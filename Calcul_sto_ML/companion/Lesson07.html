@@ -1,0 +1,1576 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 7 · Itô &amp; Girsanov</title>
+<meta name="description" content="Study companion, Lesson 7: Itô Formula and Consequences">
+<script>try{var t=localStorage.getItem('sc-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+<style>
+/* ===== Study companion — shared stylesheet (inlined into every page) ===== */
+:root {
+  color-scheme: light;
+  --bg: #f9f9f7;            /* page plane */
+  --surface: #fcfcfb;       /* cards, chart surface */
+  --surface-2: #f2f1ec;     /* code, table head */
+  --ink: #16150f;           /* primary text */
+  --ink-2: #4a4945;         /* secondary text */
+  --muted: #6f6d67;         /* captions, axis labels */
+  --rule: #e1e0d9;          /* hairlines */
+  --rule-2: #c3c2b7;        /* stronger rule / axis */
+  --accent: #1c5cab;        /* links */
+  --accent-soft: #e6effb;
+  --focus: #2a78d6;
+  /* callouts */
+  --key: #1c5cab;   --key-bg: #eef4fc;
+  --warn: #b0431f;  --warn-bg: #fcf0ea;
+  --link: #3a6e1f;  --link-bg: #eff6ea;
+  --board: #7a5a00; --board-bg: #fbf5e3;
+  --beyond: #5a4bb0; --beyond-bg: #f2f0fb;
+  /* chart tokens (dataviz reference palette, light) */
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #4a3aa7; --s8: #e34948;
+  --series-muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --chart-ink: #0b0b0b; --chart-ink-2: #52514e;
+  --shadow: 0 1px 2px rgba(20,20,10,.06), 0 2px 8px rgba(20,20,10,.04);
+  --radius: 10px;
+  --serif: "Source Serif 4", "Source Serif Pro", Georgia, "Times New Roman", serif;
+  --sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0f0f0e; --surface: #1a1a19; --surface-2: #242422;
+    --ink: #f3f2ed; --ink-2: #c9c8c0; --muted: #a09e96;
+    --rule: #2c2c2a; --rule-2: #45443f;
+    --accent: #7fb2f0; --accent-soft: #1d2a3a; --focus: #6da7ec;
+    --key: #86b6ef; --key-bg: #172333;
+    --warn: #f09a75; --warn-bg: #321d15;
+    --link: #9fd27f; --link-bg: #1b2915;
+    --board: #e6c25a; --board-bg: #2d2610;
+    --beyond: #b3a9f2; --beyond-bg: #221f38;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+    --series-muted: #8a8880;
+    --grid: #2c2c2a; --axis: #45443f; --chart-ink: #ffffff; --chart-ink-2: #c3c2b7;
+    --shadow: 0 1px 2px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0f0f0e; --surface: #1a1a19; --surface-2: #242422;
+  --ink: #f3f2ed; --ink-2: #c9c8c0; --muted: #a09e96;
+  --rule: #2c2c2a; --rule-2: #45443f;
+  --accent: #7fb2f0; --accent-soft: #1d2a3a; --focus: #6da7ec;
+  --key: #86b6ef; --key-bg: #172333;
+  --warn: #f09a75; --warn-bg: #321d15;
+  --link: #9fd27f; --link-bg: #1b2915;
+  --board: #e6c25a; --board-bg: #2d2610;
+  --beyond: #b3a9f2; --beyond-bg: #221f38;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+  --series-muted: #8a8880;
+  --grid: #2c2c2a; --axis: #45443f; --chart-ink: #ffffff; --chart-ink-2: #c3c2b7;
+  --shadow: 0 1px 2px rgba(0,0,0,.4);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: 4.5rem; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--serif); font-size: 1.0625rem; line-height: 1.62;
+  overflow-wrap: break-word;
+}
+@media (min-width: 900px) { body { font-size: 1.125rem; } }
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 3px; }
+img, svg, canvas { max-width: 100%; }
+h1, h2, h3, h4 { font-family: var(--sans); line-height: 1.25; letter-spacing: -0.01em; color: var(--ink); }
+h1 { font-size: clamp(1.6rem, 4.5vw, 2.35rem); margin: 0.2em 0 0.3em; font-weight: 700; }
+h2 { font-size: clamp(1.3rem, 3.2vw, 1.65rem); margin: 2.4em 0 0.3em; font-weight: 700; padding-top: .6em; border-top: 1px solid var(--rule); }
+h3 { font-size: clamp(1.08rem, 2.4vw, 1.22rem); margin: 1.9em 0 0.4em; font-weight: 650; }
+h4 { font-size: 1rem; margin: 1.4em 0 0.3em; font-weight: 650; }
+p { margin: 0.7em 0; }
+ul, ol { padding-left: 1.4em; }
+li { margin: 0.25em 0; }
+hr { border: 0; border-top: 1px solid var(--rule); margin: 2em 0; }
+code, kbd { font-family: var(--mono); font-size: 0.86em; background: var(--surface-2); padding: 0.08em 0.3em; border-radius: 4px; }
+pre { font-family: var(--mono); font-size: 0.82rem; line-height: 1.5; background: var(--surface-2); border: 1px solid var(--rule); border-radius: 8px; padding: 0.9em 1em; overflow-x: auto; max-width: 100%; }
+pre code { background: none; padding: 0; font-size: inherit; }
+small, .small { font-size: 0.88em; }
+.muted { color: var(--muted); }
+.nw { white-space: nowrap; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* ---------- header / navigation ---------- */
+.skip { position: absolute; left: -999px; top: 0; background: var(--surface); padding: .5em 1em; z-index: 100; }
+.skip:focus { left: .5em; }
+.topbar {
+  position: sticky; top: 0; z-index: 50; background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: saturate(1.2) blur(6px); -webkit-backdrop-filter: saturate(1.2) blur(6px);
+  border-bottom: 1px solid var(--rule); font-family: var(--sans);
+}
+.topbar-in { max-width: 72rem; margin: 0 auto; padding: .45rem 1rem; display: flex; align-items: center; gap: .6rem; }
+.brand { font-weight: 650; font-size: .92rem; color: var(--ink); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1 1 auto; }
+.brand span { color: var(--muted); font-weight: 500; }
+.navbtns { display: flex; gap: .35rem; flex: 0 0 auto; }
+.btn, .navbtns a, .navbtns button {
+  font-family: var(--sans); font-size: .82rem; font-weight: 550; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--rule-2); border-radius: 7px; padding: .32rem .6rem; text-decoration: none; cursor: pointer; line-height: 1.2;
+  display: inline-flex; align-items: center; gap: .3rem; min-height: 2rem;
+}
+.btn:hover, .navbtns a:hover, .navbtns button:hover { background: var(--surface-2); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.btn.primary:hover { filter: brightness(1.08); background: var(--accent); }
+.btn[disabled] { opacity: .5; cursor: default; }
+.navbtns .lbl { display: inline; }
+@media (max-width: 560px) { .navbtns .lbl { display: none; } .brand span { display: none; } }
+.theme-toggle svg { width: 1rem; height: 1rem; }
+
+.strip { max-width: 72rem; margin: 0 auto; padding: .55rem 1rem .1rem; display: flex; flex-wrap: wrap; gap: .35rem; font-family: var(--sans); }
+.strip a {
+  font-size: .78rem; text-decoration: none; color: var(--ink-2); border: 1px solid var(--rule); background: var(--surface);
+  border-radius: 999px; padding: .22rem .6rem; white-space: nowrap;
+}
+.strip a:hover { border-color: var(--rule-2); color: var(--ink); }
+.strip a[aria-current="page"] { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 650; }
+.strip a .t { display: none; }
+@media (min-width: 1100px) { .strip a .t { display: inline; } }
+
+.page { max-width: 72rem; margin: 0 auto; padding: 0 1rem 4rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2rem; }
+@media (min-width: 1240px) { .page { grid-template-columns: 15.5rem minmax(0, 46rem); justify-content: center; } }
+main { min-width: 0; max-width: 46rem; margin: 0 auto; width: 100%; }
+.hero { padding: 1.2rem 0 .4rem; }
+.eyebrow { font-family: var(--sans); font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0; }
+.lede { font-size: 1.08em; color: var(--ink-2); }
+.meta { font-family: var(--sans); font-size: .85rem; color: var(--muted); }
+.prevnext { display: flex; justify-content: space-between; gap: 1rem; margin: 3rem 0 0; font-family: var(--sans); font-size: .9rem; flex-wrap: wrap; }
+.prevnext a { text-decoration: none; border: 1px solid var(--rule); border-radius: 8px; padding: .6rem .8rem; background: var(--surface); max-width: 100%; }
+.prevnext a:hover { border-color: var(--rule-2); }
+.prevnext small { display: block; color: var(--muted); }
+
+/* ---------- TOC ---------- */
+.toc { font-family: var(--sans); font-size: .85rem; }
+.toc details { border: 1px solid var(--rule); border-radius: var(--radius); background: var(--surface); padding: .5rem .8rem; margin-top: 1rem; }
+.toc summary { cursor: pointer; font-weight: 650; color: var(--ink); padding: .15rem 0; }
+.toc ol { list-style: none; padding: 0; margin: .4rem 0 0; }
+.toc li { margin: 0; }
+.toc li li { padding-left: .8rem; }
+.toc a { display: block; color: var(--ink-2); text-decoration: none; padding: .16rem .4rem; border-radius: 5px; line-height: 1.35; }
+.toc a:hover { background: var(--surface-2); color: var(--ink); }
+.toc a.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+@media (min-width: 1240px) {
+  .toc { position: sticky; top: 4.2rem; align-self: start; max-height: calc(100vh - 5rem); overflow-y: auto; padding-right: .2rem; }
+  .toc details { margin-top: 1.4rem; }
+}
+
+/* ---------- statements, callouts ---------- */
+.pages { font-family: var(--sans); font-size: .82rem; color: var(--muted); margin: -.1em 0 1em; }
+.stmt { border: 1px solid var(--rule-2); border-radius: var(--radius); background: var(--surface); padding: .75rem 1rem .6rem; margin: 1.1rem 0; box-shadow: var(--shadow); }
+.stmt-h { font-family: var(--sans); font-weight: 700; font-size: .92rem; margin-bottom: .25rem; display: flex; flex-wrap: wrap; gap: .2rem .6rem; align-items: baseline; }
+.stmt-h .pp { font-weight: 500; color: var(--muted); font-size: .8rem; }
+.stmt-h .nm { font-weight: 500; color: var(--ink-2); }
+.stmt > p:first-of-type { margin-top: .2rem; }
+.stmt.def { border-left: 4px solid var(--s7); }
+.stmt.thm { border-left: 4px solid var(--s1); }
+.stmt.prop, .stmt.cor, .stmt.lem { border-left: 4px solid var(--s3); }
+.stmt.rem, .stmt.ex { border-left: 4px solid var(--rule-2); }
+.anatomy { display: grid; grid-template-columns: minmax(0,1fr); gap: .1rem; margin: .5rem 0 .2rem; font-size: .96em; }
+.anatomy > div { padding: .35rem 0 .35rem .8rem; border-left: 2px solid var(--rule); }
+.anatomy b { font-family: var(--sans); font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); display: block; }
+.callout { border-radius: var(--radius); padding: .7rem 1rem .6rem; margin: 1.2rem 0; border-left: 4px solid; }
+.callout > .ch { font-family: var(--sans); font-weight: 700; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; margin-bottom: .2rem; display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
+.callout > .ch .src { text-transform: none; letter-spacing: 0; font-weight: 500; opacity: .85; }
+.callout p:first-of-type { margin-top: .2rem; }
+.callout p:last-child { margin-bottom: .2rem; }
+.callout.key { background: var(--key-bg); border-color: var(--key); } .callout.key > .ch { color: var(--key); }
+.callout.warn { background: var(--warn-bg); border-color: var(--warn); } .callout.warn > .ch { color: var(--warn); }
+.callout.link { background: var(--link-bg); border-color: var(--link); } .callout.link > .ch { color: var(--link); }
+.callout.board { background: var(--board-bg); border-color: var(--board); } .callout.board > .ch { color: var(--board); }
+.callout.beyond { background: var(--beyond-bg); border-color: var(--beyond); } .callout.beyond > .ch { color: var(--beyond); }
+blockquote.q { margin: .8rem 0; padding: .3rem 0 .3rem 1rem; border-left: 3px solid var(--rule-2); color: var(--ink-2); font-style: italic; }
+blockquote.q cite { font-style: normal; font-family: var(--sans); font-size: .8rem; color: var(--muted); display: block; }
+
+/* ---------- collapsibles (hints, solutions, answers) ---------- */
+details.fold { border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); margin: .5rem 0; }
+details.fold > summary { cursor: pointer; padding: .45rem .8rem; font-family: var(--sans); font-size: .9rem; font-weight: 600; color: var(--ink-2); list-style: none; display: flex; gap: .5rem; align-items: baseline; }
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary::before { content: "▸"; color: var(--muted); transition: transform .15s; display: inline-block; }
+details.fold[open] > summary::before { transform: rotate(90deg); }
+details.fold > .fb { padding: .1rem 1rem .6rem; border-top: 1px solid var(--rule); }
+.exo { border: 1px solid var(--rule-2); border-radius: var(--radius); padding: .8rem 1rem .5rem; margin: 1.2rem 0; background: var(--surface); }
+.exo-h { font-family: var(--sans); font-weight: 700; font-size: .95rem; }
+.exo-h .pp { font-weight: 500; color: var(--muted); font-size: .8rem; margin-left: .4rem; }
+.qa { counter-reset: q; }
+.qa > details { counter-increment: q; }
+.qa > details > summary::after { content: ""; }
+
+/* ---------- tables ---------- */
+.tw { max-width: 100%; overflow-x: auto; margin: 1rem 0; }
+table { border-collapse: collapse; width: 100%; font-size: .9rem; font-family: var(--sans); }
+th, td { text-align: left; vertical-align: top; padding: .42rem .55rem; border-bottom: 1px solid var(--rule); }
+th { background: var(--surface-2); font-weight: 650; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.compact td, table.compact th { padding: .25rem .45rem; font-size: .82rem; }
+
+/* ---------- labs ---------- */
+.lab { border: 1px solid var(--rule-2); border-radius: 14px; background: var(--surface); margin: 1.6rem 0; box-shadow: var(--shadow); overflow: hidden; }
+.lab-h { padding: .8rem 1rem .5rem; border-bottom: 1px solid var(--rule); }
+.lab-h .tag { font-family: var(--sans); font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--s1); }
+.lab-h h3 { margin: .15rem 0 .2rem; border: 0; padding: 0; }
+.lab-h p { margin: .2rem 0; color: var(--ink-2); font-size: .95em; }
+.lab-body { padding: .8rem 1rem 1rem; }
+.lab-controls { display: grid; grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr)); gap: .6rem 1rem; font-family: var(--sans); font-size: .84rem; margin-bottom: .7rem; }
+.ctl { display: flex; flex-direction: column; gap: .2rem; min-width: 0; }
+.ctl label { color: var(--ink-2); font-weight: 550; display: flex; justify-content: space-between; gap: .5rem; }
+.ctl label output { color: var(--ink); font-variant-numeric: tabular-nums; font-weight: 650; }
+.ctl input[type=range] { width: 100%; accent-color: var(--s1); min-height: 1.6rem; }
+.ctl select, .ctl input[type=number] { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--rule-2); border-radius: 6px; padding: .3rem .4rem; min-height: 2rem; width: 100%; }
+.ctl.check { flex-direction: row; align-items: center; gap: .45rem; }
+.ctl.check input { width: 1.05rem; height: 1.05rem; accent-color: var(--s1); }
+.lab-actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin: .2rem 0 .8rem; font-family: var(--sans); font-size: .82rem; }
+.lab-status { color: var(--muted); }
+.plot { position: relative; width: 100%; margin: .4rem 0 .2rem; }
+.plot canvas { display: block; width: 100%; height: auto; border-radius: 8px; background: var(--surface); touch-action: pan-y; }
+.plot canvas.ov { background: transparent; }
+.plot-title { font-family: var(--sans); font-size: .84rem; font-weight: 650; color: var(--ink); margin: .6rem 0 0; }
+.plot-sub { font-family: var(--sans); font-size: .78rem; color: var(--muted); margin: 0 0 .2rem; }
+.legend { display: flex; flex-wrap: wrap; gap: .25rem 1rem; font-family: var(--sans); font-size: .78rem; color: var(--ink-2); margin: .25rem 0 .1rem; }
+.legend .li { display: inline-flex; align-items: center; gap: .35rem; }
+.legend .key { width: 1.3rem; height: 0; border-top: 2px solid; display: inline-block; }
+.legend .key.dash { border-top-style: dashed; }
+.legend .key.box { width: .8rem; height: .8rem; border: 0; border-radius: 2px; }
+.legend .key.dot { width: .6rem; height: .6rem; border: 0; border-radius: 50%; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--rule-2); border-radius: 7px; padding: .35rem .5rem; font-family: var(--sans); font-size: .76rem; box-shadow: var(--shadow); white-space: nowrap; z-index: 5; display: none; }
+.tip .tv { font-weight: 700; font-variant-numeric: tabular-nums; }
+.tip .tk { display: inline-block; width: .9rem; border-top: 2px solid; vertical-align: middle; margin-right: .3rem; }
+.metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: .5rem; margin: .7rem 0; font-family: var(--sans); }
+.metric { border: 1px solid var(--rule); border-radius: 8px; padding: .45rem .6rem; background: var(--bg); min-width: 0; }
+.metric .ml { font-size: .74rem; color: var(--muted); line-height: 1.3; }
+.metric output { display: block; font-size: 1.02rem; font-weight: 650; color: var(--ink); margin-top: .1rem; overflow-wrap: anywhere; }
+.findings { border-top: 1px dashed var(--rule-2); margin-top: .8rem; padding-top: .5rem; font-size: .96em; }
+.findings > .fh { font-family: var(--sans); font-size: .76rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+details.tableview { margin: .4rem 0; font-family: var(--sans); font-size: .82rem; }
+details.tableview summary { cursor: pointer; color: var(--ink-2); }
+details.tableview .tw { margin: .4rem 0; max-height: 18rem; overflow: auto; }
+
+/* ---------- maps (threads) ---------- */
+.threadmap { width: 100%; overflow-x: auto; margin: 1rem 0; }
+.threadmap table { font-size: .76rem; }
+.threadmap td, .threadmap th { text-align: center; padding: .3rem .25rem; border: 1px solid var(--rule); }
+.threadmap th[scope=row] { text-align: left; font-weight: 600; background: var(--surface); white-space: normal; min-width: 8rem; }
+.threadmap td.on { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.threadmap td.here { background: var(--accent); color: var(--bg); font-weight: 700; }
+.threadmap col.cur { background: var(--accent-soft); }
+.figure { margin: 1.2rem 0; text-align: center; }
+.figure svg { width: 100%; height: auto; max-width: 40rem; }
+.figure figcaption { font-family: var(--sans); font-size: .8rem; color: var(--muted); margin-top: .3rem; text-align: left; }
+svg .ink { fill: var(--ink); } svg .ink2 { fill: var(--ink-2); } svg .mut { fill: var(--muted); }
+svg .st-ink { stroke: var(--ink); } svg .st-mut { stroke: var(--rule-2); } svg .st-s1 { stroke: var(--s1); } svg .st-s2 { stroke: var(--s2); } svg .st-s3 { stroke: var(--s3); } svg .st-s7 { stroke: var(--s7); }
+svg .f-s1 { fill: var(--s1); } svg .f-s2 { fill: var(--s2); } svg .f-s3 { fill: var(--s3); } svg .f-surface { fill: var(--surface); } svg .f-soft { fill: var(--accent-soft); }
+svg text { font-family: var(--sans); }
+
+/* ---------- cheat sheet, glossary ---------- */
+.cheat { display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: .7rem; }
+.cheat > div { border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); padding: .5rem .8rem; font-size: .94em; }
+.cheat h4 { margin: .2rem 0 .3rem; font-size: .88rem; }
+dl.gloss { display: grid; grid-template-columns: minmax(0,1fr); gap: .1rem; }
+dl.gloss dt { font-family: var(--sans); font-weight: 650; margin-top: .5rem; }
+dl.gloss dt .fr { font-weight: 500; color: var(--muted); font-style: italic; }
+dl.gloss dd { margin: 0 0 .2rem 0; }
+footer.foot { max-width: 46rem; margin: 3rem auto 0; padding: 1.5rem 1rem 3rem; border-top: 1px solid var(--rule); font-family: var(--sans); font-size: .82rem; color: var(--muted); }
+
+/* ---------- math ---------- */
+mjx-container[display="true"] { overflow-x: auto; overflow-y: hidden; max-width: 100%; padding: .15em 0; margin: .7em 0 !important; }
+mjx-container { outline: none; }
+.eqgroup { margin: .6rem 0; }
+@media print { .topbar, .toc, .strip, .lab-controls, .lab-actions { display: none; } }
+.threadmap td a { text-decoration: none; color: inherit; display: block; font-size: .9rem; line-height: 1; }
+.threadmap td.on a { color: var(--accent); }
+.threadmap td.here a { color: var(--bg); }
+.threadmap th b { color: var(--accent); }
+.thread { border-left: 3px solid var(--rule-2); padding-left: .9rem; margin: 1rem 0; }
+.thread h3 { margin-top: .5rem; }
+@media (max-width: 560px) {
+  .page { padding: 0 .75rem 3rem; }
+  .stmt, .callout, .exo { padding-left: .7rem; padding-right: .7rem; }
+  details.fold > .fb { padding: .1rem .6rem .5rem; }
+  .lab-h, .lab-body { padding-left: .7rem; padding-right: .7rem; }
+  .anatomy > div { padding-left: .6rem; }
+}
+/* keep MathJax's hidden assistive MathML inside its formula box (it can be wider than the rendering) */
+mjx-container { position: relative; }
+mjx-assistive-mml { width: 100% !important; max-width: 100% !important; }
+
+/* ---------- home page ---------- */
+.lessons { list-style: none; padding: 0; margin: 1rem 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr)); gap: .75rem; }
+.lessons > li { margin: 0; display: flex; }
+.lcard { flex: 1; display: block; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--surface); padding: .75rem .95rem .85rem; text-decoration: none; color: var(--ink); box-shadow: var(--shadow); }
+.lcard:hover { border-color: var(--accent); }
+.lcard:hover .lt { text-decoration: underline; }
+.lcard .ln { display: block; font-family: var(--sans); font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.lcard .lt { display: block; font-family: var(--sans); font-weight: 700; font-size: 1rem; line-height: 1.3; margin: .2rem 0 .4rem; color: var(--accent); }
+.lcard .lq { display: block; font-size: .95em; color: var(--ink-2); line-height: 1.5; }
+.lcard .lm { display: block; font-family: var(--sans); font-size: .76rem; color: var(--muted); margin-top: .5rem; }
+.movements { display: grid; grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr)); gap: .7rem; margin: 1rem 0; }
+.movements > div { border-top: 3px solid var(--s1); background: var(--surface); border-radius: 0 0 8px 8px; padding: .5rem .8rem .7rem; font-size: .95em; }
+.movements > div:nth-child(2) { border-top-color: var(--s3); }
+.movements > div:nth-child(3) { border-top-color: var(--s7); }
+.movements h4 { margin: .2rem 0 .3rem; font-size: 1rem; border: 0; padding: 0; }
+table.stack th[scope=row], table.stack td.lh { font-family: var(--sans); font-weight: 650; }
+table.stack tr.grp th { background: var(--accent-soft); color: var(--ink); font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; }
+@media (max-width: 760px) {
+  table.stack thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  table.stack, table.stack tbody, table.stack tr, table.stack td, table.stack th { display: block; width: 100%; }
+  table.stack tr { border: 1px solid var(--rule); border-radius: 8px; margin: 0 0 .7rem; padding: .35rem .65rem .45rem; background: var(--surface); }
+  table.stack td, table.stack th { border: 0; padding: .22rem 0; background: none; }
+  table.stack td[data-label]::before { content: attr(data-label); display: block; font-size: .7rem; font-weight: 650; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  table.stack tr.grp { border: 0; background: none; padding: .8rem 0 0; margin: 0; }
+  table.stack tr.grp th { background: none; color: var(--accent); padding: 0; }
+}
+ol.asks > li { margin: .55rem 0; }
+ol.asks .q { font-style: italic; }
+
+</style>
+<script>window.MathJax={"tex": {"inlineMath": [["\\(", "\\)"]], "displayMath": [["\\[", "\\]"]], "macros": {"R": "\\mathbb{R}", "N": "\\mathbb{N}", "Q": "\\mathbb{Q}", "Z": "\\mathbb{Z}", "Qb": "\\mathbb{Q}", "E": "\\mathbb{E}", "P": "\\mathbb{P}", "Xb": "\\mathbb{X}", "Yb": "\\mathbb{Y}", "F": "\\mathcal{F}", "G": "\\mathcal{G}", "cB": "\\mathcal{B}", "cN": "\\mathcal{N}", "cM": "\\mathcal{M}", "cX": "\\mathcal{X}", "cY": "\\mathcal{Y}", "cC": "\\mathcal{C}", "cL": "\\mathcal{L}", "cP": "\\mathcal{P}", "cE": "\\mathcal{E}", "cW": "\\mathcal{W}", "dd": "\\mathrm{d}", "Var": "\\operatorname{Var}", "Cov": "\\operatorname{Cov}", "sgn": "\\operatorname{sign}", "ind": "\\mathbf{1}", "indep": "\\perp\\!\\!\\!\\perp", "eqd": "\\overset{(d)}{=}", "TV": "\\mathrm{TV}", "tr": "\\operatorname{Tr}", "Mtc": "\\mathcal{M}_{2,c}", "Mloc": "\\mathcal{M}^{c}_{\\mathrm{loc}}", "Law": "\\operatorname{Law}", "Wd": "W^{d}", "Leb": "\\mathrm{Leb}", "as": "\\text{a.s.}", "iid": "\\text{i.i.d.}", "lt": "<", "gt": ">", "br": ["\\langle #1\\rangle", 1], "norm": ["\\lVert #1\\rVert", 1], "abs": ["\\lvert #1\\rvert", 1], "bb": ["\\mathbb{#1}", 1]}, "processEscapes": true}, "options": {"skipHtmlTags": ["script", "noscript", "style", "textarea", "pre", "code"]}, "chtml": {"scale": 0.97, "matchFontHeight": true},"startup":{"ready":function(){MathJax.startup.defaultReady();MathJax.startup.promise.then(function(){document.documentElement.setAttribute("data-mathjax","done");});}}};</script><script defer id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-chtml.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar"><div class="topbar-in"><a class="brand" href="index.html">Stochastic calculus in ML <span>· study companion</span></a><nav class="navbtns" aria-label="Page navigation"><a href="index.html" title="Home page">⌂<span class="lbl"> Home</span></a><a href="Lesson06.html" rel="prev" title="Previous: Lesson 6">←<span class="lbl"> Prev</span></a><a href="Lesson08.html" rel="next" title="Next: Lesson 8"><span class="lbl">Next </span>→</a><button id="theme-toggle" class="theme-toggle" type="button" aria-pressed="false" aria-label="Switch to dark theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span class="lbl">Dark</span></button></nav></div><nav class="strip" aria-label="All lessons"><a href="index.html">Home</a><a href="Lesson01.html" title="Lesson 1: Brownian Motion and Its First Properties">L1<span class="t"> · Brownian motion</span></a><a href="Lesson02.html" title="Lesson 2: Function Properties of the Brownian Motion: Markov and Quadratic Variation">L2<span class="t"> · Markov &amp; QV</span></a><a href="Lesson03.html" title="Lesson 3: Measurability, Filtrations and Stopping Times">L3<span class="t"> · Filtrations &amp; stopping</span></a><a href="Lesson04.html" title="Lesson 4: Continuous-Time Martingales and Submartingales">L4<span class="t"> · Martingales</span></a><a href="Lesson05.html" title="Lesson 5: Continuous Semi-Martingales">L5<span class="t"> · Semimartingales</span></a><a href="Lesson06.html" title="Lesson 6: Stochastic Integrals">L6<span class="t"> · Stochastic integrals</span></a><a href="Lesson07.html" aria-current="page" title="Lesson 7: Itô Formula and Consequences">L7<span class="t"> · Itô &amp; Girsanov</span></a><a href="Lesson08.html" title="Lesson 8: Stochastic Differential Equations">L8<span class="t"> · SDEs</span></a></nav></header>
+<div class="page">
+<nav class="toc" aria-label="Table of contents"><details><summary>Contents</summary><ol><li><a href="#sec0">§0 Where this lesson sits</a><ol><li><a href="#sec0-threads">The threads, and this lesson's stations</a></li><li><a href="#sec0-question">A question that comes back</a></li></ol></li><li><a href="#s7-1">§7.1 Itô's formula</a><ol><li><a href="#lab7-1-h">Itô's formula, path by path: what if we forget ½f″?</a></li></ol></li><li><a href="#s7-2">§7.2 Consequences of Itô's formula</a><ol><li><a href="#lab7-2-h">Every continuous martingale is a Brownian motion on its own clock</a></li></ol></li><li><a href="#s7-3">§7.3 Girsanov's theorem(s)</a><ol><li><a href="#lab7-3-h">Girsanov as importance sampling: estimating a rare path event</a></li><li><a href="#lab7-4-h">Noise restores existence: building an SDE solution by reweighting Brownian paths</a></li></ol></li><li><a href="#exercises">Exercises</a></li><li><a href="#conclusion">Conclusion</a></li><li><a href="#refs">References</a></li><li><a href="#code">Reference implementation (Python / NumPy)</a></li><li><a href="#cheat">Cheat sheet</a></li><li><a href="#selftest">Self-test</a></li><li><a href="#glossary">Glossary (English · French)</a></li></ol></details></nav>
+<main id="main">
+<div class="hero"><p class="eyebrow">Lesson 7 · Chapter 7 of the notes · notes pp. 60–67</p><h1>Itô Formula and Consequences</h1><p class="lede">How do smooth maps and changes of probability measure transform semimartingales?</p></div>
+<section>
+<h2 id="sec0">§0 Where this lesson sits</h2>
+<p><b>What it reuses.</b></p>
+<ul>
+<li>From <a class="xr" href="Lesson06.html">Lesson 6</a>: left Riemann sums converge to stochastic integrals (<a href="Lesson06.html#n6-18">Prop. 6.18</a>), the product rule (<a href="Lesson06.html#n6-20">Prop. 6.20</a>), the powers of <a class="xr" href="Lesson06.html#n6-23">Example 6.23</a>, and the rules <span class="nw">\(\br{H\cdot M}=H^2\cdot\br{M}\).</span></li>
+<li>From <a class="xr" href="Lesson05.html">Lesson 5</a>: weighted quadratic sums converge to \(\int H\,\dd\br{X}\) (<a href="Lesson05.html#n5-44">Prop. 5.44</a>), which is the second-order term of Itô's formula. Nonnegative local martingales are supermartingales (<a href="Lesson05.html#n5-20">Thm. 5.20</a>), which is why \(\cE(L)\) needs a criterion to be a martingale.</li>
+<li>From <a class="xr" href="Lesson04.html">Lesson 4</a>: uniform integrability and supermartingale convergence (<a href="Lesson04.html#n4-16">Cor. 4.16</a>, <a href="Lesson04.html#n4-24">Thm. 4.24</a>, <a href="Lesson04.html#lab4-6">Lab 4.6</a>).</li>
+<li>From <a class="xr" href="Lesson01.html">Lesson 1</a>: the canonical Wiener space (<a href="Lesson01.html#s1-5">§1.5</a>), on which the change of measure takes place.</li>
+<li>From <a class="xr" href="Lesson02.html">Lesson 2</a>: the heat equation (<a href="Lesson02.html#n2-8">Prop. 2.8</a>), which Itô's formula explains in one line.</li>
+</ul>
+<p><b>What it prepares.</b></p>
+<ul>
+<li><a class="xr" href="Lesson08.html">Lesson 8</a>: the linear SDE is solved with Itô's formula (<a href="Lesson08.html#n8-1">Example 8.1</a>). Tanaka's example uses Lévy's characterization (<a href="Lesson08.html#n8-12">Example 8.12</a>). Weak existence and weak uniqueness for bounded drifts come from Girsanov (<a href="Lesson08.html#n8-13">Example 8.13</a>, <a href="#n7-21">Prop. 7.21</a>).</li>
+<li>The board's Chapter 0 (<a href="Lesson01.html#board-ch0">Lesson 1</a>): Girsanov is the tool the notes announce “to relate distributions of solutions of SDEs, and in particular derive useful tools for studying sampling and generative stochastic models” (p. 63).</li>
+</ul>
+<h3 id="sec0-threads">The threads, and this lesson's stations</h3>
+<div class="threadmap"><table><caption class="sr-only">Threads of the course across lessons</caption><thead><tr><th scope="col">Thread</th><th scope="col">L1</th><th scope="col">L2</th><th scope="col">L3</th><th scope="col">L4</th><th scope="col">L5</th><th scope="col">L6</th><th scope="col"><b>L7</b></th><th scope="col">L8</th></tr></thead><tbody><tr><th scope="row">T1 · Laws on path space</th><td class="on"><a href="Lesson01.html#s1-5" title="fidis; Wiener measure" aria-label="T1 in Lesson 1: fidis; Wiener measure">●</a></td><td class="on"><a href="Lesson02.html#n2-1" title="same law on W^d; Markov kernels" aria-label="T1 in Lesson 2: same law on W^d; Markov kernels">●</a></td><td><span class="sr-only">no station</span></td><td><span class="sr-only">no station</span></td><td><span class="sr-only">no station</span></td><td><span class="sr-only">no station</span></td><td class="here"><a href="Lesson07.html#s7-3" title="Girsanov: a new law on path space" aria-label="T1 in Lesson 7: Girsanov: a new law on path space">●</a></td><td class="on"><a href="Lesson08.html#n8-11" title="weak uniqueness = equal laws" aria-label="T1 in Lesson 8: weak uniqueness = equal laws">●</a></td></tr><tr><th scope="row">T2 · Discretize dyadically, then pass to the limit</th><td class="on"><a href="Lesson01.html#s1-4" title="Lévy’s dyadic construction" aria-label="T2 in Lesson 1: Lévy’s dyadic construction">●</a></td><td class="on"><a href="Lesson02.html#s2-2" title="QV on dyadic meshes; τ_N ↓ τ" aria-label="T2 in Lesson 2: QV on dyadic meshes; τ_N ↓ τ">●</a></td><td class="on"><a href="Lesson03.html#n3-12" title="progressive via dyadic approximations" aria-label="T2 in Lesson 3: progressive via dyadic approximations">●</a></td><td class="on"><a href="Lesson04.html#n4-29" title="Doob and optional stopping on dyadic skeletons" aria-label="T2 in Lesson 4: Doob and optional stopping on dyadic skeletons">●</a></td><td class="on"><a href="Lesson05.html#n5-23" title="bracket as a limit of sums" aria-label="T2 in Lesson 5: bracket as a limit of sums">●</a></td><td class="on"><a href="Lesson06.html#n6-18" title="elementary integrands; Riemann sums" aria-label="T2 in Lesson 6: elementary integrands; Riemann sums">●</a></td><td class="here"><a href="Lesson07.html#n7-1" title="Taylor on meshes = Itô" aria-label="T2 in Lesson 7: Taylor on meshes = Itô">●</a></td><td class="on"><a href="Lesson08.html#n8-9" title="Picard iterates" aria-label="T2 in Lesson 8: Picard iterates">●</a></td></tr><tr><th scope="row">T3 · Quadratic variation: the roughness that drives Itô calculus</th><td class="on"><a href="Lesson01.html#n1-10" title="Hölder exponents below 1/2" aria-label="T3 in Lesson 1: Hölder exponents below 1/2">●</a></td><td class="on"><a href="Lesson02.html#n2-21" title="Σ(ΔB)² → t; infinite variation" aria-label="T3 in Lesson 2: Σ(ΔB)² → t; infinite variation">●</a></td><td><span class="sr-only">no station</span></td><td class="on"><a href="Lesson04.html#n4-3" title="B² − t is a martingale" aria-label="T3 in Lesson 4: B² − t is a martingale">●</a></td><td class="on"><a href="Lesson05.html#n5-23" title="the bracket ⟨M⟩" aria-label="T3 in Lesson 5: the bracket ⟨M⟩">●</a></td><td class="on"><a href="Lesson06.html#n6-6" title="Itô isometry" aria-label="T3 in Lesson 6: Itô isometry">●</a></td><td class="here"><a href="Lesson07.html#n7-1" title="½ f″ d⟨X⟩; Lévy’s characterization" aria-label="T3 in Lesson 7: ½ f″ d⟨X⟩; Lévy’s characterization">●</a></td><td class="on"><a href="Lesson08.html#n8-9" title="σσᵀ in the dynamics" aria-label="T3 in Lesson 8: σσᵀ in the dynamics">●</a></td></tr><tr><th scope="row">T4 · Information, stopping and localization</th><td><span class="sr-only">no station</span></td><td class="on"><a href="Lesson02.html#n2-11" title="F_{s+}, Blumenthal, stopping times" aria-label="T4 in Lesson 2: F_{s+}, Blumenthal, stopping times">●</a></td><td class="on"><a href="Lesson03.html#s3-1" title="usual conditions; F_τ; hitting times" aria-label="T4 in Lesson 3: usual conditions; F_τ; hitting times">●</a></td><td class="on"><a href="Lesson04.html#s4-3" title="optional stopping; uniform integrability" aria-label="T4 in Lesson 4: optional stopping; uniform integrability">●</a></td><td class="on"><a href="Lesson05.html#s5-3" title="local martingales" aria-label="T4 in Lesson 5: local martingales">●</a></td><td class="on"><a href="Lesson06.html#s6-2" title="integrals built by localization" aria-label="T4 in Lesson 6: integrals built by localization">●</a></td><td class="here"><a href="Lesson07.html#n7-19" title="Novikov and Kazamaki criteria" aria-label="T4 in Lesson 7: Novikov and Kazamaki criteria">●</a></td><td class="on"><a href="Lesson08.html#n8-14" title="strong vs weak solutions (which filtration?)" aria-label="T4 in Lesson 8: strong vs weak solutions (which filtration?)">●</a></td></tr><tr><th scope="row">T5 · Markov property, semigroups and PDEs</th><td class="on"><a href="Lesson01.html#n1-7" title="independent Gaussian increments" aria-label="T5 in Lesson 1: independent Gaussian increments">●</a></td><td class="on"><a href="Lesson02.html#s2-1" title="Markov, strong Markov, heat semigroup" aria-label="T5 in Lesson 2: Markov, strong Markov, heat semigroup">●</a></td><td><span class="sr-only">no station</span></td><td class="on"><a href="Lesson04.html#n4-33" title="Laplace transform of hitting times" aria-label="T5 in Lesson 4: Laplace transform of hitting times">●</a></td><td><span class="sr-only">no station</span></td><td><span class="sr-only">no station</span></td><td class="here"><a href="Lesson07.html#n7-3" title="generator b·∇ + ½Tr(a∇²)" aria-label="T5 in Lesson 7: generator b·∇ + ½Tr(a∇²)">●</a></td><td class="on"><a href="Lesson08.html#s8-3" title="SDE solutions are Markov; P_tP_s = P_{t+s}" aria-label="T5 in Lesson 8: SDE solutions are Markov; P_tP_s = P_{t+s}">●</a></td></tr><tr><th scope="row">T6 · Completeness and L² geometry</th><td class="on"><a href="Lesson01.html#n1-19" title="Cauchy in C([0,1]) + Borel–Cantelli" aria-label="T6 in Lesson 1: Cauchy in C([0,1]) + Borel–Cantelli">●</a></td><td class="on"><a href="Lesson02.html#n2-21" title="L² convergence of quadratic sums" aria-label="T6 in Lesson 2: L² convergence of quadratic sums">●</a></td><td><span class="sr-only">no station</span></td><td class="on"><a href="Lesson04.html#n4-24" title="UI, Doob Lᵖ, closed martingales" aria-label="T6 in Lesson 4: UI, Doob Lᵖ, closed martingales">●</a></td><td class="on"><a href="Lesson05.html#n5-31" title="E⟨M⟩∞ = E M∞²" aria-label="T6 in Lesson 5: E⟨M⟩∞ = E M∞²">●</a></td><td class="on"><a href="Lesson06.html#n6-3" title="M₂,c is a Hilbert space; Riesz" aria-label="T6 in Lesson 6: M₂,c is a Hilbert space; Riesz">●</a></td><td><span class="sr-only">no station</span></td><td class="on"><a href="Lesson08.html#n8-9" title="contraction in L²_T; Gronwall" aria-label="T6 in Lesson 8: contraction in L²_T; Gronwall">●</a></td></tr><tr><th scope="row">T7 · Toward sampling and generative modeling</th><td class="on"><a href="Lesson01.html#board-ch0" title="Langevin diffusion (board, Chap. 0)" aria-label="T7 in Lesson 1: Langevin diffusion (board, Chap. 0)">●</a></td><td class="on"><a href="Lesson02.html#n2-8" title="the heat semigroup smooths" aria-label="T7 in Lesson 2: the heat semigroup smooths">●</a></td><td><span class="sr-only">no station</span></td><td class="on"><a href="Lesson04.html#n4-3" title="exponential martingales" aria-label="T7 in Lesson 4: exponential martingales">●</a></td><td><span class="sr-only">no station</span></td><td><span class="sr-only">no station</span></td><td class="here"><a href="Lesson07.html#n7-16" title="Girsanov = importance sampling of paths" aria-label="T7 in Lesson 7: Girsanov = importance sampling of paths">●</a></td><td class="on"><a href="Lesson08.html#n8-1" title="OU and Langevin as SDEs; Markov semigroup" aria-label="T7 in Lesson 8: OU and Langevin as SDEs; Markov semigroup">●</a></td></tr></tbody></table></div><p class="small muted">Filled dots link to each station; this lesson’s column is highlighted. This lesson’s stations:</p><ul class="small"><li><b>T1 · Laws on path space:</b> <a href="Lesson07.html#s7-3">Girsanov: a new law on path space</a></li><li><b>T2 · Discretize dyadically, then pass to the limit:</b> <a href="Lesson07.html#n7-1">Taylor on meshes = Itô</a></li><li><b>T3 · Quadratic variation: the roughness that drives Itô calculus:</b> <a href="Lesson07.html#n7-1">½ f″ d⟨X⟩; Lévy’s characterization</a></li><li><b>T4 · Information, stopping and localization:</b> <a href="Lesson07.html#n7-19">Novikov and Kazamaki criteria</a></li><li><b>T5 · Markov property, semigroups and PDEs:</b> <a href="Lesson07.html#n7-3">generator b·∇ + ½Tr(a∇²)</a></li><li><b>T7 · Toward sampling and generative modeling:</b> <a href="Lesson07.html#n7-16">Girsanov = importance sampling of paths</a></li></ul>
+<h3 id="sec0-question">A question that comes back</h3>
+<p><b>“How do smooth maps and changes of probability transform a semimartingale, and which part (drift or noise) changes?”</b></p>
+<ul>
+<li><a class="xr" href="Lesson05.html">Lesson 5</a> separated drift and noise uniquely: <span class="nw">\(X=X_0+M+A\).</span></li>
+<li><a class="xr" href="Lesson06.html">Lesson 6</a> showed that products create a covariation term.</li>
+<li>Here, Itô's formula says a smooth map keeps the noise structure (<span class="nw">\(f'(X)\,\dd M\))</span> and adds a drift <span class="nw">\(\frac12f''\,\dd\br{X}\).</span></li>
+<li>Girsanov says a change of measure keeps the bracket and moves the drift by <span class="nw">\(\br{M,L}\).</span></li>
+<li><a class="xr" href="Lesson08.html">Lesson 8</a> asks it in reverse: given the drift and noise coefficients, is there a process?</li>
+</ul>
+</section>
+
+<section>
+<h2 id="s7-1">§7.1 Itô's formula</h2>
+<p class="pages">notes, pp. 60–62</p>
+<p><b>The problem.</b> If \(X\) is a semimartingale and \(f\) is smooth, is \(f(X)\) a semimartingale, and what are its drift and its martingale part? This is the chain rule of stochastic calculus. It is the tool that turns every computation of the course into algebra.</p>
+<p><b>The intuition.</b> Taylor: <span class="nw">\(f(X_{t+h})-f(X_t)\approx f'(X_t)\Delta X+\frac12f''(X_t)(\Delta X)^2\).</span> For a smooth path, \((\Delta X)^2=O(h^2)\) and the second term disappears. For a semimartingale, <span class="nw">\((\Delta X)^2\approx\Delta\br{X}\),</span> of order <span class="nw">\(h\),</span> and the terms add up to <span class="nw">\(\frac12\int f''(X)\,\dd\br{X}\).</span> Informally: <span class="nw">\(\dd B\sim\sqrt{\dd t}\),</span> so <span class="nw">\((\dd B)^2=\dd t\).</span></p>
+<div class="stmt thm" id="n7-1"><div class="stmt-h">Theorem 7.1 <span class="nm">(Itô's formula)</span><span class="pp">notes pp. 60–61</span></div>
+<p>(1) If \(X\) is a real continuous semimartingale and <span class="nw">\(f\in C^2(\R)\),</span> then \(f(X)\) is a semimartingale and, a.s. for every <span class="nw">\(t\),</span>
+\[ f(X_t)=f(X_0)+\int_0^tf'(X_s)\,\dd X_s+\frac12\int_0^tf''(X_s)\,\dd\br{X}_s. \]
+(2) If \(X=(X^1,\dots,X^d)\) has continuous semimartingale components and <span class="nw">\(F\in C^2(\R^d)\),</span> then
+\[ \begin{aligned}F(X_t)=F(X_0)&+\sum_i\int_0^t\partial_iF(X_s)\,\dd X^i_s\\ &+\frac12\sum_{i,j}\int_0^t\partial^2_{ij}F(X_s)\,\dd\br{X^i,X^j}_s.\end{aligned} \]</p></div>
+<div class="anatomy">
+<div><b>In one sentence</b>Chain rule plus half the second derivative times the bracket.</div>
+<div><b>Proof (the notes' route)</b>Taylor with integral remainder on each cell: <span class="nw">\(f(X_{t_{i+1}})-f(X_{t_i})=f'(X_{t_i})\Delta_iX+I_i(\Delta_iX)^2\),</span> with <span class="nw">\(I_i=\int_0^1f''(X_{t_i}+u\Delta_iX)(1-u)\,\dd u\).</span> Sum over <span class="nw">\(i\).</span> The first sum converges in probability to \(\int f'(X)\,\dd X\) (<a href="Lesson06.html#n6-18">Prop. 6.18</a>). Replace \(I_i\) by <span class="nw">\(\frac12f''(X_{t_i})\):</span> the error is at most <span class="nw">\(\max_i|I_i-\frac12f''(X_{t_i})|\cdot\sum(\Delta X)^2\to0\),</span> by uniform continuity of \(f''\) on the compact range of the path. The remaining sum tends to \(\frac12\int f''(X)\,\dd\br{X}\) (<a href="Lesson05.html#n5-44">Prop. 5.44</a>).</div>
+<div><b>Where it fails</b>If \(f\) is only <span class="nw">\(C^1\),</span> or \(f''\) is not continuous, the formula needs modification. For <span class="nw">\(f(x)=|x|\),</span> Tanaka's formula adds a local time (Beyond the notes; see <a href="Lesson06.html#exo-6-5">Lesson 6, E5</a>). If \(X\) has jumps, extra jump terms appear.</div>
+<div><b>Used again</b>Everywhere: Lévy's characterization, exponential martingales, Girsanov, the linear SDE (<a href="Lesson08.html#n8-1">Example 8.1</a>), Tanaka's SDE (<a href="Lesson08.html#n8-16">Example 8.16</a>).</div>
+</div>
+<p><a id="n7-2"></a><b>Remark 7.2</b> (notation): <span class="nw">\(\sum_i\int\partial_iF(X)\,\dd X^i=\int\nabla F(X)^\top\,\dd X\).</span></p>
+<div class="stmt rem" id="n7-3"><div class="stmt-h">Remark 7.3 <span class="nm">(diffusions)</span><span class="pp">notes p. 60</span></div>
+<p>If <span class="nw">\(X_t=x+\int_0^tb_s\,\dd s+\int_0^t\sigma_s\,\dd B_s\),</span> with \(B\) a \(d\)-dimensional Brownian motion and <span class="nw">\((\int\sigma\,\dd B)^i=\sum_j\int\sigma^{ij}\,\dd B^j\),</span> then <span class="nw">\(\br{X^i,X^j}_t=\sum_k\int_0^t\sigma^{ik}_s\sigma^{jk}_s\,\dd s\).</span> With <span class="nw">\(a_s=\sigma_s\sigma_s^\top\):</span>
+\[ \begin{aligned}F(X_t)=F(X_0)&+\int_0^t\nabla F(X_s)^\top b_s\,\dd s\\ &+\int_0^t\nabla F(X_s)^\top\sigma_s\,\dd B_s\\ &+\frac12\int_0^t\tr\big(a_s\nabla^2F(X_s)\big)\,\dd s.\end{aligned} \]</p></div>
+<div class="callout warn"><div class="ch">Watch out: a missing ½ in Remark 7.3 (p. 60)</div>
+<p>The last display of <a class="xr" href="#n7-3">Remark 7.3</a> in the notes reads <span class="nw">\(\cdots+\int_0^t\tr(a_s\nabla^2F(X_s))\,\dd s\),</span> <b>without the factor \(\frac12\)</b>, although the display just above it has <span class="nw">\(\frac12\int\tr(\sigma\sigma^\top\nabla^2F)\,\dd s\).</span> The correct formula has <span class="nw">\(\frac12\),</span> as above. Check: for \(F(x)=|x|^2\) and \(X=B\) in <span class="nw">\(\R^d\),</span> \(\E|B_t|^2=dt\) forces the drift term to be <span class="nw">\(\frac12\tr(I\cdot2I)\,t=dt\).</span> The opening phrase of the remark, “if \((X_t)\) is a diffusion, i.e. if \(\xi\) is bounded on <span class="nw">\([0,1]\)”,</span> is also garbled; the intended hypothesis is that \(b\) and \(\sigma\) are progressive and locally bounded.</p></div>
+<p><a id="n7-4"></a><b>Remark 7.4:</b> if \(X\) takes values in an open set <span class="nw">\(O\),</span> \(f\in C^2(O)\) suffices. Example: \(\log X\) for a positive semimartingale, or \(1/|x|\) on \(\R^3\setminus\{0\}\) (<a class="xr" href="Lesson05.html">Lesson 5</a>, <a class="xr" href="Lesson05.html#lab5-3">Lab 5.3</a>).</p>
+<div class="stmt prop" id="n7-5"><div class="stmt-h">Proposition 7.5 · Remark 7.6 <span class="nm">(time-dependent Itô formula)</span><span class="pp">notes p. 61</span></div>
+<p>Finite-variation components contribute no second-order terms. In particular, for \(F(t,x)\) of class \(C^{1,2}\) and \(X\) as in <a class="xr" href="#n7-3">Remark 7.3</a>:
+\[ \begin{aligned}F(t,X_t)&=F(0,X_0)+\int_0^t\nabla F(s,X_s)^\top\sigma_s\,\dd B_s\\ &\quad+\int_0^t\big(\partial_sF+\nabla F^\top b_s\big)(s,X_s)\,\dd s\\ &\quad+\frac12\int_0^t\tr\big(a_s\nabla^2_xF(s,X_s)\big)\,\dd s.\end{aligned} \]</p></div>
+<p><a id="n7-6"></a>(Remark 7.6 is the displayed formula; the notes state it with the <span class="nw">\(\frac12\),</span> correctly.)</p>
+<div class="callout beyond"><div class="ch">Beyond the notes: the generator, and why Langevin samples \(\pi\)</div>
+<p>For a time-homogeneous diffusion <span class="nw">\(\dd X=b(X)\,\dd t+\sigma(X)\,\dd B\),</span> <a class="xr" href="#n7-6">Remark 7.6</a> says that \(f(X_t)-\int_0^t\mathcal Lf(X_s)\,\dd s\) is a local martingale. Here \(\mathcal L=b\cdot\nabla+\frac12\tr(\sigma\sigma^\top\nabla^2)\) is the <em>generator</em>. For Brownian motion it is <span class="nw">\(\frac12\Delta\),</span> and this is <a href="Lesson02.html#n2-8">Prop. 2.8 (iii)</a> again. If \(u(t,x)\) solves <span class="nw">\(\partial_tu=\mathcal Lu\),</span> then \(u(T-t,X_t)\) is a local martingale: the Kolmogorov equation announced in the title of the notes' <a class="xr" href="Lesson08.html#s8-3">§8.3</a>.</p>
+<p>For the Langevin diffusion of the board, <span class="nw">\(\dd X=-\nabla U\,\dd t+\sqrt2\,\dd B\),</span> so <span class="nw">\(\mathcal Lf=\Delta f-\nabla U\cdot\nabla f=e^{U}\nabla\cdot(e^{-U}\nabla f)\).</span> Integrating by parts, \(\int\mathcal Lf\,e^{-U}\,\dd x=0\) for every test function <span class="nw">\(f\).</span> That makes <span class="nw">\(\E_\pi[\mathcal Lf]=0\),</span> which is exactly the statement that \(\pi\propto e^{-U}\) is invariant. This is the mechanism behind “<span class="nw">\(\Law(X_t)\to\pi\)”</span> in <a href="Lesson01.html#board-ch0">Lesson 1</a>.</p></div>
+
+<div class="stmt ex" id="n7-7"><div class="stmt-h">Example 7.7 <span class="nm">(stochastic exponential)</span><span class="pp">notes p. 62</span></div>
+<p>(1) For a continuous semimartingale <span class="nw">\(X\),</span> \(\cE(X)_t=\exp\big(X_t-\frac12\br{X}_t\big)\) satisfies <span class="nw">\(\cE(X)_t=\cE(X)_0+\int_0^t\cE(X)_s\,\dd X_s\).</span> If \(X\) is a local martingale, so is <span class="nw">\(\cE(X)\).</span>
+(2) (corrected) If \(X=X_0+M+A\) with <span class="nw">\(A=-\frac\lambda2\br{M}\),</span> then \(e^{\lambda X}\) is a continuous local martingale.</p></div>
+<p><b>Proof of (1).</b> Itô for <span class="nw">\(F(x,y)=e^{x-y/2}\),</span> applied to <span class="nw">\((X,\br{X})\):</span> <span class="nw">\(\partial_xF=F\),</span> <span class="nw">\(\partial_yF=-\frac12F\),</span> <span class="nw">\(\partial^2_{xx}F=F\),</span> and \(\br{X}\) has finite variation. So <span class="nw">\(\dd\cE=\cE\,\dd X-\frac12\cE\,\dd\br{X}+\frac12\cE\,\dd\br{X}=\cE\,\dd X\).</span> <b>(2):</b> <span class="nw">\(e^{\lambda X_t}=e^{\lambda X_0}\exp\big(\lambda M_t-\frac{\lambda^2}2\br{M}_t\big)=e^{\lambda X_0}\cE(\lambda M)_t\).</span></p>
+<div class="callout warn"><div class="ch">Watch out: Example 7.7 (2) as printed (p. 62)</div>
+<p>The notes' hypothesis reads <span class="nw">\(X_t=X_0+\lambda t+\int_0^t\frac{\lambda^2}2\,\dd\br{X}_s\).</span> This does not make sense: the drift \(\lambda t\) has the wrong dimension, and with \(X_t=\lambda t\) (so <span class="nw">\(\br{X}=0\)),</span> \(e^{\lambda X_t}=e^{\lambda^2t}\) is deterministic and increasing, not a local martingale. The proof (“apply the previous point to <span class="nw">\(\lambda X\),</span> noting <span class="nw">\(\cE(\lambda X_t)=e^{\lambda X_t-\frac{\lambda^2}2\br{X}_t}\)”)</span> shows the intended statement: \(e^{\lambda X}\) is a local martingale exactly when the drift of \(X\) is <span class="nw">\(-\frac\lambda2\br{X}\).</span> Example: <span class="nw">\(X_t=B_t-\frac\lambda2t\).</span></p></div>
+
+<div class="lab" id="lab7-1" data-lab="L7.ito"><div class="lab-h"><div class="tag">Lab 7.1 · Thm. 7.1, Rem. 7.6</div><h3 id="lab7-1-h">Itô's formula, path by path: what if we forget ½f″?</h3><p>Question: Itô's formula is an almost sure identity for each path. On a grid, how close is \(f(B_1)-f(0)\) to the discrete expansion <span class="nw">\(\sum f'(B_{t_i})\Delta B+\sum(\partial_tf+\frac12f'')(B_{t_i})\Delta t\)?</span> What if we use the ordinary chain rule, dropping <span class="nw">\(\frac12f''\)?</span> Four functions, including the time-dependent <span class="nw">\(F(t,x)=e^{x-t/2}\),</span> for which <span class="nw">\(\partial_tF+\frac12\partial_x^2F=0\):</span> the exponential martingale.</p></div><div class="lab-body"><div class="lab-controls"></div><div class="lab-actions"><button type="button" class="btn primary" data-run>Run</button><button type="button" class="btn" data-reset>Reset to the default settings</button><button type="button" class="btn" data-reseed>New seed</button><span class="lab-status" aria-live="polite"></span></div><div class="lab-plots"></div><div class="metrics"></div><div class="findings"><div class="fh">What the lab shows (default settings unless stated)</div><ul>
+<li><b><span class="nw">\(f(x)=x^3\):</span></b> with the correction, the mean path-wise error is 0.0168 at \(2^{14}\) steps, and it decreases as the mesh refines (chart). Without it, the error stalls at 1.36, which is <span class="nw">\(\E|3\int_0^1B_s\,\dd s|\approx3\sqrt{1/3}\sqrt{2/\pi}=1.38\).</span></li>
+<li><b><span class="nw">\(f(x)=x^2\):</span></b> the correction is exactly \(\int_0^1\dd s=1\) (measured 1.0000), and the error without it is 1. This is \(B_t^2=2\int B\,\dd B+t\) from <a class="xr" href="Lesson06.html">Lesson 6</a>.</li>
+<li><b><span class="nw">\(F=e^{x-t/2}\):</span></b> error 0.00474 with the correction. The \(\frac12f''\) term alone averages 0.4963 (exact <span class="nw">\(\frac12\)),</span> and it is exactly cancelled by <span class="nw">\(\partial_tF\).</span> So <span class="nw">\(e^{B_t-t/2}=1+\int_0^te^{B_s-s/2}\,\dd B_s\),</span> a martingale.</li>
+</ul></div></div></div>
+</section>
+
+<section>
+<h2 id="s7-2">§7.2 Consequences of Itô's formula</h2>
+<p class="pages">notes, pp. 62–63</p>
+<p><b>The problem.</b> How do we recognize a Brownian motion? And is every continuous local martingale “a Brownian motion in disguise”?</p>
+<div class="stmt thm" id="n7-8"><div class="stmt-h">Theorem 7.8 <span class="nm">(Lévy's characterization)</span><span class="pp">notes pp. 62–63</span></div>
+<p>A \(d\)-dimensional continuous local martingale <span class="nw">\(M\),</span> null at 0, with <span class="nw">\(\br{M^i,M^j}_t=\delta_{ij}t\),</span> is a \(d\)-dimensional standard \((\F_t)\)-Brownian motion.</p></div>
+<div class="anatomy">
+<div><b>In one sentence</b>Continuity, the martingale property and the bracket \(t\) together force Gaussian independent increments.</div>
+<div><b>Proof</b>Fix \(a\in\R^d\) and <span class="nw">\(N=a^\top M\),</span> so <span class="nw">\(\br{N}_t=|a|^2t\).</span> By <a class="xr" href="#n7-7">Example 7.7</a>, \(\cE(N)_t=\exp\big(a^\top M_t-\frac12|a|^2t\big)\) is a local martingale. It is a true martingale by Novikov (<a class="xr" href="#n7-19">Prop. 7.19</a>), since \(\br{N}_t\) is deterministic. Hence \(\E\big[e^{a^\top(M_t-M_s)}\mid\F_s\big]=e^{\frac12|a|^2(t-s)}\) for every <span class="nw">\(a\).</span> A conditional moment generating function that does not depend on the past identifies \(M_t-M_s\) as <span class="nw">\(N(0,(t-s)I_d)\),</span> independent of <span class="nw">\(\F_s\).</span></div>
+<div><b>Why each hypothesis</b>Continuity: the compensated Poisson process has \(\br{\cdot}_t=\lambda t\) (predictable bracket), and it is not Brownian. The bracket: \(2B\) has bracket <span class="nw">\(4t\).</span> Local martingale: \(B_t+t\) has bracket <span class="nw">\(t\),</span> but it is not centered.</div>
+<div><b>Used again</b><a class="xr" href="#n7-9">Example 7.9</a>, Girsanov (<a class="xr" href="#n7-18">Rem. 7.18</a>), Tanaka's SDE (<a href="Lesson08.html#n8-12">Example 8.12</a>), and correlated Brownian motions (<a href="Lesson05.html#exo-5-8">Lesson 5, E8</a>).</div>
+</div>
+<div class="callout warn"><div class="ch">Watch out: two slips in the proof of Theorem 7.8 (pp. 62–63)</div>
+<p>The notes write <span class="nw">\(\cE(N_t)=\exp\big(N_t+\frac12\br{N}_t\big)=\exp\big(a^\top M_t+\frac12|a|^2t\big)\).</span> The sign is wrong: this process has expectation <span class="nw">\(e^{|a|^2t}\),</span> not 1 (script <code>errata_checks.py</code>: 29.40 against \(e^{a^2t}=29.37\) for <span class="nw">\(a=1.3\),</span> <span class="nw">\(t=2\)).</span> The next display, <span class="nw">\(\E[e^{a^\top M_t}\mid\F_s]=e^{a^\top M_s}e^{\frac12|a|^2(t-s)}\),</span> is the correct consequence of the <em>minus</em> sign. Second, the notes justify the martingale property by “being bounded on every finite interval”, but \(\cE(N)\) is not bounded. The correct reason is Novikov's criterion, or dominated convergence with <span class="nw">\(\E\sup_{s\le t}e^{a^\top M_s}\lt\infty\).</span> The final sentence, “Standard Gaussian maximal estimates then show continuity of paths”, is unnecessary: \(M\) is continuous by hypothesis.</p></div>
+<div class="stmt ex" id="n7-9"><div class="stmt-h">Example 7.9<span class="pp">notes p. 63</span></div>
+<p>\(\beta_t=\int_0^t\sgn(B_s)\,\dd B_s\) is a Brownian motion: \(\br{\beta}_t=\int_0^t\sgn(B_s)^2\,\dd s=t\) (<a href="Lesson06.html#exo-6-5">Lesson 6, E5</a>; <a class="xr" href="Lesson06.html#lab6-1">Lab 6.1</a>).</p></div>
+<div class="stmt thm" id="n7-10"><div class="stmt-h">Theorem 7.10 <span class="nm">(Dambis–Dubins–Schwarz)</span><span class="pp">notes p. 63</span></div>
+<p>If \(M\) is a continuous local martingale with \(M_0=0\) and <span class="nw">\(\br{M}_\infty=\infty\),</span> there is a Brownian motion \(W\) such that <span class="nw">\(M_t=W_{\br{M}_t}\).</span></p></div>
+<p><b>Why</b> (not proved in the notes). Let <span class="nw">\(T_u=\inf\{t:\br{M}_t\gt u\}\),</span> the inverse clock, and <span class="nw">\(W_u=M_{T_u}\).</span> By optional stopping, \(W\) is a local martingale in the time-changed filtration <span class="nw">\((\F_{T_u})\).</span> Its bracket is <span class="nw">\(\br{M}_{T_u}=u\).</span> It is continuous, because \(M\) is constant on the intervals where \(\br{M}\) is flat. By Lévy, \(W\) is a Brownian motion. <b>Meaning:</b> every continuous local martingale is a Brownian motion run with a random, adapted clock. Its “speed” is \(\dd\br{M}/\dd t\) (for example \(\sigma_s^2\) for <span class="nw">\(\int\sigma\,\dd B\)).</span></p>
+<div class="stmt thm" id="n7-11"><div class="stmt-h">Theorem 7.11 <span class="nm">(Knight, corrected)</span><span class="pp">notes p. 63</span></div>
+<p>If \(M=(M^1,\dots,M^d)\) is a continuous local martingale with <span class="nw">\(M_0=0\),</span> \(\br{M^i,M^j}=0\) for \(i\ne j\) <b>and \(\br{M^i}_\infty=\infty\) for each \(i\)</b>, there is a \(d\)-dimensional Brownian motion \(W\) with <span class="nw">\(M^i_t=W^i_{\br{M^i}_t}\).</span></p></div>
+<p>The notes omit the hypothesis <span class="nw">\(\br{M^i}_\infty=\infty\),</span> without which the clocks may stop and the time changes are not defined for all <span class="nw">\(u\).</span> (Otherwise one needs an enlarged probability space.) The remarkable point is independence: orthogonal martingales, run on their own clocks, become <em>independent</em> Brownian motions, even though the clocks themselves may be dependent.</p>
+
+<div class="lab" id="lab7-2" data-lab="L7.dds"><div class="lab-h"><div class="tag">Lab 7.2 · Thm. 7.8, Ex. 7.9, Thm. 7.10</div><h3 id="lab7-2-h">Every continuous martingale is a Brownian motion on its own clock</h3><p>Question: let \(M_t=\int_0^t\sigma_s\,\dd B_s\) with a random volatility <span class="nw">\(\sigma_s=0.5+|B_s|\).</span> At a fixed time, \(M_1\) is a mixture of Gaussians with random variances, so it has heavy tails. Dambis–Dubins–Schwarz says that reading \(M\) at the random time where its clock \(\br{M}=\int\sigma^2\,\dd s\) reaches \(u\) gives exactly <span class="nw">\(N(0,u)\).</span> We simulate paths, stop each one when its clock hits \(u\) (with an exact interpolation inside the last step), and compare.</p></div><div class="lab-body"><div class="lab-controls"></div><div class="lab-actions"><button type="button" class="btn primary" data-run>Run</button><button type="button" class="btn" data-reset>Reset to the default settings</button><button type="button" class="btn" data-reseed>New seed</button><span class="lab-status" aria-live="polite"></span></div><div class="lab-plots"></div><div class="metrics"></div><div class="findings"><div class="fh">What the lab shows (default settings unless stated)</div><ul>
+<li><b>On its own clock:</b> with <span class="nw">\(u=0.5\),</span> the KS distance to \(N(0,u)\) is 0.0055 (p-value 0.925), and the excess kurtosis is −0.067. The histogram matches the Gaussian density.</li>
+<li><b>On the calendar clock:</b> \(M_1\) has variance 1.364 and excess kurtosis 7.402, far from Gaussian. The reference code (20,000 independent paths) confirms: KS p-value 0.454 and kurtosis +0.010 on the clock, against +6.73 at time 1.</li>
+<li><b>\(\sigma=\sgn(B)\)</b> (<a class="xr" href="#n7-9">Example 7.9</a>): the clock is the calendar, and the KS distance is 0.0114. This is Lévy's characterization in action.</li>
+<li><b>Why it matters in practice.</b> Stochastic-volatility models, and the noise in stochastic gradient methods, have heavy-tailed increments in calendar time that become Gaussian in “intrinsic time”. The bracket is the right clock.</li>
+</ul></div></div></div>
+</section>
+
+<section>
+<h2 id="s7-3">§7.3 Girsanov's theorem(s)</h2>
+<p class="pages">notes, pp. 63–67</p>
+<p><b>The problem.</b> Two SDEs that differ only by their drift, \(\dd X=\dd B\) and <span class="nw">\(\dd X=b\,\dd t+\dd B\),</span> produce laws on path space. How are these laws related? Can we compute expectations under one by reweighting samples from the other? The notes: Girsanov's theorems allow one to “compare local martingale or semimartingale laws under a change of measure”, and to “relate distributions of solutions of SDEs, and in particular derive useful tools for studying sampling and generative stochastic models” (p. 63). The setting is the canonical space \(\Omega=C(\R_+,\R^d)\) of <a href="Lesson01.html#s1-5">Lesson 1</a>.</p>
+<p><b>The intuition.</b> In one dimension and at one time: \(N(\theta,1)\) has density \(e^{\theta x-\theta^2/2}\) with respect to <span class="nw">\(N(0,1)\).</span> Shifting the mean is the same as reweighting by an exponential. On path space, shifting the drift by \(f\) is the same as reweighting by the exponential martingale <span class="nw">\(\exp\big(\int f\,\dd B-\frac12\int f^2\,\dd s\big)\).</span> The weight is <span class="nw">\(\cE(L)\),</span> with <span class="nw">\(L=\int f\,\dd B\).</span></p>
+<p><b>The density process.</b> For a continuous local martingale <span class="nw">\(L\),</span> \(\cE(L)=\exp(L-\frac12\br{L})\) is a positive local martingale, hence a supermartingale (<a href="Lesson05.html#n5-20">Thm. 5.20</a>). It converges a.s. to <span class="nw">\(\cE(L)_\infty\),</span> with \(\E\cE(L)_\infty\le1\) (<a href="Lesson04.html#n4-16">Cor. 4.16</a>). A change of measure needs total mass 1.</p>
+<div class="stmt thm" id="n7-12"><div class="stmt-h">Theorem 7.12<span class="pp">notes p. 64</span></div>
+<p>A nonnegative continuous supermartingale \(D\) with \(\E D_\infty=\E D_0=1\) is uniformly integrable, and is a martingale closed by <span class="nw">\(D_\infty\).</span></p></div>
+<p><b>Why.</b> Fatou gives <span class="nw">\(\E[D_\infty\mid\F_t]\le D_t\).</span> Taking expectations, <span class="nw">\(1=\E D_\infty\le\E D_t\le\E D_0=1\).</span> So the nonnegative variable \(D_t-\E[D_\infty\mid\F_t]\) has mean 0, hence is 0: <span class="nw">\(D_t=\E[D_\infty\mid\F_t]\),</span> a closed martingale, hence UI (<a href="Lesson04.html#n4-25">Thm. 4.25</a>). <a class="xr" href="Lesson04.html#lab4-6">Lab 4.6</a> shows the failure mode: the exponential martingale \(\cE(uB)\) on \([0,\infty)\) has <span class="nw">\(\E\cE_\infty=0\).</span></p>
+<div class="stmt thm" id="n7-13"><div class="stmt-h">Theorem 7.13 <span class="nm">(Girsanov, infinite horizon)</span><span class="pp">notes p. 64</span></div>
+<p>If <span class="nw">\(\E[\cE(L)_\infty]=1\),</span> then \(\dd\Q=\cE(L)_\infty\,\dd\P\) is a probability measure (<span class="nw">\(\Q\ll\P\)),</span> and for every continuous \(\P\)-local martingale <span class="nw">\(M\),</span> the process \(M-\br{M,L}\) is a continuous \(\Q\)-local martingale.</p></div>
+<div class="stmt thm" id="n7-14"><div class="stmt-h">Theorem 7.14 <span class="nm">(Girsanov, finite horizon)</span><span class="pp">notes p. 64</span></div>
+<p>If <span class="nw">\(\E[\cE(L)_T]=1\),</span> then \(\dd\Q^L=\cE(L)_T\,\dd\P\) is a probability measure equivalent to \(\P\) on <span class="nw">\(\F_T\),</span> and \((M_t-\br{M,L}_t)_{t\le T}\) is a \(\Q^L\)-local martingale for every continuous \(\P\)-local martingale <span class="nw">\(M\).</span></p></div>
+<div class="anatomy">
+<div><b>In one sentence</b>Changing the measure by \(\cE(L)\) keeps brackets and shifts drifts by <span class="nw">\(\br{\cdot,L}\).</span></div>
+<div><b>Proof idea</b> <span class="small">(the notes give none)</span>. Bayes: with <span class="nw">\(D_t=\cE(L)_t=\E[\dd\Q/\dd\P\mid\F_t]\),</span> a process \(Y\) is a \(\Q\)-local martingale iff \(YD\) is a \(\P\)-local martingale. For <span class="nw">\(Y=M-\br{M,L}\),</span> since <span class="nw">\(\dd D=D\,\dd L\):</span> <span class="nw">\(\dd(YD)=Y\,\dd D+D\,\dd M-D\,\dd\br{M,L}+\dd\br{M,D}\),</span> and \(\dd\br{M,D}=D\,\dd\br{M,L}\) cancels the third term. What is left is a sum of stochastic integrals. Brackets do not change under an equivalent measure, since \(\sum(\Delta X)^2\to\br{X}\) in probability for both.</div>
+<div><b>Used again</b>Cameron–Martin (<a class="xr" href="#n7-16">Thm. 7.16</a>), weak existence (<a class="xr" href="#n7-21">Prop. 7.21</a>), weak uniqueness for bounded drift (<a href="Lesson08.html#n8-13">Example 8.13</a>).</div>
+</div>
+<div class="stmt rem" id="n7-15"><div class="stmt-h">Remark 7.15 <span class="nm">(an ODE without solution, corrected)</span><span class="pp">notes pp. 64–65</span></div>
+<p>The ODE \(x_t=\int_0^t\ind_{\{x_s\le0\}}\,\dd s\) has no solution on any interval <span class="nw">\([0,T]\).</span></p></div>
+<p><b>Why.</b> Such an \(x\) would be non-decreasing and start at 0. If \(x\le0\) on some <span class="nw">\([0,\varepsilon]\),</span> then \(x=0\) there, but then <span class="nw">\(x_\varepsilon=\int_0^\varepsilon1\,\dd s=\varepsilon\gt0\),</span> a contradiction. So \(x_s\gt0\) for all small <span class="nw">\(s\gt0\),</span> hence for all \(s\gt0\) by monotonicity. But then <span class="nw">\(x_t=\int_0^t\ind_{\{x_s\le0\}}\,\dd s=0\),</span> again a contradiction. The drift \(\ind_{\{x\le0\}}\) is bounded but discontinuous, so neither Picard nor Peano applies.</p>
+<div class="callout warn"><div class="ch">Watch out: the equation printed in Remark 7.15 has a solution (pp. 64–65)</div>
+<p>The notes consider \(x_t=t+\int_0^t\ind_{\{x_s\gt0\}}\,\dd s\) and argue that it has no solution. But \(x_t=2t\) solves it: \(t+\int_0^t\ind_{\{2s\gt0\}}\,\dd s=2t\) (script <code>errata_checks.py</code>). The notes' argument (“If <span class="nw">\(\tau=\infty\),</span> then \(x_t=0\) for all <span class="nw">\(t\),</span> absurd. If <span class="nw">\(\tau\lt\infty\),</span> … <span class="nw">\(x_t=\int_\tau^t\ind\,\dd s=0\)”)</span> fits the equation <span class="nw">\(x_t=\int_0^t\ind_{\{x_s\le0\}}\,\dd s\),</span> which is the corrected version above. The opening sentence (“the assumptions above are quite restrictive, and this is the first time we have used a Brownian motion…”) is garbled. The intended point, which <a class="xr" href="#n7-21">Prop. 7.21</a> makes precise: <b>adding Brownian noise restores existence</b> for bounded measurable drifts. <a class="xr" href="#lab7-4">Lab 7.4</a> shows the Euler scheme for the ODE getting stuck at \(x=h\) (the step), while the SDE is well posed.</p></div>
+
+<div class="stmt thm" id="n7-16"><div class="stmt-h">Theorem 7.16 <span class="nm">(Cameron–Martin)</span><span class="pp">notes p. 65</span></div>
+<p>Let \(f\in L^2([0,T])\) be deterministic and <span class="nw">\(L_t=\exp\big(\int_0^tf\,\dd B-\frac12\int_0^tf^2\,\dd s\big)\).</span> For every bounded measurable <span class="nw">\(\Phi:C([0,T],\R)\to\R\),</span>
+\[ \E\Big[\Phi\Big(\big(B_t+\textstyle\int_0^tf(s)\,\dd s\big)_{t\le T}\Big)\Big]=\E\big[L_T\,\Phi\big((B_t)_{t\le T}\big)\big]. \]</p></div>
+<div class="anatomy">
+<div><b>In one sentence</b>The law of Brownian motion shifted by a deterministic \(L^2\) path has density \(L_T\) with respect to Wiener measure.</div>
+<div><b>Proof</b>\(\br{\int f\,\dd B}_T=\int_0^Tf^2\lt\infty\) is deterministic, so Novikov gives <span class="nw">\(\E L_T=1\).</span> Under <span class="nw">\(\Q^L\),</span> \(\tilde B=B-\int f\) is a Brownian motion (Girsanov plus Lévy: <a class="xr" href="#n7-18">Rem. 7.18</a>). Hence
+\[ \begin{aligned}\E^{\P}\big[\Phi(B+\textstyle\int f)\big]&=\E^{\Q^L}\big[\Phi(\tilde B+\textstyle\int f)\big]\\ &=\E^{\Q^L}[\Phi(B)]=\E^{\P}[L_T\Phi(B)].\end{aligned} \]</div>
+<div><b>How it is used: importance sampling on path space</b>To estimate a rare-event probability <span class="nw">\(\E[\Phi(B)]\),</span> simulate a drifted path \(B+\int f\) and weight it by <span class="nw">\(\exp\big(-\int f\,\dd B-\frac12\int f^2\big)\),</span> which is <a class="xr" href="#n7-16">Theorem 7.16</a> read backwards. A good drift makes the rare event typical and the weights stable (<a class="xr" href="#lab7-3">Lab 7.3</a>).</div>
+<div><b>When it fails</b>If <span class="nw">\(f\notin L^2\),</span> for example \(f(s)=s^{-1/2}\) with <span class="nw">\(\int_0^Tf^2=\infty\),</span> the two laws are mutually singular (Beyond the notes: the Cameron–Martin space is exactly <span class="nw">\(\{\int f:f\in L^2\}\)).</span> There is no density, and reweighting is impossible.</div>
+</div>
+<div class="callout warn"><div class="ch">Watch out: a slip in the proof of Theorem 7.16 (p. 65)</div>
+<p>The notes write <span class="nw">\(\E^{\P}[\Psi(B)]=\E^{\Q^L}[\Psi(\tilde B+\int f)]\).</span> Since <span class="nw">\(\tilde B+\int f=B\),</span> the right side is <span class="nw">\(\E^{\Q^L}[\Psi(B)]\),</span> which is not \(\E^{\P}[\Psi(B)]\) unless <span class="nw">\(f=0\).</span> The intended identity is <span class="nw">\(\E^{\P}[\Psi(B+\int f)]=\E^{\Q^L}[\Psi(\tilde B+\int f)]\):</span> under <span class="nw">\(\Q^L\),</span> \(\tilde B\) has the law of \(B\) under <span class="nw">\(\P\).</span> The chain of equalities above is the corrected proof.</p></div>
+<p><a id="n7-17"></a><b>Remark 7.17:</b> \(\Q^L(A)=\E[\ind_A\cE(L)_T]\) for <span class="nw">\(A\in\F_t\),</span> <span class="nw">\(t\le T\).</span> Semimartingales under \(\P\) remain semimartingales under <span class="nw">\(\Q^L\),</span> and \(\P\)-a.s. statements remain \(\Q^L\)-a.s. true, since <span class="nw">\(\Q^L\ll\P\).</span> <a id="n7-18"></a><b>Remark 7.18:</b> if \(B\) is a \((\P,\F_t)\)-Brownian motion, then \(B-\br{L,B}\) is a \(\Q^L\)-local martingale with bracket <span class="nw">\(t\).</span> By Lévy it is a \(\Q^L\)-Brownian motion.</p>
+
+<div class="lab" id="lab7-3" data-lab="L7.is"><div class="lab-h"><div class="tag">Lab 7.3 · Thm. 7.16 (Cameron–Martin)</div><h3 id="lab7-3-h">Girsanov as importance sampling: estimating a rare path event</h3><p>Question: \(p=\P(\sup_{t\le1}B_t\ge a)\) equals \(2\bar\Phi(a)\) by the reflection principle, which lets us check the estimators. For <span class="nw">\(a=3\),</span> <span class="nw">\(p\approx2.7\times10^{-3}\).</span> Plain Monte Carlo wastes almost all its paths. The Girsanov estimator simulates \(B_t+\theta t\) (drift <span class="nw">\(f=\theta\))</span> and weights each path by <span class="nw">\(\exp(-\theta B_1-\theta^2/2)\),</span> with \(B\) the driving Brownian motion. Both estimators use exact bridge maxima between grid points and the same number of paths. Which drift \(\theta\) is best?</p></div><div class="lab-body"><div class="lab-controls"></div><div class="lab-actions"><button type="button" class="btn primary" data-run>Run</button><button type="button" class="btn" data-reset>Reset to the default settings</button><button type="button" class="btn" data-reseed>New seed</button><span class="lab-status" aria-live="polite"></span></div><div class="lab-plots"></div><div class="metrics"></div><div class="findings"><div class="fh">What the lab shows (default settings unless stated)</div><ul>
+<li><b>At <span class="nw">\(a=3\),</span> <span class="nw">\(\theta=3\):</span></b> the importance-sampling estimate is 2.686 × 10⁻³, with relative standard error 0.018, against the exact 2.700 × 10⁻³. Plain Monte Carlo gives 2.350 × 10⁻³ (relative error 0.146). The variance is reduced by a factor of 55.6, for the same number of paths.</li>
+<li><b>Too much drift hurts:</b> with <span class="nw">\(\theta=6\),</span> the relative error is 0.216, worse than plain Monte Carlo. The effective sample size collapses to 0.001 of the paths: a few paths with huge weights dominate. The chart shows the U-shape, with its optimum near <span class="nw">\(\theta\approx a\).</span> This is the weight degeneracy of <a class="xr" href="Lesson04.html#lab4-6">Lab 4.6</a>, now as a design constraint.</li>
+<li><b>Rarer events:</b> for \(a=4.5\) (\(p=\) 6.795 × 10⁻⁶), plain Monte Carlo with 20,000 paths sees no hits (estimate 0). Importance sampling with \(\theta=3\) gives 7.161 × 10⁻⁶ (relative error 0.034).</li>
+</ul></div></div></div>
+
+<div class="stmt prop" id="n7-19"><div class="stmt-h">Proposition 7.19 <span class="nm">(Novikov, Kazamaki)</span><span class="pp">notes p. 66 (proof skipped)</span></div>
+<p>Let \(L\) be a continuous local martingale with \(L_0=0\) and <span class="nw">\(T\in\R_+\cup\{\infty\}\).</span> Then (i) ⇒ (ii) ⇒ (iii):
+(i) Novikov: <span class="nw">\(\E\big[e^{\frac12\br{L}_T}\big]\lt\infty\);</span>
+(ii) Kazamaki: \((e^{L_t/2})_{t\le T}\) is uniformly integrable;
+(iii) <span class="nw">\(\E[\cE(L)_T]=1\),</span> so \(\cE(L)\) is a true martingale on <span class="nw">\([0,T]\).</span></p></div>
+<p>The notes' statement says “continuous martingale” and lists (ii) with “<span class="nw">\(\E[e^{L_T/2}]\lt\infty\)”;</span> the standard form is as above. <b>How to use it:</b> if \(\br{L}_T\) is bounded (bounded drift, as in <a class="xr" href="#n7-21">Prop. 7.21</a>) or deterministic (Cameron–Martin, Lévy), Novikov holds trivially. These conditions are sufficient, not necessary (<a href="#exo-7-6">E6</a>). <a id="n7-20"></a><b>Theorem 7.20</b> (notes p. 66): a family is UI if and only if it is bounded in \(L^1\) and uniformly absolutely continuous (<a href="Lesson04.html#exo-4-2">Lesson 4, E2</a>).</p>
+
+<div class="stmt prop" id="n7-21"><div class="stmt-h">Proposition 7.21 <span class="nm">(weak existence for bounded drift, sign corrected)</span><span class="pp">notes p. 66</span></div>
+<p>Let \(b:\R_+\times\R^d\to\R^d\) be measurable and bounded. There is a filtered probability space \((\Omega,\F,(\F_t),\Q)\) carrying a Brownian motion \(B\) and a continuous adapted \(X\) with <span class="nw">\(X_t=x_0+B_t+\int_0^tb(s,X_s)\,\dd s\).</span></p></div>
+<p><b>Proof</b> (finite horizon <span class="nw">\(T\)).</span> Start with a Brownian motion \(X\) from \(x_0\) under <span class="nw">\(\P\).</span> Put <span class="nw">\(L_t=+\int_0^tb(s,X_s)\cdot\dd X_s\).</span> Then <span class="nw">\(\br{L}_t=\int_0^t|b|^2\,\dd s\le t\sup|b|^2\),</span> so Novikov gives <span class="nw">\(\E\cE(L)_T=1\).</span> Under <span class="nw">\(\dd\Q^L=\cE(L)_T\,\dd\P\),</span> Girsanov says \(X-x_0-\br{X,L}\) is a local martingale, with <span class="nw">\(\br{X,L}_t=\int_0^tb(s,X_s)\,\dd s\).</span> Its bracket is still <span class="nw">\(tI\),</span> so by Lévy, \(B:=X-x_0-\int_0^tb(s,X_s)\,\dd s\) is a \(\Q^L\)-Brownian motion.</p>
+<div class="callout warn"><div class="ch">Watch out: the sign of \(L\) in Proposition 7.21 (p. 66)</div>
+<p>The notes set <span class="nw">\(L_t=-\int_0^tb(s,X_s)\cdot\dd X_s\).</span> Then <span class="nw">\(\br{X,L}=-\int b\,\dd s\),</span> and Girsanov makes \(X-x_0+\int b\,\dd s\) the \(\Q^L\)-Brownian motion: the solution of the SDE with drift <span class="nw">\(-b\),</span> not <span class="nw">\(+b\).</span> The correct choice is <span class="nw">\(L=+\int b\cdot\dd X\).</span> <b>Evidence:</b> for constant <span class="nw">\(b=0.7\),</span> the weights with \(+\) give \(\E_{\Q}[X_1-x_0]=0.7024\) and with \(-\) give \(-0.7002\) (script <code>errata_checks.py</code>, \(10^6\) samples). <a class="xr" href="#lab7-4">Lab 7.4</a> shows the same for a discontinuous drift.</p></div>
+<p><a id="n7-22"></a><b>Remark 7.22:</b> extending to \([0,\infty)\) needs a consistent family of measures \(\Q_T\) and a Kolmogorov-type extension on the canonical space; the notes refer to Revuz and Yor, Chapter VIII.</p>
+
+<div class="lab" id="lab7-4" data-lab="L7.weak"><div class="lab-h"><div class="tag">Lab 7.4 · Rem. 7.15, Prop. 7.21</div><h3 id="lab7-4-h">Noise restores existence: building an SDE solution by reweighting Brownian paths</h3><p>Question: the ODE <span class="nw">\(x'=\ind_{\{x\le0\}}\),</span> <span class="nw">\(x_0=0\),</span> has no solution (<a class="xr" href="#n7-15">Rem. 7.15</a>, corrected). The SDE \(\dd X=\ind_{\{X\le0\}}\dd t+\varepsilon\,\dd B\) does, for every \(\varepsilon\gt0\) (<a class="xr" href="#n7-21">Prop. 7.21</a>). We compute \(\E[X_1]\) in two independent ways. (a) Euler–Maruyama simulation. (b) The proof of <a class="xr" href="#n7-21">Prop. 7.21</a>: simulate \(\varepsilon W\) (no drift) and reweight by \(\cE(L)_1\) with <span class="nw">\(L=\int b(X)/\varepsilon\,\dd W\).</span> We also try the notes' sign, and a direct simulation of the SDE with drift <span class="nw">\(-\ind_{\{X\le0\}}\).</span></p></div><div class="lab-body"><div class="lab-controls"></div><div class="lab-actions"><button type="button" class="btn primary" data-run>Run</button><button type="button" class="btn" data-reset>Reset to the default settings</button><button type="button" class="btn" data-reseed>New seed</button><span class="lab-status" aria-live="polite"></span></div><div class="lab-plots"></div><div class="metrics"></div><div class="findings"><div class="fh">What the lab shows (default settings unless stated)</div><ul>
+<li><b>The construction works</b> (<span class="nw">\(\varepsilon=0.3\)):</span> Euler–Maruyama gives \(\E X_1=\) 0.1956 ± 0.0019, and the reweighted Brownian paths give 0.1944 ± 0.0045. The time spent in \(\{X\le0\}\) averages 0.194, equal to \(\E X_1\) as the equation requires, since <span class="nw">\(\E\int\varepsilon\,\dd B=0\).</span></li>
+<li><b>The notes' sign builds the other SDE:</b> the Euler simulation with drift \(-\ind_{\{X\le0\}}\) gives −0.8166 ± 0.0053, and the weights with the notes' sign give −0.8509 ± 0.4292. The two agree, but the second is extremely noisy. The reference code (100,000 paths, independent random numbers) gives −0.8101 and −0.8188.</li>
+<li><b>Reweighting degenerates as <span class="nw">\(\varepsilon\to0\):</span></b> \(\br{L}_1\) can be as large as <span class="nw">\(1/\varepsilon^2\).</span> At \(\varepsilon=0.3\) the effective sample size is 0.190 of the paths, and at \(\varepsilon=0.1\) it is 0.017. There the estimate is 0.0638 ± 0.0040 against the Euler value 0.0753, a gap of about 3 nominal standard errors: the standard error itself is unreliable. With 100,000 paths the reference code gets 0.0744 against 0.0749. With the notes' sign at <span class="nw">\(\varepsilon=0.1\),</span> the weights cannot reach the target law at all (0.0041 against −0.9314). Girsanov is exact in law, but not always usable as a Monte Carlo method.</li>
+<li><b>The ODE limit:</b> the Euler scheme for \(\varepsilon=0\) ends at \(x(1)=\) 0.001, one step \(h\) above 0, where the drift switches off. As \(h\to0\) this tends to 0, and \(x\equiv0\) is not a solution. At \(\varepsilon=1\) the mean is 0.3786; at <span class="nw">\(\varepsilon=0.1\),</span> 0.0753. The SDE solutions shrink towards 0 as the noise vanishes.</li>
+</ul></div></div></div>
+<div class="callout beyond"><div class="ch">Beyond the notes: Girsanov in generative modeling</div>
+<p>For two SDEs with the same diffusion coefficient \(\sigma\) and drifts <span class="nw">\(b_1,b_2\),</span> Girsanov gives the relative entropy of their path laws on <span class="nw">\([0,T]\):</span> <span class="nw">\(\mathrm{KL}(\P^1\|\P^2)=\frac12\E^{\P^1}\int_0^T|\sigma^{-1}(b_1-b_2)(X_s)|^2\,\dd s\).</span> Score-based diffusion models train a network \(s_\theta\) to approximate <span class="nw">\(\nabla\log p_t\).</span> This identity turns the training loss, a weighted score-matching error, into a bound on the KL divergence between the generated law and the data law (Song et al., 2021; Chen et al., 2023). It is the board's Chapter 0 item (2) made quantitative. The same identity with \(b_2=-\nabla U\) controls the bias of Langevin samplers.</p></div>
+</section>
+
+<section>
+<h2 id="exercises">Exercises</h2>
+<div class="exo" id="exo-7-1"><div class="exo-h">E1 · Moments by Itô's formula <span class="pp">Thm. 7.1</span></div>
+<p>Use Itô's formula to compute \(\E[B_t^4]\) and \(\E[e^{\lambda B_t}]\) without using the Gaussian density.</p>
+<details class="fold"><summary>Hint</summary><div class="fb"><p>Write <span class="nw">\(f(B_t)=f(0)+\int f'(B)\,\dd B+\frac12\int f''(B)\,\dd s\),</span> take expectations (the stochastic integral is an \(L^2\) martingale here), and solve the resulting ODE for <span class="nw">\(m(t)=\E f(B_t)\).</span></p></div></details>
+<details class="fold"><summary>Solution</summary><div class="fb"><p><span class="nw">\(B_t^4=4\int B^3\,\dd B+6\int B^2\,\dd s\),</span> so <span class="nw">\(\E B_t^4=6\int_0^ts\,\dd s=3t^2\).</span> For <span class="nw">\(e^{\lambda B}\):</span> <span class="nw">\(m'(t)=\frac{\lambda^2}2m(t)\),</span> <span class="nw">\(m(0)=1\),</span> so <span class="nw">\(m(t)=e^{\lambda^2t/2}\).</span> The integrals \(\int B^3\,\dd B\) and \(\int e^{\lambda B}\,\dd B\) are true martingales because \(\E\int_0^tB^6\lt\infty\) and \(\E\int_0^te^{2\lambda B}\lt\infty\) (<a class="xr" href="Lesson06.html#n6-15">Remark 6.15</a>).</p></div></details>
+</div>
+
+<div class="exo" id="exo-7-2"><div class="exo-h">E2 · Uniqueness of the stochastic exponential <span class="pp">Example 7.7</span></div>
+<p>Show that \(Z=\cE(X)\) is the only continuous semimartingale with \(Z_t=1+\int_0^tZ_s\,\dd X_s\) (for <span class="nw">\(X_0=0\)).</span></p>
+<details class="fold"><summary>Solution</summary><div class="fb"><p><span class="nw">\(\cE(X)\gt0\).</span> Let <span class="nw">\(Y=1/\cE(X)=\exp(-X+\frac12\br{X})\).</span> Itô gives <span class="nw">\(\dd Y=Y(-\dd X+\dd\br{X})\).</span> If \(Z\) is another solution, the product rule gives</p>
+\[ \begin{aligned}\dd(ZY)&=Z\,\dd Y+Y\,\dd Z+\dd\br{Z,Y}\\ &=ZY(-\dd X+\dd\br{X})+ZY\,\dd X-ZY\,\dd\br{X}=0.\end{aligned} \]
+<p>So \(ZY\equiv1\) and <span class="nw">\(Z=\cE(X)\).</span></p></div></details>
+</div>
+
+<div class="exo" id="exo-7-3"><div class="exo-h">E3 · Lévy's characterization with characteristic functions <span class="pp">Thm. 7.8, alternative proof</span></div>
+<p>For <span class="nw">\(d=1\),</span> apply Itô's formula to \(e^{iuM_t}\) (real and imaginary parts) to show <span class="nw">\(\E[e^{iu(M_t-M_s)}\mid\F_s]=e^{-u^2(t-s)/2}\).</span></p>
+<details class="fold"><summary>Solution</summary><div class="fb"><p><span class="nw">\(e^{iuM_t}=e^{iuM_s}+iu\int_s^te^{iuM_r}\,\dd M_r-\frac{u^2}2\int_s^te^{iuM_r}\,\dd r\).</span> The integrand is bounded, so the stochastic integral is a true martingale with zero conditional mean. For <span class="nw">\(A\in\F_s\),</span> \(\phi(t)=\E[\ind_Ae^{iu(M_t-M_s)}]\) satisfies <span class="nw">\(\phi(t)=\P(A)-\frac{u^2}2\int_s^t\phi(r)\,\dd r\),</span> hence <span class="nw">\(\phi(t)=\P(A)e^{-u^2(t-s)/2}\).</span> This version needs no integrability argument: <span class="nw">\(|e^{iuM}|=1\).</span></p></div></details>
+</div>
+
+<div class="exo" id="exo-7-4"><div class="exo-h">E4 · Time change of a Wiener integral <span class="pp">Thm. 7.10</span></div>
+<p>Let \(M_t=\int_0^t\sigma(s)\,\dd B_s\) with deterministic \(\sigma\) and <span class="nw">\(\int_0^\infty\sigma^2=\infty\).</span> Identify the clock and the Brownian motion of Dambis–Dubins–Schwarz.</p>
+<details class="fold"><summary>Solution</summary><div class="fb"><p>\(\br{M}_t=A(t)=\int_0^t\sigma^2\) is deterministic and increasing. \(W_u=M_{A^{-1}(u)}\) is a Gaussian process with <span class="nw">\(\Cov(W_u,W_v)=A(A^{-1}(u\wedge v))=u\wedge v\),</span> so it is a Brownian motion, and <span class="nw">\(M_t=W_{A(t)}\).</span> <a class="xr" href="#lab7-2">Lab 7.2</a> with the “deterministic” volatility is exactly this case.</p></div></details>
+</div>
+
+<div class="exo" id="exo-7-5"><div class="exo-h">E5 · Hitting a level with drift, via Girsanov and reflection <span class="pp">Thm. 7.16 + Lesson 2</span></div>
+<p>Show that \(\P\big(\sup_{t\le1}(B_t+\theta t)\ge a\big)=\bar\Phi(a-\theta)+e^{2\theta a}\,\bar\Phi(a+\theta)\) for <span class="nw">\(a\gt0\).</span></p>
+<details class="fold"><summary>Hint</summary><div class="fb"><p>By Cameron–Martin, the probability is <span class="nw">\(\E[e^{\theta B_1-\theta^2/2};S_1\ge a]\),</span> where <span class="nw">\(S_1=\sup_{t\le1}B_t\).</span> Use the joint density of \((S_1,B_1)\) from <a href="Lesson02.html#exo-2-2">Lesson 2, E2</a>, or split according to \(B_1\ge a\) or \(B_1\lt a\) and use reflection on the second part.</p></div></details>
+<details class="fold"><summary>Solution</summary><div class="fb"><p>On <span class="nw">\(\{B_1\ge a\}\),</span> \(S_1\ge a\) automatically, which gives \(\E[e^{\theta B_1-\theta^2/2};B_1\ge a]=\bar\Phi(a-\theta)\) by completing the square. On <span class="nw">\(\{S_1\ge a,B_1\lt a\}\),</span> reflection maps <span class="nw">\(B_1\mapsto2a-B_1\),</span> which preserves the law of paths that hit <span class="nw">\(a\).</span> So this part is</p>
+\[ \begin{aligned}\E\big[e^{\theta(2a-B_1)-\theta^2/2};B_1\gt a\big]&=e^{2\theta a}\E\big[e^{-\theta B_1-\theta^2/2};B_1\gt a\big]\\ &=e^{2\theta a}\bar\Phi(a+\theta).\end{aligned} \]
+<p>With \(\theta=0\) we recover <span class="nw">\(2\bar\Phi(a)\).</span></p></div></details>
+</div>
+
+<div class="exo" id="exo-7-6"><div class="exo-h">E6 · Novikov is sufficient, not necessary <span class="pp">Prop. 7.19, beyond the notes</span></div>
+<p>Let <span class="nw">\(L_t=\int_0^tB_s\,\dd B_s\).</span> Using \(\E\exp\big(\lambda\int_0^TB_s^2\,\dd s\big)=\big(\cos(T\sqrt{2\lambda})\big)^{-1/2}\) for \(T\sqrt{2\lambda}\lt\pi/2\) (Cameron–Martin's formula), show that Novikov's condition holds only for <span class="nw">\(T\lt\pi/2\).</span></p>
+<details class="fold"><summary>Solution</summary><div class="fb"><p>Novikov requires <span class="nw">\(\E e^{\frac12\br{L}_T}=\E e^{\frac12\int_0^TB^2}\lt\infty\).</span> With <span class="nw">\(\lambda=\frac12\),</span> <span class="nw">\(\sqrt{2\lambda}=1\),</span> this is finite if and only if <span class="nw">\(T\lt\pi/2\),</span> since the expectation blows up as <span class="nw">\(T\uparrow\pi/2\).</span> Yet \(\cE(L)\) is a true martingale on every <span class="nw">\([0,T]\).</span> Under the new measure, \(B\) solves <span class="nw">\(\dd B=B\,\dd t+\dd\tilde W\),</span> a linear SDE that does not explode, and a non-explosion argument then gives <span class="nw">\(\E\cE(L)_T=1\).</span> A condition can fail while its conclusion holds.</p></div></details>
+</div>
+
+<div class="exo" id="exo-7-7"><div class="exo-h">E7 · Maximum likelihood for a drift, via Girsanov <span class="pp">Thm. 7.14, beyond the notes (statistics of SDEs)</span></div>
+<p>Observe a path of \(\dd X=-\theta X\,\dd t+\dd B\) on <span class="nw">\([0,T]\),</span> with <span class="nw">\(X_0=0\).</span> Show that the log-likelihood of \(\theta\) with respect to Wiener measure is <span class="nw">\(\ell(\theta)=-\theta\int_0^TX\,\dd X-\frac{\theta^2}2\int_0^TX^2\,\dd t\),</span> and that the maximum-likelihood estimator is <span class="nw">\(\hat\theta=-\int_0^TX\,\dd X\big/\int_0^TX^2\,\dd t\).</span></p>
+<details class="fold"><summary>Solution</summary><div class="fb"><p>By Girsanov (with the corrected sign of <a class="xr" href="#n7-21">Prop. 7.21</a>), the law of the solution has density \(\cE\big(\int b(X)\,\dd X\big)_T\) with respect to the law of \(X\) under Brownian motion, where <span class="nw">\(b(x)=-\theta x\).</span> That is, <span class="nw">\(\exp\big(-\theta\int X\,\dd X-\frac{\theta^2}2\int X^2\,\dd t\big)\).</span> Setting \(\ell'(\theta)=0\) gives <span class="nw">\(\hat\theta\).</span> By Itô, <span class="nw">\(\int_0^TX\,\dd X=\frac12(X_T^2-T)\),</span> so \(\hat\theta\) only needs \(X_T\) and <span class="nw">\(\int X^2\).</span> <b>Check</b> (reference code): 400 paths with <span class="nw">\(\theta=2\),</span> <span class="nw">\(T=50\):</span> mean <span class="nw">\(\hat\theta=2.037\),</span> standard deviation 0.299, against the asymptotic <span class="nw">\(\sqrt{2\theta/T}=0.283\).</span></p></div></details>
+</div>
+
+<div class="exo" id="exo-7-8"><div class="exo-h">E8 · The Euler scheme for the ODE of Remark 7.15 <span class="pp">Rem. 7.15, corrected</span></div>
+<p>Show that the Euler scheme <span class="nw">\(x_{k+1}=x_k+h\ind_{\{x_k\le0\}}\),</span> <span class="nw">\(x_0=0\),</span> gives \(x_k=h\) for all <span class="nw">\(k\ge1\),</span> and explain why the limit \(h\to0\) is not a solution.</p>
+<details class="fold"><summary>Solution</summary><div class="fb"><p><span class="nw">\(x_1=h\gt0\),</span> and from then on the increment is 0. As \(h\to0\) the scheme converges uniformly to <span class="nw">\(x\equiv0\).</span> But \(x\equiv0\) gives <span class="nw">\(\int_0^t\ind_{\{0\le0\}}\,\dd s=t\ne0\).</span> The limit of the scheme does not solve the equation, which itself has no solution. <a class="xr" href="#lab7-4">Lab 7.4</a> gives \(x(1)=\) 0.001 for <span class="nw">\(h=10^{-3}\).</span> With noise the problem is well posed, and its solutions converge, as <span class="nw">\(\varepsilon\to0\),</span> to a generalized (Filippov) solution. This is how the zero-noise limit selects a solution (Beyond the notes).</p></div></details>
+</div>
+</section>
+
+<section>
+<h2 id="conclusion">Conclusion</h2>
+<ul>
+<li><b>Itô's formula.</b> <span class="nw">\(\dd f(X)=f'(X)\,\dd X+\frac12f''(X)\,\dd\br{X}\),</span> and its multidimensional and time-dependent forms (<a href="#n7-1">Thm. 7.1</a>, <a href="#n7-5">Rem. 7.6</a>). It comes from Taylor's formula and the quadratic sums of <a class="xr" href="Lesson05.html">Lesson 5</a>. The second-order term is not optional (<a class="xr" href="#lab7-1">Lab 7.1</a>). It links processes to PDEs through the generator, and it explains why Langevin dynamics samples <span class="nw">\(e^{-U}\).</span></li>
+<li><b>Exponentials.</b> \(\cE(X)=e^{X-\br{X}/2}\) solves \(\dd Z=Z\,\dd X\) (<a href="#n7-7">Example 7.7</a>). It is a local martingale and a supermartingale, and a true martingale under Novikov or Kazamaki (<a href="#n7-19">Prop. 7.19</a>).</li>
+<li><b>Recognizing Brownian motion.</b> The bracket \(t\) plus continuity plus the local martingale property (<a href="#n7-8">Lévy</a>). Every continuous local martingale is a time-changed Brownian motion (<a href="#n7-10">Dambis–Dubins–Schwarz</a>; <a class="xr" href="#lab7-2">Lab 7.2</a>).</li>
+<li><b>Changing the measure.</b> \(\dd\Q=\cE(L)\,\dd\P\) keeps brackets and shifts drifts by \(\br{\cdot,L}\) (<a href="#n7-13">Girsanov</a>). Cameron–Martin is the deterministic-drift case and gives importance sampling on path space (<a class="xr" href="#lab7-3">Lab 7.3</a>). With bounded drifts, reweighting Brownian paths gives weak solutions of SDEs whose ODE counterpart has none (<a href="#n7-21">Prop. 7.21</a>, sign corrected; <a class="xr" href="#lab7-4">Lab 7.4</a>). Weight degeneracy is the practical limit.</li>
+</ul>
+<p><b>Next:</b> <a href="Lesson08.html">Lesson 8</a> asks when an SDE has a solution, in which sense it is unique, and why its solutions are Markov processes with a semigroup.</p>
+</section>
+
+<section>
+<h2 id="refs">References</h2>
+<p><b>Cited by the notes.</b></p>
+<ul><li>D. Revuz and M. Yor, <em>Continuous Martingales and Brownian Motion</em>, 3rd edition, Grundlehren der mathematischen Wissenschaften 293, Springer, 1999. Cited in <a href="#n7-22">Remark 7.22</a> as “Revuz and Yor, Chapter VIII” (Girsanov's theorem and its applications; extension to infinite horizon). Itô's formula and Lévy/DDS: Chapter IV §3 and Chapter V §1.</li></ul>
+<p><b>Beyond the notes.</b></p>
+<ul>
+<li>J.-F. Le Gall, <em>Brownian Motion, Martingales, and Stochastic Calculus</em>, Springer, 2016: Chapter 5 (Itô's formula, Lévy, Dambis–Dubins–Schwarz, Girsanov, Novikov).</li>
+<li>I. Karatzas and S. E. Shreve, <em>Brownian Motion and Stochastic Calculus</em>, 2nd ed., Springer, 1991: §3.3–3.5, including Beneš's condition (E6).</li>
+<li>Y. Song, J. Sohl-Dickstein, D. P. Kingma, A. Kumar, S. Ermon and B. Poole, Score-based generative modeling through stochastic differential equations, <em>ICLR</em> 2021.</li>
+<li>S. Chen, S. Chewi, J. Li, Y. Li, A. Salim and A. Zhang, Sampling is as easy as learning the score: theory for diffusion models with minimal data assumptions, <em>ICLR</em> 2023 (Girsanov-based KL bounds).</li>
+<li>Yu. A. Kutoyants, <em>Statistical Inference for Ergodic Diffusion Processes</em>, Springer, 2004 (maximum likelihood for drift parameters, E7).</li>
+<li>P. Glasserman, <em>Monte Carlo Methods in Financial Engineering</em>, Springer, 2003: Chapter 4 (importance sampling by change of drift, as in <a class="xr" href="#lab7-3">Lab 7.3</a>).</li>
+</ul>
+<p><b>Code and datasets cited by the notes:</b> none.</p>
+</section>
+
+<section>
+<h2 id="code">Reference implementation (Python / NumPy)</h2>
+<p>Run as shown, output verbatim. It checks Itô's formula, Dambis–Dubins–Schwarz (<code>scipy.stats.kstest</code>, <code>scipy.stats.kurtosis</code>), Cameron–Martin importance sampling against the exact value, and the Girsanov construction of <a class="xr" href="#n7-21">Prop. 7.21</a> with 100,000 paths. It also runs the maximum-likelihood estimator of <a class="xr" href="#exo-7-7">E7</a>.</p>
+<pre><code>&quot;&quot;&quot;Lesson 7 — reference checks (NumPy/SciPy): Ito&#x27;s formula, Levy/Dambis-Dubins-Schwarz, Girsanov importance sampling,
+weak existence by Girsanov reweighting (Prop. 7.21, sign corrected).&quot;&quot;&quot;
+import numpy as np
+from scipy import stats
+
+rng = np.random.default_rng(7)
+
+print(&quot;1) Ito&#x27;s formula for f(x)=x^3 on [0,1] (2^14 steps, 500 paths): error with and without the 1/2 f&#x27;&#x27; term&quot;)
+n = 2**14
+dB = rng.standard_normal((500, n)) / np.sqrt(n)
+B = np.concatenate([np.zeros((500, 1)), np.cumsum(dB, axis=1)], axis=1)
+ito = np.sum(3 * B[:, :-1]**2 * dB, axis=1); half = np.sum(3 * B[:, :-1], axis=1) / n
+print(f&quot;   with: {np.mean(np.abs(B[:, -1]**3 - ito - half)):.4f}   without: {np.mean(np.abs(B[:, -1]**3 - ito)):.4f}&quot;)
+
+print(&quot;2) Dambis-Dubins-Schwarz: M = int (0.5+|B|) dB read at clock &lt;M&gt; = 0.5 is N(0, 0.5); at fixed time 1 it is not Gaussian&quot;)
+M_, dt, u = 20000, 1e-3, 0.5
+b = np.zeros(M_); x = np.zeros(M_); q = np.zeros(M_); stopped = np.full(M_, np.nan); x1 = None
+for k in range(3000):
+    sig = 0.5 + np.abs(b); d = np.sqrt(dt) * rng.standard_normal(M_); dq = sig**2 * dt
+    hit = np.isnan(stopped) &amp; (q + dq &gt;= u)
+    f = np.clip((u - q[hit]) / dq[hit], 0, 1)
+    stopped[hit] = x[hit] + sig[hit] * (f * d[hit] + np.sqrt(f * (1 - f) * dt) * rng.standard_normal(hit.sum()))
+    x += sig * d; b += d; q += dq
+    if k == 999: x1 = x.copy()
+    if not np.isnan(stopped).any() and x1 is not None: break
+print(f&quot;   KS p-value of M at clock u vs N(0,u): {stats.kstest(stopped / np.sqrt(u), &#x27;norm&#x27;).pvalue:.3f};  excess kurtosis at clock u: {stats.kurtosis(stopped):+.3f};  at time 1: {stats.kurtosis(x1):+.3f}&quot;)
+
+print(&quot;3) Cameron-Martin importance sampling for p = P(sup_{t&lt;=1} B_t &gt;= a), a = 3 (100 steps, exact bridge maxima)&quot;)
+def bridge_max(x0, x1, h, U): return 0.5 * (x0 + x1 + np.sqrt((x1 - x0)**2 - 2 * h * np.log(U)))
+a, nst, Mp = 3.0, 100, 20000
+exact = 2 * stats.norm.sf(a)
+for theta in [0.0, 3.0, 6.0]:
+    h = 1 / nst; z = np.zeros(Mp); w = np.zeros(Mp); smax = np.zeros(Mp)
+    for _ in range(nst):
+        dw = np.sqrt(h) * rng.standard_normal(Mp); zn = z + dw + theta * h
+        smax = np.maximum(smax, bridge_max(z, zn, h, rng.random(Mp))); z = zn; w += dw
+    est = np.where(smax &gt;= a, np.exp(-theta * w - 0.5 * theta**2), 0.0)
+    print(f&quot;   theta={theta}: estimate {est.mean():.3e} (relative s.e. {est.std()/np.sqrt(Mp)/max(est.mean(),1e-300):.3f});  exact {exact:.3e}&quot;)
+
+print(&quot;4) Weak existence for dX = 1{X&lt;=0} dt + eps dB (Prop. 7.21): Euler-Maruyama vs Girsanov reweighting of eps*W, 100,000 paths&quot;)
+for eps in [1.0, 0.3, 0.1]:
+    Mw, nn = 100000, 1000; h = 1 / nn
+    x = np.zeros(Mw); xn = np.zeros(Mw); y = np.zeros(Mw); L = np.zeros(Mw); Q = np.zeros(Mw)
+    for _ in range(nn):
+        x += (x &lt;= 0) * h + eps * np.sqrt(h) * rng.standard_normal(Mw)
+        xn -= (xn &lt;= 0) * h - eps * np.sqrt(h) * rng.standard_normal(Mw)
+        dw = np.sqrt(h) * rng.standard_normal(Mw); bb = (y &lt;= 0) / eps
+        L += bb * dw; Q += bb**2 * h; y += eps * dw
+    wplus, wminus = np.exp(L - 0.5 * Q), np.exp(-L - 0.5 * Q)
+    ess = wplus.sum()**2 / np.sum(wplus**2) / Mw
+    print(f&quot;   eps={eps}: E X_1 Euler(+b) {x.mean():.4f} | weights(+) {np.mean(y*wplus):.4f} (ESS/n {ess:.3f}) | Euler(-b) {xn.mean():.4f} | weights(-, notes&#x27; sign) {np.mean(y*wminus):.4f}&quot;)
+
+print(&quot;5) Girsanov likelihood for the Ornstein-Uhlenbeck drift: dX = -theta X dt + dB, theta_hat = -int X dX / int X^2 dt&quot;)
+theta, T, h, P = 2.0, 50.0, 0.01, 400
+x = np.zeros(P); num = np.zeros(P); den = np.zeros(P)
+for _ in range(int(T / h)):
+    dx = -theta * x * h + np.sqrt(h) * rng.standard_normal(P)
+    num -= x * dx; den += x**2 * h; x = x + dx
+th = num / den
+print(f&quot;   400 paths, T = {T}: mean theta_hat = {th.mean():.3f}, s.d. = {th.std(ddof=1):.3f}   (true 2; asymptotic s.d. sqrt(2 theta / T) = {np.sqrt(2*theta/T):.3f})&quot;)</code></pre>
+<p class="small"><b>Output</b> (run with Python 3.12.1, NumPy 2.5.3, SciPy 1.18.1, statsmodels 0.15.0):</p>
+<pre><code>1) Ito&#x27;s formula for f(x)=x^3 on [0,1] (2^14 steps, 500 paths): error with and without the 1/2 f&#x27;&#x27; term
+   with: 0.0161   without: 1.3675
+2) Dambis-Dubins-Schwarz: M = int (0.5+|B|) dB read at clock &lt;M&gt; = 0.5 is N(0, 0.5); at fixed time 1 it is not Gaussian
+   KS p-value of M at clock u vs N(0,u): 0.454;  excess kurtosis at clock u: +0.010;  at time 1: +6.732
+3) Cameron-Martin importance sampling for p = P(sup_{t&lt;=1} B_t &gt;= a), a = 3 (100 steps, exact bridge maxima)
+   theta=0.0: estimate 2.500e-03 (relative s.e. 0.141);  exact 2.700e-03
+   theta=3.0: estimate 2.705e-03 (relative s.e. 0.019);  exact 2.700e-03
+   theta=6.0: estimate 2.345e-03 (relative s.e. 0.170);  exact 2.700e-03
+4) Weak existence for dX = 1{X&lt;=0} dt + eps dB (Prop. 7.21): Euler-Maruyama vs Girsanov reweighting of eps*W, 100,000 paths
+   eps=1.0: E X_1 Euler(+b) 0.3732 | weights(+) 0.3742 (ESS/n 0.737) | Euler(-b) -0.6272 | weights(-, notes&#x27; sign) -0.6329
+   eps=0.3: E X_1 Euler(+b) 0.1942 | weights(+) 0.1954 (ESS/n 0.145) | Euler(-b) -0.8101 | weights(-, notes&#x27; sign) -0.8188
+   eps=0.1: E X_1 Euler(+b) 0.0749 | weights(+) 0.0744 (ESS/n 0.002) | Euler(-b) -0.9314 | weights(-, notes&#x27; sign) 0.0041
+5) Girsanov likelihood for the Ornstein-Uhlenbeck drift: dX = -theta X dt + dB, theta_hat = -int X dX / int X^2 dt
+   400 paths, T = 50.0: mean theta_hat = 2.037, s.d. = 0.299   (true 2; asymptotic s.d. sqrt(2 theta / T) = 0.283)</code></pre>
+</section>
+
+<section>
+<h2 id="cheat">Cheat sheet</h2>
+<div class="cheat">
+<div><h4>Itô's formula</h4><p><span class="nw">\(\dd f(X)=f'(X)\dd X+\frac12f''(X)\dd\br{X}\).</span> Several dimensions: <span class="nw">\(+\frac12\sum\partial^2_{ij}F\,\dd\br{X^i,X^j}\).</span> Diffusion: drift <span class="nw">\(\nabla F^\top b+\frac12\tr(\sigma\sigma^\top\nabla^2F)\).</span></p></div>
+<div><h4>Generator</h4><p><span class="nw">\(\mathcal L=b\cdot\nabla+\frac12\tr(a\nabla^2)\).</span> \(f(X_t)-\int\mathcal Lf(X)\) is a local martingale. BM: <span class="nw">\(\frac12\Delta\).</span> Langevin: <span class="nw">\(\Delta-\nabla U\cdot\nabla\),</span> invariant law <span class="nw">\(e^{-U}\).</span></p></div>
+<div><h4>Stochastic exponential</h4><p><span class="nw">\(\cE(X)=e^{X-\br{X}/2}\),</span> <span class="nw">\(\dd\cE=\cE\,\dd X\),</span> unique solution. A supermartingale if <span class="nw">\(X\in\Mloc\).</span></p></div>
+<div><h4>Lévy</h4><p>Continuous local martingale, \(\br{M^i,M^j}=\delta_{ij}t\) ⇒ BM. \(\int\sgn(B)\,\dd B\) is a BM.</p></div>
+<div><h4>DDS and Knight</h4><p>\(M_t=W_{\br{M}_t}\) if <span class="nw">\(\br{M}_\infty=\infty\).</span> Orthogonal martingales on their clocks are independent BMs.</p></div>
+<div><h4>Girsanov</h4><p><span class="nw">\(\dd\Q=\cE(L)_T\dd\P\),</span> \(\E\cE(L)_T=1\) ⇒ \(M-\br{M,L}\) is a \(\Q\)-local martingale; brackets unchanged. BM \(B\) ⇒ \(B-\br{B,L}\) is a \(\Q\)-BM.</p></div>
+<div><h4>Cameron–Martin</h4><p><span class="nw">\(\E\Phi(B+\int f)=\E[e^{\int f\dd B-\frac12\int f^2}\Phi(B)]\),</span> <span class="nw">\(f\in L^2\).</span> Importance sampling: simulate with drift, weight by the inverse density.</p></div>
+<div><h4>Novikov and applications</h4><p>\(\E e^{\br{L}_T/2}\lt\infty\) ⇒ <span class="nw">\(\E\cE(L)_T=1\).</span> Weak existence for bounded drift: <span class="nw">\(L=+\int b\cdot\dd X\).</span> KL of path laws <span class="nw">\(=\frac12\E\int|\sigma^{-1}(b_1-b_2)|^2\).</span></p></div>
+</div>
+</section>
+
+<section>
+<h2 id="selftest">Self-test</h2>
+<div class="qa">
+<details class="fold"><summary>1. Write Itô's formula for <span class="nw">\(f(B_t)\).</span></summary><div class="fb"><p><span class="nw">\(f(B_t)=f(0)+\int f'(B)\,\dd B+\frac12\int f''(B)\,\dd s\).</span></p></div></details>
+<details class="fold"><summary>2. Where does the \(\frac12f''\) come from?</summary><div class="fb"><p>From the second-order Taylor term: \(\sum\frac12f''(X_{t_i})(\Delta X)^2\to\frac12\int f''\,\dd\br{X}\) (<a class="xr" href="Lesson05.html#n5-44">Prop. 5.44</a>).</p></div></details>
+<details class="fold"><summary>3. What is the error of the ordinary chain rule for <span class="nw">\(B^3\)?</span></summary><div class="fb"><p><span class="nw">\(3\int_0^1B\,\dd s\),</span> with mean absolute value about 1.38 (<a class="xr" href="#lab7-1">Lab 7.1</a>: 1.36).</p></div></details>
+<details class="fold"><summary>4. Compute <span class="nw">\(\dd(e^{B_t-t/2})\).</span></summary><div class="fb"><p><span class="nw">\(e^{B_t-t/2}\,\dd B_t\):</span> the drift terms \(-\frac12\) and \(+\frac12\) cancel.</p></div></details>
+<details class="fold"><summary>5. Which factor is missing in the notes' last formula of Remark 7.3?</summary><div class="fb"><p>\(\frac12\) in front of <span class="nw">\(\int\tr(a\nabla^2F)\,\dd s\).</span></p></div></details>
+<details class="fold"><summary>6. When is \(e^{\lambda X}\) a local martingale, for <span class="nw">\(X=X_0+M+A\)?</span></summary><div class="fb"><p>When <span class="nw">\(A=-\frac\lambda2\br{M}\),</span> because then <span class="nw">\(e^{\lambda X}=e^{\lambda X_0}\cE(\lambda M)\).</span></p></div></details>
+<details class="fold"><summary>7. State Lévy's characterization and give a counterexample for each hypothesis.</summary><div class="fb"><p>Continuous local martingale with bracket \(t\) ⇒ BM. Counterexamples: \(N_t-\lambda t\) (not continuous), \(2B\) (bracket <span class="nw">\(4t\)),</span> \(B+t\) (not a local martingale).</p></div></details>
+<details class="fold"><summary>8. What sign error is in the notes' proof of Lévy's theorem?</summary><div class="fb"><p>\(\cE(N)=\exp(N+\frac12\br{N})\) should be <span class="nw">\(\exp(N-\frac12\br{N})\).</span></p></div></details>
+<details class="fold"><summary>9. State Dambis–Dubins–Schwarz.</summary><div class="fb"><p>\(M_t=W_{\br{M}_t}\) for some BM <span class="nw">\(W\),</span> if <span class="nw">\(M\in\Mloc\),</span> \(M_0=0\) and <span class="nw">\(\br{M}_\infty=\infty\).</span></p></div></details>
+<details class="fold"><summary>10. Why is \(M_1=\int_0^1(0.5+|B|)\,\dd B\) not Gaussian while \(M\) at clock time \(u\) is?</summary><div class="fb"><p>\(M_1\) mixes Gaussians with random variances <span class="nw">\(\br{M}_1\).</span> On its clock, the variance is fixed at \(u\) (<a class="xr" href="#lab7-2">Lab 7.2</a>: kurtosis 7.402 against −0.067).</p></div></details>
+<details class="fold"><summary>11. What does Knight's theorem add, and which hypothesis do the notes omit?</summary><div class="fb"><p>Orthogonal martingales become independent BMs on their own clocks. The notes omit <span class="nw">\(\br{M^i}_\infty=\infty\).</span></p></div></details>
+<details class="fold"><summary>12. When is \(\cE(L)\) a UI martingale on <span class="nw">\([0,\infty)\)?</span></summary><div class="fb"><p>If and only if \(\E\cE(L)_\infty=1\) (<a class="xr" href="#n7-12">Thm. 7.12</a>). Novikov/Kazamaki with \(T=\infty\) suffice.</p></div></details>
+<details class="fold"><summary>13. State Girsanov's theorem (finite horizon).</summary><div class="fb"><p>If \(\E\cE(L)_T=1\) and <span class="nw">\(\dd\Q=\cE(L)_T\dd\P\),</span> then every \(\P\)-local martingale \(M\) gives a \(\Q\)-local martingale \(M-\br{M,L}\) on <span class="nw">\([0,T]\).</span></p></div></details>
+<details class="fold"><summary>14. Does a change of measure change the bracket?</summary><div class="fb"><p>No: brackets are limits of quadratic sums in probability, and equivalent measures have the same null sets.</p></div></details>
+<details class="fold"><summary>15. What is wrong with the equation in Remark 7.15, and what is the correct one?</summary><div class="fb"><p>\(x=t+\int\ind_{x\gt0}\) is solved by <span class="nw">\(x=2t\).</span> The intended equation is <span class="nw">\(x=\int\ind_{x\le0}\),</span> which has no solution.</p></div></details>
+<details class="fold"><summary>16. State Cameron–Martin.</summary><div class="fb"><p>For deterministic <span class="nw">\(f\in L^2\),</span> \(B+\int f\) has density \(\exp(\int f\,\dd B-\frac12\int f^2)\) with respect to Wiener measure.</p></div></details>
+<details class="fold"><summary>17. How does Cameron–Martin give an importance sampler, and what limits it?</summary><div class="fb"><p>Simulate a drifted path, weight by the inverse density. Too much drift makes the weights degenerate (<a class="xr" href="#lab7-3">Lab 7.3</a>: relative error 0.216 at \(\theta=6\) against 0.018 at <span class="nw">\(\theta=3\)).</span></p></div></details>
+<details class="fold"><summary>18. Why is Novikov satisfied in Prop. 7.21?</summary><div class="fb"><p>\(\br{L}_T=\int|b|^2\le T\sup|b|^2\) is bounded.</p></div></details>
+<details class="fold"><summary>19. What does the notes' sign \(L=-\int b\cdot\dd X\) produce?</summary><div class="fb"><p>A weak solution of the SDE with drift <span class="nw">\(-b\).</span></p></div></details>
+<details class="fold"><summary>20. Why is Girsanov relevant for diffusion models?</summary><div class="fb"><p>It expresses the KL divergence between path laws of SDEs with different drifts as <span class="nw">\(\frac12\E\int|\sigma^{-1}\Delta b|^2\),</span> which links score-matching losses to sampling error.</p></div></details>
+<details class="fold"><summary>21. Give the maximum-likelihood estimator of \(\theta\) for <span class="nw">\(\dd X=-\theta X\,\dd t+\dd B\).</span></summary><div class="fb"><p>\(\hat\theta=-\int X\,\dd X/\int X^2\,\dd t=\frac{T-X_T^2}{2\int_0^TX^2\,\dd t}\) (<a class="xr" href="#exo-7-7">E7</a>).</p></div></details>
+</div>
+</section>
+
+<section>
+<h2 id="glossary">Glossary (English · French)</h2>
+<dl class="gloss">
+<dt>Itô's formula <span class="fr">· formule d'Itô</span></dt><dd>The chain rule of stochastic calculus.</dd>
+<dt>generator <span class="fr">· générateur infinitésimal</span></dt><dd><span class="nw">\(\mathcal L=b\cdot\nabla+\frac12\tr(a\nabla^2)\).</span></dd>
+<dt>diffusion coefficient / drift <span class="fr">· coefficient de diffusion / dérive</span></dt><dd>\(\sigma\) / <span class="nw">\(b\).</span></dd>
+<dt>stochastic (Doléans-Dade) exponential <span class="fr">· exponentielle stochastique (de Doléans-Dade)</span></dt><dd><span class="nw">\(\cE(X)=e^{X-\br{X}/2}\).</span></dd>
+<dt>Lévy's characterization <span class="fr">· caractérisation de Lévy</span></dt><dd>Bracket \(t\) ⇒ Brownian motion.</dd>
+<dt>time change <span class="fr">· changement de temps</span></dt><dd>\(M_t=W_{\br{M}_t}\) (Dambis–Dubins–Schwarz).</dd>
+<dt>change of (probability) measure <span class="fr">· changement de probabilité</span></dt><dd><span class="nw">\(\dd\Q=D\,\dd\P\).</span></dd>
+<dt>Radon–Nikodym density, likelihood ratio <span class="fr">· densité de Radon–Nikodym, rapport de vraisemblance</span></dt><dd><span class="nw">\(\cE(L)_T\).</span></dd>
+<dt>Girsanov's theorem <span class="fr">· théorème de Girsanov</span></dt><dd>Drift shift by \(\br{\cdot,L}\) under <span class="nw">\(\Q\).</span></dd>
+<dt>Cameron–Martin space <span class="fr">· espace de Cameron–Martin</span></dt><dd>Shifts <span class="nw">\(\int f\),</span> <span class="nw">\(f\in L^2\),</span> that keep the law absolutely continuous.</dd>
+<dt>Novikov's criterion <span class="fr">· critère de Novikov</span></dt><dd><span class="nw">\(\E e^{\br{L}_T/2}\lt\infty\).</span></dd>
+<dt>importance sampling <span class="fr">· échantillonnage préférentiel (d'importance)</span></dt><dd>Sample from a proposal, reweight by the density.</dd>
+<dt>effective sample size <span class="fr">· taille d'échantillon effective</span></dt><dd><span class="nw">\((\sum w)^2/\sum w^2\).</span></dd>
+<dt>weak solution / weak existence <span class="fr">· solution faible / existence faible</span></dt><dd>A solution on some probability space (<a class="xr" href="Lesson08.html">Lesson 8</a>).</dd>
+<dt>relative entropy (Kullback–Leibler divergence) <span class="fr">· entropie relative (divergence de Kullback–Leibler)</span></dt><dd>Between path laws, given by Girsanov.</dd>
+<dt>maximum-likelihood estimator <span class="fr">· estimateur du maximum de vraisemblance</span></dt><dd>Drift estimation from a path (<a class="xr" href="#exo-7-7">E7</a>).</dd>
+</dl>
+</section>
+
+
+<nav class="prevnext" aria-label="Previous and next lesson"><a href="Lesson06.html"><small>← Previous lesson</small>Lesson 6 · Stochastic integrals</a><a href="Lesson08.html"><small>Next lesson →</small>Lesson 8 · SDEs</a></nav>
+</main>
+</div>
+<footer class="foot"><p>Study companion for <em>Stochastic calculus in machine learning: sampling and generative modeling</em> (Alain Oliviero-Durmus). Built from the course notes (73 pp.) and, for Lesson 1, the whiteboard photos of the first lecture. Everything marked “Beyond the notes” is an addition; every number shown was produced by the code on the page or by the Python scripts listed in the lesson.</p><p><a href="#main">Back to top</a> · <a href="index.html">Home</a></p></footer>
+<script>
+/* ===== num.js — shared numerical code (identical on every page; also run by Node to measure the numbers quoted on the pages) ===== */
+(function (root) {
+  'use strict';
+  const N = {};
+
+  /* ---------- seeded RNG: xoshiro128** seeded by splitmix32 ---------- */
+  function splitmix32(a) {
+    return function () {
+      a |= 0; a = (a + 0x9e3779b9) | 0;
+      let t = a ^ (a >>> 16); t = Math.imul(t, 0x21f0aaad);
+      t = t ^ (t >>> 15); t = Math.imul(t, 0x735a2d97);
+      return ((t = t ^ (t >>> 15)) >>> 0);
+    };
+  }
+  N.rng = function (seed) {
+    const sm = splitmix32((seed >>> 0) ^ 0x5bd1e995);
+    let a = sm(), b = sm(), c = sm(), d = sm();
+    function next32() {
+      const r = Math.imul(rotl(Math.imul(b, 5), 7), 9) >>> 0;
+      const t = b << 9;
+      c ^= a; d ^= b; b ^= c; a ^= d; c ^= t; d = rotl(d, 11);
+      return r;
+    }
+    function rotl(x, k) { return (x << k) | (x >>> (32 - k)); }
+    let spare = 0, hasSpare = false;
+    const R = {
+      /** uniform on (0,1), 53-bit resolution, never exactly 0 or 1 */
+      u() {
+        const hi = next32() >>> 5, lo = next32() >>> 6;
+        return (hi * 67108864 + lo + 0.5) / 9007199254740992;
+      },
+      /** standard normal (Marsaglia polar method) */
+      g() {
+        if (hasSpare) { hasSpare = false; return spare; }
+        let x, y, s;
+        do { x = 2 * R.u() - 1; y = 2 * R.u() - 1; s = x * x + y * y; } while (s >= 1 || s === 0);
+        const f = Math.sqrt(-2 * Math.log(s) / s);
+        spare = y * f; hasSpare = true;
+        return x * f;
+      },
+      /** Float64Array of n standard normals */
+      gv(n) { const z = new Float64Array(n); for (let i = 0; i < n; i++) z[i] = R.g(); return z; },
+      /** exponential(rate) */
+      exp(rate) { return -Math.log(R.u()) / rate; },
+      /** Poisson(lambda) by inversion (small lambda) */
+      poisson(lam) { let k = 0, p = Math.exp(-lam), s = p; const u = R.u(); while (u > s && k < 1e6) { k++; p *= lam / k; s += p; } return k; },
+      int(n) { return Math.floor(R.u() * n); }
+    };
+    return R;
+  };
+
+  /* ---------- special functions ---------- */
+  const SQRTPI = Math.sqrt(Math.PI), SQRT2 = Math.SQRT2;
+  /** erfc(x), ~1e-15 relative accuracy: positive-term series for |x|<2.5, Lentz continued fraction beyond */
+  N.erfc = function (x) {
+    if (!isFinite(x)) return x > 0 ? 0 : 2;
+    if (x < 0) return 2 - N.erfc(-x);
+    if (x < 2.5) {
+      // erf(x) = 2/sqrt(pi) e^{-x^2} sum_{n>=0} 2^n x^{2n+1} / (1*3*...*(2n+1))
+      let term = x, sum = x, n = 0;
+      while (Math.abs(term) > 1e-17 * Math.abs(sum) && n < 200) { n++; term *= 2 * x * x / (2 * n + 1); sum += term; }
+      return 1 - 2 / SQRTPI * Math.exp(-x * x) * sum;
+    }
+    // continued fraction: erfc(x) = e^{-x^2}/sqrt(pi) * 1/(x+ (1/2)/(x+ 1/(x+ (3/2)/(x+ 2/(x+ ...)))))
+    const tiny = 1e-300;
+    let f = x, C = x, D = 0, i = 1;
+    for (; i < 500; i++) {
+      const a = i / 2;
+      D = x + a * D; if (Math.abs(D) < tiny) D = tiny; D = 1 / D;
+      C = x + a / C; if (Math.abs(C) < tiny) C = tiny;
+      const delta = C * D; f *= delta;
+      if (Math.abs(delta - 1) < 1e-16) break;
+    }
+    return Math.exp(-x * x) / SQRTPI / f;
+  };
+  N.erf = function (x) { return 1 - N.erfc(x); };
+  N.normPdf = function (x, m = 0, s = 1) { const z = (x - m) / s; return Math.exp(-0.5 * z * z) / (s * Math.sqrt(2 * Math.PI)); };
+  N.normCdf = function (x, m = 0, s = 1) { return 0.5 * N.erfc(-(x - m) / (s * SQRT2)); };
+  N.normSf = function (x, m = 0, s = 1) { return 0.5 * N.erfc((x - m) / (s * SQRT2)); };
+  /** inverse standard normal CDF (Acklam + one Halley step) */
+  N.normInv = function (p) {
+    if (p <= 0) return -Infinity; if (p >= 1) return Infinity;
+    const a = [-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02, 1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00];
+    const b = [-5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02, 6.680131188771972e+01, -1.328068155288572e+01];
+    const c = [-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00, -2.549732539343734e+00, 4.374664141464968e+00, 2.938163982698783e+00];
+    const d = [7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00, 3.754408661907416e+00];
+    const pl = 0.02425; let q, r, x;
+    if (p < pl) { q = Math.sqrt(-2 * Math.log(p)); x = (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1); }
+    else if (p <= 1 - pl) { q = p - 0.5; r = q * q; x = (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1); }
+    else { q = Math.sqrt(-2 * Math.log(1 - p)); x = -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1); }
+    const e = N.normCdf(x) - p, u = e * Math.sqrt(2 * Math.PI) * Math.exp(x * x / 2);
+    return x - u / (1 + x * u / 2);
+  };
+  /** log Gamma (Lanczos, g=7) */
+  N.lgamma = function (x) {
+    const g = 7, c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+    if (x < 0.5) return Math.log(Math.PI / Math.abs(Math.sin(Math.PI * x))) - N.lgamma(1 - x);
+    x -= 1; let a = c[0]; const t = x + g + 0.5;
+    for (let i = 1; i < g + 2; i++) a += c[i] / (x + i);
+    return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(a);
+  };
+
+
+  /* ---------- Gauss–Hermite quadrature for E[f(Z)], Z ~ N(0,1) (Numerical Recipes 'gauher' + rescaling) ---------- */
+  const ghCache = {};
+  N.gaussHermite = function (n) {
+    if (ghCache[n]) return ghCache[n];
+    const x = new Float64Array(n), w = new Float64Array(n), m = (n + 1) >> 1, PIM4 = 0.7511255444649425;
+    let z = 0, z1, pp = 0;
+    for (let i = 0; i < m; i++) {
+      if (i === 0) z = Math.sqrt(2 * n + 1) - 1.85575 * Math.pow(2 * n + 1, -0.16667);
+      else if (i === 1) z -= 1.14 * Math.pow(n, 0.426) / z;
+      else if (i === 2) z = 1.86 * z - 0.86 * x[0];
+      else if (i === 3) z = 1.91 * z - 0.91 * x[1];
+      else z = 2.0 * z - x[i - 2];
+      for (let its = 0; its < 100; its++) {
+        let p1 = PIM4, p2 = 0;
+        for (let j = 0; j < n; j++) { const p3 = p2; p2 = p1; p1 = z * Math.sqrt(2 / (j + 1)) * p2 - Math.sqrt(j / (j + 1)) * p3; }
+        pp = Math.sqrt(2 * n) * p2; z1 = z; z = z1 - p1 / pp;
+        if (Math.abs(z - z1) <= 1e-15) break;
+      }
+      x[i] = z; x[n - 1 - i] = -z; w[i] = 2 / (pp * pp); w[n - 1 - i] = w[i];
+    }
+    // convert from weight e^{-x^2} to the standard normal density
+    const xs = new Float64Array(n), ws = new Float64Array(n);
+    for (let i = 0; i < n; i++) { xs[i] = Math.SQRT2 * x[i]; ws[i] = w[i] / Math.sqrt(Math.PI); }
+    return (ghCache[n] = { x: xs, w: ws });
+  };
+  /** E[f(Z)] for Z ~ N(0,1) by n-point Gauss–Hermite */
+  N.gaussExpect = function (f, n = 64) { const q = N.gaussHermite(n); let s = 0; for (let i = 0; i < n; i++) s += q.w[i] * f(q.x[i]); return s; };
+
+  /* ---------- basic statistics ---------- */
+  N.sum = function (a) { let s = 0; for (let i = 0; i < a.length; i++) s += a[i]; return s; };
+  N.mean = function (a) { return a.length ? N.sum(a) / a.length : NaN; };
+  N.variance = function (a) { // unbiased, Welford
+    let m = 0, s = 0; for (let i = 0; i < a.length; i++) { const d = a[i] - m; m += d / (i + 1); s += d * (a[i] - m); }
+    return a.length > 1 ? s / (a.length - 1) : NaN;
+  };
+  N.std = function (a) { return Math.sqrt(N.variance(a)); };
+  N.se = function (a) { return N.std(a) / Math.sqrt(a.length); };
+  N.cov = function (a, b) { const ma = N.mean(a), mb = N.mean(b); let s = 0; for (let i = 0; i < a.length; i++) s += (a[i] - ma) * (b[i] - mb); return s / (a.length - 1); };
+  N.sorted = function (a) { return Float64Array.from(a).sort(); };
+  /** quantile of a sorted array, linear interpolation (numpy default) */
+  N.quantile = function (s, p) { const h = (s.length - 1) * p, i = Math.floor(h), f = h - i; return i + 1 < s.length ? s[i] + f * (s[i + 1] - s[i]) : s[s.length - 1]; };
+  N.maxAbs = function (a) { let m = 0; for (let i = 0; i < a.length; i++) { const v = Math.abs(a[i]); if (v > m) m = v; } return m; };
+  N.minmax = function (a) { let lo = Infinity, hi = -Infinity; for (let i = 0; i < a.length; i++) { if (a[i] < lo) lo = a[i]; if (a[i] > hi) hi = a[i]; } return [lo, hi]; };
+  /** histogram as density: returns {edges, density, counts, total, outside} */
+  N.histogram = function (a, nb, lo, hi) {
+    const counts = new Float64Array(nb); let outside = 0; const w = (hi - lo) / nb;
+    for (let i = 0; i < a.length; i++) { const k = Math.floor((a[i] - lo) / w); if (k >= 0 && k < nb) counts[k]++; else if (a[i] === hi) counts[nb - 1]++; else outside++; }
+    const edges = new Float64Array(nb + 1); for (let k = 0; k <= nb; k++) edges[k] = lo + k * w;
+    const density = new Float64Array(nb); for (let k = 0; k < nb; k++) density[k] = counts[k] / (a.length * w);
+    return { edges, density, counts, total: a.length, outside };
+  };
+  /** Kolmogorov–Smirnov statistic sup |F_n - F| for a continuous cdf */
+  N.ksStat = function (a, cdf) {
+    const s = N.sorted(a), n = s.length; let d = 0;
+    for (let i = 0; i < n; i++) { const F = cdf(s[i]); d = Math.max(d, (i + 1) / n - F, F - i / n); }
+    return d;
+  };
+  /** asymptotic KS p-value (Kolmogorov distribution), with Stephens' small-n correction */
+  N.ksPValue = function (d, n) {
+    const x = (Math.sqrt(n) + 0.12 + 0.11 / Math.sqrt(n)) * d; if (x < 0.2) return 1;
+    let s = 0; for (let k = 1; k < 101; k++) { const t = 2 * Math.pow(-1, k - 1) * Math.exp(-2 * k * k * x * x); s += t; if (Math.abs(t) < 1e-16) break; }
+    return Math.min(1, Math.max(0, s));
+  };
+  N.linspace = function (a, b, n) { const x = new Float64Array(n); for (let i = 0; i < n; i++) x[i] = a + (b - a) * i / (n - 1); return x; };
+  N.cumsum = function (a, x0 = 0) { const c = new Float64Array(a.length + 1); c[0] = x0; for (let i = 0; i < a.length; i++) c[i + 1] = c[i] + a[i]; return c; };
+  /** trapezoid integral of samples y on grid x */
+  N.trapz = function (x, y) { let s = 0; for (let i = 1; i < x.length; i++) s += 0.5 * (y[i] + y[i - 1]) * (x[i] - x[i - 1]); return s; };
+
+  /* ---------- Brownian motion and SDE helpers ---------- */
+  /** standard BM on [0,T] with n steps: Float64Array(n+1), B[0]=0 */
+  N.bm = function (R, n, T = 1) { const B = new Float64Array(n + 1), s = Math.sqrt(T / n); for (let i = 1; i <= n; i++) B[i] = B[i - 1] + s * R.g(); return B; };
+  /** increments of BM */
+  N.bmInc = function (R, n, T = 1) { const s = Math.sqrt(T / n), d = new Float64Array(n); for (let i = 0; i < n; i++) d[i] = s * R.g(); return d; };
+  /** restrict a fine path to every m-th point */
+  N.coarsen = function (B, m) { const k = Math.floor((B.length - 1) / m); const C = new Float64Array(k + 1); for (let i = 0; i <= k; i++) C[i] = B[i * m]; return C; };
+  /** Euler–Maruyama in 1D: dX = b(t,X)dt + s(t,X)dB, using given increments dB (length n) */
+  N.eulerPath = function (x0, b, s, T, dB) {
+    const n = dB.length, h = T / n, X = new Float64Array(n + 1); X[0] = x0;
+    for (let i = 0; i < n; i++) { const t = i * h, x = X[i]; X[i + 1] = x + b(t, x) * h + s(t, x) * dB[i]; }
+    return X;
+  };
+
+  /* ---------- formatting (shared by page outputs and measured JSON) ---------- */
+  const MINUS = '−';
+  function withMinus(str) { return str.replace(/^-/, MINUS).replace(/e-/, 'e' + MINUS); }
+  /** spec: number = decimals; {d}, {sig}, {sci}, {pct}, {int} */
+  N.fmt = function (x, spec) {
+    if (x === null || x === undefined || (typeof x === 'number' && isNaN(x))) return '—';
+    if (typeof x === 'string') return x;
+    if (!isFinite(x)) return x > 0 ? '∞' : MINUS + '∞';
+    if (typeof spec === 'number') spec = { d: spec };
+    spec = spec || { sig: 4 };
+    let s;
+    if (spec.int) s = Math.round(x).toLocaleString('en-US');
+    else if (spec.pct !== undefined) s = (100 * x).toFixed(spec.pct) + '%';
+    else if (spec.sci !== undefined && x === 0) s = '0';
+    else if (spec.sci !== undefined) {
+      const e = x.toExponential(spec.sci); const m = e.split('e'); s = m[0] + ' × 10^' + (m[1].replace('+', ''));
+      s = s.replace(/10\^(-?\d+)/, (a, p) => '10' + toSup(p));
+    } else if (spec.d !== undefined) s = x.toFixed(spec.d);
+    else if (spec.sig !== undefined) {
+      if (x !== 0 && (Math.abs(x) < 1e-3 || Math.abs(x) >= 1e6)) { const e = x.toExponential(spec.sig - 1).split('e'); s = e[0] + ' × 10' + toSup(e[1].replace('+', '')); }
+      else s = Number(x.toPrecision(spec.sig)).toString();
+    } else s = String(x);
+    if (s === '-0' || /^-0\.0*$/.test(s)) s = s.slice(1);
+    return withMinus(s);
+  };
+  function toSup(p) { const m = { '-': '⁻', '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹' }; return String(p).split('').map(c => m[c] || c).join(''); }
+  N.fmtPM = function (m, se, d) { return N.fmt(m, d) + ' ± ' + N.fmt(se, d); };
+
+  if (typeof module !== 'undefined' && module.exports) module.exports = N;
+  root.N = N;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+</script><script>
+/* ===== plot.js — small canvas chart library (theme-aware, responsive, crosshair tooltip, keyboard) ===== */
+(function (root) {
+  'use strict';
+  const P = {};
+  const charts = new Set();
+
+  function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#888'; }
+  function colorOf(c) {
+    if (!c) return css('--s1');
+    if (/^s\d$/.test(c)) return css('--' + c);
+    if (c === 'muted') return css('--series-muted');
+    if (c === 'ink') return css('--chart-ink');
+    if (c === 'ink2') return css('--chart-ink-2');
+    return c;
+  }
+  function withAlpha(hex, a) {
+    if (hex.startsWith('#') && (hex.length === 7)) { const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16); return `rgba(${r},${g},${b},${a})`; }
+    return hex;
+  }
+  /* nice ticks */
+  function niceStep(span, target) {
+    const raw = span / Math.max(1, target), mag = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / mag;
+    return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * mag;
+  }
+  function ticks(lo, hi, target) {
+    if (!(hi > lo)) { return [lo]; }
+    const st = niceStep(hi - lo, target), out = [];
+    for (let v = Math.ceil(lo / st - 1e-9) * st; v <= hi + st * 1e-9; v += st) out.push(Math.abs(v) < st * 1e-9 ? 0 : v);
+    return out;
+  }
+  function logTicks(lo, hi) { const out = []; for (let e = Math.ceil(Math.log10(lo) - 1e-9); e <= Math.floor(Math.log10(hi) + 1e-9); e++) out.push(Math.pow(10, e)); return out; }
+  function fmtTick(v, step) {
+    if (v === 0) return '0';
+    const a = Math.abs(v);
+    let s;
+    if (a >= 1e5 || a < 1e-3) { const e = Math.round(Math.log10(a)); if (Math.abs(a / Math.pow(10, e) - 1) < 1e-9) s = (v < 0 ? '-' : '') + '1e' + e; else s = v.toExponential(1); }
+    else { const dec = Math.max(0, -Math.floor(Math.log10(step || a) + 1e-9)); s = v.toFixed(Math.min(dec, 6)); }
+    return s.replace(/^-/, '−');
+  }
+  function extent(spec) {
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    const upd = (x, y) => { if (isFinite(x)) { if (x < x0) x0 = x; if (x > x1) x1 = x; } if (isFinite(y) && (!spec.logy || y > 0)) { if (y < y0) y0 = y; if (y > y1) y1 = y; } };
+    for (const s of spec.series) {
+      if (s.type === 'hist') { upd(s.edges[0], 0); upd(s.edges[s.edges.length - 1], 0); for (let i = 0; i < s.density.length; i++) upd(NaN, s.density[i]); if (!spec.logy) upd(NaN, 0); }
+      else if (s.type === 'lines') { for (const p of s.paths) for (let i = 0; i < p.y.length; i++) upd(p.x[i], p.y[i]); }
+      else if (s.type === 'band') { for (let i = 0; i < s.x.length; i++) { upd(s.x[i], s.y0[i]); upd(s.x[i], s.y1[i]); } }
+      else if (s.type === 'bars') { for (let i = 0; i < s.x.length; i++) { upd(s.x[i], s.y[i]); } if (!spec.logy) upd(NaN, 0); }
+      else if (s.x) { for (let i = 0; i < s.x.length; i++) upd(s.x[i], s.y[i]); }
+    }
+    for (const h of (spec.hlines || [])) upd(NaN, h.y);
+    return [x0, x1, y0, y1];
+  }
+
+  function Chart(container, spec) {
+    this.el = container; this.spec = spec;
+    container.classList.add('plot');
+    container.innerHTML = '';
+    this.titleEl = document.createElement('div'); this.titleEl.className = 'plot-title'; container.appendChild(this.titleEl);
+    this.subEl = document.createElement('div'); this.subEl.className = 'plot-sub'; container.appendChild(this.subEl);
+    this.setTitles(spec);
+    this.wrap = document.createElement('div'); this.wrap.style.position = 'relative';
+    this.canvas = document.createElement('canvas'); this.overlay = document.createElement('canvas');
+    this.overlay.className = 'ov'; this.overlay.style.position = 'absolute'; this.overlay.style.left = '0'; this.overlay.style.top = '0'; this.overlay.style.pointerEvents = 'none'; this.overlay.style.background = 'transparent';
+    this.canvas.setAttribute('role', 'img'); this.canvas.tabIndex = 0;
+    this.canvas.setAttribute('aria-label', (spec.aria || spec.title || 'chart') + '. Use left and right arrow keys to read values.');
+    this.tip = document.createElement('div'); this.tip.className = 'tip'; this.tip.setAttribute('aria-hidden', 'true');
+    this.wrap.appendChild(this.canvas); this.wrap.appendChild(this.overlay); this.wrap.appendChild(this.tip);
+    container.appendChild(this.wrap);
+    this.legendEl = document.createElement('div'); this.legendEl.className = 'legend'; container.appendChild(this.legendEl);
+    this.live = document.createElement('div'); this.live.className = 'sr-only'; this.live.setAttribute('aria-live', 'polite'); container.appendChild(this.live);
+    this.hoverIdx = -1;
+    const onMove = (e) => { const r = this.canvas.getBoundingClientRect(); this.hover(e.clientX - r.left, e.clientY - r.top); };
+    this.canvas.addEventListener('pointermove', onMove);
+    this.canvas.addEventListener('pointerdown', onMove);
+    this.canvas.addEventListener('pointerleave', () => this.clearHover());
+    this.canvas.addEventListener('blur', () => this.clearHover());
+    this.canvas.addEventListener('keydown', (e) => this.key(e));
+    charts.add(this);
+    this.ro = new ResizeObserver(() => this.draw());
+    this.ro.observe(container);
+    this.draw();
+  }
+  Chart.prototype.setTitles = function (spec) {
+    this.titleEl.textContent = spec.title || ''; this.titleEl.style.display = spec.title ? '' : 'none';
+    this.subEl.textContent = spec.subtitle || ''; this.subEl.style.display = spec.subtitle ? '' : 'none';
+    if (this.canvas) this.canvas.setAttribute('aria-label', (spec.aria || spec.title || 'chart') + '. Use left and right arrow keys to read values.');
+  };
+  Chart.prototype.update = function (spec) { this.spec = spec; this.setTitles(spec); this.hoverIdx = -1; this.lastHover = null; if (this.tip) this.tip.style.display = 'none'; this.draw(); };
+  Chart.prototype.draw = function () {
+    const spec = this.spec, cv = this.canvas, dpr = window.devicePixelRatio || 1;
+    const W = Math.max(240, this.el.clientWidth || 600);
+    const H = spec.height || Math.round(Math.max(210, Math.min(340, W * 0.58)));
+    for (const c of [cv, this.overlay]) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); c.style.width = W + 'px'; c.style.height = H + 'px'; }
+    const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = css('--surface'); ctx.fillRect(0, 0, W, H);
+    let [x0, x1, y0, y1] = extent(spec);
+    if (spec.xlim) { x0 = spec.xlim[0]; x1 = spec.xlim[1]; }
+    if (spec.ylim) { y0 = spec.ylim[0]; y1 = spec.ylim[1]; }
+    else if (isFinite(y0)) { if (spec.logy) { y0 = y0 / 1.6; y1 = y1 * 1.6; } else { const pad = (y1 - y0) * 0.06 || Math.abs(y1) * 0.1 || 1; if (y0 !== 0) y0 -= pad; y1 += pad; } }
+    if (!isFinite(x0)) { x0 = 0; x1 = 1; } if (!isFinite(y0)) { y0 = 0; y1 = 1; }
+    if (x1 === x0) { x1 = x0 + 1; } if (y1 === y0) { y1 = y0 + 1; }
+    const font = '12px ' + (getComputedStyle(document.body).getPropertyValue('--sans') || 'system-ui');
+    ctx.font = font;
+    const nyt = H < 260 ? 4 : 5, nxt = W < 420 ? 4 : W < 640 ? 6 : 8;
+    const yt = spec.logy ? logTicks(y0, y1) : ticks(y0, y1, nyt);
+    const ystep = yt.length > 1 ? yt[1] - yt[0] : (y1 - y0);
+    const ylabels = yt.map(v => spec.logy ? fmtTick(v, v) : fmtTick(v, ystep));
+    const yw = Math.max(...ylabels.map(s => ctx.measureText(s).width), 10);
+    const m = { l: Math.ceil(yw) + 12, r: 14, t: spec.ylab ? 24 : 12, b: spec.xlab ? 40 : 26 };
+    const pw = W - m.l - m.r, ph = H - m.t - m.b;
+    const X = (x) => m.l + (x - x0) / (x1 - x0) * pw;
+    const Y = spec.logy ? (y) => m.t + (1 - (Math.log10(Math.max(y, 1e-300)) - Math.log10(y0)) / (Math.log10(y1) - Math.log10(y0))) * ph : (y) => m.t + (1 - (y - y0) / (y1 - y0)) * ph;
+    this.geom = { m, pw, ph, X, Y, x0, x1, y0, y1, W, H };
+    // grid & axes
+    ctx.lineWidth = 1; ctx.strokeStyle = css('--grid');
+    ctx.fillStyle = css('--chart-ink-2'); ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    yt.forEach((v, i) => { const y = Math.round(Y(v)) + 0.5; if (y < m.t - 1 || y > m.t + ph + 1) return; ctx.beginPath(); ctx.moveTo(m.l, y); ctx.lineTo(m.l + pw, y); ctx.stroke(); ctx.fillText(ylabels[i], m.l - 6, y); });
+    const xt = spec.xticks || ticks(x0, x1, nxt), xstep = xt.length > 1 ? xt[1] - xt[0] : 1;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    xt.forEach(v => { const x = Math.round(X(v)) + 0.5; if (x < m.l - 1 || x > m.l + pw + 1) return; ctx.strokeStyle = css('--grid'); ctx.beginPath(); ctx.moveTo(x, m.t); ctx.lineTo(x, m.t + ph); ctx.stroke(); ctx.fillText(spec.xtickfmt ? spec.xtickfmt(v) : fmtTick(v, xstep), x, m.t + ph + 6); });
+    ctx.strokeStyle = css('--axis'); ctx.beginPath(); ctx.moveTo(m.l + 0.5, m.t); ctx.lineTo(m.l + 0.5, m.t + ph + 0.5); ctx.lineTo(m.l + pw, m.t + ph + 0.5); ctx.stroke();
+    if (!spec.logy && y0 < 0 && y1 > 0) { ctx.strokeStyle = css('--axis'); const yz = Math.round(Y(0)) + 0.5; ctx.beginPath(); ctx.moveTo(m.l, yz); ctx.lineTo(m.l + pw, yz); ctx.stroke(); }
+    ctx.fillStyle = css('--chart-ink-2');
+    if (spec.xlab) { ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(spec.xlab, m.l + pw / 2, H - 4); }
+    if (spec.ylab) { ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText(spec.ylab, 4, 4); }
+    // series
+    ctx.save(); ctx.beginPath(); ctx.rect(m.l, m.t - 1, pw, ph + 2); ctx.clip();
+    for (const s of spec.series) drawSeries(ctx, s, X, Y, spec, m, ph);
+    for (const h of (spec.hlines || [])) {
+      ctx.strokeStyle = colorOf(h.color || 'ink2'); ctx.lineWidth = h.width || 1.25; ctx.setLineDash(h.dash || [5, 4]);
+      const y = Y(h.y); ctx.beginPath(); ctx.moveTo(m.l, y); ctx.lineTo(m.l + pw, y); ctx.stroke(); ctx.setLineDash([]);
+      if (h.label) { ctx.fillStyle = css('--chart-ink-2'); ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.fillText(h.label, m.l + pw - 4, y - 3); }
+    }
+    for (const v of (spec.vlines || [])) {
+      ctx.strokeStyle = colorOf(v.color || 'ink2'); ctx.lineWidth = v.width || 1.25; ctx.setLineDash(v.dash || [5, 4]);
+      const x = X(v.x); ctx.beginPath(); ctx.moveTo(x, m.t); ctx.lineTo(x, m.t + ph); ctx.stroke(); ctx.setLineDash([]);
+      if (v.label) { ctx.fillStyle = css('--chart-ink-2'); ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText(v.label, x + 4, m.t + 2); }
+    }
+    for (const t of (spec.labels || [])) { ctx.fillStyle = css('--chart-ink'); ctx.textAlign = t.align || 'left'; ctx.textBaseline = 'middle'; ctx.fillText(t.text, X(t.x) + (t.dx || 0), Y(t.y) + (t.dy || 0)); }
+    ctx.restore();
+    this.legend();
+    if (this.hoverIdx >= 0 && this.lastHover) this.hover(this.lastHover[0], this.lastHover[1]);
+  };
+  function drawSeries(ctx, s, X, Y, spec, m, ph) {
+    const col = colorOf(s.color);
+    ctx.setLineDash(s.dash || []);
+    if (s.type === 'hist') {
+      const base = spec.logy ? m.t + ph : Y(0);
+      ctx.fillStyle = withAlpha(col, s.alpha === undefined ? 0.55 : s.alpha);
+      for (let i = 0; i < s.density.length; i++) {
+        const xa = X(s.edges[i]), xb = X(s.edges[i + 1]), y = Y(s.density[i]);
+        const gap = (xb - xa) > 4 ? 1 : 0;
+        if (s.density[i] > 0) ctx.fillRect(xa + gap / 2, Math.min(y, base), Math.max(0.5, xb - xa - gap), Math.abs(base - y));
+      }
+      return;
+    }
+    if (s.type === 'bars') {
+      const base = spec.logy ? m.t + ph : Y(0); const w = s.width || 10; ctx.fillStyle = col;
+      for (let i = 0; i < s.x.length; i++) { const x = X(s.x[i]), y = Y(s.y[i]); ctx.fillRect(x - w / 2, Math.min(y, base), w, Math.abs(base - y)); }
+      return;
+    }
+    if (s.type === 'band') {
+      ctx.fillStyle = withAlpha(col, s.alpha === undefined ? 0.14 : s.alpha); ctx.beginPath();
+      for (let i = 0; i < s.x.length; i++) { const x = X(s.x[i]), y = Y(s.y1[i]); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+      for (let i = s.x.length - 1; i >= 0; i--) ctx.lineTo(X(s.x[i]), Y(s.y0[i]));
+      ctx.closePath(); ctx.fill(); return;
+    }
+    if (s.type === 'points') {
+      const r = s.r || 3.5; ctx.fillStyle = col; ctx.strokeStyle = css('--surface'); ctx.lineWidth = s.ring === false ? 0 : 1.5;
+      for (let i = 0; i < s.x.length; i++) { if (!isFinite(s.y[i]) || (spec.logy && s.y[i] <= 0)) continue; ctx.beginPath(); ctx.arc(X(s.x[i]), Y(s.y[i]), r, 0, 2 * Math.PI); ctx.fill(); if (s.ring !== false) ctx.stroke(); }
+      return;
+    }
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    const drawPath = (x, y, step) => {
+      ctx.beginPath(); let pen = false;
+      for (let i = 0; i < x.length; i++) {
+        const yy = y[i]; if (!isFinite(yy) || (spec.logy && yy <= 0)) { pen = false; continue; }
+        const px = X(x[i]), py = Y(yy);
+        if (!pen) { ctx.moveTo(px, py); pen = true; }
+        else if (step) { ctx.lineTo(px, Y(y[i - 1])); ctx.lineTo(px, py); }
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    };
+    if (s.type === 'lines') {
+      ctx.strokeStyle = withAlpha(col, s.alpha === undefined ? 0.35 : s.alpha); ctx.lineWidth = s.width || 1;
+      for (const p of s.paths) drawPath(p.x, p.y, false);
+    } else {
+      ctx.strokeStyle = s.alpha !== undefined ? withAlpha(col, s.alpha) : col; ctx.lineWidth = s.width || 2;
+      drawPath(s.x, s.y, s.type === 'step');
+      if (s.markers) { ctx.setLineDash([]); ctx.fillStyle = col; ctx.strokeStyle = css('--surface'); ctx.lineWidth = 1.5; for (let i = 0; i < s.x.length; i++) { if (!isFinite(s.y[i]) || (spec.logy && s.y[i] <= 0)) continue; ctx.beginPath(); ctx.arc(X(s.x[i]), Y(s.y[i]), 3.5, 0, 2 * Math.PI); ctx.fill(); ctx.stroke(); } }
+    }
+    ctx.setLineDash([]);
+  }
+  Chart.prototype.legend = function () {
+    const el = this.legendEl; el.innerHTML = '';
+    const items = this.spec.series.filter(s => s.label);
+    if (items.length + (this.spec.hlines || []).filter(h => h.legend).length < 2 && !this.spec.forceLegend) { el.style.display = 'none'; return; }
+    el.style.display = '';
+    const add = (label, col, kind) => { const li = document.createElement('span'); li.className = 'li'; const k = document.createElement('span'); k.className = 'key ' + kind; if (kind === 'box' || kind === 'dot') k.style.background = col; else k.style.borderTopColor = col; li.appendChild(k); li.appendChild(document.createTextNode(label)); el.appendChild(li); };
+    for (const s of items) { const col = colorOf(s.color); const kind = s.type === 'hist' || s.type === 'bars' || s.type === 'band' ? 'box' : s.type === 'points' ? 'dot' : (s.dash ? 'dash' : ''); add(s.label, kind === 'box' ? withAlpha(col, 0.7) : col, kind); }
+    for (const h of (this.spec.hlines || [])) if (h.legend) add(h.legend, colorOf(h.color || 'ink2'), 'dash');
+  };
+  // ---- hover / keyboard ----
+  function hoverSeries(spec) { return spec.series.filter(s => (s.type === 'line' || s.type === 'step' || s.type === 'points' || s.type === 'hist' || s.type === 'bars') && s.label && s.tooltip !== false); }
+  Chart.prototype.gridX = function () {
+    const hs = hoverSeries(this.spec); if (!hs.length) return null;
+    const s = hs.find(t => t.type !== 'hist') || hs[0];
+    if (s.type === 'hist') { const c = []; for (let i = 0; i < s.density.length; i++) c.push(0.5 * (s.edges[i] + s.edges[i + 1])); return c; }
+    return s.x;
+  };
+  Chart.prototype.hover = function (px, py) {
+    const g = this.geom; if (!g) return; const gx = this.gridX(); if (!gx || !gx.length) return;
+    this.lastHover = [px, py];
+    const xv = g.x0 + (px - g.m.l) / g.pw * (g.x1 - g.x0);
+    let best = 0, bd = Infinity; for (let i = 0; i < gx.length; i++) { const d = Math.abs(gx[i] - xv); if (d < bd) { bd = d; best = i; } }
+    this.showIdx(best, gx);
+  };
+  Chart.prototype.showIdx = function (idx, gx) {
+    gx = gx || this.gridX(); if (!gx) return; this.hoverIdx = idx;
+    const g = this.geom, ov = this.overlay, dpr = window.devicePixelRatio || 1, ctx = ov.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, g.W, g.H);
+    const xv = gx[idx], x = g.X(xv);
+    if (x < g.m.l - 1 || x > g.m.l + g.pw + 1) return;
+    ctx.strokeStyle = css('--axis'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(Math.round(x) + 0.5, g.m.t); ctx.lineTo(Math.round(x) + 0.5, g.m.t + g.ph); ctx.stroke();
+    const rows = [];
+    for (const s of hoverSeries(this.spec)) {
+      let yv, xx = xv;
+      if (s.type === 'hist') { let k = -1; for (let i = 0; i < s.density.length; i++) if (xv >= s.edges[i] && xv <= s.edges[i + 1]) { k = i; break; } if (k < 0) continue; yv = s.density[k]; }
+      else { let bi = 0, bd = Infinity; for (let i = 0; i < s.x.length; i++) { const d = Math.abs(s.x[i] - xv); if (d < bd) { bd = d; bi = i; } } if (bd > Math.abs(g.x1 - g.x0) * 0.05 && s.x.length > 1) continue; yv = s.y[bi]; xx = s.x[bi]; }
+      if (!isFinite(yv)) continue;
+      const col = colorOf(s.color);
+      if (s.type !== 'hist' && s.type !== 'bars') { ctx.fillStyle = col; ctx.strokeStyle = css('--surface'); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(g.X(xx), g.Y(yv), 4, 0, 2 * Math.PI); ctx.fill(); ctx.stroke(); }
+      rows.push({ label: s.label, v: yv, col });
+    }
+    const fx = this.spec.xfmt || ((v) => fmtNum(v)), fy = this.spec.yfmt || ((v) => fmtNum(v));
+    const tip = this.tip; tip.innerHTML = '';
+    const head = document.createElement('div'); head.textContent = (this.spec.xname || 'x') + ' = ' + fx(xv); head.style.color = css('--chart-ink-2'); tip.appendChild(head);
+    for (const r of rows) { const d = document.createElement('div'); const k = document.createElement('span'); k.className = 'tk'; k.style.borderTopColor = r.col; const v = document.createElement('span'); v.className = 'tv'; v.textContent = fy(r.v); d.appendChild(k); d.appendChild(v); d.appendChild(document.createTextNode('  ' + r.label)); tip.appendChild(d); }
+    tip.style.display = 'block';
+    const tw = tip.offsetWidth, left = x + 12 + tw > g.W ? x - 12 - tw : x + 12;
+    tip.style.left = Math.max(0, left) + 'px'; tip.style.top = (g.m.t + 4) + 'px';
+    this.live.textContent = head.textContent + '; ' + rows.map(r => r.label + ' ' + fy(r.v)).join('; ');
+  };
+  Chart.prototype.clearHover = function () { this.hoverIdx = -1; this.lastHover = null; this.tip.style.display = 'none'; const g = this.geom; if (g) { const ctx = this.overlay.getContext('2d'); ctx.clearRect(0, 0, this.overlay.width, this.overlay.height); } };
+  Chart.prototype.key = function (e) {
+    const gx = this.gridX(); if (!gx || !gx.length) return;
+    let i = this.hoverIdx < 0 ? 0 : this.hoverIdx; const stepBig = Math.max(1, Math.round(gx.length / 20));
+    if (e.key === 'ArrowRight') i = Math.min(gx.length - 1, i + (e.shiftKey ? stepBig : 1));
+    else if (e.key === 'ArrowLeft') i = Math.max(0, i - (e.shiftKey ? stepBig : 1));
+    else if (e.key === 'Home') i = 0; else if (e.key === 'End') i = gx.length - 1;
+    else if (e.key === 'Escape') { this.clearHover(); return; } else return;
+    e.preventDefault(); this.showIdx(i, gx);
+  };
+  function fmtNum(v) { if (!isFinite(v)) return String(v); const a = Math.abs(v); let s = (a !== 0 && (a < 1e-3 || a >= 1e5)) ? v.toExponential(3) : Number(v.toPrecision(4)).toString(); return s.replace(/^-/, '−'); }
+
+  P.chart = function (container, spec) { if (container._chart) { container._chart.update(spec); return container._chart; } const c = new Chart(container, spec); container._chart = c; return c; };
+  P.redrawAll = function () { for (const c of charts) { if (document.body.contains(c.el)) c.draw(); else charts.delete(c); } };
+  /** table view: columns = [names], rows = [[...]] */
+  P.table = function (container, caption, columns, rows) {
+    container.innerHTML = '';
+    const d = document.createElement('details'); d.className = 'tableview';
+    const s = document.createElement('summary'); s.textContent = caption || 'Show values as a table'; d.appendChild(s);
+    const w = document.createElement('div'); w.className = 'tw'; const t = document.createElement('table'); t.className = 'compact';
+    const thead = document.createElement('thead'), tr = document.createElement('tr');
+    columns.forEach(c => { const th = document.createElement('th'); th.textContent = c; th.scope = 'col'; tr.appendChild(th); }); thead.appendChild(tr); t.appendChild(thead);
+    const tb = document.createElement('tbody');
+    rows.forEach(r => { const tr2 = document.createElement('tr'); r.forEach((v, j) => { const td = document.createElement('td'); td.textContent = typeof v === 'number' ? fmtNum(v) : v; if (typeof v === 'number') td.className = 'num'; tr2.appendChild(td); }); tb.appendChild(tr2); });
+    t.appendChild(tb); w.appendChild(t); d.appendChild(w); container.appendChild(d);
+  };
+  P.fmtNum = fmtNum;
+  root.Plot = P;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+</script><script>
+/* Lesson 7 labs — Itô's formula, Lévy / Dambis–Dubins–Schwarz, Girsanov */
+(function () {
+  'use strict';
+  const LABS = (window.LABS = window.LABS || {});
+  const N = window.N;
+
+  /* ---------- 7.1 Itô's formula, path by path (Thm 7.1, Rem 7.6) ---------- */
+  const FUN = {
+    x2: { name: 'f(x) = x²', f: (t, x) => x * x, fx: (t, x) => 2 * x, fxx: (t, x) => 2, ft: (t, x) => 0 },
+    x3: { name: 'f(x) = x³', f: (t, x) => x * x * x, fx: (t, x) => 3 * x * x, fxx: (t, x) => 6 * x, ft: (t, x) => 0 },
+    sin: { name: 'f(x) = sin x', f: (t, x) => Math.sin(x), fx: (t, x) => Math.cos(x), fxx: (t, x) => -Math.sin(x), ft: (t, x) => 0 },
+    expm: { name: 'F(t,x) = e^{x − t/2} (time-dependent, Rem. 7.6)', f: (t, x) => Math.exp(x - t / 2), fx: (t, x) => Math.exp(x - t / 2), fxx: (t, x) => Math.exp(x - t / 2), ft: (t, x) => -0.5 * Math.exp(x - t / 2) }
+  };
+  LABS['L7.ito'] = {
+    defaultSeed: 71,
+    controls: [
+      { id: 'f', label: 'Function', type: 'select', value: 'x3', string: true, options: Object.keys(FUN).map(k => [k, FUN[k].name]) },
+      { id: 'K', label: 'mesh 2^K steps on [0,1], K =', type: 'range', min: 6, max: 16, step: 1, value: 14 },
+      { id: 'paths', label: 'Paths', type: 'range', min: 100, max: 2000, step: 100, value: 500 }
+    ],
+    variants: { sin: { f: 'sin' }, expm: { f: 'expm' }, x2: { f: 'x2' } },
+    outputs: [
+      { key: 'with', label: 'mean |f(B₁) − f(0) − Σf′ΔB − Σ(∂ₜf + ½f″)Δt|', fmt: { sig: 3 } },
+      { key: 'without', label: 'the same without the ½f″ term', fmt: { sig: 3 } },
+      { key: 'corr', label: 'mean of the correction ½Σf″(B)Δt', fmt: 4 },
+      { key: 'corrth', label: 'its exact expectation ½E∫₀¹f″(B_s)ds', fmt: 4 }
+    ],
+    plots: 1,
+    compute(p) {
+      const R = N.rng(p.seed), K = p.K, n = 1 << K, M = p.paths, s = Math.sqrt(1 / n), F = FUN[p.f];
+      const levels = []; for (let k = 3; k <= K; k++) levels.push(k);
+      const errW = levels.map(() => 0), errWo = levels.map(() => 0);
+      const B = new Float64Array(n + 1);
+      let w = 0, wo = 0, cc = 0;
+      for (let m = 0; m < M; m++) {
+        B[0] = 0; for (let i = 1; i <= n; i++) B[i] = B[i - 1] + s * R.g();
+        const lhs = F.f(1, B[n]) - F.f(0, 0);
+        levels.forEach((k, q) => {
+          const st = 1 << (K - k), h = st / n; let ito = 0, drift = 0, half = 0;
+          for (let i = 0; i + st <= n; i += st) { const t = i / n, x = B[i]; ito += F.fx(t, x) * (B[i + st] - x); drift += F.ft(t, x) * h; half += 0.5 * F.fxx(t, x) * h; }
+          errW[q] += Math.abs(lhs - ito - drift - half) / M; errWo[q] += Math.abs(lhs - ito - drift) / M;
+          if (k === K) { w += Math.abs(lhs - ito - drift - half) / M; wo += Math.abs(lhs - ito - drift) / M; cc += half / M; }
+        });
+      }
+      const corrth = { x2: 1, x3: 0, sin: 0, expm: 0.5 }[p.f];   // ½E∫f″: x²→1, x³→0, sin→0 (odd), e^{B−s/2}→½
+      return { out: { with: w, without: wo, corr: cc, corrth }, levels, errW, errWo };
+    },
+    render(res, p, ui) {
+      ui.Plot.chart(ui.plots[0], { title: 'Error of the Itô expansion, with and without the second-order term', subtitle: 'with ½f″: the error → 0 as the mesh refines; without it the error stalls at |½∫f″(B)ds|', xlab: 'mesh level K', ylab: 'mean absolute error (log scale)', logy: true, xname: 'K',
+        series: [{ type: 'line', x: res.levels, y: res.errW, color: 's1', markers: true, label: 'with the ½f″ term (Itô)' }, { type: 'line', x: res.levels, y: res.errWo, color: 's2', markers: true, label: 'without it (ordinary chain rule)' }] });
+    }
+  };
+
+  /* ---------- 7.2 Lévy's characterization and Dambis–Dubins–Schwarz (Thm 7.8, Ex 7.9, Thm 7.10) ---------- */
+  LABS['L7.dds'] = {
+    defaultSeed: 72,
+    controls: [
+      { id: 'vol', label: 'volatility σ_s in M_t = ∫σ_s dB_s', type: 'select', value: 'abs', string: true, options: [['abs', 'σ = 0.5 + |B_s| (random)'], ['sign', 'σ = sign(B_s) (Example 7.9)'], ['clock', 'σ = 1 + 0.8 sin(2πs) (deterministic)']] },
+      { id: 'u', label: 'clock value u = ⟨M⟩', type: 'range', min: 0.25, max: 1, step: 0.25, value: 0.5 },
+      { id: 'paths', label: 'Paths', type: 'range', min: 2000, max: 20000, step: 2000, value: 10000 }
+    ],
+    variants: { sign: { vol: 'sign' } },
+    outputs: [
+      { key: 'ksT', label: 'KS distance of M at clock time u to N(0, u)', fmt: 4 },
+      { key: 'ksTp', label: 'KS p-value', fmt: 3 },
+      { key: 'var1', label: 'Var M₁ (fixed calendar time 1)', fmt: 3 },
+      { key: 'kurt1', label: 'excess kurtosis of M₁ (Gaussian: 0)', fmt: 3 },
+      { key: 'kurtT', label: 'excess kurtosis of M at clock time u', fmt: 3 },
+      { key: 'reached', label: 'share of paths whose clock reached u by time 3', fmt: 3 }
+    ],
+    plots: 1,
+    compute(p) {
+      const R = N.rng(p.seed), M = p.paths, dt = 1 / 1000, sq = Math.sqrt(dt), u = p.u, Tmax = 3;
+      const sig = { abs: (s, b) => 0.5 + Math.abs(b), sign: (s, b) => (b > 0 ? 1 : b < 0 ? -1 : 1), clock: (s, b) => 1 + 0.8 * Math.sin(2 * Math.PI * s) }[p.vol];
+      const atU = [], at1 = new Float64Array(M);
+      for (let m = 0; m < M; m++) {
+        let b = 0, x = 0, qv = 0, t = 0, got = false, got1 = false;
+        while (t < Tmax - 1e-12 && !(got && got1)) {
+          const sg = sig(t, b), d = sq * R.g(), dq = sg * sg * dt;
+          if (!got && qv + dq >= u) {
+            // the clock grows linearly inside the step; stop at the exact fraction, using the Brownian bridge for B inside the step
+            const f = (u - qv) / dq;
+            atU.push(x + sg * (f * d + Math.sqrt(f * (1 - f) * dt) * R.g()));
+            got = true;
+          }
+          x += sg * d; b += d; qv += dq; t += dt;
+          if (!got1 && t >= 1 - 1e-12) { at1[m] = x; got1 = true; }
+        }
+        if (!got1) at1[m] = x;
+      }
+      const a = Float64Array.from(atU);
+      const kurt = (v) => { const mu = N.mean(v), s2 = N.variance(v); let m4 = 0; for (let i = 0; i < v.length; i++) m4 += Math.pow(v[i] - mu, 4); return m4 / v.length / (s2 * s2) - 3; };
+      const ks = N.ksStat(a, x => N.normCdf(x, 0, Math.sqrt(u)));
+      return { out: { ksT: ks, ksTp: N.ksPValue(ks, a.length), var1: N.variance(at1), kurt1: kurt(at1), kurtT: kurt(a), reached: a.length / M }, a, at1, u };
+    },
+    render(res, p, ui) {
+      const lim = 4 * Math.sqrt(Math.max(res.u, 0.5)), H1 = N.histogram(res.a, 50, -lim, lim), g = N.linspace(-lim, lim, 300);
+      ui.Plot.chart(ui.plots[0], { title: 'M read on its own clock ⟨M⟩ = u is exactly N(0, u)', subtitle: 'Dambis–Dubins–Schwarz: M_t = W_{⟨M⟩_t} for a Brownian motion W', xlab: 'value', ylab: 'density', xname: 'x', xlim: [-lim, lim],
+        series: [{ type: 'hist', edges: H1.edges, density: H1.density, color: 's1', label: 'M at clock time u' }, { type: 'line', x: Array.from(g), y: Array.from(g, x => N.normPdf(x, 0, Math.sqrt(res.u))), color: 's2', label: 'N(0, u)' }] });
+    }
+  };
+
+  /* ---------- 7.3 Cameron–Martin / Girsanov as importance sampling (Thm 7.16) ---------- */
+  function bridgeMax(R, x, y, h) { return 0.5 * (x + y + Math.sqrt((y - x) * (y - x) - 2 * h * Math.log(R.u()))); }
+  LABS['L7.is'] = {
+    defaultSeed: 73,
+    controls: [
+      { id: 'a', label: 'level a in P(sup_{t≤1} B_t ≥ a)', type: 'range', min: 1, max: 5, step: 0.5, value: 3 },
+      { id: 'theta', label: 'drift θ of the proposal B_t + θt', type: 'range', min: 0, max: 8, step: 0.5, value: 3 },
+      { id: 'paths', label: 'Paths (same budget for both estimators)', type: 'range', min: 2000, max: 40000, step: 2000, value: 20000 }
+    ],
+    variants: { t0: { theta: 0 }, t6: { theta: 6 }, a45: { a: 4.5 } },
+    outputs: [
+      { key: 'exact', label: 'exact 2P(B₁ ≥ a) (reflection principle)', fmt: { sci: 3 } },
+      { key: 'naive', label: 'plain Monte Carlo estimate', fmt: { sci: 3 } },
+      { key: 'naiverel', label: 'its relative standard error', fmt: 3 },
+      { key: 'isest', label: 'importance-sampling estimate (weights from Thm 7.16)', fmt: { sci: 3 } },
+      { key: 'isrel', label: 'its relative standard error', fmt: 3 },
+      { key: 'ess', label: 'effective sample size / paths (weights on hitting paths)', fmt: 3 },
+      { key: 'gain', label: 'variance reduction factor', fmt: 1 }
+    ],
+    plots: 1,
+    compute(p) {
+      const R = N.rng(p.seed), M = p.paths, n = 100, h = 1 / n, sq = Math.sqrt(h), a = p.a, th = p.theta;
+      const naive = new Float64Array(M), isv = new Float64Array(M);
+      for (let m = 0; m < M; m++) {
+        // plain MC: Brownian path with exact bridge maxima
+        let x = 0, s = 0;
+        for (let i = 0; i < n; i++) { const y = x + sq * R.g(); const mx = bridgeMax(R, x, y, h); if (mx > s) s = mx; x = y; }
+        naive[m] = s >= a ? 1 : 0;
+        // IS: simulate W and use the drifted path W + θt; weight = exp(−θW₁ − θ²/2) (the bridge max of the drifted path is exact: drift is linear)
+        let w = 0, z = 0, sm = 0;
+        for (let i = 0; i < n; i++) { const dw = sq * R.g(); const zn = z + dw + th * h; const mx = bridgeMax(R, z, zn, h); if (mx > sm) sm = mx; z = zn; w += dw; }
+        isv[m] = sm >= a ? Math.exp(-th * w - 0.5 * th * th) : 0;
+      }
+      const exact = 2 * N.normSf(a);
+      const mN = N.mean(naive), mI = N.mean(isv), seN = N.se(naive), seI = N.se(isv);
+      let s1 = 0, s2 = 0; for (let m = 0; m < M; m++) { s1 += isv[m]; s2 += isv[m] * isv[m]; }
+      // curve over theta (smaller budget) for the plot
+      const thetas = [0, 1, 2, 2.5, 3, 3.5, 4, 5, 6, 8];
+      const curve = thetas.map(t => { const Mc = Math.max(2000, Math.floor(M / 5)); const v = new Float64Array(Mc); const Rc = N.rng(p.seed * 31 + Math.round(t * 10));
+        for (let m = 0; m < Mc; m++) { let w2 = 0, z = 0, sm = 0; for (let i = 0; i < n; i++) { const dw = sq * Rc.g(); const zn = z + dw + t * h; const mx = bridgeMax(Rc, z, zn, h); if (mx > sm) sm = mx; z = zn; w2 += dw; } v[m] = sm >= a ? Math.exp(-t * w2 - 0.5 * t * t) : 0; }
+        const mm = N.mean(v); return mm > 0 ? N.se(v) / mm : NaN; });
+      return { out: { exact, naive: mN, naiverel: mN > 0 ? seN / mN : NaN, isest: mI, isrel: mI > 0 ? seI / mI : NaN, ess: s2 > 0 ? (s1 * s1 / s2) / M : 0, gain: seI > 0 ? (exact * (1 - exact) / M) / (seI * seI) : NaN }, thetas, curve };
+    },
+    render(res, p, ui) {
+      ui.Plot.chart(ui.plots[0], { title: 'Relative standard error of the importance-sampling estimator vs the proposal drift θ', subtitle: 'θ = 0 is plain Monte Carlo; the best drift is near a (the rare event becomes typical); too much drift makes the weights degenerate', xlab: 'θ', ylab: 'relative standard error (log scale)', logy: true, xname: 'θ',
+        series: [{ type: 'line', x: res.thetas, y: res.curve, color: 's1', markers: true, label: 'importance sampling (budget: paths/5)' }] });
+    }
+  };
+
+  /* ---------- 7.4 Weak existence by Girsanov, and noise restoring well-posedness (Rem 7.15, Prop 7.21) ---------- */
+  LABS['L7.weak'] = {
+    defaultSeed: 74,
+    controls: [
+      { id: 'eps', label: 'noise level ε in dX = 1{X ≤ 0} dt + ε dB', type: 'select', value: 0.3, options: [[1, '1'], [0.5, '0.5'], [0.3, '0.3'], [0.1, '0.1'], [0.03, '0.03']] },
+      { id: 'n', label: 'time steps on [0,1]', type: 'select', value: 1000, options: [[250, '250'], [1000, '1000'], [4000, '4000']] },
+      { id: 'paths', label: 'Paths', type: 'range', min: 2000, max: 20000, step: 2000, value: 10000 }
+    ],
+    variants: { e01: { eps: 0.1 }, e1: { eps: 1 } },
+    outputs: [
+      { key: 'emEX', label: 'E[X₁], Euler–Maruyama simulation of the SDE', fmt: 4 },
+      { key: 'emse', label: '± standard error', fmt: 4 },
+      { key: 'gEX', label: 'E[X₁] by reweighting Brownian paths (L = +∫b dX/ε², corrected sign)', fmt: 4 },
+      { key: 'gse', label: '± standard error', fmt: 4 },
+      { key: 'gess', label: 'effective sample size / paths of those weights', fmt: 3 },
+      { key: 'gwrong', label: 'the same with the notes’ sign (L = −∫b dX/ε²)', fmt: 4 },
+      { key: 'gwse', label: '± standard error', fmt: 4 },
+      { key: 'emneg', label: 'E[X₁] for the drift −1{X ≤ 0} (what the notes’ sign produces)', fmt: 4 },
+      { key: 'emnegse', label: '± standard error', fmt: 4 },
+      { key: 'occ', label: 'time fraction spent in {X ≤ 0} (Euler–Maruyama)', fmt: 3 },
+      { key: 'ode', label: 'ODE (ε = 0), Euler with this step: x(1)', fmt: { sig: 3 } }
+    ],
+    plots: 1,
+    compute(p) {
+      const R = N.rng(p.seed), eps = Number(p.eps), n = Number(p.n), M = p.paths, h = 1 / n, sq = Math.sqrt(h);
+      const b = x => (x <= 0 ? 1 : 0);
+      const em = new Float64Array(M), emN = new Float64Array(M), occ = new Float64Array(M);
+      const gx = new Float64Array(M), gw = new Float64Array(M), gw2 = new Float64Array(M);
+      const hist = [];
+      for (let m = 0; m < M; m++) {
+        // Euler–Maruyama for the SDE with drift +b and with drift −b
+        let x = 0, xn = 0, o = 0;
+        for (let i = 0; i < n; i++) { const d = sq * R.g(); o += b(x) * h; x += b(x) * h + eps * d; xn += -b(xn) * h + eps * sq * R.g(); }
+        em[m] = x; emN[m] = xn; occ[m] = o;
+        // Girsanov: under P, X = εW is a (scaled) Brownian motion; weight E(L)_1 with L = ∫ (b(X)/ε) dW
+        let y = 0, L = 0, q = 0;
+        for (let i = 0; i < n; i++) { const dw = sq * R.g(); const bb = b(y) / eps; L += bb * dw; q += bb * bb * h; y += eps * dw; }
+        gx[m] = y; gw[m] = Math.exp(L - 0.5 * q); gw2[m] = Math.exp(-L - 0.5 * q);
+      }
+      const wx = Array.from(gx, (v, i) => v * gw[i]), wxw = Array.from(gx, (v, i) => v * gw2[i]);
+      const Me = N.mean(em);
+      // ODE Euler: x_{k+1} = x_k + h 1{x_k ≤ 0}
+      let xo = 0; for (let i = 0; i < n; i++) xo += h * b(xo);
+      let w1 = 0, w2 = 0; for (let m = 0; m < M; m++) { w1 += gw[m]; w2 += gw[m] * gw[m]; }
+      return { out: { emEX: Me, emse: N.se(em), gEX: N.mean(wx), gse: N.se(wx), gess: (w1 * w1 / w2) / M, gwrong: N.mean(wxw), gwse: N.se(wxw), emneg: N.mean(emN), emnegse: N.se(emN), occ: N.mean(occ), ode: xo }, em, emN, eps };
+    },
+    render(res, p, ui) {
+      const lim = Math.max(1.2, 4 * res.eps), H1 = N.histogram(res.em, 60, -lim, lim), H2 = N.histogram(res.emN, 60, -lim, lim);
+      ui.Plot.chart(ui.plots[0], { title: 'Law of X₁ for dX = ±1{X ≤ 0} dt + ε dB, X₀ = 0', subtitle: 'the SDE is well posed for every ε > 0, although the ODE (ε = 0) has no solution', xlab: 'X₁', ylab: 'density', xname: 'x', xlim: [-lim, lim],
+        series: [{ type: 'hist', edges: H1.edges, density: H1.density, color: 's1', label: 'drift +1{X ≤ 0} (the intended SDE)', alpha: 0.6 }, { type: 'hist', edges: H2.edges, density: H2.density, color: 's2', label: 'drift −1{X ≤ 0} (notes’ sign)', alpha: 0.45 }] });
+    }
+  };
+})();
+
+</script><script>
+/* ===== core.js — theme, table of contents, lab framework (identical on every page) ===== */
+(function () {
+  'use strict';
+  const root = document.documentElement;
+  /* ---------- theme ---------- */
+  function currentTheme() { const t = root.getAttribute('data-theme'); if (t) return t; return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+  function setTheme(t, save) {
+    root.setAttribute('data-theme', t);
+    if (save) { try { localStorage.setItem('sc-theme', t); } catch (e) { /* storage unavailable */ } }
+    const b = document.getElementById('theme-toggle');
+    if (b) { b.setAttribute('aria-label', t === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'); b.setAttribute('aria-pressed', t === 'dark' ? 'true' : 'false'); const l = b.querySelector('.lbl'); if (l) l.textContent = t === 'dark' ? 'Light' : 'Dark'; }
+    if (window.Plot) window.Plot.redrawAll();
+  }
+  window.__setTheme = (t) => setTheme(t, false);
+  document.addEventListener('DOMContentLoaded', () => {
+    setTheme(currentTheme(), false);
+    const b = document.getElementById('theme-toggle');
+    if (b) b.addEventListener('click', () => setTheme(currentTheme() === 'dark' ? 'light' : 'dark', true));
+    if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (!safeGet('sc-theme')) { root.removeAttribute('data-theme'); setTheme(currentTheme(), false); } });
+    initToc();
+    initLabs();
+  });
+  function safeGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+  /* ---------- TOC scroll-spy ---------- */
+  function initToc() {
+    const links = Array.from(document.querySelectorAll('.toc a[href^="#"]'));
+    if (!links.length || !('IntersectionObserver' in window)) return;
+    const map = new Map(); links.forEach(a => { const el = document.getElementById(a.getAttribute('href').slice(1)); if (el) map.set(el, a); });
+    let current = null;
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { if (current) current.classList.remove('active'); current = map.get(e.target); if (current) current.classList.add('active'); } });
+    }, { rootMargin: '-15% 0px -75% 0px' });
+    map.forEach((a, el) => obs.observe(el));
+    // open the TOC details by default on wide screens
+    const d = document.querySelector('.toc details'); if (d && window.innerWidth >= 1240) d.open = true;
+  }
+
+  /* ---------- labs ---------- */
+  const LABS = (window.LABS = window.LABS || {});
+  const instances = [];
+  function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+  function fmtCtl(c, v) { if (c.fmt) return c.fmt(v); if (c.type === 'select') { const o = (c.options || []).find(o => String(o[0]) === String(v)); return o ? o[1] : String(v); } return String(v); }
+  function initLabs() {
+    document.querySelectorAll('.lab[data-lab]').forEach(box => {
+      const id = box.getAttribute('data-lab'), spec = LABS[id];
+      if (!spec) { const s = box.querySelector('.lab-status'); if (s) s.textContent = 'lab code missing'; return; }
+      const inst = { id, box, spec, values: {}, ran: false, plots: [], tables: [] };
+      instances.push(inst);
+      buildControls(inst);
+      buildOutputs(inst);
+      const run = box.querySelector('[data-run]'); if (run) run.addEventListener('click', () => runLab(inst));
+      const reset = box.querySelector('[data-reset]'); if (reset) reset.addEventListener('click', () => { setDefaults(inst); runLab(inst); });
+      const reseed = box.querySelector('[data-reseed]'); if (reseed) reseed.addEventListener('click', () => { const s = inst.inputs.seed; if (s) { s.value = String((parseInt(s.value, 10) || 0) + 1); readValues(inst); } runLab(inst); });
+    });
+    if ('IntersectionObserver' in window) {
+      const obs = new IntersectionObserver((entries) => { entries.forEach(e => { if (e.isIntersecting) { const inst = instances.find(i => i.box === e.target); if (inst && !inst.ran) runLab(inst); obs.unobserve(e.target); } }); }, { rootMargin: '300px 0px' });
+      instances.forEach(i => obs.observe(i.box));
+    } else instances.forEach(i => runLab(i));
+  }
+  function buildControls(inst) {
+    const host = inst.box.querySelector('.lab-controls'); inst.inputs = {};
+    const ctls = (inst.spec.controls || []).slice();
+    if (!ctls.find(c => c.id === 'seed') && inst.spec.seed !== false) ctls.push({ id: 'seed', label: 'Random seed', type: 'number', min: 1, max: 999999, step: 1, value: inst.spec.defaultSeed || 1 });
+    inst.controls = ctls;
+    ctls.forEach(c => {
+      const wrap = el('div', 'ctl' + (c.type === 'check' ? ' check' : ''));
+      const fid = inst.box.id + '-' + c.id;
+      let input;
+      if (c.type === 'select') { input = el('select'); (c.options || []).forEach(o => { const op = el('option', null, o[1]); op.value = String(o[0]); input.appendChild(op); }); }
+      else if (c.type === 'check') { input = el('input'); input.type = 'checkbox'; }
+      else { input = el('input'); input.type = c.type === 'number' ? 'number' : 'range'; input.min = c.min; input.max = c.max; input.step = c.step || 1; }
+      input.id = fid;
+      const lab = el('label'); lab.htmlFor = fid;
+      if (c.type === 'check') { wrap.appendChild(input); lab.textContent = c.label; wrap.appendChild(lab); }
+      else {
+        const t = el('span', null, c.label); lab.appendChild(t);
+        if (c.type === 'range') { const o = el('output'); o.setAttribute('for', fid); lab.appendChild(o); c._out = o; }
+        wrap.appendChild(lab); wrap.appendChild(input);
+      }
+      if (c.help) { input.setAttribute('aria-description', c.help); input.title = c.help; }
+      input.addEventListener('input', () => { readValues(inst); if (c.live) runLab(inst); });
+      input.addEventListener('change', () => { readValues(inst); if (c.type !== 'number' || c.live) runLab(inst); });
+      inst.inputs[c.id] = input; host.appendChild(wrap);
+    });
+    setDefaults(inst);
+  }
+  function setDefaults(inst) {
+    inst.controls.forEach(c => { const i = inst.inputs[c.id]; if (c.type === 'check') i.checked = !!c.value; else i.value = String(c.value); });
+    readValues(inst);
+  }
+  function readValues(inst) {
+    inst.controls.forEach(c => {
+      const i = inst.inputs[c.id]; let v;
+      if (c.type === 'check') v = i.checked; else if (c.type === 'select') v = isNaN(Number(i.value)) || c.string ? i.value : Number(i.value); else { v = Number(i.value); if (!isFinite(v)) v = c.value; if (c.min !== undefined) v = Math.max(c.min, v); if (c.max !== undefined) v = Math.min(c.max, v); }
+      inst.values[c.id] = v; if (c._out) c._out.textContent = fmtCtl(c, v);
+    });
+  }
+  function buildOutputs(inst) {
+    const m = inst.box.querySelector('.metrics'); inst.outEls = {};
+    (inst.spec.outputs || []).forEach(o => { const d = el('div', 'metric'); const l = el('div', 'ml', o.label); const out = el('output'); out.setAttribute('data-out', o.key); out.textContent = '—'; d.appendChild(l); d.appendChild(out); if (m) m.appendChild(d); inst.outEls[o.key] = out; });
+    const ph = inst.box.querySelector('.lab-plots'); const n = inst.spec.plots || 1;
+    for (let k = 0; k < n; k++) { const d = el('div'); d.className = 'plot'; if (ph) ph.appendChild(d); inst.plots.push(d); const t = el('div'); if (ph) ph.appendChild(t); inst.tables.push(t); }
+  }
+  function runLab(inst) {
+    const st = inst.box.querySelector('.lab-status');
+    const btn = inst.box.querySelector('[data-run]'); if (btn) btn.disabled = true;
+    if (st) st.textContent = 'running…';
+    return new Promise(resolve => {
+      setTimeout(() => {
+        const t0 = performance.now();
+        let res;
+        try { res = inst.spec.compute(Object.assign({}, inst.values)); }
+        catch (e) { if (st) st.textContent = 'error: ' + e.message; if (btn) btn.disabled = false; console.error(e); resolve(null); return; }
+        (inst.spec.outputs || []).forEach(o => { const v = res.out ? res.out[o.key] : undefined; inst.outEls[o.key].textContent = window.N.fmt(v, o.fmt); });
+        try { if (inst.spec.render) inst.spec.render(res, inst.values, { plots: inst.plots, tables: inst.tables, Plot: window.Plot, N: window.N }); }
+        catch (e) { console.error(e); if (st) st.textContent = 'render error: ' + e.message; }
+        inst.ran = true;
+        const dt = performance.now() - t0;
+        if (st) st.textContent = 'done in ' + (dt < 1000 ? Math.round(dt) + ' ms' : (dt / 1000).toFixed(1) + ' s') + (res && res.note ? ' · ' + res.note : '');
+        if (btn) btn.disabled = false;
+        resolve(res);
+      }, 10);
+    });
+  }
+  /* test hooks: run every lab with its defaults and return the displayed outputs */
+  window.__labs = {
+    list: () => instances.map(i => i.id),
+    runAllDefaults: async () => { const out = {}; for (const i of instances) { setDefaults(i); await runLab(i); out[i.id] = {}; for (const k in i.outEls) out[i.id][k] = i.outEls[k].textContent; } return out; },
+    runOne: async (id, values) => { const i = instances.find(x => x.id === id); if (!i) return null; setDefaults(i); if (values) { for (const k in values) { const inp = i.inputs[k]; if (inp.type === 'checkbox') inp.checked = !!values[k]; else inp.value = String(values[k]); } readValues(i); } await runLab(i); const out = {}; for (const k in i.outEls) out[k] = i.outEls[k].textContent; return out; }
+  };
+})();
+
+</script>
+</body>
+</html>

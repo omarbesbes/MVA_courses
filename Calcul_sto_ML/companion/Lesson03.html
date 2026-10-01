@@ -1,0 +1,1480 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 3 · Filtrations &amp; stopping</title>
+<meta name="description" content="Study companion, Lesson 3: Measurability, Filtrations and Stopping Times">
+<script>try{var t=localStorage.getItem('sc-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+<style>
+/* ===== Study companion — shared stylesheet (inlined into every page) ===== */
+:root {
+  color-scheme: light;
+  --bg: #f9f9f7;            /* page plane */
+  --surface: #fcfcfb;       /* cards, chart surface */
+  --surface-2: #f2f1ec;     /* code, table head */
+  --ink: #16150f;           /* primary text */
+  --ink-2: #4a4945;         /* secondary text */
+  --muted: #6f6d67;         /* captions, axis labels */
+  --rule: #e1e0d9;          /* hairlines */
+  --rule-2: #c3c2b7;        /* stronger rule / axis */
+  --accent: #1c5cab;        /* links */
+  --accent-soft: #e6effb;
+  --focus: #2a78d6;
+  /* callouts */
+  --key: #1c5cab;   --key-bg: #eef4fc;
+  --warn: #b0431f;  --warn-bg: #fcf0ea;
+  --link: #3a6e1f;  --link-bg: #eff6ea;
+  --board: #7a5a00; --board-bg: #fbf5e3;
+  --beyond: #5a4bb0; --beyond-bg: #f2f0fb;
+  /* chart tokens (dataviz reference palette, light) */
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #4a3aa7; --s8: #e34948;
+  --series-muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --chart-ink: #0b0b0b; --chart-ink-2: #52514e;
+  --shadow: 0 1px 2px rgba(20,20,10,.06), 0 2px 8px rgba(20,20,10,.04);
+  --radius: 10px;
+  --serif: "Source Serif 4", "Source Serif Pro", Georgia, "Times New Roman", serif;
+  --sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0f0f0e; --surface: #1a1a19; --surface-2: #242422;
+    --ink: #f3f2ed; --ink-2: #c9c8c0; --muted: #a09e96;
+    --rule: #2c2c2a; --rule-2: #45443f;
+    --accent: #7fb2f0; --accent-soft: #1d2a3a; --focus: #6da7ec;
+    --key: #86b6ef; --key-bg: #172333;
+    --warn: #f09a75; --warn-bg: #321d15;
+    --link: #9fd27f; --link-bg: #1b2915;
+    --board: #e6c25a; --board-bg: #2d2610;
+    --beyond: #b3a9f2; --beyond-bg: #221f38;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+    --series-muted: #8a8880;
+    --grid: #2c2c2a; --axis: #45443f; --chart-ink: #ffffff; --chart-ink-2: #c3c2b7;
+    --shadow: 0 1px 2px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0f0f0e; --surface: #1a1a19; --surface-2: #242422;
+  --ink: #f3f2ed; --ink-2: #c9c8c0; --muted: #a09e96;
+  --rule: #2c2c2a; --rule-2: #45443f;
+  --accent: #7fb2f0; --accent-soft: #1d2a3a; --focus: #6da7ec;
+  --key: #86b6ef; --key-bg: #172333;
+  --warn: #f09a75; --warn-bg: #321d15;
+  --link: #9fd27f; --link-bg: #1b2915;
+  --board: #e6c25a; --board-bg: #2d2610;
+  --beyond: #b3a9f2; --beyond-bg: #221f38;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+  --series-muted: #8a8880;
+  --grid: #2c2c2a; --axis: #45443f; --chart-ink: #ffffff; --chart-ink-2: #c3c2b7;
+  --shadow: 0 1px 2px rgba(0,0,0,.4);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: 4.5rem; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--serif); font-size: 1.0625rem; line-height: 1.62;
+  overflow-wrap: break-word;
+}
+@media (min-width: 900px) { body { font-size: 1.125rem; } }
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 3px; }
+img, svg, canvas { max-width: 100%; }
+h1, h2, h3, h4 { font-family: var(--sans); line-height: 1.25; letter-spacing: -0.01em; color: var(--ink); }
+h1 { font-size: clamp(1.6rem, 4.5vw, 2.35rem); margin: 0.2em 0 0.3em; font-weight: 700; }
+h2 { font-size: clamp(1.3rem, 3.2vw, 1.65rem); margin: 2.4em 0 0.3em; font-weight: 700; padding-top: .6em; border-top: 1px solid var(--rule); }
+h3 { font-size: clamp(1.08rem, 2.4vw, 1.22rem); margin: 1.9em 0 0.4em; font-weight: 650; }
+h4 { font-size: 1rem; margin: 1.4em 0 0.3em; font-weight: 650; }
+p { margin: 0.7em 0; }
+ul, ol { padding-left: 1.4em; }
+li { margin: 0.25em 0; }
+hr { border: 0; border-top: 1px solid var(--rule); margin: 2em 0; }
+code, kbd { font-family: var(--mono); font-size: 0.86em; background: var(--surface-2); padding: 0.08em 0.3em; border-radius: 4px; }
+pre { font-family: var(--mono); font-size: 0.82rem; line-height: 1.5; background: var(--surface-2); border: 1px solid var(--rule); border-radius: 8px; padding: 0.9em 1em; overflow-x: auto; max-width: 100%; }
+pre code { background: none; padding: 0; font-size: inherit; }
+small, .small { font-size: 0.88em; }
+.muted { color: var(--muted); }
+.nw { white-space: nowrap; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* ---------- header / navigation ---------- */
+.skip { position: absolute; left: -999px; top: 0; background: var(--surface); padding: .5em 1em; z-index: 100; }
+.skip:focus { left: .5em; }
+.topbar {
+  position: sticky; top: 0; z-index: 50; background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: saturate(1.2) blur(6px); -webkit-backdrop-filter: saturate(1.2) blur(6px);
+  border-bottom: 1px solid var(--rule); font-family: var(--sans);
+}
+.topbar-in { max-width: 72rem; margin: 0 auto; padding: .45rem 1rem; display: flex; align-items: center; gap: .6rem; }
+.brand { font-weight: 650; font-size: .92rem; color: var(--ink); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1 1 auto; }
+.brand span { color: var(--muted); font-weight: 500; }
+.navbtns { display: flex; gap: .35rem; flex: 0 0 auto; }
+.btn, .navbtns a, .navbtns button {
+  font-family: var(--sans); font-size: .82rem; font-weight: 550; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--rule-2); border-radius: 7px; padding: .32rem .6rem; text-decoration: none; cursor: pointer; line-height: 1.2;
+  display: inline-flex; align-items: center; gap: .3rem; min-height: 2rem;
+}
+.btn:hover, .navbtns a:hover, .navbtns button:hover { background: var(--surface-2); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.btn.primary:hover { filter: brightness(1.08); background: var(--accent); }
+.btn[disabled] { opacity: .5; cursor: default; }
+.navbtns .lbl { display: inline; }
+@media (max-width: 560px) { .navbtns .lbl { display: none; } .brand span { display: none; } }
+.theme-toggle svg { width: 1rem; height: 1rem; }
+
+.strip { max-width: 72rem; margin: 0 auto; padding: .55rem 1rem .1rem; display: flex; flex-wrap: wrap; gap: .35rem; font-family: var(--sans); }
+.strip a {
+  font-size: .78rem; text-decoration: none; color: var(--ink-2); border: 1px solid var(--rule); background: var(--surface);
+  border-radius: 999px; padding: .22rem .6rem; white-space: nowrap;
+}
+.strip a:hover { border-color: var(--rule-2); color: var(--ink); }
+.strip a[aria-current="page"] { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 650; }
+.strip a .t { display: none; }
+@media (min-width: 1100px) { .strip a .t { display: inline; } }
+
+.page { max-width: 72rem; margin: 0 auto; padding: 0 1rem 4rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2rem; }
+@media (min-width: 1240px) { .page { grid-template-columns: 15.5rem minmax(0, 46rem); justify-content: center; } }
+main { min-width: 0; max-width: 46rem; margin: 0 auto; width: 100%; }
+.hero { padding: 1.2rem 0 .4rem; }
+.eyebrow { font-family: var(--sans); font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0; }
+.lede { font-size: 1.08em; color: var(--ink-2); }
+.meta { font-family: var(--sans); font-size: .85rem; color: var(--muted); }
+.prevnext { display: flex; justify-content: space-between; gap: 1rem; margin: 3rem 0 0; font-family: var(--sans); font-size: .9rem; flex-wrap: wrap; }
+.prevnext a { text-decoration: none; border: 1px solid var(--rule); border-radius: 8px; padding: .6rem .8rem; background: var(--surface); max-width: 100%; }
+.prevnext a:hover { border-color: var(--rule-2); }
+.prevnext small { display: block; color: var(--muted); }
+
+/* ---------- TOC ---------- */
+.toc { font-family: var(--sans); font-size: .85rem; }
+.toc details { border: 1px solid var(--rule); border-radius: var(--radius); background: var(--surface); padding: .5rem .8rem; margin-top: 1rem; }
+.toc summary { cursor: pointer; font-weight: 650; color: var(--ink); padding: .15rem 0; }
+.toc ol { list-style: none; padding: 0; margin: .4rem 0 0; }
+.toc li { margin: 0; }
+.toc li li { padding-left: .8rem; }
+.toc a { display: block; color: var(--ink-2); text-decoration: none; padding: .16rem .4rem; border-radius: 5px; line-height: 1.35; }
+.toc a:hover { background: var(--surface-2); color: var(--ink); }
+.toc a.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+@media (min-width: 1240px) {
+  .toc { position: sticky; top: 4.2rem; align-self: start; max-height: calc(100vh - 5rem); overflow-y: auto; padding-right: .2rem; }
+  .toc details { margin-top: 1.4rem; }
+}
+
+/* ---------- statements, callouts ---------- */
+.pages { font-family: var(--sans); font-size: .82rem; color: var(--muted); margin: -.1em 0 1em; }
+.stmt { border: 1px solid var(--rule-2); border-radius: var(--radius); background: var(--surface); padding: .75rem 1rem .6rem; margin: 1.1rem 0; box-shadow: var(--shadow); }
+.stmt-h { font-family: var(--sans); font-weight: 700; font-size: .92rem; margin-bottom: .25rem; display: flex; flex-wrap: wrap; gap: .2rem .6rem; align-items: baseline; }
+.stmt-h .pp { font-weight: 500; color: var(--muted); font-size: .8rem; }
+.stmt-h .nm { font-weight: 500; color: var(--ink-2); }
+.stmt > p:first-of-type { margin-top: .2rem; }
+.stmt.def { border-left: 4px solid var(--s7); }
+.stmt.thm { border-left: 4px solid var(--s1); }
+.stmt.prop, .stmt.cor, .stmt.lem { border-left: 4px solid var(--s3); }
+.stmt.rem, .stmt.ex { border-left: 4px solid var(--rule-2); }
+.anatomy { display: grid; grid-template-columns: minmax(0,1fr); gap: .1rem; margin: .5rem 0 .2rem; font-size: .96em; }
+.anatomy > div { padding: .35rem 0 .35rem .8rem; border-left: 2px solid var(--rule); }
+.anatomy b { font-family: var(--sans); font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); display: block; }
+.callout { border-radius: var(--radius); padding: .7rem 1rem .6rem; margin: 1.2rem 0; border-left: 4px solid; }
+.callout > .ch { font-family: var(--sans); font-weight: 700; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; margin-bottom: .2rem; display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
+.callout > .ch .src { text-transform: none; letter-spacing: 0; font-weight: 500; opacity: .85; }
+.callout p:first-of-type { margin-top: .2rem; }
+.callout p:last-child { margin-bottom: .2rem; }
+.callout.key { background: var(--key-bg); border-color: var(--key); } .callout.key > .ch { color: var(--key); }
+.callout.warn { background: var(--warn-bg); border-color: var(--warn); } .callout.warn > .ch { color: var(--warn); }
+.callout.link { background: var(--link-bg); border-color: var(--link); } .callout.link > .ch { color: var(--link); }
+.callout.board { background: var(--board-bg); border-color: var(--board); } .callout.board > .ch { color: var(--board); }
+.callout.beyond { background: var(--beyond-bg); border-color: var(--beyond); } .callout.beyond > .ch { color: var(--beyond); }
+blockquote.q { margin: .8rem 0; padding: .3rem 0 .3rem 1rem; border-left: 3px solid var(--rule-2); color: var(--ink-2); font-style: italic; }
+blockquote.q cite { font-style: normal; font-family: var(--sans); font-size: .8rem; color: var(--muted); display: block; }
+
+/* ---------- collapsibles (hints, solutions, answers) ---------- */
+details.fold { border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); margin: .5rem 0; }
+details.fold > summary { cursor: pointer; padding: .45rem .8rem; font-family: var(--sans); font-size: .9rem; font-weight: 600; color: var(--ink-2); list-style: none; display: flex; gap: .5rem; align-items: baseline; }
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary::before { content: "▸"; color: var(--muted); transition: transform .15s; display: inline-block; }
+details.fold[open] > summary::before { transform: rotate(90deg); }
+details.fold > .fb { padding: .1rem 1rem .6rem; border-top: 1px solid var(--rule); }
+.exo { border: 1px solid var(--rule-2); border-radius: var(--radius); padding: .8rem 1rem .5rem; margin: 1.2rem 0; background: var(--surface); }
+.exo-h { font-family: var(--sans); font-weight: 700; font-size: .95rem; }
+.exo-h .pp { font-weight: 500; color: var(--muted); font-size: .8rem; margin-left: .4rem; }
+.qa { counter-reset: q; }
+.qa > details { counter-increment: q; }
+.qa > details > summary::after { content: ""; }
+
+/* ---------- tables ---------- */
+.tw { max-width: 100%; overflow-x: auto; margin: 1rem 0; }
+table { border-collapse: collapse; width: 100%; font-size: .9rem; font-family: var(--sans); }
+th, td { text-align: left; vertical-align: top; padding: .42rem .55rem; border-bottom: 1px solid var(--rule); }
+th { background: var(--surface-2); font-weight: 650; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.compact td, table.compact th { padding: .25rem .45rem; font-size: .82rem; }
+
+/* ---------- labs ---------- */
+.lab { border: 1px solid var(--rule-2); border-radius: 14px; background: var(--surface); margin: 1.6rem 0; box-shadow: var(--shadow); overflow: hidden; }
+.lab-h { padding: .8rem 1rem .5rem; border-bottom: 1px solid var(--rule); }
+.lab-h .tag { font-family: var(--sans); font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--s1); }
+.lab-h h3 { margin: .15rem 0 .2rem; border: 0; padding: 0; }
+.lab-h p { margin: .2rem 0; color: var(--ink-2); font-size: .95em; }
+.lab-body { padding: .8rem 1rem 1rem; }
+.lab-controls { display: grid; grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr)); gap: .6rem 1rem; font-family: var(--sans); font-size: .84rem; margin-bottom: .7rem; }
+.ctl { display: flex; flex-direction: column; gap: .2rem; min-width: 0; }
+.ctl label { color: var(--ink-2); font-weight: 550; display: flex; justify-content: space-between; gap: .5rem; }
+.ctl label output { color: var(--ink); font-variant-numeric: tabular-nums; font-weight: 650; }
+.ctl input[type=range] { width: 100%; accent-color: var(--s1); min-height: 1.6rem; }
+.ctl select, .ctl input[type=number] { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--rule-2); border-radius: 6px; padding: .3rem .4rem; min-height: 2rem; width: 100%; }
+.ctl.check { flex-direction: row; align-items: center; gap: .45rem; }
+.ctl.check input { width: 1.05rem; height: 1.05rem; accent-color: var(--s1); }
+.lab-actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin: .2rem 0 .8rem; font-family: var(--sans); font-size: .82rem; }
+.lab-status { color: var(--muted); }
+.plot { position: relative; width: 100%; margin: .4rem 0 .2rem; }
+.plot canvas { display: block; width: 100%; height: auto; border-radius: 8px; background: var(--surface); touch-action: pan-y; }
+.plot canvas.ov { background: transparent; }
+.plot-title { font-family: var(--sans); font-size: .84rem; font-weight: 650; color: var(--ink); margin: .6rem 0 0; }
+.plot-sub { font-family: var(--sans); font-size: .78rem; color: var(--muted); margin: 0 0 .2rem; }
+.legend { display: flex; flex-wrap: wrap; gap: .25rem 1rem; font-family: var(--sans); font-size: .78rem; color: var(--ink-2); margin: .25rem 0 .1rem; }
+.legend .li { display: inline-flex; align-items: center; gap: .35rem; }
+.legend .key { width: 1.3rem; height: 0; border-top: 2px solid; display: inline-block; }
+.legend .key.dash { border-top-style: dashed; }
+.legend .key.box { width: .8rem; height: .8rem; border: 0; border-radius: 2px; }
+.legend .key.dot { width: .6rem; height: .6rem; border: 0; border-radius: 50%; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--rule-2); border-radius: 7px; padding: .35rem .5rem; font-family: var(--sans); font-size: .76rem; box-shadow: var(--shadow); white-space: nowrap; z-index: 5; display: none; }
+.tip .tv { font-weight: 700; font-variant-numeric: tabular-nums; }
+.tip .tk { display: inline-block; width: .9rem; border-top: 2px solid; vertical-align: middle; margin-right: .3rem; }
+.metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: .5rem; margin: .7rem 0; font-family: var(--sans); }
+.metric { border: 1px solid var(--rule); border-radius: 8px; padding: .45rem .6rem; background: var(--bg); min-width: 0; }
+.metric .ml { font-size: .74rem; color: var(--muted); line-height: 1.3; }
+.metric output { display: block; font-size: 1.02rem; font-weight: 650; color: var(--ink); margin-top: .1rem; overflow-wrap: anywhere; }
+.findings { border-top: 1px dashed var(--rule-2); margin-top: .8rem; padding-top: .5rem; font-size: .96em; }
+.findings > .fh { font-family: var(--sans); font-size: .76rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+details.tableview { margin: .4rem 0; font-family: var(--sans); font-size: .82rem; }
+details.tableview summary { cursor: pointer; color: var(--ink-2); }
+details.tableview .tw { margin: .4rem 0; max-height: 18rem; overflow: auto; }
+
+/* ---------- maps (threads) ---------- */
+.threadmap { width: 100%; overflow-x: auto; margin: 1rem 0; }
+.threadmap table { font-size: .76rem; }
+.threadmap td, .threadmap th { text-align: center; padding: .3rem .25rem; border: 1px solid var(--rule); }
+.threadmap th[scope=row] { text-align: left; font-weight: 600; background: var(--surface); white-space: normal; min-width: 8rem; }
+.threadmap td.on { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.threadmap td.here { background: var(--accent); color: var(--bg); font-weight: 700; }
+.threadmap col.cur { background: var(--accent-soft); }
+.figure { margin: 1.2rem 0; text-align: center; }
+.figure svg { width: 100%; height: auto; max-width: 40rem; }
+.figure figcaption { font-family: var(--sans); font-size: .8rem; color: var(--muted); margin-top: .3rem; text-align: left; }
+svg .ink { fill: var(--ink); } svg .ink2 { fill: var(--ink-2); } svg .mut { fill: var(--muted); }
+svg .st-ink { stroke: var(--ink); } svg .st-mut { stroke: var(--rule-2); } svg .st-s1 { stroke: var(--s1); } svg .st-s2 { stroke: var(--s2); } svg .st-s3 { stroke: var(--s3); } svg .st-s7 { stroke: var(--s7); }
+svg .f-s1 { fill: var(--s1); } svg .f-s2 { fill: var(--s2); } svg .f-s3 { fill: var(--s3); } svg .f-surface { fill: var(--surface); } svg .f-soft { fill: var(--accent-soft); }
+svg text { font-family: var(--sans); }
+
+/* ---------- cheat sheet, glossary ---------- */
+.cheat { display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: .7rem; }
+.cheat > div { border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); padding: .5rem .8rem; font-size: .94em; }
+.cheat h4 { margin: .2rem 0 .3rem; font-size: .88rem; }
+dl.gloss { display: grid; grid-template-columns: minmax(0,1fr); gap: .1rem; }
+dl.gloss dt { font-family: var(--sans); font-weight: 650; margin-top: .5rem; }
+dl.gloss dt .fr { font-weight: 500; color: var(--muted); font-style: italic; }
+dl.gloss dd { margin: 0 0 .2rem 0; }
+footer.foot { max-width: 46rem; margin: 3rem auto 0; padding: 1.5rem 1rem 3rem; border-top: 1px solid var(--rule); font-family: var(--sans); font-size: .82rem; color: var(--muted); }
+
+/* ---------- math ---------- */
+mjx-container[display="true"] { overflow-x: auto; overflow-y: hidden; max-width: 100%; padding: .15em 0; margin: .7em 0 !important; }
+mjx-container { outline: none; }
+.eqgroup { margin: .6rem 0; }
+@media print { .topbar, .toc, .strip, .lab-controls, .lab-actions { display: none; } }
+.threadmap td a { text-decoration: none; color: inherit; display: block; font-size: .9rem; line-height: 1; }
+.threadmap td.on a { color: var(--accent); }
+.threadmap td.here a { color: var(--bg); }
+.threadmap th b { color: var(--accent); }
+.thread { border-left: 3px solid var(--rule-2); padding-left: .9rem; margin: 1rem 0; }
+.thread h3 { margin-top: .5rem; }
+@media (max-width: 560px) {
+  .page { padding: 0 .75rem 3rem; }
+  .stmt, .callout, .exo { padding-left: .7rem; padding-right: .7rem; }
+  details.fold > .fb { padding: .1rem .6rem .5rem; }
+  .lab-h, .lab-body { padding-left: .7rem; padding-right: .7rem; }
+  .anatomy > div { padding-left: .6rem; }
+}
+/* keep MathJax's hidden assistive MathML inside its formula box (it can be wider than the rendering) */
+mjx-container { position: relative; }
+mjx-assistive-mml { width: 100% !important; max-width: 100% !important; }
+
+/* ---------- home page ---------- */
+.lessons { list-style: none; padding: 0; margin: 1rem 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr)); gap: .75rem; }
+.lessons > li { margin: 0; display: flex; }
+.lcard { flex: 1; display: block; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--surface); padding: .75rem .95rem .85rem; text-decoration: none; color: var(--ink); box-shadow: var(--shadow); }
+.lcard:hover { border-color: var(--accent); }
+.lcard:hover .lt { text-decoration: underline; }
+.lcard .ln { display: block; font-family: var(--sans); font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.lcard .lt { display: block; font-family: var(--sans); font-weight: 700; font-size: 1rem; line-height: 1.3; margin: .2rem 0 .4rem; color: var(--accent); }
+.lcard .lq { display: block; font-size: .95em; color: var(--ink-2); line-height: 1.5; }
+.lcard .lm { display: block; font-family: var(--sans); font-size: .76rem; color: var(--muted); margin-top: .5rem; }
+.movements { display: grid; grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr)); gap: .7rem; margin: 1rem 0; }
+.movements > div { border-top: 3px solid var(--s1); background: var(--surface); border-radius: 0 0 8px 8px; padding: .5rem .8rem .7rem; font-size: .95em; }
+.movements > div:nth-child(2) { border-top-color: var(--s3); }
+.movements > div:nth-child(3) { border-top-color: var(--s7); }
+.movements h4 { margin: .2rem 0 .3rem; font-size: 1rem; border: 0; padding: 0; }
+table.stack th[scope=row], table.stack td.lh { font-family: var(--sans); font-weight: 650; }
+table.stack tr.grp th { background: var(--accent-soft); color: var(--ink); font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; }
+@media (max-width: 760px) {
+  table.stack thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  table.stack, table.stack tbody, table.stack tr, table.stack td, table.stack th { display: block; width: 100%; }
+  table.stack tr { border: 1px solid var(--rule); border-radius: 8px; margin: 0 0 .7rem; padding: .35rem .65rem .45rem; background: var(--surface); }
+  table.stack td, table.stack th { border: 0; padding: .22rem 0; background: none; }
+  table.stack td[data-label]::before { content: attr(data-label); display: block; font-size: .7rem; font-weight: 650; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  table.stack tr.grp { border: 0; background: none; padding: .8rem 0 0; margin: 0; }
+  table.stack tr.grp th { background: none; color: var(--accent); padding: 0; }
+}
+ol.asks > li { margin: .55rem 0; }
+ol.asks .q { font-style: italic; }
+
+</style>
+<script>window.MathJax={"tex": {"inlineMath": [["\\(", "\\)"]], "displayMath": [["\\[", "\\]"]], "macros": {"R": "\\mathbb{R}", "N": "\\mathbb{N}", "Q": "\\mathbb{Q}", "Z": "\\mathbb{Z}", "Qb": "\\mathbb{Q}", "E": "\\mathbb{E}", "P": "\\mathbb{P}", "Xb": "\\mathbb{X}", "Yb": "\\mathbb{Y}", "F": "\\mathcal{F}", "G": "\\mathcal{G}", "cB": "\\mathcal{B}", "cN": "\\mathcal{N}", "cM": "\\mathcal{M}", "cX": "\\mathcal{X}", "cY": "\\mathcal{Y}", "cC": "\\mathcal{C}", "cL": "\\mathcal{L}", "cP": "\\mathcal{P}", "cE": "\\mathcal{E}", "cW": "\\mathcal{W}", "dd": "\\mathrm{d}", "Var": "\\operatorname{Var}", "Cov": "\\operatorname{Cov}", "sgn": "\\operatorname{sign}", "ind": "\\mathbf{1}", "indep": "\\perp\\!\\!\\!\\perp", "eqd": "\\overset{(d)}{=}", "TV": "\\mathrm{TV}", "tr": "\\operatorname{Tr}", "Mtc": "\\mathcal{M}_{2,c}", "Mloc": "\\mathcal{M}^{c}_{\\mathrm{loc}}", "Law": "\\operatorname{Law}", "Wd": "W^{d}", "Leb": "\\mathrm{Leb}", "as": "\\text{a.s.}", "iid": "\\text{i.i.d.}", "lt": "<", "gt": ">", "br": ["\\langle #1\\rangle", 1], "norm": ["\\lVert #1\\rVert", 1], "abs": ["\\lvert #1\\rvert", 1], "bb": ["\\mathbb{#1}", 1]}, "processEscapes": true}, "options": {"skipHtmlTags": ["script", "noscript", "style", "textarea", "pre", "code"]}, "chtml": {"scale": 0.97, "matchFontHeight": true},"startup":{"ready":function(){MathJax.startup.defaultReady();MathJax.startup.promise.then(function(){document.documentElement.setAttribute("data-mathjax","done");});}}};</script><script defer id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-chtml.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar"><div class="topbar-in"><a class="brand" href="index.html">Stochastic calculus in ML <span>· study companion</span></a><nav class="navbtns" aria-label="Page navigation"><a href="index.html" title="Home page">⌂<span class="lbl"> Home</span></a><a href="Lesson02.html" rel="prev" title="Previous: Lesson 2">←<span class="lbl"> Prev</span></a><a href="Lesson04.html" rel="next" title="Next: Lesson 4"><span class="lbl">Next </span>→</a><button id="theme-toggle" class="theme-toggle" type="button" aria-pressed="false" aria-label="Switch to dark theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span class="lbl">Dark</span></button></nav></div><nav class="strip" aria-label="All lessons"><a href="index.html">Home</a><a href="Lesson01.html" title="Lesson 1: Brownian Motion and Its First Properties">L1<span class="t"> · Brownian motion</span></a><a href="Lesson02.html" title="Lesson 2: Function Properties of the Brownian Motion: Markov and Quadratic Variation">L2<span class="t"> · Markov &amp; QV</span></a><a href="Lesson03.html" aria-current="page" title="Lesson 3: Measurability, Filtrations and Stopping Times">L3<span class="t"> · Filtrations &amp; stopping</span></a><a href="Lesson04.html" title="Lesson 4: Continuous-Time Martingales and Submartingales">L4<span class="t"> · Martingales</span></a><a href="Lesson05.html" title="Lesson 5: Continuous Semi-Martingales">L5<span class="t"> · Semimartingales</span></a><a href="Lesson06.html" title="Lesson 6: Stochastic Integrals">L6<span class="t"> · Stochastic integrals</span></a><a href="Lesson07.html" title="Lesson 7: Itô Formula and Consequences">L7<span class="t"> · Itô &amp; Girsanov</span></a><a href="Lesson08.html" title="Lesson 8: Stochastic Differential Equations">L8<span class="t"> · SDEs</span></a></nav></header>
+<div class="page">
+<nav class="toc" aria-label="Table of contents"><details><summary>Contents</summary><ol><li><a href="#sec0">§0 Where this lesson sits</a><ol><li><a href="#sec0-threads">The threads, and this lesson's stations</a></li><li><a href="#sec0-question">A question that comes back</a></li></ol></li><li><a href="#s3-1">§3.1 Filtrations and usual conditions</a><ol><li><a href="#lab3-1-h">Can a Brownian path stay below its starting point for a while?</a></li></ol></li><li><a href="#s3-2">§3.2 Measurability and stochastic processes</a></li><li><a href="#s3-3">§3.3 Stopping times and measurability</a><ol><li><a href="#lab3-2-h">Why stopping times? Martingale identities at six random times</a></li><li><a href="#lab3-3-h">Round a stopping time up, not down</a></li></ol></li><li><a href="#exercises">Exercises</a></li><li><a href="#conclusion">Conclusion</a></li><li><a href="#refs">References</a></li><li><a href="#code">Reference implementation (Python / NumPy)</a></li><li><a href="#cheat">Cheat sheet</a></li><li><a href="#selftest">Self-test</a></li><li><a href="#glossary">Glossary (English · French)</a></li></ol></details></nav>
+<main id="main">
+<div class="hero"><p class="eyebrow">Lesson 3 · Chapter 3 of the notes · notes pp. 21–26</p><h1>Measurability, Filtrations and Stopping Times</h1><p class="lede">What do we know at time t, and which random times can be decided with that information?</p></div>
+<section>
+<h2 id="sec0">§0 Where this lesson sits</h2>
+<p>The notes open the chapter by admitting that it is technical: “Here we gather some technical conditions and results which, while they may seem overly complicated at first sight, are important to consider if we want to construct and manipulate continuous-time processes” (p. 21). This page keeps asking what each condition buys.</p>
+<p><b>What it reuses.</b></p>
+<ul>
+<li>From <a class="xr" href="Lesson02.html">Lesson 2</a>: stopping times (<a href="Lesson02.html#n2-11">Def. 2.11</a>), the σ-field \(\F_\tau\) (<a href="Lesson02.html#n2-13">Def. 2.13</a>), the filtration \(\F_{t+}\) and the fact that Brownian motion does not feel the difference (<a href="Lesson02.html#n2-4">Prop. 2.4</a>, <a href="Lesson02.html#n2-9">Cor. 2.9</a>). Also the hitting time \(\tau_a\) (<a href="Lesson02.html#n2-12">Example 2.12</a>) and the dyadic rounding \(\tau_N\downarrow\tau\) from the strong Markov proof (<a href="Lesson02.html#n2-15">Thm. 2.15</a>).</li>
+<li>From <a class="xr" href="Lesson01.html">Lesson 1</a>: modifications and indistinguishability (<a href="Lesson01.html#n1-9">Def. 1.9</a>, <a href="Lesson01.html#n1-11">Def. 1.11</a>). Completing the filtration is what lets a modification of an adapted process stay adapted.</li>
+</ul>
+<p><b>What it prepares.</b></p>
+<ul>
+<li><a class="xr" href="Lesson04.html">Lesson 4</a> needs right-continuous filtrations for càdlàg modifications of martingales (<a href="Lesson04.html#n4-11">Thm. 4.11</a>). Optional stopping uses \(\F_\sigma\subset\F_\tau\) (<a href="#n3-17">Prop. 3.17</a>, <a href="Lesson04.html#n4-36">Prop. 4.36</a>) and \(\{\tau\lt\sigma\}\in\F_{\sigma\wedge\tau}\) (<a href="Lesson04.html#n4-31">Cor. 4.31</a>).</li>
+<li>Lessons 5–6 need progressive measurability: integrands must be progressive (<a href="Lesson05.html#n5-17">Prop. 5.17</a>, <a href="Lesson06.html#n6-4">Def. 6.4</a>). Local martingales are defined through stopping times (<a href="Lesson05.html#n5-18">Def. 5.18</a>), and stopped integrals through <a href="Lesson06.html#n6-12">Prop. 6.12</a>.</li>
+<li><a class="xr" href="Lesson08.html">Lesson 8</a>: “the augmented filtration” of the driving Brownian motion (<a href="Lesson08.html#n8-2">Def. 8.2</a>) is the usual augmentation of <a class="xr" href="#s3-1">§3.1</a>. Strong and weak solutions differ exactly by the filtration they are adapted to (<a href="Lesson08.html#n8-6">Rem. 8.6</a>, <a href="Lesson08.html#n8-14">Def. 8.14</a>).</li>
+</ul>
+<h3 id="sec0-threads">The threads, and this lesson's stations</h3>
+<div class="threadmap"><table><caption class="sr-only">Threads of the course across lessons</caption><thead><tr><th scope="col">Thread</th><th scope="col">L1</th><th scope="col">L2</th><th scope="col"><b>L3</b></th><th scope="col">L4</th><th scope="col">L5</th><th scope="col">L6</th><th scope="col">L7</th><th scope="col">L8</th></tr></thead><tbody><tr><th scope="row">T1 · Laws on path space</th><td class="on"><a href="Lesson01.html#s1-5" title="fidis; Wiener measure" aria-label="T1 in Lesson 1: fidis; Wiener measure">●</a></td><td class="on"><a href="Lesson02.html#n2-1" title="same law on W^d; Markov kernels" aria-label="T1 in Lesson 2: same law on W^d; Markov kernels">●</a></td><td><span class="sr-only">no station</span></td><td><span class="sr-only">no station</span></td><td><span class="sr-only">no station</span></td><td><span class="sr-only">no station</span></td><td class="on"><a href="Lesson07.html#s7-3" title="Girsanov: a new law on path space" aria-label="T1 in Lesson 7: Girsanov: a new law on path space">●</a></td><td class="on"><a href="Lesson08.html#n8-11" title="weak uniqueness = equal laws" aria-label="T1 in Lesson 8: weak uniqueness = equal laws">●</a></td></tr><tr><th scope="row">T2 · Discretize dyadically, then pass to the limit</th><td class="on"><a href="Lesson01.html#s1-4" title="Lévy’s dyadic construction" aria-label="T2 in Lesson 1: Lévy’s dyadic construction">●</a></td><td class="on"><a href="Lesson02.html#s2-2" title="QV on dyadic meshes; τ_N ↓ τ" aria-label="T2 in Lesson 2: QV on dyadic meshes; τ_N ↓ τ">●</a></td><td class="here"><a href="Lesson03.html#n3-12" title="progressive via dyadic approximations" aria-label="T2 in Lesson 3: progressive via dyadic approximations">●</a></td><td class="on"><a href="Lesson04.html#n4-29" title="Doob and optional stopping on dyadic skeletons" aria-label="T2 in Lesson 4: Doob and optional stopping on dyadic skeletons">●</a></td><td class="on"><a href="Lesson05.html#n5-23" title="bracket as a limit of sums" aria-label="T2 in Lesson 5: bracket as a limit of sums">●</a></td><td class="on"><a href="Lesson06.html#n6-18" title="elementary integrands; Riemann sums" aria-label="T2 in Lesson 6: elementary integrands; Riemann sums">●</a></td><td class="on"><a href="Lesson07.html#n7-1" title="Taylor on meshes = Itô" aria-label="T2 in Lesson 7: Taylor on meshes = Itô">●</a></td><td class="on"><a href="Lesson08.html#n8-9" title="Picard iterates" aria-label="T2 in Lesson 8: Picard iterates">●</a></td></tr><tr><th scope="row">T3 · Quadratic variation: the roughness that drives Itô calculus</th><td class="on"><a href="Lesson01.html#n1-10" title="Hölder exponents below 1/2" aria-label="T3 in Lesson 1: Hölder exponents below 1/2">●</a></td><td class="on"><a href="Lesson02.html#n2-21" title="Σ(ΔB)² → t; infinite variation" aria-label="T3 in Lesson 2: Σ(ΔB)² → t; infinite variation">●</a></td><td><span class="sr-only">no station</span></td><td class="on"><a href="Lesson04.html#n4-3" title="B² − t is a martingale" aria-label="T3 in Lesson 4: B² − t is a martingale">●</a></td><td class="on"><a href="Lesson05.html#n5-23" title="the bracket ⟨M⟩" aria-label="T3 in Lesson 5: the bracket ⟨M⟩">●</a></td><td class="on"><a href="Lesson06.html#n6-6" title="Itô isometry" aria-label="T3 in Lesson 6: Itô isometry">●</a></td><td class="on"><a href="Lesson07.html#n7-1" title="½ f″ d⟨X⟩; Lévy’s characterization" aria-label="T3 in Lesson 7: ½ f″ d⟨X⟩; Lévy’s characterization">●</a></td><td class="on"><a href="Lesson08.html#n8-9" title="σσᵀ in the dynamics" aria-label="T3 in Lesson 8: σσᵀ in the dynamics">●</a></td></tr><tr><th scope="row">T4 · Information, stopping and localization</th><td><span class="sr-only">no station</span></td><td class="on"><a href="Lesson02.html#n2-11" title="F_{s+}, Blumenthal, stopping times" aria-label="T4 in Lesson 2: F_{s+}, Blumenthal, stopping times">●</a></td><td class="here"><a href="Lesson03.html#s3-1" title="usual conditions; F_τ; hitting times" aria-label="T4 in Lesson 3: usual conditions; F_τ; hitting times">●</a></td><td class="on"><a href="Lesson04.html#s4-3" title="optional stopping; uniform integrability" aria-label="T4 in Lesson 4: optional stopping; uniform integrability">●</a></td><td class="on"><a href="Lesson05.html#s5-3" title="local martingales" aria-label="T4 in Lesson 5: local martingales">●</a></td><td class="on"><a href="Lesson06.html#s6-2" title="integrals built by localization" aria-label="T4 in Lesson 6: integrals built by localization">●</a></td><td class="on"><a href="Lesson07.html#n7-19" title="Novikov and Kazamaki criteria" aria-label="T4 in Lesson 7: Novikov and Kazamaki criteria">●</a></td><td class="on"><a href="Lesson08.html#n8-14" title="strong vs weak solutions (which filtration?)" aria-label="T4 in Lesson 8: strong vs weak solutions (which filtration?)">●</a></td></tr><tr><th scope="row">T5 · Markov property, semigroups and PDEs</th><td class="on"><a href="Lesson01.html#n1-7" title="independent Gaussian increments" aria-label="T5 in Lesson 1: independent Gaussian increments">●</a></td><td class="on"><a href="Lesson02.html#s2-1" title="Markov, strong Markov, heat semigroup" aria-label="T5 in Lesson 2: Markov, strong Markov, heat semigroup">●</a></td><td><span class="sr-only">no station</span></td><td class="on"><a href="Lesson04.html#n4-33" title="Laplace transform of hitting times" aria-label="T5 in Lesson 4: Laplace transform of hitting times">●</a></td><td><span class="sr-only">no station</span></td><td><span class="sr-only">no station</span></td><td class="on"><a href="Lesson07.html#n7-3" title="generator b·∇ + ½Tr(a∇²)" aria-label="T5 in Lesson 7: generator b·∇ + ½Tr(a∇²)">●</a></td><td class="on"><a href="Lesson08.html#s8-3" title="SDE solutions are Markov; P_tP_s = P_{t+s}" aria-label="T5 in Lesson 8: SDE solutions are Markov; P_tP_s = P_{t+s}">●</a></td></tr><tr><th scope="row">T6 · Completeness and L² geometry</th><td class="on"><a href="Lesson01.html#n1-19" title="Cauchy in C([0,1]) + Borel–Cantelli" aria-label="T6 in Lesson 1: Cauchy in C([0,1]) + Borel–Cantelli">●</a></td><td class="on"><a href="Lesson02.html#n2-21" title="L² convergence of quadratic sums" aria-label="T6 in Lesson 2: L² convergence of quadratic sums">●</a></td><td><span class="sr-only">no station</span></td><td class="on"><a href="Lesson04.html#n4-24" title="UI, Doob Lᵖ, closed martingales" aria-label="T6 in Lesson 4: UI, Doob Lᵖ, closed martingales">●</a></td><td class="on"><a href="Lesson05.html#n5-31" title="E⟨M⟩∞ = E M∞²" aria-label="T6 in Lesson 5: E⟨M⟩∞ = E M∞²">●</a></td><td class="on"><a href="Lesson06.html#n6-3" title="M₂,c is a Hilbert space; Riesz" aria-label="T6 in Lesson 6: M₂,c is a Hilbert space; Riesz">●</a></td><td><span class="sr-only">no station</span></td><td class="on"><a href="Lesson08.html#n8-9" title="contraction in L²_T; Gronwall" aria-label="T6 in Lesson 8: contraction in L²_T; Gronwall">●</a></td></tr><tr><th scope="row">T7 · Toward sampling and generative modeling</th><td class="on"><a href="Lesson01.html#board-ch0" title="Langevin diffusion (board, Chap. 0)" aria-label="T7 in Lesson 1: Langevin diffusion (board, Chap. 0)">●</a></td><td class="on"><a href="Lesson02.html#n2-8" title="the heat semigroup smooths" aria-label="T7 in Lesson 2: the heat semigroup smooths">●</a></td><td><span class="sr-only">no station</span></td><td class="on"><a href="Lesson04.html#n4-3" title="exponential martingales" aria-label="T7 in Lesson 4: exponential martingales">●</a></td><td><span class="sr-only">no station</span></td><td><span class="sr-only">no station</span></td><td class="on"><a href="Lesson07.html#n7-16" title="Girsanov = importance sampling of paths" aria-label="T7 in Lesson 7: Girsanov = importance sampling of paths">●</a></td><td class="on"><a href="Lesson08.html#n8-1" title="OU and Langevin as SDEs; Markov semigroup" aria-label="T7 in Lesson 8: OU and Langevin as SDEs; Markov semigroup">●</a></td></tr></tbody></table></div><p class="small muted">Filled dots link to each station; this lesson’s column is highlighted. This lesson’s stations:</p><ul class="small"><li><b>T2 · Discretize dyadically, then pass to the limit:</b> <a href="Lesson03.html#n3-12">progressive via dyadic approximations</a></li><li><b>T4 · Information, stopping and localization:</b> <a href="Lesson03.html#s3-1">usual conditions; F_τ; hitting times</a></li></ul>
+<h3 id="sec0-question">A question that comes back</h3>
+<p><b>“What exactly do we know at time <span class="nw">\(t\),</span> and which random times can we act on?”</b> <a class="xr" href="Lesson02.html">Lesson 2</a> met this question twice: information “just after” \(s\) (<span class="nw">\(\F_{s+}\),</span> <a href="Lesson02.html#n2-4">Prop. 2.4</a>), and restarting at a random time, which works for stopping times and fails for the last zero (<a href="Lesson02.html#exo-2-8">Lesson 2, E8</a>). Here the answer becomes a set of rules: usual conditions, progressive processes, <span class="nw">\(\F_\tau\).</span> <a class="xr" href="Lesson04.html">Lesson 4</a> turns it into the question of when martingale identities survive at random times. <a class="xr" href="#lab3-2">Lab 3.2</a> previews that answer.</p>
+</section>
+
+<section>
+<h2 id="s3-1">§3.1 Filtrations and usual conditions</h2>
+<p class="pages">notes, pp. 21–22</p>
+<p><b>The problem.</b> A filtration models information growing with time. Two technical defects make continuous-time arguments break. First, null sets may be missing, so an a.s. modification of an adapted process may fail to be adapted. Second, information may jump “just after” <span class="nw">\(t\),</span> so natural random times such as “the first time \(X\) enters an open set” are not stopping times.</p>
+<div class="stmt def" id="n3-1"><div class="stmt-h">Definition 3.1 <span class="nm">(filtration)</span><span class="pp">notes p. 21</span></div>
+<p>A filtration on \((\Omega,\F,\P)\) is an increasing family \((\F_t)_{t\ge0}\) of sub-σ-fields of <span class="nw">\(\F\):</span> <span class="nw">\(s\le t\Rightarrow\F_s\subset\F_t\).</span></p></div>
+<div class="stmt def" id="n3-2"><div class="stmt-h">Definition 3.2 <span class="nm">(right-continuity)</span><span class="pp">notes p. 21</span></div>
+<p>(a) <span class="nw">\(\F_{t+}=\bigcap_{s\gt t}\F_s\).</span> (b) \((\F_t)\) is right-continuous if \(\F_t=\F_{t+}\) for every <span class="nw">\(t\).</span></p></div>
+<p>The notes' interpretation: \((\F_t)\) is right-continuous if the information “evolves smoothly with time and does not contain new information coming from an infinitesimal time change.” <a id="n3-3"></a><b>Proposition 3.3:</b> \((\F_{t+})\) is a filtration and it is right-continuous (<a href="#exo-3-1">Exercise E1</a>).</p>
+
+<div class="stmt ex" id="n3-4"><div class="stmt-h">Example 3.4<span class="pp">notes pp. 21–22</span></div>
+<p>(1) A filtration that is not right-continuous. (2) For a Brownian motion and <span class="nw">\(a\gt0\),</span> compare \(\tau_a=\inf\{t\ge0:B_t=a\}\) and <span class="nw">\(\sigma_a=\inf\{t\ge0:B_t\gt a\}\).</span> \(\tau_a\) is a stopping time of the natural filtration <span class="nw">\(\F^B_t=\sigma(B_s:s\le t)\).</span> \(\sigma_a\) is only a stopping time of <span class="nw">\((\F^B_{t+})\):</span>
+\[ \{\sigma_a\le t\}=\bigcap_{\varepsilon\in\Qb_+}\Big\{\sup_{r\in[0,t+\varepsilon]\cap\Qb}B_r\gt a\Big\}\in\F^B_{t+}. \]
+It is a stopping time of the completed natural filtration, because \(\sigma_a=\tau_a\) a.s. (<a class="xr" href="#n3-7">Exercise 3.7</a>).</p></div>
+<div class="callout warn"><div class="ch">Watch out: three slips in Example 3.4 (notes p. 21)</div>
+<ol>
+<li>Part (1) reads “\(\F_t=\{\varnothing,\Omega\}\) while <span class="nw">\(\F_0=\sigma(Z)\)”.</span> That is not a filtration: it decreases. The intended example is the reverse: \(\F_0=\{\varnothing,\Omega\}\) and \(\F_t=\sigma(Z)\) for <span class="nw">\(t\gt0\).</span> Then <span class="nw">\(\F_{0+}=\sigma(Z)\ne\F_0\).</span> It is the natural filtration of <span class="nw">\(X_t=tZ\):</span> the path reveals \(Z\) at every <span class="nw">\(t\gt0\),</span> but not at <span class="nw">\(t=0\).</span></li>
+<li>Part (2) first says “it is easy to verify that \(\sigma_a\) is an \((\F^B_t)\)-stopping time”, then that it is not. The displayed event is in <span class="nw">\(\F^B_{t+}\),</span> so the first claim should read “an \((\F^B_{t+})\)-stopping time”.</li>
+<li>The second displayed event, <span class="nw">\(\{\sup_{[0,t]}B\gt a\}\cup\{\sup_{[0,t]}B=a\text{ and }\exists s\gt0:B_{t+s}\gt a\}\),</span> is not <span class="nw">\(\{\sigma_a\le t\}\):</span> a crossing at a much later time \(t+s\) does not give <span class="nw">\(\sigma_a\le t\).</span> The second part should say “\(B_t=a\) and for every \(\varepsilon\gt0\) there is \(s\in(0,\varepsilon)\) with <span class="nw">\(B_{t+s}\gt a\)”.</span> It depends on the path after <span class="nw">\(t\),</span> which is why \(\sigma_a\) is not an \((\F^B_t)\)-stopping time. The notes also write “\(\sigma_a\) is complete for the completed natural filtration”, meaning it is a stopping time for it.</li>
+</ol></div>
+<p>The notes conclude (p. 22): for large classes of processes including Brownian motion, the completed natural filtration is right-continuous. For Brownian motion this is <a href="Lesson02.html#n2-4">Prop. 2.4</a> in disguise: every \(A\in\F_{s+}\) differs from an event of \(\F_s\) by a null set. For general processes it fails, so to show that first hitting times are stopping times “we must consider right-continuous and complete filtrations.”</p>
+
+<div class="stmt def" id="n3-5"><div class="stmt-h">Definition 3.5 <span class="nm">(complete, completed filtration)</span><span class="pp">notes p. 22</span></div>
+<p>(a) \((\F_t)\) is complete if every negligible set belongs to <span class="nw">\(\F_0\).</span> (b) The completed filtration is <span class="nw">\(\F^c_t=\sigma(\F_t\cup\cN)\),</span> where \(\cN\) is the class of negligible sets.</p></div>
+<div class="stmt prop" id="n3-6"><div class="stmt-h">Proposition 3.6 <span class="nm">(usual augmentation)</span><span class="pp">notes p. 22</span></div>
+<p>(a) \((\F^c_t)\) is complete. (b) If \((\F_t)\) is right-continuous, \((\F^c_t)\) satisfies the <em>usual conditions</em>: it is complete and right-continuous. The usual augmentation of \((\F_t)\) is <span class="nw">\((\F^c_{t+})\).</span></p></div>
+<div class="callout key"><div class="ch">Key idea: what the usual conditions buy</div>
+<p><b>Completeness:</b> if \(X\) is adapted and \(Y\) is a modification of <span class="nw">\(X\),</span> then \(Y\) is adapted, since \(\{Y_t\in A\}\) differs from \(\{X_t\in A\}\) by a null set. An a.s. limit of adapted processes is adapted. So we can pass to continuous or càdlàg versions freely, as in <a href="Lesson04.html#n4-11">Thm. 4.11</a> and <a href="Lesson06.html#n6-3">Thm. 6.3</a>. <b>Right-continuity:</b> “\(\{\tau\lt t\}\in\F_t\) for all <span class="nw">\(t\)”</span> is enough to be a stopping time (<a href="#n3-8">Exercise 3.8</a>). Hitting times of open sets by right-continuous processes are stopping times (<a href="#n3-20">Thm. 3.20</a>). Infima of stopping times are stopping times (<a href="#n3-18">Thm. 3.18</a>). The notes: “In this course, if not specified otherwise, we will always consider filtered probability spaces satisfying the usual conditions” (p. 22).</p></div>
+
+<div class="stmt ex" id="n3-7"><div class="stmt-h">Exercise 3.7<span class="pp">notes p. 22</span></div>
+<p>Using the Brownian example above, show that \(\sigma_a=\tau_a\) almost surely. Hints and a full solution: <a href="#exo-3-3">Exercise E3</a>.</p></div>
+<p>The mechanism: after <span class="nw">\(\tau_a\),</span> the path is \(a\) plus a fresh Brownian motion (strong Markov). A Brownian motion started at 0 takes positive values on every interval \([0,\varepsilon]\) (Blumenthal). So the path exceeds \(a\) immediately after touching it. <a class="xr" href="#lab3-1">Lab 3.1</a> measures the key ingredient: the probability that a Brownian path stays \(\le0\) on \([0,h]\) is 0, whatever <span class="nw">\(h\).</span></p>
+<div class="callout warn"><div class="ch">Watch out: the notes' solution sketch of Exercise 3.7</div>
+<p>It bounds \(\{\sigma_a\gt\tau_a\}\) by <span class="nw">\(\{\exists t\ge0:\sup_{s\in[t,t+\varepsilon]}B_s=a\}\),</span> with \(\varepsilon\) undefined, and invokes “the fact that Brownian motion crosses any level immediately after hitting it”, which is what has to be proved. The event to control is <span class="nw">\(\{\exists\varepsilon\gt0: B\le a\text{ on }[\tau_a,\tau_a+\varepsilon]\}\).</span> Its probability is 0 by the strong Markov property at \(\tau_a\) and Blumenthal's law (<a class="xr" href="#exo-3-3">E3</a>).</p></div>
+
+<div class="lab" id="lab3-1" data-lab="L3.cross"><div class="lab-h"><div class="tag">Lab 3.1 · Example 3.4, Exercise 3.7</div><h3 id="lab3-1-h">Can a Brownian path stay below its starting point for a while?</h3><p>Question: \(\sigma_a=\tau_a\) holds because a Brownian motion started at 0 cannot stay \(\le0\) on any interval <span class="nw">\([0,h]\).</span> On a grid of \(n\) points of <span class="nw">\((0,h]\),</span> the path values form a Gaussian random walk. The probability that it stays \(\le0\) has an exact formula, \(\binom{2n}{n}4^{-n}\approx1/\sqrt{\pi n}\) (Sparre Andersen's theorem, beyond the notes). We check it and watch it go to 0 as the grid refines.</p></div><div class="lab-body"><div class="lab-controls"></div><div class="lab-actions"><button type="button" class="btn primary" data-run>Run</button><button type="button" class="btn" data-reset>Reset to the default settings</button><button type="button" class="btn" data-reseed>New seed</button><span class="lab-status" aria-live="polite"></span></div><div class="lab-plots"></div><div class="metrics"></div><div class="findings"><div class="fh">What the lab shows (default settings unless stated)</div><ul>
+<li>With 16 grid points, \(\hat\P=\) 0.1441 against the exact 0.1399. With \(2^{11}=2048\) points, 0.0120 against 0.0125. The fitted log–log slope is −0.513 (theory <span class="nw">\(-\frac12\)).</span> Refining the grid can only add constraints, so the continuous-time probability is <span class="nw">\(\lim_n\binom{2n}n4^{-n}=0\).</span></li>
+<li><b>No dependence on <span class="nw">\(h\).</span></b> With \(h=10^{-6}\) instead of <span class="nw">\(h=1\),</span> the outputs are <em>identical</em> (0.0120 at the finest grid). With the same seed the paths are the same up to the factor <span class="nw">\(\sqrt h\),</span> which does not change signs. This is Brownian scaling: staying below 0 is just as impossible on a microsecond as on a year. It is the numerical face of Blumenthal's 0–1 law.</li>
+</ul></div></div></div>
+
+<div class="stmt ex" id="n3-8"><div class="stmt-h">Exercise 3.8<span class="pp">notes p. 22</span></div>
+<p>Show that \(\tau\) is an \((\F_t)\)-stopping time if and only if \(\{\tau\lt t\}\in\F_t\) for every \(t\) <em>[true when \((\F_t)\) is right-continuous; see below]</em>.</p></div>
+<div class="callout warn"><div class="ch">Watch out: Exercise 3.8 needs right-continuity</div>
+<p>As stated, without right-continuity, <a class="xr" href="#n3-8">Exercise 3.8</a> is false. The notes' own sketch proves only \(\{\tau\le s\}\in\F_{s+}\) for the converse. It then adds “in particular \(\{\tau\le s\}\in\F_s\) when the filtration is right-continuous”. In general, \(\{\tau\lt t\}\in\F_t\ \forall t\) characterizes \((\F_{t+})\)-stopping times, also called <em>optional times</em>. Counterexample: in the corrected <a class="xr" href="#n3-4">Example 3.4</a> (1), take \(\tau=0\) on \(\{Z=1\}\) and \(\tau=1\) on <span class="nw">\(\{Z=-1\}\).</span> Then \(\{\tau\lt t\}\in\F_t\) for all <span class="nw">\(t\),</span> but <span class="nw">\(\{\tau\le0\}=\{Z=1\}\notin\F_0\).</span></p></div>
+<div class="stmt ex" id="n3-9"><div class="stmt-h">Exercise 3.9<span class="pp">notes p. 22</span></div>
+<p>Show that \(\tau\) is an \((\F_{t+})\)-stopping time if and only if \(\tau\wedge t\) is \(\F_t\)-measurable for every <span class="nw">\(t\).</span></p></div>
+<p>This one is correct as stated (<a href="#exo-3-5">Exercise E5</a>). The version with \(\F_t\) in place of \(\F_{t+}\) is false: the same \(\tau\) as above has \(\tau\wedge t\) \(\F_t\)-measurable for every <span class="nw">\(t\),</span> yet it is not an \((\F_t)\)-stopping time.</p>
+</section>
+
+<section>
+<h2 id="s3-2">§3.2 Measurability and stochastic processes</h2>
+<p class="pages">notes, pp. 23–24</p>
+<p><b>The problem.</b> The notes write: “Dealing with processes, one would like to know that if \((X_t)\) is a stochastic process, then \(X_\tau\ind_{\{\tau\lt\infty\}}\) is \(\F_\tau\)-measurable. This is not always the case” (p. 23). Similarly, \(\int_0^tH_s\,\dd s\) should be \(\F_t\)-measurable, which needs joint measurability in \((s,\omega)\) on \([0,t]\times\Omega\) with respect to <span class="nw">\(\cB([0,t])\otimes\F_t\).</span></p>
+<div class="stmt def" id="n3-10"><div class="stmt-h">Definition 3.10<span class="pp">notes p. 23</span></div>
+<p>Let \((X_t)\) take values in <span class="nw">\((E,\mathcal E)\).</span>
+(a) \(X\) is <em>measurable</em> if \((t,\omega)\mapsto X_t(\omega)\) is \(\cB([0,\infty))\otimes\F/\mathcal E\)-measurable.
+(b) \(X\) is <em>adapted</em> if each \(X_t\) is \(\F_t/\mathcal E\)-measurable.
+(c) \(X\) is <em>progressively measurable</em> (progressive) if, for every <span class="nw">\(t\gt0\),</span> \((\omega,s)\in\Omega\times[0,t]\mapsto X_s(\omega)\) is \(\F_t\otimes\cB([0,t])/\mathcal E\)-measurable.</p></div>
+<p>Progressive implies measurable and adapted. Progressive means that the whole past trajectory up to <span class="nw">\(t\),</span> as a function of <span class="nw">\((\omega,s)\),</span> is known at time \(t\) in a jointly measurable way.</p>
+<div class="stmt prop" id="n3-11"><div class="stmt-h">Proposition 3.11<span class="pp">notes p. 23</span></div>
+<p>If \(X\) is right-continuous, it is measurable: \(X_t=\lim_nX_{\lceil2^nt\rceil/2^n}\) pointwise, and each approximation is measurable.</p></div>
+<div class="stmt prop" id="n3-12"><div class="stmt-h">Proposition 3.12<span class="pp">notes p. 23</span></div>
+<p>If \(X\) is right-continuous and adapted, it is progressive.</p></div>
+<p><b>Correct proof.</b> Fix <span class="nw">\(t\).</span> For \(s\in[0,t]\) put \(X^{(n)}_0=X_0\) and \(X^{(n)}_s=X_{((k+1)2^{-n})\wedge t}\) for <span class="nw">\(s\in(k2^{-n},(k+1)2^{-n}]\).</span> Each \(X^{(n)}\) is a finite sum of terms \(\ind_{(\text{interval})}(s)\,X_{u}(\omega)\) with <span class="nw">\(u\le t\),</span> so it is \(\cB([0,t])\otimes\F_t\)-measurable. By right-continuity, \(X^{(n)}_s\to X_s\) for every <span class="nw">\(s\),</span> since the right endpoint decreases to <span class="nw">\(s\).</span> Pointwise limits of measurable maps are measurable.</p>
+<div class="callout warn"><div class="ch">Watch out: the notes' proof of Prop. 3.12 uses the wrong endpoint (p. 23)</div>
+<p>The notes approximate by <span class="nw">\(X^{(n)}_s=\sum_kX_{k/2^n}\ind_{(k/2^n,(k+1)/2^n]}(s)\),</span> the value at the <em>left</em> endpoint. For a right-continuous process with jumps this converges to the left limit <span class="nw">\(X_{s-}\),</span> not to <span class="nw">\(X_s\).</span> Example: \(X_s=\ind\{s\ge1/2\}\) gives <span class="nw">\(X^{(n)}_{1/2}=X_{1/2-2^{-n}}=0\ne X_{1/2}=1\).</span> Left endpoints are the right choice for left-continuous processes. For right-continuous ones use the right endpoint, capped at \(t\) to stay \(\F_t\)-measurable. <a class="xr" href="#n3-11">Prop. 3.11</a> uses <span class="nw">\(\lceil2^nt\rceil/2^n\),</span> which is correct.</p></div>
+<div class="stmt def" id="n3-13"><div class="stmt-h">Definition 3.13<span class="pp">notes p. 23</span></div>
+<p>\(A\in\cB(\R_+)\otimes\F\) is progressive if \((\omega,s)\mapsto\ind_A(s,\omega)\) is a progressive process.</p></div>
+<div class="stmt prop" id="n3-14"><div class="stmt-h">Proposition 3.14<span class="pp">notes p. 24</span></div>
+<p>(1) The progressive sets form a σ-field, the progressive σ-field <span class="nw">\(\cP\).</span> (2) \(X\) is progressive if and only if \((t,\omega)\mapsto X_t(\omega)\) is \(\cP\)-measurable.</p></div>
+<p>(1) is <a href="#exo-3-7">Exercise E7</a>: “\(A\cap([0,t]\times\Omega)\in\cB([0,t])\otimes\F_t\) for all <span class="nw">\(t\)”</span> is stable under complements and countable unions. <a class="xr" href="Lesson06.html">Lesson 6</a> builds stochastic integrals on the Hilbert space \(L^2\big([0,T]\times\Omega,\cP,\dd t\otimes\P\big)\) of progressive processes (<a href="Lesson06.html#n6-4">Def. 6.4</a>, <a href="Lesson08.html#n8-9">Thm. 8.9</a>).</p>
+<p><a id="n3-15"></a><b>Remark 3.15.</b> A process can be measurable (even adapted) without being progressive. <span class="small">(Beyond the notes: every measurable adapted process has a progressive modification, by the Chung–Doob–Meyer theorem. With the usual conditions the distinction is therefore harmless for most purposes, but it matters for the definitions.)</span></p>
+</section>
+
+<section>
+<h2 id="s3-3">§3.3 Stopping times and measurability</h2>
+<p class="pages">notes, pp. 24–26</p>
+<p><b>The problem.</b> We will constantly evaluate processes at stopping times (<span class="nw">\(M_\tau\),</span> <span class="nw">\(B_{\tau+t}\)),</span> compare two stopping times, and take limits of stopping times. We need to know what is measurable with respect to what.</p>
+<div class="stmt def" id="n3-16"><div class="stmt-h">Definition 3.16<span class="pp">notes p. 24</span></div>
+<p>For a stopping time <span class="nw">\(\tau\),</span> the notes define
+\[ \{A\in\F:\ A\cap\{\tau\lt t\}\in\F_t\ \ \forall t\ge0\}, \]
+calling it \(\F_{\tau-}\) (see the Watch out box: this set is <span class="nw">\(\F_{\tau+}\)).</span> The notes then list facts that are “repeatedly useful”:</p>
+<ul>
+<li><span class="nw">\(\F_{\tau-}\subset\F_{\tau+}\);</span></li>
+<li>if \((\F_t)\) is right-continuous, <span class="nw">\(\F_\tau=\F_{\tau+}\);</span></li>
+<li>if \(\tau\le t\) for a constant <span class="nw">\(t\),</span> then \(\F_\tau\subset\F_t\) and <span class="nw">\(\F_{\tau+}\subset\F_{t+}\);</span></li>
+<li>with <span class="nw">\(\tilde\F_t=\F_{t+}\),</span> <span class="nw">\(\tilde\F_\tau=\F_{\tau+}\);</span></li>
+<li>\(\tau\) is \(\F_\tau\)-measurable;</li>
+<li>for <span class="nw">\(A\in\F\),</span> \(\tau^A=\tau\ind_A+\infty\ind_{A^c}\) is a stopping time if and only if <span class="nw">\(A\in\F_\tau\).</span></li>
+</ul></div>
+<div class="callout warn"><div class="ch">Watch out: Definition 3.16 names the wrong σ-field (p. 24)</div>
+<p>The set \(\{A: A\cap\{\tau\lt t\}\in\F_t\ \forall t\}\) is <span class="nw">\(\F_{\tau+}\),</span> the σ-field used in the strong Markov property. By <a class="xr" href="#n3-8">Exercise 3.8</a> applied to <span class="nw">\(\tau^A\),</span> it is exactly the set of \(A\) with \(A\cap\{\tau\le t\}\in\F_{t+}\) for all <span class="nw">\(t\).</span> The standard <em>strict past</em> is different: <span class="nw">\(\F_{\tau-}=\sigma\big(\F_0\cup\{A\cap\{t\lt\tau\}:A\in\F_t,\ t\ge0\}\big)\),</span> the information strictly before <span class="nw">\(\tau\).</span> With the standard definitions, <span class="nw">\(\F_{\tau-}\subset\F_\tau\subset\F_{\tau+}\),</span> and the first bullet is then true. In the last bullet the notes write “for any <span class="nw">\(A\in\F_\tau\),</span> \(\tau^A\) is a stopping time if and only if <span class="nw">\(A\in\F_\tau\)”,</span> which is circular. It should start “for any <span class="nw">\(A\in\F\)”.</span></p></div>
+<p><b>Why \(\tau\) is \(\F_\tau\)-measurable</b> (one line): <span class="nw">\(\{\tau\le s\}\cap\{\tau\le t\}=\{\tau\le s\wedge t\}\in\F_{s\wedge t}\subset\F_t\).</span></p>
+<div class="stmt prop" id="n3-17"><div class="stmt-h">Proposition 3.17<span class="pp">notes pp. 24–25 (proof: exercise)</span></div>
+<p>Let \(\sigma,\tau\) be stopping times.
+(a) If <span class="nw">\(\sigma\le\tau\),</span> then \(\F_\sigma\subset\F_\tau\) and <span class="nw">\(\F_{\sigma+}\subset\F_{\tau+}\).</span>
+(b) \(\sigma\wedge\tau\) and \(\sigma\vee\tau\) are stopping times, <span class="nw">\(\F_{\sigma\wedge\tau}=\F_\sigma\cap\F_\tau\),</span> and \(\{\sigma\lt\tau\},\{\sigma=\tau\},\{\sigma\le\tau\}\in\F_{\sigma\wedge\tau}\) (the notes print \(\{\sigma\lt t\}\) for the first).
+(c) \(\sigma+t\) is a stopping time for every constant <span class="nw">\(t\ge0\).</span></p></div>
+<p>Proofs: <a href="#exo-3-6">Exercise E6</a>. The key identity for (a) is \(A\cap\{\tau\le t\}=(A\cap\{\sigma\le t\})\cap\{\tau\le t\}\) when <span class="nw">\(\sigma\le\tau\).</span> These facts drive optional stopping. For instance, the proof of <a href="Lesson04.html#n4-31">Cor. 4.31</a> splits on <span class="nw">\(\{\tau\lt\sigma\}\in\F_{\sigma\wedge\tau}\).</span></p>
+
+<div class="lab" id="lab3-2" data-lab="L3.opt"><div class="lab-h"><div class="tag">Lab 3.2 · Def. 2.11, preview of Lesson 4</div><h3 id="lab3-2-h">Why stopping times? Martingale identities at six random times</h3><p>Question: what goes wrong at a random time that is not a stopping time? For a bounded stopping time <span class="nw">\(\tau\),</span> optional stopping (<a class="xr" href="Lesson04.html">Lesson 4</a>, <a href="Lesson04.html#n4-30">Thm. 4.30</a>) gives \(\E[B_\tau]=0\) and <span class="nw">\(\E[B_\tau^2-\tau]=0\):</span> \(B\) and \(B^2-t\) are martingales (<a href="Lesson04.html#n4-3">Example 4.3</a>). We compute both quantities for six random times <span class="nw">\(\tau\le1\),</span> two of which are stopping times.</p></div><div class="lab-body"><div class="lab-controls"></div><div class="lab-actions"><button type="button" class="btn primary" data-run>Run</button><button type="button" class="btn" data-reset>Reset to the default settings</button><button type="button" class="btn" data-reseed>New seed</button><span class="lab-status" aria-live="polite"></span></div><div class="lab-plots"></div><div class="metrics"></div><div class="findings"><div class="fh">What the lab shows (default settings unless stated)</div><ul>
+<li><b>Stopping times</b> (hitting time <span class="nw">\(\tau_{0.5}\wedge1\);</span> “stop at \(\frac12\) if <span class="nw">\(B_{1/2}\gt0\),</span> else at 1”): \(\E[B_\tau]=\) 0.006 and 0.010, and \(\E[B_\tau^2-\tau]=\) 0.005 and −0.006. All are zero within the Monte Carlo error (largest standard error 0.012).</li>
+<li><b>Random times that look ahead</b> break the identities. “Stop at \(\frac12\) if <span class="nw">\(B_1\gt0\)”:</span> \(\E[B_\tau]=\) −0.186 (exact <span class="nw">\(-1/(2\sqrt{2\pi})=-0.1995\)).</span> The time of the maximum: \(\E[B_\tau]=\) 0.782; this is \(\E[S_1]=\sqrt{2/\pi}\approx0.798\) minus a small grid bias. The last zero: \(\E[B_\tau^2-\tau]=\) −0.486, i.e. <span class="nw">\(-\E[L]=-\frac12\).</span> Stopping 0.1 before <span class="nw">\(\tau_a\):</span> \(\E[B_\tau]=\) −0.280.</li>
+<li><b>A trap.</b> For the “peek” time, \(\E[B_\tau^2-\tau]=\) −0.005 is zero anyway, by the symmetry <span class="nw">\(B\mapsto-B\).</span> One identity can hold by accident. Being a stopping time is what makes all of them hold at once.</li>
+</ul></div></div></div>
+
+<div class="stmt thm" id="n3-18"><div class="stmt-h">Theorem 3.18<span class="pp">notes p. 25</span></div>
+<p>Let \((\tau_n)\) be a non-increasing sequence of stopping times and <span class="nw">\(\tau=\inf_n\tau_n\).</span> Then \(\tau\) is an \((\F_{t+})\)-stopping time <em>[the notes say <span class="nw">\((\F_t)\);</span> true if \((\F_t)\) is right-continuous]</em>, and <span class="nw">\(\F_{\tau+}=\bigcap_n\F_{\tau_n+}\).</span> If \((\F_t)\) is right-continuous, <span class="nw">\(\F_\tau=\bigcap_n\F_{\tau_n}\).</span></p></div>
+<p><b>Why.</b> <span class="nw">\(\{\tau\lt t\}=\bigcup_n\{\tau_n\lt t\}\in\F_t\),</span> and <a class="xr" href="#n3-8">Exercise 3.8</a> (in its correct form) turns this into “\(\tau\) is an \((\F_{t+})\)-stopping time”. The notes write \(\bigcap_n\) instead of <span class="nw">\(\bigcup_n\):</span> an infimum is below \(t\) as soon as one term is. For the σ-fields: if <span class="nw">\(A\in\bigcap_n\F_{\tau_n+}\),</span> then <span class="nw">\(A\cap\{\tau\lt t\}=\bigcup_n\big(A\cap\{\tau_n\lt t\}\big)\in\F_t\),</span> so <span class="nw">\(A\in\F_{\tau+}\).</span> The reverse inclusion follows from \(\tau\le\tau_n\) and <a class="xr" href="#n3-17">Prop. 3.17</a> (a).</p>
+<div class="callout warn"><div class="ch">Watch out: Theorem 3.18 as stated needs right-continuity</div>
+<p>Counterexample (corrected <a class="xr" href="#n3-4">Example 3.4</a> (1): \(\F_0\) trivial, \(\F_t=\sigma(Z)\) for <span class="nw">\(t\gt0\),</span> <span class="nw">\(Z=\pm1\)).</span> Let \(\tau_n=1/n\) on \(\{Z=1\}\) and \(\tau_n=1\) on <span class="nw">\(\{Z=-1\}\).</span> Each \(\tau_n\) is an \((\F_t)\)-stopping time, and they decrease. But \(\tau=\inf_n\tau_n\) equals 0 on <span class="nw">\(\{Z=1\}\),</span> and <span class="nw">\(\{\tau\le0\}=\{Z=1\}\notin\F_0\).</span> Under the usual conditions, which the course assumes, the statement is correct.</p></div>
+<p>This is the result behind every “approximate \(\tau\) from above by dyadic stopping times” argument: <a href="Lesson02.html#n2-15">Thm. 2.15</a>, <a href="Lesson04.html#n4-29">Thm. 4.29</a>, <a href="Lesson04.html#n4-35">Thm. 4.35</a>.</p>
+
+<div class="lab" id="lab3-3" data-lab="L3.dyad"><div class="lab-h"><div class="tag">Lab 3.3 · Thm. 3.18 and its uses</div><h3 id="lab3-3-h">Round a stopping time up, not down</h3><p>Question: proofs replace a stopping time \(\tau\) by the dyadic times <span class="nw">\(\lceil2^n\tau\rceil/2^n\downarrow\tau\),</span> which are again stopping times. Why not <span class="nw">\(\lfloor2^n\tau\rfloor/2^n\uparrow\tau\)?</span> We take \(\tau=\tau_a\wedge1\) on a fine grid (\(2^{12}\) steps) and compute \(\E[B]\) at both roundings for grid levels <span class="nw">\(n=1,\dots,10\).</span></p></div><div class="lab-body"><div class="lab-controls"></div><div class="lab-actions"><button type="button" class="btn primary" data-run>Run</button><button type="button" class="btn" data-reset>Reset to the default settings</button><button type="button" class="btn" data-reseed>New seed</button><span class="lab-status" aria-live="polite"></span></div><div class="lab-plots"></div><div class="metrics"></div><div class="findings"><div class="fh">What the lab shows (default settings unless stated)</div><ul>
+<li><b>Rounded up:</b> \(\E[B]=\) −0.0065 at \(n=4\) and −0.0090 at <span class="nw">\(n=10\).</span> Zero within the standard error (0.0101) at every level, because each rounded-up time is a bounded stopping time.</li>
+<li><b>Rounded down:</b> \(\E[B]=\) −0.1747 at \(n=4\) and −0.0235 at <span class="nw">\(n=10\).</span> Rounding down picks a time before <span class="nw">\(\tau\),</span> chosen because \(B\) was about to reach <span class="nw">\(a\).</span> That uses the future, and it biases \(\E[B]\) below 0. The bias vanishes only in the limit, by continuity.</li>
+<li>The reference code (20,000 independent paths on a 1000-step grid) confirms the pattern: <span class="nw">\(-0.289\),</span> <span class="nw">\(-0.162\),</span> <span class="nw">\(-0.081\),</span> \(-0.044\) for \(n=2,4,6,8\) when rounding down, against \(|\E B|\le0.002\) when rounding up.</li>
+</ul></div></div></div>
+
+<div class="stmt thm" id="n3-19"><div class="stmt-h">Theorem 3.19<span class="pp">notes p. 25</span></div>
+<p>If \((X_t)\) is \((\F_t)\)-progressive with values in \(\R^d\) and \(\tau\) is a stopping time, then \(X_\tau\ind_{\{\tau\lt\infty\}}\) is \(\F_\tau\)-measurable.</p></div>
+<div class="anatomy">
+<div><b>In one sentence</b>A progressive process stopped at a stopping time is known at that time.</div>
+<div><b>Proof</b>Fix \(t\) and a Borel set <span class="nw">\(A\).</span> On <span class="nw">\(\{\tau\le t\}\),</span> <span class="nw">\(X_\tau=X_{\tau\wedge t}\),</span> so <span class="nw">\(\{X_\tau\ind_{\{\tau\lt\infty\}}\in A\}\cap\{\tau\le t\}=\{X_{\tau\wedge t}\in A\}\cap\{\tau\le t\}\).</span> The map \(\omega\mapsto(\omega,\tau(\omega)\wedge t)\) is \(\F_t/\F_t\otimes\cB([0,t])\)-measurable, since \(\tau\wedge t\) is \(\F_t\)-measurable. Composing with the progressive map \((\omega,s)\mapsto X_s(\omega)\) on \(\Omega\times[0,t]\) shows that \(X_{\tau\wedge t}\) is \(\F_t\)-measurable.</div>
+<div><b>Why progressive</b>Composition needs joint measurability of \((\omega,s)\mapsto X_s(\omega)\) with respect to <span class="nw">\(\F_t\otimes\cB([0,t])\).</span> Adaptedness alone gives nothing about \(X\) at the random time <span class="nw">\(\tau(\omega)\).</span> This is the whole point of <a class="xr" href="#n3-10">Definition 3.10</a> (c).</div>
+<div><b>Used again</b>\(B_\tau\) in the strong Markov property (<a href="Lesson02.html#n2-20">Prop. 2.20</a>), \(M_\tau\) in optional stopping (<a href="Lesson04.html#n4-29">Thm. 4.29</a>), stopped processes \(M^\tau\) (<a href="Lesson05.html#n5-25">Rem. 5.25</a>).</div>
+</div>
+
+<div class="stmt thm" id="n3-20"><div class="stmt-h">Theorem 3.20 <span class="nm">(hitting times)</span><span class="pp">notes p. 25 (admitted)</span></div>
+<p>If \((\F_t)\) satisfies the usual conditions and \(X\) is progressive and right-continuous, then \(\tau_A=\inf\{t\ge0:X_t\in A\}\) is a stopping time whenever \(A\) is open or closed.</p></div>
+<p><span class="small">(Beyond the notes: under the usual conditions, the <em>début theorem</em> gives much more: \(\tau_A\) is a stopping time for every Borel set \(A\) and every progressive <span class="nw">\(X\).</span> Its proof uses capacity theory, which is why courses admit it.)</span></p>
+<div class="stmt thm" id="n3-21"><div class="stmt-h">Theorem 3.21<span class="pp">notes p. 26 (proof: exercise)</span></div>
+<p>As printed: let \((\F_t)\) be a complete filtration, \(X\) right-continuous in <span class="nw">\(\R^d\),</span> \(A\in\cB(\R^d)\) and <span class="nw">\(\tau_A=\inf\{t\ge0:X_t\in A\}\).</span> (a) If \(A\) is open, \(\tau_A\) is a stopping time. (b) If \(A\) is closed, \(\tau_A\) is a stopping time.</p></div>
+<div class="callout warn"><div class="ch">Watch out: Theorem 3.21 is false as stated</div>
+<p>“Complete” is not enough; the filtration must be right-continuous, and \(X\) must be adapted (the notes do not say so). Counterexample for (a): \(X_t=tZ\) with <span class="nw">\(Z=\pm1\),</span> its natural filtration completed, and \(A=(0,\infty)\) open. Then \(\tau_A=0\) on \(\{Z=1\}\) and \(\tau_A=\infty\) on <span class="nw">\(\{Z=-1\}\),</span> so <span class="nw">\(\{\tau_A\le0\}=\{Z=1\}\).</span> But \(\F_0\) contains only events of probability 0 or 1, and <span class="nw">\(\P(Z=1)=\frac12\).</span> The correct statements (<a href="#exo-3-8">Exercise E8</a>):</p>
+<ul>
+<li>(a′) \(A\) open and \(X\) right-continuous and adapted: \(\tau_A\) is an \((\F_{t+})\)-stopping time. It is a stopping time under right-continuity.</li>
+<li>(b′) \(A\) closed and \(X\) <em>continuous</em> and adapted: \(\tau_A\) is a stopping time, with no condition on the filtration.</li>
+</ul>
+<p>For closed \(A\) and merely right-continuous <span class="nw">\(X\),</span> one needs the usual conditions (<a class="xr" href="#n3-20">Thm. 3.20</a>).</p></div>
+</section>
+
+<section>
+<h2 id="exercises">Exercises</h2>
+<p>The chapter is full of “Exercise” proofs. Here they are, in the order of the notes, with the corrections discussed above.</p>
+
+<div class="exo" id="exo-3-1"><div class="exo-h">E1 · Proposition 3.3 <span class="pp">notes p. 21: “Proof. Exercise.”</span></div>
+<p>Show that \((\F_{t+})\) is a filtration and is right-continuous.</p>
+<details class="fold"><summary>Solution</summary><div class="fb"><p>For <span class="nw">\(s\le t\):</span> <span class="nw">\(\F_{s+}=\bigcap_{u\gt s}\F_u\subset\bigcap_{u\gt t}\F_u=\F_{t+}\),</span> since the second intersection is over fewer, larger σ-fields. Intersections of σ-fields are σ-fields. Right-continuity: <span class="nw">\(\bigcap_{s\gt t}\F_{s+}=\bigcap_{s\gt t}\bigcap_{u\gt s}\F_u=\bigcap_{u\gt t}\F_u=\F_{t+}\).</span></p></div></details>
+</div>
+
+<div class="exo" id="exo-3-2"><div class="exo-h">E2 · Proposition 3.6 (a) <span class="pp">notes p. 22: “Proof. Exercise.”</span></div>
+<p>Show that \(\F^c_t=\sigma(\F_t\cup\cN)\) is complete. Show also that \(A\in\F^c_t\) if and only if \(A\) differs from some \(A'\in\F_t\) by a subset of a null set.</p>
+<details class="fold"><summary>Solution</summary><div class="fb"><p><span class="nw">\(\cN\subset\F^c_0\subset\F^c_t\),</span> so the filtration is complete by definition. For the description: the class \(\{A:\exists A'\in\F_t,\ A\triangle A'\subset N\in\cN\}\) contains \(\F_t\) and <span class="nw">\(\cN\).</span> It is a σ-field, because symmetric differences behave well under complements and countable unions. And it is contained in any σ-field containing <span class="nw">\(\F_t\cup\cN\).</span> (b) needs a little more care: one checks <span class="nw">\(\bigcap_{s\gt t}\F^c_s=(\F_{t+})^c\),</span> using the description above and a sequence <span class="nw">\(s_n\downarrow t\).</span></p></div></details>
+</div>
+
+<div class="exo" id="exo-3-3"><div class="exo-h">E3 · Exercise 3.7: \(\sigma_a=\tau_a\) a.s. <span class="pp">notes p. 22</span></div>
+<details class="fold"><summary>Hint 1</summary><div class="fb"><p>\(\sigma_a\ge\tau_a\) always, by continuity. Write \(\{\sigma_a\gt\tau_a\}\) in terms of <span class="nw">\(\tilde B_s=B_{\tau_a+s}-a\).</span></p></div></details>
+<details class="fold"><summary>Hint 2</summary><div class="fb"><p>By the strong Markov property, \(\tilde B\) is a Brownian motion. What does Blumenthal's law say about <span class="nw">\(\{\exists\varepsilon\gt0:\tilde B\le0\text{ on }[0,\varepsilon]\}\)?</span></p></div></details>
+<details class="fold"><summary>Solution</summary><div class="fb"><p>If <span class="nw">\(\sigma_a\gt\tau_a\),</span> then \(B\le a\) on <span class="nw">\([\tau_a,\sigma_a)\),</span> so \(\tilde B\le0\) on \([0,\varepsilon]\) with <span class="nw">\(\varepsilon=\sigma_a-\tau_a\gt0\).</span> The event \(E=\{\exists\varepsilon\gt0:\tilde B_s\le0\ \forall s\le\varepsilon\}\) is in the germ σ-field of <span class="nw">\(\tilde B\),</span> and \(\tilde B\) is a Brownian motion (<a class="xr" href="Lesson02.html#n2-15">Thm. 2.15</a>; \(\tau_a\lt\infty\) a.s.). By Blumenthal's law (<a href="Lesson02.html#n2-9">Cor. 2.9</a>) and the discussion after it, <span class="nw">\(\P(E)=0\):</span> a Brownian motion started at 0 takes positive values in every <span class="nw">\([0,\varepsilon]\).</span> Hence <span class="nw">\(\P(\sigma_a\gt\tau_a)=0\).</span> <a class="xr" href="#lab3-1">Lab 3.1</a> checks the quantitative version: <span class="nw">\(\P(\text{stay}\le0\text{ at }n\text{ grid points})=\binom{2n}n4^{-n}\to0\).</span></p></div></details>
+</div>
+
+<div class="exo" id="exo-3-4"><div class="exo-h">E4 · Exercise 3.8 (corrected) <span class="pp">notes p. 22</span></div>
+<p>Show: (i) every stopping time satisfies \(\{\tau\lt t\}\in\F_t\) for all <span class="nw">\(t\).</span> (ii) \(\{\tau\lt t\}\in\F_t\ \forall t\) if and only if \(\tau\) is an \((\F_{t+})\)-stopping time. (iii) The two notions coincide when \((\F_t)\) is right-continuous.</p>
+<details class="fold"><summary>Solution</summary><div class="fb"><p>(i) <span class="nw">\(\{\tau\lt t\}=\bigcup_n\{\tau\le t-1/n\}\),</span> with each term in <span class="nw">\(\F_{t-1/n}\subset\F_t\).</span> (ii) If \(\{\tau\lt u\}\in\F_u\) for all <span class="nw">\(u\),</span> then <span class="nw">\(\{\tau\le s\}=\bigcap_n\{\tau\lt s+1/n\}\),</span> and for each \(u\gt s\) the terms with \(s+1/n\lt u\) lie in <span class="nw">\(\F_u\),</span> so <span class="nw">\(\{\tau\le s\}\in\bigcap_{u\gt s}\F_u=\F_{s+}\).</span> Conversely, if \(\{\tau\le s\}\in\F_{s+}\) for all <span class="nw">\(s\),</span> then \(\{\tau\lt t\}=\bigcup_n\{\tau\le t-1/n\}\) and <span class="nw">\(\F_{(t-1/n)+}\subset\F_t\).</span> (iii) is immediate. The counterexample to the unconditional statement is in the Watch out box above.</p></div></details>
+</div>
+
+<div class="exo" id="exo-3-5"><div class="exo-h">E5 · Exercise 3.9 <span class="pp">notes p. 22</span></div>
+<p>Show that \(\tau\) is an \((\F_{t+})\)-stopping time if and only if \(\tau\wedge t\) is \(\F_t\)-measurable for every <span class="nw">\(t\).</span></p>
+<details class="fold"><summary>Solution</summary><div class="fb"><p>(⇒) For <span class="nw">\(s\lt t\),</span> <span class="nw">\(\{\tau\wedge t\le s\}=\{\tau\le s\}\in\F_{s+}\subset\F_t\);</span> for \(s\ge t\) it is <span class="nw">\(\Omega\).</span> (⇐) For <span class="nw">\(t\gt s\),</span> <span class="nw">\(\{\tau\le s\}=\{\tau\wedge t\le s\}\in\F_t\).</span> Intersecting over \(t\gt s\) gives <span class="nw">\(\{\tau\le s\}\in\F_{s+}\).</span> <b>The \(\F_t\) version is false:</b> in the corrected <a class="xr" href="#n3-4">Example 3.4</a> (1), \(\tau=0\) on \(\{Z=1\}\) and \(1\) on <span class="nw">\(\{Z=-1\}\).</span> Then \(\tau\wedge t\) is \(\F_t\)-measurable for all <span class="nw">\(t\),</span> but <span class="nw">\(\{\tau\le0\}\notin\F_0\).</span></p></div></details>
+</div>
+
+<div class="exo" id="exo-3-6"><div class="exo-h">E6 · Proposition 3.17 <span class="pp">notes p. 25: “Proof. Exercise.”</span></div>
+<details class="fold"><summary>Solution</summary><div class="fb">
+<p>(a) If \(A\in\F_\sigma\) and <span class="nw">\(\sigma\le\tau\),</span> then <span class="nw">\(A\cap\{\tau\le t\}=\big(A\cap\{\sigma\le t\}\big)\cap\{\tau\le t\}\in\F_t\).</span> The same with <span class="nw">\(\F_{t+}\).</span></p>
+<p>(b) \(\{\sigma\wedge\tau\le t\}=\{\sigma\le t\}\cup\{\tau\le t\}\) and <span class="nw">\(\{\sigma\vee\tau\le t\}=\{\sigma\le t\}\cap\{\tau\le t\}\).</span> By (a), <span class="nw">\(\F_{\sigma\wedge\tau}\subset\F_\sigma\cap\F_\tau\).</span> Conversely, if <span class="nw">\(A\in\F_\sigma\cap\F_\tau\),</span> then <span class="nw">\(A\cap\{\sigma\wedge\tau\le t\}=(A\cap\{\sigma\le t\})\cup(A\cap\{\tau\le t\})\in\F_t\).</span> For <span class="nw">\(\{\sigma\lt\tau\}\):</span></p>
+\[ \begin{aligned}&\{\sigma\lt\tau\}\cap\{\sigma\wedge\tau\le t\}\\ &\quad=\bigcup_{r\in\Qb\cap[0,t]}\{\sigma\le r\lt\tau\}\ \cup\ \{\sigma\le t\lt\tau\}\in\F_t,\end{aligned} \]
+<p>so <span class="nw">\(\{\sigma\lt\tau\}\in\F_{\sigma\wedge\tau}\).</span> The other two events follow by symmetry and complements.</p>
+<p>(c) \(\{\sigma+t\le u\}=\{\sigma\le u-t\}\in\F_{u-t}\subset\F_u\) for <span class="nw">\(u\ge t\),</span> and it is \(\varnothing\) for <span class="nw">\(u\lt t\).</span></p></div></details>
+</div>
+
+<div class="exo" id="exo-3-7"><div class="exo-h">E7 · The progressive σ-field <span class="pp">notes p. 24, Prop. 3.14 (1): “Left as an exercise.”</span></div>
+<details class="fold"><summary>Solution</summary><div class="fb"><p>\(A\) is progressive iff \(A\cap([0,t]\times\Omega)\in\cB([0,t])\otimes\F_t\) for all <span class="nw">\(t\).</span> This contains \(\R_+\times\Omega\) and is stable under complements, since <span class="nw">\((A^c)\cap([0,t]\times\Omega)=([0,t]\times\Omega)\setminus(A\cap[0,t]\times\Omega)\).</span> It is stable under countable unions, since intersections distribute. So it is a σ-field.</p></div></details>
+</div>
+
+<div class="exo" id="exo-3-8"><div class="exo-h">E8 · Theorem 3.21, corrected <span class="pp">notes p. 26: “Proof. Left as an exercise.”</span></div>
+<p>(a′) \(A\) open, \(X\) right-continuous and adapted: show <span class="nw">\(\{\tau_A\lt t\}\in\F_t\).</span> (b′) \(A\) closed, \(X\) continuous and adapted: show <span class="nw">\(\{\tau_A\le t\}\in\F_t\).</span></p>
+<details class="fold"><summary>Solution</summary><div class="fb"><p>(a′) <span class="nw">\(\{\tau_A\lt t\}=\bigcup_{s\in\Qb\cap[0,t)}\{X_s\in A\}\).</span> If \(X_u\in A\) for some <span class="nw">\(u\lt t\),</span> then by right-continuity and openness \(X_s\in A\) for all \(s\) slightly larger than <span class="nw">\(u\),</span> including rational <span class="nw">\(s\lt t\).</span> So \(\tau_A\) is an \((\F_{t+})\)-stopping time (<a class="xr" href="#exo-3-4">E4</a>). (b′) Let \(d(x,A)\) be the distance to <span class="nw">\(A\),</span> a continuous function. Then <span class="nw">\(\{\tau_A\le t\}=\big\{\inf_{s\in(\Qb\cap[0,t])\cup\{t\}}d(X_s,A)=0\big\}\).</span> If the infimum is 0, a minimizing sequence \(s_k\) has a limit point \(s\le t\) with <span class="nw">\(d(X_s,A)=0\),</span> by continuity; \(A\) is closed, so <span class="nw">\(X_s\in A\).</span> The counterexample \(X_t=tZ\) shows (a′) cannot be upgraded to “stopping time” without right-continuity.</p></div></details>
+</div>
+</section>
+
+<section>
+<h2 id="conclusion">Conclusion</h2>
+<ul>
+<li><b>Usual conditions.</b> Complete plus right-continuous (<a href="#n3-6">Prop. 3.6</a>). Completeness makes modifications and a.s. limits adapted. Right-continuity turns “optional times” into stopping times, makes infima of stopping times stopping times, and makes hitting times of open sets stopping times. For Brownian motion the completed natural filtration already satisfies them.</li>
+<li><b>Progressive processes.</b> Joint measurability of the past (<a href="#n3-10">Def. 3.10</a>), automatic for right-continuous adapted processes (<a href="#n3-12">Prop. 3.12</a>, with the right endpoint). It makes \(X_\tau\) \(\F_\tau\)-measurable (<a href="#n3-19">Thm. 3.19</a>), and it is the class of stochastic integrands (Lessons 5–6).</li>
+<li><b>Stopping-time calculus.</b> \(\F_\sigma\subset\F_\tau\) for <span class="nw">\(\sigma\le\tau\),</span> <span class="nw">\(\F_{\sigma\wedge\tau}=\F_\sigma\cap\F_\tau\),</span> and comparison events such as \(\{\sigma\lt\tau\}\in\F_{\sigma\wedge\tau}\) (<a href="#n3-17">Prop. 3.17</a>). Approximation from above by dyadic stopping times (<a href="#n3-18">Thm. 3.18</a>; <a class="xr" href="#lab3-3">Lab 3.3</a>).</li>
+<li><b>Why it matters.</b> Stopping times are exactly the random times at which martingale identities survive (<a class="xr" href="#lab3-2">Lab 3.2</a>). <a class="xr" href="Lesson04.html">Lesson 4</a> turns this into the optional stopping theorems.</li>
+<li><b>Errors in this chapter of the notes</b> are more frequent than elsewhere (<a class="xr" href="#n3-4">Examples 3.4</a>, <a class="xr" href="#n3-8">Exercise 3.8</a>, <a class="xr" href="#n3-12">Prop. 3.12</a>'s proof, <a class="xr" href="#n3-16">Def. 3.16</a>, <a class="xr" href="#n3-18">Thm. 3.18</a>, <a class="xr" href="#n3-21">Thm. 3.21</a>). All are fixed on this page with counterexamples. Under the usual conditions most of the statements become true.</li>
+</ul>
+<p><b>Next:</b> <a href="Lesson04.html">Lesson 4</a>: martingales in continuous time: Doob's inequalities, convergence, uniform integrability and optional stopping.</p>
+</section>
+
+<section>
+<h2 id="refs">References</h2>
+<ul>
+<li>D. Revuz and M. Yor, <em>Continuous Martingales and Brownian Motion</em>, 3rd ed., Springer, 1999: Chapter I §4 (filtrations, stopping times, progressive processes).</li>
+<li>J.-F. Le Gall, <em>Brownian Motion, Martingales, and Stochastic Calculus</em>, Springer, 2016: Chapter 3 (filtrations and stopping times), which contains the correct forms of <a href="#n3-8">Exercise 3.8</a> and <a href="#n3-21">Theorem 3.21</a>.</li>
+<li>I. Karatzas and S. E. Shreve, <em>Brownian Motion and Stochastic Calculus</em>, 2nd ed., Springer, 1991: §1.1–1.2 (optional times, progressive measurability, Problem 1.2.7 on hitting times).</li>
+<li>C. Dellacherie and P.-A. Meyer, <em>Probabilities and Potential</em>, North-Holland, 1978: the début theorem and \(\F_{\tau-}\) (Beyond the notes).</li>
+<li>E. Sparre Andersen, On the fluctuations of sums of random variables, <em>Mathematica Scandinavica</em> 1:263–285, 1953 (the formula used in <a class="xr" href="#lab3-1">Lab 3.1</a>).</li>
+</ul>
+<p><b>Code and datasets cited by the notes:</b> none.</p>
+</section>
+
+<section>
+<h2 id="code">Reference implementation (Python / NumPy)</h2>
+<p>Run as shown; the output is verbatim. It checks <a class="xr" href="#lab3-1">Lab 3.1</a> against the exact formula (<code>scipy.special.comb</code>) and repeats Labs 3.2–3.3 with independent random numbers.</p>
+<pre><code>&quot;&quot;&quot;Lesson 3 — reference checks (NumPy/SciPy): immediate crossing, stopping vs non-stopping times, dyadic rounding.&quot;&quot;&quot;
+import numpy as np
+from scipy import special, stats
+
+rng = np.random.default_rng(3)
+
+print(&quot;1) Sparre Andersen: P(S_1&lt;=0,...,S_n&lt;=0) = C(2n,n)/4^n for a Gaussian random walk (any time scale)&quot;)
+M = 200000
+for n in [4, 16, 64, 256]:
+    S = np.cumsum(rng.standard_normal((M, n)), axis=1)
+    p = np.mean((S &lt;= 0).all(axis=1))
+    print(f&quot;   n={n:4d}: simulated {p:.4f}  exact {special.comb(2*n, n)/4**n:.4f}  1/sqrt(pi n) = {1/np.sqrt(np.pi*n):.4f}&quot;)
+
+print(&quot;2) E[B_tau] and E[B_tau^2 - tau] for random times tau &lt;= 1 (grid of 1000 steps, 20000 paths)&quot;)
+n, M, a = 1000, 20000, 0.5
+B = np.concatenate([np.zeros((M, 1)), np.cumsum(rng.standard_normal((M, n)) / np.sqrt(n), axis=1)], axis=1)
+t = np.arange(n + 1) / n
+hit = np.where((B &gt;= a).any(axis=1), (B &gt;= a).argmax(axis=1), n)          # tau_a ^ 1 on the grid
+half = np.where(B[:, n // 2] &gt; 0, n // 2, n)                              # decision at time 1/2: stopping time
+peek = np.where(B[:, n] &gt; 0, n // 2, n)                                   # decision uses B_1: not a stopping time
+argmax = B.argmax(axis=1)                                                 # time of the maximum: not a stopping time
+rows = np.arange(M)
+for name, idx in [(&quot;tau_a ^ 1&quot;, hit), (&quot;1/2 if B_1/2&gt;0 else 1&quot;, half), (&quot;1/2 if B_1&gt;0 else 1&quot;, peek), (&quot;argmax&quot;, argmax)]:
+    b = B[rows, idx]
+    print(f&quot;   {name:24s}: E[B_tau] = {b.mean():+.3f} (se {b.std()/np.sqrt(M):.3f}),  E[B_tau^2 - tau] = {np.mean(b**2 - t[idx]):+.3f}&quot;)
+print(f&quot;   exact E[B_tau] for the &#x27;peek&#x27; time: -1/(2 sqrt(2 pi)) = {-0.5/np.sqrt(2*np.pi):.4f}; for argmax: E[S_1] = sqrt(2/pi) = {np.sqrt(2/np.pi):.4f} (minus grid bias)&quot;)
+
+print(&quot;3) Rounding tau = tau_a ^ 1 to the dyadic grid: up (stopping time) vs down (anticipating)&quot;)
+for k in [2, 4, 6, 8]:
+    step = n / 2**k
+    up = np.minimum(n, np.ceil(hit / step) * step).astype(int)
+    dn = (np.floor(hit / step) * step).astype(int)
+    print(f&quot;   2^-{k}: E[B at rounded-up time] = {B[rows, up].mean():+.4f}   E[B at rounded-down time] = {B[rows, dn].mean():+.4f}&quot;)</code></pre>
+<p class="small"><b>Output</b> (run with Python 3.12.1, NumPy 2.5.3, SciPy 1.18.1, statsmodels 0.15.0):</p>
+<pre><code>1) Sparre Andersen: P(S_1&lt;=0,...,S_n&lt;=0) = C(2n,n)/4^n for a Gaussian random walk (any time scale)
+   n=   4: simulated 0.2723  exact 0.2734  1/sqrt(pi n) = 0.2821
+   n=  16: simulated 0.1403  exact 0.1399  1/sqrt(pi n) = 0.1410
+   n=  64: simulated 0.0701  exact 0.0704  1/sqrt(pi n) = 0.0705
+   n= 256: simulated 0.0349  exact 0.0352  1/sqrt(pi n) = 0.0353
+2) E[B_tau] and E[B_tau^2 - tau] for random times tau &lt;= 1 (grid of 1000 steps, 20000 paths)
+   tau_a ^ 1               : E[B_tau] = -0.000 (se 0.005),  E[B_tau^2 - tau] = -0.006
+   1/2 if B_1/2&gt;0 else 1   : E[B_tau] = -0.004 (se 0.006),  E[B_tau^2 - tau] = -0.007
+   1/2 if B_1&gt;0 else 1     : E[B_tau] = -0.199 (se 0.006),  E[B_tau^2 - tau] = -0.007
+   argmax                  : E[B_tau] = +0.778 (se 0.004),  E[B_tau^2 - tau] = +0.470
+   exact E[B_tau] for the &#x27;peek&#x27; time: -1/(2 sqrt(2 pi)) = -0.1995; for argmax: E[S_1] = sqrt(2/pi) = 0.7979 (minus grid bias)
+3) Rounding tau = tau_a ^ 1 to the dyadic grid: up (stopping time) vs down (anticipating)
+   2^-2: E[B at rounded-up time] = +0.0014   E[B at rounded-down time] = -0.2888
+   2^-4: E[B at rounded-up time] = +0.0012   E[B at rounded-down time] = -0.1617
+   2^-6: E[B at rounded-up time] = +0.0003   E[B at rounded-down time] = -0.0814
+   2^-8: E[B at rounded-up time] = -0.0005   E[B at rounded-down time] = -0.0438</code></pre>
+</section>
+
+<section>
+<h2 id="cheat">Cheat sheet</h2>
+<div class="cheat">
+<div><h4>Usual conditions</h4><p>\(\cN\subset\F_0\) (complete) and \(\F_t=\F_{t+}\) (right-continuous). Usual augmentation: <span class="nw">\((\F^c_{t+})\).</span> Brownian filtration: already OK after completion.</p></div>
+<div><h4>Optional vs stopping</h4><p>\(\{\tau\lt t\}\in\F_t\ \forall t\iff\tau\) is an \((\F_{t+})\)-stopping time <span class="nw">\(\iff\tau\wedge t\in\F_t\ \forall t\).</span> The same as a stopping time under right-continuity.</p></div>
+<div><h4>Measurability</h4><p>Progressive ⇒ measurable and adapted. Right-continuous and adapted ⇒ progressive (approximate by right endpoints). Progressive ⇒ <span class="nw">\(X_\tau\ind_{\{\tau\lt\infty\}}\in\F_\tau\).</span></p></div>
+<div><h4>\(\F_\tau\) rules</h4><p><span class="nw">\(\sigma\le\tau\Rightarrow\F_\sigma\subset\F_\tau\).</span> <span class="nw">\(\F_{\sigma\wedge\tau}=\F_\sigma\cap\F_\tau\).</span> <span class="nw">\(\{\sigma\lt\tau\},\{\sigma\le\tau\}\in\F_{\sigma\wedge\tau}\).</span> \(\tau\) is \(\F_\tau\)-measurable. \(\sigma+t\) is a stopping time.</p></div>
+<div><h4>Limits</h4><p>Decreasing limits of stopping times are \((\F_{t+})\)-stopping times, and <span class="nw">\(\F_{\tau+}=\bigcap\F_{\tau_n+}\).</span> Round up: \(\lceil2^n\tau\rceil/2^n\) is a stopping time; rounding down is not.</p></div>
+<div><h4>Hitting times</h4><p>Open \(A\) + right-continuous: optional time. Closed \(A\) + continuous: stopping time. Usual conditions: any Borel \(A\) (début theorem). \(\tau_a=\sigma_a\) a.s. for BM.</p></div>
+</div>
+</section>
+
+<section>
+<h2 id="selftest">Self-test</h2>
+<div class="qa">
+<details class="fold"><summary>1. Give a filtration that is not right-continuous.</summary><div class="fb"><p>\(\F_0\) trivial, \(\F_t=\sigma(Z)\) for <span class="nw">\(t\gt0\):</span> the natural filtration of <span class="nw">\(X_t=tZ\).</span> Then <span class="nw">\(\F_{0+}=\sigma(Z)\).</span></p></div></details>
+<details class="fold"><summary>2. What is wrong with the notes' Example 3.4 (1)?</summary><div class="fb"><p>“\(\F_t\) trivial while <span class="nw">\(\F_0=\sigma(Z)\)”</span> decreases, so it is not a filtration. Swap the roles.</p></div></details>
+<details class="fold"><summary>3. Why is \(\sigma_a=\inf\{t:B_t\gt a\}\) not an \((\F^B_t)\)-stopping time?</summary><div class="fb"><p>Deciding \(\{\sigma_a\le t\}\) when \(B\) touches \(a\) exactly at \(t\) requires seeing the path just after <span class="nw">\(t\).</span></p></div></details>
+<details class="fold"><summary>4. Why is \(\sigma_a=\tau_a\) a.s.?</summary><div class="fb"><p>Strong Markov at \(\tau_a\) plus Blumenthal: a Brownian motion started at 0 is positive at times arbitrarily close to 0.</p></div></details>
+<details class="fold"><summary>5. What does completeness of the filtration buy?</summary><div class="fb"><p>Modifications and a.s. limits of adapted processes are adapted.</p></div></details>
+<details class="fold"><summary>6. What does right-continuity buy?</summary><div class="fb"><p>“<span class="nw">\(\{\tau\lt t\}\in\F_t\)”</span> suffices for a stopping time; hitting times of open sets and infima of stopping times are stopping times; <span class="nw">\(\F_\tau=\F_{\tau+}\).</span></p></div></details>
+<details class="fold"><summary>7. Is “\(\tau\wedge t\) is \(\F_t\)-measurable for all <span class="nw">\(t\)”</span> equivalent to “\(\tau\) is an \((\F_t)\)-stopping time”?</summary><div class="fb"><p>No, only to “\(\tau\) is an \((\F_{t+})\)-stopping time” (<a class="xr" href="#n3-9">Exercise 3.9</a>).</p></div></details>
+<details class="fold"><summary>8. Define progressive measurability in words.</summary><div class="fb"><p>For every <span class="nw">\(t\),</span> the map \((\omega,s)\mapsto X_s(\omega)\) on \(\Omega\times[0,t]\) is jointly measurable for <span class="nw">\(\F_t\otimes\cB([0,t])\).</span></p></div></details>
+<details class="fold"><summary>9. Why must right-continuous processes be approximated by right endpoints?</summary><div class="fb"><p>Left endpoints converge to left limits <span class="nw">\(X_{s-}\),</span> which differ from \(X_s\) at jumps.</p></div></details>
+<details class="fold"><summary>10. Why do we want \(X_\tau\) to be \(\F_\tau\)-measurable, and what guarantees it?</summary><div class="fb"><p>To condition on the state at a stopping time (strong Markov, optional stopping). Progressive measurability guarantees it (<a class="xr" href="#n3-19">Thm. 3.19</a>).</p></div></details>
+<details class="fold"><summary>11. Show \(\F_\sigma\subset\F_\tau\) when <span class="nw">\(\sigma\le\tau\).</span></summary><div class="fb"><p><span class="nw">\(A\cap\{\tau\le t\}=A\cap\{\sigma\le t\}\cap\{\tau\le t\}\).</span></p></div></details>
+<details class="fold"><summary>12. Which σ-field does the notes' Definition 3.16 really define?</summary><div class="fb"><p><span class="nw">\(\F_{\tau+}\),</span> not the strict past <span class="nw">\(\F_{\tau-}\).</span></p></div></details>
+<details class="fold"><summary>13. Is \(\inf_n\tau_n\) of decreasing stopping times a stopping time?</summary><div class="fb"><p>It is an \((\F_{t+})\)-stopping time; a stopping time under right-continuity. The counterexample uses \(\tau_n=1/n\) on <span class="nw">\(\{Z=1\}\).</span></p></div></details>
+<details class="fold"><summary>14. Why round a stopping time up, not down, in approximation arguments?</summary><div class="fb"><p>\(\lceil2^n\tau\rceil/2^n\) is a stopping time; \(\lfloor2^n\tau\rfloor/2^n\) anticipates. <a class="xr" href="#lab3-3">Lab 3.3</a>: −0.1747 against −0.0065 at <span class="nw">\(n=4\).</span></p></div></details>
+<details class="fold"><summary>15. Is the hitting time of an open set by a right-continuous adapted process a stopping time?</summary><div class="fb"><p>An \((\F_{t+})\)-stopping time; a stopping time under right-continuity. Not with a merely complete filtration (<span class="nw">\(X_t=tZ\)).</span></p></div></details>
+<details class="fold"><summary>16. Is the hitting time of a closed set by a continuous adapted process a stopping time?</summary><div class="fb"><p>Yes, for any filtration: use the countable infimum of <span class="nw">\(d(X_s,A)\).</span></p></div></details>
+<details class="fold"><summary>17. Why does E[B at the time of the maximum on [0,1]] differ from 0?</summary><div class="fb"><p>That time is not a stopping time; the value is <span class="nw">\(\E S_1=\sqrt{2/\pi}\approx0.80\).</span> <a class="xr" href="#lab3-2">Lab 3.2</a>: 0.782 on a grid.</p></div></details>
+<details class="fold"><summary>18. What is <span class="nw">\(\P(B\le0\text{ at }n\text{ equally spaced times in }(0,h])\)?</span></summary><div class="fb"><p><span class="nw">\(\binom{2n}n4^{-n}\approx1/\sqrt{\pi n}\),</span> whatever \(h\) (Sparre Andersen).</p></div></details>
+</div>
+</section>
+
+<section>
+<h2 id="glossary">Glossary (English · French)</h2>
+<dl class="gloss">
+<dt>filtration <span class="fr">· filtration</span></dt><dd>Increasing family of σ-fields.</dd>
+<dt>right-continuous filtration <span class="fr">· filtration continue à droite</span></dt><dd><span class="nw">\(\F_t=\bigcap_{s\gt t}\F_s\).</span></dd>
+<dt>complete filtration / completion <span class="fr">· filtration complète / complétée</span></dt><dd>All null sets are in <span class="nw">\(\F_0\).</span></dd>
+<dt>usual conditions / usual augmentation <span class="fr">· conditions habituelles / augmentation habituelle</span></dt><dd>Complete and right-continuous; <span class="nw">\((\F^c_{t+})\).</span></dd>
+<dt>stopping time / optional time <span class="fr">· temps d'arrêt / temps d'arrêt large (temps optionnel)</span></dt><dd>\(\{\tau\le t\}\in\F_t\) / <span class="nw">\(\{\tau\lt t\}\in\F_t\).</span></dd>
+<dt>hitting time, first passage, début <span class="fr">· temps d'atteinte, premier passage, début</span></dt><dd><span class="nw">\(\inf\{t:X_t\in A\}\).</span></dd>
+<dt>measurable process <span class="fr">· processus mesurable</span></dt><dd>Jointly measurable in <span class="nw">\((t,\omega)\).</span></dd>
+<dt>adapted process <span class="fr">· processus adapté</span></dt><dd>\(X_t\) is \(\F_t\)-measurable.</dd>
+<dt>progressively measurable process <span class="fr">· processus progressivement mesurable (progressif)</span></dt><dd>Jointly measurable on \(\Omega\times[0,t]\) for <span class="nw">\(\F_t\otimes\cB\).</span></dd>
+<dt>progressive σ-field <span class="fr">· tribu progressive</span></dt><dd>The σ-field of progressive sets.</dd>
+<dt>σ-field of events prior to τ <span class="fr">· tribu des événements antérieurs à τ</span></dt><dd><span class="nw">\(\F_\tau\);</span> \(\F_{\tau+}\) (just after), \(\F_{\tau-}\) (strictly before).</dd>
+<dt>stopped process <span class="fr">· processus arrêté</span></dt><dd><span class="nw">\(X^\tau_t=X_{t\wedge\tau}\).</span></dd>
+<dt>right endpoint approximation <span class="fr">· approximation par l'extrémité droite</span></dt><dd><span class="nw">\(X_{\lceil2^nt\rceil/2^n}\);</span> the correct choice for right-continuous processes.</dd>
+<dt>càdlàg <span class="fr">· càdlàg (continu à droite, limité à gauche)</span></dt><dd>Right-continuous with left limits.</dd>
+<dt>début theorem <span class="fr">· théorème du début</span></dt><dd>Under the usual conditions, hitting times of Borel sets are stopping times.</dd>
+</dl>
+</section>
+
+
+<nav class="prevnext" aria-label="Previous and next lesson"><a href="Lesson02.html"><small>← Previous lesson</small>Lesson 2 · Markov &amp; QV</a><a href="Lesson04.html"><small>Next lesson →</small>Lesson 4 · Martingales</a></nav>
+</main>
+</div>
+<footer class="foot"><p>Study companion for <em>Stochastic calculus in machine learning: sampling and generative modeling</em> (Alain Oliviero-Durmus). Built from the course notes (73 pp.) and, for Lesson 1, the whiteboard photos of the first lecture. Everything marked “Beyond the notes” is an addition; every number shown was produced by the code on the page or by the Python scripts listed in the lesson.</p><p><a href="#main">Back to top</a> · <a href="index.html">Home</a></p></footer>
+<script>
+/* ===== num.js — shared numerical code (identical on every page; also run by Node to measure the numbers quoted on the pages) ===== */
+(function (root) {
+  'use strict';
+  const N = {};
+
+  /* ---------- seeded RNG: xoshiro128** seeded by splitmix32 ---------- */
+  function splitmix32(a) {
+    return function () {
+      a |= 0; a = (a + 0x9e3779b9) | 0;
+      let t = a ^ (a >>> 16); t = Math.imul(t, 0x21f0aaad);
+      t = t ^ (t >>> 15); t = Math.imul(t, 0x735a2d97);
+      return ((t = t ^ (t >>> 15)) >>> 0);
+    };
+  }
+  N.rng = function (seed) {
+    const sm = splitmix32((seed >>> 0) ^ 0x5bd1e995);
+    let a = sm(), b = sm(), c = sm(), d = sm();
+    function next32() {
+      const r = Math.imul(rotl(Math.imul(b, 5), 7), 9) >>> 0;
+      const t = b << 9;
+      c ^= a; d ^= b; b ^= c; a ^= d; c ^= t; d = rotl(d, 11);
+      return r;
+    }
+    function rotl(x, k) { return (x << k) | (x >>> (32 - k)); }
+    let spare = 0, hasSpare = false;
+    const R = {
+      /** uniform on (0,1), 53-bit resolution, never exactly 0 or 1 */
+      u() {
+        const hi = next32() >>> 5, lo = next32() >>> 6;
+        return (hi * 67108864 + lo + 0.5) / 9007199254740992;
+      },
+      /** standard normal (Marsaglia polar method) */
+      g() {
+        if (hasSpare) { hasSpare = false; return spare; }
+        let x, y, s;
+        do { x = 2 * R.u() - 1; y = 2 * R.u() - 1; s = x * x + y * y; } while (s >= 1 || s === 0);
+        const f = Math.sqrt(-2 * Math.log(s) / s);
+        spare = y * f; hasSpare = true;
+        return x * f;
+      },
+      /** Float64Array of n standard normals */
+      gv(n) { const z = new Float64Array(n); for (let i = 0; i < n; i++) z[i] = R.g(); return z; },
+      /** exponential(rate) */
+      exp(rate) { return -Math.log(R.u()) / rate; },
+      /** Poisson(lambda) by inversion (small lambda) */
+      poisson(lam) { let k = 0, p = Math.exp(-lam), s = p; const u = R.u(); while (u > s && k < 1e6) { k++; p *= lam / k; s += p; } return k; },
+      int(n) { return Math.floor(R.u() * n); }
+    };
+    return R;
+  };
+
+  /* ---------- special functions ---------- */
+  const SQRTPI = Math.sqrt(Math.PI), SQRT2 = Math.SQRT2;
+  /** erfc(x), ~1e-15 relative accuracy: positive-term series for |x|<2.5, Lentz continued fraction beyond */
+  N.erfc = function (x) {
+    if (!isFinite(x)) return x > 0 ? 0 : 2;
+    if (x < 0) return 2 - N.erfc(-x);
+    if (x < 2.5) {
+      // erf(x) = 2/sqrt(pi) e^{-x^2} sum_{n>=0} 2^n x^{2n+1} / (1*3*...*(2n+1))
+      let term = x, sum = x, n = 0;
+      while (Math.abs(term) > 1e-17 * Math.abs(sum) && n < 200) { n++; term *= 2 * x * x / (2 * n + 1); sum += term; }
+      return 1 - 2 / SQRTPI * Math.exp(-x * x) * sum;
+    }
+    // continued fraction: erfc(x) = e^{-x^2}/sqrt(pi) * 1/(x+ (1/2)/(x+ 1/(x+ (3/2)/(x+ 2/(x+ ...)))))
+    const tiny = 1e-300;
+    let f = x, C = x, D = 0, i = 1;
+    for (; i < 500; i++) {
+      const a = i / 2;
+      D = x + a * D; if (Math.abs(D) < tiny) D = tiny; D = 1 / D;
+      C = x + a / C; if (Math.abs(C) < tiny) C = tiny;
+      const delta = C * D; f *= delta;
+      if (Math.abs(delta - 1) < 1e-16) break;
+    }
+    return Math.exp(-x * x) / SQRTPI / f;
+  };
+  N.erf = function (x) { return 1 - N.erfc(x); };
+  N.normPdf = function (x, m = 0, s = 1) { const z = (x - m) / s; return Math.exp(-0.5 * z * z) / (s * Math.sqrt(2 * Math.PI)); };
+  N.normCdf = function (x, m = 0, s = 1) { return 0.5 * N.erfc(-(x - m) / (s * SQRT2)); };
+  N.normSf = function (x, m = 0, s = 1) { return 0.5 * N.erfc((x - m) / (s * SQRT2)); };
+  /** inverse standard normal CDF (Acklam + one Halley step) */
+  N.normInv = function (p) {
+    if (p <= 0) return -Infinity; if (p >= 1) return Infinity;
+    const a = [-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02, 1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00];
+    const b = [-5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02, 6.680131188771972e+01, -1.328068155288572e+01];
+    const c = [-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00, -2.549732539343734e+00, 4.374664141464968e+00, 2.938163982698783e+00];
+    const d = [7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00, 3.754408661907416e+00];
+    const pl = 0.02425; let q, r, x;
+    if (p < pl) { q = Math.sqrt(-2 * Math.log(p)); x = (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1); }
+    else if (p <= 1 - pl) { q = p - 0.5; r = q * q; x = (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1); }
+    else { q = Math.sqrt(-2 * Math.log(1 - p)); x = -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1); }
+    const e = N.normCdf(x) - p, u = e * Math.sqrt(2 * Math.PI) * Math.exp(x * x / 2);
+    return x - u / (1 + x * u / 2);
+  };
+  /** log Gamma (Lanczos, g=7) */
+  N.lgamma = function (x) {
+    const g = 7, c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+    if (x < 0.5) return Math.log(Math.PI / Math.abs(Math.sin(Math.PI * x))) - N.lgamma(1 - x);
+    x -= 1; let a = c[0]; const t = x + g + 0.5;
+    for (let i = 1; i < g + 2; i++) a += c[i] / (x + i);
+    return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(a);
+  };
+
+
+  /* ---------- Gauss–Hermite quadrature for E[f(Z)], Z ~ N(0,1) (Numerical Recipes 'gauher' + rescaling) ---------- */
+  const ghCache = {};
+  N.gaussHermite = function (n) {
+    if (ghCache[n]) return ghCache[n];
+    const x = new Float64Array(n), w = new Float64Array(n), m = (n + 1) >> 1, PIM4 = 0.7511255444649425;
+    let z = 0, z1, pp = 0;
+    for (let i = 0; i < m; i++) {
+      if (i === 0) z = Math.sqrt(2 * n + 1) - 1.85575 * Math.pow(2 * n + 1, -0.16667);
+      else if (i === 1) z -= 1.14 * Math.pow(n, 0.426) / z;
+      else if (i === 2) z = 1.86 * z - 0.86 * x[0];
+      else if (i === 3) z = 1.91 * z - 0.91 * x[1];
+      else z = 2.0 * z - x[i - 2];
+      for (let its = 0; its < 100; its++) {
+        let p1 = PIM4, p2 = 0;
+        for (let j = 0; j < n; j++) { const p3 = p2; p2 = p1; p1 = z * Math.sqrt(2 / (j + 1)) * p2 - Math.sqrt(j / (j + 1)) * p3; }
+        pp = Math.sqrt(2 * n) * p2; z1 = z; z = z1 - p1 / pp;
+        if (Math.abs(z - z1) <= 1e-15) break;
+      }
+      x[i] = z; x[n - 1 - i] = -z; w[i] = 2 / (pp * pp); w[n - 1 - i] = w[i];
+    }
+    // convert from weight e^{-x^2} to the standard normal density
+    const xs = new Float64Array(n), ws = new Float64Array(n);
+    for (let i = 0; i < n; i++) { xs[i] = Math.SQRT2 * x[i]; ws[i] = w[i] / Math.sqrt(Math.PI); }
+    return (ghCache[n] = { x: xs, w: ws });
+  };
+  /** E[f(Z)] for Z ~ N(0,1) by n-point Gauss–Hermite */
+  N.gaussExpect = function (f, n = 64) { const q = N.gaussHermite(n); let s = 0; for (let i = 0; i < n; i++) s += q.w[i] * f(q.x[i]); return s; };
+
+  /* ---------- basic statistics ---------- */
+  N.sum = function (a) { let s = 0; for (let i = 0; i < a.length; i++) s += a[i]; return s; };
+  N.mean = function (a) { return a.length ? N.sum(a) / a.length : NaN; };
+  N.variance = function (a) { // unbiased, Welford
+    let m = 0, s = 0; for (let i = 0; i < a.length; i++) { const d = a[i] - m; m += d / (i + 1); s += d * (a[i] - m); }
+    return a.length > 1 ? s / (a.length - 1) : NaN;
+  };
+  N.std = function (a) { return Math.sqrt(N.variance(a)); };
+  N.se = function (a) { return N.std(a) / Math.sqrt(a.length); };
+  N.cov = function (a, b) { const ma = N.mean(a), mb = N.mean(b); let s = 0; for (let i = 0; i < a.length; i++) s += (a[i] - ma) * (b[i] - mb); return s / (a.length - 1); };
+  N.sorted = function (a) { return Float64Array.from(a).sort(); };
+  /** quantile of a sorted array, linear interpolation (numpy default) */
+  N.quantile = function (s, p) { const h = (s.length - 1) * p, i = Math.floor(h), f = h - i; return i + 1 < s.length ? s[i] + f * (s[i + 1] - s[i]) : s[s.length - 1]; };
+  N.maxAbs = function (a) { let m = 0; for (let i = 0; i < a.length; i++) { const v = Math.abs(a[i]); if (v > m) m = v; } return m; };
+  N.minmax = function (a) { let lo = Infinity, hi = -Infinity; for (let i = 0; i < a.length; i++) { if (a[i] < lo) lo = a[i]; if (a[i] > hi) hi = a[i]; } return [lo, hi]; };
+  /** histogram as density: returns {edges, density, counts, total, outside} */
+  N.histogram = function (a, nb, lo, hi) {
+    const counts = new Float64Array(nb); let outside = 0; const w = (hi - lo) / nb;
+    for (let i = 0; i < a.length; i++) { const k = Math.floor((a[i] - lo) / w); if (k >= 0 && k < nb) counts[k]++; else if (a[i] === hi) counts[nb - 1]++; else outside++; }
+    const edges = new Float64Array(nb + 1); for (let k = 0; k <= nb; k++) edges[k] = lo + k * w;
+    const density = new Float64Array(nb); for (let k = 0; k < nb; k++) density[k] = counts[k] / (a.length * w);
+    return { edges, density, counts, total: a.length, outside };
+  };
+  /** Kolmogorov–Smirnov statistic sup |F_n - F| for a continuous cdf */
+  N.ksStat = function (a, cdf) {
+    const s = N.sorted(a), n = s.length; let d = 0;
+    for (let i = 0; i < n; i++) { const F = cdf(s[i]); d = Math.max(d, (i + 1) / n - F, F - i / n); }
+    return d;
+  };
+  /** asymptotic KS p-value (Kolmogorov distribution), with Stephens' small-n correction */
+  N.ksPValue = function (d, n) {
+    const x = (Math.sqrt(n) + 0.12 + 0.11 / Math.sqrt(n)) * d; if (x < 0.2) return 1;
+    let s = 0; for (let k = 1; k < 101; k++) { const t = 2 * Math.pow(-1, k - 1) * Math.exp(-2 * k * k * x * x); s += t; if (Math.abs(t) < 1e-16) break; }
+    return Math.min(1, Math.max(0, s));
+  };
+  N.linspace = function (a, b, n) { const x = new Float64Array(n); for (let i = 0; i < n; i++) x[i] = a + (b - a) * i / (n - 1); return x; };
+  N.cumsum = function (a, x0 = 0) { const c = new Float64Array(a.length + 1); c[0] = x0; for (let i = 0; i < a.length; i++) c[i + 1] = c[i] + a[i]; return c; };
+  /** trapezoid integral of samples y on grid x */
+  N.trapz = function (x, y) { let s = 0; for (let i = 1; i < x.length; i++) s += 0.5 * (y[i] + y[i - 1]) * (x[i] - x[i - 1]); return s; };
+
+  /* ---------- Brownian motion and SDE helpers ---------- */
+  /** standard BM on [0,T] with n steps: Float64Array(n+1), B[0]=0 */
+  N.bm = function (R, n, T = 1) { const B = new Float64Array(n + 1), s = Math.sqrt(T / n); for (let i = 1; i <= n; i++) B[i] = B[i - 1] + s * R.g(); return B; };
+  /** increments of BM */
+  N.bmInc = function (R, n, T = 1) { const s = Math.sqrt(T / n), d = new Float64Array(n); for (let i = 0; i < n; i++) d[i] = s * R.g(); return d; };
+  /** restrict a fine path to every m-th point */
+  N.coarsen = function (B, m) { const k = Math.floor((B.length - 1) / m); const C = new Float64Array(k + 1); for (let i = 0; i <= k; i++) C[i] = B[i * m]; return C; };
+  /** Euler–Maruyama in 1D: dX = b(t,X)dt + s(t,X)dB, using given increments dB (length n) */
+  N.eulerPath = function (x0, b, s, T, dB) {
+    const n = dB.length, h = T / n, X = new Float64Array(n + 1); X[0] = x0;
+    for (let i = 0; i < n; i++) { const t = i * h, x = X[i]; X[i + 1] = x + b(t, x) * h + s(t, x) * dB[i]; }
+    return X;
+  };
+
+  /* ---------- formatting (shared by page outputs and measured JSON) ---------- */
+  const MINUS = '−';
+  function withMinus(str) { return str.replace(/^-/, MINUS).replace(/e-/, 'e' + MINUS); }
+  /** spec: number = decimals; {d}, {sig}, {sci}, {pct}, {int} */
+  N.fmt = function (x, spec) {
+    if (x === null || x === undefined || (typeof x === 'number' && isNaN(x))) return '—';
+    if (typeof x === 'string') return x;
+    if (!isFinite(x)) return x > 0 ? '∞' : MINUS + '∞';
+    if (typeof spec === 'number') spec = { d: spec };
+    spec = spec || { sig: 4 };
+    let s;
+    if (spec.int) s = Math.round(x).toLocaleString('en-US');
+    else if (spec.pct !== undefined) s = (100 * x).toFixed(spec.pct) + '%';
+    else if (spec.sci !== undefined && x === 0) s = '0';
+    else if (spec.sci !== undefined) {
+      const e = x.toExponential(spec.sci); const m = e.split('e'); s = m[0] + ' × 10^' + (m[1].replace('+', ''));
+      s = s.replace(/10\^(-?\d+)/, (a, p) => '10' + toSup(p));
+    } else if (spec.d !== undefined) s = x.toFixed(spec.d);
+    else if (spec.sig !== undefined) {
+      if (x !== 0 && (Math.abs(x) < 1e-3 || Math.abs(x) >= 1e6)) { const e = x.toExponential(spec.sig - 1).split('e'); s = e[0] + ' × 10' + toSup(e[1].replace('+', '')); }
+      else s = Number(x.toPrecision(spec.sig)).toString();
+    } else s = String(x);
+    if (s === '-0' || /^-0\.0*$/.test(s)) s = s.slice(1);
+    return withMinus(s);
+  };
+  function toSup(p) { const m = { '-': '⁻', '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹' }; return String(p).split('').map(c => m[c] || c).join(''); }
+  N.fmtPM = function (m, se, d) { return N.fmt(m, d) + ' ± ' + N.fmt(se, d); };
+
+  if (typeof module !== 'undefined' && module.exports) module.exports = N;
+  root.N = N;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+</script><script>
+/* ===== plot.js — small canvas chart library (theme-aware, responsive, crosshair tooltip, keyboard) ===== */
+(function (root) {
+  'use strict';
+  const P = {};
+  const charts = new Set();
+
+  function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#888'; }
+  function colorOf(c) {
+    if (!c) return css('--s1');
+    if (/^s\d$/.test(c)) return css('--' + c);
+    if (c === 'muted') return css('--series-muted');
+    if (c === 'ink') return css('--chart-ink');
+    if (c === 'ink2') return css('--chart-ink-2');
+    return c;
+  }
+  function withAlpha(hex, a) {
+    if (hex.startsWith('#') && (hex.length === 7)) { const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16); return `rgba(${r},${g},${b},${a})`; }
+    return hex;
+  }
+  /* nice ticks */
+  function niceStep(span, target) {
+    const raw = span / Math.max(1, target), mag = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / mag;
+    return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * mag;
+  }
+  function ticks(lo, hi, target) {
+    if (!(hi > lo)) { return [lo]; }
+    const st = niceStep(hi - lo, target), out = [];
+    for (let v = Math.ceil(lo / st - 1e-9) * st; v <= hi + st * 1e-9; v += st) out.push(Math.abs(v) < st * 1e-9 ? 0 : v);
+    return out;
+  }
+  function logTicks(lo, hi) { const out = []; for (let e = Math.ceil(Math.log10(lo) - 1e-9); e <= Math.floor(Math.log10(hi) + 1e-9); e++) out.push(Math.pow(10, e)); return out; }
+  function fmtTick(v, step) {
+    if (v === 0) return '0';
+    const a = Math.abs(v);
+    let s;
+    if (a >= 1e5 || a < 1e-3) { const e = Math.round(Math.log10(a)); if (Math.abs(a / Math.pow(10, e) - 1) < 1e-9) s = (v < 0 ? '-' : '') + '1e' + e; else s = v.toExponential(1); }
+    else { const dec = Math.max(0, -Math.floor(Math.log10(step || a) + 1e-9)); s = v.toFixed(Math.min(dec, 6)); }
+    return s.replace(/^-/, '−');
+  }
+  function extent(spec) {
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    const upd = (x, y) => { if (isFinite(x)) { if (x < x0) x0 = x; if (x > x1) x1 = x; } if (isFinite(y) && (!spec.logy || y > 0)) { if (y < y0) y0 = y; if (y > y1) y1 = y; } };
+    for (const s of spec.series) {
+      if (s.type === 'hist') { upd(s.edges[0], 0); upd(s.edges[s.edges.length - 1], 0); for (let i = 0; i < s.density.length; i++) upd(NaN, s.density[i]); if (!spec.logy) upd(NaN, 0); }
+      else if (s.type === 'lines') { for (const p of s.paths) for (let i = 0; i < p.y.length; i++) upd(p.x[i], p.y[i]); }
+      else if (s.type === 'band') { for (let i = 0; i < s.x.length; i++) { upd(s.x[i], s.y0[i]); upd(s.x[i], s.y1[i]); } }
+      else if (s.type === 'bars') { for (let i = 0; i < s.x.length; i++) { upd(s.x[i], s.y[i]); } if (!spec.logy) upd(NaN, 0); }
+      else if (s.x) { for (let i = 0; i < s.x.length; i++) upd(s.x[i], s.y[i]); }
+    }
+    for (const h of (spec.hlines || [])) upd(NaN, h.y);
+    return [x0, x1, y0, y1];
+  }
+
+  function Chart(container, spec) {
+    this.el = container; this.spec = spec;
+    container.classList.add('plot');
+    container.innerHTML = '';
+    this.titleEl = document.createElement('div'); this.titleEl.className = 'plot-title'; container.appendChild(this.titleEl);
+    this.subEl = document.createElement('div'); this.subEl.className = 'plot-sub'; container.appendChild(this.subEl);
+    this.setTitles(spec);
+    this.wrap = document.createElement('div'); this.wrap.style.position = 'relative';
+    this.canvas = document.createElement('canvas'); this.overlay = document.createElement('canvas');
+    this.overlay.className = 'ov'; this.overlay.style.position = 'absolute'; this.overlay.style.left = '0'; this.overlay.style.top = '0'; this.overlay.style.pointerEvents = 'none'; this.overlay.style.background = 'transparent';
+    this.canvas.setAttribute('role', 'img'); this.canvas.tabIndex = 0;
+    this.canvas.setAttribute('aria-label', (spec.aria || spec.title || 'chart') + '. Use left and right arrow keys to read values.');
+    this.tip = document.createElement('div'); this.tip.className = 'tip'; this.tip.setAttribute('aria-hidden', 'true');
+    this.wrap.appendChild(this.canvas); this.wrap.appendChild(this.overlay); this.wrap.appendChild(this.tip);
+    container.appendChild(this.wrap);
+    this.legendEl = document.createElement('div'); this.legendEl.className = 'legend'; container.appendChild(this.legendEl);
+    this.live = document.createElement('div'); this.live.className = 'sr-only'; this.live.setAttribute('aria-live', 'polite'); container.appendChild(this.live);
+    this.hoverIdx = -1;
+    const onMove = (e) => { const r = this.canvas.getBoundingClientRect(); this.hover(e.clientX - r.left, e.clientY - r.top); };
+    this.canvas.addEventListener('pointermove', onMove);
+    this.canvas.addEventListener('pointerdown', onMove);
+    this.canvas.addEventListener('pointerleave', () => this.clearHover());
+    this.canvas.addEventListener('blur', () => this.clearHover());
+    this.canvas.addEventListener('keydown', (e) => this.key(e));
+    charts.add(this);
+    this.ro = new ResizeObserver(() => this.draw());
+    this.ro.observe(container);
+    this.draw();
+  }
+  Chart.prototype.setTitles = function (spec) {
+    this.titleEl.textContent = spec.title || ''; this.titleEl.style.display = spec.title ? '' : 'none';
+    this.subEl.textContent = spec.subtitle || ''; this.subEl.style.display = spec.subtitle ? '' : 'none';
+    if (this.canvas) this.canvas.setAttribute('aria-label', (spec.aria || spec.title || 'chart') + '. Use left and right arrow keys to read values.');
+  };
+  Chart.prototype.update = function (spec) { this.spec = spec; this.setTitles(spec); this.hoverIdx = -1; this.lastHover = null; if (this.tip) this.tip.style.display = 'none'; this.draw(); };
+  Chart.prototype.draw = function () {
+    const spec = this.spec, cv = this.canvas, dpr = window.devicePixelRatio || 1;
+    const W = Math.max(240, this.el.clientWidth || 600);
+    const H = spec.height || Math.round(Math.max(210, Math.min(340, W * 0.58)));
+    for (const c of [cv, this.overlay]) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); c.style.width = W + 'px'; c.style.height = H + 'px'; }
+    const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = css('--surface'); ctx.fillRect(0, 0, W, H);
+    let [x0, x1, y0, y1] = extent(spec);
+    if (spec.xlim) { x0 = spec.xlim[0]; x1 = spec.xlim[1]; }
+    if (spec.ylim) { y0 = spec.ylim[0]; y1 = spec.ylim[1]; }
+    else if (isFinite(y0)) { if (spec.logy) { y0 = y0 / 1.6; y1 = y1 * 1.6; } else { const pad = (y1 - y0) * 0.06 || Math.abs(y1) * 0.1 || 1; if (y0 !== 0) y0 -= pad; y1 += pad; } }
+    if (!isFinite(x0)) { x0 = 0; x1 = 1; } if (!isFinite(y0)) { y0 = 0; y1 = 1; }
+    if (x1 === x0) { x1 = x0 + 1; } if (y1 === y0) { y1 = y0 + 1; }
+    const font = '12px ' + (getComputedStyle(document.body).getPropertyValue('--sans') || 'system-ui');
+    ctx.font = font;
+    const nyt = H < 260 ? 4 : 5, nxt = W < 420 ? 4 : W < 640 ? 6 : 8;
+    const yt = spec.logy ? logTicks(y0, y1) : ticks(y0, y1, nyt);
+    const ystep = yt.length > 1 ? yt[1] - yt[0] : (y1 - y0);
+    const ylabels = yt.map(v => spec.logy ? fmtTick(v, v) : fmtTick(v, ystep));
+    const yw = Math.max(...ylabels.map(s => ctx.measureText(s).width), 10);
+    const m = { l: Math.ceil(yw) + 12, r: 14, t: spec.ylab ? 24 : 12, b: spec.xlab ? 40 : 26 };
+    const pw = W - m.l - m.r, ph = H - m.t - m.b;
+    const X = (x) => m.l + (x - x0) / (x1 - x0) * pw;
+    const Y = spec.logy ? (y) => m.t + (1 - (Math.log10(Math.max(y, 1e-300)) - Math.log10(y0)) / (Math.log10(y1) - Math.log10(y0))) * ph : (y) => m.t + (1 - (y - y0) / (y1 - y0)) * ph;
+    this.geom = { m, pw, ph, X, Y, x0, x1, y0, y1, W, H };
+    // grid & axes
+    ctx.lineWidth = 1; ctx.strokeStyle = css('--grid');
+    ctx.fillStyle = css('--chart-ink-2'); ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    yt.forEach((v, i) => { const y = Math.round(Y(v)) + 0.5; if (y < m.t - 1 || y > m.t + ph + 1) return; ctx.beginPath(); ctx.moveTo(m.l, y); ctx.lineTo(m.l + pw, y); ctx.stroke(); ctx.fillText(ylabels[i], m.l - 6, y); });
+    const xt = spec.xticks || ticks(x0, x1, nxt), xstep = xt.length > 1 ? xt[1] - xt[0] : 1;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    xt.forEach(v => { const x = Math.round(X(v)) + 0.5; if (x < m.l - 1 || x > m.l + pw + 1) return; ctx.strokeStyle = css('--grid'); ctx.beginPath(); ctx.moveTo(x, m.t); ctx.lineTo(x, m.t + ph); ctx.stroke(); ctx.fillText(spec.xtickfmt ? spec.xtickfmt(v) : fmtTick(v, xstep), x, m.t + ph + 6); });
+    ctx.strokeStyle = css('--axis'); ctx.beginPath(); ctx.moveTo(m.l + 0.5, m.t); ctx.lineTo(m.l + 0.5, m.t + ph + 0.5); ctx.lineTo(m.l + pw, m.t + ph + 0.5); ctx.stroke();
+    if (!spec.logy && y0 < 0 && y1 > 0) { ctx.strokeStyle = css('--axis'); const yz = Math.round(Y(0)) + 0.5; ctx.beginPath(); ctx.moveTo(m.l, yz); ctx.lineTo(m.l + pw, yz); ctx.stroke(); }
+    ctx.fillStyle = css('--chart-ink-2');
+    if (spec.xlab) { ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(spec.xlab, m.l + pw / 2, H - 4); }
+    if (spec.ylab) { ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText(spec.ylab, 4, 4); }
+    // series
+    ctx.save(); ctx.beginPath(); ctx.rect(m.l, m.t - 1, pw, ph + 2); ctx.clip();
+    for (const s of spec.series) drawSeries(ctx, s, X, Y, spec, m, ph);
+    for (const h of (spec.hlines || [])) {
+      ctx.strokeStyle = colorOf(h.color || 'ink2'); ctx.lineWidth = h.width || 1.25; ctx.setLineDash(h.dash || [5, 4]);
+      const y = Y(h.y); ctx.beginPath(); ctx.moveTo(m.l, y); ctx.lineTo(m.l + pw, y); ctx.stroke(); ctx.setLineDash([]);
+      if (h.label) { ctx.fillStyle = css('--chart-ink-2'); ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.fillText(h.label, m.l + pw - 4, y - 3); }
+    }
+    for (const v of (spec.vlines || [])) {
+      ctx.strokeStyle = colorOf(v.color || 'ink2'); ctx.lineWidth = v.width || 1.25; ctx.setLineDash(v.dash || [5, 4]);
+      const x = X(v.x); ctx.beginPath(); ctx.moveTo(x, m.t); ctx.lineTo(x, m.t + ph); ctx.stroke(); ctx.setLineDash([]);
+      if (v.label) { ctx.fillStyle = css('--chart-ink-2'); ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText(v.label, x + 4, m.t + 2); }
+    }
+    for (const t of (spec.labels || [])) { ctx.fillStyle = css('--chart-ink'); ctx.textAlign = t.align || 'left'; ctx.textBaseline = 'middle'; ctx.fillText(t.text, X(t.x) + (t.dx || 0), Y(t.y) + (t.dy || 0)); }
+    ctx.restore();
+    this.legend();
+    if (this.hoverIdx >= 0 && this.lastHover) this.hover(this.lastHover[0], this.lastHover[1]);
+  };
+  function drawSeries(ctx, s, X, Y, spec, m, ph) {
+    const col = colorOf(s.color);
+    ctx.setLineDash(s.dash || []);
+    if (s.type === 'hist') {
+      const base = spec.logy ? m.t + ph : Y(0);
+      ctx.fillStyle = withAlpha(col, s.alpha === undefined ? 0.55 : s.alpha);
+      for (let i = 0; i < s.density.length; i++) {
+        const xa = X(s.edges[i]), xb = X(s.edges[i + 1]), y = Y(s.density[i]);
+        const gap = (xb - xa) > 4 ? 1 : 0;
+        if (s.density[i] > 0) ctx.fillRect(xa + gap / 2, Math.min(y, base), Math.max(0.5, xb - xa - gap), Math.abs(base - y));
+      }
+      return;
+    }
+    if (s.type === 'bars') {
+      const base = spec.logy ? m.t + ph : Y(0); const w = s.width || 10; ctx.fillStyle = col;
+      for (let i = 0; i < s.x.length; i++) { const x = X(s.x[i]), y = Y(s.y[i]); ctx.fillRect(x - w / 2, Math.min(y, base), w, Math.abs(base - y)); }
+      return;
+    }
+    if (s.type === 'band') {
+      ctx.fillStyle = withAlpha(col, s.alpha === undefined ? 0.14 : s.alpha); ctx.beginPath();
+      for (let i = 0; i < s.x.length; i++) { const x = X(s.x[i]), y = Y(s.y1[i]); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+      for (let i = s.x.length - 1; i >= 0; i--) ctx.lineTo(X(s.x[i]), Y(s.y0[i]));
+      ctx.closePath(); ctx.fill(); return;
+    }
+    if (s.type === 'points') {
+      const r = s.r || 3.5; ctx.fillStyle = col; ctx.strokeStyle = css('--surface'); ctx.lineWidth = s.ring === false ? 0 : 1.5;
+      for (let i = 0; i < s.x.length; i++) { if (!isFinite(s.y[i]) || (spec.logy && s.y[i] <= 0)) continue; ctx.beginPath(); ctx.arc(X(s.x[i]), Y(s.y[i]), r, 0, 2 * Math.PI); ctx.fill(); if (s.ring !== false) ctx.stroke(); }
+      return;
+    }
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    const drawPath = (x, y, step) => {
+      ctx.beginPath(); let pen = false;
+      for (let i = 0; i < x.length; i++) {
+        const yy = y[i]; if (!isFinite(yy) || (spec.logy && yy <= 0)) { pen = false; continue; }
+        const px = X(x[i]), py = Y(yy);
+        if (!pen) { ctx.moveTo(px, py); pen = true; }
+        else if (step) { ctx.lineTo(px, Y(y[i - 1])); ctx.lineTo(px, py); }
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    };
+    if (s.type === 'lines') {
+      ctx.strokeStyle = withAlpha(col, s.alpha === undefined ? 0.35 : s.alpha); ctx.lineWidth = s.width || 1;
+      for (const p of s.paths) drawPath(p.x, p.y, false);
+    } else {
+      ctx.strokeStyle = s.alpha !== undefined ? withAlpha(col, s.alpha) : col; ctx.lineWidth = s.width || 2;
+      drawPath(s.x, s.y, s.type === 'step');
+      if (s.markers) { ctx.setLineDash([]); ctx.fillStyle = col; ctx.strokeStyle = css('--surface'); ctx.lineWidth = 1.5; for (let i = 0; i < s.x.length; i++) { if (!isFinite(s.y[i]) || (spec.logy && s.y[i] <= 0)) continue; ctx.beginPath(); ctx.arc(X(s.x[i]), Y(s.y[i]), 3.5, 0, 2 * Math.PI); ctx.fill(); ctx.stroke(); } }
+    }
+    ctx.setLineDash([]);
+  }
+  Chart.prototype.legend = function () {
+    const el = this.legendEl; el.innerHTML = '';
+    const items = this.spec.series.filter(s => s.label);
+    if (items.length + (this.spec.hlines || []).filter(h => h.legend).length < 2 && !this.spec.forceLegend) { el.style.display = 'none'; return; }
+    el.style.display = '';
+    const add = (label, col, kind) => { const li = document.createElement('span'); li.className = 'li'; const k = document.createElement('span'); k.className = 'key ' + kind; if (kind === 'box' || kind === 'dot') k.style.background = col; else k.style.borderTopColor = col; li.appendChild(k); li.appendChild(document.createTextNode(label)); el.appendChild(li); };
+    for (const s of items) { const col = colorOf(s.color); const kind = s.type === 'hist' || s.type === 'bars' || s.type === 'band' ? 'box' : s.type === 'points' ? 'dot' : (s.dash ? 'dash' : ''); add(s.label, kind === 'box' ? withAlpha(col, 0.7) : col, kind); }
+    for (const h of (this.spec.hlines || [])) if (h.legend) add(h.legend, colorOf(h.color || 'ink2'), 'dash');
+  };
+  // ---- hover / keyboard ----
+  function hoverSeries(spec) { return spec.series.filter(s => (s.type === 'line' || s.type === 'step' || s.type === 'points' || s.type === 'hist' || s.type === 'bars') && s.label && s.tooltip !== false); }
+  Chart.prototype.gridX = function () {
+    const hs = hoverSeries(this.spec); if (!hs.length) return null;
+    const s = hs.find(t => t.type !== 'hist') || hs[0];
+    if (s.type === 'hist') { const c = []; for (let i = 0; i < s.density.length; i++) c.push(0.5 * (s.edges[i] + s.edges[i + 1])); return c; }
+    return s.x;
+  };
+  Chart.prototype.hover = function (px, py) {
+    const g = this.geom; if (!g) return; const gx = this.gridX(); if (!gx || !gx.length) return;
+    this.lastHover = [px, py];
+    const xv = g.x0 + (px - g.m.l) / g.pw * (g.x1 - g.x0);
+    let best = 0, bd = Infinity; for (let i = 0; i < gx.length; i++) { const d = Math.abs(gx[i] - xv); if (d < bd) { bd = d; best = i; } }
+    this.showIdx(best, gx);
+  };
+  Chart.prototype.showIdx = function (idx, gx) {
+    gx = gx || this.gridX(); if (!gx) return; this.hoverIdx = idx;
+    const g = this.geom, ov = this.overlay, dpr = window.devicePixelRatio || 1, ctx = ov.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, g.W, g.H);
+    const xv = gx[idx], x = g.X(xv);
+    if (x < g.m.l - 1 || x > g.m.l + g.pw + 1) return;
+    ctx.strokeStyle = css('--axis'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(Math.round(x) + 0.5, g.m.t); ctx.lineTo(Math.round(x) + 0.5, g.m.t + g.ph); ctx.stroke();
+    const rows = [];
+    for (const s of hoverSeries(this.spec)) {
+      let yv, xx = xv;
+      if (s.type === 'hist') { let k = -1; for (let i = 0; i < s.density.length; i++) if (xv >= s.edges[i] && xv <= s.edges[i + 1]) { k = i; break; } if (k < 0) continue; yv = s.density[k]; }
+      else { let bi = 0, bd = Infinity; for (let i = 0; i < s.x.length; i++) { const d = Math.abs(s.x[i] - xv); if (d < bd) { bd = d; bi = i; } } if (bd > Math.abs(g.x1 - g.x0) * 0.05 && s.x.length > 1) continue; yv = s.y[bi]; xx = s.x[bi]; }
+      if (!isFinite(yv)) continue;
+      const col = colorOf(s.color);
+      if (s.type !== 'hist' && s.type !== 'bars') { ctx.fillStyle = col; ctx.strokeStyle = css('--surface'); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(g.X(xx), g.Y(yv), 4, 0, 2 * Math.PI); ctx.fill(); ctx.stroke(); }
+      rows.push({ label: s.label, v: yv, col });
+    }
+    const fx = this.spec.xfmt || ((v) => fmtNum(v)), fy = this.spec.yfmt || ((v) => fmtNum(v));
+    const tip = this.tip; tip.innerHTML = '';
+    const head = document.createElement('div'); head.textContent = (this.spec.xname || 'x') + ' = ' + fx(xv); head.style.color = css('--chart-ink-2'); tip.appendChild(head);
+    for (const r of rows) { const d = document.createElement('div'); const k = document.createElement('span'); k.className = 'tk'; k.style.borderTopColor = r.col; const v = document.createElement('span'); v.className = 'tv'; v.textContent = fy(r.v); d.appendChild(k); d.appendChild(v); d.appendChild(document.createTextNode('  ' + r.label)); tip.appendChild(d); }
+    tip.style.display = 'block';
+    const tw = tip.offsetWidth, left = x + 12 + tw > g.W ? x - 12 - tw : x + 12;
+    tip.style.left = Math.max(0, left) + 'px'; tip.style.top = (g.m.t + 4) + 'px';
+    this.live.textContent = head.textContent + '; ' + rows.map(r => r.label + ' ' + fy(r.v)).join('; ');
+  };
+  Chart.prototype.clearHover = function () { this.hoverIdx = -1; this.lastHover = null; this.tip.style.display = 'none'; const g = this.geom; if (g) { const ctx = this.overlay.getContext('2d'); ctx.clearRect(0, 0, this.overlay.width, this.overlay.height); } };
+  Chart.prototype.key = function (e) {
+    const gx = this.gridX(); if (!gx || !gx.length) return;
+    let i = this.hoverIdx < 0 ? 0 : this.hoverIdx; const stepBig = Math.max(1, Math.round(gx.length / 20));
+    if (e.key === 'ArrowRight') i = Math.min(gx.length - 1, i + (e.shiftKey ? stepBig : 1));
+    else if (e.key === 'ArrowLeft') i = Math.max(0, i - (e.shiftKey ? stepBig : 1));
+    else if (e.key === 'Home') i = 0; else if (e.key === 'End') i = gx.length - 1;
+    else if (e.key === 'Escape') { this.clearHover(); return; } else return;
+    e.preventDefault(); this.showIdx(i, gx);
+  };
+  function fmtNum(v) { if (!isFinite(v)) return String(v); const a = Math.abs(v); let s = (a !== 0 && (a < 1e-3 || a >= 1e5)) ? v.toExponential(3) : Number(v.toPrecision(4)).toString(); return s.replace(/^-/, '−'); }
+
+  P.chart = function (container, spec) { if (container._chart) { container._chart.update(spec); return container._chart; } const c = new Chart(container, spec); container._chart = c; return c; };
+  P.redrawAll = function () { for (const c of charts) { if (document.body.contains(c.el)) c.draw(); else charts.delete(c); } };
+  /** table view: columns = [names], rows = [[...]] */
+  P.table = function (container, caption, columns, rows) {
+    container.innerHTML = '';
+    const d = document.createElement('details'); d.className = 'tableview';
+    const s = document.createElement('summary'); s.textContent = caption || 'Show values as a table'; d.appendChild(s);
+    const w = document.createElement('div'); w.className = 'tw'; const t = document.createElement('table'); t.className = 'compact';
+    const thead = document.createElement('thead'), tr = document.createElement('tr');
+    columns.forEach(c => { const th = document.createElement('th'); th.textContent = c; th.scope = 'col'; tr.appendChild(th); }); thead.appendChild(tr); t.appendChild(thead);
+    const tb = document.createElement('tbody');
+    rows.forEach(r => { const tr2 = document.createElement('tr'); r.forEach((v, j) => { const td = document.createElement('td'); td.textContent = typeof v === 'number' ? fmtNum(v) : v; if (typeof v === 'number') td.className = 'num'; tr2.appendChild(td); }); tb.appendChild(tr2); });
+    t.appendChild(tb); w.appendChild(t); d.appendChild(w); container.appendChild(d);
+  };
+  P.fmtNum = fmtNum;
+  root.Plot = P;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+</script><script>
+/* Lesson 3 labs — filtrations, stopping times, measurability */
+(function () {
+  'use strict';
+  const LABS = (window.LABS = window.LABS || {});
+  const N = window.N;
+
+  /* ---------- 3.1 Immediate crossing: P(B stays <= 0 on a grid of [0,h]) -> 0 (Ex. 3.4, Ex. 3.7) ---------- */
+  function sparre(n) { // C(2n,n)/4^n computed in log space
+    return Math.exp(N.lgamma(2 * n + 1) - 2 * N.lgamma(n + 1) - 2 * n * Math.LN2);
+  }
+  LABS['L3.cross'] = {
+    defaultSeed: 31,
+    controls: [
+      { id: 'h', label: 'time window h (the answer does not depend on it)', type: 'select', value: 1, options: [[1e-6, '10⁻⁶'], [1e-3, '10⁻³'], [1, '1'], [100, '100']] },
+      { id: 'paths', label: 'Paths', type: 'range', min: 2000, max: 40000, step: 2000, value: 10000 },
+      { id: 'nmax', label: 'finest grid: n = 2^k points, k up to', type: 'range', min: 8, max: 14, step: 1, value: 11 }
+    ],
+    variants: { small: { h: 1e-6 } },
+    outputs: [
+      { key: 'p10', label: 'P̂(B ≤ 0 at all 16 grid points of (0,h])', fmt: 4 },
+      { key: 'e10', label: 'exact C(32,16)/4¹⁶ (Sparre Andersen)', fmt: 4 },
+      { key: 'pmax', label: 'P̂(B ≤ 0 at all points of the finest grid)', fmt: 4 },
+      { key: 'emax', label: 'exact value at the finest grid', fmt: 4 },
+      { key: 'slope', label: 'fitted log–log slope of P̂ vs n (theory −1/2)', fmt: 3 }
+    ],
+    plots: 1,
+    compute(p) {
+      const R = N.rng(p.seed), K = p.nmax, n = 1 << K, M = p.paths, s = Math.sqrt(p.h / n);
+      const ks = []; for (let k = 1; k <= K; k++) ks.push(k);
+      const stay = ks.map(() => 0);
+      for (let m = 0; m < M; m++) {
+        let x = 0;
+        // simulate on the finest grid; the coarse grid at level k uses every 2^{K-k}-th point
+        let violatedAt = Infinity; // smallest level k at which a coarse-grid point was > 0
+        for (let i = 1; i <= n; i++) {
+          x += s * R.g();
+          if (x > 0) { // point i belongs to level k iff i is a multiple of 2^{K-k}
+            let tz = 0, j = i; while ((j & 1) === 0 && tz < K) { j >>= 1; tz++; }
+            const lev = K - tz; if (lev < violatedAt) violatedAt = lev;
+            if (violatedAt === 1) break;
+          }
+        }
+        ks.forEach((k, q) => { if (k < violatedAt) stay[q]++; });
+
+      }
+      const pr = stay.map(c => c / M), nn = ks.map(k => 1 << k), ex = nn.map(sparre);
+      const lx = nn.map(v => Math.log(v)), ly = pr.map(v => Math.log(Math.max(v, 1e-12)));
+      const sel = ks.map((k, q) => q).filter(q => ks[q] >= 3 && pr[q] > 0);
+      const mx = N.mean(sel.map(q => lx[q])), my = N.mean(sel.map(q => ly[q]));
+      let sxy = 0, sxx = 0; sel.forEach(q => { sxy += (lx[q] - mx) * (ly[q] - my); sxx += (lx[q] - mx) ** 2; });
+      return { out: { p10: pr[3], e10: ex[3], pmax: pr[K - 1], emax: ex[K - 1], slope: sxy / sxx }, nn, pr, ex };
+    },
+    render(res, p, ui) {
+      const k = res.nn.map(v => Math.round(Math.log2(v)));
+      ui.Plot.chart(ui.plots[0], { title: 'Probability that the path stays ≤ 0 at all n grid points of (0, h]', subtitle: 'it tends to 0 as the grid refines, for every h: B cannot stay below its starting level on any interval', xlab: 'number of grid points n (log scale)', ylab: 'probability (log scale)', logy: true, xname: 'log₂ n',
+        xticks: k.filter(v => v % 2 === 1), xtickfmt: v => String(Math.pow(2, v)), xfmt: v => 'n = ' + Math.pow(2, v), series: [
+          { type: 'line', x: k, y: res.ex, color: 's2', dash: [6, 4], label: 'exact C(2n,n)/4ⁿ ≈ 1/√(πn)' },
+          { type: 'line', x: k, y: res.pr, color: 's1', markers: true, label: 'simulated' }
+        ] });
+      ui.Plot.table(ui.tables[0], 'Show values as a table', ['n', 'simulated', 'exact'], res.nn.map((v, i) => [v, res.pr[i], res.ex[i]]));
+    }
+  };
+
+  /* ---------- 3.2 Stopping times are the random times where martingale identities survive ---------- */
+  const TIMES = [
+    { id: 'ta', name: 'τ_a ∧ 1 (hitting time)', stop: true },
+    { id: 'half', name: '1/2 if B_{1/2} > 0, else 1', stop: true },
+    { id: 'peek', name: '1/2 if B_1 > 0, else 1 (peeks)', stop: false },
+    { id: 'argmax', name: 'time of the maximum on [0,1]', stop: false },
+    { id: 'last', name: 'last zero before 1', stop: false },
+    { id: 'early', name: '(τ_a − 0.1)⁺ ∧ 1 (anticipates)', stop: false }
+  ];
+  LABS['L3.opt'] = {
+    defaultSeed: 32,
+    controls: [
+      { id: 'a', label: 'level a for τ_a', type: 'range', min: 0.25, max: 1.5, step: 0.25, value: 0.5 },
+      { id: 'steps', label: 'grid steps on [0,1]', type: 'select', value: 1000, options: [[250, '250'], [1000, '1000'], [4000, '4000']] },
+      { id: 'paths', label: 'Paths', type: 'range', min: 2000, max: 20000, step: 2000, value: 10000 }
+    ],
+    outputs: TIMES.map(T => ({ key: 'm_' + T.id, label: 'E[B_τ] for ' + T.name + (T.stop ? ' — stopping time' : ' — not a stopping time'), fmt: 3 }))
+      .concat(TIMES.map(T => ({ key: 'w_' + T.id, label: 'E[B_τ² − τ] for ' + T.name, fmt: 3 })))
+      .concat([{ key: 'se', label: 'largest standard error among these estimates', fmt: 3 }]),
+    plots: 1,
+    compute(p) {
+      const R = N.rng(p.seed), n = Number(p.steps), M = p.paths, h = 1 / n, sq = Math.sqrt(h), a = p.a;
+      const vals = {}, wal = {}; TIMES.forEach(T => { vals[T.id] = new Float64Array(M); wal[T.id] = new Float64Array(M); });
+      const B = new Float64Array(n + 1);
+      for (let m = 0; m < M; m++) {
+        B[0] = 0; for (let i = 1; i <= n; i++) B[i] = B[i - 1] + sq * R.g();
+        let ia = n; for (let i = 0; i <= n; i++) if (B[i] >= a) { ia = i; break; }
+        let im = 0; for (let i = 1; i <= n; i++) if (B[i] > B[im]) im = i;
+        let il = 0; for (let i = n; i >= 1; i--) if (B[i] * B[i - 1] <= 0) { il = Math.abs(B[i]) < Math.abs(B[i - 1]) ? i : i - 1; break; }
+        const half = n / 2;
+        const idx = { ta: ia, half: B[half] > 0 ? half : n, peek: B[n] > 0 ? half : n, argmax: im, last: il, early: Math.max(0, ia - Math.round(0.1 * n)) };
+        if (ia === n) idx.early = n;
+        TIMES.forEach(T => { const i = idx[T.id], b = B[i]; vals[T.id][m] = b; wal[T.id][m] = b * b - i * h; });
+      }
+      const out = {}; let se = 0;
+      TIMES.forEach(T => { out['m_' + T.id] = N.mean(vals[T.id]); out['w_' + T.id] = N.mean(wal[T.id]); se = Math.max(se, N.se(vals[T.id]), N.se(wal[T.id])); });
+      out.se = se;
+      return { out };
+    },
+    render(res, p, ui) {
+      const x = TIMES.map((T, i) => i + 1);
+      ui.Plot.chart(ui.plots[0], { title: 'E[B_τ] for six random times τ ≤ 1', subtitle: 'bars 1–2: stopping times (E[B_τ] = 0); bars 3–6: not stopping times', xlab: 'random time (see the table and the list below)', ylab: 'E[B_τ]', xname: 'τ #', xticks: x, xlim: [0.4, 6.6],
+        hlines: [{ y: 0, color: 'ink2', dash: [], width: 1 }],
+        series: [{ type: 'bars', x, y: TIMES.map(T => res.out['m_' + T.id]), color: 's1', width: 26, label: 'E[B_τ]' }] });
+      ui.Plot.table(ui.tables[0], 'Show values as a table', ['#', 'random time', 'stopping time?', 'E[B_τ]', 'E[B_τ² − τ]'], TIMES.map((T, i) => [i + 1, T.name, T.stop ? 'yes' : 'no', res.out['m_' + T.id], res.out['w_' + T.id]]));
+    }
+  };
+
+  /* ---------- 3.3 Approximating a stopping time from above vs below (Thm 2.15, Thm 3.18, Thm 4.29) ---------- */
+  LABS['L3.dyad'] = {
+    defaultSeed: 33,
+    controls: [
+      { id: 'a', label: 'level a', type: 'range', min: 0.25, max: 1.5, step: 0.25, value: 0.5 },
+      { id: 'paths', label: 'Paths', type: 'range', min: 2000, max: 20000, step: 1000, value: 6000 }
+    ],
+    outputs: [
+      { key: 'up4', label: 'E[B at ⌈2⁴τ⌉/2⁴] (rounded up: stopping time)', fmt: 4 },
+      { key: 'dn4', label: 'E[B at ⌊2⁴τ⌋/2⁴] (rounded down: not a stopping time)', fmt: 4 },
+      { key: 'up10', label: 'rounded up, 2¹⁰ grid', fmt: 4 },
+      { key: 'dn10', label: 'rounded down, 2¹⁰ grid', fmt: 4 },
+      { key: 'se', label: 'standard error (about the same for all)', fmt: 4 }
+    ],
+    plots: 1,
+    compute(p) {
+      const R = N.rng(p.seed), J = 12, n = 1 << J, M = p.paths, sq = Math.sqrt(1 / n), a = p.a;
+      const levels = []; for (let k = 1; k <= 10; k++) levels.push(k);
+      const up = levels.map(() => new Float64Array(M)), dn = levels.map(() => new Float64Array(M));
+      const B = new Float64Array(n + 1);
+      for (let m = 0; m < M; m++) {
+        B[0] = 0; for (let i = 1; i <= n; i++) B[i] = B[i - 1] + sq * R.g();
+        let it = n; for (let i = 0; i <= n; i++) if (B[i] >= a) { it = i; break; }   // tau (fine-grid stopping time), capped at 1
+        levels.forEach((k, q) => { const st = 1 << (J - k); const iu = Math.min(n, Math.ceil(it / st) * st), id = Math.floor(it / st) * st; up[q][m] = B[iu]; dn[q][m] = B[id]; });
+      }
+      const mu = up.map(v => N.mean(v)), md = dn.map(v => N.mean(v));
+      return { out: { up4: mu[3], dn4: md[3], up10: mu[9], dn10: md[9], se: N.se(up[3]) }, levels, mu, md, seu: up.map(v => N.se(v)) };
+    },
+    render(res, p, ui) {
+      const x = res.levels;
+      ui.Plot.chart(ui.plots[0], { title: 'E[B_{τ_n}] when τ = τ_a ∧ 1 is rounded to the grid 2⁻ⁿℕ', subtitle: 'rounding up keeps a stopping time and E[B] = 0 at every n; rounding down looks ahead and is biased', xlab: 'grid level n', ylab: 'E[B at the rounded time]', xname: 'n',
+        hlines: [{ y: 0, color: 'ink2', dash: [], width: 1 }],
+        series: [
+          { type: 'band', x, y0: res.mu.map((v, i) => -2 * res.seu[i]), y1: res.mu.map((v, i) => 2 * res.seu[i]), color: 'muted', alpha: 0.18, label: '±2 standard errors around 0' },
+          { type: 'line', x, y: res.mu, color: 's1', markers: true, label: 'rounded up ⌈2ⁿτ⌉/2ⁿ' },
+          { type: 'line', x, y: res.md, color: 's2', markers: true, label: 'rounded down ⌊2ⁿτ⌋/2ⁿ' }
+        ] });
+      ui.Plot.table(ui.tables[0], 'Show values as a table', ['n', 'rounded up', 'rounded down'], x.map((k, i) => [k, res.mu[i], res.md[i]]));
+    }
+  };
+})();
+
+</script><script>
+/* ===== core.js — theme, table of contents, lab framework (identical on every page) ===== */
+(function () {
+  'use strict';
+  const root = document.documentElement;
+  /* ---------- theme ---------- */
+  function currentTheme() { const t = root.getAttribute('data-theme'); if (t) return t; return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+  function setTheme(t, save) {
+    root.setAttribute('data-theme', t);
+    if (save) { try { localStorage.setItem('sc-theme', t); } catch (e) { /* storage unavailable */ } }
+    const b = document.getElementById('theme-toggle');
+    if (b) { b.setAttribute('aria-label', t === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'); b.setAttribute('aria-pressed', t === 'dark' ? 'true' : 'false'); const l = b.querySelector('.lbl'); if (l) l.textContent = t === 'dark' ? 'Light' : 'Dark'; }
+    if (window.Plot) window.Plot.redrawAll();
+  }
+  window.__setTheme = (t) => setTheme(t, false);
+  document.addEventListener('DOMContentLoaded', () => {
+    setTheme(currentTheme(), false);
+    const b = document.getElementById('theme-toggle');
+    if (b) b.addEventListener('click', () => setTheme(currentTheme() === 'dark' ? 'light' : 'dark', true));
+    if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (!safeGet('sc-theme')) { root.removeAttribute('data-theme'); setTheme(currentTheme(), false); } });
+    initToc();
+    initLabs();
+  });
+  function safeGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+  /* ---------- TOC scroll-spy ---------- */
+  function initToc() {
+    const links = Array.from(document.querySelectorAll('.toc a[href^="#"]'));
+    if (!links.length || !('IntersectionObserver' in window)) return;
+    const map = new Map(); links.forEach(a => { const el = document.getElementById(a.getAttribute('href').slice(1)); if (el) map.set(el, a); });
+    let current = null;
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { if (current) current.classList.remove('active'); current = map.get(e.target); if (current) current.classList.add('active'); } });
+    }, { rootMargin: '-15% 0px -75% 0px' });
+    map.forEach((a, el) => obs.observe(el));
+    // open the TOC details by default on wide screens
+    const d = document.querySelector('.toc details'); if (d && window.innerWidth >= 1240) d.open = true;
+  }
+
+  /* ---------- labs ---------- */
+  const LABS = (window.LABS = window.LABS || {});
+  const instances = [];
+  function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+  function fmtCtl(c, v) { if (c.fmt) return c.fmt(v); if (c.type === 'select') { const o = (c.options || []).find(o => String(o[0]) === String(v)); return o ? o[1] : String(v); } return String(v); }
+  function initLabs() {
+    document.querySelectorAll('.lab[data-lab]').forEach(box => {
+      const id = box.getAttribute('data-lab'), spec = LABS[id];
+      if (!spec) { const s = box.querySelector('.lab-status'); if (s) s.textContent = 'lab code missing'; return; }
+      const inst = { id, box, spec, values: {}, ran: false, plots: [], tables: [] };
+      instances.push(inst);
+      buildControls(inst);
+      buildOutputs(inst);
+      const run = box.querySelector('[data-run]'); if (run) run.addEventListener('click', () => runLab(inst));
+      const reset = box.querySelector('[data-reset]'); if (reset) reset.addEventListener('click', () => { setDefaults(inst); runLab(inst); });
+      const reseed = box.querySelector('[data-reseed]'); if (reseed) reseed.addEventListener('click', () => { const s = inst.inputs.seed; if (s) { s.value = String((parseInt(s.value, 10) || 0) + 1); readValues(inst); } runLab(inst); });
+    });
+    if ('IntersectionObserver' in window) {
+      const obs = new IntersectionObserver((entries) => { entries.forEach(e => { if (e.isIntersecting) { const inst = instances.find(i => i.box === e.target); if (inst && !inst.ran) runLab(inst); obs.unobserve(e.target); } }); }, { rootMargin: '300px 0px' });
+      instances.forEach(i => obs.observe(i.box));
+    } else instances.forEach(i => runLab(i));
+  }
+  function buildControls(inst) {
+    const host = inst.box.querySelector('.lab-controls'); inst.inputs = {};
+    const ctls = (inst.spec.controls || []).slice();
+    if (!ctls.find(c => c.id === 'seed') && inst.spec.seed !== false) ctls.push({ id: 'seed', label: 'Random seed', type: 'number', min: 1, max: 999999, step: 1, value: inst.spec.defaultSeed || 1 });
+    inst.controls = ctls;
+    ctls.forEach(c => {
+      const wrap = el('div', 'ctl' + (c.type === 'check' ? ' check' : ''));
+      const fid = inst.box.id + '-' + c.id;
+      let input;
+      if (c.type === 'select') { input = el('select'); (c.options || []).forEach(o => { const op = el('option', null, o[1]); op.value = String(o[0]); input.appendChild(op); }); }
+      else if (c.type === 'check') { input = el('input'); input.type = 'checkbox'; }
+      else { input = el('input'); input.type = c.type === 'number' ? 'number' : 'range'; input.min = c.min; input.max = c.max; input.step = c.step || 1; }
+      input.id = fid;
+      const lab = el('label'); lab.htmlFor = fid;
+      if (c.type === 'check') { wrap.appendChild(input); lab.textContent = c.label; wrap.appendChild(lab); }
+      else {
+        const t = el('span', null, c.label); lab.appendChild(t);
+        if (c.type === 'range') { const o = el('output'); o.setAttribute('for', fid); lab.appendChild(o); c._out = o; }
+        wrap.appendChild(lab); wrap.appendChild(input);
+      }
+      if (c.help) { input.setAttribute('aria-description', c.help); input.title = c.help; }
+      input.addEventListener('input', () => { readValues(inst); if (c.live) runLab(inst); });
+      input.addEventListener('change', () => { readValues(inst); if (c.type !== 'number' || c.live) runLab(inst); });
+      inst.inputs[c.id] = input; host.appendChild(wrap);
+    });
+    setDefaults(inst);
+  }
+  function setDefaults(inst) {
+    inst.controls.forEach(c => { const i = inst.inputs[c.id]; if (c.type === 'check') i.checked = !!c.value; else i.value = String(c.value); });
+    readValues(inst);
+  }
+  function readValues(inst) {
+    inst.controls.forEach(c => {
+      const i = inst.inputs[c.id]; let v;
+      if (c.type === 'check') v = i.checked; else if (c.type === 'select') v = isNaN(Number(i.value)) || c.string ? i.value : Number(i.value); else { v = Number(i.value); if (!isFinite(v)) v = c.value; if (c.min !== undefined) v = Math.max(c.min, v); if (c.max !== undefined) v = Math.min(c.max, v); }
+      inst.values[c.id] = v; if (c._out) c._out.textContent = fmtCtl(c, v);
+    });
+  }
+  function buildOutputs(inst) {
+    const m = inst.box.querySelector('.metrics'); inst.outEls = {};
+    (inst.spec.outputs || []).forEach(o => { const d = el('div', 'metric'); const l = el('div', 'ml', o.label); const out = el('output'); out.setAttribute('data-out', o.key); out.textContent = '—'; d.appendChild(l); d.appendChild(out); if (m) m.appendChild(d); inst.outEls[o.key] = out; });
+    const ph = inst.box.querySelector('.lab-plots'); const n = inst.spec.plots || 1;
+    for (let k = 0; k < n; k++) { const d = el('div'); d.className = 'plot'; if (ph) ph.appendChild(d); inst.plots.push(d); const t = el('div'); if (ph) ph.appendChild(t); inst.tables.push(t); }
+  }
+  function runLab(inst) {
+    const st = inst.box.querySelector('.lab-status');
+    const btn = inst.box.querySelector('[data-run]'); if (btn) btn.disabled = true;
+    if (st) st.textContent = 'running…';
+    return new Promise(resolve => {
+      setTimeout(() => {
+        const t0 = performance.now();
+        let res;
+        try { res = inst.spec.compute(Object.assign({}, inst.values)); }
+        catch (e) { if (st) st.textContent = 'error: ' + e.message; if (btn) btn.disabled = false; console.error(e); resolve(null); return; }
+        (inst.spec.outputs || []).forEach(o => { const v = res.out ? res.out[o.key] : undefined; inst.outEls[o.key].textContent = window.N.fmt(v, o.fmt); });
+        try { if (inst.spec.render) inst.spec.render(res, inst.values, { plots: inst.plots, tables: inst.tables, Plot: window.Plot, N: window.N }); }
+        catch (e) { console.error(e); if (st) st.textContent = 'render error: ' + e.message; }
+        inst.ran = true;
+        const dt = performance.now() - t0;
+        if (st) st.textContent = 'done in ' + (dt < 1000 ? Math.round(dt) + ' ms' : (dt / 1000).toFixed(1) + ' s') + (res && res.note ? ' · ' + res.note : '');
+        if (btn) btn.disabled = false;
+        resolve(res);
+      }, 10);
+    });
+  }
+  /* test hooks: run every lab with its defaults and return the displayed outputs */
+  window.__labs = {
+    list: () => instances.map(i => i.id),
+    runAllDefaults: async () => { const out = {}; for (const i of instances) { setDefaults(i); await runLab(i); out[i.id] = {}; for (const k in i.outEls) out[i.id][k] = i.outEls[k].textContent; } return out; },
+    runOne: async (id, values) => { const i = instances.find(x => x.id === id); if (!i) return null; setDefaults(i); if (values) { for (const k in values) { const inp = i.inputs[k]; if (inp.type === 'checkbox') inp.checked = !!values[k]; else inp.value = String(values[k]); } readValues(i); } await runLab(i); const out = {}; for (const k in i.outEls) out[k] = i.outEls[k].textContent; return out; }
+  };
+})();
+
+</script>
+</body>
+</html>

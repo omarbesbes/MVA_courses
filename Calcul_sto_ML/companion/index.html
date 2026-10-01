@@ -1,0 +1,1358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stochastic calculus in ML</title>
+<meta name="description" content="Home page of the study companion: lessons, threads, dependencies and synthesis.">
+<script>try{var t=localStorage.getItem('sc-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+<style>
+/* ===== Study companion — shared stylesheet (inlined into every page) ===== */
+:root {
+  color-scheme: light;
+  --bg: #f9f9f7;            /* page plane */
+  --surface: #fcfcfb;       /* cards, chart surface */
+  --surface-2: #f2f1ec;     /* code, table head */
+  --ink: #16150f;           /* primary text */
+  --ink-2: #4a4945;         /* secondary text */
+  --muted: #6f6d67;         /* captions, axis labels */
+  --rule: #e1e0d9;          /* hairlines */
+  --rule-2: #c3c2b7;        /* stronger rule / axis */
+  --accent: #1c5cab;        /* links */
+  --accent-soft: #e6effb;
+  --focus: #2a78d6;
+  /* callouts */
+  --key: #1c5cab;   --key-bg: #eef4fc;
+  --warn: #b0431f;  --warn-bg: #fcf0ea;
+  --link: #3a6e1f;  --link-bg: #eff6ea;
+  --board: #7a5a00; --board-bg: #fbf5e3;
+  --beyond: #5a4bb0; --beyond-bg: #f2f0fb;
+  /* chart tokens (dataviz reference palette, light) */
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #4a3aa7; --s8: #e34948;
+  --series-muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --chart-ink: #0b0b0b; --chart-ink-2: #52514e;
+  --shadow: 0 1px 2px rgba(20,20,10,.06), 0 2px 8px rgba(20,20,10,.04);
+  --radius: 10px;
+  --serif: "Source Serif 4", "Source Serif Pro", Georgia, "Times New Roman", serif;
+  --sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0f0f0e; --surface: #1a1a19; --surface-2: #242422;
+    --ink: #f3f2ed; --ink-2: #c9c8c0; --muted: #a09e96;
+    --rule: #2c2c2a; --rule-2: #45443f;
+    --accent: #7fb2f0; --accent-soft: #1d2a3a; --focus: #6da7ec;
+    --key: #86b6ef; --key-bg: #172333;
+    --warn: #f09a75; --warn-bg: #321d15;
+    --link: #9fd27f; --link-bg: #1b2915;
+    --board: #e6c25a; --board-bg: #2d2610;
+    --beyond: #b3a9f2; --beyond-bg: #221f38;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+    --series-muted: #8a8880;
+    --grid: #2c2c2a; --axis: #45443f; --chart-ink: #ffffff; --chart-ink-2: #c3c2b7;
+    --shadow: 0 1px 2px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0f0f0e; --surface: #1a1a19; --surface-2: #242422;
+  --ink: #f3f2ed; --ink-2: #c9c8c0; --muted: #a09e96;
+  --rule: #2c2c2a; --rule-2: #45443f;
+  --accent: #7fb2f0; --accent-soft: #1d2a3a; --focus: #6da7ec;
+  --key: #86b6ef; --key-bg: #172333;
+  --warn: #f09a75; --warn-bg: #321d15;
+  --link: #9fd27f; --link-bg: #1b2915;
+  --board: #e6c25a; --board-bg: #2d2610;
+  --beyond: #b3a9f2; --beyond-bg: #221f38;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+  --series-muted: #8a8880;
+  --grid: #2c2c2a; --axis: #45443f; --chart-ink: #ffffff; --chart-ink-2: #c3c2b7;
+  --shadow: 0 1px 2px rgba(0,0,0,.4);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: 4.5rem; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--serif); font-size: 1.0625rem; line-height: 1.62;
+  overflow-wrap: break-word;
+}
+@media (min-width: 900px) { body { font-size: 1.125rem; } }
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 3px; }
+img, svg, canvas { max-width: 100%; }
+h1, h2, h3, h4 { font-family: var(--sans); line-height: 1.25; letter-spacing: -0.01em; color: var(--ink); }
+h1 { font-size: clamp(1.6rem, 4.5vw, 2.35rem); margin: 0.2em 0 0.3em; font-weight: 700; }
+h2 { font-size: clamp(1.3rem, 3.2vw, 1.65rem); margin: 2.4em 0 0.3em; font-weight: 700; padding-top: .6em; border-top: 1px solid var(--rule); }
+h3 { font-size: clamp(1.08rem, 2.4vw, 1.22rem); margin: 1.9em 0 0.4em; font-weight: 650; }
+h4 { font-size: 1rem; margin: 1.4em 0 0.3em; font-weight: 650; }
+p { margin: 0.7em 0; }
+ul, ol { padding-left: 1.4em; }
+li { margin: 0.25em 0; }
+hr { border: 0; border-top: 1px solid var(--rule); margin: 2em 0; }
+code, kbd { font-family: var(--mono); font-size: 0.86em; background: var(--surface-2); padding: 0.08em 0.3em; border-radius: 4px; }
+pre { font-family: var(--mono); font-size: 0.82rem; line-height: 1.5; background: var(--surface-2); border: 1px solid var(--rule); border-radius: 8px; padding: 0.9em 1em; overflow-x: auto; max-width: 100%; }
+pre code { background: none; padding: 0; font-size: inherit; }
+small, .small { font-size: 0.88em; }
+.muted { color: var(--muted); }
+.nw { white-space: nowrap; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* ---------- header / navigation ---------- */
+.skip { position: absolute; left: -999px; top: 0; background: var(--surface); padding: .5em 1em; z-index: 100; }
+.skip:focus { left: .5em; }
+.topbar {
+  position: sticky; top: 0; z-index: 50; background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: saturate(1.2) blur(6px); -webkit-backdrop-filter: saturate(1.2) blur(6px);
+  border-bottom: 1px solid var(--rule); font-family: var(--sans);
+}
+.topbar-in { max-width: 72rem; margin: 0 auto; padding: .45rem 1rem; display: flex; align-items: center; gap: .6rem; }
+.brand { font-weight: 650; font-size: .92rem; color: var(--ink); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1 1 auto; }
+.brand span { color: var(--muted); font-weight: 500; }
+.navbtns { display: flex; gap: .35rem; flex: 0 0 auto; }
+.btn, .navbtns a, .navbtns button {
+  font-family: var(--sans); font-size: .82rem; font-weight: 550; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--rule-2); border-radius: 7px; padding: .32rem .6rem; text-decoration: none; cursor: pointer; line-height: 1.2;
+  display: inline-flex; align-items: center; gap: .3rem; min-height: 2rem;
+}
+.btn:hover, .navbtns a:hover, .navbtns button:hover { background: var(--surface-2); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.btn.primary:hover { filter: brightness(1.08); background: var(--accent); }
+.btn[disabled] { opacity: .5; cursor: default; }
+.navbtns .lbl { display: inline; }
+@media (max-width: 560px) { .navbtns .lbl { display: none; } .brand span { display: none; } }
+.theme-toggle svg { width: 1rem; height: 1rem; }
+
+.strip { max-width: 72rem; margin: 0 auto; padding: .55rem 1rem .1rem; display: flex; flex-wrap: wrap; gap: .35rem; font-family: var(--sans); }
+.strip a {
+  font-size: .78rem; text-decoration: none; color: var(--ink-2); border: 1px solid var(--rule); background: var(--surface);
+  border-radius: 999px; padding: .22rem .6rem; white-space: nowrap;
+}
+.strip a:hover { border-color: var(--rule-2); color: var(--ink); }
+.strip a[aria-current="page"] { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 650; }
+.strip a .t { display: none; }
+@media (min-width: 1100px) { .strip a .t { display: inline; } }
+
+.page { max-width: 72rem; margin: 0 auto; padding: 0 1rem 4rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2rem; }
+@media (min-width: 1240px) { .page { grid-template-columns: 15.5rem minmax(0, 46rem); justify-content: center; } }
+main { min-width: 0; max-width: 46rem; margin: 0 auto; width: 100%; }
+.hero { padding: 1.2rem 0 .4rem; }
+.eyebrow { font-family: var(--sans); font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0; }
+.lede { font-size: 1.08em; color: var(--ink-2); }
+.meta { font-family: var(--sans); font-size: .85rem; color: var(--muted); }
+.prevnext { display: flex; justify-content: space-between; gap: 1rem; margin: 3rem 0 0; font-family: var(--sans); font-size: .9rem; flex-wrap: wrap; }
+.prevnext a { text-decoration: none; border: 1px solid var(--rule); border-radius: 8px; padding: .6rem .8rem; background: var(--surface); max-width: 100%; }
+.prevnext a:hover { border-color: var(--rule-2); }
+.prevnext small { display: block; color: var(--muted); }
+
+/* ---------- TOC ---------- */
+.toc { font-family: var(--sans); font-size: .85rem; }
+.toc details { border: 1px solid var(--rule); border-radius: var(--radius); background: var(--surface); padding: .5rem .8rem; margin-top: 1rem; }
+.toc summary { cursor: pointer; font-weight: 650; color: var(--ink); padding: .15rem 0; }
+.toc ol { list-style: none; padding: 0; margin: .4rem 0 0; }
+.toc li { margin: 0; }
+.toc li li { padding-left: .8rem; }
+.toc a { display: block; color: var(--ink-2); text-decoration: none; padding: .16rem .4rem; border-radius: 5px; line-height: 1.35; }
+.toc a:hover { background: var(--surface-2); color: var(--ink); }
+.toc a.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+@media (min-width: 1240px) {
+  .toc { position: sticky; top: 4.2rem; align-self: start; max-height: calc(100vh - 5rem); overflow-y: auto; padding-right: .2rem; }
+  .toc details { margin-top: 1.4rem; }
+}
+
+/* ---------- statements, callouts ---------- */
+.pages { font-family: var(--sans); font-size: .82rem; color: var(--muted); margin: -.1em 0 1em; }
+.stmt { border: 1px solid var(--rule-2); border-radius: var(--radius); background: var(--surface); padding: .75rem 1rem .6rem; margin: 1.1rem 0; box-shadow: var(--shadow); }
+.stmt-h { font-family: var(--sans); font-weight: 700; font-size: .92rem; margin-bottom: .25rem; display: flex; flex-wrap: wrap; gap: .2rem .6rem; align-items: baseline; }
+.stmt-h .pp { font-weight: 500; color: var(--muted); font-size: .8rem; }
+.stmt-h .nm { font-weight: 500; color: var(--ink-2); }
+.stmt > p:first-of-type { margin-top: .2rem; }
+.stmt.def { border-left: 4px solid var(--s7); }
+.stmt.thm { border-left: 4px solid var(--s1); }
+.stmt.prop, .stmt.cor, .stmt.lem { border-left: 4px solid var(--s3); }
+.stmt.rem, .stmt.ex { border-left: 4px solid var(--rule-2); }
+.anatomy { display: grid; grid-template-columns: minmax(0,1fr); gap: .1rem; margin: .5rem 0 .2rem; font-size: .96em; }
+.anatomy > div { padding: .35rem 0 .35rem .8rem; border-left: 2px solid var(--rule); }
+.anatomy b { font-family: var(--sans); font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); display: block; }
+.callout { border-radius: var(--radius); padding: .7rem 1rem .6rem; margin: 1.2rem 0; border-left: 4px solid; }
+.callout > .ch { font-family: var(--sans); font-weight: 700; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; margin-bottom: .2rem; display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
+.callout > .ch .src { text-transform: none; letter-spacing: 0; font-weight: 500; opacity: .85; }
+.callout p:first-of-type { margin-top: .2rem; }
+.callout p:last-child { margin-bottom: .2rem; }
+.callout.key { background: var(--key-bg); border-color: var(--key); } .callout.key > .ch { color: var(--key); }
+.callout.warn { background: var(--warn-bg); border-color: var(--warn); } .callout.warn > .ch { color: var(--warn); }
+.callout.link { background: var(--link-bg); border-color: var(--link); } .callout.link > .ch { color: var(--link); }
+.callout.board { background: var(--board-bg); border-color: var(--board); } .callout.board > .ch { color: var(--board); }
+.callout.beyond { background: var(--beyond-bg); border-color: var(--beyond); } .callout.beyond > .ch { color: var(--beyond); }
+blockquote.q { margin: .8rem 0; padding: .3rem 0 .3rem 1rem; border-left: 3px solid var(--rule-2); color: var(--ink-2); font-style: italic; }
+blockquote.q cite { font-style: normal; font-family: var(--sans); font-size: .8rem; color: var(--muted); display: block; }
+
+/* ---------- collapsibles (hints, solutions, answers) ---------- */
+details.fold { border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); margin: .5rem 0; }
+details.fold > summary { cursor: pointer; padding: .45rem .8rem; font-family: var(--sans); font-size: .9rem; font-weight: 600; color: var(--ink-2); list-style: none; display: flex; gap: .5rem; align-items: baseline; }
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary::before { content: "▸"; color: var(--muted); transition: transform .15s; display: inline-block; }
+details.fold[open] > summary::before { transform: rotate(90deg); }
+details.fold > .fb { padding: .1rem 1rem .6rem; border-top: 1px solid var(--rule); }
+.exo { border: 1px solid var(--rule-2); border-radius: var(--radius); padding: .8rem 1rem .5rem; margin: 1.2rem 0; background: var(--surface); }
+.exo-h { font-family: var(--sans); font-weight: 700; font-size: .95rem; }
+.exo-h .pp { font-weight: 500; color: var(--muted); font-size: .8rem; margin-left: .4rem; }
+.qa { counter-reset: q; }
+.qa > details { counter-increment: q; }
+.qa > details > summary::after { content: ""; }
+
+/* ---------- tables ---------- */
+.tw { max-width: 100%; overflow-x: auto; margin: 1rem 0; }
+table { border-collapse: collapse; width: 100%; font-size: .9rem; font-family: var(--sans); }
+th, td { text-align: left; vertical-align: top; padding: .42rem .55rem; border-bottom: 1px solid var(--rule); }
+th { background: var(--surface-2); font-weight: 650; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.compact td, table.compact th { padding: .25rem .45rem; font-size: .82rem; }
+
+/* ---------- labs ---------- */
+.lab { border: 1px solid var(--rule-2); border-radius: 14px; background: var(--surface); margin: 1.6rem 0; box-shadow: var(--shadow); overflow: hidden; }
+.lab-h { padding: .8rem 1rem .5rem; border-bottom: 1px solid var(--rule); }
+.lab-h .tag { font-family: var(--sans); font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--s1); }
+.lab-h h3 { margin: .15rem 0 .2rem; border: 0; padding: 0; }
+.lab-h p { margin: .2rem 0; color: var(--ink-2); font-size: .95em; }
+.lab-body { padding: .8rem 1rem 1rem; }
+.lab-controls { display: grid; grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr)); gap: .6rem 1rem; font-family: var(--sans); font-size: .84rem; margin-bottom: .7rem; }
+.ctl { display: flex; flex-direction: column; gap: .2rem; min-width: 0; }
+.ctl label { color: var(--ink-2); font-weight: 550; display: flex; justify-content: space-between; gap: .5rem; }
+.ctl label output { color: var(--ink); font-variant-numeric: tabular-nums; font-weight: 650; }
+.ctl input[type=range] { width: 100%; accent-color: var(--s1); min-height: 1.6rem; }
+.ctl select, .ctl input[type=number] { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--rule-2); border-radius: 6px; padding: .3rem .4rem; min-height: 2rem; width: 100%; }
+.ctl.check { flex-direction: row; align-items: center; gap: .45rem; }
+.ctl.check input { width: 1.05rem; height: 1.05rem; accent-color: var(--s1); }
+.lab-actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin: .2rem 0 .8rem; font-family: var(--sans); font-size: .82rem; }
+.lab-status { color: var(--muted); }
+.plot { position: relative; width: 100%; margin: .4rem 0 .2rem; }
+.plot canvas { display: block; width: 100%; height: auto; border-radius: 8px; background: var(--surface); touch-action: pan-y; }
+.plot canvas.ov { background: transparent; }
+.plot-title { font-family: var(--sans); font-size: .84rem; font-weight: 650; color: var(--ink); margin: .6rem 0 0; }
+.plot-sub { font-family: var(--sans); font-size: .78rem; color: var(--muted); margin: 0 0 .2rem; }
+.legend { display: flex; flex-wrap: wrap; gap: .25rem 1rem; font-family: var(--sans); font-size: .78rem; color: var(--ink-2); margin: .25rem 0 .1rem; }
+.legend .li { display: inline-flex; align-items: center; gap: .35rem; }
+.legend .key { width: 1.3rem; height: 0; border-top: 2px solid; display: inline-block; }
+.legend .key.dash { border-top-style: dashed; }
+.legend .key.box { width: .8rem; height: .8rem; border: 0; border-radius: 2px; }
+.legend .key.dot { width: .6rem; height: .6rem; border: 0; border-radius: 50%; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--rule-2); border-radius: 7px; padding: .35rem .5rem; font-family: var(--sans); font-size: .76rem; box-shadow: var(--shadow); white-space: nowrap; z-index: 5; display: none; }
+.tip .tv { font-weight: 700; font-variant-numeric: tabular-nums; }
+.tip .tk { display: inline-block; width: .9rem; border-top: 2px solid; vertical-align: middle; margin-right: .3rem; }
+.metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: .5rem; margin: .7rem 0; font-family: var(--sans); }
+.metric { border: 1px solid var(--rule); border-radius: 8px; padding: .45rem .6rem; background: var(--bg); min-width: 0; }
+.metric .ml { font-size: .74rem; color: var(--muted); line-height: 1.3; }
+.metric output { display: block; font-size: 1.02rem; font-weight: 650; color: var(--ink); margin-top: .1rem; overflow-wrap: anywhere; }
+.findings { border-top: 1px dashed var(--rule-2); margin-top: .8rem; padding-top: .5rem; font-size: .96em; }
+.findings > .fh { font-family: var(--sans); font-size: .76rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+details.tableview { margin: .4rem 0; font-family: var(--sans); font-size: .82rem; }
+details.tableview summary { cursor: pointer; color: var(--ink-2); }
+details.tableview .tw { margin: .4rem 0; max-height: 18rem; overflow: auto; }
+
+/* ---------- maps (threads) ---------- */
+.threadmap { width: 100%; overflow-x: auto; margin: 1rem 0; }
+.threadmap table { font-size: .76rem; }
+.threadmap td, .threadmap th { text-align: center; padding: .3rem .25rem; border: 1px solid var(--rule); }
+.threadmap th[scope=row] { text-align: left; font-weight: 600; background: var(--surface); white-space: normal; min-width: 8rem; }
+.threadmap td.on { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.threadmap td.here { background: var(--accent); color: var(--bg); font-weight: 700; }
+.threadmap col.cur { background: var(--accent-soft); }
+.figure { margin: 1.2rem 0; text-align: center; }
+.figure svg { width: 100%; height: auto; max-width: 40rem; }
+.figure figcaption { font-family: var(--sans); font-size: .8rem; color: var(--muted); margin-top: .3rem; text-align: left; }
+svg .ink { fill: var(--ink); } svg .ink2 { fill: var(--ink-2); } svg .mut { fill: var(--muted); }
+svg .st-ink { stroke: var(--ink); } svg .st-mut { stroke: var(--rule-2); } svg .st-s1 { stroke: var(--s1); } svg .st-s2 { stroke: var(--s2); } svg .st-s3 { stroke: var(--s3); } svg .st-s7 { stroke: var(--s7); }
+svg .f-s1 { fill: var(--s1); } svg .f-s2 { fill: var(--s2); } svg .f-s3 { fill: var(--s3); } svg .f-surface { fill: var(--surface); } svg .f-soft { fill: var(--accent-soft); }
+svg text { font-family: var(--sans); }
+
+/* ---------- cheat sheet, glossary ---------- */
+.cheat { display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: .7rem; }
+.cheat > div { border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); padding: .5rem .8rem; font-size: .94em; }
+.cheat h4 { margin: .2rem 0 .3rem; font-size: .88rem; }
+dl.gloss { display: grid; grid-template-columns: minmax(0,1fr); gap: .1rem; }
+dl.gloss dt { font-family: var(--sans); font-weight: 650; margin-top: .5rem; }
+dl.gloss dt .fr { font-weight: 500; color: var(--muted); font-style: italic; }
+dl.gloss dd { margin: 0 0 .2rem 0; }
+footer.foot { max-width: 46rem; margin: 3rem auto 0; padding: 1.5rem 1rem 3rem; border-top: 1px solid var(--rule); font-family: var(--sans); font-size: .82rem; color: var(--muted); }
+
+/* ---------- math ---------- */
+mjx-container[display="true"] { overflow-x: auto; overflow-y: hidden; max-width: 100%; padding: .15em 0; margin: .7em 0 !important; }
+mjx-container { outline: none; }
+.eqgroup { margin: .6rem 0; }
+@media print { .topbar, .toc, .strip, .lab-controls, .lab-actions { display: none; } }
+.threadmap td a { text-decoration: none; color: inherit; display: block; font-size: .9rem; line-height: 1; }
+.threadmap td.on a { color: var(--accent); }
+.threadmap td.here a { color: var(--bg); }
+.threadmap th b { color: var(--accent); }
+.thread { border-left: 3px solid var(--rule-2); padding-left: .9rem; margin: 1rem 0; }
+.thread h3 { margin-top: .5rem; }
+@media (max-width: 560px) {
+  .page { padding: 0 .75rem 3rem; }
+  .stmt, .callout, .exo { padding-left: .7rem; padding-right: .7rem; }
+  details.fold > .fb { padding: .1rem .6rem .5rem; }
+  .lab-h, .lab-body { padding-left: .7rem; padding-right: .7rem; }
+  .anatomy > div { padding-left: .6rem; }
+}
+/* keep MathJax's hidden assistive MathML inside its formula box (it can be wider than the rendering) */
+mjx-container { position: relative; }
+mjx-assistive-mml { width: 100% !important; max-width: 100% !important; }
+
+/* ---------- home page ---------- */
+.lessons { list-style: none; padding: 0; margin: 1rem 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr)); gap: .75rem; }
+.lessons > li { margin: 0; display: flex; }
+.lcard { flex: 1; display: block; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--surface); padding: .75rem .95rem .85rem; text-decoration: none; color: var(--ink); box-shadow: var(--shadow); }
+.lcard:hover { border-color: var(--accent); }
+.lcard:hover .lt { text-decoration: underline; }
+.lcard .ln { display: block; font-family: var(--sans); font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.lcard .lt { display: block; font-family: var(--sans); font-weight: 700; font-size: 1rem; line-height: 1.3; margin: .2rem 0 .4rem; color: var(--accent); }
+.lcard .lq { display: block; font-size: .95em; color: var(--ink-2); line-height: 1.5; }
+.lcard .lm { display: block; font-family: var(--sans); font-size: .76rem; color: var(--muted); margin-top: .5rem; }
+.movements { display: grid; grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr)); gap: .7rem; margin: 1rem 0; }
+.movements > div { border-top: 3px solid var(--s1); background: var(--surface); border-radius: 0 0 8px 8px; padding: .5rem .8rem .7rem; font-size: .95em; }
+.movements > div:nth-child(2) { border-top-color: var(--s3); }
+.movements > div:nth-child(3) { border-top-color: var(--s7); }
+.movements h4 { margin: .2rem 0 .3rem; font-size: 1rem; border: 0; padding: 0; }
+table.stack th[scope=row], table.stack td.lh { font-family: var(--sans); font-weight: 650; }
+table.stack tr.grp th { background: var(--accent-soft); color: var(--ink); font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; }
+@media (max-width: 760px) {
+  table.stack thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  table.stack, table.stack tbody, table.stack tr, table.stack td, table.stack th { display: block; width: 100%; }
+  table.stack tr { border: 1px solid var(--rule); border-radius: 8px; margin: 0 0 .7rem; padding: .35rem .65rem .45rem; background: var(--surface); }
+  table.stack td, table.stack th { border: 0; padding: .22rem 0; background: none; }
+  table.stack td[data-label]::before { content: attr(data-label); display: block; font-size: .7rem; font-weight: 650; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  table.stack tr.grp { border: 0; background: none; padding: .8rem 0 0; margin: 0; }
+  table.stack tr.grp th { background: none; color: var(--accent); padding: 0; }
+}
+ol.asks > li { margin: .55rem 0; }
+ol.asks .q { font-style: italic; }
+
+</style>
+<script>window.MathJax={"tex": {"inlineMath": [["\\(", "\\)"]], "displayMath": [["\\[", "\\]"]], "macros": {"R": "\\mathbb{R}", "N": "\\mathbb{N}", "Q": "\\mathbb{Q}", "Z": "\\mathbb{Z}", "Qb": "\\mathbb{Q}", "E": "\\mathbb{E}", "P": "\\mathbb{P}", "Xb": "\\mathbb{X}", "Yb": "\\mathbb{Y}", "F": "\\mathcal{F}", "G": "\\mathcal{G}", "cB": "\\mathcal{B}", "cN": "\\mathcal{N}", "cM": "\\mathcal{M}", "cX": "\\mathcal{X}", "cY": "\\mathcal{Y}", "cC": "\\mathcal{C}", "cL": "\\mathcal{L}", "cP": "\\mathcal{P}", "cE": "\\mathcal{E}", "cW": "\\mathcal{W}", "dd": "\\mathrm{d}", "Var": "\\operatorname{Var}", "Cov": "\\operatorname{Cov}", "sgn": "\\operatorname{sign}", "ind": "\\mathbf{1}", "indep": "\\perp\\!\\!\\!\\perp", "eqd": "\\overset{(d)}{=}", "TV": "\\mathrm{TV}", "tr": "\\operatorname{Tr}", "Mtc": "\\mathcal{M}_{2,c}", "Mloc": "\\mathcal{M}^{c}_{\\mathrm{loc}}", "Law": "\\operatorname{Law}", "Wd": "W^{d}", "Leb": "\\mathrm{Leb}", "as": "\\text{a.s.}", "iid": "\\text{i.i.d.}", "lt": "<", "gt": ">", "br": ["\\langle #1\\rangle", 1], "norm": ["\\lVert #1\\rVert", 1], "abs": ["\\lvert #1\\rvert", 1], "bb": ["\\mathbb{#1}", 1]}, "processEscapes": true}, "options": {"skipHtmlTags": ["script", "noscript", "style", "textarea", "pre", "code"]}, "chtml": {"scale": 0.97, "matchFontHeight": true},"startup":{"ready":function(){MathJax.startup.defaultReady();MathJax.startup.promise.then(function(){document.documentElement.setAttribute("data-mathjax","done");});}}};</script><script defer id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-chtml.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar"><div class="topbar-in"><a class="brand" href="index.html">Stochastic calculus in ML <span>· study companion</span></a><nav class="navbtns" aria-label="Page navigation"><a href="index.html" title="Home page">⌂<span class="lbl"> Home</span></a><a href="Lesson01.html" rel="next" title="Next: Lesson 1"><span class="lbl">Next </span>→</a><button id="theme-toggle" class="theme-toggle" type="button" aria-pressed="false" aria-label="Switch to dark theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span class="lbl">Dark</span></button></nav></div><nav class="strip" aria-label="All lessons"><a href="index.html" aria-current="page">Home</a><a href="Lesson01.html" title="Lesson 1: Brownian Motion and Its First Properties">L1<span class="t"> · Brownian motion</span></a><a href="Lesson02.html" title="Lesson 2: Function Properties of the Brownian Motion: Markov and Quadratic Variation">L2<span class="t"> · Markov &amp; QV</span></a><a href="Lesson03.html" title="Lesson 3: Measurability, Filtrations and Stopping Times">L3<span class="t"> · Filtrations &amp; stopping</span></a><a href="Lesson04.html" title="Lesson 4: Continuous-Time Martingales and Submartingales">L4<span class="t"> · Martingales</span></a><a href="Lesson05.html" title="Lesson 5: Continuous Semi-Martingales">L5<span class="t"> · Semimartingales</span></a><a href="Lesson06.html" title="Lesson 6: Stochastic Integrals">L6<span class="t"> · Stochastic integrals</span></a><a href="Lesson07.html" title="Lesson 7: Itô Formula and Consequences">L7<span class="t"> · Itô &amp; Girsanov</span></a><a href="Lesson08.html" title="Lesson 8: Stochastic Differential Equations">L8<span class="t"> · SDEs</span></a></nav></header>
+<div class="page">
+<nav class="toc" aria-label="Table of contents"><details><summary>Contents</summary><ol><li><a href="#about">What the course is about</a></li><li><a href="#structure">How the course is built</a><ol><li><a href="#movements">Three movements</a></li><li><a href="#built-from">What these pages are built from</a></li></ol></li><li><a href="#lessons">The eight lessons</a></li><li><a href="#threads">Threads across the lessons</a></li><li><a href="#dependencies">Dependencies between lessons</a></li><li><a href="#synthesis">Synthesis of the course</a><ol><li><a href="#synthesis-table">The lessons at a glance</a></li><li><a href="#keeps-asking">The question each lesson keeps asking</a></li><li><a href="#which-tool">Which tool for which question</a></li></ol></li><li><a href="#notation">Notation shared by all pages</a></li><li><a href="#corrections">Corrections to the notes</a><ol><li><a href="#corrections-main">The ones that change a statement</a></li><li><a href="#corrections-all">All corrections, chapter by chapter</a></li></ol></li><li><a href="#how-to-use">How the lesson pages work</a></li><li><a href="#revision">Revision kit</a></li><li><a href="#sources">Sources and references</a></li></ol></details></nav>
+<main id="main">
+<div class="hero"><p class="eyebrow">Study companion · Alain Oliviero-Durmus</p><h1>Stochastic calculus in machine learning: sampling and generative modeling</h1><p class="lede">Eight lesson pages, one per chapter of the notes, with interactive labs, worked exercises and self-tests.</p></div>
+<section>
+<h2 id="about">What the course is about</h2>
+<p>Sampling algorithms and diffusion-based generative models are stochastic differential equations (SDEs) run on a computer. This course builds, starting from the definition of Brownian motion, the calculus needed to write such equations, to know when they have a solution, and to compute with them.</p>
+<p>The first board of the course, “Chap 0. Motivation and illustration” (photos IMG_3205 2 – IMG_3211 2), names three places where this calculus is used in machine learning.</p>
+<ol>
+<li><b>Sampling and Monte Carlo.</b> The goal is to sample from a law \(\pi\) whose density is proportional to <span class="nw">\(e^{-U}\),</span> known only up to a multiplicative constant. The Langevin diffusion \(\dd X_t=-\nabla U(X_t)\,\dd t+\sqrt2\,\dd B_t\) has \(\pi\) as its long-run law: \(\Law(X_t)\to\pi\) as <span class="nw">\(t\to\infty\).</span> Discretizing it in time gives the Langevin algorithm (<a href="Lesson01.html#lab1-1">Lab 1.1</a>, <a href="Lesson08.html#lab8-5">Lab 8.5</a>).</li>
+<li><b>Generative models,</b> in particular diffusion models. They turn data into noise with an SDE and learn to run that SDE backwards in time (<a href="Lesson08.html#kolmogorov">Lesson 8, Beyond the notes</a>).</li>
+<li><b>Theory of deep learning.</b> Train a network with one hidden layer of \(N\) neurons by gradient descent, with iterates <span class="nw">\(w^i_k\).</span> Speed up time as <span class="nw">\(\tilde w^{i,N}_t=w^i_{\lfloor tN\rfloor}\).</span> As <span class="nw">\(N\to\infty\),</span> these processes converge to the solution of an SDE (<a href="Lesson01.html#wb-ch0">Lesson 1, board Chapter 0</a>).</li>
+</ol>
+<p>Giving a meaning to \(\dd X_t=b(X_t)\,\dd t+\sigma(X_t)\,\dd B_t\) takes the eight chapters of the notes, one per lesson here. We need a Brownian motion \(B\) (<a class="xr" href="Lesson01.html">Lesson 1</a>), its law, Markov property and roughness (<a class="xr" href="Lesson02.html">Lesson 2</a>), and a precise model of information (<a class="xr" href="Lesson03.html">Lesson 3</a>). Then come martingales (<a class="xr" href="Lesson04.html">Lesson 4</a>), the processes one can integrate against (<a class="xr" href="Lesson05.html">Lesson 5</a>), the stochastic integral (<a class="xr" href="Lesson06.html">Lesson 6</a>), the chain rule and changes of probability (<a class="xr" href="Lesson07.html">Lesson 7</a>), and finally existence and uniqueness of solutions (<a class="xr" href="Lesson08.html">Lesson 8</a>).</p>
+<p>The notes stop at the semigroup property of SDE solutions (<a href="Lesson08.html#n8-23">Corollary 8.23</a>, p. 73). The machine-learning uses from the board, the Kolmogorov and Fokker–Planck equations, and the time reversal behind diffusion models are not in the notes. These pages add them, always inside a “Beyond the notes” box.</p>
+</section>
+
+<section>
+<h2 id="structure">How the course is built</h2>
+<h3 id="movements">Three movements</h3>
+<div class="movements">
+<div><h4>1 · The object (Lessons 1–2)</h4><p>Construct Brownian motion and put its law on the space of continuous paths. Then read off what the law implies. Independent increments give the Markov property. Gaussian scaling gives the roughness: quadratic variation <span class="nw">\(t\),</span> infinite total variation.</p></div>
+<div><h4>2 · Information and fair games (Lessons 3–5)</h4><p>Filtrations say what is known at time <span class="nw">\(t\).</span> Stopping times are the random times one can act on. Martingales are processes whose best forecast is their present value. Local martingales and the bracket \(\br{M}\) extend the tools to processes that are fair only up to random times.</p></div>
+<div><h4>3 · The calculus (Lessons 6–8)</h4><p>Define \(\int H\,\dd M\) in <span class="nw">\(L^2\),</span> by an isometry, rather than path by path. Derive the chain rule (Itô's formula) and the rule for changing the probability (Girsanov). Then solve SDEs and study their Markov semigroups.</p></div>
+</div>
+<p>One method runs through all three movements. Prove the statement on a finite grid, control the error, and let the grid shrink. It gives Lévy's construction, quadratic variation, the strong Markov property, optional stopping, the bracket, the stochastic integral, Itô's formula and Picard's iteration. It is thread T2 in the <a href="#threads">map of threads</a>.</p>
+<h3 id="built-from">What these pages are built from</h3>
+<ul>
+<li><b>The notes</b> (73 pages, “Handwritten Stochastic Calculus Notes, transcribed from handwritten chapter notes”). They are organized in eight chapters, not in dated lessons, so each chapter is one lesson here. Section and statement numbers are the notes' own: “<a class="xr" href="Lesson04.html#n4-29">Theorem 4.29</a>” on a page is <a class="xr" href="Lesson04.html#n4-29">Theorem 4.29</a> in the notes, and every statement box gives its page.</li>
+<li><b>The whiteboard photos of the first lecture</b> (62 photos). They cover the board's Chapter 0 and Chapter 1 up to <a class="xr" href="Lesson01.html#n1-20">Corollary 1.20</a>. Their content appears in <a class="xr" href="Lesson01.html">Lesson 1</a>, in “From the whiteboard” boxes that cite the file names, with a <a href="Lesson01.html#board-summary">side-by-side comparison with the notes</a>.</li>
+<li><b>Code.</b> Every number on every page is produced by code: the labs run in the page, and each lesson ends with a Python reference script whose printed output is included. The scripts compare their results with exact formulas and with reference libraries: SciPy (distributions, special functions, quadrature) and sdeint (Euler–Maruyama).</li>
+</ul>
+</section>
+
+<section>
+<h2 id="lessons">The eight lessons</h2>
+<p>Each card links to the lesson page and gives the question the lesson answers.</p>
+<ul class="lessons">
+<li><a class="lcard" href="Lesson01.html"><span class="ln">Lesson 1 · notes pp. 3–12</span><span class="lt">Brownian motion and its first properties</span><span class="lq">What is Brownian motion, does it exist, and what does it mean to know the law of a random path?</span><span class="lm">5 labs · 8 exercises · 22 self-test questions</span></a></li>
+<li><a class="lcard" href="Lesson02.html"><span class="ln">Lesson 2 · notes pp. 13–20</span><span class="lt">Markov property and quadratic variation</span><span class="lq">What does the past tell us about the future of a Brownian path, and how rough is that path?</span><span class="lm">5 labs · 8 exercises · 20 self-test questions</span></a></li>
+<li><a class="lcard" href="Lesson03.html"><span class="ln">Lesson 3 · notes pp. 21–26</span><span class="lt">Measurability, filtrations and stopping times</span><span class="lq">What do we know at time <span class="nw">\(t\),</span> and which random times can be decided with that information?</span><span class="lm">3 labs · 8 exercises · 18 self-test questions</span></a></li>
+<li><a class="lcard" href="Lesson04.html"><span class="ln">Lesson 4 · notes pp. 27–37</span><span class="lt">Continuous-time martingales</span><span class="lq">When do martingale identities survive limits in time and random (stopping) times?</span><span class="lm">6 labs · 9 exercises · 20 self-test questions</span></a></li>
+<li><a class="lcard" href="Lesson05.html"><span class="ln">Lesson 5 · notes pp. 38–49</span><span class="lt">Continuous semimartingales</span><span class="lq">Which processes can serve as integrators, and how do we measure the roughness of a continuous martingale?</span><span class="lm">5 labs · 9 exercises · 21 self-test questions</span></a></li>
+<li><a class="lcard" href="Lesson06.html"><span class="ln">Lesson 6 · notes pp. 50–59</span><span class="lt">Stochastic integrals</span><span class="lq">How can one integrate against a path of infinite variation, and what survives from ordinary calculus?</span><span class="lm">4 labs · 8 exercises · 20 self-test questions</span></a></li>
+<li><a class="lcard" href="Lesson07.html"><span class="ln">Lesson 7 · notes pp. 60–67</span><span class="lt">Itô's formula and its consequences</span><span class="lq">How do smooth maps and changes of probability measure transform semimartingales?</span><span class="lm">4 labs · 8 exercises · 21 self-test questions</span></a></li>
+<li><a class="lcard" href="Lesson08.html"><span class="ln">Lesson 8 · notes pp. 68–73</span><span class="lt">Stochastic differential equations</span><span class="lq">When does a stochastic differential equation have a solution, is it unique, and in which sense?</span><span class="lm">5 labs · 8 exercises · 21 self-test questions</span></a></li>
+</ul>
+<p class="small muted">In total: 37 labs, 66 exercises with hints and solutions, 163 self-test questions, and a glossary of 150 terms in English and French.</p>
+</section>
+
+<section>
+<h2 id="threads">Threads across the lessons</h2>
+<p>A thread is an idea that comes back in several lessons, each time in a more general form. The table shows where each of the seven threads appears; each dot links to that station. The lists below give each thread's path through the course.</p>
+<div class="threadmap"><table><caption class="sr-only">Threads of the course across lessons</caption><thead><tr><th scope="col">Thread</th><th scope="col">L1</th><th scope="col">L2</th><th scope="col">L3</th><th scope="col">L4</th><th scope="col">L5</th><th scope="col">L6</th><th scope="col">L7</th><th scope="col">L8</th></tr></thead><tbody><tr><th scope="row">T1 · Laws on path space</th><td class="on"><a href="Lesson01.html#s1-5" title="fidis; Wiener measure" aria-label="T1 in Lesson 1: fidis; Wiener measure">●</a></td><td class="on"><a href="Lesson02.html#n2-1" title="same law on W^d; Markov kernels" aria-label="T1 in Lesson 2: same law on W^d; Markov kernels">●</a></td><td><span class="sr-only">no station</span></td><td><span class="sr-only">no station</span></td><td><span class="sr-only">no station</span></td><td><span class="sr-only">no station</span></td><td class="on"><a href="Lesson07.html#s7-3" title="Girsanov: a new law on path space" aria-label="T1 in Lesson 7: Girsanov: a new law on path space">●</a></td><td class="on"><a href="Lesson08.html#n8-11" title="weak uniqueness = equal laws" aria-label="T1 in Lesson 8: weak uniqueness = equal laws">●</a></td></tr><tr><th scope="row">T2 · Discretize dyadically, then pass to the limit</th><td class="on"><a href="Lesson01.html#s1-4" title="Lévy’s dyadic construction" aria-label="T2 in Lesson 1: Lévy’s dyadic construction">●</a></td><td class="on"><a href="Lesson02.html#s2-2" title="QV on dyadic meshes; τ_N ↓ τ" aria-label="T2 in Lesson 2: QV on dyadic meshes; τ_N ↓ τ">●</a></td><td class="on"><a href="Lesson03.html#n3-12" title="progressive via dyadic approximations" aria-label="T2 in Lesson 3: progressive via dyadic approximations">●</a></td><td class="on"><a href="Lesson04.html#n4-29" title="Doob and optional stopping on dyadic skeletons" aria-label="T2 in Lesson 4: Doob and optional stopping on dyadic skeletons">●</a></td><td class="on"><a href="Lesson05.html#n5-23" title="bracket as a limit of sums" aria-label="T2 in Lesson 5: bracket as a limit of sums">●</a></td><td class="on"><a href="Lesson06.html#n6-18" title="elementary integrands; Riemann sums" aria-label="T2 in Lesson 6: elementary integrands; Riemann sums">●</a></td><td class="on"><a href="Lesson07.html#n7-1" title="Taylor on meshes = Itô" aria-label="T2 in Lesson 7: Taylor on meshes = Itô">●</a></td><td class="on"><a href="Lesson08.html#n8-9" title="Picard iterates" aria-label="T2 in Lesson 8: Picard iterates">●</a></td></tr><tr><th scope="row">T3 · Quadratic variation: the roughness that drives Itô calculus</th><td class="on"><a href="Lesson01.html#n1-10" title="Hölder exponents below 1/2" aria-label="T3 in Lesson 1: Hölder exponents below 1/2">●</a></td><td class="on"><a href="Lesson02.html#n2-21" title="Σ(ΔB)² → t; infinite variation" aria-label="T3 in Lesson 2: Σ(ΔB)² → t; infinite variation">●</a></td><td><span class="sr-only">no station</span></td><td class="on"><a href="Lesson04.html#n4-3" title="B² − t is a martingale" aria-label="T3 in Lesson 4: B² − t is a martingale">●</a></td><td class="on"><a href="Lesson05.html#n5-23" title="the bracket ⟨M⟩" aria-label="T3 in Lesson 5: the bracket ⟨M⟩">●</a></td><td class="on"><a href="Lesson06.html#n6-6" title="Itô isometry" aria-label="T3 in Lesson 6: Itô isometry">●</a></td><td class="on"><a href="Lesson07.html#n7-1" title="½ f″ d⟨X⟩; Lévy’s characterization" aria-label="T3 in Lesson 7: ½ f″ d⟨X⟩; Lévy’s characterization">●</a></td><td class="on"><a href="Lesson08.html#n8-9" title="σσᵀ in the dynamics" aria-label="T3 in Lesson 8: σσᵀ in the dynamics">●</a></td></tr><tr><th scope="row">T4 · Information, stopping and localization</th><td><span class="sr-only">no station</span></td><td class="on"><a href="Lesson02.html#n2-11" title="F_{s+}, Blumenthal, stopping times" aria-label="T4 in Lesson 2: F_{s+}, Blumenthal, stopping times">●</a></td><td class="on"><a href="Lesson03.html#s3-1" title="usual conditions; F_τ; hitting times" aria-label="T4 in Lesson 3: usual conditions; F_τ; hitting times">●</a></td><td class="on"><a href="Lesson04.html#s4-3" title="optional stopping; uniform integrability" aria-label="T4 in Lesson 4: optional stopping; uniform integrability">●</a></td><td class="on"><a href="Lesson05.html#s5-3" title="local martingales" aria-label="T4 in Lesson 5: local martingales">●</a></td><td class="on"><a href="Lesson06.html#s6-2" title="integrals built by localization" aria-label="T4 in Lesson 6: integrals built by localization">●</a></td><td class="on"><a href="Lesson07.html#n7-19" title="Novikov and Kazamaki criteria" aria-label="T4 in Lesson 7: Novikov and Kazamaki criteria">●</a></td><td class="on"><a href="Lesson08.html#n8-14" title="strong vs weak solutions (which filtration?)" aria-label="T4 in Lesson 8: strong vs weak solutions (which filtration?)">●</a></td></tr><tr><th scope="row">T5 · Markov property, semigroups and PDEs</th><td class="on"><a href="Lesson01.html#n1-7" title="independent Gaussian increments" aria-label="T5 in Lesson 1: independent Gaussian increments">●</a></td><td class="on"><a href="Lesson02.html#s2-1" title="Markov, strong Markov, heat semigroup" aria-label="T5 in Lesson 2: Markov, strong Markov, heat semigroup">●</a></td><td><span class="sr-only">no station</span></td><td class="on"><a href="Lesson04.html#n4-33" title="Laplace transform of hitting times" aria-label="T5 in Lesson 4: Laplace transform of hitting times">●</a></td><td><span class="sr-only">no station</span></td><td><span class="sr-only">no station</span></td><td class="on"><a href="Lesson07.html#n7-3" title="generator b·∇ + ½Tr(a∇²)" aria-label="T5 in Lesson 7: generator b·∇ + ½Tr(a∇²)">●</a></td><td class="on"><a href="Lesson08.html#s8-3" title="SDE solutions are Markov; P_tP_s = P_{t+s}" aria-label="T5 in Lesson 8: SDE solutions are Markov; P_tP_s = P_{t+s}">●</a></td></tr><tr><th scope="row">T6 · Completeness and L² geometry</th><td class="on"><a href="Lesson01.html#n1-19" title="Cauchy in C([0,1]) + Borel–Cantelli" aria-label="T6 in Lesson 1: Cauchy in C([0,1]) + Borel–Cantelli">●</a></td><td class="on"><a href="Lesson02.html#n2-21" title="L² convergence of quadratic sums" aria-label="T6 in Lesson 2: L² convergence of quadratic sums">●</a></td><td><span class="sr-only">no station</span></td><td class="on"><a href="Lesson04.html#n4-24" title="UI, Doob Lᵖ, closed martingales" aria-label="T6 in Lesson 4: UI, Doob Lᵖ, closed martingales">●</a></td><td class="on"><a href="Lesson05.html#n5-31" title="E⟨M⟩∞ = E M∞²" aria-label="T6 in Lesson 5: E⟨M⟩∞ = E M∞²">●</a></td><td class="on"><a href="Lesson06.html#n6-3" title="M₂,c is a Hilbert space; Riesz" aria-label="T6 in Lesson 6: M₂,c is a Hilbert space; Riesz">●</a></td><td><span class="sr-only">no station</span></td><td class="on"><a href="Lesson08.html#n8-9" title="contraction in L²_T; Gronwall" aria-label="T6 in Lesson 8: contraction in L²_T; Gronwall">●</a></td></tr><tr><th scope="row">T7 · Toward sampling and generative modeling</th><td class="on"><a href="Lesson01.html#board-ch0" title="Langevin diffusion (board, Chap. 0)" aria-label="T7 in Lesson 1: Langevin diffusion (board, Chap. 0)">●</a></td><td class="on"><a href="Lesson02.html#n2-8" title="the heat semigroup smooths" aria-label="T7 in Lesson 2: the heat semigroup smooths">●</a></td><td><span class="sr-only">no station</span></td><td class="on"><a href="Lesson04.html#n4-3" title="exponential martingales" aria-label="T7 in Lesson 4: exponential martingales">●</a></td><td><span class="sr-only">no station</span></td><td><span class="sr-only">no station</span></td><td class="on"><a href="Lesson07.html#n7-16" title="Girsanov = importance sampling of paths" aria-label="T7 in Lesson 7: Girsanov = importance sampling of paths">●</a></td><td class="on"><a href="Lesson08.html#n8-1" title="OU and Langevin as SDEs; Markov semigroup" aria-label="T7 in Lesson 8: OU and Langevin as SDEs; Markov semigroup">●</a></td></tr></tbody></table></div>
+<div class="thread"><h3 id="thread-t1" data-notoc>T1 · Laws on path space</h3><p class="muted">What is “the law” of a random path, and when do two constructions give the same one?</p><p><a href="Lesson01.html#s1-5">L1: fidis; Wiener measure</a> → <a href="Lesson02.html#n2-1">L2: same law on W^d; Markov kernels</a> → <a href="Lesson07.html#s7-3">L7: Girsanov: a new law on path space</a> → <a href="Lesson08.html#n8-11">L8: weak uniqueness = equal laws</a></p></div><div class="thread"><h3 id="thread-t2" data-notoc>T2 · Discretize dyadically, then pass to the limit</h3><p class="muted">Prove it on a grid, control the error, let the mesh go to 0.</p><p><a href="Lesson01.html#s1-4">L1: Lévy’s dyadic construction</a> → <a href="Lesson02.html#s2-2">L2: QV on dyadic meshes; τ_N ↓ τ</a> → <a href="Lesson03.html#n3-12">L3: progressive via dyadic approximations</a> → <a href="Lesson04.html#n4-29">L4: Doob and optional stopping on dyadic skeletons</a> → <a href="Lesson05.html#n5-23">L5: bracket as a limit of sums</a> → <a href="Lesson06.html#n6-18">L6: elementary integrands; Riemann sums</a> → <a href="Lesson07.html#n7-1">L7: Taylor on meshes = Itô</a> → <a href="Lesson08.html#n8-9">L8: Picard iterates</a></p></div><div class="thread"><h3 id="thread-t3" data-notoc>T3 · Quadratic variation: the roughness that drives Itô calculus</h3><p class="muted">Paths have infinite variation but finite quadratic variation; everything follows.</p><p><a href="Lesson01.html#n1-10">L1: Hölder exponents below 1/2</a> → <a href="Lesson02.html#n2-21">L2: Σ(ΔB)² → t; infinite variation</a> → <a href="Lesson04.html#n4-3">L4: B² − t is a martingale</a> → <a href="Lesson05.html#n5-23">L5: the bracket ⟨M⟩</a> → <a href="Lesson06.html#n6-6">L6: Itô isometry</a> → <a href="Lesson07.html#n7-1">L7: ½ f″ d⟨X⟩; Lévy’s characterization</a> → <a href="Lesson08.html#n8-9">L8: σσᵀ in the dynamics</a></p></div><div class="thread"><h3 id="thread-t4" data-notoc>T4 · Information, stopping and localization</h3><p class="muted">What is known at time t, and how do we cut a process at a random time?</p><p><a href="Lesson02.html#n2-11">L2: F_{s+}, Blumenthal, stopping times</a> → <a href="Lesson03.html#s3-1">L3: usual conditions; F_τ; hitting times</a> → <a href="Lesson04.html#s4-3">L4: optional stopping; uniform integrability</a> → <a href="Lesson05.html#s5-3">L5: local martingales</a> → <a href="Lesson06.html#s6-2">L6: integrals built by localization</a> → <a href="Lesson07.html#n7-19">L7: Novikov and Kazamaki criteria</a> → <a href="Lesson08.html#n8-14">L8: strong vs weak solutions (which filtration?)</a></p></div><div class="thread"><h3 id="thread-t5" data-notoc>T5 · Markov property, semigroups and PDEs</h3><p class="muted">The future depends on the past only through the present; averages solve equations.</p><p><a href="Lesson01.html#n1-7">L1: independent Gaussian increments</a> → <a href="Lesson02.html#s2-1">L2: Markov, strong Markov, heat semigroup</a> → <a href="Lesson04.html#n4-33">L4: Laplace transform of hitting times</a> → <a href="Lesson07.html#n7-3">L7: generator b·∇ + ½Tr(a∇²)</a> → <a href="Lesson08.html#s8-3">L8: SDE solutions are Markov; P_tP_s = P_{t+s}</a></p></div><div class="thread"><h3 id="thread-t6" data-notoc>T6 · Completeness and L² geometry</h3><p class="muted">Build objects as limits: Cauchy sequences, isometries, fixed points.</p><p><a href="Lesson01.html#n1-19">L1: Cauchy in C([0,1]) + Borel–Cantelli</a> → <a href="Lesson02.html#n2-21">L2: L² convergence of quadratic sums</a> → <a href="Lesson04.html#n4-24">L4: UI, Doob Lᵖ, closed martingales</a> → <a href="Lesson05.html#n5-31">L5: E⟨M⟩∞ = E M∞²</a> → <a href="Lesson06.html#n6-3">L6: M₂,c is a Hilbert space; Riesz</a> → <a href="Lesson08.html#n8-9">L8: contraction in L²_T; Gronwall</a></p></div><div class="thread"><h3 id="thread-t7" data-notoc>T7 · Toward sampling and generative modeling</h3><p class="muted">Stochastic dynamics that sample a target law, and how to change the law of paths.</p><p><a href="Lesson01.html#board-ch0">L1: Langevin diffusion (board, Chap. 0)</a> → <a href="Lesson02.html#n2-8">L2: the heat semigroup smooths</a> → <a href="Lesson04.html#n4-3">L4: exponential martingales</a> → <a href="Lesson07.html#n7-16">L7: Girsanov = importance sampling of paths</a> → <a href="Lesson08.html#n8-1">L8: OU and Langevin as SDEs; Markov semigroup</a></p></div>
+</section>
+
+<section>
+<h2 id="dependencies">Dependencies between lessons</h2>
+<p>An arc from lesson A to lesson B means that B uses a definition or a theorem of A. The lesson pages give the exact statements, in their §0 “Where this lesson sits”.</p>
+<figure class="figure"><svg viewBox="0 0 640 270" role="img" aria-label="Dependency arcs between the eight lessons; each arc goes from an earlier lesson to a later one that uses it."><defs><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-s1"/></marker></defs><path d="M40 191 C 40 140.6, 120 140.6, 120 191" fill="none" class="st-s1" stroke-width="1.6" opacity="0.75" marker-end="url(#arr)"><title>Lesson 1 → Lesson 2: Brownian motion, Gaussian characterization, invariances</title></path><path d="M40 191 C 40 8.599999999999994, 520 8.599999999999994, 520 191" fill="none" class="st-s1" stroke-width="1.6" opacity="0.75" marker-end="url(#arr)"><title>Lesson 1 → Lesson 7: canonical Wiener space for Girsanov</title></path><path d="M40 191 C 40 -17.80000000000001, 600 -17.80000000000001, 600 191" fill="none" class="st-s1" stroke-width="1.6" opacity="0.75" marker-end="url(#arr)"><title>Lesson 1 → Lesson 8: Wiener space for weak uniqueness</title></path><path d="M120 191 C 120 140.6, 200 140.6, 200 191" fill="none" class="st-s1" stroke-width="1.6" opacity="0.75" marker-end="url(#arr)"><title>Lesson 2 → Lesson 3: stopping times, hitting times</title></path><path d="M120 191 C 120 114.19999999999999, 280 114.19999999999999, 280 191" fill="none" class="st-s1" stroke-width="1.6" opacity="0.75" marker-end="url(#arr)"><title>Lesson 2 → Lesson 4: Brownian martingales, hitting times</title></path><path d="M120 191 C 120 87.8, 360 87.8, 360 191" fill="none" class="st-s1" stroke-width="1.6" opacity="0.75" marker-end="url(#arr)"><title>Lesson 2 → Lesson 5: quadratic variation of BM</title></path><path d="M120 191 C 120 8.599999999999994, 600 8.599999999999994, 600 191" fill="none" class="st-s1" stroke-width="1.6" opacity="0.75" marker-end="url(#arr)"><title>Lesson 2 → Lesson 8: Markov semigroup</title></path><path d="M200 191 C 200 140.6, 280 140.6, 280 191" fill="none" class="st-s1" stroke-width="1.6" opacity="0.75" marker-end="url(#arr)"><title>Lesson 3 → Lesson 4: usual conditions, F_τ</title></path><path d="M200 191 C 200 114.19999999999999, 360 114.19999999999999, 360 191" fill="none" class="st-s1" stroke-width="1.6" opacity="0.75" marker-end="url(#arr)"><title>Lesson 3 → Lesson 5: progressive processes, localization</title></path><path d="M200 191 C 200 87.8, 440 87.8, 440 191" fill="none" class="st-s1" stroke-width="1.6" opacity="0.75" marker-end="url(#arr)"><title>Lesson 3 → Lesson 6: progressive integrands</title></path><path d="M280 191 C 280 140.6, 360 140.6, 360 191" fill="none" class="st-s1" stroke-width="1.6" opacity="0.75" marker-end="url(#arr)"><title>Lesson 4 → Lesson 5: Doob inequality, optional stopping</title></path><path d="M280 191 C 280 114.19999999999999, 440 114.19999999999999, 440 191" fill="none" class="st-s1" stroke-width="1.6" opacity="0.75" marker-end="url(#arr)"><title>Lesson 4 → Lesson 6: Doob L² inequality, optional stopping</title></path><path d="M280 191 C 280 87.8, 520 87.8, 520 191" fill="none" class="st-s1" stroke-width="1.6" opacity="0.75" marker-end="url(#arr)"><title>Lesson 4 → Lesson 7: uniform integrability, supermartingale convergence</title></path><path d="M360 191 C 360 140.6, 440 140.6, 440 191" fill="none" class="st-s1" stroke-width="1.6" opacity="0.75" marker-end="url(#arr)"><title>Lesson 5 → Lesson 6: bracket, Kunita–Watanabe, semimartingales</title></path><path d="M360 191 C 360 114.19999999999999, 520 114.19999999999999, 520 191" fill="none" class="st-s1" stroke-width="1.6" opacity="0.75" marker-end="url(#arr)"><title>Lesson 5 → Lesson 7: bracket of semimartingales</title></path><path d="M440 191 C 440 140.6, 520 140.6, 520 191" fill="none" class="st-s1" stroke-width="1.6" opacity="0.75" marker-end="url(#arr)"><title>Lesson 6 → Lesson 7: integration by parts, H·M</title></path><path d="M440 191 C 440 114.19999999999999, 600 114.19999999999999, 600 191" fill="none" class="st-s1" stroke-width="1.6" opacity="0.75" marker-end="url(#arr)"><title>Lesson 6 → Lesson 8: Itô isometry</title></path><path d="M520 191 C 520 140.6, 600 140.6, 600 191" fill="none" class="st-s1" stroke-width="1.6" opacity="0.75" marker-end="url(#arr)"><title>Lesson 7 → Lesson 8: Itô formula, Lévy, Girsanov</title></path><a href="Lesson01.html"><circle cx="40" cy="205" r="15" class="f-surface st-ink" stroke-width="1.5"/><text x="40" y="210" text-anchor="middle" font-size="13" font-weight="700" class="ink">L1</text><text x="40" y="239" text-anchor="middle" font-size="10.5" class="mut">Brownian</text></a><a href="Lesson02.html"><circle cx="120" cy="205" r="15" class="f-surface st-ink" stroke-width="1.5"/><text x="120" y="210" text-anchor="middle" font-size="13" font-weight="700" class="ink">L2</text><text x="120" y="239" text-anchor="middle" font-size="10.5" class="mut">Markov</text></a><a href="Lesson03.html"><circle cx="200" cy="205" r="15" class="f-surface st-ink" stroke-width="1.5"/><text x="200" y="210" text-anchor="middle" font-size="13" font-weight="700" class="ink">L3</text><text x="200" y="239" text-anchor="middle" font-size="10.5" class="mut">Filtrations</text></a><a href="Lesson04.html"><circle cx="280" cy="205" r="15" class="f-surface st-ink" stroke-width="1.5"/><text x="280" y="210" text-anchor="middle" font-size="13" font-weight="700" class="ink">L4</text><text x="280" y="239" text-anchor="middle" font-size="10.5" class="mut">Martingales</text></a><a href="Lesson05.html"><circle cx="360" cy="205" r="15" class="f-surface st-ink" stroke-width="1.5"/><text x="360" y="210" text-anchor="middle" font-size="13" font-weight="700" class="ink">L5</text><text x="360" y="239" text-anchor="middle" font-size="10.5" class="mut">Semimartingales</text></a><a href="Lesson06.html"><circle cx="440" cy="205" r="15" class="f-surface st-ink" stroke-width="1.5"/><text x="440" y="210" text-anchor="middle" font-size="13" font-weight="700" class="ink">L6</text><text x="440" y="239" text-anchor="middle" font-size="10.5" class="mut">Stochastic</text></a><a href="Lesson07.html"><circle cx="520" cy="205" r="15" class="f-surface st-ink" stroke-width="1.5"/><text x="520" y="210" text-anchor="middle" font-size="13" font-weight="700" class="ink">L7</text><text x="520" y="239" text-anchor="middle" font-size="10.5" class="mut">Itô</text></a><a href="Lesson08.html"><circle cx="600" cy="205" r="15" class="f-surface st-ink" stroke-width="1.5"/><text x="600" y="210" text-anchor="middle" font-size="13" font-weight="700" class="ink">L8</text><text x="600" y="239" text-anchor="middle" font-size="10.5" class="mut">SDEs</text></a></svg><figcaption>Each arc goes from a lesson to a later lesson that reuses it (hover an arc for the reason). The same information as a table:</figcaption></figure><details class="tableview"><summary>Show the dependencies as a table</summary><div class="tw"><table class="compact"><thead><tr><th>From → to</th><th>What is reused</th></tr></thead><tbody><tr><td>L1 → L2</td><td>Brownian motion, Gaussian characterization, invariances</td></tr><tr><td>L1 → L7</td><td>canonical Wiener space for Girsanov</td></tr><tr><td>L1 → L8</td><td>Wiener space for weak uniqueness</td></tr><tr><td>L2 → L3</td><td>stopping times, hitting times</td></tr><tr><td>L2 → L4</td><td>Brownian martingales, hitting times</td></tr><tr><td>L2 → L5</td><td>quadratic variation of BM</td></tr><tr><td>L2 → L8</td><td>Markov semigroup</td></tr><tr><td>L3 → L4</td><td>usual conditions, F_τ</td></tr><tr><td>L3 → L5</td><td>progressive processes, localization</td></tr><tr><td>L3 → L6</td><td>progressive integrands</td></tr><tr><td>L4 → L5</td><td>Doob inequality, optional stopping</td></tr><tr><td>L4 → L6</td><td>Doob L² inequality, optional stopping</td></tr><tr><td>L4 → L7</td><td>uniform integrability, supermartingale convergence</td></tr><tr><td>L5 → L6</td><td>bracket, Kunita–Watanabe, semimartingales</td></tr><tr><td>L5 → L7</td><td>bracket of semimartingales</td></tr><tr><td>L6 → L7</td><td>integration by parts, H·M</td></tr><tr><td>L6 → L8</td><td>Itô isometry</td></tr><tr><td>L7 → L8</td><td>Itô formula, Lévy, Girsanov</td></tr></tbody></table></div></details>
+<p><b>How to read it.</b> The course is close to a chain: each lesson uses the one before it. Three lessons are used far ahead. <a class="xr" href="Lesson01.html">Lesson 1</a> gives the Wiener space, which reappears in Girsanov's theorem (<a class="xr" href="Lesson07.html">Lesson 7</a>) and in weak uniqueness (<a class="xr" href="Lesson08.html">Lesson 8</a>). <a class="xr" href="Lesson02.html">Lesson 2</a> gives the Markov semigroup, which comes back for SDEs (<a class="xr" href="Lesson08.html">Lesson 8</a>). <a class="xr" href="Lesson04.html">Lesson 4</a> gives uniform integrability, on which the Novikov criterion rests (<a class="xr" href="Lesson07.html">Lesson 7</a>). If you study out of order, Lessons 3 and 4 are the ones you cannot skip: every later proof stops a process at a random time.</p>
+</section>
+
+<section>
+<h2 id="synthesis">Synthesis of the course</h2>
+<h3 id="synthesis-table">The lessons at a glance</h3>
+<p>For each lesson: the question it answers, the objects it works with, its methods, and the one choice on which everything else depends.</p>
+<div class="tw"><table class="compact stack synth">
+<thead><tr><th>Lesson and question</th><th>What it manipulates</th><th>Methods</th><th>The choice that decides</th></tr></thead>
+<tbody>
+<tr><td data-label="Lesson"><a href="Lesson01.html"><b>1 · Brownian motion</b></a><br>What is Brownian motion, does it exist, and what is the law of a random path?</td>
+<td data-label="Manipulates">Random functions <span class="nw">\(t\mapsto B_t\);</span> fidis; Gaussian vectors with covariance <span class="nw">\(s\wedge t\);</span> modifications and indistinguishable versions; the Wiener space <span class="nw">\(\Wd=C(\R_+,\R^d)\).</span></td>
+<td data-label="Methods">Gaussian characterization (<a href="Lesson01.html#n1-13">Prop. 1.13</a>); dyadic construction with Borel–Cantelli and a uniform Cauchy limit (<a href="Lesson01.html#n1-19">Thm. 1.19</a>); uniqueness of laws by monotone class (<a href="Lesson01.html#n1-28">Prop. 1.28</a>); Kolmogorov's extension theorem and continuity criterion (<a href="Lesson01.html#n1-31">Thm. 1.31</a>, <a href="Lesson01.html#n1-33">1.33</a>).</td>
+<td data-label="Choice">Where the law lives. The fidis do not see continuity, so the law is put on the space of continuous paths. In the construction: keep the old values and add midpoint noise of size <span class="nw">\(2^{-(n+2)/2}\).</span></td></tr>
+<tr><td data-label="Lesson"><a href="Lesson02.html"><b>2 · Markov and quadratic variation</b></a><br>What does the past say about the future, and how rough is the path?</td>
+<td data-label="Manipulates">The restarted path <span class="nw">\(B_{s+\cdot}-B_s\);</span> the σ-fields \(\F_s\) and <span class="nw">\(\F_{s+}\);</span> the heat semigroup <span class="nw">\(P_t\);</span> stopping times; the running maximum; sums of squared increments.</td>
+<td data-label="Methods">Independent increments and freezing (<a href="Lesson02.html#n2-5">Cor. 2.5</a>); time inversion for Blumenthal's 0–1 law (<a href="Lesson02.html#n2-9">Cor. 2.9</a>); dyadic stopping times \(\tau_N\downarrow\tau\) (<a href="Lesson02.html#n2-15">Thm. 2.15</a>); reflection at \(\tau_a\) (<a href="Lesson02.html#n2-17">Thm. 2.17</a>); the variance of quadratic sums (<a href="Lesson02.html#n2-21">Prop. 2.21</a>).</td>
+<td data-label="Choice">Restart only at stopping times: at the last zero before time 1 the restart fails (<a href="Lesson02.html#exo-2-8">Lesson 2, E8</a>). Measure roughness with squared increments: \(\sum(\Delta B)^2\to t\) while <span class="nw">\(\sum|\Delta B|\to\infty\).</span></td></tr>
+<tr><td data-label="Lesson"><a href="Lesson03.html"><b>3 · Filtrations and stopping times</b></a><br>What do we know at time <span class="nw">\(t\),</span> and which random times can we decide?</td>
+<td data-label="Manipulates">Filtrations <span class="nw">\(\F_t\),</span> \(\F_{t+}\) and their completion; adapted, measurable and progressive processes; stopping and optional times; <span class="nw">\(\F_\tau\);</span> hitting times <span class="nw">\(\tau_A\).</span></td>
+<td data-label="Methods">Countable reductions through path regularity; approximation of stopping times from above (<a href="Lesson03.html#n3-18">Thm. 3.18</a>); the usual augmentation (<a href="Lesson03.html#n3-6">Prop. 3.6</a>).</td>
+<td data-label="Choice">The usual conditions. Right-continuity turns optional times into stopping times (<a href="Lesson03.html#n3-8">Ex. 3.8</a>) and makes hitting times of open sets stopping times (<a href="Lesson03.html#n3-20">Thm. 3.20</a>). With completeness alone, <a href="Lesson03.html#n3-21">Thm. 3.21</a> fails (<span class="nw">\(X_t=tZ\)).</span></td></tr>
+<tr><td data-label="Lesson"><a href="Lesson04.html"><b>4 · Martingales</b></a><br>When do martingale identities survive limits and stopping times?</td>
+<td data-label="Manipulates">Martingales, sub- and supermartingales in continuous time; running maxima; upcrossings; uniformly integrable (UI) families; closed martingales; stopped processes.</td>
+<td data-label="Methods">Discrete-time results on dyadic skeletons, then right-continuity; Doob's inequalities (<a href="Lesson04.html#n4-6">Thm. 4.6</a>, <a href="Lesson04.html#n4-9">4.9</a>); upcrossings and convergence (<a href="Lesson04.html#n4-12">Thm. 4.12</a>, <a href="Lesson04.html#n4-15">4.15</a>); Vitali (<a href="Lesson04.html#n4-13">Thm. 4.13</a>); optional stopping (<a href="Lesson04.html#n4-29">Thm. 4.29</a>, <a href="Lesson04.html#n4-30">4.30</a>); exponential martingales (<a href="Lesson04.html#n4-33">Ex. 4.33</a>).</td>
+<td data-label="Choice">Bounded stopping times, or uniform integrability. Without them, \(\E[B_{\tau_a}]=a\ne0\) (<a href="Lesson04.html#lab4-3">Lab 4.3</a>), and \(e^{B_t-t/2}\to0\) almost surely although its mean is 1 (<a href="Lesson04.html#lab4-6">Lab 4.6</a>).</td></tr>
+<tr><td data-label="Lesson"><a href="Lesson05.html"><b>5 · Semimartingales</b></a><br>Which processes are integrators, and how rough is a continuous martingale?</td>
+<td data-label="Manipulates">Functions of bounded variation and their Stieltjes measures; finite-variation processes; local martingales and reducing sequences; the brackets \(\br{M}\) and <span class="nw">\(\br{M,N}\);</span> semimartingales <span class="nw">\(X=X_0+M+A\).</span></td>
+<td data-label="Methods">Jordan and Hahn decompositions (<a href="Lesson05.html#n5-3">Prop. 5.3</a>, <a href="Lesson05.html#n5-7">Thm. 5.7</a>); localization by stopping times; \(L^2\) estimates for sums of squared increments (<a href="Lesson05.html#n5-23">Thm. 5.23</a>); polarization; the Kunita–Watanabe inequality (<a href="Lesson05.html#n5-39">Thm. 5.39</a>).</td>
+<td data-label="Choice">Continuity. A continuous local martingale of finite variation is constant (<a href="Lesson05.html#n5-22">Thm. 5.22</a>). This makes the decomposition \(X=X_0+M+A\) unique and the bracket well defined. With jumps it fails: \(N_t-t\) for a Poisson process \(N\) (<a href="Lesson05.html#lab5-4">Lab 5.4</a>).</td></tr>
+<tr><td data-label="Lesson"><a href="Lesson06.html"><b>6 · Stochastic integrals</b></a><br>How do we integrate against a path of infinite variation?</td>
+<td data-label="Manipulates">The Hilbert space <span class="nw">\(\Mtc\);</span> the integrands \(L^2(M)\) and <span class="nw">\(L^2_{\mathrm{loc}}(M)\);</span> elementary processes; the integral <span class="nw">\(H\cdot M\);</span> Riemann sums.</td>
+<td data-label="Methods">Riesz representation through \(\br{H\cdot M,N}=H\cdot\br{M,N}\) (<a href="Lesson06.html#n6-6">Thm. 6.6</a>), which amounts to the isometry <span class="nw">\(\E(H\cdot M)_\infty^2=\E\int H^2\,\dd\br{M}\);</span> localization (<a href="Lesson06.html#n6-14">Thm. 6.14</a>); convergence of left Riemann sums (<a href="Lesson06.html#n6-18">Prop. 6.18</a>).</td>
+<td data-label="Choice">Progressive integrands, evaluated at the left end point. Then integrals are (local) martingales, and \(\E\int H\,\dd M=0\) in the \(L^2\) case. Other points give other limits: for <span class="nw">\(\int_0^1B\,\dd B\),</span> right-point sums exceed left-point sums by about 1 (<a href="Lesson06.html#lab6-3">Lab 6.3</a>).</td></tr>
+<tr><td data-label="Lesson"><a href="Lesson07.html"><b>7 · Itô and Girsanov</b></a><br>How do smooth maps and changes of probability transform semimartingales?</td>
+<td data-label="Manipulates">\(f(X_t)\) for <span class="nw">\(f\in C^2\);</span> stochastic exponentials <span class="nw">\(\cE(L)=\exp(L-\frac12\br{L})\);</span> probabilities <span class="nw">\(\dd\Q=\cE(L)_T\,\dd\P\);</span> time changes by <span class="nw">\(\br{M}\).</span></td>
+<td data-label="Methods">Taylor expansion on meshes and bracket limits (<a href="Lesson07.html#n7-1">Thm. 7.1</a>); exponential martingales and characteristic functions (Lévy, <a href="Lesson07.html#n7-8">Thm. 7.8</a>); the inverse bracket as a clock (<a href="Lesson07.html#n7-10">Thm. 7.10</a>); change of measure (<a href="Lesson07.html#n7-13">Thm. 7.13</a>, <a href="Lesson07.html#n7-14">7.14</a>); Novikov and Kazamaki (<a href="Lesson07.html#n7-19">Prop. 7.19</a>).</td>
+<td data-label="Choice">Keep the second-order term <span class="nw">\(\frac12f''\,\dd\br{X}\):</span> \(\dd\br{X}\) is of order <span class="nw">\(\dd t\),</span> not <span class="nw">\(\dd t^2\).</span> For Girsanov: check that \(\cE(L)\) is a true martingale (Novikov); otherwise \(\Q\) has total mass below 1.</td></tr>
+<tr><td data-label="Lesson"><a href="Lesson08.html"><b>8 · SDEs</b></a><br>When does an SDE have a solution, is it unique, and in which sense?</td>
+<td data-label="Manipulates">Coefficients <span class="nw">\(b,\sigma\);</span> solutions of <span class="nw">\(\cE_{X_0}(b,\sigma)\);</span> the space <span class="nw">\(L^2_T\);</span> pathwise and weak uniqueness; strong and weak solutions; the Markov semigroup <span class="nw">\(P_t\).</span></td>
+<td data-label="Methods">Picard iteration with Doob, the Itô isometry and Gronwall (<a href="Lesson08.html#n8-9">Thm. 8.9</a>); Lévy's characterization (<a href="Lesson08.html#n8-12">Ex. 8.12</a>); Girsanov for bounded drifts (<a href="Lesson08.html#n8-13">Ex. 8.13</a>); Yamada–Watanabe (<a href="Lesson08.html#n8-17">Thm. 8.17</a>); restarting with fresh noise (<a href="Lesson08.html#n8-19">Thm. 8.19</a>).</td>
+<td data-label="Choice">Lipschitz and linear-growth coefficients, assumption <a href="Lesson08.html#n8-7">(L)</a>: under it, everything holds. Beyond it, one must say which sense of solution is meant. Tanaka's SDE has weak solutions and uniqueness in law, but no strong solution. Without Lipschitz, uniqueness can fail; without linear growth, solutions can explode (<a href="Lesson08.html#lab8-3">Lab 8.3</a>).</td></tr>
+</tbody></table></div>
+
+<h3 id="keeps-asking">The question each lesson keeps asking</h3>
+<p>Each lesson page opens with “A question that comes back”: the one question the lesson keeps asking, and how earlier lessons asked it. Here are the eight, with links to where each page discusses it.</p>
+<ol class="asks">
+<li><a href="Lesson01.html#sec0-question">Lesson 1</a>: <span class="q">What does it mean to know the law of a random path, and which properties of the path does the law see?</span></li>
+<li><a href="Lesson02.html#sec0-question">Lesson 2</a>: <span class="q">Given what we know now, what is the law of the future, and can “now” be a random time?</span></li>
+<li><a href="Lesson03.html#sec0-question">Lesson 3</a>: <span class="q">What exactly do we know at time <span class="nw">\(t\),</span> and which random times can we act on?</span></li>
+<li><a href="Lesson04.html#sec0-question">Lesson 4</a>: <span class="q">An identity holds at every fixed time. Does it survive at random times, and in the limit <span class="nw">\(t\to\infty\)?</span></span></li>
+<li><a href="Lesson05.html#sec0-question">Lesson 5</a>: <span class="q">Which random processes can we integrate against, and what intrinsic quantity measures their roughness?</span></li>
+<li><a href="Lesson06.html#sec0-question">Lesson 6</a>: <span class="q">How can we integrate against a path of infinite variation, and what survives from ordinary calculus?</span></li>
+<li><a href="Lesson07.html#sec0-question">Lesson 7</a>: <span class="q">How do smooth maps and changes of probability transform a semimartingale, and which part, drift or noise, changes?</span></li>
+<li><a href="Lesson08.html#sec0-question">Lesson 8</a>: <span class="q">Given drift and noise coefficients, is there a process, is it unique, and in which sense: same paths or same law?</span></li>
+</ol>
+<p>Read together, the eight questions are three questions, asked with more generality each time.</p>
+<ul>
+<li><b>Existence.</b> Does the object exist, and on which space? Brownian motion on \(\Wd\) (<a class="xr" href="Lesson01.html">Lesson 1</a>), the integral in \(\Mtc\) (<a class="xr" href="Lesson06.html">Lesson 6</a>), solutions of SDEs (<a class="xr" href="Lesson08.html">Lesson 8</a>).</li>
+<li><b>Law and information.</b> What is known at time <span class="nw">\(t\),</span> and what is the law of what comes next? Fidis (<a class="xr" href="Lesson01.html">Lesson 1</a>), the Markov property (<a class="xr" href="Lesson02.html">Lesson 2</a>), filtrations (<a class="xr" href="Lesson03.html">Lesson 3</a>), uniqueness in law and semigroups (<a class="xr" href="Lesson08.html">Lesson 8</a>).</li>
+<li><b>Stability.</b> Which identities survive limits, random times and changes of probability? The strong Markov property (<a class="xr" href="Lesson02.html">Lesson 2</a>), optional stopping and uniform integrability (<a class="xr" href="Lesson04.html">Lesson 4</a>), localization (<a class="xr" href="Lesson05.html">Lesson 5</a>), Novikov's criterion (<a class="xr" href="Lesson07.html">Lesson 7</a>).</li>
+</ul>
+<div class="callout key"><div class="ch">Key idea</div>
+<p>Continuous paths, right-continuous complete filtrations, localization by stopping times and \(L^2\) isometries are what make limits safe. Quadratic variation is the price of roughness. It shows up as the extra term \(\frac12f''\,\dd\br{X}\) in Itô's formula, and as \(\sigma\sigma^\top\) in the generator of an SDE.</p></div>
+
+<h3 id="which-tool">Which tool for which question</h3>
+<p>Start from what you need to show or compute. The last column links to the statement and to a lab that shows the tool at work, or fails when an assumption is dropped.</p>
+<div class="tw"><table class="compact stack tools">
+<thead><tr><th>You want to…</th><th>Tool</th><th>Where</th></tr></thead>
+<tbody>
+<tr class="grp"><th colspan="3">Laws and constructions</th></tr>
+<tr><td data-label="You want to">show that a process is a Brownian motion</td><td data-label="Tool">If it is continuous and Gaussian: check mean 0 and covariance <span class="nw">\(s\wedge t\).</span> If it is a continuous local martingale: check \(\br{M}_t=t\) (Lévy).</td><td data-label="Where"><a href="Lesson01.html#n1-13">Prop. 1.13</a>, <a href="Lesson07.html#n7-8">Thm. 7.8</a>; <a href="Lesson01.html#lab1-2">Lab 1.2</a>, <a href="Lesson07.html#lab7-2">Lab 7.2</a></td></tr>
+<tr><td data-label="You want to">show that two processes have the same law</td><td data-label="Tool">Compare the fidis. For continuous processes this gives equal laws on <span class="nw">\(\Wd\).</span></td><td data-label="Where"><a href="Lesson01.html#n1-28">Prop. 1.28</a>, <a href="Lesson02.html#n2-1">Thm. 2.1</a></td></tr>
+<tr><td data-label="You want to">get a continuous version of a process</td><td data-label="Tool">Kolmogorov's criterion: \(\E|X_t-X_s|^p\le C|t-s|^{1+\varepsilon}\) gives a modification that is Hölder of every order below <span class="nw">\(\varepsilon/p\).</span></td><td data-label="Where"><a href="Lesson01.html#n1-33">Thm. 1.33</a>; <a href="Lesson01.html#lab1-5">Lab 1.5</a></td></tr>
+<tr><td data-label="You want to">build a random continuous function as a limit</td><td data-label="Tool">Find thresholds \(a_n\) with \(\sum a_n\lt\infty\) and <span class="nw">\(\sum_n\P(\|X^{n+1}-X^n\|_\infty\ge a_n)\lt\infty\).</span> Borel–Cantelli then gives a uniform limit almost surely.</td><td data-label="Where"><a href="Lesson01.html#n1-19">Thm. 1.19</a>; <a href="Lesson01.html#lab1-4">Lab 1.4</a></td></tr>
+<tr><td data-label="You want to">define a law on path space from compatible marginals</td><td data-label="Tool">Kolmogorov's extension theorem.</td><td data-label="Where"><a href="Lesson01.html#n1-31">Thm. 1.31</a></td></tr>
+<tr class="grp"><th colspan="3">Information and random times</th></tr>
+<tr><td data-label="You want to">show that an event decided at time \(0+\) has probability 0 or 1</td><td data-label="Tool">Blumenthal's 0–1 law.</td><td data-label="Where"><a href="Lesson02.html#n2-9">Cor. 2.9</a>; <a href="Lesson02.html#lab2-2">Lab 2.2</a></td></tr>
+<tr><td data-label="You want to">show that a random time is a stopping time</td><td data-label="Tool">Hitting time of an open or closed set by a right-continuous progressive process, under the usual conditions. For a right-continuous filtration, \(\{\tau\lt t\}\in\F_t\) for all \(t\) is enough.</td><td data-label="Where"><a href="Lesson03.html#n3-20">Thm. 3.20</a>, <a href="Lesson03.html#n3-8">Ex. 3.8</a></td></tr>
+<tr><td data-label="You want to">restart a process at a random time</td><td data-label="Tool">The strong Markov property, at stopping times only. It fails at the last zero before time 1.</td><td data-label="Where"><a href="Lesson02.html#n2-15">Thm. 2.15</a>, <a href="Lesson08.html#n8-19">Thm. 8.19</a>; <a href="Lesson03.html#lab3-2">Lab 3.2</a></td></tr>
+<tr><td data-label="You want to">approximate a stopping time</td><td data-label="Tool">From above, by the dyadic stopping times <span class="nw">\(\tau_N=(\lfloor2^N\tau\rfloor+1)/2^N\).</span> Rounding down gives random times that peek into the future.</td><td data-label="Where"><a href="Lesson02.html#n2-15">Thm. 2.15</a>, <a href="Lesson03.html#n3-18">Thm. 3.18</a>; <a href="Lesson03.html#lab3-3">Lab 3.3</a></td></tr>
+<tr><td data-label="You want to">find the law of a running maximum or a hitting time</td><td data-label="Tool">The reflection principle, <span class="nw">\(\sup_{s\le t}B_s\eqd|B_t|\).</span> The Laplace transform of <span class="nw">\(\tau_a\),</span> by optional stopping of <span class="nw">\(e^{\lambda B_t-\lambda^2t/2}\).</span></td><td data-label="Where"><a href="Lesson02.html#n2-17">Thm. 2.17</a>, <a href="Lesson04.html#n4-33">Ex. 4.33</a>; <a href="Lesson02.html#lab2-4">Lab 2.4</a>, <a href="Lesson04.html#lab4-4">Lab 4.4</a></td></tr>
+<tr class="grp"><th colspan="3">Martingales and bounds</th></tr>
+<tr><td data-label="You want to">bound the maximum of a martingale</td><td data-label="Tool">Doob's inequalities: \(\E[\sup_{s\le t}|M_s|^p]\le(\frac p{p-1})^p\E|M_t|^p\) for <span class="nw">\(p\gt1\),</span> and the maximal inequality for <span class="nw">\(\P(\sup M\ge\lambda)\).</span></td><td data-label="Where"><a href="Lesson04.html#n4-6">Thm. 4.6</a>, <a href="Lesson04.html#n4-9">Thm. 4.9</a>; <a href="Lesson04.html#lab4-1">Lab 4.1</a></td></tr>
+<tr><td data-label="You want to">compute an expectation at a stopping time</td><td data-label="Tool">Optional stopping: \(\E[M_\tau]=\E[M_0]\) if \(\tau\) is bounded, or if \(M\) is uniformly integrable.</td><td data-label="Where"><a href="Lesson04.html#n4-30">Thm. 4.30</a>, <a href="Lesson04.html#n4-29">Thm. 4.29</a>; <a href="Lesson04.html#lab4-3">Lab 4.3</a></td></tr>
+<tr><td data-label="You want to">show that a martingale converges</td><td data-label="Tool">Bounded in <span class="nw">\(L^1\):</span> almost surely. Uniformly integrable: also in <span class="nw">\(L^1\),</span> and it is closed. Bounded in <span class="nw">\(L^p\),</span> <span class="nw">\(p\gt1\):</span> in <span class="nw">\(L^p\).</span></td><td data-label="Where"><a href="Lesson04.html#n4-15">Thm. 4.15</a>, <a href="Lesson04.html#n4-24">Thm. 4.24</a>, <a href="Lesson04.html#n4-18">Cor. 4.18</a>; <a href="Lesson04.html#lab4-6">Lab 4.6</a></td></tr>
+<tr><td data-label="You want to">show that a local martingale is a true martingale</td><td data-label="Tool">Domination by an integrable variable, or <span class="nw">\(\E\br{M}_t\lt\infty\).</span> For <span class="nw">\(\cE(L)\):</span> Novikov or Kazamaki. A nonnegative local martingale is only a supermartingale.</td><td data-label="Where"><a href="Lesson05.html#n5-20">Thm. 5.20</a>, <a href="Lesson05.html#n5-28">Thm. 5.28</a>, <a href="Lesson07.html#n7-19">Prop. 7.19</a>; <a href="Lesson05.html#lab5-3">Lab 5.3</a></td></tr>
+<tr><td data-label="You want to">show that a process is constant</td><td data-label="Tool">A continuous local martingale of finite variation is constant; so is one with <span class="nw">\(\br{M}\equiv0\).</span></td><td data-label="Where"><a href="Lesson05.html#n5-22">Thm. 5.22</a>, <a href="Lesson05.html#n5-29">Cor. 5.29</a>; <a href="Lesson05.html#lab5-4">Lab 5.4</a></td></tr>
+<tr class="grp"><th colspan="3">Integration and calculus</th></tr>
+<tr><td data-label="You want to">compute or estimate a bracket</td><td data-label="Tool">The limit of sums of squared increments; <span class="nw">\(\br{H\cdot M}=\int H^2\,\dd\br{M}\);</span> polarization; the Kunita–Watanabe inequality to bound <span class="nw">\(\br{M,N}\).</span></td><td data-label="Where"><a href="Lesson05.html#n5-23">Thm. 5.23</a>, <a href="Lesson06.html#n6-10">Prop. 6.10</a>, <a href="Lesson05.html#n5-39">Thm. 5.39</a>; <a href="Lesson05.html#lab5-5">Lab 5.5</a></td></tr>
+<tr><td data-label="You want to">compute the second moment of a stochastic integral</td><td data-label="Tool">The Itô isometry, <span class="nw">\(\E\big(\int_0^tH\,\dd M\big)^2=\E\int_0^tH^2\,\dd\br{M}\).</span></td><td data-label="Where"><a href="Lesson06.html#n6-6">Thm. 6.6</a>; <a href="Lesson06.html#lab6-1">Lab 6.1</a></td></tr>
+<tr><td data-label="You want to">compute \(\dd f(X_t)\) or \(\dd f(t,X_t)\)</td><td data-label="Tool">Itô's formula: <span class="nw">\(\dd f(X)=f'(X)\,\dd X+\frac12f''(X)\,\dd\br{X}\),</span> and its time-dependent form.</td><td data-label="Where"><a href="Lesson07.html#n7-1">Thm. 7.1</a>, <a href="Lesson07.html#n7-5">Rem. 7.6</a>; <a href="Lesson07.html#lab7-1">Lab 7.1</a></td></tr>
+<tr><td data-label="You want to">compute \(\dd(X_tY_t)\)</td><td data-label="Tool">Integration by parts: <span class="nw">\(\dd(XY)=X\,\dd Y+Y\,\dd X+\dd\br{X,Y}\).</span></td><td data-label="Where"><a href="Lesson06.html#n6-20">Prop. 6.20</a></td></tr>
+<tr><td data-label="You want to">approximate a stochastic integral on a grid</td><td data-label="Tool">Left-point Riemann sums. Right-point or midpoint sums converge to other limits.</td><td data-label="Where"><a href="Lesson06.html#n6-18">Prop. 6.18</a>, <a href="Lesson06.html#n6-19">Rem. 6.19</a>; <a href="Lesson06.html#lab6-3">Lab 6.3</a></td></tr>
+<tr class="grp"><th colspan="3">Changing the probability or the clock</th></tr>
+<tr><td data-label="You want to">remove or add a drift, or estimate a rare event by importance sampling</td><td data-label="Tool">Girsanov's theorem; for a deterministic shift, Cameron–Martin.</td><td data-label="Where"><a href="Lesson07.html#n7-14">Thm. 7.14</a>, <a href="Lesson07.html#n7-16">Thm. 7.16</a>; <a href="Lesson07.html#lab7-3">Lab 7.3</a></td></tr>
+<tr><td data-label="You want to">turn a continuous martingale into a Brownian motion</td><td data-label="Tool">Run it on the clock <span class="nw">\(\br{M}\):</span> Dambis–Dubins–Schwarz; Knight for several martingales.</td><td data-label="Where"><a href="Lesson07.html#n7-10">Thm. 7.10</a>, <a href="Lesson07.html#n7-11">Thm. 7.11</a>; <a href="Lesson07.html#lab7-2">Lab 7.2</a></td></tr>
+<tr class="grp"><th colspan="3">SDEs and sampling</th></tr>
+<tr><td data-label="You want to">prove that an SDE has a unique solution</td><td data-label="Tool">Under (L): Picard iteration and Gronwall.</td><td data-label="Where"><a href="Lesson08.html#n8-9">Thm. 8.9</a>; <a href="Lesson08.html#lab8-2">Lab 8.2</a></td></tr>
+<tr><td data-label="You want to">solve an SDE whose drift is bounded but discontinuous</td><td data-label="Tool">A weak solution by Girsanov (sign of \(L\) corrected).</td><td data-label="Where"><a href="Lesson07.html#n7-21">Prop. 7.21</a>, <a href="Lesson08.html#n8-13">Ex. 8.13</a>; <a href="Lesson07.html#lab7-4">Lab 7.4</a></td></tr>
+<tr><td data-label="You want to">get a strong solution</td><td data-label="Tool">Yamada–Watanabe: weak existence plus pathwise uniqueness. Tanaka's SDE shows that pathwise uniqueness cannot be dropped.</td><td data-label="Where"><a href="Lesson08.html#n8-17">Thm. 8.17</a>, <a href="Lesson08.html#n8-12">Ex. 8.12</a>; <a href="Lesson08.html#lab8-4">Lab 8.4</a></td></tr>
+<tr><td data-label="You want to">compute \(\E[g(X^x_t)]\) for an SDE</td><td data-label="Tool">The Markov semigroup <span class="nw">\(P_tg(x)\):</span> Monte Carlo on simulated paths, or the backward Kolmogorov equation \(\partial_tu=\cL u\) (Beyond the notes).</td><td data-label="Where"><a href="Lesson08.html#n8-21">Def. 8.21</a>, <a href="Lesson08.html#kolmogorov">Kolmogorov equations</a>; <a href="Lesson08.html#lab8-5">Lab 8.5</a></td></tr>
+<tr><td data-label="You want to">simulate an SDE</td><td data-label="Tool">Exact sampling when the transition law is known (Ornstein–Uhlenbeck); otherwise the Euler–Maruyama scheme, whose step size biases the result.</td><td data-label="Where"><a href="Lesson08.html#n8-1">Ex. 8.1</a>, <a href="Lesson08.html#euler-rates">Euler rates</a>; <a href="Lesson08.html#lab8-1">Lab 8.1</a></td></tr>
+<tr><td data-label="You want to">sample from \(\pi\propto e^{-U}\)</td><td data-label="Tool">The Langevin diffusion and its Euler discretization, the unadjusted Langevin algorithm. The step size biases the stationary law, and a large step makes the scheme diverge.</td><td data-label="Where"><a href="Lesson01.html#wb-ch0">Board Chapter 0</a>; <a href="Lesson01.html#lab1-1">Lab 1.1</a>, <a href="Lesson08.html#lab8-1">Lab 8.1</a></td></tr>
+</tbody></table></div>
+</section>
+
+<section>
+<h2 id="notation">Notation shared by all pages</h2>
+<p>The same macros are used on every page, so a symbol always means the same thing. Where the notes use two notations for one object, or one notation for two objects, the lesson page says so in a “Watch out” box.</p>
+<div class="tw"><table class="compact stack">
+<thead><tr><th>Symbol</th><th>Meaning</th><th>Defined in</th></tr></thead>
+<tbody>
+<tr><td data-label="Symbol"><span class="nw">\(s\wedge t\),</span> \(s\vee t\)</td><td data-label="Meaning"><span class="nw">\(\min(s,t)\),</span> \(\max(s,t)\)</td><td data-label="Defined in">—</td></tr>
+<tr><td data-label="Symbol">\(\eqd\)</td><td data-label="Meaning">equality in law</td><td data-label="Defined in">—</td></tr>
+<tr><td data-label="Symbol">\(B=(B_t)_{t\ge0}\)</td><td data-label="Meaning">standard Brownian motion</td><td data-label="Defined in"><a href="Lesson01.html#n1-7">Def. 1.7</a>, <a href="Lesson01.html#n1-17">1.17</a></td></tr>
+<tr><td data-label="Symbol">\(\Wd\)</td><td data-label="Meaning">the Wiener space \(C(\R_+,\R^d)\) with its Borel σ-field; the Wiener measure is the law of \(B\) on it</td><td data-label="Defined in"><a href="Lesson01.html#n1-21">Thm. 1.21</a></td></tr>
+<tr><td data-label="Symbol"><span class="nw">\(\mu_I\),</span> fidis</td><td data-label="Meaning">finite-dimensional distributions of a process</td><td data-label="Defined in"><a href="Lesson01.html#n1-4">Def. 1.4</a></td></tr>
+<tr><td data-label="Symbol"><span class="nw">\(\F_t\),</span> \(\F_{t+}\)</td><td data-label="Meaning">a filtration; <span class="nw">\(\F_{t+}=\bigcap_{s\gt t}\F_s\),</span> the information “just after” \(t\)</td><td data-label="Defined in"><a href="Lesson03.html#n3-1">Def. 3.1</a>, <a href="Lesson03.html#n3-2">3.2</a></td></tr>
+<tr><td data-label="Symbol">\(\F_\tau\)</td><td data-label="Meaning">the information at a stopping time \(\tau\)</td><td data-label="Defined in"><a href="Lesson02.html#n2-13">Def. 2.13</a></td></tr>
+<tr><td data-label="Symbol"><span class="nw">\(\tau_a\),</span> \(S_t\)</td><td data-label="Meaning"><span class="nw">\(\inf\{t:B_t=a\}\);</span> \(\sup_{s\le t}B_s\) (the notes also use \(S_t\) for <span class="nw">\(\sup_{s\le t}|B_s|\))</span></td><td data-label="Defined in"><a href="Lesson02.html#n2-12">Ex. 2.12</a>, <a href="Lesson02.html#n2-17">Thm. 2.17</a></td></tr>
+<tr><td data-label="Symbol">\(M^\tau\)</td><td data-label="Meaning">the stopped process \(M_{t\wedge\tau}\)</td><td data-label="Defined in"><a href="Lesson05.html#n5-18">Def. 5.18</a></td></tr>
+<tr><td data-label="Symbol">\(\Mloc\)</td><td data-label="Meaning">continuous local martingales</td><td data-label="Defined in"><a href="Lesson05.html#n5-18">Def. 5.18</a></td></tr>
+<tr><td data-label="Symbol"><span class="nw">\(\br{M}\),</span> \(\br{M,N}\)</td><td data-label="Meaning">bracket (quadratic variation) and cross-bracket</td><td data-label="Defined in"><a href="Lesson05.html#n5-23">Thm. 5.23</a>, <a href="Lesson05.html#n5-33">Def. 5.33</a></td></tr>
+<tr><td data-label="Symbol">\(\Mtc\)</td><td data-label="Meaning">continuous martingales bounded in <span class="nw">\(L^2\),</span> null at 0</td><td data-label="Defined in"><a href="Lesson06.html#n6-1">Def. 6.1</a></td></tr>
+<tr><td data-label="Symbol"><span class="nw">\(L^2(M)\),</span> \(L^2_{\mathrm{loc}}(M)\)</td><td data-label="Meaning">progressive integrands with <span class="nw">\(\E\int_0^\infty H^2\,\dd\br{M}\lt\infty\),</span> or \(\int_0^tH^2\,\dd\br{M}\lt\infty\) for all \(t\) almost surely</td><td data-label="Defined in"><a href="Lesson06.html#n6-4">Def. 6.4</a>, <a href="Lesson06.html#n6-13">6.13</a></td></tr>
+<tr><td data-label="Symbol"><span class="nw">\(H\cdot M\),</span> \(\int_0^tH_s\,\dd M_s\)</td><td data-label="Meaning">the stochastic integral</td><td data-label="Defined in"><a href="Lesson06.html#n6-6">Thm. 6.6</a>, <a href="Lesson06.html#n6-16">Def. 6.16</a></td></tr>
+<tr><td data-label="Symbol">\(\cE(L)\)</td><td data-label="Meaning">the stochastic exponential \(\exp(L-\frac12\br{L})\)</td><td data-label="Defined in"><a href="Lesson07.html#n7-7">Ex. 7.7</a></td></tr>
+<tr><td data-label="Symbol">\(\cE_{X_0}(b,\sigma)\)</td><td data-label="Meaning">the SDE \(\dd X_t=b(t,X_t)\,\dd t+\sigma(t,X_t)\,\dd B_t\) started at \(X_0\)</td><td data-label="Defined in"><a href="Lesson08.html#n8-2">Def. 8.2</a></td></tr>
+<tr><td data-label="Symbol">(L)</td><td data-label="Meaning">Lipschitz and linear-growth assumption on \(b,\sigma\)</td><td data-label="Defined in"><a href="Lesson08.html#n8-7">“Prop.” 8.7</a></td></tr>
+<tr><td data-label="Symbol">\(P_t\)</td><td data-label="Meaning">a Markov semigroup: heat semigroup for Brownian motion; \(P_tg(x)=\E[g(X^x_t)]\) for an SDE</td><td data-label="Defined in"><a href="Lesson02.html#n2-7">Def. 2.7</a>, <a href="Lesson08.html#n8-21">Def. 8.21</a></td></tr>
+<tr><td data-label="Symbol">\(\cL\)</td><td data-label="Meaning">the generator \(b\cdot\nabla+\frac12\tr(\sigma\sigma^\top\nabla^2)\)</td><td data-label="Defined in"><a href="Lesson07.html#n7-6">Lesson 7, after Rem. 7.6</a>; <a href="Lesson08.html#kolmogorov">Lesson 8</a></td></tr>
+</tbody></table></div>
+</section>
+
+<section>
+<h2 id="corrections">Corrections to the notes</h2>
+<p>The notes are a typed transcription of handwritten notes, and they contain slips. Every problem found was checked against the page image at 200–300 dpi, since text extraction garbles formulas. Each lesson page flags its problems where they occur, in a “Watch out” box with the evidence: the page image, a counterexample, a direct computation, or a numerical check. This section lists them all, chapter by chapter, with links.</p>
+<h3 id="corrections-main">The ones that change a statement</h3>
+<p>Most slips are typographical. These are not: as printed, the statement is false, or it proves something else.</p>
+<div class="tw"><table class="compact stack">
+<thead><tr><th>Where</th><th>As printed</th><th>Correction and evidence</th></tr></thead>
+<tbody>
+<tr><td data-label="Where"><a href="Lesson01.html#err-noise">Thm. 1.19</a>, p. 7</td><td data-label="As printed">midpoint noise \(G_{k,n}/2^{(n+1)/2}\) in Lévy's construction</td><td data-label="Correction"><span class="nw">\(G_{k,n}/2^{(n+2)/2}\).</span> The printed scale gives a continuous process with covariance <span class="nw">\(2(s\wedge t)-st\),</span> not a Brownian motion. Evidence: the board (IMG_3259), the notes' own Case 4, the exact covariance, <a class="xr" href="Lesson01.html#lab1-3">Lab 1.3</a>, and a Kolmogorov–Smirnov test (<span class="nw">\(p\approx10^{-53}\)).</span></td></tr>
+<tr><td data-label="Where"><a href="Lesson02.html#n2-12">Ex. 2.12</a>, p. 16</td><td data-label="As printed">\(\{\tau_a\le t\}=\{\sup_{r\in[0,t]\cap\Qb}|B_r-a|=0\}\)</td><td data-label="Correction">\(\inf\) instead of <span class="nw">\(\sup\).</span> The printed event is empty for <span class="nw">\(a\ne0\),</span> since <span class="nw">\(B_0=0\).</span></td></tr>
+<tr><td data-label="Where"><a href="Lesson02.html#n2-17">Thm. 2.17</a>, p. 18</td><td data-label="As printed">reflection principle “for every <span class="nw">\(b\le a\)”</span></td><td data-label="Correction">It needs <span class="nw">\(a\ge0\):</span> for \(a\lt0\) the left side is <span class="nw">\(\P(B_t\le b)\).</span></td></tr>
+<tr><td data-label="Where"><a href="Lesson03.html#n3-8">Ex. 3.8</a>, p. 22</td><td data-label="As printed">\(\tau\) is a stopping time iff \(\{\tau\lt t\}\in\F_t\) for all \(t\)</td><td data-label="Correction">True only for a right-continuous filtration; in general this characterizes optional times. Counterexample: \(\tau\in\{0,1\}\) decided by <span class="nw">\(Z=\pm1\),</span> revealed just after 0.</td></tr>
+<tr><td data-label="Where"><a href="Lesson03.html#n3-18">Thm. 3.18</a>, p. 25</td><td data-label="As printed">the infimum of decreasing stopping times is an \((\F_t)\)-stopping time</td><td data-label="Correction">Only an \((\F_{t+})\)-stopping time, unless the filtration is right-continuous. Counterexample: \(\tau_n=1/n\) on <span class="nw">\(\{Z=1\}\),</span> \(\tau_n=1\) otherwise.</td></tr>
+<tr><td data-label="Where"><a href="Lesson03.html#n3-21">Thm. 3.21</a>, p. 26</td><td data-label="As printed">hitting times of open or closed sets are stopping times for a complete filtration</td><td data-label="Correction">False: <span class="nw">\(X_t=tZ\),</span> \(A=(0,\infty)\) gives <span class="nw">\(\{\tau_A\le0\}=\{Z=1\}\notin\F_0\).</span> Correct forms: open set and right-continuous process give an optional time; closed set and continuous process give a stopping time.</td></tr>
+<tr><td data-label="Where"><a href="Lesson04.html#n4-12">Thm. 4.12</a>, p. 29</td><td data-label="As printed">\(N_{a,b}=\sum_q\ind_{[a,b]}(\tilde M_q)\) as the number of upcrossings</td><td data-label="Correction">That sum counts visits, not upcrossings. In <a class="xr" href="Lesson04.html#lab4-2">Lab 4.2</a> a Brownian path makes on average 562.9 grid visits to <span class="nw">\([0,0.5]\),</span> but only 0.720 upcrossings.</td></tr>
+<tr><td data-label="Where"><a href="Lesson04.html#n4-16">Cor. 4.16</a>, p. 30</td><td data-label="As printed">every right-continuous supermartingale converges almost surely</td><td data-label="Correction">False: <span class="nw">\(M_t=-t\).</span> It needs <span class="nw">\(\sup_t\E[M_t^-]\lt\infty\),</span> for example <span class="nw">\(M\ge0\).</span></td></tr>
+<tr><td data-label="Where"><a href="Lesson04.html#n4-26">Thm. 4.26</a>, p. 32</td><td data-label="As printed">backward martingales with \(\F_{-n}\subset\F_{-(n+1)}\)</td><td data-label="Correction">Inclusion and inequality reversed; the limit formula holds for martingales only.</td></tr>
+<tr><td data-label="Where"><a href="Lesson05.html#n5-13">Prop. 5.13 (3)</a>, p. 40</td><td data-label="As printed">\(\dd G^+=g\,\dd f^++g\,\dd f^-\)</td><td data-label="Correction">\(\dd G^+=g^+\dd f^++g^-\dd f^-\) and <span class="nw">\(\dd G^-=g^-\dd f^++g^+\dd f^-\);</span> as printed, <span class="nw">\(\dd G=0\).</span> Part (4) needs <span class="nw">\(f\in C^1\):</span> the Cantor function is a counterexample (<a class="xr" href="Lesson05.html#lab5-1">Lab 5.1</a>).</td></tr>
+<tr><td data-label="Where"><a href="Lesson05.html#n5-14">Prop. 5.14</a>, p. 41</td><td data-label="As printed">Riemann–Stieltjes sums converge for bounded measurable \(g\)</td><td data-label="Correction">It needs \(g\) continuous. Counterexamples: \(g=\ind_{\Qb}\) with rational mesh points; a common jump of \(f\) and \(g\) (<a class="xr" href="Lesson05.html#lab5-2">Lab 5.2</a>).</td></tr>
+<tr><td data-label="Where"><a href="Lesson05.html#n5-22">Thm. 5.22</a>, p. 43</td><td data-label="As printed">a local martingale of bounded variation is constant</td><td data-label="Correction">It needs continuity: \(N_t-t\) for a Poisson process \(N\) is a martingale of finite variation (<a class="xr" href="Lesson05.html#lab5-4">Lab 5.4</a>).</td></tr>
+<tr><td data-label="Where"><a href="Lesson06.html#n6-4">Def. 6.4</a>, p. 51</td><td data-label="As printed">integrands are “non-progressive processes”</td><td data-label="Correction">Progressive processes. The whole point is that the integrand must not see the future (<a class="xr" href="Lesson06.html#lab6-2">Lab 6.2</a>).</td></tr>
+<tr><td data-label="Where"><a href="Lesson06.html#n6-23">Ex. 6.23</a>, pp. 58–59</td><td data-label="As printed">a proof via \(\br{B^m,B^n}=\br{B^m,B^{m+n}}\)</td><td data-label="Correction">The result is right, the proof is wrong (false for <span class="nw">\(m=n=1\)).</span> A correct proof by induction is given, and <a class="xr" href="Lesson06.html#lab6-4">Lab 6.4</a> checks the formula numerically.</td></tr>
+<tr><td data-label="Where"><a href="Lesson07.html#n7-3">Rem. 7.3</a>, p. 60</td><td data-label="As printed">\(\int_0^t\tr(a_s\nabla^2F(X_s))\,\dd s\)</td><td data-label="Correction">A factor \(\frac12\) is missing; check with <span class="nw">\(\E|B_t|^2=dt\).</span></td></tr>
+<tr><td data-label="Where"><a href="Lesson07.html#n7-8">Thm. 7.8</a>, pp. 62–63</td><td data-label="As printed">\(\cE(N)_t=\exp(N_t+\frac12\br{N}_t)\)</td><td data-label="Correction"><span class="nw">\(\exp(N_t-\frac12\br{N}_t)\).</span> With the plus sign the mean is <span class="nw">\(e^{a^2t}\):</span> 29.40 simulated against 29.37 for <span class="nw">\(a=1.3\),</span> <span class="nw">\(t=2\).</span></td></tr>
+<tr><td data-label="Where"><a href="Lesson07.html#n7-15">Rem. 7.15</a>, pp. 64–65</td><td data-label="As printed">\(x_t=t+\int_0^t\ind_{\{x_s\gt0\}}\,\dd s\) “has no solution”</td><td data-label="Correction">\(x_t=2t\) solves it. The argument fits <span class="nw">\(x_t=\int_0^t\ind_{\{x_s\le0\}}\,\dd s\),</span> which has no solution.</td></tr>
+<tr><td data-label="Where"><a href="Lesson07.html#n7-21">Prop. 7.21</a>, p. 66</td><td data-label="As printed">\(L_t=-\int_0^tb(s,X_s)\cdot\dd X_s\)</td><td data-label="Correction"><span class="nw">\(L=+\int b\cdot\dd X\);</span> the minus sign solves the SDE with drift <span class="nw">\(-b\).</span> For <span class="nw">\(b=0.7\):</span> \(\E_\Q[X_1-x_0]=0.7024\) with <span class="nw">\(+\),</span> \(-0.7002\) with <span class="nw">\(-\).</span></td></tr>
+<tr><td data-label="Where"><a href="Lesson08.html#n8-12">Ex. 8.12</a>, p. 71</td><td data-label="As printed">Tanaka's SDE, \(\sgn(0)\) unspecified</td><td data-label="Correction">It needs <span class="nw">\(\sgn(0)\ne0\);</span> with <span class="nw">\(\sgn(0)=0\),</span> \(X\equiv0\) is another solution and uniqueness in law fails.</td></tr>
+<tr><td data-label="Where"><a href="Lesson08.html#n8-17">Thm. 8.17 (2)</a>, p. 72</td><td data-label="As printed">pathwise uniqueness gives a strong solution</td><td data-label="Correction">It needs weak existence too: an equation without solutions has pathwise uniqueness vacuously.</td></tr>
+<tr><td data-label="Where"><a href="Lesson08.html#kolmogorov">§8.3</a>, pp. 72–73</td><td data-label="As printed">titled “Markov Property and Kolmogorov Equation”</td><td data-label="Correction">The notes end at <a class="xr" href="Lesson08.html#n8-23">Cor. 8.23</a> without the Kolmogorov equation. It is supplied, marked “Beyond the notes”, and checked numerically in <a class="xr" href="Lesson08.html#lab8-5">Lab 8.5</a>.</td></tr>
+</tbody></table></div>
+
+<h3 id="corrections-all">All corrections, chapter by chapter</h3>
+<p>The table above, plus the smaller slips. Open a chapter to see its list.</p>
+
+<details class="fold"><summary>Chapter 1 · Lesson 1 (9 items)</summary><div class="fb"><ul class="small">
+<li><a href="Lesson01.html#n1-5">Cor. 1.5</a> (p. 3): “if” should be “if and only if”, as in <a class="xr" href="Lesson01.html#n1-28">Prop. 1.28</a> (3). The board (IMG_3220) has the same “if”.</li>
+<li><a href="Lesson01.html#err-noise">Thm. 1.19</a> (p. 7): the midpoint noise scale; see the table above.</li>
+<li><a href="Lesson01.html#err-noise">Thm. 1.19</a> (p. 7): the union bound uses \(2^{(n+1)/2}\) and the Markov bound <span class="nw">\(2^{(n+2)/2}\),</span> so the proof is inconsistent. The final bound “<span class="nw">\(\le2^{-n-8}\)”</span> drops the factor <span class="nw">\(\E|G|^8=105\).</span></li>
+<li><a href="Lesson01.html#err-noise">Thm. 1.19</a> (p. 7): the interpolation formula gives 0 at the grid points, where both weights vanish.</li>
+<li><a href="Lesson01.html#err-noise">Thm. 1.19</a> (p. 8): in Case 2 the neighbours are <span class="nw">\((\ell\pm1)/2^{n+1}\),</span> not \((\ell\pm1)/2^n\) (false as printed for <span class="nw">\(\ell=1\),</span> <span class="nw">\(k=4\)).</span> Case 4 omits the noise variance when <span class="nw">\(\ell=k\),</span> and its display runs off the page.</li>
+<li><a href="Lesson01.html#n1-22">Rem. 1.22</a> (p. 10): the ball is <span class="nw">\(F^{-1}([0,r))\),</span> not <span class="nw">\(F^{-1}((0,r))\);</span> “<span class="nw">\(F=\sigma(W_t)\)”</span> should be “<span class="nw">\(\cW^d=\sigma(W_t)\)”.</span></li>
+<li><a href="Lesson01.html#s1-7">§1.7</a> (p. 12): titled “Kolmogorov Extension Theorem”, but it contains the continuity criterion (<a class="xr" href="Lesson01.html#n1-33">Thm. 1.33</a>); the extension theorem is <a class="xr" href="Lesson01.html#n1-31">Thm. 1.31</a>.</li>
+<li>Whiteboard disagreements (noise scale, Borel–Cantelli threshold, gluing formula, axiom order and others): see the <a href="Lesson01.html#board-disagrees">Lesson 1 comparison table</a>.</li>
+<li>Checked and correct: the notes' threshold \(a_n=2^{-n/4}\) (the board's \(2^{-n/2}\) fails, <a href="Lesson01.html#lab1-4">Lab 1.4</a>).</li>
+</ul></div></details>
+
+<details class="fold"><summary>Chapter 2 · Lesson 2 (9 items)</summary><div class="fb"><ul class="small">
+<li><a href="Lesson02.html#n2-4">Prop. 2.4</a> (p. 13): it is <span class="nw">\((B_t-B_u)_{t\ge u}\),</span> not <span class="nw">\((B_t-B_s)_{t\ge s}\),</span> that is independent of <span class="nw">\(\F_u\);</span> \(\rho_1\) and \(\rho(0)\) should be <span class="nw">\(\varphi_1(0)\);</span> “equal integrability” should be dominated convergence.</li>
+<li><a href="Lesson02.html#n2-8">Prop. 2.8</a> (p. 15): the proof of (ii) must show <span class="nw">\(P_t\varphi(x)\to0\),</span> not <span class="nw">\(\varphi(x)\to0\);</span> (iii) and (iv) are not proved in the notes (proofs supplied).</li>
+<li><a href="Lesson02.html#exo-2-1">Ex. 2.10</a> (p. 16): the solution sketch reverses an inclusion (<span class="nw">\(\F_{0+}\subset\F_{1/n}\))</span> and needs a reverse-Fatou step.</li>
+<li><a href="Lesson02.html#n2-12">Ex. 2.12</a> (p. 16): \(\sup\) should be <span class="nw">\(\inf\).</span></li>
+<li><a href="Lesson02.html#n2-13">Def. 2.13</a> (p. 17): the condition “<span class="nw">\(A\in\F_\infty\)”</span> is missing.</li>
+<li><a href="Lesson02.html#n2-15">Thm. 2.15</a> (p. 17): the proof's events are <span class="nw">\(A\cap\{k2^{-N}\le\tau\lt(k+1)2^{-N}\}\),</span> with <span class="nw">\(k\ge0\).</span></li>
+<li><a href="Lesson02.html#n2-17">Thm. 2.17</a> (p. 18): needs <span class="nw">\(a\ge0\).</span> Its proof is left to a “TD sheet” we do not have; it is <a href="Lesson02.html#exo-2-2">Exercise E2</a>.</li>
+<li><a href="Lesson02.html#n2-12">pp. 16–18</a>: \(S_t\) denotes \(\sup|B|\) in one place and \(\sup B\) in another.</li>
+<li><a href="Lesson02.html#n2-21">Prop. 2.21</a> (p. 19): the variance bound \(3\sum(\Delta t)^2\) is loose (exactly <span class="nw">\(2\sum(\Delta t)^2\)),</span> and a factor 2 is missing later. Harmless.</li>
+</ul></div></details>
+
+<details class="fold"><summary>Chapter 3 · Lesson 3 (9 items)</summary><div class="fb"><ul class="small">
+<li><a href="Lesson03.html#n3-4">Ex. 3.4</a> (p. 21): part (1) describes a decreasing family; part (2) mixes \(\F^B_t\) and <span class="nw">\(\F^B_{t+}\),</span> and its event and final word (“complete” for “stopping time”) are wrong.</li>
+<li><a href="Lesson03.html#n3-7">Ex. 3.7</a> (p. 22): the solution sketch assumes what it must prove.</li>
+<li><a href="Lesson03.html#n3-8">Ex. 3.8</a> (p. 22): needs right-continuity; see the table above.</li>
+<li><a href="Lesson03.html#n3-12">Prop. 3.12</a> (p. 23): the proof uses left endpoints, which converge to <span class="nw">\(X_{s-}\);</span> use right endpoints capped at <span class="nw">\(t\).</span></li>
+<li><a href="Lesson03.html#n3-16">Def. 3.16</a> (p. 24): the formula defines <span class="nw">\(\F_{\tau+}\),</span> not <span class="nw">\(\F_{\tau-}\);</span> its last bullet is circular.</li>
+<li><a href="Lesson03.html#n3-17">Prop. 3.17</a> (pp. 24–25): \(\{\sigma\lt t\}\) should be <span class="nw">\(\{\sigma\lt\tau\}\).</span></li>
+<li><a href="Lesson03.html#n3-18">Thm. 3.18</a> (p. 25): needs right-continuity; the proof writes \(\bigcap\) for <span class="nw">\(\bigcup\).</span></li>
+<li><a href="Lesson03.html#n3-21">Thm. 3.21</a> (p. 26): false as stated; see the table above.</li>
+<li>Checked and correct: <a href="Lesson03.html#n3-9">Ex. 3.9</a> (its \(\F_t\) version would be false).</li>
+</ul></div></details>
+
+<details class="fold"><summary>Chapter 4 · Lesson 4 (11 items)</summary><div class="fb"><ul class="small">
+<li><a href="Lesson04.html#n4-6">Thm. 4.6</a> (p. 28): the proof uses right-continuity, which the statement omits.</li>
+<li><a href="Lesson04.html#n4-9">Thm. 4.9–4.10</a> (p. 29): the two proofs are swapped; the constant 3 is not needed (\(\E[M_T^+]\) suffices); the proof's two-sided claim is false for submartingales (<span class="nw">\(M_s=-5+5s\));</span> the correct two-sided bound is <span class="nw">\(\E|M_0|+2\E|M_t|\).</span></li>
+<li><a href="Lesson04.html#n4-12">Thm. 4.12</a> (p. 29): counts visits, not upcrossings; the condition \(a\gt0\) is unnecessary.</li>
+<li><a href="Lesson04.html#n4-16">Cor. 4.16</a> (p. 30): false as printed; see the table above.</li>
+<li><a href="Lesson04.html#n4-18">Cor. 4.18</a> (pp. 30–31): the proof needs a martingale or a nonnegative submartingale.</li>
+<li><a href="Lesson04.html#n4-26">Thm. 4.26</a> (p. 32): reversed; a stray sentence follows the proof.</li>
+<li><a href="Lesson04.html#n4-29">Thm. 4.29</a> (p. 33): proof slips (\(M_t\) for <span class="nw">\(M_\sigma\);</span> a garbled event; \(\sigma_n\) and \(\tau_n\) mixed).</li>
+<li><a href="Lesson04.html#n4-31">Cor. 4.31</a> (p. 34): the hypothesis \(\tau\ge\sigma\) makes it a repetition of <a class="xr" href="Lesson04.html#n4-30">Thm. 4.30</a>; it is meant for arbitrary <span class="nw">\(\sigma,\tau\).</span></li>
+<li><a href="Lesson04.html#n4-34">Ex. 4.34</a> (p. 35): the first display should be <span class="nw">\(\E[e^{i\theta X_T}]=e^{-|\theta|}\).</span></li>
+<li><a href="Lesson04.html#n4-38">Thm. 4.38</a> (pp. 35–37): the proof printed under it is the missing step of <a class="xr" href="Lesson04.html#n4-35">Thm. 4.35</a>.</li>
+<li>Duplicates (pp. 28–37): <a class="xr" href="Lesson04.html#n4-13">Thm. 4.13</a> = <a class="xr" href="Lesson04.html#n4-20">Thm. 4.20</a> = <a class="xr" href="Lesson04.html#n4-39">Ex. 4.39</a>; <a class="xr" href="Lesson04.html#n4-21">Ex. 4.21</a> = <a class="xr" href="Lesson04.html#n4-40">Ex. 4.40</a>; <a class="xr" href="Lesson04.html#n4-22">Ex. 4.22</a> = <a class="xr" href="Lesson04.html#n4-41">Ex. 4.41</a>; <a class="xr" href="Lesson04.html#n4-17">Def. 4.17</a> ≈ <a class="xr" href="Lesson04.html#n4-23">Def. 4.23</a>.</li>
+</ul></div></details>
+
+<details class="fold"><summary>Chapter 5 · Lesson 5 (9 items)</summary><div class="fb"><ul class="small">
+<li><a href="Lesson05.html#n5-2">Rem. 5.2</a> (p. 38): garbled (“If <span class="nw">\(I=[n,M]\)”).</span></li>
+<li><a href="Lesson05.html#n5-5">Thm. 5.5</a> (pp. 38–39): \(\dd F([s,t])=F(t)-F(s)\) needs \(F\) continuous; otherwise use <span class="nw">\((s,t]\).</span></li>
+<li><a href="Lesson05.html#n5-11">Ex. 5.11</a> (p. 40): “<span class="nw">\(f\)”</span> should be “<span class="nw">\(\dd f\)”.</span></li>
+<li><a href="Lesson05.html#n5-13">Prop. 5.13</a> (p. 40): parts (3) and (4); see the table above.</li>
+<li><a href="Lesson05.html#n5-14">Prop. 5.14</a> (p. 41): needs \(g\) continuous; see the table above.</li>
+<li><a href="Lesson05.html#n5-22">Thm. 5.22</a> (p. 43) and <a class="xr" href="Lesson05.html#n5-19">Ex. 5.19</a> (5): need continuity; the proof assumes <span class="nw">\(M_0=0\).</span></li>
+<li><a href="Lesson05.html#n5-23">Thm. 5.23</a> (p. 43): “any sequence of meshes” means meshes whose size tends to 0; the convergence is in probability.</li>
+<li><a href="Lesson05.html#n5-44">Prop. 5.44</a> (pp. 48–49): “interpolation” should be “polarization”; a display runs off the page.</li>
+<li>Checked and correct on the page image: <a href="Lesson05.html#n5-12">Def. 5.12</a> (only the text extraction garbles it).</li>
+</ul></div></details>
+
+<details class="fold"><summary>Chapter 6 · Lesson 6 (10 items)</summary><div class="fb"><ul class="small">
+<li><a href="Lesson06.html#n6-1">Def. 6.1</a> (p. 50): “bounded martingales bounded in <span class="nw">\(L^2\)”</span> should be “martingales bounded in <span class="nw">\(L^2\)”.</span></li>
+<li><a href="Lesson06.html#n6-2">Prop. 6.2</a> (p. 50): a stray “For <span class="nw">\(\lambda\in\R\)”;</span> its proof of the stopping property does not prove it (use Doob).</li>
+<li><a href="Lesson06.html#n6-3">Thm. 6.3</a> (p. 50): “It is often lost that” should be “It is clear that”.</li>
+<li><a href="Lesson06.html#n6-4">Def. 6.4</a> (p. 51): “non-progressive” should be “progressive”.</li>
+<li><a href="Lesson06.html#n6-6">Thm. 6.6</a> (p. 51): an expectation is missing (a number is equated with a random variable). The density of elementary processes is used without proof.</li>
+<li><a href="Lesson06.html#n6-8">Prop. 6.8</a> (p. 53): the first display of the proof is circular.</li>
+<li><a href="Lesson06.html#n6-9">Rem. 6.9</a> (p. 53): “Parameterization” should be “The characterization”.</li>
+<li><a href="Lesson06.html#n6-10">Prop. 6.10 (a)</a> (p. 54): trivial as printed; the intended identity is <span class="nw">\((\ind_AH)\cdot M=\ind_A(H\cdot M)\).</span></li>
+<li><a href="Lesson06.html#n6-17">Prop. 6.17 (e)</a> (p. 57): an index slip.</li>
+<li><a href="Lesson06.html#n6-23">Ex. 6.23</a> (pp. 58–59): the proof is wrong; see the table above.</li>
+</ul></div></details>
+
+<details class="fold"><summary>Chapter 7 · Lesson 7 (8 items)</summary><div class="fb"><ul class="small">
+<li><a href="Lesson07.html#n7-3">Rem. 7.3</a> (p. 60): a missing <span class="nw">\(\frac12\);</span> the opening hypothesis (“\(\xi\) bounded”) is garbled.</li>
+<li><a href="Lesson07.html#n7-7">Ex. 7.7 (2)</a> (p. 62): the hypothesis is garbled; the intended one is that \(X\) has drift <span class="nw">\(-\frac\lambda2\br{M}\).</span></li>
+<li><a href="Lesson07.html#n7-8">Thm. 7.8</a> (pp. 62–63): sign in the exponential; “bounded on finite intervals” is false (use Novikov); the continuity sentence is unnecessary.</li>
+<li><a href="Lesson07.html#n7-11">Thm. 7.11</a> (p. 63): Knight's theorem needs \(\br{M^i}_\infty=\infty\) for every <span class="nw">\(i\).</span></li>
+<li><a href="Lesson07.html#n7-15">Rem. 7.15</a> (pp. 64–65): the printed equation has a solution; see the table above.</li>
+<li><a href="Lesson07.html#n7-16">Thm. 7.16</a> (p. 65): the proof should read <span class="nw">\(\E^\P[\Psi(B+\int f)]=\E^{\Q^L}[\Psi(\tilde B+\int f)]\).</span></li>
+<li><a href="Lesson07.html#n7-19">Prop. 7.19</a> (p. 66): \(L\) should be a continuous local martingale; the proof is skipped.</li>
+<li><a href="Lesson07.html#n7-21">Prop. 7.21</a> (p. 66): the sign of <span class="nw">\(L\);</span> see the table above.</li>
+</ul></div></details>
+
+<details class="fold"><summary>Chapter 8 · Lesson 8 (9 items)</summary><div class="fb"><ul class="small">
+<li><a href="Lesson08.html#n8-2">Def. 8.3</a> (p. 68): calls every solution “strong”, while <a class="xr" href="Lesson08.html#n8-14">Def. 8.14</a> (p. 72) defines a strong solution as one adapted to the Brownian filtration. These pages follow <a class="xr" href="Lesson08.html#n8-14">Def. 8.14</a>.</li>
+<li><a href="Lesson08.html#n8-7">“Prop.” 8.7</a> (p. 69): an assumption, not a proposition; its first sentence is garbled.</li>
+<li><a href="Lesson08.html#n8-9">Thm. 8.9</a> (pp. 69–71): needs <span class="nw">\(\E\|X_0\|^2\lt\infty\);</span> the constant \(4L^2\tilde T\) is valid only for \(\tilde T\ge1\) (conclusion unchanged).</li>
+<li><a href="Lesson08.html#n8-11">Def. 8.11</a>, <a href="Lesson08.html#n8-13">Ex. 8.13</a> (pp. 71–72): the arguments of \(\cE(b,\sigma)\) are swapped in places.</li>
+<li><a href="Lesson08.html#n8-12">Ex. 8.12</a> (p. 71): needs <span class="nw">\(\sgn(0)\ne0\).</span></li>
+<li><a href="Lesson08.html#n8-16">Ex. 8.16</a> (p. 72): <span class="nw">\(\varphi_\varepsilon(X_0)=\sqrt\varepsilon\),</span> not <span class="nw">\(\varepsilon\);</span> \(\F^B\) means <span class="nw">\(\F^\beta\).</span></li>
+<li><a href="Lesson08.html#n8-17">Thm. 8.17 (2)</a> (p. 72): needs weak existence.</li>
+<li><a href="Lesson08.html#n8-19">Thm. 8.19</a> (pp. 72–73): in the proof, \((X_s,\tilde B_t:t\le s)\) should be <span class="nw">\((X_s,\tilde B_r:r\le t)\).</span></li>
+<li><a href="Lesson08.html#kolmogorov">§8.3</a> (pp. 72–73): the announced Kolmogorov equation is absent.</li>
+</ul></div></details>
+</section>
+
+<section>
+<h2 id="how-to-use">How the lesson pages work</h2>
+<p>All eight pages have the same structure, so you always know where to look.</p>
+<ol>
+<li><b>§0 Where this lesson sits.</b> What the lesson reuses and what it prepares, with links to the exact statements; the thread map with this lesson's stations; and “A question that comes back”.</li>
+<li><b>The sections of the notes</b>, numbered as in the notes and with their pages. Each topic follows the same order: the problem, the intuition, the formulation, why it is true, when it fails, how it is used. Important results come with a one-sentence summary, the idea of the proof, a counterexample when an assumption matters, and where the result is used again.</li>
+<li><b>Labs</b> inside the sections. Each lab asks one question, opens with the notes' own settings, and ends with “What the lab shows”, whose numbers are measured by the code at the default settings. Every lab has a seed, so its results are reproducible.</li>
+<li><b>Exercises</b>: every exercise of the notes, and every step the notes leave to the reader, with progressive hints and a worked solution, all collapsed.</li>
+<li><b>End matter</b>: conclusion, references, Python reference code with its printed output, cheat sheet, self-test, and glossary in English and French.</li>
+</ol>
+<p>Five kinds of boxes, used sparingly:</p>
+<div class="callout key"><div class="ch">Key idea</div><p>The one thing to remember from a section.</p></div>
+<div class="callout warn"><div class="ch">Watch out</div><p>A trap, a notation conflict, or an error in the notes, with the evidence.</p></div>
+<div class="callout link"><div class="ch">Link</div><p>A connection to another lesson.</p></div>
+<div class="callout board"><div class="ch">From the whiteboard</div><p>Material from the photos of the first lecture, with the file names (<a class="xr" href="Lesson01.html">Lesson 1</a> only).</p></div>
+<div class="callout beyond"><div class="ch">Beyond the notes</div><p>Anything that is in neither the notes nor the board. Everything outside these boxes is course content.</p></div>
+<p><b>Links.</b> Every statement has an anchor built from its number: <a class="xr" href="Lesson04.html#n4-29">Theorem 4.29</a> is <code>Lesson04.html#n4-29</code>, <a class="xr" href="Lesson02.html#s2-1">§2.1</a> is <code>Lesson02.html#s2-1</code>, <a class="xr" href="Lesson07.html#lab7-3">Lab 7.3</a> is <code>Lesson07.html#lab7-3</code>. <b>Keyboard.</b> Controls are reachable with Tab; on a chart, the arrow keys move the crosshair, and a screen reader announces the values. <b>Themes.</b> The switch in the top bar toggles light and dark; the choice is remembered.</p>
+<p><b>Glossary language.</b> The glossaries give each term in English and French. The request left the second language open (“&lt;SECOND LANGUAGE, OR DELETE&gt;”). French was chosen because the notes refer to a “TD sheet” (<em>travaux dirigés</em>), the term French universities use for exercise classes.</p>
+</section>
+
+<section>
+<h2 id="revision">Revision kit</h2>
+<p>Direct links to the parts of each lesson that are made for revising.</p>
+<div class="tw"><table class="compact">
+<thead><tr><th>Lesson</th><th>Cheat sheet</th><th>Self-test</th><th>Exercises</th><th>Glossary</th></tr></thead>
+<tbody>
+<tr><td><a href="Lesson01.html">1 · Brownian motion</a></td><td><a href="Lesson01.html#cheat">sheet</a></td><td><a href="Lesson01.html#selftest">22 questions</a></td><td><a href="Lesson01.html#exercises">8</a></td><td><a href="Lesson01.html#glossary">31 terms</a></td></tr>
+<tr><td><a href="Lesson02.html">2 · Markov &amp; QV</a></td><td><a href="Lesson02.html#cheat">sheet</a></td><td><a href="Lesson02.html#selftest">20 questions</a></td><td><a href="Lesson02.html#exercises">8</a></td><td><a href="Lesson02.html#glossary">24 terms</a></td></tr>
+<tr><td><a href="Lesson03.html">3 · Filtrations</a></td><td><a href="Lesson03.html#cheat">sheet</a></td><td><a href="Lesson03.html#selftest">18 questions</a></td><td><a href="Lesson03.html#exercises">8</a></td><td><a href="Lesson03.html#glossary">15 terms</a></td></tr>
+<tr><td><a href="Lesson04.html">4 · Martingales</a></td><td><a href="Lesson04.html#cheat">sheet</a></td><td><a href="Lesson04.html#selftest">20 questions</a></td><td><a href="Lesson04.html#exercises">9</a></td><td><a href="Lesson04.html#glossary">17 terms</a></td></tr>
+<tr><td><a href="Lesson05.html">5 · Semimartingales</a></td><td><a href="Lesson05.html#cheat">sheet</a></td><td><a href="Lesson05.html#selftest">21 questions</a></td><td><a href="Lesson05.html#exercises">9</a></td><td><a href="Lesson05.html#glossary">17 terms</a></td></tr>
+<tr><td><a href="Lesson06.html">6 · Integrals</a></td><td><a href="Lesson06.html#cheat">sheet</a></td><td><a href="Lesson06.html#selftest">20 questions</a></td><td><a href="Lesson06.html#exercises">8</a></td><td><a href="Lesson06.html#glossary">13 terms</a></td></tr>
+<tr><td><a href="Lesson07.html">7 · Itô &amp; Girsanov</a></td><td><a href="Lesson07.html#cheat">sheet</a></td><td><a href="Lesson07.html#selftest">21 questions</a></td><td><a href="Lesson07.html#exercises">8</a></td><td><a href="Lesson07.html#glossary">16 terms</a></td></tr>
+<tr><td><a href="Lesson08.html">8 · SDEs</a></td><td><a href="Lesson08.html#cheat">sheet</a></td><td><a href="Lesson08.html#selftest">21 questions</a></td><td><a href="Lesson08.html#exercises">8</a></td><td><a href="Lesson08.html#glossary">17 terms</a></td></tr>
+</tbody></table></div>
+</section>
+
+<section>
+<h2 id="sources">Sources and references</h2>
+<p><b>Cited by the notes.</b> The notes have no bibliography. They cite one book, in <a href="Lesson07.html#n7-22">Remark 7.22</a> (p. 67): D. Revuz and M. Yor, <em>Continuous Martingales and Brownian Motion</em>, 3rd edition, Grundlehren der mathematischen Wissenschaften 293, Springer, 1999 (“Chapter VIII”). They also refer to a “TD sheet” (the exercise sheet, p. 18), which was not available. They cite no code and no datasets; all labs use synthetic data with a known ground truth.</p>
+<p><b>Used for the “Beyond the notes” boxes</b> (details and chapters in each lesson's references):</p>
+<ul class="small">
+<li>J.-F. Le Gall, <em>Brownian Motion, Martingales, and Stochastic Calculus</em>, Graduate Texts in Mathematics 274, Springer, 2016. Closest in structure to the notes.</li>
+<li>I. Karatzas and S. E. Shreve, <em>Brownian Motion and Stochastic Calculus</em>, 2nd edition, Graduate Texts in Mathematics 113, Springer, 1991.</li>
+<li>P. Mörters and Y. Peres, <em>Brownian Motion</em>, Cambridge University Press, 2010.</li>
+<li>D. Williams, <em>Probability with Martingales</em>, Cambridge University Press, 1991; P. E. Protter, <em>Stochastic Integration and Differential Equations</em>, 2nd edition, Springer, 2004; B. Øksendal, <em>Stochastic Differential Equations</em>, 6th edition, Springer, 2003.</li>
+<li>P. E. Kloeden and E. Platen, <em>Numerical Solution of Stochastic Differential Equations</em>, Springer, 1992 (Euler–Maruyama).</li>
+<li>G. O. Roberts and R. L. Tweedie, Exponential convergence of Langevin distributions and their discrete approximations, <em>Bernoulli</em> 2(4):341–363, 1996; A. Durmus and É. Moulines, Nonasymptotic convergence analysis for the unadjusted Langevin algorithm, <em>Annals of Applied Probability</em> 27(3):1551–1587, 2017.</li>
+<li>U. G. Haussmann and É. Pardoux, Time reversal of diffusions, <em>Annals of Probability</em> 14(4):1188–1205, 1986; Y. Song, J. Sohl-Dickstein, D. P. Kingma, A. Kumar, S. Ermon and B. Poole, Score-based generative modeling through stochastic differential equations, ICLR 2021; J. Ho, A. Jain and P. Abbeel, Denoising diffusion probabilistic models, NeurIPS 2020.</li>
+<li>S. Mei, A. Montanari and P.-M. Nguyen, A mean field view of the landscape of two-layer neural networks, <em>PNAS</em> 115(33):E7665–E7671, 2018; L. Chizat and F. Bach, On the global convergence of gradient descent for over-parameterized models using optimal transport, NeurIPS 2018.</li>
+</ul>
+<p><b>Software used for the checks</b>: Python 3.12 with NumPy, SciPy and sdeint, in a separate virtual environment (statsmodels and scikit-learn were installed but no check needed them); the labs' JavaScript numerical library was checked against SciPy (normal distribution functions to <span class="nw">\(10^{-11}\)).</span></p>
+</section>
+
+
+
+</main>
+</div>
+<footer class="foot"><p>Study companion for <em>Stochastic calculus in machine learning: sampling and generative modeling</em> (Alain Oliviero-Durmus). Built from the course notes (73 pp.) and, for Lesson 1, the whiteboard photos of the first lecture. Everything marked “Beyond the notes” is an addition; every number shown was produced by the code on the page or by the Python scripts listed in the lesson.</p><p><a href="#main">Back to top</a> · <a href="index.html">Home</a></p></footer>
+<script>
+/* ===== num.js — shared numerical code (identical on every page; also run by Node to measure the numbers quoted on the pages) ===== */
+(function (root) {
+  'use strict';
+  const N = {};
+
+  /* ---------- seeded RNG: xoshiro128** seeded by splitmix32 ---------- */
+  function splitmix32(a) {
+    return function () {
+      a |= 0; a = (a + 0x9e3779b9) | 0;
+      let t = a ^ (a >>> 16); t = Math.imul(t, 0x21f0aaad);
+      t = t ^ (t >>> 15); t = Math.imul(t, 0x735a2d97);
+      return ((t = t ^ (t >>> 15)) >>> 0);
+    };
+  }
+  N.rng = function (seed) {
+    const sm = splitmix32((seed >>> 0) ^ 0x5bd1e995);
+    let a = sm(), b = sm(), c = sm(), d = sm();
+    function next32() {
+      const r = Math.imul(rotl(Math.imul(b, 5), 7), 9) >>> 0;
+      const t = b << 9;
+      c ^= a; d ^= b; b ^= c; a ^= d; c ^= t; d = rotl(d, 11);
+      return r;
+    }
+    function rotl(x, k) { return (x << k) | (x >>> (32 - k)); }
+    let spare = 0, hasSpare = false;
+    const R = {
+      /** uniform on (0,1), 53-bit resolution, never exactly 0 or 1 */
+      u() {
+        const hi = next32() >>> 5, lo = next32() >>> 6;
+        return (hi * 67108864 + lo + 0.5) / 9007199254740992;
+      },
+      /** standard normal (Marsaglia polar method) */
+      g() {
+        if (hasSpare) { hasSpare = false; return spare; }
+        let x, y, s;
+        do { x = 2 * R.u() - 1; y = 2 * R.u() - 1; s = x * x + y * y; } while (s >= 1 || s === 0);
+        const f = Math.sqrt(-2 * Math.log(s) / s);
+        spare = y * f; hasSpare = true;
+        return x * f;
+      },
+      /** Float64Array of n standard normals */
+      gv(n) { const z = new Float64Array(n); for (let i = 0; i < n; i++) z[i] = R.g(); return z; },
+      /** exponential(rate) */
+      exp(rate) { return -Math.log(R.u()) / rate; },
+      /** Poisson(lambda) by inversion (small lambda) */
+      poisson(lam) { let k = 0, p = Math.exp(-lam), s = p; const u = R.u(); while (u > s && k < 1e6) { k++; p *= lam / k; s += p; } return k; },
+      int(n) { return Math.floor(R.u() * n); }
+    };
+    return R;
+  };
+
+  /* ---------- special functions ---------- */
+  const SQRTPI = Math.sqrt(Math.PI), SQRT2 = Math.SQRT2;
+  /** erfc(x), ~1e-15 relative accuracy: positive-term series for |x|<2.5, Lentz continued fraction beyond */
+  N.erfc = function (x) {
+    if (!isFinite(x)) return x > 0 ? 0 : 2;
+    if (x < 0) return 2 - N.erfc(-x);
+    if (x < 2.5) {
+      // erf(x) = 2/sqrt(pi) e^{-x^2} sum_{n>=0} 2^n x^{2n+1} / (1*3*...*(2n+1))
+      let term = x, sum = x, n = 0;
+      while (Math.abs(term) > 1e-17 * Math.abs(sum) && n < 200) { n++; term *= 2 * x * x / (2 * n + 1); sum += term; }
+      return 1 - 2 / SQRTPI * Math.exp(-x * x) * sum;
+    }
+    // continued fraction: erfc(x) = e^{-x^2}/sqrt(pi) * 1/(x+ (1/2)/(x+ 1/(x+ (3/2)/(x+ 2/(x+ ...)))))
+    const tiny = 1e-300;
+    let f = x, C = x, D = 0, i = 1;
+    for (; i < 500; i++) {
+      const a = i / 2;
+      D = x + a * D; if (Math.abs(D) < tiny) D = tiny; D = 1 / D;
+      C = x + a / C; if (Math.abs(C) < tiny) C = tiny;
+      const delta = C * D; f *= delta;
+      if (Math.abs(delta - 1) < 1e-16) break;
+    }
+    return Math.exp(-x * x) / SQRTPI / f;
+  };
+  N.erf = function (x) { return 1 - N.erfc(x); };
+  N.normPdf = function (x, m = 0, s = 1) { const z = (x - m) / s; return Math.exp(-0.5 * z * z) / (s * Math.sqrt(2 * Math.PI)); };
+  N.normCdf = function (x, m = 0, s = 1) { return 0.5 * N.erfc(-(x - m) / (s * SQRT2)); };
+  N.normSf = function (x, m = 0, s = 1) { return 0.5 * N.erfc((x - m) / (s * SQRT2)); };
+  /** inverse standard normal CDF (Acklam + one Halley step) */
+  N.normInv = function (p) {
+    if (p <= 0) return -Infinity; if (p >= 1) return Infinity;
+    const a = [-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02, 1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00];
+    const b = [-5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02, 6.680131188771972e+01, -1.328068155288572e+01];
+    const c = [-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00, -2.549732539343734e+00, 4.374664141464968e+00, 2.938163982698783e+00];
+    const d = [7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00, 3.754408661907416e+00];
+    const pl = 0.02425; let q, r, x;
+    if (p < pl) { q = Math.sqrt(-2 * Math.log(p)); x = (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1); }
+    else if (p <= 1 - pl) { q = p - 0.5; r = q * q; x = (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1); }
+    else { q = Math.sqrt(-2 * Math.log(1 - p)); x = -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1); }
+    const e = N.normCdf(x) - p, u = e * Math.sqrt(2 * Math.PI) * Math.exp(x * x / 2);
+    return x - u / (1 + x * u / 2);
+  };
+  /** log Gamma (Lanczos, g=7) */
+  N.lgamma = function (x) {
+    const g = 7, c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+    if (x < 0.5) return Math.log(Math.PI / Math.abs(Math.sin(Math.PI * x))) - N.lgamma(1 - x);
+    x -= 1; let a = c[0]; const t = x + g + 0.5;
+    for (let i = 1; i < g + 2; i++) a += c[i] / (x + i);
+    return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(a);
+  };
+
+
+  /* ---------- Gauss–Hermite quadrature for E[f(Z)], Z ~ N(0,1) (Numerical Recipes 'gauher' + rescaling) ---------- */
+  const ghCache = {};
+  N.gaussHermite = function (n) {
+    if (ghCache[n]) return ghCache[n];
+    const x = new Float64Array(n), w = new Float64Array(n), m = (n + 1) >> 1, PIM4 = 0.7511255444649425;
+    let z = 0, z1, pp = 0;
+    for (let i = 0; i < m; i++) {
+      if (i === 0) z = Math.sqrt(2 * n + 1) - 1.85575 * Math.pow(2 * n + 1, -0.16667);
+      else if (i === 1) z -= 1.14 * Math.pow(n, 0.426) / z;
+      else if (i === 2) z = 1.86 * z - 0.86 * x[0];
+      else if (i === 3) z = 1.91 * z - 0.91 * x[1];
+      else z = 2.0 * z - x[i - 2];
+      for (let its = 0; its < 100; its++) {
+        let p1 = PIM4, p2 = 0;
+        for (let j = 0; j < n; j++) { const p3 = p2; p2 = p1; p1 = z * Math.sqrt(2 / (j + 1)) * p2 - Math.sqrt(j / (j + 1)) * p3; }
+        pp = Math.sqrt(2 * n) * p2; z1 = z; z = z1 - p1 / pp;
+        if (Math.abs(z - z1) <= 1e-15) break;
+      }
+      x[i] = z; x[n - 1 - i] = -z; w[i] = 2 / (pp * pp); w[n - 1 - i] = w[i];
+    }
+    // convert from weight e^{-x^2} to the standard normal density
+    const xs = new Float64Array(n), ws = new Float64Array(n);
+    for (let i = 0; i < n; i++) { xs[i] = Math.SQRT2 * x[i]; ws[i] = w[i] / Math.sqrt(Math.PI); }
+    return (ghCache[n] = { x: xs, w: ws });
+  };
+  /** E[f(Z)] for Z ~ N(0,1) by n-point Gauss–Hermite */
+  N.gaussExpect = function (f, n = 64) { const q = N.gaussHermite(n); let s = 0; for (let i = 0; i < n; i++) s += q.w[i] * f(q.x[i]); return s; };
+
+  /* ---------- basic statistics ---------- */
+  N.sum = function (a) { let s = 0; for (let i = 0; i < a.length; i++) s += a[i]; return s; };
+  N.mean = function (a) { return a.length ? N.sum(a) / a.length : NaN; };
+  N.variance = function (a) { // unbiased, Welford
+    let m = 0, s = 0; for (let i = 0; i < a.length; i++) { const d = a[i] - m; m += d / (i + 1); s += d * (a[i] - m); }
+    return a.length > 1 ? s / (a.length - 1) : NaN;
+  };
+  N.std = function (a) { return Math.sqrt(N.variance(a)); };
+  N.se = function (a) { return N.std(a) / Math.sqrt(a.length); };
+  N.cov = function (a, b) { const ma = N.mean(a), mb = N.mean(b); let s = 0; for (let i = 0; i < a.length; i++) s += (a[i] - ma) * (b[i] - mb); return s / (a.length - 1); };
+  N.sorted = function (a) { return Float64Array.from(a).sort(); };
+  /** quantile of a sorted array, linear interpolation (numpy default) */
+  N.quantile = function (s, p) { const h = (s.length - 1) * p, i = Math.floor(h), f = h - i; return i + 1 < s.length ? s[i] + f * (s[i + 1] - s[i]) : s[s.length - 1]; };
+  N.maxAbs = function (a) { let m = 0; for (let i = 0; i < a.length; i++) { const v = Math.abs(a[i]); if (v > m) m = v; } return m; };
+  N.minmax = function (a) { let lo = Infinity, hi = -Infinity; for (let i = 0; i < a.length; i++) { if (a[i] < lo) lo = a[i]; if (a[i] > hi) hi = a[i]; } return [lo, hi]; };
+  /** histogram as density: returns {edges, density, counts, total, outside} */
+  N.histogram = function (a, nb, lo, hi) {
+    const counts = new Float64Array(nb); let outside = 0; const w = (hi - lo) / nb;
+    for (let i = 0; i < a.length; i++) { const k = Math.floor((a[i] - lo) / w); if (k >= 0 && k < nb) counts[k]++; else if (a[i] === hi) counts[nb - 1]++; else outside++; }
+    const edges = new Float64Array(nb + 1); for (let k = 0; k <= nb; k++) edges[k] = lo + k * w;
+    const density = new Float64Array(nb); for (let k = 0; k < nb; k++) density[k] = counts[k] / (a.length * w);
+    return { edges, density, counts, total: a.length, outside };
+  };
+  /** Kolmogorov–Smirnov statistic sup |F_n - F| for a continuous cdf */
+  N.ksStat = function (a, cdf) {
+    const s = N.sorted(a), n = s.length; let d = 0;
+    for (let i = 0; i < n; i++) { const F = cdf(s[i]); d = Math.max(d, (i + 1) / n - F, F - i / n); }
+    return d;
+  };
+  /** asymptotic KS p-value (Kolmogorov distribution), with Stephens' small-n correction */
+  N.ksPValue = function (d, n) {
+    const x = (Math.sqrt(n) + 0.12 + 0.11 / Math.sqrt(n)) * d; if (x < 0.2) return 1;
+    let s = 0; for (let k = 1; k < 101; k++) { const t = 2 * Math.pow(-1, k - 1) * Math.exp(-2 * k * k * x * x); s += t; if (Math.abs(t) < 1e-16) break; }
+    return Math.min(1, Math.max(0, s));
+  };
+  N.linspace = function (a, b, n) { const x = new Float64Array(n); for (let i = 0; i < n; i++) x[i] = a + (b - a) * i / (n - 1); return x; };
+  N.cumsum = function (a, x0 = 0) { const c = new Float64Array(a.length + 1); c[0] = x0; for (let i = 0; i < a.length; i++) c[i + 1] = c[i] + a[i]; return c; };
+  /** trapezoid integral of samples y on grid x */
+  N.trapz = function (x, y) { let s = 0; for (let i = 1; i < x.length; i++) s += 0.5 * (y[i] + y[i - 1]) * (x[i] - x[i - 1]); return s; };
+
+  /* ---------- Brownian motion and SDE helpers ---------- */
+  /** standard BM on [0,T] with n steps: Float64Array(n+1), B[0]=0 */
+  N.bm = function (R, n, T = 1) { const B = new Float64Array(n + 1), s = Math.sqrt(T / n); for (let i = 1; i <= n; i++) B[i] = B[i - 1] + s * R.g(); return B; };
+  /** increments of BM */
+  N.bmInc = function (R, n, T = 1) { const s = Math.sqrt(T / n), d = new Float64Array(n); for (let i = 0; i < n; i++) d[i] = s * R.g(); return d; };
+  /** restrict a fine path to every m-th point */
+  N.coarsen = function (B, m) { const k = Math.floor((B.length - 1) / m); const C = new Float64Array(k + 1); for (let i = 0; i <= k; i++) C[i] = B[i * m]; return C; };
+  /** Euler–Maruyama in 1D: dX = b(t,X)dt + s(t,X)dB, using given increments dB (length n) */
+  N.eulerPath = function (x0, b, s, T, dB) {
+    const n = dB.length, h = T / n, X = new Float64Array(n + 1); X[0] = x0;
+    for (let i = 0; i < n; i++) { const t = i * h, x = X[i]; X[i + 1] = x + b(t, x) * h + s(t, x) * dB[i]; }
+    return X;
+  };
+
+  /* ---------- formatting (shared by page outputs and measured JSON) ---------- */
+  const MINUS = '−';
+  function withMinus(str) { return str.replace(/^-/, MINUS).replace(/e-/, 'e' + MINUS); }
+  /** spec: number = decimals; {d}, {sig}, {sci}, {pct}, {int} */
+  N.fmt = function (x, spec) {
+    if (x === null || x === undefined || (typeof x === 'number' && isNaN(x))) return '—';
+    if (typeof x === 'string') return x;
+    if (!isFinite(x)) return x > 0 ? '∞' : MINUS + '∞';
+    if (typeof spec === 'number') spec = { d: spec };
+    spec = spec || { sig: 4 };
+    let s;
+    if (spec.int) s = Math.round(x).toLocaleString('en-US');
+    else if (spec.pct !== undefined) s = (100 * x).toFixed(spec.pct) + '%';
+    else if (spec.sci !== undefined && x === 0) s = '0';
+    else if (spec.sci !== undefined) {
+      const e = x.toExponential(spec.sci); const m = e.split('e'); s = m[0] + ' × 10^' + (m[1].replace('+', ''));
+      s = s.replace(/10\^(-?\d+)/, (a, p) => '10' + toSup(p));
+    } else if (spec.d !== undefined) s = x.toFixed(spec.d);
+    else if (spec.sig !== undefined) {
+      if (x !== 0 && (Math.abs(x) < 1e-3 || Math.abs(x) >= 1e6)) { const e = x.toExponential(spec.sig - 1).split('e'); s = e[0] + ' × 10' + toSup(e[1].replace('+', '')); }
+      else s = Number(x.toPrecision(spec.sig)).toString();
+    } else s = String(x);
+    if (s === '-0' || /^-0\.0*$/.test(s)) s = s.slice(1);
+    return withMinus(s);
+  };
+  function toSup(p) { const m = { '-': '⁻', '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹' }; return String(p).split('').map(c => m[c] || c).join(''); }
+  N.fmtPM = function (m, se, d) { return N.fmt(m, d) + ' ± ' + N.fmt(se, d); };
+
+  if (typeof module !== 'undefined' && module.exports) module.exports = N;
+  root.N = N;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+</script><script>
+/* ===== plot.js — small canvas chart library (theme-aware, responsive, crosshair tooltip, keyboard) ===== */
+(function (root) {
+  'use strict';
+  const P = {};
+  const charts = new Set();
+
+  function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#888'; }
+  function colorOf(c) {
+    if (!c) return css('--s1');
+    if (/^s\d$/.test(c)) return css('--' + c);
+    if (c === 'muted') return css('--series-muted');
+    if (c === 'ink') return css('--chart-ink');
+    if (c === 'ink2') return css('--chart-ink-2');
+    return c;
+  }
+  function withAlpha(hex, a) {
+    if (hex.startsWith('#') && (hex.length === 7)) { const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16); return `rgba(${r},${g},${b},${a})`; }
+    return hex;
+  }
+  /* nice ticks */
+  function niceStep(span, target) {
+    const raw = span / Math.max(1, target), mag = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / mag;
+    return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * mag;
+  }
+  function ticks(lo, hi, target) {
+    if (!(hi > lo)) { return [lo]; }
+    const st = niceStep(hi - lo, target), out = [];
+    for (let v = Math.ceil(lo / st - 1e-9) * st; v <= hi + st * 1e-9; v += st) out.push(Math.abs(v) < st * 1e-9 ? 0 : v);
+    return out;
+  }
+  function logTicks(lo, hi) { const out = []; for (let e = Math.ceil(Math.log10(lo) - 1e-9); e <= Math.floor(Math.log10(hi) + 1e-9); e++) out.push(Math.pow(10, e)); return out; }
+  function fmtTick(v, step) {
+    if (v === 0) return '0';
+    const a = Math.abs(v);
+    let s;
+    if (a >= 1e5 || a < 1e-3) { const e = Math.round(Math.log10(a)); if (Math.abs(a / Math.pow(10, e) - 1) < 1e-9) s = (v < 0 ? '-' : '') + '1e' + e; else s = v.toExponential(1); }
+    else { const dec = Math.max(0, -Math.floor(Math.log10(step || a) + 1e-9)); s = v.toFixed(Math.min(dec, 6)); }
+    return s.replace(/^-/, '−');
+  }
+  function extent(spec) {
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    const upd = (x, y) => { if (isFinite(x)) { if (x < x0) x0 = x; if (x > x1) x1 = x; } if (isFinite(y) && (!spec.logy || y > 0)) { if (y < y0) y0 = y; if (y > y1) y1 = y; } };
+    for (const s of spec.series) {
+      if (s.type === 'hist') { upd(s.edges[0], 0); upd(s.edges[s.edges.length - 1], 0); for (let i = 0; i < s.density.length; i++) upd(NaN, s.density[i]); if (!spec.logy) upd(NaN, 0); }
+      else if (s.type === 'lines') { for (const p of s.paths) for (let i = 0; i < p.y.length; i++) upd(p.x[i], p.y[i]); }
+      else if (s.type === 'band') { for (let i = 0; i < s.x.length; i++) { upd(s.x[i], s.y0[i]); upd(s.x[i], s.y1[i]); } }
+      else if (s.type === 'bars') { for (let i = 0; i < s.x.length; i++) { upd(s.x[i], s.y[i]); } if (!spec.logy) upd(NaN, 0); }
+      else if (s.x) { for (let i = 0; i < s.x.length; i++) upd(s.x[i], s.y[i]); }
+    }
+    for (const h of (spec.hlines || [])) upd(NaN, h.y);
+    return [x0, x1, y0, y1];
+  }
+
+  function Chart(container, spec) {
+    this.el = container; this.spec = spec;
+    container.classList.add('plot');
+    container.innerHTML = '';
+    this.titleEl = document.createElement('div'); this.titleEl.className = 'plot-title'; container.appendChild(this.titleEl);
+    this.subEl = document.createElement('div'); this.subEl.className = 'plot-sub'; container.appendChild(this.subEl);
+    this.setTitles(spec);
+    this.wrap = document.createElement('div'); this.wrap.style.position = 'relative';
+    this.canvas = document.createElement('canvas'); this.overlay = document.createElement('canvas');
+    this.overlay.className = 'ov'; this.overlay.style.position = 'absolute'; this.overlay.style.left = '0'; this.overlay.style.top = '0'; this.overlay.style.pointerEvents = 'none'; this.overlay.style.background = 'transparent';
+    this.canvas.setAttribute('role', 'img'); this.canvas.tabIndex = 0;
+    this.canvas.setAttribute('aria-label', (spec.aria || spec.title || 'chart') + '. Use left and right arrow keys to read values.');
+    this.tip = document.createElement('div'); this.tip.className = 'tip'; this.tip.setAttribute('aria-hidden', 'true');
+    this.wrap.appendChild(this.canvas); this.wrap.appendChild(this.overlay); this.wrap.appendChild(this.tip);
+    container.appendChild(this.wrap);
+    this.legendEl = document.createElement('div'); this.legendEl.className = 'legend'; container.appendChild(this.legendEl);
+    this.live = document.createElement('div'); this.live.className = 'sr-only'; this.live.setAttribute('aria-live', 'polite'); container.appendChild(this.live);
+    this.hoverIdx = -1;
+    const onMove = (e) => { const r = this.canvas.getBoundingClientRect(); this.hover(e.clientX - r.left, e.clientY - r.top); };
+    this.canvas.addEventListener('pointermove', onMove);
+    this.canvas.addEventListener('pointerdown', onMove);
+    this.canvas.addEventListener('pointerleave', () => this.clearHover());
+    this.canvas.addEventListener('blur', () => this.clearHover());
+    this.canvas.addEventListener('keydown', (e) => this.key(e));
+    charts.add(this);
+    this.ro = new ResizeObserver(() => this.draw());
+    this.ro.observe(container);
+    this.draw();
+  }
+  Chart.prototype.setTitles = function (spec) {
+    this.titleEl.textContent = spec.title || ''; this.titleEl.style.display = spec.title ? '' : 'none';
+    this.subEl.textContent = spec.subtitle || ''; this.subEl.style.display = spec.subtitle ? '' : 'none';
+    if (this.canvas) this.canvas.setAttribute('aria-label', (spec.aria || spec.title || 'chart') + '. Use left and right arrow keys to read values.');
+  };
+  Chart.prototype.update = function (spec) { this.spec = spec; this.setTitles(spec); this.hoverIdx = -1; this.lastHover = null; if (this.tip) this.tip.style.display = 'none'; this.draw(); };
+  Chart.prototype.draw = function () {
+    const spec = this.spec, cv = this.canvas, dpr = window.devicePixelRatio || 1;
+    const W = Math.max(240, this.el.clientWidth || 600);
+    const H = spec.height || Math.round(Math.max(210, Math.min(340, W * 0.58)));
+    for (const c of [cv, this.overlay]) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); c.style.width = W + 'px'; c.style.height = H + 'px'; }
+    const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = css('--surface'); ctx.fillRect(0, 0, W, H);
+    let [x0, x1, y0, y1] = extent(spec);
+    if (spec.xlim) { x0 = spec.xlim[0]; x1 = spec.xlim[1]; }
+    if (spec.ylim) { y0 = spec.ylim[0]; y1 = spec.ylim[1]; }
+    else if (isFinite(y0)) { if (spec.logy) { y0 = y0 / 1.6; y1 = y1 * 1.6; } else { const pad = (y1 - y0) * 0.06 || Math.abs(y1) * 0.1 || 1; if (y0 !== 0) y0 -= pad; y1 += pad; } }
+    if (!isFinite(x0)) { x0 = 0; x1 = 1; } if (!isFinite(y0)) { y0 = 0; y1 = 1; }
+    if (x1 === x0) { x1 = x0 + 1; } if (y1 === y0) { y1 = y0 + 1; }
+    const font = '12px ' + (getComputedStyle(document.body).getPropertyValue('--sans') || 'system-ui');
+    ctx.font = font;
+    const nyt = H < 260 ? 4 : 5, nxt = W < 420 ? 4 : W < 640 ? 6 : 8;
+    const yt = spec.logy ? logTicks(y0, y1) : ticks(y0, y1, nyt);
+    const ystep = yt.length > 1 ? yt[1] - yt[0] : (y1 - y0);
+    const ylabels = yt.map(v => spec.logy ? fmtTick(v, v) : fmtTick(v, ystep));
+    const yw = Math.max(...ylabels.map(s => ctx.measureText(s).width), 10);
+    const m = { l: Math.ceil(yw) + 12, r: 14, t: spec.ylab ? 24 : 12, b: spec.xlab ? 40 : 26 };
+    const pw = W - m.l - m.r, ph = H - m.t - m.b;
+    const X = (x) => m.l + (x - x0) / (x1 - x0) * pw;
+    const Y = spec.logy ? (y) => m.t + (1 - (Math.log10(Math.max(y, 1e-300)) - Math.log10(y0)) / (Math.log10(y1) - Math.log10(y0))) * ph : (y) => m.t + (1 - (y - y0) / (y1 - y0)) * ph;
+    this.geom = { m, pw, ph, X, Y, x0, x1, y0, y1, W, H };
+    // grid & axes
+    ctx.lineWidth = 1; ctx.strokeStyle = css('--grid');
+    ctx.fillStyle = css('--chart-ink-2'); ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    yt.forEach((v, i) => { const y = Math.round(Y(v)) + 0.5; if (y < m.t - 1 || y > m.t + ph + 1) return; ctx.beginPath(); ctx.moveTo(m.l, y); ctx.lineTo(m.l + pw, y); ctx.stroke(); ctx.fillText(ylabels[i], m.l - 6, y); });
+    const xt = spec.xticks || ticks(x0, x1, nxt), xstep = xt.length > 1 ? xt[1] - xt[0] : 1;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    xt.forEach(v => { const x = Math.round(X(v)) + 0.5; if (x < m.l - 1 || x > m.l + pw + 1) return; ctx.strokeStyle = css('--grid'); ctx.beginPath(); ctx.moveTo(x, m.t); ctx.lineTo(x, m.t + ph); ctx.stroke(); ctx.fillText(spec.xtickfmt ? spec.xtickfmt(v) : fmtTick(v, xstep), x, m.t + ph + 6); });
+    ctx.strokeStyle = css('--axis'); ctx.beginPath(); ctx.moveTo(m.l + 0.5, m.t); ctx.lineTo(m.l + 0.5, m.t + ph + 0.5); ctx.lineTo(m.l + pw, m.t + ph + 0.5); ctx.stroke();
+    if (!spec.logy && y0 < 0 && y1 > 0) { ctx.strokeStyle = css('--axis'); const yz = Math.round(Y(0)) + 0.5; ctx.beginPath(); ctx.moveTo(m.l, yz); ctx.lineTo(m.l + pw, yz); ctx.stroke(); }
+    ctx.fillStyle = css('--chart-ink-2');
+    if (spec.xlab) { ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(spec.xlab, m.l + pw / 2, H - 4); }
+    if (spec.ylab) { ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText(spec.ylab, 4, 4); }
+    // series
+    ctx.save(); ctx.beginPath(); ctx.rect(m.l, m.t - 1, pw, ph + 2); ctx.clip();
+    for (const s of spec.series) drawSeries(ctx, s, X, Y, spec, m, ph);
+    for (const h of (spec.hlines || [])) {
+      ctx.strokeStyle = colorOf(h.color || 'ink2'); ctx.lineWidth = h.width || 1.25; ctx.setLineDash(h.dash || [5, 4]);
+      const y = Y(h.y); ctx.beginPath(); ctx.moveTo(m.l, y); ctx.lineTo(m.l + pw, y); ctx.stroke(); ctx.setLineDash([]);
+      if (h.label) { ctx.fillStyle = css('--chart-ink-2'); ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.fillText(h.label, m.l + pw - 4, y - 3); }
+    }
+    for (const v of (spec.vlines || [])) {
+      ctx.strokeStyle = colorOf(v.color || 'ink2'); ctx.lineWidth = v.width || 1.25; ctx.setLineDash(v.dash || [5, 4]);
+      const x = X(v.x); ctx.beginPath(); ctx.moveTo(x, m.t); ctx.lineTo(x, m.t + ph); ctx.stroke(); ctx.setLineDash([]);
+      if (v.label) { ctx.fillStyle = css('--chart-ink-2'); ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText(v.label, x + 4, m.t + 2); }
+    }
+    for (const t of (spec.labels || [])) { ctx.fillStyle = css('--chart-ink'); ctx.textAlign = t.align || 'left'; ctx.textBaseline = 'middle'; ctx.fillText(t.text, X(t.x) + (t.dx || 0), Y(t.y) + (t.dy || 0)); }
+    ctx.restore();
+    this.legend();
+    if (this.hoverIdx >= 0 && this.lastHover) this.hover(this.lastHover[0], this.lastHover[1]);
+  };
+  function drawSeries(ctx, s, X, Y, spec, m, ph) {
+    const col = colorOf(s.color);
+    ctx.setLineDash(s.dash || []);
+    if (s.type === 'hist') {
+      const base = spec.logy ? m.t + ph : Y(0);
+      ctx.fillStyle = withAlpha(col, s.alpha === undefined ? 0.55 : s.alpha);
+      for (let i = 0; i < s.density.length; i++) {
+        const xa = X(s.edges[i]), xb = X(s.edges[i + 1]), y = Y(s.density[i]);
+        const gap = (xb - xa) > 4 ? 1 : 0;
+        if (s.density[i] > 0) ctx.fillRect(xa + gap / 2, Math.min(y, base), Math.max(0.5, xb - xa - gap), Math.abs(base - y));
+      }
+      return;
+    }
+    if (s.type === 'bars') {
+      const base = spec.logy ? m.t + ph : Y(0); const w = s.width || 10; ctx.fillStyle = col;
+      for (let i = 0; i < s.x.length; i++) { const x = X(s.x[i]), y = Y(s.y[i]); ctx.fillRect(x - w / 2, Math.min(y, base), w, Math.abs(base - y)); }
+      return;
+    }
+    if (s.type === 'band') {
+      ctx.fillStyle = withAlpha(col, s.alpha === undefined ? 0.14 : s.alpha); ctx.beginPath();
+      for (let i = 0; i < s.x.length; i++) { const x = X(s.x[i]), y = Y(s.y1[i]); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+      for (let i = s.x.length - 1; i >= 0; i--) ctx.lineTo(X(s.x[i]), Y(s.y0[i]));
+      ctx.closePath(); ctx.fill(); return;
+    }
+    if (s.type === 'points') {
+      const r = s.r || 3.5; ctx.fillStyle = col; ctx.strokeStyle = css('--surface'); ctx.lineWidth = s.ring === false ? 0 : 1.5;
+      for (let i = 0; i < s.x.length; i++) { if (!isFinite(s.y[i]) || (spec.logy && s.y[i] <= 0)) continue; ctx.beginPath(); ctx.arc(X(s.x[i]), Y(s.y[i]), r, 0, 2 * Math.PI); ctx.fill(); if (s.ring !== false) ctx.stroke(); }
+      return;
+    }
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    const drawPath = (x, y, step) => {
+      ctx.beginPath(); let pen = false;
+      for (let i = 0; i < x.length; i++) {
+        const yy = y[i]; if (!isFinite(yy) || (spec.logy && yy <= 0)) { pen = false; continue; }
+        const px = X(x[i]), py = Y(yy);
+        if (!pen) { ctx.moveTo(px, py); pen = true; }
+        else if (step) { ctx.lineTo(px, Y(y[i - 1])); ctx.lineTo(px, py); }
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    };
+    if (s.type === 'lines') {
+      ctx.strokeStyle = withAlpha(col, s.alpha === undefined ? 0.35 : s.alpha); ctx.lineWidth = s.width || 1;
+      for (const p of s.paths) drawPath(p.x, p.y, false);
+    } else {
+      ctx.strokeStyle = s.alpha !== undefined ? withAlpha(col, s.alpha) : col; ctx.lineWidth = s.width || 2;
+      drawPath(s.x, s.y, s.type === 'step');
+      if (s.markers) { ctx.setLineDash([]); ctx.fillStyle = col; ctx.strokeStyle = css('--surface'); ctx.lineWidth = 1.5; for (let i = 0; i < s.x.length; i++) { if (!isFinite(s.y[i]) || (spec.logy && s.y[i] <= 0)) continue; ctx.beginPath(); ctx.arc(X(s.x[i]), Y(s.y[i]), 3.5, 0, 2 * Math.PI); ctx.fill(); ctx.stroke(); } }
+    }
+    ctx.setLineDash([]);
+  }
+  Chart.prototype.legend = function () {
+    const el = this.legendEl; el.innerHTML = '';
+    const items = this.spec.series.filter(s => s.label);
+    if (items.length + (this.spec.hlines || []).filter(h => h.legend).length < 2 && !this.spec.forceLegend) { el.style.display = 'none'; return; }
+    el.style.display = '';
+    const add = (label, col, kind) => { const li = document.createElement('span'); li.className = 'li'; const k = document.createElement('span'); k.className = 'key ' + kind; if (kind === 'box' || kind === 'dot') k.style.background = col; else k.style.borderTopColor = col; li.appendChild(k); li.appendChild(document.createTextNode(label)); el.appendChild(li); };
+    for (const s of items) { const col = colorOf(s.color); const kind = s.type === 'hist' || s.type === 'bars' || s.type === 'band' ? 'box' : s.type === 'points' ? 'dot' : (s.dash ? 'dash' : ''); add(s.label, kind === 'box' ? withAlpha(col, 0.7) : col, kind); }
+    for (const h of (this.spec.hlines || [])) if (h.legend) add(h.legend, colorOf(h.color || 'ink2'), 'dash');
+  };
+  // ---- hover / keyboard ----
+  function hoverSeries(spec) { return spec.series.filter(s => (s.type === 'line' || s.type === 'step' || s.type === 'points' || s.type === 'hist' || s.type === 'bars') && s.label && s.tooltip !== false); }
+  Chart.prototype.gridX = function () {
+    const hs = hoverSeries(this.spec); if (!hs.length) return null;
+    const s = hs.find(t => t.type !== 'hist') || hs[0];
+    if (s.type === 'hist') { const c = []; for (let i = 0; i < s.density.length; i++) c.push(0.5 * (s.edges[i] + s.edges[i + 1])); return c; }
+    return s.x;
+  };
+  Chart.prototype.hover = function (px, py) {
+    const g = this.geom; if (!g) return; const gx = this.gridX(); if (!gx || !gx.length) return;
+    this.lastHover = [px, py];
+    const xv = g.x0 + (px - g.m.l) / g.pw * (g.x1 - g.x0);
+    let best = 0, bd = Infinity; for (let i = 0; i < gx.length; i++) { const d = Math.abs(gx[i] - xv); if (d < bd) { bd = d; best = i; } }
+    this.showIdx(best, gx);
+  };
+  Chart.prototype.showIdx = function (idx, gx) {
+    gx = gx || this.gridX(); if (!gx) return; this.hoverIdx = idx;
+    const g = this.geom, ov = this.overlay, dpr = window.devicePixelRatio || 1, ctx = ov.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, g.W, g.H);
+    const xv = gx[idx], x = g.X(xv);
+    if (x < g.m.l - 1 || x > g.m.l + g.pw + 1) return;
+    ctx.strokeStyle = css('--axis'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(Math.round(x) + 0.5, g.m.t); ctx.lineTo(Math.round(x) + 0.5, g.m.t + g.ph); ctx.stroke();
+    const rows = [];
+    for (const s of hoverSeries(this.spec)) {
+      let yv, xx = xv;
+      if (s.type === 'hist') { let k = -1; for (let i = 0; i < s.density.length; i++) if (xv >= s.edges[i] && xv <= s.edges[i + 1]) { k = i; break; } if (k < 0) continue; yv = s.density[k]; }
+      else { let bi = 0, bd = Infinity; for (let i = 0; i < s.x.length; i++) { const d = Math.abs(s.x[i] - xv); if (d < bd) { bd = d; bi = i; } } if (bd > Math.abs(g.x1 - g.x0) * 0.05 && s.x.length > 1) continue; yv = s.y[bi]; xx = s.x[bi]; }
+      if (!isFinite(yv)) continue;
+      const col = colorOf(s.color);
+      if (s.type !== 'hist' && s.type !== 'bars') { ctx.fillStyle = col; ctx.strokeStyle = css('--surface'); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(g.X(xx), g.Y(yv), 4, 0, 2 * Math.PI); ctx.fill(); ctx.stroke(); }
+      rows.push({ label: s.label, v: yv, col });
+    }
+    const fx = this.spec.xfmt || ((v) => fmtNum(v)), fy = this.spec.yfmt || ((v) => fmtNum(v));
+    const tip = this.tip; tip.innerHTML = '';
+    const head = document.createElement('div'); head.textContent = (this.spec.xname || 'x') + ' = ' + fx(xv); head.style.color = css('--chart-ink-2'); tip.appendChild(head);
+    for (const r of rows) { const d = document.createElement('div'); const k = document.createElement('span'); k.className = 'tk'; k.style.borderTopColor = r.col; const v = document.createElement('span'); v.className = 'tv'; v.textContent = fy(r.v); d.appendChild(k); d.appendChild(v); d.appendChild(document.createTextNode('  ' + r.label)); tip.appendChild(d); }
+    tip.style.display = 'block';
+    const tw = tip.offsetWidth, left = x + 12 + tw > g.W ? x - 12 - tw : x + 12;
+    tip.style.left = Math.max(0, left) + 'px'; tip.style.top = (g.m.t + 4) + 'px';
+    this.live.textContent = head.textContent + '; ' + rows.map(r => r.label + ' ' + fy(r.v)).join('; ');
+  };
+  Chart.prototype.clearHover = function () { this.hoverIdx = -1; this.lastHover = null; this.tip.style.display = 'none'; const g = this.geom; if (g) { const ctx = this.overlay.getContext('2d'); ctx.clearRect(0, 0, this.overlay.width, this.overlay.height); } };
+  Chart.prototype.key = function (e) {
+    const gx = this.gridX(); if (!gx || !gx.length) return;
+    let i = this.hoverIdx < 0 ? 0 : this.hoverIdx; const stepBig = Math.max(1, Math.round(gx.length / 20));
+    if (e.key === 'ArrowRight') i = Math.min(gx.length - 1, i + (e.shiftKey ? stepBig : 1));
+    else if (e.key === 'ArrowLeft') i = Math.max(0, i - (e.shiftKey ? stepBig : 1));
+    else if (e.key === 'Home') i = 0; else if (e.key === 'End') i = gx.length - 1;
+    else if (e.key === 'Escape') { this.clearHover(); return; } else return;
+    e.preventDefault(); this.showIdx(i, gx);
+  };
+  function fmtNum(v) { if (!isFinite(v)) return String(v); const a = Math.abs(v); let s = (a !== 0 && (a < 1e-3 || a >= 1e5)) ? v.toExponential(3) : Number(v.toPrecision(4)).toString(); return s.replace(/^-/, '−'); }
+
+  P.chart = function (container, spec) { if (container._chart) { container._chart.update(spec); return container._chart; } const c = new Chart(container, spec); container._chart = c; return c; };
+  P.redrawAll = function () { for (const c of charts) { if (document.body.contains(c.el)) c.draw(); else charts.delete(c); } };
+  /** table view: columns = [names], rows = [[...]] */
+  P.table = function (container, caption, columns, rows) {
+    container.innerHTML = '';
+    const d = document.createElement('details'); d.className = 'tableview';
+    const s = document.createElement('summary'); s.textContent = caption || 'Show values as a table'; d.appendChild(s);
+    const w = document.createElement('div'); w.className = 'tw'; const t = document.createElement('table'); t.className = 'compact';
+    const thead = document.createElement('thead'), tr = document.createElement('tr');
+    columns.forEach(c => { const th = document.createElement('th'); th.textContent = c; th.scope = 'col'; tr.appendChild(th); }); thead.appendChild(tr); t.appendChild(thead);
+    const tb = document.createElement('tbody');
+    rows.forEach(r => { const tr2 = document.createElement('tr'); r.forEach((v, j) => { const td = document.createElement('td'); td.textContent = typeof v === 'number' ? fmtNum(v) : v; if (typeof v === 'number') td.className = 'num'; tr2.appendChild(td); }); tb.appendChild(tr2); });
+    t.appendChild(tb); w.appendChild(t); d.appendChild(w); container.appendChild(d);
+  };
+  P.fmtNum = fmtNum;
+  root.Plot = P;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+</script><script>
+/* ===== core.js — theme, table of contents, lab framework (identical on every page) ===== */
+(function () {
+  'use strict';
+  const root = document.documentElement;
+  /* ---------- theme ---------- */
+  function currentTheme() { const t = root.getAttribute('data-theme'); if (t) return t; return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+  function setTheme(t, save) {
+    root.setAttribute('data-theme', t);
+    if (save) { try { localStorage.setItem('sc-theme', t); } catch (e) { /* storage unavailable */ } }
+    const b = document.getElementById('theme-toggle');
+    if (b) { b.setAttribute('aria-label', t === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'); b.setAttribute('aria-pressed', t === 'dark' ? 'true' : 'false'); const l = b.querySelector('.lbl'); if (l) l.textContent = t === 'dark' ? 'Light' : 'Dark'; }
+    if (window.Plot) window.Plot.redrawAll();
+  }
+  window.__setTheme = (t) => setTheme(t, false);
+  document.addEventListener('DOMContentLoaded', () => {
+    setTheme(currentTheme(), false);
+    const b = document.getElementById('theme-toggle');
+    if (b) b.addEventListener('click', () => setTheme(currentTheme() === 'dark' ? 'light' : 'dark', true));
+    if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (!safeGet('sc-theme')) { root.removeAttribute('data-theme'); setTheme(currentTheme(), false); } });
+    initToc();
+    initLabs();
+  });
+  function safeGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+  /* ---------- TOC scroll-spy ---------- */
+  function initToc() {
+    const links = Array.from(document.querySelectorAll('.toc a[href^="#"]'));
+    if (!links.length || !('IntersectionObserver' in window)) return;
+    const map = new Map(); links.forEach(a => { const el = document.getElementById(a.getAttribute('href').slice(1)); if (el) map.set(el, a); });
+    let current = null;
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { if (current) current.classList.remove('active'); current = map.get(e.target); if (current) current.classList.add('active'); } });
+    }, { rootMargin: '-15% 0px -75% 0px' });
+    map.forEach((a, el) => obs.observe(el));
+    // open the TOC details by default on wide screens
+    const d = document.querySelector('.toc details'); if (d && window.innerWidth >= 1240) d.open = true;
+  }
+
+  /* ---------- labs ---------- */
+  const LABS = (window.LABS = window.LABS || {});
+  const instances = [];
+  function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+  function fmtCtl(c, v) { if (c.fmt) return c.fmt(v); if (c.type === 'select') { const o = (c.options || []).find(o => String(o[0]) === String(v)); return o ? o[1] : String(v); } return String(v); }
+  function initLabs() {
+    document.querySelectorAll('.lab[data-lab]').forEach(box => {
+      const id = box.getAttribute('data-lab'), spec = LABS[id];
+      if (!spec) { const s = box.querySelector('.lab-status'); if (s) s.textContent = 'lab code missing'; return; }
+      const inst = { id, box, spec, values: {}, ran: false, plots: [], tables: [] };
+      instances.push(inst);
+      buildControls(inst);
+      buildOutputs(inst);
+      const run = box.querySelector('[data-run]'); if (run) run.addEventListener('click', () => runLab(inst));
+      const reset = box.querySelector('[data-reset]'); if (reset) reset.addEventListener('click', () => { setDefaults(inst); runLab(inst); });
+      const reseed = box.querySelector('[data-reseed]'); if (reseed) reseed.addEventListener('click', () => { const s = inst.inputs.seed; if (s) { s.value = String((parseInt(s.value, 10) || 0) + 1); readValues(inst); } runLab(inst); });
+    });
+    if ('IntersectionObserver' in window) {
+      const obs = new IntersectionObserver((entries) => { entries.forEach(e => { if (e.isIntersecting) { const inst = instances.find(i => i.box === e.target); if (inst && !inst.ran) runLab(inst); obs.unobserve(e.target); } }); }, { rootMargin: '300px 0px' });
+      instances.forEach(i => obs.observe(i.box));
+    } else instances.forEach(i => runLab(i));
+  }
+  function buildControls(inst) {
+    const host = inst.box.querySelector('.lab-controls'); inst.inputs = {};
+    const ctls = (inst.spec.controls || []).slice();
+    if (!ctls.find(c => c.id === 'seed') && inst.spec.seed !== false) ctls.push({ id: 'seed', label: 'Random seed', type: 'number', min: 1, max: 999999, step: 1, value: inst.spec.defaultSeed || 1 });
+    inst.controls = ctls;
+    ctls.forEach(c => {
+      const wrap = el('div', 'ctl' + (c.type === 'check' ? ' check' : ''));
+      const fid = inst.box.id + '-' + c.id;
+      let input;
+      if (c.type === 'select') { input = el('select'); (c.options || []).forEach(o => { const op = el('option', null, o[1]); op.value = String(o[0]); input.appendChild(op); }); }
+      else if (c.type === 'check') { input = el('input'); input.type = 'checkbox'; }
+      else { input = el('input'); input.type = c.type === 'number' ? 'number' : 'range'; input.min = c.min; input.max = c.max; input.step = c.step || 1; }
+      input.id = fid;
+      const lab = el('label'); lab.htmlFor = fid;
+      if (c.type === 'check') { wrap.appendChild(input); lab.textContent = c.label; wrap.appendChild(lab); }
+      else {
+        const t = el('span', null, c.label); lab.appendChild(t);
+        if (c.type === 'range') { const o = el('output'); o.setAttribute('for', fid); lab.appendChild(o); c._out = o; }
+        wrap.appendChild(lab); wrap.appendChild(input);
+      }
+      if (c.help) { input.setAttribute('aria-description', c.help); input.title = c.help; }
+      input.addEventListener('input', () => { readValues(inst); if (c.live) runLab(inst); });
+      input.addEventListener('change', () => { readValues(inst); if (c.type !== 'number' || c.live) runLab(inst); });
+      inst.inputs[c.id] = input; host.appendChild(wrap);
+    });
+    setDefaults(inst);
+  }
+  function setDefaults(inst) {
+    inst.controls.forEach(c => { const i = inst.inputs[c.id]; if (c.type === 'check') i.checked = !!c.value; else i.value = String(c.value); });
+    readValues(inst);
+  }
+  function readValues(inst) {
+    inst.controls.forEach(c => {
+      const i = inst.inputs[c.id]; let v;
+      if (c.type === 'check') v = i.checked; else if (c.type === 'select') v = isNaN(Number(i.value)) || c.string ? i.value : Number(i.value); else { v = Number(i.value); if (!isFinite(v)) v = c.value; if (c.min !== undefined) v = Math.max(c.min, v); if (c.max !== undefined) v = Math.min(c.max, v); }
+      inst.values[c.id] = v; if (c._out) c._out.textContent = fmtCtl(c, v);
+    });
+  }
+  function buildOutputs(inst) {
+    const m = inst.box.querySelector('.metrics'); inst.outEls = {};
+    (inst.spec.outputs || []).forEach(o => { const d = el('div', 'metric'); const l = el('div', 'ml', o.label); const out = el('output'); out.setAttribute('data-out', o.key); out.textContent = '—'; d.appendChild(l); d.appendChild(out); if (m) m.appendChild(d); inst.outEls[o.key] = out; });
+    const ph = inst.box.querySelector('.lab-plots'); const n = inst.spec.plots || 1;
+    for (let k = 0; k < n; k++) { const d = el('div'); d.className = 'plot'; if (ph) ph.appendChild(d); inst.plots.push(d); const t = el('div'); if (ph) ph.appendChild(t); inst.tables.push(t); }
+  }
+  function runLab(inst) {
+    const st = inst.box.querySelector('.lab-status');
+    const btn = inst.box.querySelector('[data-run]'); if (btn) btn.disabled = true;
+    if (st) st.textContent = 'running…';
+    return new Promise(resolve => {
+      setTimeout(() => {
+        const t0 = performance.now();
+        let res;
+        try { res = inst.spec.compute(Object.assign({}, inst.values)); }
+        catch (e) { if (st) st.textContent = 'error: ' + e.message; if (btn) btn.disabled = false; console.error(e); resolve(null); return; }
+        (inst.spec.outputs || []).forEach(o => { const v = res.out ? res.out[o.key] : undefined; inst.outEls[o.key].textContent = window.N.fmt(v, o.fmt); });
+        try { if (inst.spec.render) inst.spec.render(res, inst.values, { plots: inst.plots, tables: inst.tables, Plot: window.Plot, N: window.N }); }
+        catch (e) { console.error(e); if (st) st.textContent = 'render error: ' + e.message; }
+        inst.ran = true;
+        const dt = performance.now() - t0;
+        if (st) st.textContent = 'done in ' + (dt < 1000 ? Math.round(dt) + ' ms' : (dt / 1000).toFixed(1) + ' s') + (res && res.note ? ' · ' + res.note : '');
+        if (btn) btn.disabled = false;
+        resolve(res);
+      }, 10);
+    });
+  }
+  /* test hooks: run every lab with its defaults and return the displayed outputs */
+  window.__labs = {
+    list: () => instances.map(i => i.id),
+    runAllDefaults: async () => { const out = {}; for (const i of instances) { setDefaults(i); await runLab(i); out[i.id] = {}; for (const k in i.outEls) out[i.id][k] = i.outEls[k].textContent; } return out; },
+    runOne: async (id, values) => { const i = instances.find(x => x.id === id); if (!i) return null; setDefaults(i); if (values) { for (const k in values) { const inp = i.inputs[k]; if (inp.type === 'checkbox') inp.checked = !!values[k]; else inp.value = String(values[k]); } readValues(i); } await runLab(i); const out = {}; for (const k in i.outEls) out[k] = i.outEls[k].textContent; return out; }
+  };
+})();
+
+</script>
+</body>
+</html>
