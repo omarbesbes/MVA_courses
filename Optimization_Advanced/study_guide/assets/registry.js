@@ -144,6 +144,66 @@ window.LSD_REGISTRY = {
 "t": "$f$ is convex $\\iff$ $\\epi f$ is convex; the domain of a convex function is convex",
 "s": "<p>Let $f:\\H\\to\\,]-\\infty,+\\infty]$. Then $f$ is convex if and only if its epigraph $\\epi f$ is a convex subset of $\\H\\times\\R$. Consequently, if $f$ is convex then $\\dom f$ is convex.</p>"
 },
+"convex-stability": {
+"p": "01_convex_analysis.html",
+"k": "prop",
+"t": "Sums, suprema, the class $\\Gz{\\H}$, indicator of a closed convex set",
+"s": "<ul>\n<li>Every finite sum of convex functions is convex.</li>\n<li>Let $(f_i)_{i\\in I}$ be a family of convex functions. Then $\\sup_{i\\in I}f_i$ is convex.</li>\n<li>$\\Gz{\\H}$ denotes the class of convex, l.s.c. and proper functions from $\\H$ to $]-\\infty,+\\infty]$.</li>\n<li>$\\ind_C\\in\\Gz{\\H}\\iff C$ is a nonempty closed convex set. <em>Proof on the slide:</em> $\\epi\\ind_C=C\\times[0,+\\infty[$.</li>\n</ul>"
+},
+"strictly-convex": {
+"p": "01_convex_analysis.html",
+"k": "def",
+"t": "Strictly convex function",
+"s": "<p>Let $\\H$ be a Hilbert space and $f:\\H\\to\\,]-\\infty,+\\infty]$. $f$ is <strong>strictly convex</strong> if\n$$(\\forall x\\in\\dom f)(\\forall y\\in\\dom f)(\\forall\\alpha\\in\\,]0,1[)\\qquad x\\neq y\\ \\Rightarrow\\ f(\\alpha x+(1-\\alpha)y)\\lt\\alpha f(x)+(1-\\alpha)f(y).$$</p>"
+},
+"second-order-convexity": {
+"p": "01_convex_analysis.html",
+"k": "thm",
+"t": "Hessian characterization of (strict) convexity",
+"s": "<p>Let $\\H$ be a Hilbert space and let $f:\\H\\to\\,]-\\infty,+\\infty]$ be twice Fréchet differentiable on $\\dom f$, which is a nonempty open convex set.</p>\n<ul><li>$f$ is convex if and only if, for every $x\\in\\dom f$, $\\ (\\forall z\\in\\H)\\ \\ps{z}{\\nabla^2f(x)z}\\ge0$.</li>\n<li>If, for every $x\\in\\dom f$, $\\ (\\forall z\\in\\H\\setminus\\{0\\})\\ \\ps{z}{\\nabla^2f(x)z}\\gt0$, then $f$ is strictly convex.</li></ul>"
+},
+"minimizers-convex": {
+"p": "01_convex_analysis.html",
+"k": "thm",
+"t": "Minimizers of a convex function: Argmin convex, local = global, strict ⇒ at most one",
+"s": "<p>Let $\\H$ be a Hilbert space and let $f:\\H\\to\\,]-\\infty,+\\infty]$ be a proper convex function such that $\\mu=\\inf f\\gt-\\infty$.</p>\n<ul><li>$\\{x\\in\\H\\mid f(x)=\\mu\\}$ is convex.</li>\n<li>Every local minimizer of $f$ is a global minimizer.</li>\n<li>If $f$ is strictly convex, then there exists at most one minimizer.</li></ul>"
+},
+"existence-uniqueness-convex": {
+"p": "01_convex_analysis.html",
+"k": "thm",
+"t": "Existence and uniqueness of a minimizer over a closed convex set",
+"s": "<p>Let $\\H$ be a Hilbert space and $C$ a closed convex subset of $\\H$. Let $f\\in\\Gz{\\H}$ such that $\\dom f\\cap C\\neq\\emptyset$. If $f$ is coercive or $C$ is bounded, then there exists $\\hat x\\in C$ such that\n$$f(\\hat x)=\\inf_{x\\in C}f(x).$$\nIf, moreover, $f$ is strictly convex, this minimizer $\\hat x$ is unique.</p>"
+},
+"ex-basics-1": {
+"p": "01_convex_analysis.html",
+"k": "ex",
+"t": "A nonconvex $f$ with $f+\\ind_C$ convex",
+"s": "<p>Provide an example of a function $f:\\R\\to\\R$ and a nonempty set $C\\subset\\R$ such that $f$ is nonconvex, $C$ is convex, and $f+\\ind_C$ is convex.</p>"
+},
+"ex-basics-2": {
+"p": "01_convex_analysis.html",
+"k": "ex",
+"t": "Lower level sets of convex functions",
+"s": "<ol><li>Let $f:\\H\\to\\,]-\\infty,+\\infty]$ be a convex function. Prove that for every $\\zeta\\in\\R$, the lower level set $\\lev_{\\le\\zeta}f=\\{x\\in\\H\\mid f(x)\\le\\zeta\\}$ is convex.</li>\n<li>Show that the converse is false by providing an example of a nonconvex function the lower level sets of which are all convex.</li></ol>"
+},
+"ex-basics-3": {
+"p": "01_convex_analysis.html",
+"k": "ex",
+"t": "Convexity of the logistic loss",
+"s": "<p>Let $y\\in\\R$. Show that $f:\\R\\to\\R:x\\mapsto\\log(1+\\exp(-yx))$ is convex. When is it strictly convex?</p>"
+},
+"ex-basics-4": {
+"p": "01_convex_analysis.html",
+"k": "ex",
+"t": "Perspective function and Kullback–Leibler divergence",
+"s": "<p>Let $\\H$ be a Hilbert space and let $f:\\H\\to\\,]-\\infty,+\\infty]$ be a convex function. Let $g$ be the perspective function of $f$ defined as\n$$(\\forall(x,t)\\in\\H\\times\\R)\\qquad g(x,t)=\\begin{cases}t\\,f(x/t)&amp;\\text{if }t\\gt0\\\\ +\\infty&amp;\\text{otherwise.}\\end{cases}$$</p>\n<ol><li>How is the epigraph of $g$ related to the epigraph of $f$?</li>\n<li>Deduce that $g$ is a convex function.</li>\n<li>As a consequence of this result, show that the Kullback–Leibler divergence defined as\n$$h(x,y)=\\begin{cases}\\sum_{i=1}^Nx^{(i)}\\ln\\big(x^{(i)}/y^{(i)}\\big)&amp;\\text{if }(x,y)\\in(]0,+\\infty[^N)^2\\\\ +\\infty&amp;\\text{otherwise}\\end{cases}$$\nfor $x=(x^{(i)})_{1\\le i\\le N}\\in\\R^N$, $y=(y^{(i)})_{1\\le i\\le N}\\in\\R^N$, is convex.</li></ol>"
+},
+"ex-basics-5": {
+"p": "01_convex_analysis.html",
+"k": "ex",
+"t": "Least squares: $\\norm{Ax-z}$ and $\\norm{Ax-z}^2$",
+"s": "<p>Let $A\\in\\R^{M\\times N}$ and $z\\in\\R^M$. Let $f:\\R^N\\to\\R:x\\mapsto\\norm{Ax-z}$ and $g:\\R^N\\to\\R:x\\mapsto\\norm{Ax-z}^2$.</p>\n<ol><li>Prove that $f$ and $g$ are convex.</li>\n<li>Give a necessary and sufficient condition on $A$ for $g$ to be strictly convex.</li>\n<li>Show that $g$ admits a minimizer.</li>\n<li>Find the minimizers of $g$.</li>\n<li>What are the minimizers of $f$?</li>\n<li>Can $f$ be strictly convex?</li></ol>"
+},
 "subdifferential": {
 "p": "02_subdifferential_conjugate.html",
 "k": "def",
@@ -269,6 +329,24 @@ window.LSD_REGISTRY = {
 "k": "prop",
 "t": "Piecewise linear functions, $\\ell^q$ norms and the $\\ell^1$ norm as support functions",
 "s": "<ul>\n<li>Let $f:\\R\\to\\,]-\\infty,+\\infty]:\\ x\\mapsto\\begin{cases}\\delta_1x&amp;\\text{if }x\\lt0\\\\ 0&amp;\\text{if }x=0\\\\ \\delta_2x&amp;\\text{if }x\\gt0\\end{cases}$ with $-\\infty\\le\\delta_1\\lt\\delta_2\\le+\\infty$. Then $f=\\sigma_C$ where $C$ is the closed real interval such that $\\inf C=\\delta_1$ and $\\sup C=\\delta_2$.</li>\n<li>Let $f$ be an $\\ell^q$ norm of $\\R^N$ with $q\\in[1,+\\infty]$. Then $f=\\sigma_C$ where $C=\\{y\\in\\R^N\\ |\\ \\norm{y}_{q^*}\\le1\\}$ with $\\tfrac1q+\\tfrac1{q^*}=1$.</li>\n<li>Particular case: the $\\ell^1$ norm of $\\R^N$: $C=[-1,1]^N$.</li>\n</ul>"
+},
+"fenchel-young": {
+"p": "02_subdifferential_conjugate.html",
+"k": "thm",
+"t": "Fenchel–Young inequality, its equality case, and $\\partial f^*=(\\partial f)^{-1}$",
+"s": "<p><strong>Fenchel–Young inequality.</strong> If $f$ is proper, then</p>\n<ol>\n<li>$\\big(\\forall(x,u)\\in\\H^2\\big)\\qquad f(x)+f^*(u)\\ge\\ps{x}{u}$;</li>\n<li>$\\big(\\forall(x,u)\\in\\H^2\\big)\\qquad u\\in\\partial f(x)\\iff f(x)+f^*(u)=\\ps{x}{u}$.</li>\n</ol>\n<p>If $f\\in\\Gz{\\H}$, then $$\\big(\\forall(x,u)\\in\\H^2\\big)\\qquad u\\in\\partial f(x)\\iff x\\in\\partial f^*(u).$$</p>"
+},
+"conjugate-separable": {
+"p": "02_subdifferential_conjugate.html",
+"k": "prop",
+"t": "Conjugate of a separable sum: $f^*(u)=\\sum_i f_i^*(u_i)$",
+"s": "<p>Let $(\\H_i)_{i\\in I}$, $I\\subset\\N$, be Hilbert spaces and $\\H=\\bigoplus_{i\\in I}\\H_i$. For every $i\\in I$ let $f_i:\\H_i\\to\\,]-\\infty,+\\infty]$, and set $f:\\H\\to\\,]-\\infty,+\\infty]:\\ x=(x_i)_{i\\in I}\\mapsto\\sum_{i\\in I}f_i(x_i)$. Then\n$$\\big(\\forall u=(u_i)_{i\\in I}\\in\\H\\big)\\qquad f^*(u)=\\sum_{i\\in I}f_i^*(u_i).$$</p>"
+},
+"ex-conjugate-linear-indicator": {
+"p": "02_subdifferential_conjugate.html",
+"k": "ex",
+"t": "Conjugates of $\\ps{c}{\\cdot}$ and of $\\ind_{[0,+\\infty[^N}(\\cdot-c)$",
+"s": "<p>For every $c\\in\\R^N$, give the expression of the conjugate of\n$$f:\\R^N\\to\\,]-\\infty,+\\infty]:\\ x\\mapsto\\ps{c}{x}.$$\nSame question for $$g:\\R^N\\to\\,]-\\infty,+\\infty]:\\ x\\mapsto\\ind_{[0,+\\infty[^N}(x-c).$$</p>"
 },
 "prox-motivation": {
 "p": "03_proximity_operator.html",
@@ -515,6 +593,18 @@ window.LSD_REGISTRY = {
 "k": "cor",
 "t": "Proximal point algorithm ($g=0$)",
 "s": "<p>Let $f\\in\\Gz{\\H}$. Let $(\\gamma_n)_{n\\in\\N}$ be a sequence in $]0,+\\infty[$ such that $\\sum_{n\\in\\N}\\gamma_n=+\\infty$. We assume that $\\Argmin f\\neq\\emptyset$. Let $x_0\\in\\H$ and\n$$(\\forall n\\in\\N)\\qquad x_{n+1}=\\prox_{\\gamma_nf}x_n.$$\nThen $(x_n)_{n\\in\\N}$ converges weakly to a minimizer of $f$.</p>"
+},
+"ex-nonexpansive-iteration": {
+"p": "04_fixed_point_forward_backward.html",
+"k": "ex",
+"t": "Prove the nonexpansive iteration result via Fejér monotonicity",
+"s": "<p>Let $C$ be a nonempty closed convex subset of a Hilbert space $\\H$ and $T:C\\to C$ a nonexpansive operator such that $\\Fix T\\neq\\emptyset$. Let $x_0\\in C$ and $(\\forall n\\in\\N)\\ x_{n+1}=Tx_n$. Assume $x_n-Tx_n\\to0$. Prove that $(x_n)_{n\\in\\N}$ converges weakly to a point in $\\Fix T$, by showing that $(x_n)_{n\\in\\N}$ is Fejér-monotone with respect to $\\Fix T$.</p>"
+},
+"ex-averaged-combination": {
+"p": "04_fixed_point_forward_backward.html",
+"k": "ex",
+"t": "Convex combination of averaged operators",
+"s": "<p>Let $C\\subset\\H$ be a nonempty set, $A_1:C\\to\\H$ be $\\alpha_1$-averaged and $A_2:C\\to\\H$ be $\\alpha_2$-averaged with $(\\alpha_1,\\alpha_2)\\in\\,]0,1[^2$, and let $\\lambda\\in\\,]0,1[$. Prove that $\\lambda A_1+(1-\\lambda)A_2$ is $\\gamma$-averaged with $\\gamma=\\lambda\\alpha_1+(1-\\lambda)\\alpha_2$.</p>"
 },
 "dr-motivation": {
 "p": "05_douglas_rachford_ppxa.html",

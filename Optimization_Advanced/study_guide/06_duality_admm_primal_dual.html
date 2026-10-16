@@ -49,7 +49,70 @@
 </div></header>
 
 <div class="page">
-<!--TOC-->
+<nav class="toc" aria-label="Contents">
+<details id="toc-det" open>
+<summary><span><span class="mark">6 · Duality, ADMM &amp; primal-dual</span><span class="submark">Part II.5 · 36 slides</span></span><span class="toc-btn">Contents</span></summary>
+<div class="toc-body">
+<div class="gr">Overview</div>
+<ol>
+<li><a class="l" href="#overview">Where we are</a></li>
+</ol>
+<div class="gr">Duality</div>
+<ol>
+<li><a class="l" href="#s-fenchel-rockafellar">Fenchel–Rockafellar duality</a></li>
+<li class="s"><a class="l" href="#primal-dual-problems">Primal and dual problems</a></li>
+<li class="s"><a class="l" href="#weak-duality">Weak duality, duality gap</a></li>
+<li class="s"><a class="l" href="#strong-duality">Strong duality</a></li>
+<li class="s"><a class="l" href="#lp-duality">Example 1: linear programming</a></li>
+<li class="s"><a class="l" href="#consensus-sharing">Example 2: consensus ↔ sharing</a></li>
+<li class="s"><a class="l" href="#sum-rule-recall">Recall: sum rule</a></li>
+<li class="s"><a class="l" href="#duality-theorem-1">Duality theorem (1)</a></li>
+<li class="s"><a class="l" href="#duality-theorem-2">Duality theorem (2), Kuhn–Tucker points</a></li>
+<li class="s"><a class="l" href="#kt-prox-form">Prox form of KT points</a></li>
+<li><a class="l" href="#s-lagrangian">Lagrange duality</a></li>
+<li class="s"><a class="l" href="#lagrangian-minimax">Minimax: the primal</a></li>
+<li class="s"><a class="l" href="#lagrangian-maximin">Maximin: the dual, multipliers</a></li>
+<li class="s"><a class="l" href="#saddle-point">Saddle points ⇔ KT points</a></li>
+</ol>
+<div class="gr">ADMM</div>
+<ol>
+<li><a class="l" href="#s-admm">ADMM</a></li>
+<li class="s"><a class="l" href="#admm-idea">Idea and augmented Lagrangian</a></li>
+<li class="s"><a class="l" href="#augmented-lagrangian-saddle">Saddle points of the augmented Lagrangian</a></li>
+<li class="s"><a class="l" href="#admm-derivation">ADMM derived</a></li>
+<li class="s"><a class="l" href="#dr-unrelaxed">Unrelaxed DR (reminder)</a></li>
+<li class="s"><a class="l" href="#dr-dual-form">Dual form of DR</a></li>
+<li class="s"><a class="l" href="#dr-admm-equivalence">DR on the dual is ADMM</a></li>
+<li class="s"><a class="l" href="#lemma-graph-closed">Closed-graph lemma</a></li>
+<li class="s"><a class="l" href="#admm-convergence">Convergence of ADMM</a></li>
+</ol>
+<div class="gr">Primal-dual</div>
+<ol>
+<li><a class="l" href="#s-primal-dual">Primal-dual algorithms</a></li>
+<li class="s"><a class="l" href="#pd-problem">The problem f + g∘L + h</a></li>
+<li class="s"><a class="l" href="#admm-limitations">Limitations of ADMM</a></li>
+<li class="s"><a class="l" href="#arrow-hurwicz">Idea 1: Arrow–Hurwicz</a></li>
+<li class="s"><a class="l" href="#pd-implicit">Idea 2: implicit steps</a></li>
+<li class="s"><a class="l" href="#primal-dual-algorithm">Idea 3: the primal-dual algorithm</a></li>
+<li class="s"><a class="l" href="#primal-dual-relaxed">Relaxed primal-dual</a></li>
+<li><a class="l" href="#s-exercises">Exercises</a></li>
+<li class="s"><a class="l" href="#ex-consensus-sharing">Consensus ↔ sharing</a></li>
+<li class="s"><a class="l" href="#ex-primal-dual-sum">Primal-dual for a sum</a></li>
+</ol>
+<div class="gr">Retain</div>
+<ol>
+<li><a class="l" href="#s-comparison">Which algorithm</a></li>
+<li><a class="l" href="#retain">What to retain</a></li>
+<li><a class="l" href="#quiz">Self-check</a></li>
+</ol>
+<div class="tools">
+<button class="btn" type="button" data-toggle-details="details.proof" data-label-open="Collapse all proofs" data-label-closed="Expand all proofs" aria-pressed="false">Expand all proofs</button>
+<span class="mini" id="known-count"></span>
+<button class="btn small" type="button" id="known-reset">Reset "known" marks</button>
+</div>
+</div>
+</details>
+</nav>
 
 <main>
 <header class="hero" id="top">
@@ -973,3 +1036,466 @@ $$\underset{x\in\H}{\text{minimize}}\ f(x)+\sum_{i=1}^mg_i(L_ix)+h(x).$$</p></di
 </div></details>
 </article>
 </section>
+
+<section class="chapter" id="s-comparison">
+<header><div class="eyebrow">Synthesis</div><h2>Which algorithm for which structure</h2>
+<p class="lead">Four splitting algorithms, one question each: what must be proximable, what must be invertible, what must be smooth, and which step condition buys convergence.</p></header>
+<div class="table-scroll"><table class="cmp">
+<thead><tr><th>Algorithm</th><th>Problem</th><th>Needs (prox / gradient)</th><th>Inversion?</th><th>Step condition</th><th>What converges</th></tr></thead>
+<tbody>
+<tr><td><a class="xref" data-id="forward-backward" href="04_fixed_point_forward_backward.html#forward-backward">Forward–Backward</a></td><td>$f+h$, $\nabla h$ $\beta$-Lipschitz</td><td>$\prox_{\gamma f}$, $\nabla h$</td><td class="ok">none</td><td>$\gamma\in\,]0,2/\beta[$, $\lambda_n\in[0,2-\gamma\beta/2]$</td><td>$x_n\wto\hat x\in\Argmin(f+h)$</td></tr>
+<tr><td><a class="xref" data-id="douglas-rachford" href="05_douglas_rachford_ppxa.html#douglas-rachford">Douglas–Rachford</a></td><td>$f+g$, both nonsmooth</td><td>$\prox_{\gamma f}$, $\prox_{\gamma g}$</td><td class="ok">none</td><td>any $\gamma\gt0$, $\lambda_n\in[0,2]$, $\sum\lambda_n(2-\lambda_n)=+\infty$</td><td>shadow $\prox_{\gamma g}u_n\wto$ minimizer; $u_n\wto$ fixed point</td></tr>
+<tr><td><a class="xref" data-id="admm-convergence" href="#admm-convergence">ADMM</a></td><td>$f+g\circ L$</td><td>$\argmin\tfrac12\norm{L\cdot-w}^2+\tfrac1\gamma f$ (inner problem), $\prox_{g/\gamma}$</td><td class="ko">$L^*L$ invertible</td><td>any $\gamma\gt0$ (penalty $=$ dual step)</td><td>$x_n\wto\hat x$, $\gamma z_n\wto\hat v$ (via dual DR)</td></tr>
+<tr><td><a class="xref" data-id="primal-dual-algorithm" href="#primal-dual-algorithm">Primal-dual (Condat–Vũ)</a></td><td>$f+g\circ L+h$</td><td>$\prox_{\tau f}$, $\prox_{\sigma g^*}$ (Moreau: from $\prox_g$), $\nabla h$, $L$, $L^*$</td><td class="ok">none</td><td>$\tau^{-1}-\sigma\norm{L}^2\gt\beta/2$ (relaxed: $\ge$, $\lambda_n\in[0,\delta]$)</td><td>$x_n\wto\hat x$, $v_n\wto\hat v$ (KT pair)</td></tr>
+<tr><td><a class="xref" data-id="ppxa" href="05_douglas_rachford_ppxa.html#ppxa">PPXA+</a></td><td>$\sum_ig_i\circ L_i$</td><td>$\prox_{g_i}$ in parallel</td><td class="mid">$\sum_i\omega_iL_i^*L_i$ invertible</td><td>$\lambda_n\in[0,2]$ type</td><td>$x_n\wto$ minimizer</td></tr>
+</tbody></table></div>
+<div class="callout insight"><span class="lbl">Decision rule</span><p>Is there an $L$ inside a nonsmooth term? No → FB (one smooth) or DR (two nonsmooth). Yes → can you solve $\argmin\tfrac12\norm{Lx-w}^2+\tfrac1\gamma f(x)$ cheaply <em>and</em> is $L^*L$ invertible? Yes → ADMM (often faster per iteration count, robust to $\gamma$). No, or there is a smooth $h$ you want to exploit → primal-dual with $\tau^{-1}-\sigma\norm{L}^2\gt\beta/2$. Several $g_i\circ L_i$ → primal-dual with parallel dual blocks (exercise) or PPXA+.</p></div>
+<h4>Two worked choices</h4>
+<ul>
+<li><strong>Selectivity estimation (<a class="xref" data-id="lab-dbsm" href="08_labs.html#lab-dbsm">lab 3</a>)</strong>: $\min_{x\in C}q_b(Ax)$, $C$ a simplex-type set with an available projection, $q_b$ with an available prox (cubic equation), $A\in\{0,1\}^{M\times N}$, no smooth term. Template: $f=\ind_C$, $g=q_b$, $L=A$, $h=0$. Primal-dual: $x_{n+1}=P_C(x_n-\tau A^{\top}v_n)$, $v_{n+1}=\prox_{\sigma q_b^*}\big(v_n+\sigma A(2x_{n+1}-x_n)\big)$ with $\prox_{\sigma q_b^*}(w)=w-\sigma\prox_{q_b/\sigma}(w/\sigma)$ and $\tau\sigma\norm{A}^2\lt1$. ADMM (question 7 of the lab)? With $M=6\lt N=7$, $A^{\top}A$ is singular, so the ADMM theorem does not apply as such; one would have to swap roles ($f=q_b\circ A$ is not proximable) or add a regularizing term — the primal-dual algorithm is the natural choice.</li>
+<li><strong>TV denoising / deblurring</strong>: $\tfrac12\norm{Ax-z}^2+\lambda\norm{Dx}_1$ ($+\ind_{[0,1]^N}$). With $A=\Id$ the dual is smooth + box: projected gradient on $v$ (FB on the dual, $\hat x=z-D^*\hat v$ by the <a class="xref" data-id="kt-prox-form" href="#kt-prox-form">prox form of KT</a>). With a blur $A$: $h=\tfrac12\norm{A\cdot-z}^2$, $\beta=\norm{A}^2$, $g=\lambda\norm{\cdot}_1$, $L=D$, $f=\ind_{[0,1]^N}$: Condat–Vũ with $\tau^{-1}-\sigma\norm{D}^2\gt\norm{A}^2/2$, $\norm{D}^2\le8$ in 2-D. ADMM would need $D^*D$ invertible (false: constants are in its kernel) unless $D$ is replaced by $(D,\Id)$ stacked.</li>
+</ul>
+</section>
+
+<section class="chapter" id="retain">
+<header><div class="eyebrow">Retain</div><h2>What to retain</h2></header>
+<div class="box"><ul>
+<li><strong>Template.</strong> Primal $\min_x f(x)+g(Lx)$; dual $\min_v f^*(-L^*v)+g^*(v)$. Origin: $g(Lx)=\sup_v\ps{v}{Lx}-g^*(v)$ and swap $\inf\sup\to\sup\inf$.</li>
+<li><strong>Weak duality</strong> ($f,g$ proper): $\mu\ge-\mu^*$; proof $=$ Fenchel–Young twice, inner products cancel. Gap $=\mu+\mu^*\ge0$.</li>
+<li><strong>Strong duality</strong> ($f,g\in\Gz{}$, $\inte(\dom g)\cap L(\dom f)\ne\emptyset$ or $\dom g\cap\inte L(\dom f)\ne\emptyset$): $\mu=-\min(\text{dual})$. Same condition as the sum rule; mechanism $=$ Fermat $+$ sum rule $+$ Fenchel–Young equality.</li>
+<li><strong>Kuhn–Tucker point:</strong> $-L^*\hat v\in\partial f(\hat x)$, $L\hat x\in\partial g^*(\hat v)$ ⇒ $\hat x$ primal solution, $\hat v$ dual solution (no qualification needed). Primal zero of $\partial f+L^*\partial gL$ ⇒ a KT partner exists. Primal zeros ⇔ dual zeros via $\partial f^*=(\partial f)^{-1}$.</li>
+<li><strong>Quadratic data term:</strong> $f=\varphi+\tfrac12\norm{\cdot-z}^2$ ⇒ $\hat x=\prox_\varphi(z-L^*\hat v)$.</li>
+<li><strong>LP:</strong> $f=\ps{c}{\cdot}+\ind_{\R^N_+}$, $g=\ind_{\R^K_+}(\cdot-b)$, $y=-v$ ⇒ $\max\ps{b}{y}$, $L^{\top}y\le c$, $y\ge0$. <strong>Consensus ↔ sharing:</strong> $\ind_{\Lambda_m}^*=\ind_{\{\sum v_i=0\}}$, shift by $\overline u/m$.</li>
+<li><strong>Lagrangian</strong> $\Lag(x,y,v)=f(x)+g(y)+\ps{v}{Lx-y}$: primal $=\inf_{x,y}\sup_v\Lag$, dual $=\sup_v\inf_{x,y}\Lag$; saddle point ⇔ KT point with $\hat y=L\hat x$.</li>
+<li><strong>Augmented Lagrangian</strong> $\widetilde{\Lag}=\Lag(x,y,\gamma z)+\tfrac\gamma2\norm{Lx-y}^2$: same saddle points, multiplier $v=\gamma z$.</li>
+<li><strong>ADMM:</strong> $x_n=\argmin\tfrac12\norm{Lx-y_n+z_n}^2+\tfrac1\gamma f$; $y_{n+1}=\prox_{g/\gamma}(z_n+Lx_n)$; $z_{n+1}=z_n+Lx_n-y_{n+1}$. Completing the square around $z_n$ is the derivation.</li>
+<li><strong>ADMM $=$ DR on the dual</strong> with $z_n=v_n/\gamma$, $y_n=(u_n-v_n)/\gamma$, $x_n$ the vector with $-L^*w_n\in\partial f(x_n)$; needs $L^*L$ isomorphism ($\ran L^*=\H$, chain rule with equality).</li>
+<li><strong>ADMM converges</strong> ($L^*L$ iso, qualification, primal solution): $x_n\wto\hat x$, $\gamma z_n\wto\hat v$. Proof: dual DR limit → $x_n=(L^*L)^{-1}L^*s_n$ → KT inclusions (Moreau; closed-graph lemma).</li>
+<li><strong>Closed-graph lemma:</strong> $v_n\in\partial f(x_n)$, $x_n\to\hat x$, $v_n\wto\hat v$ ⇒ $\hat v\in\partial f(\hat x)$.</li>
+<li><strong>Primal-dual algorithm:</strong> $x_{n+1}=\prox_{\tau f}(x_n-\tau(\nabla h(x_n)+L^*v_n))$, $v_{n+1}=\prox_{\sigma g^*}(v_n+\sigma L(2x_{n+1}-x_n))$; condition $\tau^{-1}-\sigma\norm{L}^2\gt\beta/2$ ("pay for $L$ with $\sigma$, for $h$ with $\beta/2$"); $x_n\wto\hat x$, $v_n\wto\hat v$. $g=0$ ⇒ FB.</li>
+<li><strong>Why it converges:</strong> FB in the metric $V=\begin{pmatrix}\tau^{-1}\Id&amp;-L^*\\-L&amp;\sigma^{-1}\Id\end{pmatrix}$ ($\succ0$ iff $\tau\sigma\norm{L}^2\lt1$); the extrapolation $2x_{n+1}-x_n$ creates the off-diagonal blocks. Relaxed: $\delta=2-\frac\beta2(\tau^{-1}-\sigma\norm{L}^2)^{-1}$, $\lambda_n\in[0,\delta]$.</li>
+<li><strong>Explicit saddle steps (Arrow–Hurwicz) rotate</strong> on bilinear couplings: constant steps fail; the extrapolation is the fix.</li>
+<li><strong>Sum $\sum_ig_i\circ L_i$:</strong> product space, $\prox_{\sigma g^*}$ blockwise in parallel, $\norm{L}^2\le\sum_i\norm{L_i}^2$.</li>
+</ul></div>
+<h4>Connections</h4>
+<p>This page closes the "prox world" of the course: every algorithm so far (FB, DR, PPXA+, ADMM, primal-dual) is a fixed-point iteration of an averaged operator built from proximity operators, gradients of smooth terms and linear maps, and every convergence proof is Fejér monotonicity plus a closedness argument (demiclosedness on page 4, the closed-graph lemma here). Duality added one idea: when a prox is unavailable because of a composition $g\circ L$, introduce the dual variable and use $\prox_{g^*}$ instead. <a href="07_majorization_minimization.html">Page 7</a> leaves this world: when <em>no</em> prox is available at all (nonconvex or complicated $f$), one replaces $f$ by a tangent majorant and minimizes that instead (Majorization–Minimization); the metric trick of this page (FB in the $V$-metric, <a class="chip t" href="09_toolbox.html#T18"><b>T18</b></a>) returns there as the variable-metric Forward–Backward algorithm, and the "pay for the curvature" condition returns as the choice of the majorant's curvature. The <a href="08_labs.html">labs</a> use this page directly: the DBSM lab is a primal-dual algorithm, and the denoising and NMR labs ask when ADMM or a dual method would apply.</p>
+</section>
+
+<section class="chapter" id="quiz">
+<header><div class="eyebrow">Self-check</div><h2>Ten questions</h2></header>
+<div class="quiz">
+<div class="q"><div class="qt">Write the dual of $\min_x f(x)+g(Lx)$ and say in one line where the minus sign comes from.</div><div class="spoiler"><button type="button">Show answer</button><div class="ans"><p>$\min_v f^*(-L^*v)+g^*(v)$. Writing $g(Lx)=\sup_v\ps{v}{Lx}-g^*(v)$ and swapping $\inf$ and $\sup$, the inner $\inf_x f(x)+\ps{L^*v}{x}=-f^*(-L^*v)$: the conjugate is evaluated at $-L^*v$ because $\ps{L^*v}{x}=-\ps{-L^*v}{x}$. The sign is what makes the Fenchel–Young coupling terms cancel.</p></div></div></div>
+<div class="q"><div class="qt">Prove weak duality in two lines. Which hypotheses are needed?</div><div class="spoiler"><button type="button">Show answer</button><div class="ans"><p>Fenchel–Young: $f(x)+f^*(-L^*v)\ge\ps{x}{-L^*v}$ and $g(Lx)+g^*(v)\ge\ps{Lx}{v}$; add: the right-hand side is $0$. Take infima: $\mu+\mu^*\ge0$. Only $f$, $g$ proper (so the conjugates are $\gt-\infty$) and $L$ bounded; no convexity.</p></div></div></div>
+<div class="q"><div class="qt">What is the qualification condition of strong duality, and which other theorem of the course has the same condition? Why is that no coincidence?</div><div class="spoiler"><button type="button">Show answer</button><div class="ans"><p>$\inte(\dom g)\cap L(\dom f)\ne\emptyset$ or $\dom g\cap\inte(L(\dom f))\ne\emptyset$: the condition of the sum rule $\partial(f+g\circ L)=\partial f+L^*\partial gL$. Strong duality at a primal solution $\hat x$ is obtained by splitting Fermat's $0\in\partial(f+g\circ L)(\hat x)$ with the sum rule into a KT pair, then using Fenchel–Young's equality case to get zero gap.</p></div></div></div>
+<div class="q"><div class="qt">Define a Kuhn–Tucker point and explain why it is a "certificate".</div><div class="spoiler"><button type="button">Show answer</button><div class="ans"><p>$(\hat x,\hat v)$ with $-L^*\hat v\in\partial f(\hat x)$ and $L\hat x\in\partial g^*(\hat v)$. Checking these two inclusions (or the vanishing of $f(\hat x)+g(L\hat x)+f^*(-L^*\hat v)+g^*(\hat v)$) proves, without solving anything, that $\hat x$ is primal optimal and $\hat v$ dual optimal, by Fermat and the free sum inclusion.</p></div></div></div>
+<div class="q"><div class="qt">In the consensus problem, what are $f$, $g$, $L$, and what is $f^*$? What do the dual variables mean?</div><div class="spoiler"><button type="button">Show answer</button><div class="ans"><p>$f=\ind_{\Lambda_m}$ (diagonal subspace of $\H^m$), $g(x)=\sum_ig_i(x_i)$, $L=\Id$. $f^*(v)=\sup_{x_1}\ps{\sum_iv_i}{x_1}=\ind_{\{0\}}(\sum_iv_i)$. The dual is $\min\sum_ig_i^*(v_i)$ s.t. $\sum_iv_i=0$; at the optimum $\hat v_i\in\partial g_i(\hat x)$ are the slopes (prices) of the local costs at the consensus, and they sum to zero.</p></div></div></div>
+<div class="q"><div class="qt">Why does alternating minimization of the plain Lagrangian fail, and what does the augmented term change at a saddle point?</div><div class="spoiler"><button type="button">Show answer</button><div class="ans"><p>$\Lag(\cdot,y,v)=f+\ps{L^*v}{\cdot}$ is often unbounded below (e.g. $f$ linear or an indicator of an unbounded set, as in LP) and the multiplier step has no step control. The term $\tfrac\gamma2\norm{Lx-y}^2$ is $\ge0$ and vanishes when $Lx=y$, which holds at every saddle point: saddle points of $\widetilde{\Lag}$ at $(\hat x,\hat y,\hat z)$ are saddle points of $\Lag$ at $(\hat x,\hat y,\gamma\hat z)$.</p></div></div></div>
+<div class="q"><div class="qt">Derive the ADMM $x$-step from the augmented Lagrangian.</div><div class="spoiler"><button type="button">Show answer</button><div class="ans"><p>$\gamma\ps{z_n}{Lx-y_n}+\tfrac\gamma2\norm{Lx-y_n}^2=\tfrac\gamma2\norm{Lx-y_n+z_n}^2-\tfrac\gamma2\norm{z_n}^2$ (complete the square); drop the constant, divide by $\gamma$: $x_n=\argmin\tfrac12\norm{Lx-y_n+z_n}^2+\tfrac1\gamma f(x)$.</p></div></div></div>
+<div class="q"><div class="qt">State the change of variables that turns dual Douglas–Rachford into ADMM, and say where $L^*L$ invertible is used.</div><div class="spoiler"><button type="button">Show answer</button><div class="ans"><p>$y_n=\gamma^{-1}(u_n-v_n)$, $z_n=\gamma^{-1}v_n$, and $x_n$ is the vector with $x_n\in\partial f^*(-L^*w_n)$ provided by the chain rule $\partial(f^*\circ(-L^*))=-L\partial f^*(-L^*\cdot)$, which holds with equality because $\ran L^*=\H$ (as $\ran L^*\supset\ran L^*L=\H$); invertibility also gives uniqueness of $x_n$ and the recovery $x_n=(L^*L)^{-1}L^*s_n$ in the convergence proof.</p></div></div></div>
+<div class="q"><div class="qt">Write the primal-dual algorithm for $f+g\circ L+h$ and its step condition. What happens when $g=0$?</div><div class="spoiler"><button type="button">Show answer</button><div class="ans"><p>$x_{n+1}=\prox_{\tau f}(x_n-\tau(\nabla h(x_n)+L^*v_n))$, $v_{n+1}=\prox_{\sigma g^*}(v_n+\sigma L(2x_{n+1}-x_n))$; $\tau^{-1}-\sigma\norm{L}^2\gt\beta/2$ and $\zer(\partial f+\nabla h+L^*\partial gL)\ne\emptyset$ ⇒ $x_n\wto$ minimizer, $v_n\wto$ dual solution. If $g=0$, $\prox_{\sigma g^*}=0$, $v_n=0$, and the $x$-step is Forward–Backward with $\tau\lt2/\beta$.</p></div></div></div>
+<div class="q"><div class="qt">Why is the extrapolation $2x_{n+1}-x_n$ essential, in terms of the metric $V$?</div><div class="spoiler"><button type="button">Show answer</button><div class="ans"><p>Writing both prox steps as inclusions gives $V(w_n-w_{n+1})\in Aw_{n+1}+Bw_n$ with $V=\begin{pmatrix}\tau^{-1}\Id&amp;-L^*\\-L&amp;\sigma^{-1}\Id\end{pmatrix}$ <em>only because</em> the $v$-step uses $L(2x_{n+1}-x_n)=Lx_{n+1}-L(x_n-x_{n+1})$: that extra term is the $-L$ block. Without it $V$ would be block-diagonal and the skew coupling $(L^*v,-Lx)$ would be treated explicitly, which rotates (Arrow–Hurwicz). With it, the iteration is FB in a positive definite metric ($\tau\sigma\norm{L}^2\lt1$) and the FB step condition is exactly $\tau^{-1}-\sigma\norm{L}^2\gt\beta/2$.</p></div></div></div>
+</div>
+</section>
+
+<footer class="foot">
+<div class="prevnext"><a href="05_douglas_rachford_ppxa.html">← 5 · Douglas–Rachford &amp; PPXA</a><a href="07_majorization_minimization.html">7 · Majorization–Minimization →</a></div>
+<p>Study guide written from the official slides of E. Chouzenoux and J.-C. Pesquet (MVA, 2026–27). Slide numbers refer to the frame numbers printed on the Paris-Saclay deck "Part II.5: Primal-dual methods".</p>
+</footer>
+</main>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  'use strict';
+  var L = window.LSD;
+  function sq(x) { return x * x; }
+  function soft(t, th) { return Math.sign(t) * Math.max(Math.abs(t) - th, 0); }
+  function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
+  function polyline(svg, pts, cls, extra) {
+    /* pts: array of [px,py] in pixel coords; breaks on null entries */
+    var segs = [], cur = [];
+    pts.forEach(function (p) { if (!p || !isFinite(p[0]) || !isFinite(p[1])) { if (cur.length) segs.push(cur); cur = []; } else cur.push(p[0].toFixed(1) + ',' + p[1].toFixed(1)); });
+    if (cur.length) segs.push(cur);
+    var g = L.el('g', null, svg);
+    segs.forEach(function (s) { L.el('polyline', Object.assign({ points: s.join(' '), fill: 'none', 'stroke-width': 2, class: cls || 's-ink' }, extra || {}), g); });
+    return g;
+  }
+
+  /* ---------- 1. duality gap ---------- */
+  function initDualityGap() {
+    var svg = document.getElementById('dg-svg'); if (!svg) return;
+    var read = document.getElementById('dg-read');
+    var lam = 1, a = 1.5, c = 2, x = -1, v = 0.3;
+    function P(t) { return 0.5 * sq(t - c) + lam * Math.abs(a * t); }
+    function D(t) { return Math.abs(t) <= lam + 1e-12 ? -0.5 * a * a * t * t + a * c * t : -Infinity; }
+    function draw() {
+      L.clear(svg);
+      var xh = soft(c, lam * a), vh = (c - xh) / a, mu = P(xh), dmax = D(vh);
+      var hi = Math.max(P(-3), P(3)), lo = Math.min(D(-lam), D(lam), mu) - 1;
+      var Y = L.scale(lo, hi, 270, 18);
+      var X1 = L.scale(-3, 3, 48, 322), X2 = L.scale(-1.5, 1.5, 410, 684);
+      L.axes(svg, X1, Y, { xlabel: 'x', nx: 6, ny: 5, dy: 0 });
+      L.axes(svg, X2, Y, { xlabel: 'v', nx: 6, ny: 5, dy: 0 });
+      /* feasible dual interval */
+      L.el('rect', { x: X2(-lam), y: 18, width: X2(lam) - X2(-lam), height: 252, class: 'f-k' }, svg);
+      L.plotFn(svg, P, X1, Y, { class: 's-1', 'stroke-width': 2.2 }, 300);
+      L.plotFn(svg, D, X2, Y, { class: 's-2', 'stroke-width': 2.2 }, 300);
+      /* optimal level */
+      L.line(svg, X1(-3), Y(mu), X1(3), Y(mu), 's-idea dash');
+      L.line(svg, X2(-1.5), Y(dmax), X2(1.5), Y(dmax), 's-idea dash');
+      L.text(svg, X1(-3) + 2, Y(mu) - 5, 'µ = min P = ' + L.fmt(mu, 2), 'f-idea');
+      L.text(svg, X2(-1.5) + 2, Y(dmax) - 5, 'max D = −µ* = ' + L.fmt(dmax, 2), 'f-idea');
+      L.dot(svg, X1(xh), Y(mu), 4.5, 'f-idea'); L.text(svg, X1(xh) + 6, Y(mu) + 16, 'x̂', 'tm f-idea');
+      L.dot(svg, X2(vh), Y(dmax), 4.5, 'f-idea'); L.text(svg, X2(vh) + 6, Y(dmax) + 16, 'v̂', 'tm f-idea');
+      /* current */
+      var px = P(x), dv = D(v);
+      L.dot(svg, X1(x), Y(px), 5, 'f-acc'); L.text(svg, X1(x) + 7, Y(px) - 6, 'P(x) = ' + L.fmt(px, 2), 'f-acc');
+      if (isFinite(dv)) {
+        L.dot(svg, X2(v), Y(dv), 5, 'f-acc'); L.text(svg, X2(v) + 7, Y(dv) + 14, 'D(v) = ' + L.fmt(dv, 2), 'f-acc');
+        /* gap bar */
+        L.line(svg, X1(x), Y(px), 366, Y(px), 's-faint dash', { 'stroke-width': 1 });
+        L.line(svg, X2(v), Y(dv), 366, Y(dv), 's-faint dash', { 'stroke-width': 1 });
+        L.line(svg, 366, Y(dv), 366, Y(px), 's-warn', { 'stroke-width': 4 });
+        L.text(svg, 366, Y((px + dv) / 2) + 4, 'gap ' + L.fmt(px - dv, 2), 'f-warn', { 'text-anchor': 'middle', dx: 0, dy: -8 });
+      } else {
+        L.dot(svg, X2(v), 270, 5, 'f-acc'); L.text(svg, X2(v) + 7, 262, 'D(v) = −∞ (infeasible)', 'f-acc');
+      }
+      L.text(svg, 185, 14, 'primal objective P(x) = f(x) + g(ax)', 'hd', { 'text-anchor': 'middle' });
+      L.text(svg, 547, 14, 'dual function D(v) = −f*(−av) − g*(v)', 'hd', { 'text-anchor': 'middle' });
+      if (read) read.textContent = 'P(x) = ' + L.fmt(px, 3) + '   D(v) = ' + (isFinite(dv) ? L.fmt(dv, 3) : '−∞') + '   gap P(x) − D(v) = ' + (isFinite(dv) ? L.fmt(px - dv, 3) : '+∞') + '   |   x̂ = ' + L.fmt(xh, 3) + ', v̂ = ' + L.fmt(vh, 3) + ', µ = −µ* = ' + L.fmt(mu, 3);
+    }
+    L.bindRange('dg-c', function (t) { c = t; draw(); });
+    L.bindRange('dg-x', function (t) { x = t; draw(); });
+    L.bindRange('dg-v', function (t) { v = t; draw(); });
+  }
+
+  /* ---------- 2. LP duality ---------- */
+  function initLP() {
+    var sp = document.getElementById('lp-svg-p'), sd = document.getElementById('lp-svg-d'); if (!sp || !sd) return;
+    var read = document.getElementById('lp-read');
+    var c = [1, 1.2], b = [2, 3], Lm = [[1, 1], [1, 3]];
+    /* half-planes {n·p >= r} */
+    var primalHP = [{ n: [1, 0], r: 0 }, { n: [0, 1], r: 0 }, { n: Lm[0], r: b[0] }, { n: Lm[1], r: b[1] }];
+    var dualHP = [{ n: [1, 0], r: 0 }, { n: [0, 1], r: 0 }, { n: [-Lm[0][0], -Lm[1][0]], r: -c[0] }, { n: [-Lm[0][1], -Lm[1][1]], r: -c[1] }];
+    function feasible(p, HP) { return HP.every(function (h) { return h.n[0] * p[0] + h.n[1] * p[1] >= h.r - 1e-9; }); }
+    function vertices(HP) {
+      var out = [];
+      for (var i = 0; i < HP.length; i++) for (var j = i + 1; j < HP.length; j++) {
+        var A = HP[i].n, B = HP[j].n, det = A[0] * B[1] - A[1] * B[0]; if (Math.abs(det) < 1e-12) continue;
+        var p = [(HP[i].r * B[1] - A[1] * HP[j].r) / det, (A[0] * HP[j].r - HP[i].r * B[0]) / det];
+        if (feasible(p, HP)) out.push(p);
+      }
+      return out;
+    }
+    function clipPoly(poly, h) {
+      var out = [];
+      for (var i = 0; i < poly.length; i++) {
+        var P = poly[i], Q = poly[(i + 1) % poly.length];
+        var sP = h.n[0] * P[0] + h.n[1] * P[1] - h.r, sQ = h.n[0] * Q[0] + h.n[1] * Q[1] - h.r;
+        if (sP >= 0) out.push(P);
+        if ((sP >= 0) !== (sQ >= 0)) { var t = sP / (sP - sQ); out.push([P[0] + t * (Q[0] - P[0]), P[1] + t * (Q[1] - P[1])]); }
+      }
+      return out;
+    }
+    function region(HP, box) { var poly = [[0, 0], [box, 0], [box, box], [0, box]]; HP.forEach(function (h) { poly = clipPoly(poly, h); }); return poly; }
+    var y = [0.5, 0.2];
+    var pv = vertices(primalHP), best = null, bestVal = Infinity;
+    pv.forEach(function (p) { var val = c[0] * p[0] + c[1] * p[1]; if (val < bestVal) { bestVal = val; best = p; } });
+    var dv = vertices(dualHP), dbest = null, dbestVal = -Infinity;
+    dv.forEach(function (p) { var val = b[0] * p[0] + b[1] * p[1]; if (val > dbestVal) { dbestVal = val; dbest = p; } });
+    function drawPanel(svg, HP, box, X, Y, lbls, obj, level, pts, title) {
+      L.clear(svg);
+      L.axes(svg, X, Y, { xlabel: lbls[0], ylabel: lbls[1], nx: 4, ny: 4, dx: 1, dy: 1 });
+      var poly = region(HP, box);
+      if (poly.length) L.el('polygon', { points: poly.map(function (p) { return X(p[0]).toFixed(1) + ',' + Y(p[1]).toFixed(1); }).join(' '), class: 'f-k' }, svg);
+      /* constraint lines */
+      HP.slice(2).forEach(function (h, k) {
+        var pts2 = [];
+        [0, box].forEach(function (t) { if (Math.abs(h.n[1]) > 1e-12) pts2.push([t, (h.r - h.n[0] * t) / h.n[1]]); });
+        if (pts2.length === 2) L.line(svg, X(pts2[0][0]), Y(pts2[0][1]), X(pts2[1][0]), Y(pts2[1][1]), k === 0 ? 's-3' : 's-4', { 'stroke-width': 1.6 });
+      });
+      /* level line obj·p = level */
+      var lp = [];
+      [0, box].forEach(function (t) { lp.push([t, (level - obj[0] * t) / obj[1]]); });
+      L.line(svg, X(lp[0][0]), Y(lp[0][1]), X(lp[1][0]), Y(lp[1][1]), 's-acc dash', { 'stroke-width': 1.6 });
+      pts.forEach(function (q) { L.dot(svg, X(q.p[0]), Y(q.p[1]), 5, q.cls); L.text(svg, X(q.p[0]) + 8, Y(q.p[1]) - 6, q.t, q.tc); });
+      L.text(svg, 170, 14, title, 'hd', { 'text-anchor': 'middle' });
+    }
+    function draw() {
+      var Xp = L.scale(0, 4, 40, 325), Yp = L.scale(0, 4, 270, 22);
+      drawPanel(sp, primalHP, 4, Xp, Yp, ['x₁', 'x₂'], c, bestVal, [{ p: best, cls: 'f-idea', t: 'x̂ = (' + L.fmt(best[0], 1) + ', ' + L.fmt(best[1], 1) + ')', tc: 'f-idea' }], 'primal: ⟨c|x⟩ = ' + L.fmt(bestVal, 2) + ' at x̂');
+      var Xd = L.scale(0, 1.5, 40, 325), Yd = L.scale(0, 1.5, 270, 22);
+      var yv = b[0] * y[0] + b[1] * y[1], ok = feasible(y, dualHP);
+      drawPanel(sd, dualHP, 1.5, Xd, Yd, ['y₁', 'y₂'], b, yv, [{ p: dbest, cls: 'f-idea', t: 'ŷ', tc: 'f-idea' }, { p: y, cls: ok ? 'f-acc' : 'f-warn', t: 'y', tc: ok ? 'f-acc' : 'f-warn' }], 'dual: ⟨b|y⟩ = ' + L.fmt(yv, 2) + (ok ? '' : ' (infeasible)'));
+      if (read) read.textContent = 'primal optimum ⟨c|x̂⟩ = ' + L.fmt(bestVal, 3) + ' at x̂ = (' + L.fmt(best[0], 2) + ', ' + L.fmt(best[1], 2) + ')   |   candidate y = (' + L.fmt(y[0], 2) + ', ' + L.fmt(y[1], 2) + '): ⟨b|y⟩ = ' + L.fmt(yv, 3) + (ok ? ' ≤ ' + L.fmt(bestVal, 3) + ' ✓ feasible, a valid lower bound' : ' — infeasible (Lᵀy ≤ c violated), no certificate') + '   |   dual optimum ' + L.fmt(dbestVal, 3) + ' at ŷ = (' + L.fmt(dbest[0], 2) + ', ' + L.fmt(dbest[1], 2) + ')';
+    }
+    L.bindRange('lp-y1', function (t) { y[0] = t; draw(); });
+    L.bindRange('lp-y2', function (t) { y[1] = t; draw(); });
+  }
+
+  /* ---------- 3. consensus ADMM ---------- */
+  function initConsensus() {
+    var sa = document.getElementById('cs-svg-a'), sb = document.getElementById('cs-svg-b'); if (!sa || !sb) return;
+    var read = document.getElementById('cs-read');
+    var a = [1, 2, 0.5], c = [-2, 1, 2.5], gam = 1, m = 3;
+    var y, z, n, hist, xbar;
+    function reset() { y = [0, 0, 0]; z = [0, 0, 0]; n = 0; xbar = 0; hist = [{ xbar: 0, v: [0, 0, 0] }]; }
+    function step() {
+      xbar = 0; for (var i = 0; i < m; i++) xbar += (y[i] - z[i]) / m;
+      for (var j = 0; j < m; j++) { y[j] = (gam * (z[j] + xbar) + a[j] * c[j]) / (gam + a[j]); z[j] = z[j] + xbar - y[j]; }
+      n++; hist.push({ xbar: xbar, v: z.map(function (t) { return gam * t; }) }); if (hist.length > 80) hist.shift();
+    }
+    function g(i, x) { return 0.5 * a[i] * sq(x - c[i]); }
+    function draw() {
+      var S = a[0] + a[1] + a[2], xh = (a[0] * c[0] + a[1] * c[1] + a[2] * c[2]) / S, vh = a.map(function (ai, i) { return ai * (xh - c[i]); });
+      L.clear(sa); L.clear(sb);
+      var X = L.scale(-4, 4, 34, 348), Y = L.scale(0, 10, 232, 16);
+      L.axes(sa, X, Y, { xlabel: 'x', nx: 8, ny: 5, dy: 0 });
+      ['s-1', 's-2', 's-3'].forEach(function (cls, i) { L.plotFn(sa, function (x) { return g(i, x); }, X, Y, { class: cls, 'stroke-width': 1.8 }); });
+      L.line(sa, X(xh), Y(0), X(xh), Y(10), 's-idea', { 'stroke-width': 2 }); L.text(sa, X(xh) + 4, Y(10) + 12, 'x̂ = ' + L.fmt(xh, 2), 'f-idea');
+      var xb = hist[hist.length - 1].xbar;
+      L.line(sa, X(xb), Y(0), X(xb), Y(10), 's-acc dash', { 'stroke-width': 1.5 }); L.text(sa, X(xb) + 4, Y(10) + 26, 'x̄ₙ = ' + L.fmt(xb, 2), 'f-acc');
+      ['f-1', 'f-2', 'f-3'].forEach(function (cls, i) { L.dot(sa, X(clamp(y[i], -4, 4)), Y(clamp(g(i, y[i]), 0, 10)), 5, cls); L.text(sa, X(c[i]), Y(0) - 6, 'c' + (i + 1), 'f-mut', { 'text-anchor': 'middle' }); });
+      /* right: prices */
+      var lo = Math.min.apply(null, vh.concat([0])) - 1, hi = Math.max.apply(null, vh.concat([0])) + 1;
+      hist.forEach(function (h) { h.v.forEach(function (t) { lo = Math.min(lo, t); hi = Math.max(hi, t); }); });
+      lo = Math.max(lo, -12); hi = Math.min(hi, 12);
+      var N = Math.max(hist.length - 1, 10), T = L.scale(0, N, 40, 348), V = L.scale(lo, hi, 232, 16);
+      L.axes(sb, T, V, { xlabel: 'n', ylabel: 'γzₙ', nx: 5, ny: 5, dx: 0, dy: 1 });
+      ['s-1', 's-2', 's-3'].forEach(function (cls, i) {
+        L.line(sb, T(0), V(vh[i]), T(N), V(vh[i]), 's-faint dash', { 'stroke-width': 1 });
+        polyline(sb, hist.map(function (h, k) { return [T(k), V(clamp(h.v[i], lo, hi))]; }), cls, { 'stroke-width': 1.8 });
+      });
+      polyline(sb, hist.map(function (h, k) { return [T(k), V(clamp(h.v[0] + h.v[1] + h.v[2], lo, hi))]; }), 's-ink dash', { 'stroke-width': 1.5 });
+      L.text(sb, T(N) - 4, V(vh[0]) - 4, 'v̂₁', 'tm f-1', { 'text-anchor': 'end' });
+      L.text(sb, T(N) - 4, V(vh[1]) - 4, 'v̂₂', 'tm f-2', { 'text-anchor': 'end' });
+      L.text(sb, T(N) - 4, V(vh[2]) - 4, 'v̂₃', 'tm f-3', { 'text-anchor': 'end' });
+      L.text(sb, T(0) + 4, V(0) - 4, 'sum of prices (dashed) → 0', 'f-ink2');
+      var last = hist[hist.length - 1];
+      if (read) read.textContent = 'n = ' + n + '   x̄ₙ = ' + L.fmt(last.xbar, 4) + ' → x̂ = ' + L.fmt(xh, 4) + '   |   γzₙ = (' + last.v.map(function (t) { return L.fmt(t, 3); }).join(', ') + '), sum = ' + L.fmt(last.v[0] + last.v[1] + last.v[2], 4) + '   |   v̂ = (' + vh.map(function (t) { return L.fmt(t, 3); }).join(', ') + ')';
+    }
+    reset();
+    L.bindRange('cs-c1', function (t) { c[0] = t; reset(); draw(); });
+    L.bindRange('cs-c2', function (t) { c[1] = t; reset(); draw(); });
+    L.bindRange('cs-c3', function (t) { c[2] = t; reset(); draw(); });
+    L.bindRange('cs-gamma', function (t) { gam = t; reset(); draw(); });
+    var bs = document.getElementById('cs-step'), br = document.getElementById('cs-run'), bz = document.getElementById('cs-reset');
+    if (bs) bs.addEventListener('click', function () { step(); draw(); });
+    if (br) br.addEventListener('click', function () { for (var k = 0; k < 10; k++) step(); draw(); });
+    if (bz) bz.addEventListener('click', function () { reset(); draw(); });
+    draw();
+  }
+
+  /* ---------- contour helper for saddle functions K(x,v) = (c/2)x^2 + v(ax-b) ---------- */
+  function drawSaddleContours(svg, X, Y, c, a, b, levels, cls) {
+    levels.forEach(function (lv, k) {
+      L.plotFn(svg, function (x) { var d = a * x - b; if (Math.abs(d) < 1e-9) return NaN; return (lv - 0.5 * c * x * x) / d; }, X, Y, { class: cls || 's-faint', 'stroke-width': 1 }, 400);
+    });
+  }
+
+  /* ---------- 4. saddle point ---------- */
+  function initSaddlePoint() {
+    var svg = document.getElementById('sp-svg'); if (!svg) return;
+    var s1 = document.getElementById('sp-s1'), s2 = document.getElementById('sp-s2');
+    var a = 1, b = 1, x = 2, v = 1;
+    function K(x, v) { return 0.5 * x * x + v * (a * x - b); }
+    function draw() {
+      L.clear(svg);
+      var X = L.scale(-3, 3, 46, 540), Y = L.scale(-3, 3, 300, 18);
+      L.axes(svg, X, Y, { xlabel: 'x', ylabel: 'v', nx: 6, ny: 6, dx: 0, dy: 0 });
+      var xh = b / a, vh = -b / (a * a), Kh = K(xh, vh);
+      var levels = []; for (var k = -6; k <= 6; k++) if (k !== 0) levels.push(Kh + 0.6 * k);
+      drawSaddleContours(svg, X, Y, 1, a, b, levels, 's-faint');
+      drawSaddleContours(svg, X, Y, 1, a, b, [Kh], 's-mut');
+      /* slices */
+      L.line(svg, X(xh), Y(-3), X(xh), Y(3), 's-2 dash', { 'stroke-width': 1.4 });
+      L.line(svg, X(-3), Y(vh), X(3), Y(vh), 's-1 dash', { 'stroke-width': 1.4 });
+      L.text(svg, X(xh) + 5, Y(3) + 12, 'x = x̂ (vary v: maximum at v̂)', 'f-2');
+      L.text(svg, X(-3) + 4, Y(vh) - 6, 'v = v̂ (vary x: minimum at x̂)', 'f-1');
+      L.dot(svg, X(xh), Y(clamp(v, -3, 3)), 5, 'f-2');
+      L.dot(svg, X(clamp(x, -3, 3)), Y(vh), 5, 'f-1');
+      L.dot(svg, X(xh), Y(vh), 6, 'f-idea'); L.text(svg, X(xh) + 8, Y(vh) + 16, '(x̂, v̂) = (' + L.fmt(xh, 2) + ', ' + L.fmt(vh, 2) + ')', 'f-idea');
+      L.dot(svg, X(clamp(x, -3, 3)), Y(clamp(v, -3, 3)), 5, 'f-acc'); L.text(svg, X(clamp(x, -3, 3)) + 8, Y(clamp(v, -3, 3)) - 6, '(x, v)', 'tm f-acc');
+      var A = K(xh, v), B = K(xh, vh), C = K(x, vh);
+      if (s1) { s1.textContent = 'L(x̂, v) = ' + L.fmt(A, 3) + '  ≤  L(x̂, v̂) = ' + L.fmt(B, 3) + (A <= B + 1e-9 ? '   ✓ (v̂ maximizes the affine slice; it is constant because ax̂ − b = 0)' : '   ✗'); s1.className = A <= B + 1e-9 ? 'ok' : 'ko'; }
+      if (s2) { s2.textContent = 'L(x̂, v̂) = ' + L.fmt(B, 3) + '  ≤  L(x, v̂) = ' + L.fmt(C, 3) + (B <= C + 1e-9 ? '   ✓ (x̂ minimizes the convex slice ½x² + v̂(ax − b))' : '   ✗'); s2.className = B <= C + 1e-9 ? 'ok' : 'ko'; }
+    }
+    L.bindRange('sp-a', function (t) { a = t; draw(); });
+    L.bindRange('sp-b', function (t) { b = t; draw(); });
+    L.bindRange('sp-x', function (t) { x = t; draw(); });
+    L.bindRange('sp-v', function (t) { v = t; draw(); });
+  }
+
+  /* ---------- 5. saddle schemes: AH simultaneous / sequential / extrapolated ---------- */
+  function initSaddleSchemes() {
+    var svg = document.getElementById('ss-svg'); if (!svg) return;
+    var read = document.getElementById('ss-read');
+    var a = 1, b = 1, tau = 0.5, sig = 0.5, c = 0, mode = 'jac';
+    function matrix() {
+      if (mode === 'jac') return [[1 - tau * c, -tau * a], [sig * a, 1]];
+      if (mode === 'seq') return [[1 - tau * c, -tau * a], [sig * a * (1 - tau * c), 1 - sig * tau * a * a]];
+      return [[1 - tau * c, -tau * a], [sig * a * (1 - 2 * tau * c), 1 - 2 * sig * tau * a * a]];
+    }
+    function rho(M) { var tr = M[0][0] + M[1][1], det = M[0][0] * M[1][1] - M[0][1] * M[1][0], disc = tr * tr - 4 * det; if (disc < 0) return Math.sqrt(det); var s = Math.sqrt(disc); return Math.max(Math.abs((tr + s) / 2), Math.abs((tr - s) / 2)); }
+    function iterate(N) {
+      var x = -1.5, v = 1.5, pts = [[x, v]];
+      for (var n = 0; n < N; n++) {
+        var xn;
+        xn = x - tau * (c * x + a * v);
+        if (mode === 'jac') v = v + sig * (a * x - b);
+        else if (mode === 'seq') v = v + sig * (a * xn - b);
+        else v = v + sig * (a * (2 * xn - x) - b);
+        x = xn; pts.push([x, v]);
+        if (!isFinite(x) || !isFinite(v) || Math.abs(x) > 1e6 || Math.abs(v) > 1e6) break;
+      }
+      return pts;
+    }
+    function draw() {
+      L.clear(svg);
+      var X = L.scale(-3, 5, 46, 540), Y = L.scale(-4, 4, 310, 18);
+      L.axes(svg, X, Y, { xlabel: 'x', ylabel: 'v', nx: 8, ny: 8, dx: 0, dy: 0 });
+      var xh = b / a, vh = -c * xh / a, Kh = 0.5 * c * xh * xh + vh * (a * xh - b);
+      var levels = []; for (var k = -8; k <= 8; k++) if (k !== 0) levels.push(Kh + 0.5 * k);
+      drawSaddleContours(svg, X, Y, c, a, b, levels, 's-faint');
+      var pts = iterate(60);
+      var pix = pts.map(function (p) { return (p[0] < -3.5 || p[0] > 5.5 || p[1] < -4.5 || p[1] > 4.5) ? null : [X(p[0]), Y(p[1])]; });
+      polyline(svg, pix, 's-acc', { 'stroke-width': 1.6 });
+      pix.forEach(function (p, i) { if (p) L.dot(svg, p[0], p[1], i === 0 ? 4.5 : 2.6, i === 0 ? 'f-acc' : 'f-acc'); });
+      L.dot(svg, X(xh), Y(vh), 6, 'f-idea'); L.text(svg, X(xh) + 8, Y(vh) + 16, 'saddle (x̂, v̂)', 'f-idea');
+      if (pix[0]) L.text(svg, pix[0][0] - 8, pix[0][1] - 8, '(x₀, v₀)', 'f-acc', { 'text-anchor': 'end' });
+      var r = rho(matrix()), cond = 1 / tau - sig * a * a, ok = cond > c / 2;
+      var last = pts[pts.length - 1], dist = Math.hypot(last[0] - xh, last[1] - vh);
+      L.text(svg, 540, 14, 'spectral radius ρ = ' + L.fmt(r, 3) + (r < 1 - 1e-9 ? '  (converges)' : (r > 1 + 1e-9 ? '  (diverges)' : '  (neutral: circles)')), r < 1 - 1e-9 ? 'f-idea' : 'f-warn', { 'text-anchor': 'end' });
+      var names = { jac: 'simultaneous explicit steps', seq: 'sequential (Arrow–Hurwicz as on the slides = idea 2 here)', ext: 'extrapolated 2x_{n+1} − x_n (idea 3)' };
+      if (read) read.textContent = names[mode] + '   |   ρ = ' + L.fmt(r, 4) + '   |   1/τ − σa² = ' + L.fmt(cond, 3) + (ok ? ' > ' : ' ≤ ') + 'c/2 = ' + L.fmt(c / 2, 2) + (ok ? '  ✓ PD condition holds' : '  ✗ PD condition violated') + '   |   after ' + (pts.length - 1) + ' steps: distance to the saddle ' + (isFinite(dist) ? L.fmt(dist, 4) : '∞');
+    }
+    L.bindRange('ss-tau', function (t) { tau = t; draw(); });
+    L.bindRange('ss-sigma', function (t) { sig = t; draw(); });
+    L.bindRange('ss-c', function (t) { c = t; draw(); });
+    L.bindSeg('ss-mode', function (t) { mode = t; draw(); });
+  }
+
+  /* ---------- 6. ADMM in 2-D ---------- */
+  function initADMM() {
+    var sa = document.getElementById('ad-svg-a'), sb = document.getElementById('ad-svg-b'); if (!sa || !sb) return;
+    var read = document.getElementById('ad-read');
+    var Lm = [[1, 0.5], [-0.5, 1]], c = [2, 1], lam = 1, gam = 1, nShow = 15;
+    function mv(M, x) { return [M[0][0] * x[0] + M[0][1] * x[1], M[1][0] * x[0] + M[1][1] * x[1]]; }
+    var Lt = [[Lm[0][0], Lm[1][0]], [Lm[0][1], Lm[1][1]]];
+    var LtL = [[Lt[0][0] * Lm[0][0] + Lt[0][1] * Lm[1][0], Lt[0][0] * Lm[0][1] + Lt[0][1] * Lm[1][1]], [Lt[1][0] * Lm[0][0] + Lt[1][1] * Lm[1][0], Lt[1][0] * Lm[0][1] + Lt[1][1] * Lm[1][1]]];
+    function solve2(M, r) { var det = M[0][0] * M[1][1] - M[0][1] * M[1][0]; return [(r[0] * M[1][1] - M[0][1] * r[1]) / det, (M[0][0] * r[1] - r[0] * M[1][0]) / det]; }
+    function run(g, N) {
+      var y = [0, 0], z = [0, 0], out = [];
+      for (var n = 0; n < N; n++) {
+        var M = [[LtL[0][0] + 1 / g, LtL[0][1]], [LtL[1][0], LtL[1][1] + 1 / g]];
+        var rhs = mv(Lt, [y[0] - z[0], y[1] - z[1]]); rhs[0] += c[0] / g; rhs[1] += c[1] / g;
+        var x = solve2(M, rhs), s = mv(Lm, x);
+        var yn = [soft(z[0] + s[0], lam / g), soft(z[1] + s[1], lam / g)];
+        var zn = [z[0] + s[0] - yn[0], z[1] + s[1] - yn[1]];
+        out.push({ x: x, s: s, y: y.slice(), yn: yn, z: z.slice(), zn: zn });
+        y = yn; z = zn;
+      }
+      return out;
+    }
+    var ref = run(1, 3000), last = ref[ref.length - 1], xh = last.x, vh = [last.zn[0], last.zn[1]], Lxh = last.s;
+    function draw() {
+      var it = run(gam, 41);
+      L.clear(sa); L.clear(sb);
+      var pts = []; for (var n = 0; n <= nShow; n++) { pts.push(it[n].s); pts.push(it[n].y); }
+      var lo = [Infinity, Infinity], hi = [-Infinity, -Infinity];
+      pts.concat([Lxh, [0, 0]]).forEach(function (p) { for (var k = 0; k < 2; k++) { lo[k] = Math.min(lo[k], p[k]); hi[k] = Math.max(hi[k], p[k]); } });
+      var span = Math.max(hi[0] - lo[0], hi[1] - lo[1], 1) * 1.15, cx = (lo[0] + hi[0]) / 2, cy = (lo[1] + hi[1]) / 2;
+      var X = L.scale(cx - span / 2, cx + span / 2, 40, 340), Y = L.scale(cy - span / 2, cy + span / 2, 272, 20);
+      L.axes(sa, X, Y, { xlabel: 'y₁', ylabel: 'y₂', nx: 5, ny: 5, dx: 1, dy: 1 });
+      /* path of y_n and of L x_n */
+      polyline(sa, it.slice(0, nShow + 1).map(function (q) { return [X(q.y[0]), Y(q.y[1])]; }), 's-2', { 'stroke-width': 1.2, opacity: 0.7 });
+      polyline(sa, it.slice(0, nShow + 1).map(function (q) { return [X(q.s[0]), Y(q.s[1])]; }), 's-1', { 'stroke-width': 1.2, opacity: 0.7 });
+      for (var n = 0; n <= nShow; n++) {
+        var q = it[n];
+        L.line(sa, X(q.s[0]), Y(q.s[1]), X(q.y[0]), Y(q.y[1]), 's-faint', { 'stroke-width': 1 });
+        L.el('rect', { x: X(q.y[0]) - 3.5, y: Y(q.y[1]) - 3.5, width: 7, height: 7, class: 'f-2' }, sa);
+        L.dot(sa, X(q.s[0]), Y(q.s[1]), 3.5, 'f-1');
+      }
+      L.dot(sa, X(Lxh[0]), Y(Lxh[1]), 6, 'f-idea'); L.text(sa, X(Lxh[0]) + 8, Y(Lxh[1]) - 6, 'L x̂', 'tm f-idea');
+      L.text(sa, X(it[0].s[0]) + 6, Y(it[0].s[1]) + 14, 'L x₀', 'tm f-1');
+      L.text(sa, X(it[0].y[0]) + 6, Y(it[0].y[1]) + 14, 'y₀', 'tm f-2');
+      /* right: log plots */
+      var T = L.scale(0, 40, 44, 340), V = L.scale(-8, 1, 272, 20);
+      L.axes(sb, T, V, { xlabel: 'n', ylabel: 'log₁₀', nx: 5, ny: 5, dx: 0, dy: 0 });
+      function lg(t) { return clamp(Math.log10(Math.max(t, 1e-12)), -8, 1); }
+      polyline(sb, it.map(function (q, n) { return [T(n), V(lg(Math.hypot(q.s[0] - q.yn[0], q.s[1] - q.yn[1])))]; }), 's-2', { 'stroke-width': 1.8 });
+      polyline(sb, it.map(function (q, n) { return [T(n), V(lg(Math.hypot(q.x[0] - xh[0], q.x[1] - xh[1])))]; }), 's-1', { 'stroke-width': 1.8 });
+      polyline(sb, it.map(function (q, n) { return [T(n), V(lg(Math.hypot(gam * q.z[0] - vh[0], gam * q.z[1] - vh[1])))]; }), 's-5', { 'stroke-width': 1.8 });
+      L.line(sb, T(nShow), V(-8), T(nShow), V(1), 's-mut dash', { 'stroke-width': 1 });
+      L.text(sb, T(nShow) + 3, V(1) + 12, 'n = ' + nShow, 'f-mut');
+      var q = it[nShow];
+      if (read) read.textContent = 'γ = ' + L.fmt(gam, 1) + ', n = ' + nShow + ':  x_n = (' + L.fmt(q.x[0], 3) + ', ' + L.fmt(q.x[1], 3) + ')   ‖Lx_n − y_{n+1}‖ = ' + Math.hypot(q.s[0] - q.yn[0], q.s[1] - q.yn[1]).toExponential(2) + '   γz_n = (' + L.fmt(gam * q.z[0], 3) + ', ' + L.fmt(gam * q.z[1], 3) + ')   |   x̂ = (' + L.fmt(xh[0], 3) + ', ' + L.fmt(xh[1], 3) + '), v̂ = (' + L.fmt(vh[0], 3) + ', ' + L.fmt(vh[1], 3) + '), check c − Lᵀv̂ = (' + L.fmt(c[0] - (Lt[0][0] * vh[0] + Lt[0][1] * vh[1]), 3) + ', ' + L.fmt(c[1] - (Lt[1][0] * vh[0] + Lt[1][1] * vh[1]), 3) + ')';
+    }
+    L.bindRange('ad-gamma', function (t) { gam = t; draw(); });
+    L.bindRange('ad-n', function (t) { nShow = Math.round(t); draw(); });
+  }
+
+  /* ---------- 7. primal-dual on 1-D TV ---------- */
+  function initPDTV() {
+    var sa = document.getElementById('pd-svg-a'), sb = document.getElementById('pd-svg-b'); if (!sa || !sb) return;
+    var read = document.getElementById('pd-read'), cond = document.getElementById('pd-cond');
+    var N = 40, lam = 0.8, beta = 1, tau = 0.3, sig = 0.5, nShow = 60;
+    var seed = 12345; function rnd() { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648 - 0.5; }
+    var z = []; for (var i = 0; i < N; i++) z.push((i < 12 ? 0 : (i < 25 ? 1.5 : 0.5)) + 0.5 * rnd());
+    var normL2 = 4 * sq(Math.sin(Math.PI * (N - 1) / (2 * N)));
+    function D(x) { var out = []; for (var i = 0; i < N - 1; i++) out.push(x[i + 1] - x[i]); return out; }
+    function Dt(v) { var out = new Array(N).fill(0); for (var i = 0; i < N - 1; i++) { out[i] -= v[i]; out[i + 1] += v[i]; } return out; }
+    function F(x) { var s = 0; for (var i = 0; i < N; i++) s += 0.5 * sq(x[i] - z[i]); D(x).forEach(function (t) { s += lam * Math.abs(t); }); return s; }
+    function run(t, s, M) {
+      var x = z.slice(), v = new Array(N - 1).fill(0), xs = [x.slice()], Fs = [F(x)], blown = false;
+      for (var n = 0; n < M; n++) {
+        if (blown) { xs.push(null); Fs.push(Infinity); continue; }
+        var dv = Dt(v), xn = [];
+        for (var i = 0; i < N; i++) xn.push(x[i] - t * (x[i] - z[i] + dv[i]));
+        var xb = []; for (i = 0; i < N; i++) xb.push(2 * xn[i] - x[i]);
+        var dxb = D(xb);
+        for (i = 0; i < N - 1; i++) v[i] = clamp(v[i] + s * dxb[i], -lam, lam);
+        x = xn;
+        var mx = 0; for (i = 0; i < N; i++) mx = Math.max(mx, Math.abs(x[i]));
+        if (!isFinite(mx) || mx > 1e8) blown = true;
+        xs.push(blown ? null : x.slice()); Fs.push(blown ? Infinity : F(x));
+      }
+      return { xs: xs, Fs: Fs };
+    }
+    var refRun = run(0.25, 0.5, 4000), xh = refRun.xs[4000], Fh = F(xh);
+    var cur = null;
+    function recompute() { cur = run(tau, sig, 200); }
+    function draw() {
+      L.clear(sa); L.clear(sb);
+      var X = L.scale(0, N - 1, 30, 348), Y = L.scale(-0.8, 2.6, 236, 16);
+      L.axes(sa, X, Y, { xlabel: 'i', nx: 4, ny: 4, dx: 0, dy: 1 });
+      for (var i = 0; i < N; i++) L.dot(sa, X(i), Y(z[i]), 2.5, 'f-mut');
+      polyline(sa, xh.map(function (t, i) { return [X(i), Y(t)]; }), 's-idea dash', { 'stroke-width': 1.8 });
+      var xn = cur.xs[nShow];
+      if (xn) polyline(sa, xn.map(function (t, i) { return [X(i), Y(clamp(t, -0.8, 2.6))]; }), 's-1', { 'stroke-width': 2 });
+      else L.text(sa, 190, 120, 'iterates diverged (overflow)', 'f-warn', { 'text-anchor': 'middle' });
+      var T = L.scale(0, 200, 44, 348), V = L.scale(-8, 4, 236, 16);
+      L.axes(sb, T, V, { xlabel: 'n', ylabel: 'log₁₀(F(xₙ) − F(x̂))', nx: 4, ny: 6, dx: 0, dy: 0 });
+      polyline(sb, cur.Fs.map(function (f, n) { var g = f - Fh; return [T(n), V(clamp(Math.log10(Math.max(g, 1e-12)), -8, 4))]; }), 's-1', { 'stroke-width': 1.8 });
+      L.line(sb, T(nShow), V(-8), T(nShow), V(4), 's-mut dash', { 'stroke-width': 1 });
+      var val = 1 / tau - sig * normL2, ok = val > beta / 2;
+      if (cond) { cond.textContent = '1/τ − σ‖L‖² = ' + L.fmt(val, 2) + (ok ? ' > ' : ' ≤ ') + 'β/2 = 0.5 ' + (ok ? '✓' : '✗'); cond.className = 'cond ' + (ok ? 'ok' : 'ko'); }
+      var gap = cur.Fs[nShow] - Fh;
+      if (read) read.textContent = 'τ = ' + L.fmt(tau, 2) + ', σ = ' + L.fmt(sig, 2) + ', ‖L‖² = ' + L.fmt(normL2, 3) + ', β = 1   |   n = ' + nShow + ': F(xₙ) − F(x̂) = ' + (isFinite(gap) ? gap.toExponential(2) : '+∞') + '   |   ' + (ok ? 'convergence guaranteed by the theorem' : 'outside the guaranteed region');
+    }
+    L.bindRange('pd-tau', function (t) { tau = t; recompute(); draw(); });
+    L.bindRange('pd-sigma', function (t) { sig = t; recompute(); draw(); });
+    L.bindRange('pd-n', function (t) { nShow = Math.round(t); if (!cur) recompute(); draw(); });
+  }
+
+  try { initDualityGap(); } catch (e) { console.error('widget w-duality-gap', e); }
+  try { initLP(); } catch (e) { console.error('widget w-lp-duality', e); }
+  try { initConsensus(); } catch (e) { console.error('widget w-consensus-sharing', e); }
+  try { initSaddlePoint(); } catch (e) { console.error('widget w-saddle-point', e); }
+  try { initSaddleSchemes(); } catch (e) { console.error('widget w-saddle-schemes', e); }
+  try { initADMM(); } catch (e) { console.error('widget w-admm-2d', e); }
+  try { initPDTV(); } catch (e) { console.error('widget w-primal-dual-tv', e); }
+});
+</script>
+</body>
+</html>
