@@ -1,0 +1,1048 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>5 · Douglas–Rachford &amp; PPXA · LSD study guide</title>
+<meta name="description" content="Study guide for Part V.2 (Douglas–Rachford, parallel Douglas–Rachford, PPXA+) of Foundations of Distributed and Large Scale Computing Optimization (MVA): every result explained, proved, visualized and made memorable.">
+<link rel="stylesheet" href="assets/katex/katex.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<script defer src="assets/katex/katex.min.js"></script>
+<script defer src="assets/katex/contrib/auto-render.min.js"></script>
+<script defer src="assets/registry.js"></script>
+<script defer src="assets/guide.js"></script>
+<style>
+.widget .w-btns{display:inline-flex;flex-wrap:wrap;gap:6px}
+.widget .readout b{color:var(--ink);font-weight:600}
+.cmp td .katex{font-size:1em}
+</style>
+</head>
+<body>
+
+<header class="site"><div class="site-in">
+<a class="home" href="index.html">LSD study guide<small>Large Scale &amp; Distributed Optimization · MVA</small></a>
+<span class="spacer"></span>
+<ul class="strip" aria-label="Pages">
+<li><a href="index.html"><span class="n">⌂</span>Home</a></li>
+<li><a href="01_convex_analysis.html"><span class="n">1</span>Convexity</a></li>
+<li><a href="02_subdifferential_conjugate.html"><span class="n">2</span>Subdifferential &amp; conjugate</a></li>
+<li><a href="03_proximity_operator.html"><span class="n">3</span>Prox</a></li>
+<li><a href="04_fixed_point_forward_backward.html"><span class="n">4</span>Fixed points &amp; FB</a></li>
+<li><a href="05_douglas_rachford_ppxa.html" class="on"><span class="n">5</span>DR &amp; PPXA</a></li>
+<li><a href="06_duality_admm_primal_dual.html"><span class="n">6</span>Duality, ADMM &amp; primal-dual</a></li>
+<li><a href="07_majorization_minimization.html"><span class="n">7</span>MM</a></li>
+<li><a href="08_labs.html"><span class="n">L</span>Labs</a></li>
+<li><a href="09_toolbox.html"><span class="n">T</span>Toolbox</a></li>
+<li><a href="10_memorize.html"><span class="n">M</span>Memorize</a></li>
+</ul>
+<button class="btn theme-toggle" type="button">☾ Dark</button>
+</div></header>
+
+<div class="page">
+<nav class="toc" aria-label="Contents">
+<details id="toc-det" open>
+<summary><span><span class="mark">5 · Douglas–Rachford &amp; PPXA</span><span class="submark">Part V.2 · 12 slides · Part V · slides 30–38</span></span><span class="toc-btn">Contents</span></summary>
+<div class="toc-body">
+<div class="gr">Overview</div>
+<ol>
+<li><a class="l" href="#overview">Where we are</a></li>
+</ol>
+<div class="gr">Douglas–Rachford</div>
+<ol>
+<li><a class="l" href="#s-dr">Two nonsmooth functions</a></li>
+<li class="s"><a class="l" href="#dr-motivation">Which algorithm needs what</a></li>
+<li class="s"><a class="l" href="#rprox-nonexpansive">The reflected prox is nonexpansive</a></li>
+<li class="s"><a class="l" href="#ex-rprox">Exercise: prove it</a></li>
+<li class="s"><a class="l" href="#dr-fixed-points">Fixed points ↔ solutions</a></li>
+<li class="s"><a class="l" href="#douglas-rachford">Douglas–Rachford algorithm</a></li>
+<li class="s"><a class="l" href="#peaceman-rachford">Peaceman–Rachford (λ = 2)</a></li>
+</ol>
+<div class="gr">Parallel form</div>
+<ol>
+<li><a class="l" href="#s-parallel">Parallel Douglas–Rachford and PPXA+</a></li>
+<li class="s"><a class="l" href="#weak-continuity-bounded">Lemma: weak continuity</a></li>
+<li class="s"><a class="l" href="#parallel-dr">Parallel DR for g∘L</a></li>
+<li class="s"><a class="l" href="#ppxa">PPXA+</a></li>
+<li class="s"><a class="l" href="#ppxa-consensus">Consensus case: PPXA</a></li>
+</ol>
+<div class="gr">Exercises</div>
+<ol>
+<li><a class="l" href="#s-exercises">Exercise of the deck</a></li>
+<li class="s"><a class="l" href="#ex-parallel-algorithms">Three parallel algorithms</a></li>
+</ol>
+<div class="gr">Synthesis</div>
+<ol>
+<li><a class="l" href="#s-comparison">FB vs DR vs PPXA+, and ADMM ahead</a></li>
+<li><a class="l" href="#retain">What to retain</a></li>
+<li><a class="l" href="#quiz">Self-check</a></li>
+</ol>
+<div class="tools">
+<button class="btn" type="button" data-toggle-details="details.proof" data-label-open="Collapse all proofs" data-label-closed="Expand all proofs" aria-pressed="false">Expand all proofs</button>
+<span class="mini" id="known-count"></span>
+<button class="btn small" type="button" id="known-reset">Reset "known" marks</button>
+</div>
+</div>
+</details>
+</nav>
+
+<main>
+<header class="hero" id="top">
+<div>
+<div class="eyebrow">Lecture 2 · Part V.2 (12 slides) · Part V · slides 30–38</div>
+<h1>Douglas–Rachford and PPXA+</h1>
+<p class="lead">When neither $f$ nor $g$ is smooth, compose <em>reflections</em> instead of proxes: $T=\rprox_{\gamma f}\circ\rprox_{\gamma g}$ is nonexpansive, its fixed points are the solutions seen through $\prox_{\gamma g}$, and Krasnosel'skii–Mann does the rest. Lifting to a product space turns the same algorithm into a parallel one.</p>
+</div>
+<svg viewBox="0 0 220 170" role="img" aria-label="One Douglas–Rachford step on a line and a disc: project on the disc, reflect, project on the line, average.">
+<line x1="10" y1="140" x2="210" y2="40" class="s-1" stroke-width="2"/>
+<circle cx="140" cy="110" r="40" class="s-2 f-none" stroke-width="2"/>
+<line x1="40" y1="50" x2="171" y2="129" class="s-mut dash" stroke-width="1"/>
+<line x1="171" y1="129" x2="143.5" y2="73.3" class="s-mut dash" stroke-width="1"/>
+<line x1="40" y1="50" x2="77.8" y2="33.9" class="s-ink" stroke-width="1.6"/>
+<circle cx="40" cy="50" r="4" class="f-ink"/>
+<circle cx="105.7" cy="89.4" r="4" class="f-2"/>
+<circle cx="171" cy="129" r="3.5" class="f-none s-ink2" stroke-width="1.5"/>
+<circle cx="143.5" cy="73.3" r="4" class="f-1"/>
+<circle cx="77.8" cy="33.9" r="4" class="f-ink2"/>
+<text x="28" y="44" class="tm f-ink">x</text>
+<text x="96" y="104" class="tm f-2">y</text>
+<text x="176" y="140" class="tm f-ink2">2y−x</text>
+<text x="150" y="70" class="tm f-1">z</text>
+<text x="82" y="30" class="tm f-ink2">x⁺</text>
+<text x="178" y="36" class="tm f-1">A</text>
+<text x="128" y="160" class="tm f-2">B</text>
+</svg>
+</header>
+
+<ol class="howto">
+<li><b>Read the statement, then the "in one sentence".</b> Try to say why it is true before opening "Why it is true".</li>
+<li><b>Try the proof</b> with the hint before unfolding it; note the trick chips, they come back on every page.</li>
+<li><b>Play with the widgets</b>, then tick "known" when you can restate the result and its mechanism from memory.</li>
+</ol>
+<div class="legend" aria-label="Legend">
+<span><span class="tag tag-slides">Slides</span> on the official slides</span>
+<span><span class="tag tag-key">Key</span> used everywhere afterwards</span>
+<span><span class="tag tag-extra">Extra</span> context, not on the slides</span>
+<span><span class="tag tag-exam">Exam</span> classic exam question</span>
+<span><span class="tag tag-lab">Lab</span> needed in a lab</span>
+</div>
+
+<section class="chapter" id="overview">
+<header><div class="eyebrow">Overview</div><h2>Where we are</h2>
+<p class="lead">Page 4 ended with Forward–Backward: it solves $0\in\partial f(x)+\nabla g(x)$ by composing a prox with a gradient step, and converges because that composition is averaged. This page removes the last smoothness assumption.</p></header>
+<p>The chain of the course so far is <em>Fermat's rule</em> $0\in\partial(f+g)(\hat x)$ → <em>a zero of a sum of operators</em> $0\in\partial f(\hat x)+\partial g(\hat x)$ → <em>a fixed point of a nonexpansive map</em> → <em>Fejér monotonicity and Krasnosel'skii–Mann</em>. Every link is in place except one: when both $f$ and $g$ are nonsmooth, which nonexpansive map has the solutions as fixed points? The obvious candidate $\prox_{\gamma f}\circ\prox_{\gamma g}$ is nonexpansive but its fixed points are <strong>not</strong> the minimizers of $f+g$ (try $f=\abs{\cdot}$, $g=\tfrac12(\cdot-3)^2$, $\gamma=1$: the composition fixes $1$, the minimizer is $2$).</p>
+<p>The invention of this page (Lions–Mercier 1979, after Douglas and Rachford 1956) has two parts, and both are worth learning by heart:</p>
+<ul>
+<li><strong>Reflect instead of projecting.</strong> $\rprox_{\gamma f}=2\prox_{\gamma f}-\Id$ is nonexpansive because $\prox_{\gamma f}$ is <em>firmly</em> nonexpansive (<a class="chip t" href="09_toolbox.html#T11"><b>T11</b> reflect to compose</a>). Reflections lose the averagedness of the prox, but their composition has the right fixed points (seen through $\prox_{\gamma g}$); averaging is restored at the end by the relaxation.</li>
+<li><strong>Solutions are shadows of fixed points.</strong> $\zer(\partial f+\partial g)=\prox_{\gamma g}(\Fix T)$ with $T=\rprox_{\gamma f}\circ\rprox_{\gamma g}$: a fixed point of $T$ is not a solution, its image under $\prox_{\gamma g}$ is (<a class="chip t" href="09_toolbox.html#T15"><b>T15</b> zeros ⇔ fixed points</a>).</li>
+</ul>
+<p>Averaging $T$ with the identity (relaxation $\lambda_n/2$) gives the Douglas–Rachford algorithm, Krasnosel'skii–Mann in disguise (<a class="chip t" href="09_toolbox.html#T22"><b>T22</b> count averagedness</a>). The second half of the page applies it to $f=\ind_E$ with $E=\ran L$ a subspace: the projection $P_E$ becomes a least-squares solve, the algorithm becomes the <em>parallel</em> Douglas–Rachford, and on a product space it becomes PPXA+, where the $m$ proxes run simultaneously (<a class="chip t" href="09_toolbox.html#T16"><b>T16</b> product-space lifting</a>). Page 6 will show that Douglas–Rachford applied to a dual problem is ADMM.</p>
+<div class="callout insight"><span class="lbl">The one picture</span><p>For two sets $A,B$ ($f=\ind_A$, $g=\ind_B$) one Douglas–Rachford step is: project $x$ on $B$ (get $y$), <em>reflect</em> through it ($2y-x$), project the reflection on $A$ (get $z$), then move $x$ by $z-y$. The point $x$ itself never has to be in $A$ or $B$: it is a bookkeeping variable whose shadow $y=P_Bx$ converges to $A\cap B$. The hero picture above shows exactly one such step.</p></div>
+</section>
+
+<section class="chapter" id="s-dr">
+<header><div class="eyebrow">Part V.2 · slides 2–7 · Part V · slides 30–34</div><h2>Two nonsmooth functions: the Douglas–Rachford algorithm</h2>
+<p class="lead">Minimize $f+g$ with $f,g\in\Gz{\H}$, both possibly nonsmooth, each with a computable prox. Three results: the reflected prox is nonexpansive; solutions are shadows of the fixed points of $\rprox_{\gamma f}\circ\rprox_{\gamma g}$; the relaxed iteration converges.</p></header>
+
+<article class="card rem" id="dr-motivation">
+<header class="card-head"><span class="kind">Remark</span><h3>Which algorithm needs what: a splitting algorithm for two nonsmooth functions</h3><span class="src">Part V.2 · slide 2 · Part V · slide 30</span><span class="tag tag-slides">Slides</span><a class="anchor" href="#dr-motivation" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Motivation</span>
+<p>Let $f\in\Gz{\H}$ and $g\in\Gz{\H}$. We want to $$\operatorname*{minimize}_{x\in\H}\ f(x)+g(x).$$ Possible solutions and what they require:</p>
+<div class="table-scroll"><table class="cmp"><thead><tr><th>Algorithm</th><th>Needs</th><th>Iteration</th></tr></thead><tbody>
+<tr><td><a class="xref" data-id="gradient-descent" href="04_fixed_point_forward_backward.html#gradient-descent">gradient descent</a></td><td><span class="ko">$f+g$ smooth</span> (Lipschitz gradient)</td><td>$x_{n+1}=x_n-\gamma\nabla(f+g)(x_n)$</td></tr>
+<tr><td><a class="xref" data-id="proximal-point" href="04_fixed_point_forward_backward.html#proximal-point">proximal point</a></td><td><span class="ko">$f+g$ "proximable"</span> (one prox for the sum)</td><td>$x_{n+1}=\prox_{\gamma_n(f+g)}x_n$</td></tr>
+<tr><td><a class="xref" data-id="forward-backward" href="04_fixed_point_forward_backward.html#forward-backward">Forward–Backward</a></td><td><span class="mid">$g$ smooth</span>, $f$ proximable</td><td>$x_{n+1}=x_n+\lambda_n\big(\prox_{\gamma f}(x_n-\gamma\nabla g(x_n))-x_n\big)$</td></tr>
+<tr><td><strong>Douglas–Rachford</strong> (this page)</td><td><span class="ok">$f$ and $g$ each proximable</span>, nothing smooth</td><td>$y_n=\prox_{\gamma g}x_n$, $z_n=\prox_{\gamma f}(2y_n-x_n)$, $x_{n+1}=x_n+\lambda_n(z_n-y_n)$</td></tr>
+</tbody></table></div>
+<p><strong>Can we find a splitting algorithm when both $f$ and $g$ are nonsmooth?</strong> Splitting means: the algorithm only ever calls $\prox_{\gamma f}$ and $\prox_{\gamma g}$ separately, never a prox of the sum.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Knowing the two proxes separately is not knowing the prox of the sum: a splitting algorithm has to combine them, and the right combination is a composition of reflections, not of proxes.</p>
+<div class="rub">Why the question is not trivial</div>
+<div class="why"><p>The prox of a sum is in general not computable from the two proxes: $\prox_{\gamma(f+g)}\neq\prox_{\gamma f}\circ\prox_{\gamma g}$ (page 3). Worse, the fixed points of $\prox_{\gamma f}\circ\prox_{\gamma g}$ are not minimizers of $f+g$. Take $f=\abs{\cdot}$, $g=\tfrac12(\cdot-3)^2$ on $\R$, $\gamma=1$: $\prox_g x=\tfrac{x+3}{2}$, $\prox_f=\operatorname{soft}_1$, and $\prox_f(\prox_g x)=x$ gives $\tfrac{x+3}{2}-1=x$, i.e. $x=1$, whereas the minimizer is $\hat x=\prox_{\abs\cdot}(3)=2$. So "alternate the two proxes" is the wrong algorithm for minimization. (It is the right one for <em>feasibility</em>, $f=\ind_A$, $g=\ind_B$: the fixed points of $P_AP_B$ are exactly $A\cap B$ when the intersection is nonempty, which is why alternating projections works there, and why the general case needs a new idea.)</p>
+<p>A second motivation is the <strong>feasibility problem</strong> itself: find $x\in A\cap B$ for two closed convex sets, i.e. minimize $\ind_A+\ind_B$. The algorithm of this page then reads $y_n=P_Bx_n$, $z_n=P_A(2y_n-x_n)$, $x_{n+1}=x_n+\lambda_n(z_n-y_n)$: a projection, a <em>reflection</em> $2y_n-x_n$ through $B$, another projection. Reflections, not projections, are the geometric heart of Douglas–Rachford (widget in the <a href="#douglas-rachford">algorithm card</a>).</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p>GD needs the sum smooth, PPA needs the sum proximable, FB needs one smooth part. <strong>DR needs only the two proxes</strong>, and it composes their <em>reflections</em>. No smoothness is ever needed, because each prox is firmly nonexpansive for every $\gamma\gt0$, whatever $f$ and $g$ are.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="forward-backward" href="04_fixed_point_forward_backward.html#forward-backward">Forward–Backward</a><a class="chip xref" data-id="proximal-point" href="04_fixed_point_forward_backward.html#proximal-point">proximal point</a><a class="chip xref" data-id="prox-projection" href="03_proximity_operator.html#prox-projection">prox of an indicator = projection</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="douglas-rachford" href="#douglas-rachford">Douglas–Rachford</a></div>
+</article>
+
+<article class="card prop" id="rprox-nonexpansive">
+<header class="card-head"><span class="kind">Proposition</span><h3>The reflected prox $\rprox_{\gamma f}=2\prox_{\gamma f}-\Id$ is nonexpansive</h3><span class="src">Part V.2 · slide 3 · Part V · slide 31</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#rprox-nonexpansive" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $\gamma\in\,]0,+\infty[$ and let $f\in\Gz{\H}$. The <strong>reflection of the proximity operator</strong>, defined as $$\rprox_{\gamma f}=2\prox_{\gamma f}-\Id,$$ is nonexpansive: $(\forall x,y\in\H)\ \norm{\rprox_{\gamma f}x-\rprox_{\gamma f}y}\le\norm{x-y}$.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">$\prox_{\gamma f}x$ is the midpoint of $x$ and $\rprox_{\gamma f}x$; "firmly nonexpansive" means precisely "midpoint of the identity and a nonexpansive map", so the reflection is that nonexpansive map.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>On page 4, $\prox_{\gamma f}$ was shown to be <a class="xref" data-id="prox-firmly-nonexpansive" href="04_fixed_point_forward_backward.html#prox-firmly-nonexpansive">firmly nonexpansive</a>, i.e. $\tfrac12$-averaged: by the <a class="xref" data-id="averaged" href="04_fixed_point_forward_backward.html#averaged">definition of an $\alpha$-averaged operator</a> there is a nonexpansive $R$ with $\prox_{\gamma f}=\tfrac12\Id+\tfrac12R$. Solve for $R$: $R=2\prox_{\gamma f}-\Id=\rprox_{\gamma f}$. That is the whole proof; the computation below shows that the two statements are in fact <em>equivalent</em>, which is the content of the averaged inequality with $\alpha=\tfrac12$.</p>
+<p>The mechanism is a parallelogram. Write $p=\prox_{\gamma f}x$, $q=\prox_{\gamma f}y$ and split the displacement $x-y$ into its prox part and its residual part: $x-y=a+b$ with $a=p-q$ and $b=(x-p)-(y-q)$. The reflection keeps $a$ and flips $b$: $\rprox_{\gamma f}x-\rprox_{\gamma f}y=2a-(a+b)=a-b$. The two diagonals of the parallelogram built on $a$ and $b$ satisfy $\norm{a+b}^2-\norm{a-b}^2=4\ps{a}{b}$, so flipping $b$ cannot lengthen the displacement as soon as $\ps{a}{b}\ge0$. That is exactly firm nonexpansiveness: $x-p\in\gamma\partial f(p)$ and $y-q\in\gamma\partial f(q)$, so $b$ is a difference of subgradients, and the monotonicity of $\partial f$ makes it form a non-obtuse angle with $a=p-q$. For the projection onto a disc (widget below), $R_Cx=2P_Cx-x$ is the mirror image of $x$ in the tangent line at $P_Cx$.</p>
+<p>The sentence to say out loud: <em>the reflection flips the residual part of the displacement; flipping a vector that makes a non-obtuse angle with the other part never lengthens the sum.</em></p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul><li>$f\in\Gz{\H}$ and $\gamma\gt0$: $\gamma f\in\Gz{\H}$, so $\prox_{\gamma f}$ is well defined and single-valued everywhere, and page 4's firm nonexpansiveness applies to it.</li><li>Nothing else. The result is unconditional: any prox can be reflected.</li></ul></div>
+<details class="pl hint"><summary>Hint <span class="aid">— try it first</span></summary><div class="dc"><p>Write $p=\prox_{\gamma f}x$, $q=\prox_{\gamma f}y$ and expand $\norm{(2p-x)-(2q-y)}^2$. The cross term is exactly what firm nonexpansiveness controls.</p></div></details>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T11"><b>T11</b> reflect to compose</a> <a class="chip t" href="09_toolbox.html#T12"><b>T12</b> λ-identity (α = ½)</a></summary><div class="dc">
+<p><span class="step">1. Name the objects.</span> Fix $x,y\in\H$, set $p=\prox_{\gamma f}x$, $q=\prox_{\gamma f}y$, $R=\rprox_{\gamma f}$. Then $Rx-Ry=2(p-q)-(x-y)$.</p>
+<p><span class="step">2. Expand.</span> $$\norm{Rx-Ry}^2=4\norm{p-q}^2-4\ps{p-q}{x-y}+\norm{x-y}^2 .$$</p>
+<p><span class="step">3. Firm nonexpansiveness.</span> Page 4 proved, from the monotonicity of $\partial(\gamma f)$, that $\ps{p-q}{x-y}\ge\norm{p-q}^2$ (this is the inequality $\ps{\prox u_1'-\prox u_2'}{u_1'-u_2'}\ge\norm{\prox u_1'-\prox u_2'}^2$ of the slides). Hence $4\norm{p-q}^2-4\ps{p-q}{x-y}\le0$.</p>
+<p><span class="step">4. Conclude.</span> $\norm{Rx-Ry}^2\le\norm{x-y}^2$: $R$ is nonexpansive.</p>
+<p><span class="step">5. Equivalence (bonus).</span> Step 2 is an identity, so $R$ nonexpansive $\iff$ $\ps{p-q}{x-y}\ge\norm{p-q}^2$ $\iff$ $\prox_{\gamma f}$ firmly nonexpansive. Equivalently, $\norm{\tfrac12(x-y)+\tfrac12(Rx-Ry)}^2=\tfrac12\norm{x-y}^2+\tfrac12\norm{Rx-Ry}^2-\tfrac14\norm{(x-y)-(Rx-Ry)}^2$ (the λ-identity with $\lambda=\tfrac12$) is the averaged inequality of page 4 with $\alpha=\tfrac12$.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout trick"><span class="lbl">Trick</span><p><strong>Reflect to compose</strong> (<a class="chip t" href="09_toolbox.html#T11"><b>T11</b></a>). Composing two proxes is harmless for convergence (the composition is still averaged) but fatal for the target: $\Fix(\prox_{\gamma f}\prox_{\gamma g})\neq\zer(\partial f+\partial g)$ in general (overview example: $1$ instead of $2$; projections onto two intersecting sets are the lucky exception). <span class="tag tag-extra">Extra</span> In fact $\Fix(\prox_{\gamma f}\prox_{\gamma g})=\Argmin\big(f+\env{\gamma}{g}\big)$: the composition minimizes $f$ plus the Moreau envelope of $g$, not $f+g$. Composing the <em>reflections</em> keeps nonexpansiveness and gets the target right, through the shadow: $\zer(\partial f+\partial g)=\prox_{\gamma g}\big(\Fix(\rprox_{\gamma f}\rprox_{\gamma g})\big)$. Reflections are only nonexpansive, so average back with the identity, $\tfrac12(\Id+T)$, and let Krasnosel'skii–Mann converge. Pattern: write each firmly nonexpansive $P$ as $\tfrac12(\Id+R)$ with $R=2P-\Id$, compose the $R$'s, average at the end. This is the entire design of Douglas–Rachford.</p></div>
+<div class="callout pitfall"><span class="lbl">Pitfall</span><p>$\rprox_{\gamma f}$ is nonexpansive but <em>not</em> averaged in general: the reflection through a line is an isometry ($\norm{Rx-Ry}=\norm{x-y}$), and the Picard iteration of a composition of two such reflections is a rotation that never converges (see <a href="#peaceman-rachford">Peaceman–Rachford</a>). Nonexpansive is enough to compose, not enough to iterate: averaging must come back at the end.</p></div>
+
+<div class="widget" id="w-rprox">
+<div class="w-title">Interactive · the reflection $2P_C-\Id$ of a projection stays nonexpansive</div>
+<p class="w-help">$C$ is the unit disc, $P_C$ its projection (the prox of $\ind_C$), $R_C=2P_C-\Id$ the reflection. Move $x$ and compare the distances: both $\norm{P_Cx-P_Cy}$ and $\norm{R_Cx-R_Cy}$ are $\le\norm{x-y}$, but the two are not ordered (in the default position the reflections are much closer than the projections). Since $P_C$ is the midpoint of $\Id$ and $R_C$, the two are linked only through the midpoint bound $\norm{P_Cx-P_Cy}\le\tfrac12\big(\norm{x-y}+\norm{R_Cx-R_Cy}\big)$. The readout checks the identity of the proof, $\norm{x-y}^2-\norm{R_Cx-R_Cy}^2=4\big(\ps{P_Cx-P_Cy}{x-y}-\norm{P_Cx-P_Cy}^2\big)\ge0$: firm nonexpansiveness of $P_C$ is exactly what keeps the reflection from expanding.</p>
+<div class="w-ctls">
+<label class="ctl">radius of x <input type="range" id="rp-rho" min="0" max="2.8" step="0.05" value="2.2"><output id="rp-rho-v"></output></label>
+<label class="ctl">angle of x (°) <input type="range" id="rp-phi" min="0" max="360" step="2" value="20"><output id="rp-phi-v"></output></label>
+</div>
+<svg class="w-svg" id="rp-svg" viewBox="0 0 520 330" role="img" aria-label="Projection and reflection of two points through the unit disc"></svg>
+<div class="leg"><span><i class="dot" style="background:var(--ink)"></i>$x$, $y$</span><span><i class="dot" style="background:var(--s1)"></i>$P_Cx$, $P_Cy$</span><span><i class="dot" style="background:var(--s2)"></i>$R_Cx$, $R_Cy$</span></div>
+<p class="readout" id="rp-read"></p>
+<p class="w-cap">When both points are inside $C$, $P_C$ and $R_C$ both act as the identity. When $x$ is outside, $R_Cx$ is the mirror image of $x$ in the tangent line at $P_Cx$ (the point reflection of $x$ through $P_Cx$), so $\norm{R_Cx}=\abs{2-\norm{x}}$: for $1\le\norm{x}\le3$ it lands back in the disc (beyond the centre once $\norm{x}\gt2$), and for $\norm{x}\gt3$ it leaves the disc on the opposite side. Distances never grow.</p>
+</div>
+
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>prox = midpoint, rprox = mirror.</strong> $\prox_{\gamma f}=\tfrac12(\Id+\rprox_{\gamma f})$; proxes are firmly nonexpansive, their reflections are nonexpansive, and firmly nonexpansive $\iff$ $2P-\Id$ nonexpansive.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="prox-firmly-nonexpansive" href="04_fixed_point_forward_backward.html#prox-firmly-nonexpansive">prox is firmly nonexpansive</a><a class="chip xref" data-id="averaged" href="04_fixed_point_forward_backward.html#averaged">averaged operators</a><a class="chip xref" data-id="nonexpansive" href="04_fixed_point_forward_backward.html#nonexpansive">nonexpansive operator</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="dr-fixed-points" href="#dr-fixed-points">fixed points of DR</a><a class="chip xref" data-id="douglas-rachford" href="#douglas-rachford">Douglas–Rachford</a><a class="chip xref" data-id="dr-unrelaxed" href="06_duality_admm_primal_dual.html#dr-unrelaxed">unrelaxed DR (page 6)</a></div>
+</article>
+
+<article class="card ex" id="ex-rprox">
+<header class="card-head"><span class="kind">Exercise</span><h3>Establish that $\rprox_{\gamma f}$ is nonexpansive</h3><span class="src">Part V · slide 31</span><span class="lvl">★☆☆</span><a class="anchor" href="#ex-rprox" title="link to this card">#</a></header>
+<div class="ex-statement"><p>Let $\gamma\in\,]0,+\infty[$ and $f\in\Gz{\H}$. Establish that $\rprox_{\gamma f}=2\prox_{\gamma f}-\Id$ is nonexpansive.</p></div>
+<p class="reflex">Reflex: a statement about $2P-\Id$ is a statement about $P$ being $\tfrac12$-averaged. Expand the square and let firm nonexpansiveness kill the cross term.</p>
+<details class="pl hint"><summary>Hint</summary><div class="dc"><p>Two routes. (a) Use the definition of a $\tfrac12$-averaged operator: $\prox_{\gamma f}=\tfrac12\Id+\tfrac12R$. (b) Direct computation: $\norm{(2p-x)-(2q-y)}^2$ with $p=\prox_{\gamma f}x$, $q=\prox_{\gamma f}y$, plus the inequality $\ps{p-q}{x-y}\ge\norm{p-q}^2$ proved on page 4.</p></div></details>
+<details class="pl solution"><summary>Solution</summary><div class="dc">
+<p><span class="step">Route (a).</span> By page 4, $\prox_{\gamma f}$ is firmly nonexpansive, i.e. $\tfrac12$-averaged: there exists a nonexpansive $R:\H\to\H$ such that $\prox_{\gamma f}=(1-\tfrac12)\Id+\tfrac12R$. Multiplying by $2$ and subtracting $\Id$: $R=2\prox_{\gamma f}-\Id=\rprox_{\gamma f}$, which is therefore nonexpansive.</p>
+<p><span class="step">Route (b), from scratch.</span> Let $x,y\in\H$, $p=\prox_{\gamma f}x$, $q=\prox_{\gamma f}y$. By the <a class="xref" data-id="prox-characterization" href="03_proximity_operator.html#prox-characterization">characterization of the prox</a>, $x-p\in\gamma\partial f(p)$ and $y-q\in\gamma\partial f(q)$. The <a class="xref" data-id="subdifferential-monotone" href="02_subdifferential_conjugate.html#subdifferential-monotone">monotonicity of $\partial f$</a> gives $\ps{(x-p)-(y-q)}{p-q}\ge0$, i.e. $\ps{x-y}{p-q}\ge\norm{p-q}^2$. Then
+$$\norm{\rprox_{\gamma f}x-\rprox_{\gamma f}y}^2=\norm{2(p-q)-(x-y)}^2=\norm{x-y}^2-4\big(\ps{x-y}{p-q}-\norm{p-q}^2\big)\le\norm{x-y}^2 .$$</p>
+<p><span class="step">Remark.</span> The identity in route (b) shows the converse too: if $2P-\Id$ is nonexpansive then $\ps{x-y}{Px-Py}\ge\norm{Px-Py}^2$, so $P$ is firmly nonexpansive. "Firmly nonexpansive" and "reflection nonexpansive" are the same property.</p>
+</div></details>
+</article>
+
+<article class="card thm" id="dr-fixed-points">
+<header class="card-head"><span class="kind">Theorem</span><h3>Solutions are shadows of fixed points: $\zer(\partial f+\partial g)=\prox_{\gamma g}(\Fix T)$, $T=\rprox_{\gamma f}\circ\rprox_{\gamma g}$</h3><span class="src">Part V.2 · slide 4 · Part V · slide 32</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><span class="tag tag-exam">Exam</span><a class="anchor" href="#dr-fixed-points" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $\gamma\in\,]0,+\infty[$, let $f\in\Gz{\H}$ and let $g\in\Gz{\H}$. We have $$\zer(\partial f+\partial g)=\prox_{\gamma g}(\Fix T)\qquad\text{where }T=\rprox_{\gamma f}\circ\rprox_{\gamma g}.$$ In words: $x$ is a zero of $\partial f+\partial g$ if and only if $x=\prox_{\gamma g}y$ for some fixed point $y$ of $T$.</p>
+<p class="mini">Letters: here, as on the slides, $x$ is the solution and $y$ the fixed point. In the <a href="#douglas-rachford">algorithm</a> the roles swap: the governing sequence $x_n$ tends to a fixed point $\hat x$, and the shadow $y_n=\prox_{\gamma g}x_n$ tends to the solution $\hat y$.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">A solution $x$ carries a subgradient $u\in\partial g(x)$ that $f$ cancels ($-u\in\partial f(x)$); the point $y=x+\gamma u$ "above" $x$ is a fixed point of $T$, and $x$ is recovered as its shadow $\prox_{\gamma g}y$.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>$0\in\partial f(x)+\partial g(x)$ says: some $u\in\partial g(x)$ satisfies $-u\in\partial f(x)$. Encode $u$ as a displacement: $y=x+\gamma u$. Then $y-x\in\gamma\partial g(x)$ is, by the <a class="xref" data-id="prox-characterization" href="03_proximity_operator.html#prox-characterization">prox characterization</a> (<a class="chip t" href="09_toolbox.html#T08"><b>T08</b></a>), the statement $x=\prox_{\gamma g}y$: the point $x$ is the shadow of $y$. And $x-y\in\gamma\partial f(x)$ is $x=\prox_{\gamma f}(2x-y)$, where $2x-y=2\prox_{\gamma g}y-y=\rprox_{\gamma g}y$ is the reflection of $y$ through $x$. So a solution is a point $x$ that is <em>simultaneously</em> the $\prox_{\gamma g}$ of $y$ and the $\prox_{\gamma f}$ of the reflection of $y$. Reflecting once more, $\rprox_{\gamma f}(\rprox_{\gamma g}y)=2x-(2x-y)=y$: the two reflections bring $y$ back to itself, $y\in\Fix T$. Every step is an equivalence, so the fixed points of $T$ are exactly the points whose two shadows coincide, and the common shadow is the solution.</p>
+<p>The sentence to say out loud: <em>fixed points of $T$ live one subgradient above the solutions; $\prox_{\gamma g}$ brings them down.</em></p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul><li>$f,g\in\Gz{\H}$: the two proxes exist and the characterization $p=\prox_{\gamma h}y\iff y-p\in\gamma\partial h(p)$ holds for $h=f$ and $h=g$ (applied to $\gamma h\in\Gz{\H}$, using $\partial(\gamma h)=\gamma\partial h$).</li><li>$\gamma\gt0$ is <em>free</em>: it only rescales the subgradient $u$ into the displacement $y-x=\gamma u$. Different $\gamma$ give different fixed points $y$ for the same solution $x$ (widget below).</li><li>No qualification condition is needed: the theorem is about $\zer(\partial f+\partial g)$, not about $\Argmin(f+g)$. The <a class="xref" data-id="subdiff-sum-inclusion" href="02_subdifferential_conjugate.html#subdiff-sum-inclusion">inclusion $\partial f+\partial g\subset\partial(f+g)$</a> gives $\zer(\partial f+\partial g)\subset\Argmin(f+g)$ for free; equality needs the <a class="xref" data-id="moreau-rockafellar" href="02_subdifferential_conjugate.html#moreau-rockafellar">sum rule</a>.</li></ul></div>
+<details class="pl hint"><summary>Hint <span class="aid">— try it first</span></summary><div class="dc"><p>Introduce $y$ with $x-y\in\gamma\partial f(x)$ and $y-x\in\gamma\partial g(x)$, then translate each inclusion into a prox equation with $w\in(\Id+\gamma\partial h)x\iff x=\prox_{\gamma h}w$ (<a class="chip t" href="09_toolbox.html#T08"><b>T08</b></a>): here $w=y$ for $h=g$, and $w=2x-y$ for $h=f$. Watch the point at which the inclusion is evaluated: always $x$, so $x$ is the output of both proxes.</p></div></details>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T08"><b>T08</b> Fermat + rewrite</a> <a class="chip t" href="09_toolbox.html#T15"><b>T15</b> zeros ⇔ fixed points</a> <a class="chip t" href="09_toolbox.html#T11"><b>T11</b> reflect</a></summary><div class="dc">
+<p>Let $x\in\H$. We prove a chain of equivalences, exactly as on the slide, and justify each one.</p>
+<p><span class="step">1. Split the zero into two subgradients.</span> Since $\gamma\gt0$ and $\partial(\gamma h)=\gamma\partial h$ (<a class="xref" data-id="subdiff-scaling" href="02_subdifferential_conjugate.html#subdiff-scaling">scaling</a>),
+$$0\in\partial f(x)+\partial g(x)\iff 0\in\gamma\big(\partial f(x)+\partial g(x)\big)\iff(\exists y\in\H)\ \ x-y\in\gamma\partial f(x)\ \text{ and }\ y-x\in\gamma\partial g(x).\tag{1}$$
+($\Rightarrow$) pick $v\in\gamma\partial g(x)$ with $-v\in\gamma\partial f(x)$ and set $y=x+v$. ($\Leftarrow$) add the two inclusions: $0=(x-y)+(y-x)\in\gamma\partial f(x)+\gamma\partial g(x)$.</p>
+<p><span class="step">2. Rewrite each inclusion as "x is a prox".</span> By the <a class="xref" data-id="prox-characterization" href="03_proximity_operator.html#prox-characterization">characterization</a> applied to $\gamma g$: $y-x\in\gamma\partial g(x)\iff y\in(\Id+\gamma\partial g)x\iff x=\prox_{\gamma g}y$. For $f$: $x-y\in\gamma\partial f(x)\iff 2x-y\in x+\gamma\partial f(x)=(\Id+\gamma\partial f)x$ (add $x$ to both sides). So
+$$(1)\iff(\exists y\in\H)\ \ 2x-y\in(\Id+\gamma\partial f)x\ \text{ and }\ x=\prox_{\gamma g}y.\tag{2}$$</p>
+<p><span class="step">3. The second prox and the first reflection.</span> $2x-y\in(\Id+\gamma\partial f)x\iff x=\prox_{\gamma f}(2x-y)$. Now use $x=\prox_{\gamma g}y$ inside: $2x-y=2\prox_{\gamma g}y-y=\rprox_{\gamma g}y$. Hence
+$$(2)\iff(\exists y\in\H)\ \ x=\prox_{\gamma f}\big(\rprox_{\gamma g}y\big)\ \text{ and }\ x=\prox_{\gamma g}y.\tag{3}$$</p>
+<p><span class="step">4. The second reflection closes the loop.</span> Write $r=\rprox_{\gamma g}y$. For any $r$, $x=\prox_{\gamma f}r\iff\rprox_{\gamma f}r=2\prox_{\gamma f}r-r=2x-r$. With $r=\rprox_{\gamma g}y=2x-y$ (step 3) this reads $\rprox_{\gamma f}(\rprox_{\gamma g}y)=2x-(2x-y)=y$. Therefore
+$$(3)\iff(\exists y\in\H)\ \ \rprox_{\gamma f}\big(\rprox_{\gamma g}y\big)=2x-\rprox_{\gamma g}y=y\ \text{ and }\ x=\prox_{\gamma g}y .$$
+(The equivalence is two-sided: given $x=\prox_{\gamma g}y$, the identity $Ty=2\prox_{\gamma f}(r)-r$ with $r=2x-y$ shows $Ty=y\iff\prox_{\gamma f}(r)=x$.)</p>
+<p><span class="step">5. Read off.</span> The condition is "$y\in\Fix T$ and $x=\prox_{\gamma g}y$": $$0\in\partial f(x)+\partial g(x)\iff(\exists y\in\Fix T)\ x=\prox_{\gamma g}y\iff x\in\prox_{\gamma g}(\Fix T).$$</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout insight"><span class="lbl">Explicit dictionary <span class="tag tag-extra">Extra</span></span><p>The proof gives more than the statement: $$\Fix T=\big\{\,x+\gamma u\ :\ x\in\zer(\partial f+\partial g),\ u\in\partial g(x),\ -u\in\partial f(x)\,\big\}.$$ One solution can have many fixed points above it (one per cancelling subgradient pair), and several fixed points can share the same shadow. When $g$ is differentiable, $u=\nabla g(x)$ is forced and each solution has exactly one fixed point $x+\gamma\nabla g(x)$ above it.</p></div>
+<div class="callout trick"><span class="lbl">Trick</span><p><strong>Zeros ⇔ fixed points</strong> (<a class="chip t" href="09_toolbox.html#T15"><b>T15</b></a>), DR flavour: to turn $0\in A x+Bx$ into a fixed-point equation, introduce the auxiliary point $y=x+\gamma u$ with $u\in Bx$, and read $y-x\in\gamma Bx$ as $x=(\Id+\gamma B)^{-1}y$. The FB flavour (page 4) used $x=\prox_{\gamma f}(x-\gamma\nabla g(x))$ with no auxiliary point because $\nabla g(x)$ is single-valued; here $\partial g(x)$ is a set, so the choice of $u$ must be stored somewhere, in $y$.</p></div>
+<div class="callout pitfall"><span class="lbl">Pitfall</span><p>A fixed point of $T$ is <em>not</em> a solution. If you run an iteration converging to a point of $\Fix T$ and output that point, you are wrong by $\gamma u$. Always output the image of the fixed-point variable under $\prox_{\gamma g}$: $\prox_{\gamma g}y$ in the theorem's letters, $y_n=\prox_{\gamma g}x_n$ (never $x_n$) in the algorithm's letters. Also, $\Fix T$ depends on $\gamma$ even though the solution set $\zer(\partial f+\partial g)$ does not.</p></div>
+
+<div class="widget" id="w-dr-fixed-map">
+<div class="w-title">Interactive · the map $T=\rprox_{\gamma f}\circ\rprox_{\gamma g}$ on $\R$: fixed points above, solutions below</div>
+<p class="w-help">Letters as in the algorithm: the graph of $T$ (blue) crosses the diagonal at its fixed points $\hat x$ (black). Each fixed point is dropped onto the axis as its shadow $\hat y=\prox_{\gamma g}\hat x$ (green dot, with a green arrow from $\hat x$ to $\hat y$); the green band on the axis is the true solution set $\Argmin(f+g)$. Move $\gamma$: the fixed points move, the set of shadows does not. The optional cobweb shows the Douglas–Rachford iteration $x_{n+1}=\tfrac12(x_n+Tx_n)$ ($\lambda=1$) from $x_0=3.5$.</p>
+<div class="w-ctls">
+<div class="seg" id="fm-pair" role="group" aria-label="choice of f and g"><button class="btn" type="button" data-v="A" aria-pressed="true">f = |·−1|, g = ½(·−3)²</button><button class="btn" type="button" data-v="B">f = |·|, g = ι<sub>]−∞,0]</sub></button><button class="btn" type="button" data-v="C">f = ι<sub>[−1,1]</sub>, g = ι<sub>[0,3]</sub></button></div>
+<label class="ctl">γ <input type="range" id="fm-gamma" min="0.2" max="3" step="0.1" value="0.5"><output id="fm-gamma-v"></output></label>
+<div class="seg" id="fm-cob" role="group" aria-label="cobweb"><button class="btn" type="button" data-v="off" aria-pressed="true">no cobweb</button><button class="btn" type="button" data-v="on">DR cobweb (λ = 1)</button></div>
+</div>
+<svg class="w-svg" id="fm-svg" viewBox="0 0 520 380" role="img" aria-label="Graph of T with fixed points and their shadows"></svg>
+<div class="leg"><span><i style="border-color:var(--s1)"></i>$T$</span><span><i style="border-color:var(--ink-3);border-top-style:dashed"></i>diagonal</span><span><i class="dot" style="background:var(--ink)"></i>$\Fix T$</span><span><i class="dot" style="background:var(--idea)"></i>shadows $\prox_{\gamma g}(\Fix T)$</span><span><i style="border-color:var(--idea);border-top-width:5px"></i>$\Argmin(f+g)$</span></div>
+<p class="readout" id="fm-read"></p>
+<p class="w-cap">First pair: one fixed point $\hat x=2-\gamma$ above the unique minimizer $\hat y=2$ ($\hat x=\hat y+\gamma u$ with $u=g'(2)=-1$). Second pair: every $u\in\partial g(0)=[0,+\infty[$ (the normal cone of $]-\infty,0]$ at $0$) with $-u\in\partial f(0)=[-1,1]$, i.e. $u\in[0,1]$, gives the fixed point $0+\gamma u$: $\Fix T=[0,\gamma]$, all with shadow $0$. Third pair (two intervals): $T$ is the identity on $[0,1]=A\cap B$, so fixed points and solutions coincide, independently of $\gamma$.</p>
+</div>
+
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Solutions = shadows of fixed points</strong>: $\zer(\partial f+\partial g)=\prox_{\gamma g}\big(\Fix(\rprox_{\gamma f}\rprox_{\gamma g})\big)$. Mnemonic, in the algorithm's letters: fixed point $\hat x=\hat y+\gamma u$, with $\hat y$ the solution and $u\in\partial g(\hat y)$ the subgradient that $f$ cancels ($-u\in\partial f(\hat y)$); $\prox_{\gamma g}$ subtracts it back. <em>What goes into $\prox_{\gamma g}$ lives in $\Fix T$; what comes out is the solution.</em></p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="prox-characterization" href="03_proximity_operator.html#prox-characterization">prox characterization</a><a class="chip xref" data-id="subdiff-scaling" href="02_subdifferential_conjugate.html#subdiff-scaling">∂(γf) = γ∂f</a><a class="chip xref" data-id="rprox-nonexpansive" href="#rprox-nonexpansive">reflected prox</a><a class="chip xref" data-id="fix-zer" href="04_fixed_point_forward_backward.html#fix-zer">Fix and zer</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="douglas-rachford" href="#douglas-rachford">Douglas–Rachford</a><a class="chip xref" data-id="parallel-dr" href="#parallel-dr">parallel DR</a><a class="chip xref" data-id="dr-unrelaxed" href="06_duality_admm_primal_dual.html#dr-unrelaxed">unrelaxed DR (page 6)</a><a class="chip xref" data-id="lab-nmr2" href="08_labs.html#lab-nmr2">Lab 2, part II (output the shadow)</a></div>
+</article>
+
+<article class="card thm" id="douglas-rachford">
+<header class="card-head"><span class="kind">Theorem</span><h3>Douglas–Rachford algorithm and its convergence</h3><span class="src">Part V.2 · slides 5–7 · Part V · slides 33–34</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><span class="tag tag-exam">Exam</span><span class="tag tag-lab">Lab</span><a class="anchor" href="#douglas-rachford" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $\H$ be a Hilbert space. Let $f\in\Gz{\H}$ and $g\in\Gz{\H}$. Let $\gamma\in\,]0,+\infty[$ and let $(\lambda_n)_{n\in\N}$ be a sequence in $[0,2]$ such that $\sum_{n\in\N}\lambda_n(2-\lambda_n)=+\infty$. We assume that $\zer(\partial f+\partial g)\neq\emptyset$. Let $x_0\in\H$ and</p>
+<div class="algo-box"><div class="algo-name">Douglas–Rachford</div>
+<p>For $n=0,1,\dots$</p>
+<ol><li>$y_n=\prox_{\gamma g}x_n$ <span class="mini">(the shadow: the candidate solution)</span></li>
+<li>$z_n=\prox_{\gamma f}(2y_n-x_n)$ <span class="mini">(prox of $f$ at the reflection of $x_n$ through $y_n$)</span></li>
+<li>$x_{n+1}=x_n+\lambda_n(z_n-y_n)$ <span class="mini">(relaxed update of the governing variable)</span></li></ol></div>
+<p>The following properties are satisfied:</p>
+<ol>
+<li>$x_n\wto\hat x$;</li>
+<li>$\hat y=\prox_{\gamma g}\hat x\in\Argmin(f+g)$;</li>
+<li>$z_n-y_n\to0$;</li>
+<li>$y_n\wto\hat y$ and $z_n\wto\hat y$.</li>
+</ol>
+</div>
+<div class="callout pitfall"><span class="lbl">Careful: the letters swap</span><p>In the <a href="#dr-fixed-points">fixed-point theorem</a> (as on the slides) $x$ is the solution and $y$ the fixed point: $x=\prox_{\gamma g}y$. In the algorithm it is the other way round: $x_n$ is the governing sequence, $x_n\wto\hat x\in\Fix T$, and $y_n=\prox_{\gamma g}x_n$ is the shadow, $y_n\wto\hat y\in\Argmin(f+g)$. A rule that never fails: <strong>what goes into $\prox_{\gamma g}$ lives in $\Fix T$; what comes out of $\prox_{\gamma g}$ is the candidate solution.</strong> The widgets of this page keep one colour code: black = the governing sequence $x_n$ (and the fixed points of $T$), orange = the shadow $y_n$, blue = $z_n$, green = solutions (in the PPXA widget, colours identify the three copies).</p></div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Douglas–Rachford is the Krasnosel'skii–Mann iteration of $T=\rprox_{\gamma f}\rprox_{\gamma g}$ with relaxation $\lambda_n/2$; the governing sequence $x_n$ converges to a fixed point, and the shadow $y_n=\prox_{\gamma g}x_n$ converges to the minimizer underneath it.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>Three facts do all the work. (i) $T$ is nonexpansive because each reflection is (<a href="#rprox-nonexpansive">previous proposition</a>), and $\Fix T\neq\emptyset$ because $\prox_{\gamma g}(\Fix T)=\zer(\partial f+\partial g)\neq\emptyset$ (<a href="#dr-fixed-points">fixed-point theorem</a>). (ii) The update is, after a two-line computation, $x_{n+1}=x_n+\frac{\lambda_n}{2}(Tx_n-x_n)$, so it is <a class="xref" data-id="krasnoselskii-mann" href="04_fixed_point_forward_backward.html#krasnoselskii-mann">Krasnosel'skii–Mann</a> with relaxation $\mu_n=\lambda_n/2\in[0,1]$; the condition $\sum\lambda_n(2-\lambda_n)=+\infty$ is exactly $\sum\mu_n(1-\mu_n)=+\infty$ (factor $\tfrac14$). KM gives $Tx_n-x_n\to0$ and $x_n\wto\hat x\in\Fix T$ by the Fejér + demiclosedness recipe (<a class="chip t" href="09_toolbox.html#T14"><b>T14</b></a>). (iii) The shadow of the limit is a solution by the fixed-point theorem, and a solution of $0\in\partial f+\partial g$ is a minimizer of $f+g$ by the inclusion $\partial f+\partial g\subset\partial(f+g)$ and Fermat.</p>
+<p><strong>Why $x_n$ is called the governing sequence.</strong> It is the only state the algorithm carries from one iteration to the next: $y_n$ and $z_n$ are recomputed from it. It is bookkeeping: at the limit it sits one scaled subgradient $\gamma u$ away from the solution, it need not be feasible or optimal, and in the disjoint case of the feasibility widget below it even runs off to infinity while the shadows settle on the closest pair. The step moves it by $z_n-y_n$, the disagreement between its two shadows $\prox_{\gamma g}x_n$ and $\prox_{\gamma f}(\rprox_{\gamma g}x_n)$; it stops moving exactly when they agree, which is the fixed-point condition of the previous theorem.</p>
+<p><strong>Where did smoothness go?</strong> In Forward–Backward, $g$ entered through the forward step $\Id-\gamma\nabla g$, which is <a class="xref" data-id="gradient-step-averaged" href="04_fixed_point_forward_backward.html#gradient-step-averaged">averaged</a> only if $\nabla g$ is $\nu$-Lipschitz and $\gamma\lt2/\nu$ (<a class="xref" data-id="baillon-haddad" href="04_fixed_point_forward_backward.html#baillon-haddad">Baillon–Haddad</a>): that is the only place where the Lipschitz constant was used, and it is where the step-size bound came from. Douglas–Rachford never takes a gradient: $g$ enters through $\prox_{\gamma g}$, a backward step, and the prox of any $g\in\Gz{\H}$ is firmly nonexpansive for every $\gamma\gt0$, because all it uses is the monotonicity of $\partial g$. Monotonicity, not Lipschitz continuity, is what a prox needs. And the convergence argument is the Fejér monotonicity of $x_n$ with respect to $\Fix T$ (Krasnosel'skii–Mann), not a decrease of $f+g$, so no descent lemma is needed either.</p>
+<p>The sentence to say out loud: <em>reflect, reflect, average: that is Krasnosel'skii–Mann, and the solution is the shadow.</em></p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul>
+<li>$f,g\in\Gz{\H}$: both proxes exist, both reflections are nonexpansive, the fixed-point dictionary holds.</li>
+<li>$\zer(\partial f+\partial g)\neq\emptyset$: gives $\Fix T\neq\emptyset$, which KM needs (a nonexpansive map without fixed points, e.g. a translation, has divergent iterates: this is what happens for two disjoint sets, see the widget). Note that it is stronger than $\Argmin(f+g)\neq\emptyset$; the two coincide under a qualification condition (<a class="xref" data-id="moreau-rockafellar" href="02_subdifferential_conjugate.html#moreau-rockafellar">sum rule</a>).</li>
+<li>$\lambda_n\in[0,2]$, $\sum\lambda_n(2-\lambda_n)=+\infty$: the KM condition for $\mu_n=\lambda_n/2$. The range is twice that of KM because $T$ is only nonexpansive and the algorithm already contains the factor $\tfrac12$ (<a class="chip t" href="09_toolbox.html#T22"><b>T22</b></a>). $\lambda_n\equiv2$ is excluded (the series is $0$): see <a href="#peaceman-rachford">Peaceman–Rachford</a>.</li>
+<li>$\gamma\in\,]0,+\infty[$: <strong>any</strong> value works. Unlike Forward–Backward there is no Lipschitz constant to respect (FB's bound $\gamma\lt2/\nu$ came from its gradient step, which DR does not have). $\gamma$ changes $\Fix T$, the speed and, when $f+g$ has several minimizers, <em>which</em> minimizer the shadows converge to (e.g. $f=\norm{\cdot}_1$, $g=\ind_{\{x_1+x_2=1\}}$ on $\R^2$, $x_0=(3,-1)$, $\lambda_n\equiv1$: the limit shadow is $(0.95,0.05)$ for $\gamma=0.1$, $(0.75,0.25)$ for $\gamma=0.5$, $(0.5,0.5)$ for $\gamma\ge1$). Only the set $\prox_{\gamma g}(\Fix T)=\zer(\partial f+\partial g)$ is independent of $\gamma$: if the minimizer is unique, every $\gamma$ gives the same limit (as in the widgets).</li>
+<li>$\H$ Hilbert: KM is a Hilbert-space theorem (weak convergence). Item 4 is proved on the slides in finite dimension only (see step 6 of the proof).</li>
+</ul></div>
+<details class="pl hint"><summary>Hint <span class="aid">— try it first</span></summary><div class="dc"><p>Compute $Tx_n$ in terms of $y_n$ and $z_n$: $\rprox_{\gamma g}x_n=2y_n-x_n$ and $\rprox_{\gamma f}(2y_n-x_n)=2z_n-(2y_n-x_n)$. Then compare $Tx_n-x_n$ with $z_n-y_n$.</p></div></details>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T11"><b>T11</b> reflect to compose</a> <a class="chip t" href="09_toolbox.html#T22"><b>T22</b> relaxation λ/2</a> <a class="chip t" href="09_toolbox.html#T14"><b>T14</b> Fejér + demiclosed (via KM)</a> <a class="chip t" href="09_toolbox.html#T15"><b>T15</b> dictionary</a></summary><div class="dc">
+<p><span class="step">1. The operator.</span> Let $T=\rprox_{\gamma f}\circ\rprox_{\gamma g}$. $T$ is nonexpansive as a composition of two nonexpansive maps (<a class="xref" data-id="rprox-nonexpansive" href="#rprox-nonexpansive">reflected prox</a>): $\norm{Tx-Ty}\le\norm{\rprox_{\gamma g}x-\rprox_{\gamma g}y}\le\norm{x-y}$. Moreover $\emptyset\neq\zer(\partial f+\partial g)=\prox_{\gamma g}(\Fix T)$ (<a class="xref" data-id="dr-fixed-points" href="#dr-fixed-points">fixed points</a>) forces $\Fix T\neq\emptyset$.</p>
+<p><span class="step">2. The update is a relaxed step on T (the algebra).</span> For every $n\in\N$, substitute $y_n$ and $z_n$:
+$$\begin{aligned}
+x_{n+1}&amp;=x_n+\lambda_n\Big(\prox_{\gamma f}\big(2\prox_{\gamma g}(x_n)-x_n\big)-\prox_{\gamma g}(x_n)\Big)\\
+&amp;=x_n+\frac{\lambda_n}{2}\Big(2\prox_{\gamma f}\big(2\prox_{\gamma g}(x_n)-x_n\big)-2\prox_{\gamma g}(x_n)+x_n-x_n\Big)\\
+&amp;=x_n+\frac{\lambda_n}{2}\Big(2\prox_{\gamma f}\big(\rprox_{\gamma g}(x_n)\big)-\rprox_{\gamma g}(x_n)-x_n\Big)\\
+&amp;=x_n+\frac{\lambda_n}{2}\big(Tx_n-x_n\big).
+\end{aligned}$$
+Line 2 multiplies and divides by $2$ and adds $x_n-x_n$; line 3 recognizes $2\prox_{\gamma g}(x_n)-x_n=\rprox_{\gamma g}(x_n)$ twice; line 4 recognizes $2\prox_{\gamma f}(r)-r=\rprox_{\gamma f}(r)$ with $r=\rprox_{\gamma g}(x_n)$.</p>
+<div class="callout note"><span class="lbl">Slide typo</span><p>Part V, slide 34 misplaces a parenthesis in line 2: it prints $2\prox_{\gamma f}\big(2\prox_{\gamma g}(x_n-x_n)-2\prox_{\gamma g}(x_n)+x_n-x_n$. The intended line, written above and printed correctly on Part V.2, slide 6, is $2\prox_{\gamma f}\big(2\prox_{\gamma g}(x_n)-x_n\big)-2\prox_{\gamma g}(x_n)+x_n-x_n$.</p></div>
+<p><span class="step">3. Krasnosel'skii–Mann.</span> Set $\mu_n=\lambda_n/2$. Then $\mu_n\in[0,1]$ and $\sum_n\mu_n(1-\mu_n)=\tfrac14\sum_n\lambda_n(2-\lambda_n)=+\infty$. So $(x_n)$ is the <a class="xref" data-id="krasnoselskii-mann" href="04_fixed_point_forward_backward.html#krasnoselskii-mann">Krasnosel'skii–Mann</a> sequence of the nonexpansive $T:\H\to\H$ with $\Fix T\neq\emptyset$ (take $C=\H$). Hence $(x_n)$ is Fejér-monotone with respect to $\Fix T$, $Tx_n-x_n\to0$ and $x_n\wto\hat x\in\Fix T$. This is item 1.</p>
+<p><span class="step">4. The residual.</span> From line 4 of step 2 read backwards, $Tx_n-x_n=2\big(\prox_{\gamma f}(2y_n-x_n)-y_n\big)=2(z_n-y_n)$, i.e. $$z_n-y_n=\prox_{\gamma f}\big(2\prox_{\gamma g}(x_n)-x_n\big)-\prox_{\gamma g}(x_n)=\tfrac12(Tx_n-x_n)\to0 .$$ This is item 3.</p>
+<p><span class="step">5. The shadow of the limit is a minimizer.</span> Since $\hat x\in\Fix T$, $\hat y=\prox_{\gamma g}(\hat x)\in\prox_{\gamma g}(\Fix T)=\zer(\partial f+\partial g)$. By the <a class="xref" data-id="subdiff-sum-inclusion" href="02_subdifferential_conjugate.html#subdiff-sum-inclusion">sum inclusion</a> $\partial f(\hat y)+\partial g(\hat y)\subset\partial(f+g)(\hat y)$, so $0\in\partial(f+g)(\hat y)$, and by <a class="xref" data-id="fermat-rule" href="02_subdifferential_conjugate.html#fermat-rule">Fermat's rule</a> $\hat y\in\zer\partial(f+g)=\Argmin(f+g)$. This is item 2.</p>
+<p><span class="step">6. Convergence of the shadows (finite dimension, as on the slides).</span> Assume $\H$ finite-dimensional. Then $x_n\wto\hat x$ is $x_n\to\hat x$, and $\prox_{\gamma g}$ is continuous (it is nonexpansive, hence $1$-Lipschitz), so $y_n=\prox_{\gamma g}x_n\to\prox_{\gamma g}\hat x=\hat y$. Because $z_n-y_n\to0$, also $z_n=y_n+(z_n-y_n)\to\hat y$. This is item 4 (strong convergence in that case).</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout note"><span class="lbl">What is proved where</span><p>Items 1–3 are proved in any Hilbert space. The slides prove item 4 "for simplicity" in finite dimension, where $\prox_{\gamma g}$ continuous and $x_n\to\hat x$ give $y_n\to\hat y$ directly. In infinite dimension the argument breaks because a nonexpansive map need not be weakly continuous, not even a prox: for the projection $P_B$ onto the closed unit ball of $\ell^2$, $x_n=e_1+e_n\wto e_1$ ($n\ge2$) but $P_Bx_n=(e_1+e_n)/\sqrt2\wto e_1/\sqrt2\neq P_Be_1=e_1$. <span class="tag tag-extra">Extra</span> The conclusion $y_n\wto\hat y$ nevertheless holds in every Hilbert space, by a finer argument: Svaiter (2011, "On weak convergence of the Douglas–Rachford method") for $\lambda_n\equiv1$, Bauschke–Combettes (2nd ed. 2017, Thm 26.11) for the relaxed version stated here. The Part V deck (slide 34) assumes finite dimension from the start of its proof and writes $x_n\to\hat x$; Part V.2 keeps the Hilbert statement and localizes the assumption to item 4.</p></div>
+<div class="callout trick"><span class="lbl">Trick</span><p><strong>Count the averagedness</strong> (<a class="chip t" href="09_toolbox.html#T22"><b>T22</b></a>): the relaxation range of a scheme $x_{n+1}=x_n+\lambda_n(Sx_n-x_n)$ is $[0,1/\alpha]$ when $S$ is $\alpha$-averaged. DR's $S=\prox_{\gamma f}(2\prox_{\gamma g}-\Id)-\prox_{\gamma g}+\Id=\tfrac12(\Id+T)$ is $\tfrac12$-averaged, so $\lambda_n\in[0,2]$; FB's $S=\prox_{\gamma f}(\Id-\gamma\nabla g)$ is $1/\delta$-averaged with $\delta=2-\gamma\nu/2$, so $\lambda_n\in[0,\delta]$. Same theorem, different count.</p></div>
+<div class="callout pitfall"><span class="lbl">Pitfalls</span><p><strong>$x_n$ is not the solution.</strong> It converges to a fixed point $\hat x=\hat y+\gamma u$ of $T$, one subgradient above the minimizer; the output is $y_n=\prox_{\gamma g}x_n$ (or $z_n$, same limit). The widget below shows $x_n$ settling away from $\hat y$. <strong>Do not compose the proxes.</strong> $\prox_{\gamma f}\circ\prox_{\gamma g}$ converges, to the wrong point (motivation card). <strong>$\lambda_n=2$ for all $n$ is not covered.</strong> The series condition fails; convergence may fail (next card). <strong>$\gamma$ is free but not neutral.</strong> In the widget "the governing sequence and the shadow" below, one step multiplies $x_n-\hat x$ by $1-\lambda\gamma/(1+\gamma)$ near the limit: a small $\gamma$ is slow at every $\lambda$; for $\lambda\le1$ a larger $\gamma$ is always faster, but for $\lambda\in\,]1,2]$ the best value is $\gamma=1/(\lambda-1)$ ($\gamma=1$ at $\lambda=2$) and a larger $\gamma$ slows down again (try $\gamma=0.1$, $1$ and $4$ at $\lambda=1.9$). In general the best $\gamma$ depends on the problem.</p></div>
+<div class="callout insight"><span class="lbl">Cost per iteration and parallelism</span><p>One $\prox_{\gamma g}$, one $\prox_{\gamma f}$ and two vector additions. The two proxes are <em>sequential</em> ($z_n$ needs $y_n$), so plain DR is not parallel; the parallel version below removes this by lifting to a product space. Memory: $x_n$ only (plus the temporaries $y_n$, $z_n$). Fejér monotonicity holds with respect to $\Fix T$, so $\norm{x_n-\hat x}$ decreases, but nothing is monotone about $f(y_n)+g(y_n)$: DR is not a descent method.</p></div>
+
+<div class="widget" id="w-dr-feasibility">
+<div class="w-title">Interactive · Douglas–Rachford on two sets is "project, reflect, project, average"</div>
+<p class="w-help">$f=\ind_A$ (blue), $g=\ind_B$ (orange), so $\prox_{\gamma g}=P_B$, $\prox_{\gamma f}=P_A$ and $\gamma$ plays no role. One step: $y_n=P_Bx_n$, the reflection $2y_n-x_n$ (hollow), $z_n=P_A(2y_n-x_n)$, then $x_{n+1}=x_n+\lambda(z_n-y_n)$: the thin blue arrow is $z_n-y_n$, the black arrow is the move of $x_n$, $\lambda$ times it. Step through it, compare with alternating projections $x_{n+1}=P_AP_Bx_n$, and try the disjoint case: $x_n$ runs away (no fixed point) while the shadows $y_n$, $z_n$ still converge, to the two closest points of $A$ and $B$. When the points bunch up, "zoom on this step" frames the current step.</p>
+<div class="w-ctls">
+<div class="seg" id="fe-cfg" role="group" aria-label="configuration"><button class="btn" type="button" data-v="ld" aria-pressed="true">line ∩ disc</button><button class="btn" type="button" data-v="ll">two lines</button><button class="btn" type="button" data-v="dd">two discs</button><button class="btn" type="button" data-v="dis">disjoint (line, disc)</button></div>
+<div class="seg" id="fe-method" role="group" aria-label="method"><button class="btn" type="button" data-v="dr" aria-pressed="true">Douglas–Rachford</button><button class="btn" type="button" data-v="ap">alternating projections</button></div>
+<label class="ctl">λ <input type="range" id="fe-lambda" min="0.1" max="2" step="0.1" value="1"><output id="fe-lambda-v"></output></label>
+<div class="w-btns"><button class="btn" type="button" id="fe-step">Step</button><button class="btn" type="button" id="fe-run">Run ×10</button><button class="btn" type="button" id="fe-reset">Reset</button></div>
+<div class="seg" id="fe-zoom" role="group" aria-label="view"><button class="btn" type="button" data-v="all" aria-pressed="true">whole picture</button><button class="btn" type="button" data-v="step">zoom on this step</button></div>
+</div>
+<svg class="w-svg" id="fe-svg" viewBox="0 0 520 350" role="img" aria-label="Douglas–Rachford iterates on two convex sets in the plane"></svg>
+<div class="leg"><span><i class="dot" style="background:var(--ink)"></i>$x_n$ (governing)</span><span><i class="dot" style="background:var(--s2)"></i>$y_n=P_Bx_n$ (shadow)</span><span><i class="dot" style="background:transparent;border:1.6px solid var(--ink-2);box-sizing:border-box"></i>$2y_n-x_n$</span><span><i class="dot" style="background:var(--s1)"></i>$z_n=P_A(2y_n-x_n)$</span><span><i class="dot" style="background:var(--ink-2)"></i>$x_{n+1}$</span><span><i style="border-color:var(--idea);border-top-width:4px"></i>$A\cap B$</span></div>
+<p class="readout" id="fe-read"></p>
+<p class="w-cap">With $\lambda=1$ the new point is $x_n+z_n-y_n$: $x_n$, $y_n$, $z_n$, $x_{n+1}$ form a parallelogram (the black and blue arrows are parallel and of equal length). The shadows $y_n$ end in the green set $A\cap B$. Here $x_n$ ends there too, because for these intersecting sets the offset $\gamma u$ between fixed point and solution is $0$ (no nonzero $u\in N_B(\hat y)$ with $-u\in N_A(\hat y)$); in the disjoint case $x_n$ runs away. With $\lambda=2$ (Peaceman–Rachford) $x_{n+1}=2z_n-(2y_n-x_n)$ is the double reflection $R_AR_Bx_n$; for two lines it is a rotation and never converges.</p>
+</div>
+
+<div class="widget" id="w-dr-shadow">
+<div class="w-title">Interactive · the governing sequence $x_n$ and the shadow $y_n=\prox_{\gamma g}x_n$ on $f+g=\abs{\cdot-1}+\tfrac12(\cdot-3)^2$</div>
+<p class="w-help">Both proxes are explicit: $\prox_{\gamma g}x=\frac{x+3\gamma}{1+\gamma}$, $\prox_{\gamma f}x=1+\operatorname{soft}_\gamma(x-1)$. The minimizer is $\hat y=2$ for every $\gamma$; the fixed point is $\hat x=\hat y+\gamma g'(\hat y)=2-\gamma$, which moves with $\gamma$. Watch $x_n$ (black) converge to $2-\gamma$ and $y_n$ (orange) to $2$, with $z_n$ (blue) next to $y_n$, then vary $\lambda$ and $\gamma$ to see the speed change.</p>
+<div class="w-ctls">
+<label class="ctl">γ <input type="range" id="sh-gamma" min="0.1" max="4" step="0.1" value="0.5"><output id="sh-gamma-v"></output></label>
+<label class="ctl">λ <input type="range" id="sh-lambda" min="0.1" max="2" step="0.1" value="1"><output id="sh-lambda-v"></output></label>
+<label class="ctl">x₀ <input type="range" id="sh-x0" min="-3" max="6" step="0.5" value="-2"><output id="sh-x0-v"></output></label>
+</div>
+<svg class="w-svg" id="sh-svg" viewBox="0 0 520 300" role="img" aria-label="Iterates x_n and y_n versus n"></svg>
+<div class="leg"><span><i style="border-color:var(--ink)"></i>$x_n$ (governing)</span><span><i style="border-color:var(--s2)"></i>$y_n=\prox_{\gamma g}x_n$ (shadow)</span><span><i style="border-color:var(--s1)"></i>$z_n$</span><span><i style="border-color:var(--idea);border-top-style:dashed"></i>minimizer $\hat y=2$</span><span><i style="border-color:var(--ink);border-top-style:dashed"></i>fixed point $\hat x=2-\gamma$</span></div>
+<p class="readout" id="sh-read"></p>
+<p class="w-cap">Here $g$ is strongly convex, so even $\lambda=2$ converges (see the Peaceman–Rachford remark). The gap between the two limits is exactly $\gamma\abs{g'(\hat y)}=\gamma$: the fixed point sits one scaled gradient of $g$ away from the solution. Near the limit one step multiplies $x_n-\hat x$ (and $y_n-\hat y=(x_n-\hat x)/(1+\gamma)$) by $1-\lambda\gamma/(1+\gamma)$. At $\gamma=1$ exactly, $\rprox_{\gamma g}$ is the constant $3$ for this $g$, so $T$ is constant and $z_n=2$ from the first step: a coincidence of the example.</p>
+</div>
+
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>DR = KM on $\rprox_{\gamma f}\rprox_{\gamma g}$ with relaxation $\lambda_n/2$.</strong> $\lambda_n\in[0,2]$, $\sum\lambda_n(2-\lambda_n)=+\infty$, any $\gamma\gt0$, need $\zer(\partial f+\partial g)\neq\emptyset$. Then $x_n\wto\hat x\in\Fix T$, $z_n-y_n\to0$, and the <em>shadow</em> $\hat y=\prox_{\gamma g}\hat x$ minimizes $f+g$. Slogan: <em>reflect, reflect, average; output the shadow.</em></p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="rprox-nonexpansive" href="#rprox-nonexpansive">reflected prox</a><a class="chip xref" data-id="dr-fixed-points" href="#dr-fixed-points">fixed points of DR</a><a class="chip xref" data-id="krasnoselskii-mann" href="04_fixed_point_forward_backward.html#krasnoselskii-mann">Krasnosel'skii–Mann</a><a class="chip xref" data-id="fejer-convergence" href="04_fixed_point_forward_backward.html#fejer-convergence">Fejér convergence</a><a class="chip xref" data-id="demiclosedness" href="04_fixed_point_forward_backward.html#demiclosedness">demiclosedness</a><a class="chip xref" data-id="subdiff-sum-inclusion" href="02_subdifferential_conjugate.html#subdiff-sum-inclusion">∂f + ∂g ⊂ ∂(f+g)</a><a class="chip xref" data-id="fermat-rule" href="02_subdifferential_conjugate.html#fermat-rule">Fermat</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="peaceman-rachford" href="#peaceman-rachford">Peaceman–Rachford</a><a class="chip xref" data-id="parallel-dr" href="#parallel-dr">parallel DR</a><a class="chip xref" data-id="ppxa" href="#ppxa">PPXA+</a><a class="chip xref" data-id="dr-unrelaxed" href="06_duality_admm_primal_dual.html#dr-unrelaxed">unrelaxed DR</a><a class="chip xref" data-id="dr-dual-form" href="06_duality_admm_primal_dual.html#dr-dual-form">DR on the dual</a><a class="chip xref" data-id="lab-nmr1" href="08_labs.html#lab-nmr1">Lab 2, part I (NMR, DR)</a><a class="chip xref" data-id="lab-nmr2" href="08_labs.html#lab-nmr2">Lab 2, part II (max. entropy, DR)</a></div>
+</article>
+
+<article class="card rem" id="peaceman-rachford">
+<header class="card-head"><span class="kind">Remark</span><h3>Peaceman–Rachford: the limit case $\lambda_n\equiv2$</h3><span class="src">Part V.2 · slide 7</span><span class="tag tag-slides">Slides</span><a class="anchor" href="#peaceman-rachford" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Remark (slide)</span>
+<p>The limit case when $(\forall n\in\N)\ \lambda_n=2$ is the <strong>Peaceman–Rachford algorithm</strong>. Its convergence is only guaranteed under some additional assumption (e.g. strong convexity of $g$).</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">With $\lambda_n=2$ the update is $x_{n+1}=Tx_n$, the plain Picard iteration of a map that is only nonexpansive: no averaging, no Fejér-strict decrease, no guarantee.</p>
+<div class="rub">Why the guarantee is lost, and what restores it</div>
+<div class="why"><p>From step 2 of the DR proof, $\lambda_n=2$ gives $x_{n+1}=x_n+(Tx_n-x_n)=Tx_n$. The series $\sum\lambda_n(2-\lambda_n)$ is identically $0$, and KM's mechanism, the strict decrease $\norm{x_{n+1}-\bar x}^2\le\norm{x_n-\bar x}^2-\mu_n(1-\mu_n)\norm{Tx_n-x_n}^2$ (<a class="chip t" href="09_toolbox.html#T12"><b>T12</b></a>), degenerates to a plain inequality: the residual is no longer forced to $0$. <a href="04_fixed_point_forward_backward.html#w-km-rotation">Page 4</a> showed that the Picard iteration of a rotation never converges; here the rotation is $R_AR_B$. For $f=\ind_A$, $g=\ind_B$ with $A,B$ two distinct lines through the origin, $T=R_AR_B$ is the <em>rotation</em> by twice the angle from $B$ to $A$ (the composition of two reflections is a rotation by twice the angle between the mirrors): by $-2\theta$ when $A$ is the horizontal axis and $B$ makes the angle $\theta$ with it, while $R_BR_A$ rotates by $+2\theta$. Its only fixed point is $0=A\cap B$, every iterate stays on the circle of radius $\norm{x_0}$ and never converges, while $\lambda\lt2$ spirals in (widget).</p>
+<p><span class="tag tag-extra">Extra</span> Why strong convexity of $g$ rescues it: if $g$ is $\mu$-strongly convex then $\partial g$ is $\mu$-strongly monotone, and redoing the computation of the <a href="#rprox-nonexpansive">reflected prox</a> with $p=\prox_{\gamma g}x$, $q=\prox_{\gamma g}\bar x$ gives $\ps{x-\bar x}{p-q}\ge(1+\gamma\mu)\norm{p-q}^2$, hence $$\norm{\rprox_{\gamma g}x-\rprox_{\gamma g}\bar x}^2\le\norm{x-\bar x}^2-4\gamma\mu\norm{p-q}^2 .$$ With $\bar x\in\Fix T$ and $T=\rprox_{\gamma f}\rprox_{\gamma g}$ nonexpansive, $\norm{x_{n+1}-\bar x}^2\le\norm{x_n-\bar x}^2-4\gamma\mu\norm{y_n-\hat y}^2$; telescoping (<a class="chip t" href="09_toolbox.html#T13"><b>T13</b></a>) gives $\sum_n\norm{y_n-\hat y}^2\lt+\infty$, so the shadows $y_n$ converge <em>strongly</em> to the unique minimizer $\hat y=\prox_{\gamma g}\bar x$. (Lions–Mercier 1979.) The governing sequence itself need not converge, but the shadow does, which is all one wants.</p></div>
+<div class="callout pitfall"><span class="lbl">Pitfall</span><p>"$\lambda_n\in[0,2]$" in the theorem does not mean that the constant choice $\lambda_n\equiv2$ is allowed. Individual values $\lambda_n=2$ are fine as long as $\sum\lambda_n(2-\lambda_n)=+\infty$; the constant endpoint is excluded by the series condition, just as $\lambda_n\equiv1$ is excluded in KM. A sequence like $\lambda_n=2-\tfrac1{n+1}$ is fine ($\sum\lambda_n(2-\lambda_n)=\sum\tfrac{2n+1}{(n+1)^2}=+\infty$).</p></div>
+
+<div class="widget" id="w-peaceman-rachford">
+<div class="w-title">Interactive · two lines through the origin: Peaceman–Rachford is a rotation, Douglas–Rachford a spiral</div>
+<p class="w-help">$A$ is the horizontal axis, $B$ the line at angle $\theta$. $T=R_AR_B$ is the rotation by $-2\theta$, so with $\lambda=2$ the iterates $x_{n+1}=Tx_n$ stay on a circle ($\theta=30°$: a hexagon). With $\lambda\lt2$, $x_{n+1}=(1-\tfrac\lambda2)x_n+\tfrac\lambda2Tx_n$ is a complex multiplication by $1-\tfrac\lambda2+\tfrac\lambda2e^{-2i\theta}$, of modulus $\lt1$: a spiral to the intersection $0$. The shadows $y_n=P_Bx_n$ (hollow) follow.</p>
+<div class="w-ctls">
+<label class="ctl">θ (°) <input type="range" id="pr-theta" min="5" max="85" step="1" value="30"><output id="pr-theta-v"></output></label>
+<label class="ctl">λ <input type="range" id="pr-lambda" min="0.1" max="2" step="0.1" value="2"><output id="pr-lambda-v"></output></label>
+</div>
+<svg class="w-svg" id="pr-svg" viewBox="0 0 520 350" role="img" aria-label="Peaceman–Rachford and Douglas–Rachford iterates for two lines"></svg>
+<div class="leg"><span><i class="dot" style="background:var(--ink)"></i>$x_n$ (governing)</span><span><i class="dot" style="background:transparent;border:1.6px solid var(--s2);box-sizing:border-box"></i>$y_n=P_Bx_n$ (shadow)</span><span><i style="border-color:var(--s1)"></i>$A$</span><span><i style="border-color:var(--s2)"></i>$B$</span><span><i class="dot" style="background:var(--idea)"></i>$A\cap B=\{0\}$</span></div>
+<p class="readout" id="pr-read"></p>
+<p class="w-cap">For $\lambda\in\,]0,2]$ and $\theta\in\,]0,\pi[$ the contraction factor $\abs{1-\tfrac\lambda2+\tfrac\lambda2e^{-2i\theta}}$ equals $1$ exactly when $\lambda=2$: the KM strict decrease $\mu(1-\mu)\norm{Tx_n-x_n}^2$ is what you lose at the endpoint.</p>
+</div>
+
+<div class="callout memo"><span class="lbl">To remember</span><p>$\lambda_n\equiv2$ = Peaceman–Rachford = Picard on $T$: nonexpansive is not enough (rotation counterexample). Strong convexity of $g$ makes $\rprox_{\gamma g}$ lose $4\gamma\mu\norm{y_n-\hat y}^2$ per step and the shadows converge.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="douglas-rachford" href="#douglas-rachford">Douglas–Rachford</a><a class="chip xref" data-id="krasnoselskii-mann" href="04_fixed_point_forward_backward.html#krasnoselskii-mann">Krasnosel'skii–Mann</a><a class="chip xref" data-id="picard" href="04_fixed_point_forward_backward.html#picard">Picard iteration</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="douglas-rachford" href="#douglas-rachford">DR: why $\lambda_n\equiv2$ is excluded</a></div>
+</article>
+</section>
+
+<section class="chapter" id="s-parallel">
+<header><div class="eyebrow">Part V.2 · slides 8–11 · Part V · slides 35–37</div><h2>Parallel Douglas–Rachford and PPXA+</h2>
+<p class="lead">Minimizing $g\circ L$ is minimizing $g$ on the subspace $E=\ran L$. Douglas–Rachford with $f=\ind_E$ needs only $P_E$, a least-squares solve, and reads naturally in the small variable $v\in\G$. On a product space, with $g$ separable, the prox step splits into $m$ independent proxes: PPXA+.</p></header>
+
+<article class="card lemma" id="weak-continuity-bounded">
+<header class="card-head"><span class="kind">Lemma</span><h3>Bounded linear operators are weakly continuous</h3><span class="src">Part V.2 · slide 8</span><span class="tag tag-slides">Slides</span><a class="anchor" href="#weak-continuity-bounded" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $\H$ and $\G$ be two Hilbert spaces and let $L\in\B(\G,\H)$. Then $L$ is weakly continuous: for every sequence $(x_n)_{n\in\N}$ of $\G$, $$x_n\wto x\ \Rightarrow\ Lx_n\wto Lx .$$</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Testing $Lx_n$ against $y$ is testing $x_n$ against $L^*y$: the adjoint moves the operator onto the test vector, where weak convergence already does the job.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>Weak convergence is convergence of every inner product $\ps{x_n}{w}$. The inner products that define "$Lx_n\wto Lx$" are $\ps{Lx_n}{y}=\ps{x_n}{L^*y}$, which are inner products of $x_n$ against the fixed vectors $L^*y$: they converge by assumption. Linearity and boundedness are used exactly once, to have an adjoint. This is why the parallel DR proof below is allowed to pass weak limits through $P_E$, $L$ and $(L^*L)^{-1}L^*$, but not through a nonlinear prox.</p>
+<p>The sentence to say out loud: <em>the adjoint carries the operator onto the test vector.</em></p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul><li>$L$ linear and bounded: existence of the adjoint $L^*\in\B(\H,\G)$ (<a class="xref" data-id="hilbert-space" href="01_convex_analysis.html#hilbert-space">page 1</a>). Nothing else is used.</li><li>Contrast: a nonexpansive <em>nonlinear</em> map is strongly continuous but not weakly continuous in general, not even a prox. For the projection $P_B$ onto the closed unit ball of $\ell^2$, $x_n=e_1+e_n\wto e_1$ ($n\ge2$) but $P_Bx_n=(e_1+e_n)/\sqrt2\wto e_1/\sqrt2\neq P_Be_1=e_1$; another example is $x\mapsto\norm{x}e$ with $\norm{e}=1$, which sends $e_n\wto0$ to $e$. This is exactly why item 4 of DR needed finite dimension on the slides.</li></ul></div>
+<details class="pl hint"><summary>Hint <span class="aid">— try it first</span></summary><div class="dc"><p>Weak convergence is tested against vectors: to test $Lx_n$ against $y$, move $L$ onto the test vector.</p></div></details>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T07"><b>T07</b> test vector $L^*y$</a> <span class="aid">(two lines, via the adjoint)</span></summary><div class="dc">
+<p><span class="step">1. Fix a test vector.</span> Let $(x_n)$ be a sequence of $\G$ with $x_n\wto x\in\G$, and let $y\in\H$.</p>
+<p><span class="step">2. Move L to the other side.</span> $L^*y\in\G$, so by weak convergence $\ps{x_n}{L^*y}\to\ps{x}{L^*y}$, i.e. by definition of the adjoint $\ps{Lx_n}{y}\to\ps{Lx}{y}$.</p>
+<p><span class="step">3. Conclude.</span> This holds for every $y\in\H$, which is the definition of $Lx_n\wto Lx$.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout memo"><span class="lbl">To remember</span><p>$\ps{Lx_n}{y}=\ps{x_n}{L^*y}$: weak continuity is free for bounded linear maps. Linear: yes. Nonexpansive nonlinear: no.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="hilbert-space" href="01_convex_analysis.html#hilbert-space">adjoint</a><a class="chip xref" data-id="convergence-strong-weak" href="01_convex_analysis.html#convergence-strong-weak">weak convergence</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="parallel-dr" href="#parallel-dr">parallel DR</a></div>
+</article>
+
+<article class="card thm" id="parallel-dr">
+<header class="card-head"><span class="kind">Theorem</span><h3>Parallel form of Douglas–Rachford for $g\circ L$</h3><span class="src">Part V.2 · slides 8–10 · Part V · slides 35–36</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#parallel-dr" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $\H$ and $\G$ be two Hilbert spaces. Let $g\in\Gz{\H}$ and $L\in\B(\G,\H)$ be such that $\ran L$ is closed and $L^*L$ is an isomorphism. Let $\gamma\in\,]0,+\infty[$ and let $(\lambda_n)_{n\in\N}$ be a sequence in $[0,2]$ such that $\sum_{n\in\N}\lambda_n(2-\lambda_n)=+\infty$. Assume that $\zer(L^*\circ\partial g\circ L)\neq\emptyset$. Let $x_0\in\H$, $v_0=(L^*L)^{-1}L^*x_0$ and</p>
+<div class="algo-box"><div class="algo-name">Parallel Douglas–Rachford</div>
+<p>For $n=0,1,\dots$</p>
+<ol><li>$y_n=\prox_{\gamma g}x_n$ <span class="mini">(prox in the big space $\H$)</span></li>
+<li>$c_n=(L^*L)^{-1}L^*y_n$ <span class="mini">(least squares: $Lc_n=P_Ey_n$, $E=\ran L$)</span></li>
+<li>$x_{n+1}=x_n+\lambda_n\big(L(2c_n-v_n)-y_n\big)$ <span class="mini">($L(2c_n-v_n)=P_E(2y_n-x_n)=z_n$)</span></li>
+<li>$v_{n+1}=v_n+\lambda_n(c_n-v_n)$ <span class="mini">(the same update read in $\G$)</span></li></ol></div>
+<p>Then $v_n\wto\hat v$ where $\hat v\in\Argmin(g\circ L)$. (The proof also gives $c_n\wto\hat v$, as stated on slide 8.)</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Minimizing $g(Lv)$ over $v$ is minimizing $\ind_E+g$ over $x\in\H$ with $E=\ran L$; run Douglas–Rachford with $f=\ind_E$, whose prox is the projection $P_E=L(L^*L)^{-1}L^*$, and translate the iterates back to $\G$ through $L$.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p><strong>Why lift at all?</strong> Because $\prox_{\gamma(g\circ L)}$ is in general not computable (<a class="xref" data-id="prox-composition-semiorthogonal" href="03_proximity_operator.html#prox-composition-semiorthogonal">page 3</a> gives it only when $LL^*=\mu\Id$), whereas $\prox_{\gamma g}$ and $P_{\ran L}$ are. Writing $g\circ L$ as $\ind_{\ran L}+g$ on the big space trades one intractable prox for two tractable ones, exactly the input DR needs. Nothing is parallel yet: the name anticipates PPXA+ below, where $g$ is separable on a product space and $\prox_{\gamma g}$ splits into $m$ independent proxes.</p>
+<p>Two ideas. <strong>Lifting the constraint</strong> (<a class="chip t" href="09_toolbox.html#T01"><b>T01</b></a>): the values $g(Lv)$, $v\in\G$, are exactly the values $g(x)$ for $x$ in the subspace $E=\ran L$, so the problem is "$g$ restricted to $E$", i.e. $\ind_E+g$: two nonsmooth functions, DR territory. <strong>The projection is a least-squares solve</strong>: $P_Ey$ is the point $Lc$ of $E$ closest to $y$, and the normal equations $L^*(Lc-y)=0$ give $c=(L^*L)^{-1}L^*y$; that is where the isomorphism hypothesis enters (it also makes $E$ closed, so that $\ind_E\in\Gz{\H}$, and makes $L$ injective, so that iterates in $E$ can be "divided by $L$"). Since $P_E$ is linear, $z_n=P_E(2y_n-x_n)=2P_Ey_n-P_Ex_n=L(2c_n-v_n)$ with $v_n=(L^*L)^{-1}L^*x_n$, and the $x$-update projected onto $E$ becomes $v_{n+1}=v_n+\lambda_n(c_n-v_n)$. Finally DR says $y_n\wto\hat y\in\Argmin(\ind_E+g)$, i.e. $\hat y=L\hat v$ with $\hat v$ minimizing $g\circ L$, and the <a href="#weak-continuity-bounded">lemma</a> lets us push the weak limit through $P_E$ and $(L^*L)^{-1}L^*$ to get $c_n\wto\hat v$ and $v_n\wto\hat v$.</p>
+<p>Sentence to say out loud: <em>parallel DR is DR for $\ind_{\ran L}+g$, with the projection computed by least squares and the iteration read in $\G$.</em></p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul>
+<li>$L^*L$ isomorphism (bijective, bounded, bounded inverse): $E=\ran L$ is closed (proved in step 1, so the explicit hypothesis "$\ran L$ closed" on the slide is redundant but harmless), $\ind_E\in\Gz{\H}$, the least-squares formula $P_E=L(L^*L)^{-1}L^*$ makes sense, and $L$ is injective ($Lw=0\Rightarrow L^*Lw=0\Rightarrow w=0$), which is needed to read $Lv_{n+1}=L(v_n+\lambda_n(c_n-v_n))$ as an equality in $\G$. <span class="tag tag-extra">Extra</span> In Hilbert spaces, $L^*L$ is an isomorphism iff $L$ is injective with closed range iff $\norm{Lw}\ge\kappa\norm{w}$ for some $\kappa\gt0$. Drop the hypothesis and the least-squares step is ill-posed: for $L(v_1,v_2)=v_1+v_2$ from $\R^2$ to $\R$ (closed range, not injective), $L^*L=\begin{pmatrix}1&amp;1\\1&amp;1\end{pmatrix}$ is singular, $c_n$ is not unique, and $g\circ L$ has a whole line of minimizers above each minimizer of $g$.</li>
+<li>$\zer(L^*\circ\partial g\circ L)\neq\emptyset$: this is $\zer(\partial\ind_E+\partial g)\neq\emptyset$ in disguise (step 2), the DR hypothesis. It is stronger than $\Argmin(g\circ L)\neq\emptyset$ because only $L^*\partial g(L\cdot)\subset\partial(g\circ L)$ holds without qualification (<a class="xref" data-id="subdiff-sum-inclusion" href="02_subdifferential_conjugate.html#subdiff-sum-inclusion">page 2</a>).</li>
+<li>$\gamma$, $\lambda_n$: inherited from DR, unchanged.</li>
+<li>$v_0=(L^*L)^{-1}L^*x_0$: makes $Lv_n=P_Ex_n$ true at $n=0$, and the $v$-update propagates it.</li>
+</ul></div>
+<details class="pl hint"><summary>Hint <span class="aid">— try it first</span></summary><div class="dc"><p>Write the DR iteration for $f=\ind_E$, $g$; replace $P_E$ by $L(L^*L)^{-1}L^*$ everywhere; apply $P_E$ to the $x$-update and use $P_Ez_n=z_n$.</p></div></details>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T01"><b>T01</b> indicator trick</a> <a class="chip t" href="09_toolbox.html#T16"><b>T16</b> lifting</a> <a class="chip t" href="09_toolbox.html#T08"><b>T08</b> normal equations</a></summary><div class="dc">
+<p><span class="step">1. $E=\ran L$ is closed.</span> Let $(Lw_n)$ be a sequence of $E$ converging to $z\in\H$. By continuity of $L^*$, $L^*Lw_n\to L^*z$; applying the bounded inverse $(L^*L)^{-1}$, $w_n\to(L^*L)^{-1}L^*z=:w$; by continuity of $L$, $Lw_n\to Lw$. Limits being unique, $z=Lw\in E$. So the limit of every convergent sequence of $E$ belongs to $E$: $E$ is closed, hence $\ind_E\in\Gz{\H}$ (<a class="xref" data-id="convex-stability" href="01_convex_analysis.html#convex-stability">page 1</a>).</p>
+<p><span class="step">2. Reformulation: $\min_v g(Lv)\iff\min_x\ind_E(x)+g(x)$, and the zero sets match.</span> The values taken by $g\circ L$ are the values of $g$ on $E$, so $v\in\Argmin(g\circ L)\iff Lv\in\Argmin(\ind_E+g)$. For the hypothesis, with $N_E(x)=E^\perp$ for $x\in E$ (<a class="xref" data-id="normal-cone" href="02_subdifferential_conjugate.html#normal-cone">normal cone of a closed subspace</a>) and $\Ker L^*=(\ran L)^\perp=E^\perp$:
+$$\begin{aligned}
+\zer(L^*\circ\partial g\circ L)\neq\emptyset&amp;\iff(\exists v\in\G)\ 0\in L^*\partial g(Lv)\\
+&amp;\iff(\exists x\in E)\ 0\in L^*\partial g(x)\\
+&amp;\iff(\exists x\in E)(\exists u\in\partial g(x))\ 0=L^*u\\
+&amp;\iff(\exists x\in E)(\exists u\in\partial g(x))\ -u\in\Ker L^*=E^\perp\\
+&amp;\iff(\exists x\in\H)(\exists u\in\partial g(x))\ -u\in N_E(x)=\partial\ind_E(x)\\
+&amp;\iff(\exists x\in\H)\ 0\in\partial\ind_E(x)+\partial g(x)\\
+&amp;\iff\zer(\partial\ind_E+\partial g)\neq\emptyset .
+\end{aligned}$$
+(Line 5 uses $N_E(x)=E^\perp$ if $x\in E$ and $N_E(x)=\emptyset$ otherwise, so "$x\in E$ and $-u\in E^\perp$" is "$-u\in N_E(x)$".) Hence Douglas–Rachford applies to $f=\ind_E$ and $g$.</p>
+<p><span class="step">3. DR with $f=\ind_E$.</span> $\prox_{\gamma\ind_E}=P_E$ (<a class="xref" data-id="prox-projection" href="03_proximity_operator.html#prox-projection">prox of an indicator</a>, independent of $\gamma$), and $P_E$ is linear because $E$ is a closed subspace. The DR iteration reads
+$$y_n=\prox_{\gamma g}x_n,\qquad z_n=P_E(2y_n-x_n)=2P_Ey_n-P_Ex_n,\qquad x_{n+1}=x_n+\lambda_n(z_n-y_n).$$</p>
+<p><span class="step">4. The projection is a least-squares solve.</span> For every $n$, $P_Ey_n\in E$ so $P_Ey_n=Lc_n$ for some $c_n\in\G$, characterized by $c_n=\argmin_{c\in\G}\norm{y_n-Lc}^2$. Fermat for this differentiable convex function: $L^*(Lc_n-y_n)=0\iff c_n=(L^*L)^{-1}L^*y_n$. Likewise $P_Ex_n=Lv_n$ with $v_n=(L^*L)^{-1}L^*x_n$ (true at $n=0$ by the choice of $v_0$; step 5 shows it propagates). Then $z_n=2Lc_n-Lv_n=L(2c_n-v_n)$, which is line 3 of the algorithm.</p>
+<div class="callout note"><span class="lbl">Slide typo</span><p>Part V, slide 36 writes $c_n=\argmin_{c\in\H}\norm{y_n-Lc}^2$; the variable $c$ ranges over $\G$, the domain of $L$ (Part V.2, slide 9 has $c\in\G$).</p></div>
+<p><span class="step">5. The update read in $\G$.</span> Apply $P_E$ (linear) to the $x$-update and use $P_Ez_n=z_n$ (since $z_n\in E$):
+$$\begin{aligned}
+Lv_{n+1}=P_Ex_{n+1}&amp;=P_Ex_n+\lambda_n(P_Ez_n-P_Ey_n)=P_Ex_n+\lambda_n(z_n-P_Ey_n)\\
+&amp;=P_Ex_n+\lambda_n(2P_Ey_n-P_Ex_n-P_Ey_n)=P_Ex_n+\lambda_n(P_Ey_n-P_Ex_n)\\
+&amp;=L\big(v_n+\lambda_n(c_n-v_n)\big).
+\end{aligned}$$
+Since $L$ is injective, $v_{n+1}=v_n+\lambda_n(c_n-v_n)$: line 4 of the algorithm. In summary the iteration is exactly $y_n=\prox_{\gamma g}x_n$, $c_n=(L^*L)^{-1}L^*y_n$, $z_n=L(2c_n-v_n)$, $x_{n+1}=x_n+\lambda_n(z_n-y_n)$, $v_{n+1}=v_n+\lambda_n(c_n-v_n)$.</p>
+<p><span class="step">6. The limit of the shadows.</span> By the <a class="xref" data-id="douglas-rachford" href="#douglas-rachford">DR theorem</a> (item 4), $y_n\wto\hat y\in\Argmin(\ind_E+g)$, and
+$$\hat y\in\Argmin(\ind_E+g)\iff\hat y=L\hat v\ \text{and}\ (\forall y\in E)\ g(y)\ge g(\hat y)\iff\hat y=L\hat v\ \text{and}\ (\forall v\in\G)\ g(Lv)\ge g(L\hat v)\iff\hat y=L\hat v\ \text{and}\ \hat v\in\Argmin(g\circ L).$$</p>
+<p><span class="step">7. Push the weak limit through linear maps.</span> $P_E$ is bounded linear, so by the <a class="xref" data-id="weak-continuity-bounded" href="#weak-continuity-bounded">lemma</a> $Lc_n=P_Ey_n\wto P_E\hat y=\hat y=L\hat v$; $(L^*L)^{-1}L^*$ is bounded linear, so $c_n=(L^*L)^{-1}L^*(Lc_n)\wto(L^*L)^{-1}L^*(L\hat v)=\hat v$. Also $z_n\wto\hat y$ (DR item 4), i.e. $L(2c_n-v_n)\wto L\hat v$; applying $(L^*L)^{-1}L^*$ again, $2c_n-v_n\wto\hat v$, hence $v_n=2c_n-(2c_n-v_n)\wto2\hat v-\hat v=\hat v\in\Argmin(g\circ L)$.</p>
+<div class="callout note"><span class="lbl">Item 4 in infinite dimension <span class="tag tag-extra">Extra</span></span><p>Steps 6–7 follow the slides and use item 4 of DR ($y_n\wto\hat y$, $z_n\wto\hat y$), which the slides prove only in finite dimension; in a general Hilbert space it is Svaiter's theorem (see the <a href="#douglas-rachford">DR card</a>). Here it can be avoided. By the fixed-point dictionary, $\hat x-\hat y=\gamma u$ with $-u\in N_E(\hat y)=E^\perp$, so $P_E\hat x=\hat y$. Hence $Lv_n=P_Ex_n\wto P_E\hat x=\hat y=L\hat v$ (item 1 and the lemma), and $v_n=(L^*L)^{-1}L^*(Lv_n)\wto\hat v$. Moreover $L(c_n-v_n)=P_Ey_n-P_Ex_n=P_E(z_n-y_n)$, because $P_Ez_n=z_n=2P_Ey_n-P_Ex_n$; so $\norm{L(c_n-v_n)}\le\norm{z_n-y_n}\to0$ (item 3), and applying the bounded operator $(L^*L)^{-1}L^*$ gives $c_n-v_n\to0$ strongly, whence $c_n\wto\hat v$. Only items 1–3 are used.</p></div>
+<span class="qed">□</span>
+</div></details>
+<div class="callout insight"><span class="lbl">Line by line, and why the output may come from $x_n$</span><p>Read DR with $f=\ind_E$ in the coordinates $M=(L^*L)^{-1}L^*$ of $E$ (so $ML=\Id$ and $LM=P_E$). Line 1, $y_n=\prox_{\gamma g}x_n$, is DR unchanged. Line 2 sets $c_n=My_n$, and $v_n=Mx_n$ is kept alongside, so that $P_Ey_n=Lc_n$ and $P_Ex_n=Lv_n$. In line 3, $L(2c_n-v_n)=P_E(2y_n-x_n)=z_n$, so line 3 is DR's update $x_{n+1}=x_n+\lambda_n(z_n-y_n)$. Line 4 is $M$ applied to that update: $Mx_{n+1}=v_n+\lambda_n(2c_n-v_n-c_n)=v_n+\lambda_n(c_n-v_n)$. It is not a new equation, just $v_n=Mx_n$ kept up to date without a second solve. DR says "output the shadow", yet $Lv_n=P_Ex_n$ projects the governing sequence. The reason: at the limit $\hat x=\hat y+\gamma u$ with $-u\in\partial\ind_E(\hat y)=E^\perp$, so the offset between fixed point and solution is orthogonal to $E$ and $P_E\hat x=\hat y$. Projecting onto $E$ removes exactly the subgradient offset (in the product-space widget, $Lv_n$ is the foot of the perpendicular from $x_n$ to the diagonal).</p></div>
+<div class="callout trick"><span class="lbl">Trick</span><p><strong>Constraint as an indicator, then project by least squares</strong> (<a class="chip t" href="09_toolbox.html#T01"><b>T01</b></a> + <a class="chip t" href="09_toolbox.html#T08"><b>T08</b></a>). "$x\in\ran L$" costs one linear solve with $L^*L$: $P_{\ran L}=L(L^*L)^{-1}L^*$. Factorize $L^*L=R^*R$ (Cholesky) once; every iteration then costs a prox of $g$, one product by $L^*$, two triangular solves (forward and backward substitution) and one product by $L$. When $L^*L=\mu\Id$ (tight frames, consensus) the solve disappears entirely.</p></div>
+<div class="callout pitfall"><span class="lbl">Pitfall</span><p>Two sequences live in two spaces: $x_n,y_n\in\H$ (big) and $c_n,v_n\in\G$ (small). The solution is $\hat v\in\G$, the limit of $v_n$ (and of $c_n$), not of $x_n$. In line 3, $L(2c_n-v_n)$ is $z_n=P_E(2y_n-x_n)$: the "reflect then project" of DR, where the reflection is taken in $\H$ and the projection returns to $E$.</p></div>
+
+<div class="widget" id="w-product-space">
+<div class="w-title">Interactive · parallel DR seen in the product space: $E=\ran L$ is the diagonal, $g=\ind_{C_1\times C_2}$</div>
+<p class="w-help">Two intervals $C_1,C_2\subset\R$. Lift to $\H=\R^2$ with $L:v\mapsto(v,v)$: $E=\ran L$ is the diagonal, $L^*L=2$, $c_n=\tfrac12(y_{n,1}+y_{n,2})$ (the mean), and $P_E$ is "replace both coordinates by their mean". DR on $\ind_E+\ind_{C_1\times C_2}$: $y_n=P_{C_1\times C_2}x_n$ (clip each coordinate), reflect, project on the diagonal, average. The solutions are the diagonal points $(v,v)$ with $v\in C_1\cap C_2$ (green segment). Slide $C_2$ until the intersection is empty: $x_n$ drifts away while $y_n$ still converges.</p>
+<div class="w-ctls">
+<label class="ctl">shift of C₂ <input type="range" id="ps-shift" min="-1" max="3" step="0.1" value="1"><output id="ps-shift-v"></output></label>
+<label class="ctl">λ <input type="range" id="ps-lambda" min="0.1" max="2" step="0.1" value="1"><output id="ps-lambda-v"></output></label>
+<div class="w-btns"><button class="btn" type="button" id="ps-step">Step</button><button class="btn" type="button" id="ps-run">Run ×10</button><button class="btn" type="button" id="ps-reset">Reset</button></div>
+</div>
+<svg class="w-svg" id="ps-svg" viewBox="0 0 520 400" role="img" aria-label="Douglas–Rachford in the product space with the diagonal as ran L"></svg>
+<div class="leg"><span><i class="dot" style="background:var(--ink)"></i>x_n ∈ ℋ = ℝ²</span><span><i class="dot" style="background:var(--s2)"></i>y_n = P_{C₁×C₂} x_n</span><span><i class="dot" style="background:var(--s1)"></i>z_n = L(2c_n − v_n) ∈ E</span><span><i class="dot" style="background:var(--idea)"></i>L c_n, L v_n on the diagonal</span></div>
+<p class="readout" id="ps-read"></p>
+<p class="w-cap">$C_1=[0,2]$ (horizontal extent of the rectangle), $C_2=[s,s+2]$ (vertical). The rectangle is $C_1\times C_2=\dom g$; the diagonal is $E=\ran L$. The small variable $v_n$ is the abscissa of $Lv_n=P_Ex_n$.</p>
+</div>
+
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Parallel DR = DR for $\ind_{\ran L}+g$</strong>, with $P_{\ran L}=L(L^*L)^{-1}L^*$: $y_n=\prox_{\gamma g}x_n$, $c_n=(L^*L)^{-1}L^*y_n$, $x_{n+1}=x_n+\lambda_n(L(2c_n-v_n)-y_n)$, $v_{n+1}=v_n+\lambda_n(c_n-v_n)$; $v_n\wto\hat v\in\Argmin(g\circ L)$. Needs $L^*L$ isomorphism and $\zer(L^*\partial gL)\neq\emptyset$.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="douglas-rachford" href="#douglas-rachford">Douglas–Rachford</a><a class="chip xref" data-id="weak-continuity-bounded" href="#weak-continuity-bounded">weak continuity lemma</a><a class="chip xref" data-id="prox-projection" href="03_proximity_operator.html#prox-projection">prox of an indicator</a><a class="chip xref" data-id="normal-cone" href="02_subdifferential_conjugate.html#normal-cone">normal cone of a subspace</a><a class="chip xref" data-id="indicator-function" href="01_convex_analysis.html#indicator-function">indicator function</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="ppxa" href="#ppxa">PPXA+</a><a class="chip xref" data-id="ex-parallel-algorithms" href="#ex-parallel-algorithms">exercise</a><a class="chip xref" data-id="consensus-sharing" href="06_duality_admm_primal_dual.html#consensus-sharing">consensus (page 6)</a></div>
+</article>
+
+<article class="card algo" id="ppxa">
+<header class="card-head"><span class="kind">Algorithm</span><h3>PPXA+: parallel proximal algorithm for $\sum_{i=1}^m g_i\circ L_i$</h3><span class="src">Part V.2 · slides 10–11 · Part V · slide 38</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><span class="tag tag-lab">Lab</span><a class="anchor" href="#ppxa" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement (PPXA+)</span>
+<p>Let $\H_1,\dots,\H_m$ and $\G$ be Hilbert spaces. For every $i\in\{1,\dots,m\}$, let $g_i\in\Gz{\H_i}$ and let $L_i\in\B(\G,\H_i)$. Assume that $\sum_{i=1}^mL_i^*L_i$ is an isomorphism. Let $\gamma\in\,]0,+\infty[$ and let $(\lambda_n)_{n\in\N}$ be a sequence in $[0,2]$ such that $\sum_{n\in\N}\lambda_n(2-\lambda_n)=+\infty$. Assume that $\zer\big(\sum_{i=1}^mL_i^*\circ\partial g_i\circ L_i\big)\neq\emptyset$. Let $(x_{0,i})_{1\le i\le m}\in\H_1\times\dots\times\H_m$, $v_0=\big(\sum_{i=1}^mL_i^*L_i\big)^{-1}\sum_{i=1}^mL_i^*x_{0,i}$ and</p>
+<div class="algo-box"><div class="algo-name">PPXA+</div>
+<p>For $n=0,1,\dots$</p>
+<ol><li>$y_{n,i}=\prox_{\gamma g_i}(x_{n,i}),\quad i\in\{1,\dots,m\}$ <span class="mini">(<strong>parallel</strong>: $m$ independent proxes)</span></li>
+<li>$c_n=\big(\sum_{i=1}^mL_i^*L_i\big)^{-1}\sum_{i=1}^mL_i^*y_{n,i}$ <span class="mini">(<strong>synchronization</strong>: gather, one linear solve)</span></li>
+<li>$x_{n+1,i}=x_{n,i}+\lambda_n\big(L_i(2c_n-v_n)-y_{n,i}\big),\quad i\in\{1,\dots,m\}$ <span class="mini">(<strong>parallel</strong>: broadcast $2c_n-v_n$, local update)</span></li>
+<li>$v_{n+1}=v_n+\lambda_n(c_n-v_n)$ <span class="mini">(the small variable)</span></li></ol></div>
+<p>Then $v_n\wto\hat v\in\Argmin\sum_{i=1}^mg_i\circ L_i$.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">PPXA+ is the parallel Douglas–Rachford on the product space $\H=\H_1\times\dots\times\H_m$ with the separable $g(x)=\sum g_i(x_i)$ and the stacked $L:v\mapsto(L_1v,\dots,L_mv)$; separability makes the prox step $m$ independent proxes, and $L^*L=\sum L_i^*L_i$ is the only coupling.</p>
+<div class="rub">Why it is the parallel DR (answer to the slide's "Question")</div>
+<div class="why"><p>Take $\H=\H_1\times\dots\times\H_m$ with $\ps{x}{y}=\sum_i\ps{x_i}{y_i}$, $g(x)=\sum_{i=1}^mg_i(x_i)$, $L:\G\to\H$, $v\mapsto(L_1v,\dots,L_mv)$ (<a class="chip t" href="09_toolbox.html#T16"><b>T16</b></a>). Then $g(Lv)=\sum_ig_i(L_iv)$, so $\Argmin(g\circ L)=\Argmin\sum_ig_i\circ L_i$, and the five ingredients of the parallel DR become:</p>
+<ul>
+<li><strong>Adjoint:</strong> $\ps{Lv}{y}=\sum_i\ps{L_iv}{y_i}=\sum_i\ps{v}{L_i^*y_i}=\ps{v}{\sum_iL_i^*y_i}$, so $L^*y=\sum_{i=1}^mL_i^*y_i$ (the <a class="xref" data-id="adjoint-example" href="01_convex_analysis.html#adjoint-example">adjoint of a stacking is a sum</a>). Hence $L^*L=\sum_{i=1}^mL_i^*L_i$, and "$L^*L$ isomorphism" is the stated assumption.</li>
+<li><strong>Prox:</strong> $g$ is separable, so $\prox_{\gamma g}(x)=\big(\prox_{\gamma g_i}(x_i)\big)_{1\le i\le m}$ (<a class="xref" data-id="prox-separable" href="03_proximity_operator.html#prox-separable">prox of a separable sum</a>): line 1, computable in parallel.</li>
+<li><strong>Zeros:</strong> $\partial g(x)=\partial g_1(x_1)\times\dots\times\partial g_m(x_m)$ (<a class="xref" data-id="subdiff-separable" href="02_subdifferential_conjugate.html#subdiff-separable">page 2</a>), so $L^*\partial g(Lv)=\sum_iL_i^*\partial g_i(L_iv)$ and the hypothesis $\zer(L^*\partial gL)\neq\emptyset$ is the stated one.</li>
+<li><strong>Least squares:</strong> $c_n=(L^*L)^{-1}L^*y_n=\big(\sum_iL_i^*L_i\big)^{-1}\sum_iL_i^*y_{n,i}$: line 2. Likewise $v_0=(L^*L)^{-1}L^*x_0$.</li>
+<li><strong>Update:</strong> $x_{n+1}=x_n+\lambda_n(L(2c_n-v_n)-y_n)$ read componentwise is line 3; $v_{n+1}=v_n+\lambda_n(c_n-v_n)$ is line 4.</li>
+</ul>
+<p>The conclusion $v_n\wto\hat v\in\Argmin(g\circ L)=\Argmin\sum_ig_i\circ L_i$ is the parallel DR theorem verbatim. (Closedness of $\ran L$ follows from the isomorphism, step 1 of that proof.)</p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul><li>$\sum_iL_i^*L_i$ isomorphism: the synchronization step is a well-posed linear solve; it holds as soon as one $L_i^*L_i$ is an isomorphism (e.g. one $L_i=\Id$).</li><li>$\zer(\sum_iL_i^*\partial g_iL_i)\neq\emptyset$: existence of a minimizer <em>plus</em> a qualification condition (sum rule); this is what the exercise's condition $\dom g_1\cap\bigcap_{i\ge2}\inte(\dom g_i)\neq\emptyset$ is for.</li><li>$\gamma$, $\lambda_n$: as in DR.</li></ul></div>
+<details class="pl proof"><summary>Convergence proof <span class="aid">(reduction to the parallel DR theorem)</span></summary><div class="dc">
+<p><span class="step">1.</span> Define $\H$, $g$, $L$ as in "Why". $g\in\Gz{\H}$ as a finite sum of functions of $\Gz{\H}$ of separate variables (proper: $\dom g=\prod\dom g_i\neq\emptyset$; lsc and convex: each term is). $L\in\B(\G,\H)$ with $\norm{Lv}^2=\sum_i\norm{L_iv}^2\le(\sum_i\norm{L_i}^2)\norm{v}^2$.</p>
+<p><span class="step">2.</span> $L^*L=\sum_iL_i^*L_i$ is an isomorphism by assumption; hence $\ran L$ is closed (parallel DR, step 1).</p>
+<p><span class="step">3.</span> $\zer(L^*\circ\partial g\circ L)=\zer(\sum_iL_i^*\circ\partial g_i\circ L_i)\neq\emptyset$ by separability of $\partial g$.</p>
+<p><span class="step">4.</span> The PPXA+ iteration is the parallel DR iteration written componentwise (the five identifications in "Why"). The <a class="xref" data-id="parallel-dr" href="#parallel-dr">parallel DR theorem</a> gives $v_n\wto\hat v\in\Argmin(g\circ L)=\Argmin\sum_ig_i\circ L_i$.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout insight"><span class="lbl">Cost per iteration, what is parallel, what synchronizes</span><p><strong>Parallel:</strong> the $m$ proxes $\prox_{\gamma g_i}$ (line 1) and the $m$ local updates (line 3) are independent: one worker per $i$, each holding $x_{n,i}$, $y_{n,i}$ and applying $L_i$. <strong>Synchronization:</strong> line 2 gathers $\sum_iL_i^*y_{n,i}$ (a reduce), solves one linear system with the fixed operator $\sum_iL_i^*L_i$ (factorized once, or trivial when it is $\mu\Id$), and broadcasts $2c_n-v_n\in\G$. Communication per iteration: one reduce of a vector of $\G$ and one broadcast of a vector of $\G$. The variable $v_n$ is the consensus value; the solution is its limit.</p></div>
+<div class="callout pitfall"><span class="lbl">Pitfall</span><p>Each $x_{n,i}$ lives in $\H_i$ and is <em>not</em> an estimate of the solution; neither is $y_{n,i}=\prox_{\gamma g_i}x_{n,i}$ alone. Only the consensus variable $v_n\in\G$ (equivalently $c_n$) converges to $\hat v$. Also: the proxes are of $\gamma g_i$ with the <em>same</em> $\gamma$ for all $i$ (no weights here; weighted versions change the metric).</p></div>
+
+<div class="widget" id="w-ppxa-sets">
+<div class="w-title">Interactive · PPXA on three discs: three proxes in parallel, one average to synchronize</div>
+<p class="w-help">$g_i=\ind_{C_i}$ (three discs in $\R^2$), $L_i=\Id$, $m=3$: $y_{n,i}=P_{C_i}x_{n,i}$ in parallel, $c_n=\tfrac13\sum_iy_{n,i}$, $x_{n+1,i}=x_{n,i}+\lambda(2c_n-v_n-y_{n,i})$, $v_{n+1}=v_n+\lambda(c_n-v_n)$. The three copies $x_{n,i}$ (coloured) start far apart; the consensus $v_n$ (green) converges to a point of $C_1\cap C_2\cap C_3$.</p>
+<div class="w-ctls">
+<label class="ctl">λ <input type="range" id="px-lambda" min="0.1" max="2" step="0.1" value="1"><output id="px-lambda-v"></output></label>
+<div class="w-btns"><button class="btn" type="button" id="px-step">Step</button><button class="btn" type="button" id="px-run">Run ×10</button><button class="btn" type="button" id="px-reset">Reset</button></div>
+</div>
+<svg class="w-svg" id="px-svg" viewBox="0 0 520 350" role="img" aria-label="PPXA iterates on three discs"></svg>
+<div class="leg"><span><i class="dot" style="background:var(--s1)"></i>x_{n,1}, y_{n,1}</span><span><i class="dot" style="background:var(--s2)"></i>x_{n,2}, y_{n,2}</span><span><i class="dot" style="background:var(--s3)"></i>x_{n,3}, y_{n,3}</span><span><i class="dot" style="background:var(--ink)"></i>c_n (mean of the y)</span><span><i class="dot" style="background:var(--idea)"></i>v_n (consensus)</span></div>
+<p class="readout" id="px-read"></p>
+<p class="w-cap">Hollow dots are the projections $y_{n,i}$, filled dots the copies $x_{n,i}$. The consensus residual $\max_i\norm{y_{n,i}-c_n}$ goes to $0$: in the limit all three projections agree, which is the only way for the mean to be in all three sets.</p>
+</div>
+
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>PPXA+ = parallel DR on $\H_1\times\dots\times\H_m$</strong>: $m$ proxes in parallel, one linear solve with $\sum L_i^*L_i$, broadcast $2c_n-v_n$. Memorize the four lines by their roles: <em>prox / gather / scatter / consensus</em>.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="parallel-dr" href="#parallel-dr">parallel DR</a><a class="chip xref" data-id="adjoint-example" href="01_convex_analysis.html#adjoint-example">adjoint of a stacking</a><a class="chip xref" data-id="prox-separable" href="03_proximity_operator.html#prox-separable">separable prox</a><a class="chip xref" data-id="subdiff-separable" href="02_subdifferential_conjugate.html#subdiff-separable">separable subdifferential</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="ppxa-consensus" href="#ppxa-consensus">consensus case</a><a class="chip xref" data-id="ex-parallel-algorithms" href="#ex-parallel-algorithms">exercise</a><a class="chip xref" data-id="lab-nmr2" href="08_labs.html#lab-nmr2">Lab 2 (NMR)</a><a class="chip xref" data-id="consensus-sharing" href="06_duality_admm_primal_dual.html#consensus-sharing">consensus/sharing (page 6)</a></div>
+</article>
+
+<article class="card cor" id="ppxa-consensus">
+<header class="card-head"><span class="kind">Corollary</span><h3>Consensus case $L_i=\Id$: the parallel proximal algorithm (PPXA)</h3><span class="src">Part V.2 · slide 12 (exercise 1) · Part V · slide 38</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#ppxa-consensus" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $g_1,\dots,g_m\in\Gz{\G}$ with $\zer\big(\sum_{i=1}^m\partial g_i\big)\neq\emptyset$, $\gamma\gt0$, $(\lambda_n)$ in $[0,2]$ with $\sum\lambda_n(2-\lambda_n)=+\infty$. Let $(x_{0,i})_{1\le i\le m}\in\G^m$, $v_0=\frac1m\sum_{i=1}^mx_{0,i}$ and</p>
+<div class="algo-box"><div class="algo-name">PPXA (consensus form)</div>
+<p>For $n=0,1,\dots$</p>
+<ol><li>$y_{n,i}=\prox_{\gamma g_i}(x_{n,i}),\quad i\in\{1,\dots,m\}$ <span class="mini">(parallel)</span></li>
+<li>$c_n=\frac1m\sum_{i=1}^my_{n,i}$ <span class="mini">(the average)</span></li>
+<li>$x_{n+1,i}=x_{n,i}+\lambda_n(2c_n-v_n-y_{n,i}),\quad i\in\{1,\dots,m\}$ <span class="mini">(parallel)</span></li>
+<li>$v_{n+1}=v_n+\lambda_n(c_n-v_n)$</li></ol></div>
+<p>Then $v_n\wto\hat v\in\Argmin\sum_{i=1}^mg_i$.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">With $L_i=\Id$, $\sum L_i^*L_i=m\Id$ and the synchronization step is just the average of the $m$ prox outputs: minimizing a sum of $m$ functions costs $m$ proxes in parallel and one mean.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>Set $\H_i=\G$ and $L_i=\Id$ in PPXA+. Then $L^*L=\sum_i\Id=m\Id$, an isomorphism with inverse $\frac1m\Id$; $L^*y=\sum_iy_i$; so $c_n=\frac1m\sum_iy_{n,i}$, $v_0=\frac1m\sum_ix_{0,i}$ and $L_i(2c_n-v_n)=2c_n-v_n$. The hypothesis $\zer(\sum_iL_i^*\partial g_iL_i)\neq\emptyset$ is $\zer(\sum_i\partial g_i)\neq\emptyset$. Geometrically, $E=\ran L=\{(v,\dots,v)\}$ is the <em>consensus subspace</em> (the diagonal of $\G^m$) and $P_E$ replaces every component by the average: the product-space widget above shows exactly this for $m=2$.</p></div>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T16"><b>T16</b> lifting</a></summary><div class="dc">
+<p><span class="step">1.</span> Apply <a class="xref" data-id="ppxa" href="#ppxa">PPXA+</a> with $\H_i=\G$, $L_i=\Id\in\B(\G,\G)$: $\sum_iL_i^*L_i=m\Id$ is an isomorphism.</p>
+<p><span class="step">2.</span> $(m\Id)^{-1}\sum_iL_i^*y_{n,i}=\frac1m\sum_iy_{n,i}=c_n$ and $(m\Id)^{-1}\sum_iL_i^*x_{0,i}=\frac1m\sum_ix_{0,i}=v_0$; line 3 of PPXA+ becomes $x_{n+1,i}=x_{n,i}+\lambda_n(2c_n-v_n-y_{n,i})$.</p>
+<p><span class="step">3.</span> PPXA+ gives $v_n\wto\hat v\in\Argmin\sum_ig_i\circ\Id=\Argmin\sum_ig_i$.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout note"><span class="lbl">Qualification</span><p>$\zer(\sum_i\partial g_i)\neq\emptyset$ follows from "$\Argmin\sum_ig_i\neq\emptyset$" when the <a class="xref" data-id="moreau-rockafellar" href="02_subdifferential_conjugate.html#moreau-rockafellar">sum rule</a> $\partial(\sum_ig_i)=\sum_i\partial g_i$ holds, e.g. under $\dom g_1\cap\bigcap_{i=2}^m\inte(\dom g_i)\neq\emptyset$: see the exercise. <span class="tag tag-extra">Extra</span> This is the PPXA algorithm of Combettes–Pesquet (2008); the "+" of PPXA+ (Pesquet–Pustelnik 2012) is the linear operators $L_i$.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Consensus PPXA:</strong> prox each, average, reflect through the average ($2c_n-v_n$), update each, move the consensus toward the average. The whole coupling is one mean.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="ppxa" href="#ppxa">PPXA+</a><a class="chip xref" data-id="adjoint-example" href="01_convex_analysis.html#adjoint-example">adjoint of x ↦ (x,…,x)</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="ex-parallel-algorithms" href="#ex-parallel-algorithms">exercise</a><a class="chip xref" data-id="consensus-sharing" href="06_duality_admm_primal_dual.html#consensus-sharing">consensus/sharing duality (page 6)</a></div>
+</article>
+</section>
+
+<section class="chapter" id="s-exercises">
+<header><div class="eyebrow">Exercises · Part V.2 slide 12 · Part V slide 38</div><h2>Exercise of the deck: three parallel algorithms</h2>
+<p class="lead">The exercise appears in both decks. The Part V.2 version adds a qualification condition in item 1, a boundedness assumption in item 2, and a third item on the $\ell^1$ norm. We solve the fuller version and say why each added assumption is there.</p></header>
+
+<article class="card ex" id="ex-parallel-algorithms">
+<header class="card-head"><span class="kind">Exercise</span><h3>Parallel algorithms for $\sum g_i$, for projections + support functions, and for $\norm{\cdot}_1$ over an intersection</h3><span class="src">Part V.2 · slide 12 · Part V · slide 38</span><span class="lvl">★★☆</span><span class="tag tag-exam">Exam</span><a class="anchor" href="#ex-parallel-algorithms" title="link to this card">#</a></header>
+<div class="ex-statement">
+<p>Let $\G$ be a real Hilbert space. Let $m\in\N$, $m\ge2$.</p>
+<ol>
+<li>For every $i\in\{1,\dots,m\}$, let $g_i$ be a function in $\Gz{\G}$ such that $\dom g_1\cap\bigcap_{i=2}^m\inte(\dom g_i)\neq\emptyset$. Propose a parallel algorithm for finding a minimizer of $\sum_{i=1}^mg_i$ when such a minimizer exists.</li>
+<li>Let $p\in\{1,\dots,m-1\}$ and let $(C_i)_{1\le i\le m}$ be nonempty closed convex subsets of $\G$. We assume that $\bigcap_{i=1}^p\inte(C_i)\neq\emptyset$, and for every $j\in\{p+1,\dots,m\}$, $C_j$ is bounded. Propose a parallel algorithm for solving the problem $$\operatorname*{minimize}_{x\in\bigcap_{i=1}^pC_i}\ \sum_{j=p+1}^m\sigma_{C_j}(x)$$ when this problem admits a solution.</li>
+<li>Let $\H=\R^N$. Deduce an algorithm to $$\operatorname*{minimize}_{x\in\bigcap_{i=1}^pC_i}\ \norm{x}_1 .$$</li>
+</ol>
+<p class="mini">Part V version: item 1 without the qualification condition, item 2 without "$C_j$ bounded", no item 3.</p>
+</div>
+<p class="reflex">Reflex: a sum of $m$ proximable terms is PPXA+ with $L_i=\Id$; each hypothesis of PPXA+ must be checked, and "a minimizer exists" is not yet "$\zer\sum\partial g_i\neq\emptyset$": that is what the qualification condition is for. Indicators and support functions are a Moreau pair: $\prox$ of one is $\Id$ minus a projection.</p>
+<details class="pl hint"><summary>Hint</summary><div class="dc"><p>(1) Consensus PPXA; use the sum rule to turn $\Argmin\neq\emptyset$ into $\zer(\sum\partial g_i)\neq\emptyset$. (2) $g_i=\ind_{C_i}$ for $i\le p$, $g_j=\sigma_{C_j}$ for $j\gt p$; $\prox_{\gamma\sigma_C}$ from the <a class="xref" data-id="moreau-decomposition" href="03_proximity_operator.html#moreau-decomposition">Moreau decomposition</a> with $f=\ind_C$; bounded $C_j$ makes $\dom\sigma_{C_j}=\G$. (3) $\norm{\cdot}_1=\sigma_{[-1,1]^N}$ and the projection on a box is a clip.</p></div></details>
+<details class="pl solution"><summary>Solution</summary><div class="dc">
+<p><span class="step">1. Consensus lifting.</span> Apply PPXA+ with $\H_i=\G$ and $L_i=\Id$ for every $i$ (<a class="xref" data-id="ppxa-consensus" href="#ppxa-consensus">consensus case</a>). Then $\sum_iL_i^*L_i=m\Id$ is an isomorphism with inverse $\frac1m\Id$, $\sum_iL_i^*y_i=\sum_iy_i$, and the algorithm is, for $(x_{0,i})_{1\le i\le m}\in\G^m$ and $v_0=\frac1m\sum_ix_{0,i}$:</p>
+<div class="algo-box"><div class="algo-name">Item 1 · parallel algorithm for $\sum_{i=1}^m g_i$</div>
+<ol><li>$y_{n,i}=\prox_{\gamma g_i}(x_{n,i})$, $i=1,\dots,m$ <span class="mini">(in parallel)</span></li>
+<li>$c_n=\frac1m\sum_{i=1}^my_{n,i}$</li>
+<li>$x_{n+1,i}=x_{n,i}+\lambda_n(2c_n-v_n-y_{n,i})$, $i=1,\dots,m$ <span class="mini">(in parallel)</span></li>
+<li>$v_{n+1}=v_n+\lambda_n(c_n-v_n)$</li></ol></div>
+<p>with $\gamma\gt0$, $\lambda_n\in[0,2]$, $\sum\lambda_n(2-\lambda_n)=+\infty$. <em>Checking the hypotheses.</em> Each $g_i\in\Gz{\G}$ is given. The remaining one is $\zer(\sum_{i=1}^m\partial g_i)\neq\emptyset$. We know $\Argmin\sum_ig_i\neq\emptyset$, i.e. by <a class="xref" data-id="fermat-rule" href="02_subdifferential_conjugate.html#fermat-rule">Fermat</a> $\zer\,\partial(\sum_ig_i)\neq\emptyset$. In general only $\sum_i\partial g_i\subset\partial(\sum_ig_i)$ holds; the qualification condition $\dom g_1\cap\bigcap_{i\ge2}\inte(\dom g_i)\neq\emptyset$ is exactly the hypothesis of the <a class="xref" data-id="moreau-rockafellar" href="02_subdifferential_conjugate.html#moreau-rockafellar">Moreau–Rockafellar sum rule</a> (applied $m-1$ times), which gives $\partial(\sum_ig_i)=\sum_i\partial g_i$. Hence $\zer(\sum_i\partial g_i)=\Argmin\sum_ig_i\neq\emptyset$, PPXA+ applies, and $v_n\wto\hat v\in\Argmin\sum_ig_i$. (Without the condition, as in the Part V version, one must simply assume $\zer(\sum_i\partial g_i)\neq\emptyset$ directly.)</p>
+
+<p><span class="step">2. Indicators and support functions.</span> Write the problem as $\operatorname*{minimize}_{x\in\G}\sum_{i=1}^m g_i(x)$ with (<a class="chip t" href="09_toolbox.html#T01"><b>T01</b></a>) $$g_i=\ind_{C_i}\ (1\le i\le p),\qquad g_j=\sigma_{C_j}\ (p+1\le j\le m).$$ <em>Each $g_i$ is in $\Gz{\G}$:</em> $\ind_{C_i}$ because $C_i$ is nonempty closed convex (<a class="xref" data-id="convex-stability" href="01_convex_analysis.html#convex-stability">page 1</a>); $\sigma_{C_j}=\ind_{C_j}^*$ is a conjugate, hence lsc convex, and proper since $\sigma_{C_j}(0)=0$ and $\sigma_{C_j}\gt-\infty$ ($C_j\neq\emptyset$) (<a class="xref" data-id="support-function" href="02_subdifferential_conjugate.html#support-function">support function</a>). <em>Qualification condition of item 1:</em> $\dom\ind_{C_1}=C_1$, $\inte(\dom\ind_{C_i})=\inte C_i$ for $2\le i\le p$, and for $j\gt p$, since $C_j$ is bounded by some $\rho_j$, $\sigma_{C_j}(x)=\sup_{c\in C_j}\ps{c}{x}\le\rho_j\norm{x}\lt+\infty$: $\dom\sigma_{C_j}=\G$, so $\inte(\dom\sigma_{C_j})=\G$. Therefore $$\dom g_1\cap\bigcap_{i=2}^m\inte(\dom g_i)=C_1\cap\bigcap_{i=2}^p\inte C_i\ \supset\ \bigcap_{i=1}^p\inte C_i\neq\emptyset .$$ <strong>This is why "$C_j$ bounded" and "$\bigcap_{i\le p}\inte C_i\neq\emptyset$" are assumed:</strong> they make the qualification condition of item 1 hold (an unbounded $C_j$ gives a support function with $+\infty$ values, whose domain may have empty interior and may break the sum rule). The problem admits a solution by assumption, so item 1 applies.</p>
+<p><em>The proxes.</em> For $i\le p$: $\prox_{\gamma\ind_{C_i}}=P_{C_i}$ (<a class="xref" data-id="prox-projection" href="03_proximity_operator.html#prox-projection">page 3</a>). For $j\gt p$: by the <a class="xref" data-id="moreau-decomposition" href="03_proximity_operator.html#moreau-decomposition">Moreau decomposition</a> $\prox_{\gamma f^*}x=x-\gamma\prox_{\gamma^{-1}f}(\gamma^{-1}x)$ with $f=\ind_{C_j}$, $f^*=\sigma_{C_j}$ and $\prox_{\gamma^{-1}\ind_{C_j}}=P_{C_j}$: $$\prox_{\gamma\sigma_{C_j}}x=x-\gamma P_{C_j}(x/\gamma)=x-P_{\gamma C_j}(x).$$ For $\gamma=1$ this is the slide formula $\prox_{\sigma_C}=\Id-P_C$ (<a class="xref" data-id="prox-support-function" href="03_proximity_operator.html#prox-support-function">page 3</a>); the identity $\gamma P_C(x/\gamma)=P_{\gamma C}(x)$ is the scaling of a projection. The algorithm, with $x_{0,i}\in\G$ and $v_0=\frac1m\sum_ix_{0,i}$:</p>
+<div class="algo-box"><div class="algo-name">Item 2 · parallel algorithm for $\min_{x\in\cap_{i\le p}C_i}\sum_{j\gt p}\sigma_{C_j}(x)$</div>
+<ol><li>$y_{n,i}=P_{C_i}(x_{n,i})$ for $i=1,\dots,p$; $\ y_{n,j}=x_{n,j}-\gamma P_{C_j}(x_{n,j}/\gamma)$ for $j=p+1,\dots,m$ <span class="mini">(all $m$ in parallel)</span></li>
+<li>$c_n=\frac1m\sum_{i=1}^my_{n,i}$</li>
+<li>$x_{n+1,i}=x_{n,i}+\lambda_n(2c_n-v_n-y_{n,i})$, $i=1,\dots,m$ <span class="mini">(in parallel)</span></li>
+<li>$v_{n+1}=v_n+\lambda_n(c_n-v_n)$</li></ol></div>
+<p>and $v_n\wto\hat v$, a solution of the problem. Only projections onto the $C_i$ are ever needed.</p>
+
+<p><span class="step">3. The $\ell^1$ norm over an intersection.</span> On $\R^N$, $\norm{x}_1=\sum_k\abs{x_k}=\sup_{c\in[-1,1]^N}\ps{c}{x}=\sigma_{[-1,1]^N}(x)$ (<a class="xref" data-id="support-examples" href="02_subdifferential_conjugate.html#support-examples">page 2</a>: the $\ell^1$ norm is the support function of the $\ell^\infty$ unit ball). So the problem is item 2 with $m=p+1$ and $C_{p+1}=[-1,1]^N$, which is bounded, as required. $P_{[-1,1]^N}$ is the componentwise clip $(P_{[-1,1]^N}x)_k=\max(-1,\min(1,x_k))$, and the prox of the support function is soft-thresholding: $$\big(\prox_{\gamma\norm{\cdot}_1}x\big)_k=x_k-\gamma\max\big(-1,\min(1,x_k/\gamma)\big)=\operatorname{sign}(x_k)\max(\abs{x_k}-\gamma,0),$$ recovering the formula of page 3 (<a class="xref" data-id="prox-orthonormal-basis" href="03_proximity_operator.html#prox-orthonormal-basis">soft-thresholding</a>). The algorithm, with $x_{0,1},\dots,x_{0,p+1}\in\R^N$ and $v_0=\frac1{p+1}\sum_ix_{0,i}$:</p>
+<div class="algo-box"><div class="algo-name">Item 3 · parallel algorithm for $\min_{x\in\cap_{i\le p}C_i}\norm{x}_1$</div>
+<ol><li>$y_{n,i}=P_{C_i}(x_{n,i})$ for $i=1,\dots,p$; $\ y_{n,p+1}=\operatorname{soft}_\gamma(x_{n,p+1})$ (componentwise) <span class="mini">(in parallel)</span></li>
+<li>$c_n=\frac1{p+1}\sum_{i=1}^{p+1}y_{n,i}$</li>
+<li>$x_{n+1,i}=x_{n,i}+\lambda_n(2c_n-v_n-y_{n,i})$, $i=1,\dots,p+1$ <span class="mini">(in parallel)</span></li>
+<li>$v_{n+1}=v_n+\lambda_n(c_n-v_n)$</li></ol></div>
+<p>Then $v_n\to\hat v\in\Argmin_{x\in\cap_{i\le p}C_i}\norm{x}_1$ (strong convergence: finite dimension). Here "the problem admits a solution" is automatic: $\ind_{\cap C_i}+\norm{\cdot}_1$ is proper (the intersection contains $\bigcap\inte C_i\neq\emptyset$), lsc and coercive on $\R^N$, so a minimizer exists (<a class="xref" data-id="existence-coercive" href="01_convex_analysis.html#existence-coercive">page 1</a>).</p>
+</div></details>
+</article>
+</section>
+
+<section class="chapter" id="s-comparison">
+<header><div class="eyebrow">Synthesis</div><h2>Forward–Backward vs Douglas–Rachford vs PPXA+, and what comes next</h2>
+<p class="lead">All splitting algorithms of the course are Krasnosel'skii–Mann on a nonexpansive (or averaged) operator whose fixed points encode Fermat's rule. They differ in what they need and in how much relaxation the averagedness count allows.</p></header>
+<div id="comparison-table">
+<div class="table-scroll"><table class="cmp"><thead><tr><th>Algorithm</th><th>Problem / needs</th><th>Operator and its fixed points</th><th>Parameters</th><th>Converges</th><th>Parallel?</th></tr></thead><tbody>
+<tr><td><a class="xref" data-id="forward-backward" href="04_fixed_point_forward_backward.html#forward-backward">Forward–Backward</a></td><td>$f+g$, $g$ with $\nu$-Lipschitz gradient, $f$ proximable</td><td>$\prox_{\gamma f}(\Id-\gamma\nabla g)$, $\tfrac1\delta$-averaged; $\Fix=\Argmin(f+g)$</td><td>$\gamma\in\,]0,2/\nu[$, $\delta=2-\gamma\nu/2$, $\lambda_n\in[0,\delta]$, $\sum\lambda_n(\delta-\lambda_n)=+\infty$</td><td>$x_n\wto\hat x\in\Argmin(f+g)$ (the iterate itself)</td><td>no (sequential)</td></tr>
+<tr><td><a href="#douglas-rachford">Douglas–Rachford</a></td><td>$f+g$, both proximable, nothing smooth; $\zer(\partial f+\partial g)\neq\emptyset$</td><td>$T=\rprox_{\gamma f}\rprox_{\gamma g}$ nonexpansive; $\prox_{\gamma g}(\Fix T)=\zer(\partial f+\partial g)$</td><td>any $\gamma\gt0$; $\lambda_n\in[0,2]$, $\sum\lambda_n(2-\lambda_n)=+\infty$</td><td>$x_n\wto\hat x\in\Fix T$; shadow $y_n=\prox_{\gamma g}x_n\wto\hat y\in\Argmin(f+g)$</td><td>no (two proxes in sequence)</td></tr>
+<tr><td><a href="#peaceman-rachford">Peaceman–Rachford</a></td><td>same, plus e.g. $g$ strongly convex</td><td>Picard on $T$</td><td>$\lambda_n\equiv2$</td><td>shadows $y_n\to\hat y$ under the extra assumption; may cycle otherwise</td><td>no</td></tr>
+<tr><td><a href="#parallel-dr">Parallel DR</a></td><td>$g\circ L$, $L^*L$ isomorphism; $\zer(L^*\partial gL)\neq\emptyset$</td><td>DR for $\ind_{\ran L}+g$, $P_{\ran L}=L(L^*L)^{-1}L^*$</td><td>as DR</td><td>$v_n\wto\hat v\in\Argmin(g\circ L)$ (small variable)</td><td>prox in $\H$ + one linear solve</td></tr>
+<tr><td><a href="#ppxa">PPXA+</a></td><td>$\sum_ig_i\circ L_i$, $\sum L_i^*L_i$ isomorphism; $\zer(\sum L_i^*\partial g_iL_i)\neq\emptyset$</td><td>parallel DR on $\H_1\times\dots\times\H_m$</td><td>as DR</td><td>$v_n\wto\hat v\in\Argmin\sum g_i\circ L_i$</td><td><span class="ok">yes</span>: $m$ proxes, one reduce/broadcast</td></tr>
+<tr><td><a class="xref" data-id="admm-derivation" href="06_duality_admm_primal_dual.html#admm-derivation">ADMM</a> (page 6)</td><td>$f(x)+g(Lx)$, $L^*L$ invertible</td><td>DR applied to the <em>dual</em> problem</td><td>$\gamma\gt0$ (unrelaxed DR)</td><td>primal and dual iterates converge</td><td>partially (depends on $f$)</td></tr>
+<tr><td><a class="xref" data-id="primal-dual-algorithm" href="06_duality_admm_primal_dual.html#primal-dual-algorithm">primal-dual</a> (page 6)</td><td>$f+g\circ L+h$, $h$ with $\beta$-Lipschitz gradient, no inversion of $L$</td><td>FB in a product space with a metric</td><td>$\tau^{-1}-\sigma\norm{L}^2\gt\beta/2$</td><td>$(x_n,v_n)$ converge to a primal-dual pair</td><td>$\prox_f$ and $\prox_{g^*}$ in sequence</td></tr>
+</tbody></table></div>
+</div>
+<div class="callout insight" id="admm-preview"><span class="lbl">Preview of page 6: Douglas–Rachford on the dual is ADMM</span><p>For $\operatorname*{minimize}_x f(x)+g(Lx)$, page 6 writes the Fenchel–Rockafellar dual $\operatorname*{minimize}_v f^*(-L^*v)+g^*(v)$, applies the unrelaxed DR ($\lambda_n\equiv1$) to the two dual functions, and then changes variables (<a class="chip t" href="09_toolbox.html#T18"><b>T18</b></a>): the dual proxes become primal minimizations of the augmented Lagrangian, and the iteration is exactly the Alternating Direction Method of Multipliers. Everything proved here, fixed points, $\lambda\le2$, free $\gamma$, is inherited by ADMM; in particular the requirement that $L^*L$ be invertible is the parallel-DR hypothesis in another guise. The primal-dual algorithm, by contrast, is Forward–Backward in a product space with a different metric, which is why it has a step condition $\tau^{-1}-\sigma\norm{L}^2\gt\beta/2$ while DR has none.</p></div>
+</section>
+
+<section class="chapter" id="retain">
+<header><div class="eyebrow">Retain</div><h2>What to retain</h2></header>
+<div class="box"><ul>
+<li><strong>Motivation.</strong> GD needs $f+g$ smooth, PPA needs the sum proximable, FB needs $g$ smooth; DR needs only $\prox_{\gamma f}$ and $\prox_{\gamma g}$.</li>
+<li><strong>Reflected prox.</strong> $\rprox_{\gamma f}=2\prox_{\gamma f}-\Id$ is nonexpansive $\iff$ $\prox_{\gamma f}$ is firmly nonexpansive ($\tfrac12$-averaged). Proof: expand $\norm{2(p-q)-(x-y)}^2$ and use $\ps{p-q}{x-y}\ge\norm{p-q}^2$.</li>
+<li><strong>Never compose proxes</strong> to minimize $f+g$: the fixed points are wrong ($\abs\cdot+\tfrac12(\cdot-3)^2$: $1$ instead of $2$). Compose reflections.</li>
+<li><strong>Dictionary.</strong> $\zer(\partial f+\partial g)=\prox_{\gamma g}(\Fix T)$, $T=\rprox_{\gamma f}\rprox_{\gamma g}$. Fixed point $y=\hat x+\gamma u$ with $u\in\partial g(\hat x)$, $-u\in\partial f(\hat x)$; $\prox_{\gamma g}$ brings it down.</li>
+<li><strong>Proof route of the dictionary:</strong> $x-y\in\gamma\partial f(x)$ and $y-x\in\gamma\partial g(x)$ → $x=\prox_{\gamma g}y$ and $x=\prox_{\gamma f}(\rprox_{\gamma g}y)$ → $Ty=2x-\rprox_{\gamma g}y=y$.</li>
+<li><strong>DR algorithm.</strong> $y_n=\prox_{\gamma g}x_n$, $z_n=\prox_{\gamma f}(2y_n-x_n)$, $x_{n+1}=x_n+\lambda_n(z_n-y_n)$; $\gamma\gt0$ any, $\lambda_n\in[0,2]$, $\sum\lambda_n(2-\lambda_n)=+\infty$, $\zer(\partial f+\partial g)\neq\emptyset$.</li>
+<li><strong>Why it converges:</strong> $x_{n+1}=x_n+\tfrac{\lambda_n}2(Tx_n-x_n)$ is KM with $\mu_n=\lambda_n/2$; $z_n-y_n=\tfrac12(Tx_n-x_n)\to0$; $x_n\wto\hat x\in\Fix T$; $\hat y=\prox_{\gamma g}\hat x\in\zer(\partial f+\partial g)\subset\Argmin(f+g)$.</li>
+<li><strong>Output the shadow</strong> $y_n$ (or $z_n$), never $x_n$; $y_n\wto\hat y$ (proved in finite dimension on the slides, true in general).</li>
+<li><strong>Peaceman–Rachford</strong> ($\lambda_n\equiv2$) is Picard on $T$: two lines → rotation → no convergence; strong convexity of $g$ restores convergence of the shadows.</li>
+<li><strong>Weak continuity lemma:</strong> $\ps{Lx_n}{y}=\ps{x_n}{L^*y}$, so bounded linear maps preserve weak convergence (nonlinear nonexpansive maps do not).</li>
+<li><strong>Parallel DR</strong> $=$ DR for $\ind_{\ran L}+g$; $P_{\ran L}y=Lc$ with $c=(L^*L)^{-1}L^*y$ (normal equations); $x_{n+1}=x_n+\lambda_n(L(2c_n-v_n)-y_n)$, $v_{n+1}=v_n+\lambda_n(c_n-v_n)$; $v_n\wto\hat v\in\Argmin(g\circ L)$.</li>
+<li><strong>Hypotheses of parallel DR:</strong> $L^*L$ isomorphism (gives $\ran L$ closed, least squares, $L$ injective), $\zer(L^*\partial gL)\neq\emptyset$ ($=\zer(\partial\ind_E+\partial g)\neq\emptyset$ via $N_E=E^\perp=\Ker L^*$).</li>
+<li><strong>PPXA+</strong> $=$ parallel DR on $\H_1\times\dots\times\H_m$: $L^*y=\sum L_i^*y_i$, $L^*L=\sum L_i^*L_i$, prox separable. Prox / gather / scatter / consensus. $L_i=\Id$: $c_n$ is the average.</li>
+<li><strong>Exercise formulas:</strong> $\prox_{\gamma\ind_C}=P_C$; $\prox_{\gamma\sigma_C}=\Id-\gamma P_C(\cdot/\gamma)=\Id-P_{\gamma C}$; $\norm\cdot_1=\sigma_{[-1,1]^N}$ ⇒ soft-thresholding. "$C_j$ bounded" makes $\dom\sigma_{C_j}=\G$ for the qualification condition.</li>
+<li><strong>Next:</strong> DR on the dual of $f+g\circ L$ is ADMM; the primal-dual algorithm is FB in a product space.</li>
+</ul></div>
+<h4>Connections</h4>
+<p>Page 6 needs from this page: the unrelaxed DR iteration and its fixed-point dictionary (it will be rewritten, after a change of variables, as ADMM), the fact that $\gamma$ is free and $\lambda_n\in[0,2]$ (inherited by relaxed ADMM), and the product-space lifting of PPXA+ (the consensus/sharing duality is its dual picture). Page 8 (Lab 2, NMR) uses DR for a constrained maximum-entropy problem and PPXA+-type splittings. Backwards, this page used: the prox characterization and the Moreau decomposition (page 3), the sum inclusion, the normal cone of a subspace and support functions (page 2), and the whole fixed-point toolkit of page 4 (nonexpansive, averaged, firmly nonexpansive, Krasnosel'skii–Mann, demiclosedness).</p>
+</section>
+
+<section class="chapter" id="quiz">
+<header><div class="eyebrow">Self-check</div><h2>Ten questions</h2></header>
+<div class="quiz">
+<div class="q"><div class="qt">Why does the Douglas–Rachford algorithm converge without any smoothness assumption?</div><div class="spoiler"><button type="button">Show answer</button><div class="ans"><p>Because it is Krasnosel'skii–Mann on $T=\rprox_{\gamma f}\rprox_{\gamma g}$, which is nonexpansive as a composition of reflections of firmly nonexpansive proxes; KM only needs nonexpansiveness, a fixed point, and $\mu_n=\lambda_n/2\in[0,1]$ with $\sum\mu_n(1-\mu_n)=+\infty$. Smoothness entered FB only through the averagedness of $\Id-\gamma\nabla g$; here the averaging is done by the relaxation itself.</p></div></div></div>
+<div class="q"><div class="qt">State the fixed-point dictionary of DR and explain where the fixed point sits relative to the solution.</div><div class="spoiler"><button type="button">Show answer</button><div class="ans"><p>$\zer(\partial f+\partial g)=\prox_{\gamma g}(\Fix T)$ with $T=\rprox_{\gamma f}\rprox_{\gamma g}$. If $\hat x$ is a solution with $u\in\partial g(\hat x)$, $-u\in\partial f(\hat x)$, then $y=\hat x+\gamma u$ is a fixed point and $\prox_{\gamma g}y=\hat x$: the fixed point is one scaled subgradient above the solution.</p></div></div></div>
+<div class="q"><div class="qt">Why is $\rprox_{\gamma f}$ nonexpansive? Give the one-line computation.</div><div class="spoiler"><button type="button">Show answer</button><div class="ans"><p>$\norm{(2p-x)-(2q-y)}^2=\norm{x-y}^2-4(\ps{x-y}{p-q}-\norm{p-q}^2)\le\norm{x-y}^2$ because $\ps{x-y}{p-q}\ge\norm{p-q}^2$ (firm nonexpansiveness of the prox, from monotonicity of $\partial f$).</p></div></div></div>
+<div class="q"><div class="qt">In the DR theorem, what is the exact condition on $(\lambda_n)$ and where does it come from?</div><div class="spoiler"><button type="button">Show answer</button><div class="ans"><p>$\lambda_n\in[0,2]$ and $\sum_n\lambda_n(2-\lambda_n)=+\infty$. Since $x_{n+1}=x_n+\frac{\lambda_n}2(Tx_n-x_n)$, it is KM's condition on $\mu_n=\lambda_n/2$: $\sum\mu_n(1-\mu_n)=\frac14\sum\lambda_n(2-\lambda_n)$.</p></div></div></div>
+<div class="q"><div class="qt">Which sequence converges to a minimizer of $f+g$: $x_n$, $y_n$ or $z_n$? What does $x_n$ converge to?</div><div class="spoiler"><button type="button">Show answer</button><div class="ans"><p>$y_n=\prox_{\gamma g}x_n$ and $z_n$ (same limit since $z_n-y_n\to0$) converge to $\hat y\in\Argmin(f+g)$; $x_n$ converges weakly to a fixed point $\hat x$ of $T$, with $\hat y=\prox_{\gamma g}\hat x$.</p></div></div></div>
+<div class="q"><div class="qt">Give an example where Peaceman–Rachford ($\lambda_n=2$) does not converge.</div><div class="spoiler"><button type="button">Show answer</button><div class="ans"><p>$f=\ind_A$, $g=\ind_B$ with $A,B$ two distinct lines through $0$ in $\R^2$: $T=R_AR_B$ is a rotation of angle twice the angle between the lines; $x_{n+1}=Tx_n$ stays on a circle and does not converge, although $\Fix T=\{0\}=A\cap B\neq\emptyset$.</p></div></div></div>
+<div class="q"><div class="qt">Why is a bounded linear operator weakly continuous, and why does this matter in the parallel DR proof?</div><div class="spoiler"><button type="button">Show answer</button><div class="ans"><p>$\ps{Lx_n}{y}=\ps{x_n}{L^*y}\to\ps{x}{L^*y}=\ps{Lx}{y}$. The proof needs to pass the weak limit $y_n\wto\hat y$ through $P_E$ and $(L^*L)^{-1}L^*$ to get $c_n\wto\hat v$ and $v_n\wto\hat v$; this is legitimate for linear bounded maps, not for a general nonexpansive map.</p></div></div></div>
+<div class="q"><div class="qt">What does the hypothesis "$L^*L$ is an isomorphism" buy in the parallel DR?</div><div class="spoiler"><button type="button">Show answer</button><div class="ans"><p>$E=\ran L$ closed (so $\ind_E\in\Gz{\H}$), the least-squares formula $P_E=L(L^*L)^{-1}L^*$ for the prox of $\ind_E$, and the injectivity of $L$ used to read $Lv_{n+1}=L(v_n+\lambda_n(c_n-v_n))$ as an update of $v_n$.</p></div></div></div>
+<div class="q"><div class="qt">Write PPXA+ for $m$ functions with $L_i=\Id$ and say which step is the synchronization.</div><div class="spoiler"><button type="button">Show answer</button><div class="ans"><p>$y_{n,i}=\prox_{\gamma g_i}x_{n,i}$ (parallel); $c_n=\frac1m\sum_iy_{n,i}$ (synchronization: the average, since $\sum L_i^*L_i=m\Id$); $x_{n+1,i}=x_{n,i}+\lambda_n(2c_n-v_n-y_{n,i})$ (parallel); $v_{n+1}=v_n+\lambda_n(c_n-v_n)$. $v_n\wto\hat v\in\Argmin\sum g_i$.</p></div></div></div>
+<div class="q"><div class="qt">What is $\prox_{\gamma\sigma_C}$, and why does the exercise assume the $C_j$ bounded?</div><div class="spoiler"><button type="button">Show answer</button><div class="ans"><p>Moreau decomposition with $f=\ind_C$: $\prox_{\gamma\sigma_C}x=x-\gamma P_C(x/\gamma)=x-P_{\gamma C}x$ ($=\Id-P_C$ for $\gamma=1$). Boundedness makes $\sigma_{C_j}$ finite everywhere, so $\inte(\dom\sigma_{C_j})=\G$ and the qualification condition $\dom g_1\cap\bigcap_{i\ge2}\inte\dom g_i\neq\emptyset$ reduces to $\bigcap_{i\le p}\inte C_i\neq\emptyset$; the sum rule then converts "a minimizer exists" into $\zer(\sum\partial g_i)\neq\emptyset$.</p></div></div></div>
+</div>
+</section>
+
+<footer class="foot">
+<div class="prevnext"><a href="04_fixed_point_forward_backward.html">← 4 · Fixed points &amp; Forward–Backward</a><a href="06_duality_admm_primal_dual.html">6 · Duality, ADMM &amp; primal-dual →</a></div>
+<p>Study guide written from the official slides of E. Chouzenoux and J.-C. Pesquet (MVA, 2026–27). Slide numbers refer to the PDF pages of each deck (Part V.2: 12 frames; Part V: 38 frames).</p>
+</footer>
+</main>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  'use strict';
+  var L = window.LSD;
+
+  /* ---------- small helpers (plane geometry, 1-D proxes) ---------- */
+  function clip(x, a, b) { return Math.max(a, Math.min(b, x)); }
+  function soft(x, g) { return Math.sign(x) * Math.max(Math.abs(x) - g, 0); }
+  function sub(a, b) { return [a[0] - b[0], a[1] - b[1]]; }
+  function add(a, b) { return [a[0] + b[0], a[1] + b[1]]; }
+  function mul(a, s) { return [a[0] * s, a[1] * s]; }
+  function dotp(a, b) { return a[0] * b[0] + a[1] * b[1]; }
+  function nrm(a) { return Math.sqrt(dotp(a, a)); }
+  function projLine(p, p0, d) { return add(p0, mul(d, dotp(sub(p, p0), d))); }
+  function projDisc(p, c, r) { var v = sub(p, c), n = nrm(v); if (n <= r) return p.slice(); return add(c, mul(v, r / n)); }
+  function dir(deg) { var a = deg * Math.PI / 180; return [Math.cos(a), Math.sin(a)]; }
+  /* equal-aspect frame: x in [xmin,xmax] fills the width, y centred at yc */
+  function eqFrame(W, H, xmin, xmax, pad, yc) {
+    var ppu = (W - 2 * pad) / (xmax - xmin); var X = L.scale(xmin, xmax, pad, W - pad);
+    var yh = H / ppu / 2; var Y = L.scale((yc || 0) - yh, (yc || 0) + yh, H, 0); return { X: X, Y: Y, ppu: ppu };
+  }
+  function hollow(svg, x, y, r, cls) { return L.el('circle', { cx: x, cy: y, r: r || 4, class: 'f-none ' + (cls || 's-ink2'), 'stroke-width': 1.6 }, svg); }
+  function filled(svg, x, y, r, cls) { return L.el('circle', { cx: x, cy: y, r: r || 4, class: cls || 'f-ink' }, svg); }
+  function seg(svg, X, Y, a, b, cls, extra) { return L.line(svg, X(a[0]), Y(a[1]), X(b[0]), Y(b[1]), cls, extra); }
+  function drawLine(svg, X, Y, p0, d, cls, w) { var a = add(p0, mul(d, -20)), b = add(p0, mul(d, 20)); return L.line(svg, X(a[0]), Y(a[1]), X(b[0]), Y(b[1]), cls, { 'stroke-width': w || 2 }); }
+  function drawDisc(svg, X, Y, c, r, cls, ppu, fill) { return L.el('circle', { cx: X(c[0]), cy: Y(c[1]), r: r * ppu, class: (fill || 'f-k') + ' ' + cls, 'stroke-width': 2 }, svg); }
+  function trail(svg, X, Y, pts, cls, w) { if (pts.length < 2) return; L.el('polyline', { points: pts.map(function (p) { return X(p[0]).toFixed(1) + ',' + Y(p[1]).toFixed(1); }).join(' '), class: 'f-none ' + cls, 'stroke-width': w || 1.2 }, svg); }
+  function lbl(svg, X, Y, p, s, cls, dx, dy) { return L.text(svg, X(p[0]) + (dx || 7), Y(p[1]) + (dy || -7), s, 'tm ' + (cls || 'f-ink')); }
+  function setRead(id, html) { var e = document.getElementById(id); if (e) e.innerHTML = html; }
+
+  /* ================= w-rprox: reflection of the projection onto the unit disc ================= */
+  function initRprox() {
+    var svg = document.getElementById('rp-svg'); if (!svg) return;
+    var W = 520, H = 330, F = eqFrame(W, H, -3.1, 3.1, 10, 0), X = F.X, Y = F.Y;
+    var rho = 2.2, phi = 20; var y = [-1.6, -1.3];
+    function P(p) { return projDisc(p, [0, 0], 1); }
+    function R(p) { return sub(mul(P(p), 2), p); }
+    function draw() {
+      L.clear(svg);
+      L.axes(svg, X, Y, { grid: false });
+      drawDisc(svg, X, Y, [0, 0], 1, 's-mut', F.ppu, 'f-k');
+      L.text(svg, X(0.55), Y(0.75), 'C', 'tm f-mut');
+      var x = [rho * Math.cos(phi * Math.PI / 180), rho * Math.sin(phi * Math.PI / 180)];
+      var px = P(x), py = P(y), rx = R(x), ry = R(y);
+      /* the three segments */
+      seg(svg, X, Y, x, y, 's-ink', { 'stroke-width': 1.6 });
+      seg(svg, X, Y, px, py, 's-1', { 'stroke-width': 2 });
+      seg(svg, X, Y, rx, ry, 's-2', { 'stroke-width': 2 });
+      /* x -> Px -> Rx (dashed through the midpoint) */
+      seg(svg, X, Y, x, rx, 's-mut dash', { 'stroke-width': 1 });
+      seg(svg, X, Y, y, ry, 's-mut dash', { 'stroke-width': 1 });
+      filled(svg, X(x[0]), Y(x[1]), 5, 'f-ink'); lbl(svg, X, Y, x, 'x', 'f-ink');
+      filled(svg, X(y[0]), Y(y[1]), 5, 'f-ink'); lbl(svg, X, Y, y, 'y', 'f-ink');
+      filled(svg, X(px[0]), Y(px[1]), 4.5, 'f-1'); lbl(svg, X, Y, px, 'P x', 'f-1');
+      filled(svg, X(py[0]), Y(py[1]), 4.5, 'f-1'); lbl(svg, X, Y, py, 'P y', 'f-1', 7, 16);
+      filled(svg, X(rx[0]), Y(rx[1]), 4.5, 'f-2'); lbl(svg, X, Y, rx, 'R x', 'f-2', -30, 16);
+      filled(svg, X(ry[0]), Y(ry[1]), 4.5, 'f-2'); lbl(svg, X, Y, ry, 'R y', 'f-2', 7, -8);
+      var dxy = nrm(sub(x, y)), dP = nrm(sub(px, py)), dR = nrm(sub(rx, ry));
+      setRead('rp-read', '‖x − y‖ = <b>' + L.fmt(dxy, 3) + '</b> &nbsp; ‖P x − P y‖ = <b>' + L.fmt(dP, 3) + '</b> &nbsp; ‖R x − R y‖ = <b>' + L.fmt(dR, 3) + '</b>' +
+        ' &nbsp; (firm: ⟨Px−Py | x−y⟩ − ‖Px−Py‖² = ' + L.fmt(dotp(sub(px, py), sub(x, y)) - dP * dP, 3) + ' ≥ 0)');
+    }
+    L.bindRange('rp-rho', function (v) { rho = v; draw(); });
+    L.bindRange('rp-phi', function (v) { phi = v; draw(); }, function (v) { return v + '°'; });
+  }
+
+  /* ================= w-dr-fixed-map: T = rprox_f ∘ rprox_g on R ================= */
+  function initFixedMap() {
+    var svg = document.getElementById('fm-svg'); if (!svg) return;
+    var pair = 'A', gam = 1, cob = 'off';
+    var X = L.scale(-4, 4, 40, 500), Y = L.scale(-4, 4, 345, 25);
+    function proxg(x) { if (pair === 'A') return (x + 3 * gam) / (1 + gam); if (pair === 'B') return Math.min(x, 0); return clip(x, 0, 3); }
+    function proxf(x) { if (pair === 'A') return 1 + soft(x - 1, gam); if (pair === 'B') return soft(x, gam); return clip(x, -1, 1); }
+    function T(x) { var r = 2 * proxg(x) - x; return 2 * proxf(r) - r; }
+    function D(x) { return 0.5 * (x + T(x)); }
+    function argmin() { if (pair === 'A') return [2, 2]; if (pair === 'B') return [0, 0]; return [0, 1]; }
+    function fixedPoints() {
+      var N = 2400, a = -4, b = 4, segs = [], cur = null, tol = 1e-9, prev = null, prevx = null;
+      for (var i = 0; i <= N; i++) {
+        var x = a + (b - a) * i / N, d = T(x) - x;
+        if (Math.abs(d) < tol) { if (!cur) cur = [x, x]; else cur[1] = x; }
+        else {
+          if (cur) { segs.push(cur); cur = null; }
+          if (prev !== null && prev * d < 0 && Math.abs(prev) >= tol) { /* bisect */
+            var lo = prevx, hi = x, flo = prev; for (var k = 0; k < 50; k++) { var m = 0.5 * (lo + hi), fm = T(m) - m; if (fm === 0) { lo = hi = m; break; } if (flo * fm < 0) hi = m; else { lo = m; flo = fm; } }
+            segs.push([0.5 * (lo + hi), 0.5 * (lo + hi)]);
+          }
+        }
+        prev = d; prevx = x;
+      }
+      if (cur) segs.push(cur);
+      /* merge touching segments */
+      var out = []; segs.sort(function (p, q) { return p[0] - q[0]; });
+      segs.forEach(function (s) { var last = out[out.length - 1]; if (last && s[0] - last[1] < 0.02) last[1] = Math.max(last[1], s[1]); else out.push(s.slice()); });
+      return out;
+    }
+    function draw() {
+      L.clear(svg);
+      L.axes(svg, X, Y, { xlabel: 'x', ylabel: 'T(x)', nx: 8, ny: 8, dx: 0, dy: 0 });
+      L.line(svg, X(-4), Y(-4), X(4), Y(4), 's-mut dash', { 'stroke-width': 1 });
+      L.text(svg, X(3.3), Y(3.55), 'y = x', 'tm f-mut');
+      if (cob === 'on') { L.plotFn(svg, D, X, Y, { class: 's-4', 'stroke-width': 1.3 }, 800); L.text(svg, X(-3.9), Y(D(-3.9)) - 8, '(Id+T)/2', 'tm f-4'); }
+      L.plotFn(svg, T, X, Y, { class: 's-1', 'stroke-width': 2.4 }, 800);
+      var am = argmin();
+      /* solution band on the axis */
+      L.line(svg, X(am[0]) - (am[0] === am[1] ? 5 : 0), Y(0) + 7, X(am[1]) + (am[0] === am[1] ? 5 : 0), Y(0) + 7, 's-idea', { 'stroke-width': 5, 'stroke-linecap': 'round' });
+      L.text(svg, X(am[1]) + 10, Y(0) + 22, 'Argmin(f+g)', 'tm f-idea');
+      var fp = fixedPoints(), txt = [];
+      fp.forEach(function (s) {
+        var sh = [proxg(s[0]), proxg(s[1])];
+        if (s[1] - s[0] > 1e-6) {
+          L.line(svg, X(s[0]), Y(s[0]), X(s[1]), Y(s[1]), 's-2', { 'stroke-width': 5, 'stroke-linecap': 'round' });
+          [s[0], s[1]].forEach(function (p) { L.line(svg, X(p), Y(p), X(p), Y(0), 's-2 dash', { 'stroke-width': 1 }); });
+          L.line(svg, X(sh[0]), Y(0) - 2, X(sh[1]), Y(0) - 2, 's-idea', { 'stroke-width': 4 });
+          txt.push('Fix T ⊃ [' + L.fmt(s[0], 2) + ', ' + L.fmt(s[1], 2) + '] → shadows [' + L.fmt(Math.min(sh[0], sh[1]), 2) + ', ' + L.fmt(Math.max(sh[0], sh[1]), 2) + ']');
+        } else {
+          var p = s[0];
+          filled(svg, X(p), Y(p), 5.5, 'f-2');
+          L.line(svg, X(p), Y(p), X(p), Y(0), 's-2 dash', { 'stroke-width': 1 });
+          if (Math.abs(sh[0] - p) > 1e-6) L.line(svg, X(p), Y(0) - 3, X(sh[0]), Y(0) - 3, 's-idea', { 'stroke-width': 1.4, 'marker-end': L.arrowDefs(svg, 'fm-arr', 'f-idea') });
+          filled(svg, X(sh[0]), Y(0), 4.5, 'f-idea');
+          txt.push('fixed point ȳ = ' + L.fmt(p, 3) + ' → shadow prox_γg(ȳ) = ' + L.fmt(sh[0], 3));
+        }
+      });
+      if (cob === 'on') {
+        var x = 3.5, pts = []; pts.push([x, 0]);
+        for (var i = 0; i < 14; i++) { var d = D(x); pts.push([x, d]); pts.push([d, d]); x = d; }
+        trail(svg, X, Y, pts, 's-4', 1.1);
+        filled(svg, X(3.5), Y(0), 3.5, 'f-4'); L.text(svg, X(3.5) - 4, Y(0) + 32, 'x₀', 'tm f-4');
+        filled(svg, X(x), Y(x), 4, 'f-4');
+      }
+      setRead('fm-read', 'γ = <b>' + L.fmt(gam, 1) + '</b> · ' + txt.join(' · ') + ' · Argmin(f+g) = ' + (am[0] === am[1] ? '{' + L.fmt(am[0], 2) + '}' : '[' + L.fmt(am[0], 2) + ', ' + L.fmt(am[1], 2) + ']'));
+    }
+    L.bindSeg('fm-pair', function (v) { pair = v; draw(); });
+    L.bindRange('fm-gamma', function (v) { gam = v; draw(); });
+    L.bindSeg('fm-cob', function (v) { cob = v; draw(); });
+  }
+
+  /* ================= w-dr-shadow: x_n, y_n, z_n versus n ================= */
+  function initShadow() {
+    var svg = document.getElementById('sh-svg'); if (!svg) return;
+    var gam = 1, lam = 1, x0 = -2, N = 25;
+    function run() {
+      var xs = [x0], ys = [], zs = [], x = x0;
+      for (var n = 0; n <= N; n++) {
+        var y = (x + 3 * gam) / (1 + gam); var z = 1 + soft(2 * y - x - 1, gam);
+        ys.push(y); zs.push(z); if (n < N) { x = x + lam * (z - y); xs.push(x); }
+      }
+      return { xs: xs, ys: ys, zs: zs };
+    }
+    function draw() {
+      L.clear(svg);
+      var r = run(); var all = r.xs.concat(r.ys, r.zs, [2, 2 - gam]);
+      var lo = Math.min.apply(null, all) - 0.6, hi = Math.max.apply(null, all) + 0.6;
+      var X = L.scale(0, N, 42, 505), Y = L.scale(lo, hi, 270, 15);
+      L.axes(svg, X, Y, { xlabel: 'n', nx: 6, ny: 6, dx: 0, dy: 1 });
+      L.line(svg, X(0), Y(2), X(N), Y(2), 's-idea dash', { 'stroke-width': 1.3 }); L.text(svg, X(N) - 2, Y(2) - 5, 'ŷ = 2', 'tm f-idea', { 'text-anchor': 'end' });
+      L.line(svg, X(0), Y(2 - gam), X(N), Y(2 - gam), 's-2 dash', { 'stroke-width': 1.3 }); L.text(svg, X(N) - 2, Y(2 - gam) + 14, 'x̂ = 2 − γ', 'tm f-2', { 'text-anchor': 'end' });
+      function series(arr, cls, fcls, rad) { var pts = arr.map(function (v, i) { return [i, v]; }); trail(svg, X, Y, pts, cls, 1.6); pts.forEach(function (p) { filled(svg, X(p[0]), Y(p[1]), rad, fcls); }); }
+      series(r.zs, 's-3', 'f-3', 2.2);
+      series(r.xs, 's-2', 'f-2', 3);
+      series(r.ys, 's-1', 'f-1', 3);
+      L.text(svg, X(1) + 4, Y(r.xs[1]) + (r.xs[1] > r.ys[1] ? -8 : 15), 'xₙ', 'tm f-2');
+      L.text(svg, X(1) + 4, Y(r.ys[1]) + (r.xs[1] > r.ys[1] ? 15 : -8), 'yₙ', 'tm f-1');
+      setRead('sh-read', 'fixed point x̂ = 2 − γ = <b>' + L.fmt(2 - gam, 2) + '</b> · after ' + N + ' steps: x' + N + ' = ' + L.fmt(r.xs[N], 4) + ', y' + N + ' = ' + L.fmt(r.ys[N], 4) + ' (|yₙ − 2| = ' + Math.abs(r.ys[N] - 2).toExponential(1) + '), zₙ − yₙ = ' + (r.zs[N] - r.ys[N]).toExponential(1));
+    }
+    L.bindRange('sh-gamma', function (v) { gam = v; draw(); });
+    L.bindRange('sh-lambda', function (v) { lam = v; draw(); });
+    L.bindRange('sh-x0', function (v) { x0 = v; draw(); });
+  }
+
+  /* ================= w-dr-feasibility: DR / alternating projections on two sets ================= */
+  function initFeasibility() {
+    var svg = document.getElementById('fe-svg'); if (!svg) return;
+    var W = 520, H = 350, F = eqFrame(W, H, -3.1, 3.1, 10, 0), X = F.X, Y = F.Y;
+    var cfgs = {
+      ld: { A: { t: 'line', p0: [0, 0], d: dir(25) }, B: { t: 'disc', c: [1.0, 0.9], r: 1.0 }, x0: [-2.2, -1.3] },
+      ll: { A: { t: 'line', p0: [0, 0], d: dir(25) }, B: { t: 'line', p0: [0, 0], d: dir(110) }, x0: [-2.2, -1.3] },
+      dd: { A: { t: 'disc', c: [-0.6, 0], r: 1.1 }, B: { t: 'disc', c: [0.9, 0.3], r: 1.0 }, x0: [-2.2, -1.3] },
+      dis: { A: { t: 'line', p0: [0, 0], d: dir(25) }, B: { t: 'disc', c: [-0.8, 1.7], r: 0.6 }, x0: [2.0, -1.0] }
+    };
+    var cfg = 'ld', method = 'dr', lam = 1, x, n, tx, ty, prevRes;
+    function proj(S, p) { return S.t === 'line' ? projLine(p, S.p0, S.d) : projDisc(p, S.c, S.r); }
+    function drawSet(S, cls, fill) { if (S.t === 'line') drawLine(svg, X, Y, S.p0, S.d, cls, 2); else drawDisc(svg, X, Y, S.c, S.r, cls, F.ppu, fill); }
+    function reset() { x = cfgs[cfg].x0.slice(); n = 0; tx = [x.slice()]; ty = []; prevRes = null; draw(); }
+    function stepData() {
+      var A = cfgs[cfg].A, B = cfgs[cfg].B; var y = proj(B, x);
+      if (method === 'ap') { var xn = proj(A, y); return { y: y, xn: xn }; }
+      var r = sub(mul(y, 2), x), z = proj(A, r), xn2 = add(x, mul(sub(z, y), lam)); return { y: y, r: r, z: z, xn: xn2 };
+    }
+    function step() { var s = stepData(); ty.push(s.y); x = s.xn; tx.push(x.slice()); n++; draw(); }
+    function draw() {
+      L.clear(svg);
+      L.axes(svg, X, Y, { grid: false });
+      var A = cfgs[cfg].A, B = cfgs[cfg].B;
+      drawSet(A, 's-1', 'f-k'); drawSet(B, 's-2', 'f-k');
+      var la = A.t === 'line' ? add(A.p0, mul(A.d, 2.6)) : add(A.c, [0, A.r + 0.12]);
+      var lb = B.t === 'line' ? add(B.p0, mul(B.d, 1.9)) : add(B.c, [0, B.r + 0.12]);
+      L.text(svg, X(la[0]) + 6, Y(la[1]), 'A (f = ι_A)', 'tm f-1'); L.text(svg, X(lb[0]) + 6, Y(lb[1]), 'B (g = ι_B)', 'tm f-2');
+      trail(svg, X, Y, tx, 's-ink', 1); tx.forEach(function (p, i) { if (i < tx.length - 1) filled(svg, X(p[0]), Y(p[1]), 2.2, 'f-ink'); });
+      ty.forEach(function (p) { filled(svg, X(p[0]), Y(p[1]), 2.2, 'f-2'); });
+      var s = stepData();
+      if (method === 'dr') {
+        seg(svg, X, Y, x, s.y, 's-2 dash', { 'stroke-width': 1 }); seg(svg, X, Y, s.y, s.r, 's-mut dash', { 'stroke-width': 1 });
+        seg(svg, X, Y, s.r, s.z, 's-1 dash', { 'stroke-width': 1 }); seg(svg, X, Y, x, s.xn, 's-ink', { 'stroke-width': 1.8, 'marker-end': L.arrowDefs(svg, 'fe-arr', 'f-ink') });
+        hollow(svg, X(s.r[0]), Y(s.r[1]), 4, 's-ink2'); lbl(svg, X, Y, s.r, '2yₙ − xₙ', 'f-ink2');
+        filled(svg, X(s.z[0]), Y(s.z[1]), 4.5, 'f-1'); lbl(svg, X, Y, s.z, 'zₙ', 'f-1');
+      } else {
+        seg(svg, X, Y, x, s.y, 's-2 dash', { 'stroke-width': 1 }); seg(svg, X, Y, s.y, s.xn, 's-1 dash', { 'stroke-width': 1 });
+      }
+      filled(svg, X(x[0]), Y(x[1]), 5, 'f-ink'); lbl(svg, X, Y, x, 'xₙ', 'f-ink');
+      filled(svg, X(s.y[0]), Y(s.y[1]), 4.5, 'f-2'); lbl(svg, X, Y, s.y, 'yₙ', 'f-2', 7, 16);
+      filled(svg, X(s.xn[0]), Y(s.xn[1]), 4.5, 'f-idea'); lbl(svg, X, Y, s.xn, 'xₙ₊₁', 'f-idea', -34, -8);
+      var res = method === 'dr' ? nrm(sub(s.z, s.y)) : nrm(sub(s.xn, x));
+      var inside = (A.t === 'line' ? Math.abs(dotp(sub(s.y, A.p0), [-A.d[1], A.d[0]])) : Math.max(0, nrm(sub(s.y, A.c)) - A.r));
+      setRead('fe-read', 'n = <b>' + n + '</b> · ' + (method === 'dr' ? '‖zₙ − yₙ‖ = <b>' + res.toExponential(2) + '</b>' : '‖xₙ₊₁ − xₙ‖ = <b>' + res.toExponential(2) + '</b>') +
+        ' · dist(yₙ, A) = ' + inside.toExponential(2) + ' · ‖xₙ‖ = ' + L.fmt(nrm(x), 2) + (cfg === 'dis' ? ' (A ∩ B = ∅: xₙ drifts, yₙ and zₙ settle on the closest pair)' : ''));
+    }
+    L.bindSeg('fe-cfg', function (v) { cfg = v; reset(); });
+    L.bindSeg('fe-method', function (v) { method = v; reset(); });
+    L.bindRange('fe-lambda', function (v) { lam = v; draw(); });
+    var b1 = document.getElementById('fe-step'), b2 = document.getElementById('fe-run'), b3 = document.getElementById('fe-reset');
+    if (b1) b1.addEventListener('click', step);
+    if (b2) b2.addEventListener('click', function () { for (var i = 0; i < 10; i++) { var s = stepData(); ty.push(s.y); x = s.xn; tx.push(x.slice()); n++; } draw(); });
+    if (b3) b3.addEventListener('click', reset);
+  }
+
+  /* ================= w-peaceman-rachford: two lines through the origin ================= */
+  function initPR() {
+    var svg = document.getElementById('pr-svg'); if (!svg) return;
+    var W = 520, H = 350, F = eqFrame(W, H, -3.1, 3.1, 10, 0), X = F.X, Y = F.Y;
+    var th = 30, lam = 2, x0 = [2.3, 0.9], N = 40;
+    function draw() {
+      L.clear(svg);
+      L.axes(svg, X, Y, { grid: false });
+      var dA = [1, 0], dB = dir(th);
+      drawLine(svg, X, Y, [0, 0], dA, 's-1', 2); drawLine(svg, X, Y, [0, 0], dB, 's-2', 2);
+      L.text(svg, X(2.75), Y(0) - 8, 'A', 'tm f-1'); var lb = mul(dB, 2.3); L.text(svg, X(lb[0]) + 6, Y(lb[1]), 'B', 'tm f-2');
+      L.el('circle', { cx: X(0), cy: Y(0), r: nrm(x0) * F.ppu, class: 'f-none s-faint dash', 'stroke-width': 1 }, svg);
+      var x = x0.slice(), pts = [x.slice()], ys = [];
+      for (var i = 0; i < N; i++) { var y = projLine(x, [0, 0], dB), r = sub(mul(y, 2), x), z = projLine(r, [0, 0], dA); ys.push(y); x = add(x, mul(sub(z, y), lam)); pts.push(x.slice()); }
+      trail(svg, X, Y, pts, 's-ink', 1.1);
+      ys.forEach(function (p, i) { hollow(svg, X(p[0]), Y(p[1]), i === 0 ? 4 : 2.6, 's-2'); });
+      pts.forEach(function (p, i) { filled(svg, X(p[0]), Y(p[1]), i === 0 ? 5 : 3, i === 0 ? 'f-ink' : 'f-ink2'); });
+      L.text(svg, X(x0[0]) + 7, Y(x0[1]) - 6, 'x₀', 'tm f-ink');
+      filled(svg, X(0), Y(0), 4, 'f-idea'); L.text(svg, X(0) + 7, Y(0) + 16, 'A ∩ B = {0}', 'tm f-idea');
+      var mu = lam / 2, a = 2 * th * Math.PI / 180; var rho = Math.sqrt(Math.pow(1 - mu + mu * Math.cos(a), 2) + Math.pow(mu * Math.sin(a), 2));
+      setRead('pr-read', 'T = R_A R_B = rotation by −2θ = <b>−' + L.fmt(2 * th, 0) + '°</b> · relaxation μ = λ/2 = ' + L.fmt(mu, 2) + ' · contraction factor |1 − μ + μ e^{−2iθ}| = <b>' + L.fmt(rho, 4) + '</b> · ‖x' + N + '‖ / ‖x₀‖ = ' + L.fmt(nrm(x) / nrm(x0), 4) + (lam === 2 ? ' (λ = 2: Peaceman–Rachford, pure rotation, no convergence)' : ''));
+    }
+    L.bindRange('pr-theta', function (v) { th = v; draw(); }, function (v) { return v + '°'; });
+    L.bindRange('pr-lambda', function (v) { lam = v; draw(); });
+  }
+
+  /* ================= w-product-space: two intervals lifted to R^2, E = diagonal ================= */
+  function initProductSpace() {
+    var svg = document.getElementById('ps-svg'); if (!svg) return;
+    var X = L.scale(-1.5, 5.5, 30, 490), ppu = 460 / 7, Y = L.scale(1.6 - 200 / ppu, 1.6 + 200 / ppu, 400, 0);
+    var s = 1, lam = 1, x, v, n, tx, ty;
+    var C1 = [0, 2]; function C2() { return [s, s + 2]; }
+    function reset() { x = [4.5, -0.5]; v = 0.5 * (x[0] + x[1]); n = 0; tx = [x.slice()]; ty = []; draw(); }
+    function stepData() {
+      var c2 = C2(); var y = [clip(x[0], C1[0], C1[1]), clip(x[1], c2[0], c2[1])]; var c = 0.5 * (y[0] + y[1]);
+      var r = sub(mul(y, 2), x); var zz = 2 * c - v, z = [zz, zz]; var xn = add(x, mul(sub(z, y), lam)); var vn = v + lam * (c - v);
+      return { y: y, c: c, r: r, z: z, xn: xn, vn: vn };
+    }
+    function commit(d) { ty.push(d.y); x = d.xn; v = d.vn; tx.push(x.slice()); n++; }
+    function draw() {
+      L.clear(svg);
+      L.axes(svg, X, Y, { xlabel: 'x₁', ylabel: 'x₂', nx: 7, ny: 6, dx: 0, dy: 0 });
+      var c2 = C2();
+      /* rectangle C1 x C2 */
+      L.el('rect', { x: X(C1[0]), y: Y(c2[1]), width: X(C1[1]) - X(C1[0]), height: Y(c2[0]) - Y(c2[1]), class: 'f-k s-2', 'stroke-width': 2 }, svg);
+      L.text(svg, X(C1[1]) + 6, Y(c2[1]) + 14, 'C₁ × C₂ = dom g', 'tm f-2');
+      /* diagonal E */
+      L.line(svg, X(-1.5), Y(-1.5), X(5.2), Y(5.2), 's-1', { 'stroke-width': 2 });
+      L.text(svg, X(4.55), Y(4.95), 'E = ran L (diagonal)', 'tm f-1');
+      var lo = Math.max(C1[0], c2[0]), hi = Math.min(C1[1], c2[1]);
+      if (lo <= hi) { L.line(svg, X(lo), Y(lo), X(hi), Y(hi), 's-idea', { 'stroke-width': 6, 'stroke-linecap': 'round' }); L.text(svg, X(hi) + 12, Y(hi) - 26, 'solutions (v,v), v ∈ C₁∩C₂', 'tm f-idea'); }
+      trail(svg, X, Y, tx, 's-ink', 1); tx.forEach(function (p, i) { if (i < tx.length - 1) filled(svg, X(p[0]), Y(p[1]), 2.2, 'f-ink'); });
+      ty.forEach(function (p) { filled(svg, X(p[0]), Y(p[1]), 2.2, 'f-2'); });
+      var d = stepData();
+      seg(svg, X, Y, x, d.y, 's-2 dash', { 'stroke-width': 1 }); seg(svg, X, Y, d.y, d.r, 's-mut dash', { 'stroke-width': 1 }); seg(svg, X, Y, d.r, d.z, 's-1 dash', { 'stroke-width': 1 });
+      seg(svg, X, Y, x, d.xn, 's-ink', { 'stroke-width': 1.8, 'marker-end': L.arrowDefs(svg, 'ps-arr', 'f-ink') });
+      hollow(svg, X(d.r[0]), Y(d.r[1]), 4, 's-ink2'); lbl(svg, X, Y, d.r, '2yₙ − xₙ', 'f-ink2');
+      filled(svg, X(d.z[0]), Y(d.z[1]), 4.5, 'f-1'); lbl(svg, X, Y, d.z, 'zₙ = L(2cₙ − vₙ)', 'f-1', -118, 20);
+      filled(svg, X(v), Y(v), 4, 'f-idea'); lbl(svg, X, Y, [v, v], 'L vₙ', 'f-idea', -36, -6);
+      hollow(svg, X(d.c), Y(d.c), 4, 's-idea'); lbl(svg, X, Y, [d.c, d.c], 'L cₙ', 'f-idea', -36, 14);
+      filled(svg, X(x[0]), Y(x[1]), 5, 'f-ink'); lbl(svg, X, Y, x, 'xₙ', 'f-ink');
+      filled(svg, X(d.y[0]), Y(d.y[1]), 4.5, 'f-2'); lbl(svg, X, Y, d.y, 'yₙ', 'f-2', 9, 5);
+      filled(svg, X(d.xn[0]), Y(d.xn[1]), 4.5, 'f-idea'); lbl(svg, X, Y, d.xn, 'xₙ₊₁', 'f-idea', -36, -8);
+      setRead('ps-read', 'n = <b>' + n + '</b> · C₂ = [' + L.fmt(c2[0], 1) + ', ' + L.fmt(c2[1], 1) + '] · C₁∩C₂ = ' + (lo <= hi ? '[' + L.fmt(lo, 1) + ', ' + L.fmt(hi, 1) + ']' : '∅') +
+        ' · vₙ = <b>' + L.fmt(v, 4) + '</b> · cₙ = ' + L.fmt(d.c, 4) + ' · ‖zₙ − yₙ‖ = ' + nrm(sub(d.z, d.y)).toExponential(2) + ' · ‖xₙ‖ = ' + L.fmt(nrm(x), 2));
+    }
+    L.bindRange('ps-shift', function (val) { s = val; reset(); });
+    L.bindRange('ps-lambda', function (val) { lam = val; draw(); });
+    var b1 = document.getElementById('ps-step'), b2 = document.getElementById('ps-run'), b3 = document.getElementById('ps-reset');
+    if (b1) b1.addEventListener('click', function () { commit(stepData()); draw(); });
+    if (b2) b2.addEventListener('click', function () { for (var i = 0; i < 10; i++) commit(stepData()); draw(); });
+    if (b3) b3.addEventListener('click', reset);
+  }
+
+  /* ================= w-ppxa-sets: PPXA (L_i = Id) on three discs ================= */
+  function initPPXA() {
+    var svg = document.getElementById('px-svg'); if (!svg) return;
+    var W = 520, H = 350, F = eqFrame(W, H, -3.1, 3.1, 10, 0), X = F.X, Y = F.Y;
+    var discs = [{ c: [-0.9, 0.2], r: 1.3 }, { c: [0.8, 0.6], r: 1.1 }, { c: [0.1, -0.9], r: 1.2 }];
+    var X0 = [[-2.6, 1.6], [2.6, 1.7], [0.3, -1.9]];
+    var lam = 1, xs, v, n, trails, ctrail;
+    function reset() { xs = X0.map(function (p) { return p.slice(); }); v = mul(add(add(xs[0], xs[1]), xs[2]), 1 / 3); n = 0; trails = xs.map(function (p) { return [p.slice()]; }); ctrail = []; draw(); }
+    function stepData() {
+      var ys = xs.map(function (p, i) { return projDisc(p, discs[i].c, discs[i].r); });
+      var c = mul(add(add(ys[0], ys[1]), ys[2]), 1 / 3);
+      var xn = xs.map(function (p, i) { return add(p, mul(sub(sub(mul(c, 2), v), ys[i]), lam)); });
+      var vn = add(v, mul(sub(c, v), lam));
+      return { ys: ys, c: c, xn: xn, vn: vn };
+    }
+    function commit(d) { xs = d.xn; v = d.vn; ctrail.push(d.c); xs.forEach(function (p, i) { trails[i].push(p.slice()); }); n++; }
+    function draw() {
+      L.clear(svg);
+      L.axes(svg, X, Y, { grid: false });
+      var cls = ['1', '2', '3'];
+      discs.forEach(function (D, i) { drawDisc(svg, X, Y, D.c, D.r, 's-' + cls[i], F.ppu, 'f-k'); L.text(svg, X(D.c[0] + D.r * 0.55) + 4, Y(D.c[1] + D.r * 0.85), 'C' + (i + 1), 'tm f-' + cls[i]); });
+      var d = stepData();
+      trails.forEach(function (t, i) { trail(svg, X, Y, t, 's-' + cls[i], 1); });
+      trail(svg, X, Y, ctrail.concat([d.c]), 's-ink', 1.2);
+      ctrail.forEach(function (p) { filled(svg, X(p[0]), Y(p[1]), 2.2, 'f-ink'); });
+      xs.forEach(function (p, i) {
+        seg(svg, X, Y, p, d.ys[i], 's-' + cls[i] + ' dash', { 'stroke-width': 1 });
+        hollow(svg, X(d.ys[i][0]), Y(d.ys[i][1]), 4, 's-' + cls[i]);
+        filled(svg, X(p[0]), Y(p[1]), 5, 'f-' + cls[i]); lbl(svg, X, Y, p, 'xₙ,' + (i + 1), 'f-' + cls[i]);
+      });
+      filled(svg, X(d.c[0]), Y(d.c[1]), 5, 'f-ink'); lbl(svg, X, Y, d.c, 'cₙ', 'f-ink', 8, 4);
+      filled(svg, X(v[0]), Y(v[1]), 5, 'f-idea'); lbl(svg, X, Y, v, 'vₙ', 'f-idea', -22, -8);
+      var res = Math.max.apply(null, d.ys.map(function (y) { return nrm(sub(y, d.c)); }));
+      var inAll = discs.every(function (D) { return nrm(sub(v, D.c)) <= D.r + 1e-9; });
+      setRead('px-read', 'n = <b>' + n + '</b> · consensus residual maxᵢ ‖yₙ,ᵢ − cₙ‖ = <b>' + res.toExponential(2) + '</b> · vₙ = (' + L.fmt(v[0], 3) + ', ' + L.fmt(v[1], 3) + ')' + (inAll ? ' ∈ C₁∩C₂∩C₃' : ' ∉ C₁∩C₂∩C₃ yet'));
+    }
+    reset();
+    L.bindRange('px-lambda', function (val) { lam = val; draw(); });
+    var b1 = document.getElementById('px-step'), b2 = document.getElementById('px-run'), b3 = document.getElementById('px-reset');
+    if (b1) b1.addEventListener('click', function () { commit(stepData()); draw(); });
+    if (b2) b2.addEventListener('click', function () { for (var i = 0; i < 10; i++) commit(stepData()); draw(); });
+    if (b3) b3.addEventListener('click', reset);
+  }
+
+  try { initRprox(); } catch (e) { console.error('widget w-rprox', e); }
+  try { initFixedMap(); } catch (e) { console.error('widget w-dr-fixed-map', e); }
+  try { initShadow(); } catch (e) { console.error('widget w-dr-shadow', e); }
+  try { initFeasibility(); } catch (e) { console.error('widget w-dr-feasibility', e); }
+  try { initPR(); } catch (e) { console.error('widget w-peaceman-rachford', e); }
+  try { initProductSpace(); } catch (e) { console.error('widget w-product-space', e); }
+  try { initPPXA(); } catch (e) { console.error('widget w-ppxa-sets', e); }
+});
+</script>
+</body>
+</html>
