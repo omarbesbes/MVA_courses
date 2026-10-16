@@ -15,6 +15,7 @@
 .cook td{font-size:15px}
 .readout b{color:var(--ink)}
 .widget .leg i.sq{width:12px;height:12px;border:0;border-radius:2px}
+.table-scroll,.katex-display{position:relative}
 </style>
 <script defer src="assets/katex/katex.min.js"></script>
 <script defer src="assets/katex/contrib/auto-render.min.js"></script>
@@ -150,7 +151,7 @@ where $\prox_{\gamma f}=(\Id+\gamma\partial f)^{-1}$ is the object defined here.
 <div class="w-title">Interactive · on $f(x)=\tfrac{\beta}{2}x^2$ the explicit step overshoots when $\gamma\gt2/\beta$, the implicit step never does</div>
 <p class="w-help">Explicit: $x_{n+1}=x_n-\gamma f'(x_n)=(1-\gamma\beta)x_n$. Implicit: $x_{n+1}$ solves $p+\gamma f'(p)=x_n$, i.e. $x_{n+1}=x_n/(1+\gamma\beta)$. Move $\gamma$ past $2/\beta$ and watch the explicit iterates (orange) diverge while the implicit ones (blue) keep contracting.</p>
 <div class="w-ctls">
-<label class="ctl">γ <input type="range" id="ie-gamma" min="0.1" max="3" step="0.05" value="0.8"><output id="ie-gamma-v"></output></label>
+<label class="ctl">γ <input type="range" id="ie-gamma" min="0.1" max="3" step="0.05" value="1.7"><output id="ie-gamma-v"></output></label>
 <label class="ctl">β <input type="range" id="ie-beta" min="0.5" max="2" step="0.25" value="1"><output id="ie-beta-v"></output></label>
 <label class="ctl">iterations <input type="range" id="ie-n" min="1" max="12" step="1" value="6"><output id="ie-n-v"></output></label>
 </div>
@@ -646,7 +647,7 @@ $$\prox_{f\circ L}=\Id-\mu^{-1}L^*\circ(\Id-\prox_{\mu f})\circ L .$$</p>
 </ul></div>
 <div class="widget" id="w-tight-frame">
 <div class="w-title">Interactive · $\prox_{f\circ L}$ in the plane for $Lx=\ps lx$ ($LL^*=\norm l^2=\mu$): the formula against a brute-force minimization</div>
-<p class="w-help">$V=\ran L^*$ is the line spanned by $l$. The prox moves $x$ only along $V$: its $V^\perp$ component is kept, its $V$ component $\ps lx$ is replaced by $\prox_{\mu f}(\ps lx)$ pulled back by $\mu^{-1}l$. The grey dot is the minimizer of $f(\ps ly)+\tfrac12\norm{y-x}^2$ found by a brute-force grid search + refinement; the readout gives the distance between the two answers.</p>
+<p class="w-help">$V=\ran L^*$ is the line spanned by $l$. The prox moves $x$ only along $V$: its $V^\perp$ component is kept, its $V$ component $\ps lx$ is replaced by $\prox_{\mu f}(\ps lx)$ pulled back by $\mu^{-1}l$. The grey dot is the minimizer of $f(\ps ly)+\tfrac12\norm{y-x}^2$ found by a brute-force grid search + refinement; the readout gives the distance between the two answers. Dashed lines: $\ps ly=\pm1$; for $f=\abs\cdot$ the dark line is the kink $\ps ly=0$ of $f\circ L$.</p>
 <div class="w-ctls">
 <label class="ctl">x₁ <input type="range" id="tf-x1" min="-2.5" max="2.5" step="0.05" value="1.6"><output id="tf-x1-v"></output></label>
 <label class="ctl">x₂ <input type="range" id="tf-x2" min="-2.5" max="2.5" step="0.05" value="1.4"><output id="tf-x2-v"></output></label>
@@ -808,7 +809,7 @@ document.addEventListener('DOMContentLoaded', function () {
   /* ---------- widget: explicit vs implicit step ---------- */
   function initImplicitExplicit() {
     var svg = document.getElementById('ie-svg'); if (!svg) return;
-    var gam = 0.8, beta = 1, N = 6, x0 = 2;
+    var gam = 1.7, beta = 1, N = 6, x0 = 2;
     function draw() {
       L.clear(svg);
       var f = function (x) { return beta / 2 * x * x; };
@@ -825,7 +826,7 @@ document.addEventListener('DOMContentLoaded', function () {
             var a = seq[n - 1], b = seq[n];
             if (Math.abs(a) <= 3.05 && Math.abs(b) <= 3.05 && f(a) <= 4.6 && f(b) <= 4.6) L.line(svg, X(a), Y(f(a)), X(b), Y(f(b)), cls, { 'stroke-width': 1.2, 'stroke-opacity': 0.8 });
           }
-          if (inr) { L.dot(svg, X(seq[n]), Y(f(seq[n])), n === 0 ? 4.5 : 3.5, fcls); if (n <= 2) L.text(svg, X(seq[n]) + 5, Y(f(seq[n])) - 6, 'x' + n, 'tm ' + fcls); }
+          if (inr) { L.dot(svg, X(seq[n]), Y(f(seq[n])), n === 0 ? 4.5 : 3.5, fcls); if (n <= 1) L.text(svg, X(seq[n]) + 5, Y(f(seq[n])) - 6, 'x' + ['₀', '₁'][n], 'tm ' + fcls); }
         }
       }
       path(ex, 's-2', 'f-2'); path(im, 's-1', 'f-1');
@@ -929,7 +930,8 @@ document.addEventListener('DOMContentLoaded', function () {
         var n = cone[0], w = 0.05;
         L.el('polygon', { points: [p, [p[0] + Rc * n[0] - w * n[1], p[1] + Rc * n[1] + w * n[0]], [p[0] + Rc * n[0] + w * n[1], p[1] + Rc * n[1] - w * n[0]]].map(function (q) { return X(q[0]) + ',' + Y(q[1]); }).join(' '), class: 'f-acc s-acc', 'fill-opacity': 0.25, 'stroke-width': 1 }, svg);
       }
-      if (cone.length) L.text(svg, X(p[0] + Rc * (cone.length === 2 ? 0.8 * (cone[0][0] + cone[1][0]) : cone[0][0])) + 4, Y(p[1] + Rc * (cone.length === 2 ? 0.8 * (cone[0][1] + cone[1][1]) : cone[0][1])) - 4, 'N_C(p)', 'tm f-acc');
+      if (cone.length === 2) L.text(svg, X(p[0] + Rc * 0.8 * (cone[0][0] + cone[1][0])) + 4, Y(p[1] + Rc * 0.8 * (cone[0][1] + cone[1][1])) - 4, 'N_C(p)', 'tm f-acc');
+      else if (cone.length === 1) { var nn = cone[0], pp = [-nn[1], nn[0]], lp = [p[0] + 0.7 * Rc * nn[0] + 0.3 * pp[0], p[1] + 0.7 * Rc * nn[1] + 0.3 * pp[1]]; L.text(svg, X(lp[0]), Y(lp[1]), 'N_C(p)', 'tm f-acc', { 'text-anchor': pp[0] < 0 ? 'end' : 'start' }); }
       L.text(svg, X(0) + 6, Y(0) + 14, 'C', 'tm f-acc');
       /* vectors */
       var arrow = L.arrowDefs(svg, 'pj-arr', 'f-ink2');
@@ -945,7 +947,7 @@ document.addEventListener('DOMContentLoaded', function () {
         L.el('polyline', { points: pts.join(' '), class: 's-warn', fill: 'none', 'stroke-width': 1.5 }, svg);
         var am = a0 + d / 2; L.text(svg, X(p[0] + 0.55 * Math.cos(am)) - 10, Y(p[1] + 0.55 * Math.sin(am)) + 4, Math.round(ang * 180 / Math.PI) + '°', 'f-warn');
       }
-      L.dot(svg, X(x[0]), Y(x[1]), 5, 'f-2'); L.text(svg, X(x[0]) + 7, Y(x[1]) - 7, 'x', 'tm f-2');
+      L.dot(svg, X(x[0]), Y(x[1]), 5, 'f-2'); L.text(svg, X(x[0]) + 9, Y(x[1]) + 17, 'x', 'tm f-2');
       L.dot(svg, X(p[0]), Y(p[1]), 5, 'f-1'); L.text(svg, X(p[0]) + 7, Y(p[1]) + 15, inside ? 'p = x' : 'p = P_C x', 'tm f-1');
       L.dot(svg, X(y[0]), Y(y[1]), 4.5, 'f-idea'); L.text(svg, X(y[0]) - 14, Y(y[1]) - 8, 'y', 'tm f-idea');
       var r = document.getElementById('pj-read'), ipv = u[0] * v[0] + u[1] * v[1];
@@ -965,7 +967,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function draw() {
       L.clear(svgF); L.clear(svgP);
       var X = L.scale(-3, 3, 30, 350), Y = L.scale(-0.3, 4, 225, 15);
-      var X2 = L.scale(-3, 3, 30, 350), Y2 = L.scale(-3, 3, 235, 15);
+      var X2 = L.scale(-3, 3, 30, 350), Y2 = L.scale(-3, 3, 226, 15);
       L.axes(svgF, X, Y, { xlabel: 'x', nx: 6, ny: 4 });
       L.axes(svgP, X2, Y2, { xlabel: 'x', ylabel: 'prox', nx: 6, ny: 6 });
       L.line(svgP, X2(-3), Y2(-3), X2(3), Y2(3), 's-faint dash');
@@ -1026,7 +1028,8 @@ document.addEventListener('DOMContentLoaded', function () {
         var M = 0; for (k = 0; k < N; k++) M = Math.max(M, Math.abs(est.c[k])); M = Math.max(M * 1.1, 0.5);
         var Xc = L.scale(-0.5, N - 0.5, 30, 545), Yc = L.scale(-M, M, 280, 14);
         L.el('rect', { x: Xc(-0.5), y: 14, width: Xc(NA - 0.5) - Xc(-0.5), height: 266, class: 'f-k' }, svg);
-        L.axes(svg, Xc, Yc, { xlabel: 'coefficient index', nx: 6, ny: 4, dx: 0 });
+        L.axes(svg, Xc, Yc, { nx: 6, ny: 4, dx: 0 });
+        L.text(svg, Xc(N - 0.5) - 2, 292, 'coefficient index (coarse → fine)', 'f-mut', { 'text-anchor': 'end' });
         L.line(svg, Xc(NA - 0.5), Yc(lam), Xc(N - 0.5), Yc(lam), 's-trick dash'); L.line(svg, Xc(NA - 0.5), Yc(-lam), Xc(N - 0.5), Yc(-lam), 's-trick dash');
         L.text(svg, Xc(N - 0.5) - 2, Yc(lam) - 4, '+λ', 'f-trick', { 'text-anchor': 'end' });
         for (k = 0; k < N; k++) { L.line(svg, Xc(k), Yc(0), Xc(k), Yc(est.c[k]), 's-2', { 'stroke-width': 2 }); L.dot(svg, Xc(k), Yc(est.cc[k]), 2.6, 'f-1'); }
@@ -1152,7 +1155,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       L.dot(svg, X(best.y[0]), Y(best.y[1]), 7, 'f-none s-mut'); L.el('circle', { cx: X(best.y[0]), cy: Y(best.y[1]), r: 7, class: 's-mut f-none', 'stroke-width': 1.5 }, svg);
       L.dot(svg, X(x[0]), Y(x[1]), 5, 'f-2'); L.text(svg, X(x[0]) + 7, Y(x[1]) - 7, 'x', 'tm f-2');
-      L.dot(svg, X(p[0]), Y(p[1]), 5, 'f-1'); L.text(svg, X(p[0]) + 8, Y(p[1]) + 15, 'p = prox_f∘L (x)', 'tm f-1');
+      L.dot(svg, X(p[0]), Y(p[1]), 5, 'f-1'); L.text(svg, X(p[0]) - 10, Y(p[1]) - 10, 'p = prox_f∘L (x)', 'tm f-1', { 'text-anchor': 'end' });
       hd(svg, 24, 354, 'f = ' + S.name + ',  Lx = ⟨l | x⟩,  LL* = ‖l‖² = µ = ' + F(mu));
       var r = document.getElementById('tf-read'), dist = Math.hypot(best.y[0] - p[0], best.y[1] - p[1]);
       if (r) r.innerHTML = 'Lx = ' + F(Lx, 3) + ' · prox<sub>µf</sub>(Lx) = ' + F(q, 3) + ' · formula: p = x − µ⁻¹ l (Lx − prox<sub>µf</sub>(Lx)) = (' + F(p[0], 3) + ', ' + F(p[1], 3) + ') · brute force: (' + F(best.y[0], 3) + ', ' + F(best.y[1], 3) + ') · distance <b>' + dist.toExponential(1) + '</b>';

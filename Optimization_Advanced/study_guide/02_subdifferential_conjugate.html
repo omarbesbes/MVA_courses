@@ -962,12 +962,13 @@ the last step because $f^*(u)$ is the least upper bound of the left-hand sides. 
 <div class="w-ctls">
 <div class="seg" id="fy-fn" role="group" aria-label="function"><button class="btn" type="button" data-v="quad" aria-pressed="true">x²/2</button><button class="btn" type="button" data-v="abs">|x|</button><button class="btn" type="button" data-v="exp">eˣ</button></div>
 <label class="ctl">x <input type="range" id="fy-x" min="-2" max="2" step="0.05" value="1"><output id="fy-x-v"></output></label>
-<label class="ctl">u <input type="range" id="fy-u" min="-2" max="2" step="0.05" value="0.4"><output id="fy-u-v"></output></label>
+<label class="ctl">u <input type="range" id="fy-u" min="-2" max="2" step="0.05" value="-0.3"><output id="fy-u-v"></output></label>
 </div>
 <div class="w-cols">
 <div><svg class="w-svg" id="fy-svg-f" viewBox="0 0 360 250" role="img" aria-label="f, the minorant of slope u and the gap at x"></svg><p class="w-cap">$f$, the minorant $\ps{\cdot}{u}-f^*(u)$, the gap at $x$</p></div>
 <div><svg class="w-svg" id="fy-svg-c" viewBox="0 0 360 250" role="img" aria-label="f*, the minorant of slope x and the gap at u"></svg><p class="w-cap">$f^*$, the minorant $\ps{\cdot}{x}-f(x)$, the gap at $u$</p></div>
 </div>
+<div class="leg"><span><i style="border-color:var(--ink)"></i>graph of f (left) and of f* (right)</span><span><i style="border-color:var(--accent)"></i>affine minorant</span><span><i style="border-color:var(--warn)"></i>Fenchel–Young gap</span></div>
 <div class="readout" id="fy-read"></div>
 </div>
 
@@ -1136,7 +1137,7 @@ document.addEventListener('DOMContentLoaded', function () {
       L.plotFn(svgF, F.f, X, Y, { class: 's-ink', 'stroke-width': 2.2 });
       L.dot(svgF, X(x0), Y(fx), 4.5, 'f-ink');
       L.text(svgF, X(x0) + 7, Y(fx) - 8, 'x', 'tm f-ink');
-      labelOn(svgF, X, Y, F.f, [1.9, -1.9, 0.8], 'f', 'tm f-ink');
+      labelOn(svgF, X, Y, F.f, [1.9, -1.2, 0.8], 'f', 'tm f-ink');
       var U = L.scale(-2.7, 2.7, 225, 15);
       L.axes(svgD, X, U, { xlabel: 'x', ylabel: 'u', nx: 5, ny: 5 });
       drawSubdiffGraph(svgD, F, X, U);
@@ -1174,7 +1175,9 @@ document.addEventListener('DOMContentLoaded', function () {
       drawSubdiffGraph(svgD, F, X, U);
       L.line(svgD, X(x1), U(u1), X(x2), U(u2), 's-warn', { 'stroke-width': 2, 'stroke-dasharray': '5 3' });
       L.dot(svgD, X(x1), U(u1), 5, 'f-1'); L.dot(svgD, X(x2), U(u2), 5, 'f-2');
-      L.text(svgD, X(x1) - 24, U(u1) + 4, '(x₁,u₁)', 'tm f-1'); L.text(svgD, X(x2) + 8, U(u2) + 4, '(x₂,u₂)', 'tm f-2');
+      var lft = x1 <= x2;
+      L.text(svgD, X(x1) + (lft ? -8 : 8), U(u1) - 10, '(x₁,u₁)', 'tm f-1', { 'text-anchor': lft ? 'end' : 'start' });
+      L.text(svgD, X(x2) + (lft ? 8 : -8), U(u2) - 10, '(x₂,u₂)', 'tm f-2', { 'text-anchor': lft ? 'start' : 'end' });
       var prod = (u1 - u2) * (x1 - x2);
       if (out) out.innerHTML = 'u₁ = ' + L.fmt(u1, 2) + ' ∈ ∂f(x₁) = ' + fmtSet(s1) + ',  u₂ = ' + L.fmt(u2, 2) + ' ∈ ∂f(x₂) = ' + fmtSet(s2) +
         '<br>⟨u₁ − u₂ | x₁ − x₂⟩ = (' + L.fmt(u1 - u2, 2) + ') × (' + L.fmt(x1 - x2, 2) + ') = <b class="' + (prod >= -1e-12 ? 'ok' : 'ko') + '">' + L.fmt(prod, 3) + '</b> ≥ 0' +
@@ -1248,10 +1251,11 @@ document.addEventListener('DOMContentLoaded', function () {
         L.text(svg, X(U1[0]) + 6, Y(U1[1]) + 4, 'u', 'tm f-acc');
         var perp = [-u[1], u[0]], H1 = add(P, mul(perp, 4)), H2 = sub(P, mul(perp, 4));
         L.line(svg, X(H1[0]), Y(H1[1]), X(H2[0]), Y(H2[1]), 's-mut dash', { 'stroke-width': 1.2 });
-        var lab = add(P, mul(perp, 1.1)); L.text(svg, X(lab[0]) + 4, Y(lab[1]) - 6, '⟨u | y − x⟩ = 0', 'f-mut');
+        var lab = add(add(P, mul(perp, 1.5)), mul(u, 0.22)); L.text(svg, X(lab[0]), Y(lab[1]), '⟨u | y − x⟩ = 0', 'f-mut', { 'text-anchor': 'middle' });
       }
       L.dot(svg, X(P[0]), Y(P[1]), 5, 'f-ink');
       L.text(svg, X(P[0]) + 8, Y(P[1]) + 14, 'x', 'tm f-ink');
+      if (!gens.length) L.text(svg, X(P[0]) + 10, Y(P[1]) - 10, 'N_C(x) = {0}', 'f-trick');
       /* check ⟨u | y − x⟩ ≤ 0 on the centre and on a sample of the set */
       var check = '';
       if (gens.length) { var yc = S.c; check = ' — check with y = c (the centre): ⟨u | y − x⟩ = ' + L.fmt(dotp(u, sub(yc, P)), 2) + ' ≤ 0'; }
@@ -1302,7 +1306,7 @@ document.addEventListener('DOMContentLoaded', function () {
     } else L.plotFn(svg, F.f, X, Y, { class: 's-ink', 'stroke-width': 2.2 });
   }
   function drawFstarWalls(svg, key, U, V, cls) { /* +∞ regions of f* */
-    if (key === 'abs') { [-1, 1].forEach(function (a) { L.line(svg, U(a), V(0), U(a), V(V.d[1]), cls || 's-faint', { 'stroke-width': 1.5, 'stroke-dasharray': '3 3' }); }); L.text(svg, U(1.15), V(2.6), '+∞', 'f-mut'); L.text(svg, U(-1.6), V(2.6), '+∞', 'f-mut'); }
+    if (key === 'abs') { [-1, 1].forEach(function (a) { L.line(svg, U(a), V(0), U(a), V(V.d[1]), cls || 's-faint', { 'stroke-width': 1.5, 'stroke-dasharray': '3 3' }); }); L.text(svg, U(1.15), V(1.9), '+∞', 'f-mut'); L.text(svg, U(-1.6), V(1.9), '+∞', 'f-mut'); }
     if (key === 'exp') { L.text(svg, U(-1.9), V(1.2), 'f* = +∞ for u < 0', 'f-mut'); }
   }
 
@@ -1330,11 +1334,11 @@ document.addEventListener('DOMContentLoaded', function () {
           msg = 'f*(u) = ' + L.fmt(c, 3) + ' — supremum not attained (the line is an asymptote of the graph)';
         }
       } else {
-        L.text(svgF, X(-2.4), Y(3.15), 'no affine minorant of slope u: f*(u) = +∞', 'f-warn');
+        L.text(svgF, X(-2.4), Y(3.3), 'no affine minorant of slope u: f*(u) = +∞', 'f-warn');
         msg = 'f*(u) = +∞: the gap ⟨x | u⟩ − f(x) is unbounded, no line of slope u fits under f';
       }
       drawF(svgF, key, F, X, Y);
-      labelOn(svgF, X, Y, F.f, [-2.3, -1.8, -0.9, 0.6], 'f', 'tm f-ink');
+      labelOn(svgF, X, Y, F.f, [-2.3, -1.8, 0.55], 'f', 'tm f-ink');
       /* conjugate panel */
       var U = L.scale(-2.5, 2.5, 28, 345), V = L.scale(-1.6, 3.4, 232, 12);
       L.axes(svgC, U, V, { xlabel: 'u', ylabel: 'f*', nx: 5, ny: 5 });
@@ -1362,22 +1366,19 @@ document.addEventListener('DOMContentLoaded', function () {
       var fx = F.f(x), c = F.fs(u), gap = fx + c - x * u;
       if (isFinite(c)) {
         affine(svgF, X, Y, 0, -c, u, 's-acc', { 'stroke-width': 2 });
-        L.text(svgF, X(2.4), Y(2.4 * u - c) + 14, '⟨x | u⟩ − f*(u)', 'tm f-acc', { 'text-anchor': 'end' });
         L.line(svgF, X(x), Y(u * x - c), X(x), Y(fx), 's-warn', { 'stroke-width': 3.5 });
-      } else L.text(svgF, X(-2.4), Y(4.1), 'f*(u) = +∞: no minorant of slope u, the gap is +∞', 'f-warn');
+      } else L.text(svgF, X(-2.4), Y(4.3), 'f*(u) = +∞: no minorant of slope u, the gap is +∞', 'f-warn');
       drawF(svgF, key, F, X, Y);
       L.dot(svgF, X(x), Y(fx), 4.5, 'f-ink'); L.text(svgF, X(x) + 7, Y(fx) - 8, '(x, f(x))', 'tm f-ink');
       var U = L.scale(-2.5, 2.5, 28, 345), V = L.scale(-2.4, 4.4, 232, 12);
       L.axes(svgC, U, V, { xlabel: 'u', nx: 5, ny: 6 });
       affine(svgC, U, V, 0, -fx, x, 's-acc', { 'stroke-width': 2 });
-      L.text(svgC, U(2.4), V(2.4 * x - fx) + 14, '⟨u | x⟩ − f(x)', 'tm f-acc', { 'text-anchor': 'end' });
       L.plotFn(svgC, F.fs, U, V, { class: 's-ink', 'stroke-width': 2.2 });
       drawFstarWalls(svgC, key, U, V, 's-ink');
-      labelOn(svgC, U, V, F.fs, [1.6, 0.6, -0.6, 2.2], 'f*', 'tm f-ink');
       if (isFinite(c)) { L.line(svgC, U(u), V(x * u - fx), U(u), V(c), 's-warn', { 'stroke-width': 3.5 }); L.dot(svgC, U(u), V(c), 4.5, 'f-ink'); L.text(svgC, U(u) + 7, V(c) - 8, '(u, f*(u))', 'tm f-ink'); }
       else L.line(svgC, U(u), V(V.d[0]), U(u), V(V.d[1]), 's-warn dash', { 'stroke-width': 1.5 });
       var eq = isFinite(gap) && gap < 1e-9;
-      if (out) out.innerHTML = 'f(x) + f*(u) − ⟨x | u⟩ = ' + L.fmt(fx, 3) + ' + ' + L.fmt(c, 3) + ' − ' + L.fmt(x * u, 3) + ' = <b class="' + (eq ? 'ok' : 'ko') + '">' + (isFinite(gap) ? L.fmt(gap, 3) : '+∞') + '</b>' +
+      if (out) out.innerHTML = 'f(x) + f*(u) − ⟨x | u⟩ = ' + L.fmt(fx, 3) + ' + ' + (c < 0 ? '(' + L.fmt(c, 3) + ')' : L.fmt(c, 3)) + ' − ' + (x * u < 0 ? '(' + L.fmt(x * u, 3) + ')' : L.fmt(x * u, 3)) + ' = <b class="' + (eq ? 'ok' : 'ko') + '">' + (isFinite(gap) ? L.fmt(gap, 3) : '+∞') + '</b>' +
         (eq ? ' = 0: equality, u ∈ ∂f(x) and x ∈ ∂f*(u) — both red segments vanish' : (isFinite(gap) ? ' > 0: u ∉ ∂f(x); the two red segments have this same length' : ''));
     }
     L.bindSeg('fy-fn', function (v) { key = v; draw(); });
@@ -1440,7 +1441,7 @@ document.addEventListener('DOMContentLoaded', function () {
       /* strip: σ_C as a function of θ */
       var XS = L.scale(0, 360, 36, 505), YS = L.scale(0, 1.9, 92, 10);
       L.axes(svgS, XS, YS, { xlabel: 'θ (degrees)', nx: 6, ny: 2, dx: 0 });
-      L.text(svgS, XS(300), YS(1.75), 'σ_C(u_θ) as θ turns', 'tm f-ink2');
+      L.text(svgS, XS(8), YS(0.25), 'σ_C(u_θ) as θ turns', 'tm f-ink2');
       L.plotFn(svgS, function (deg) { var a = deg * Math.PI / 180; return sigma([Math.cos(a), Math.sin(a)]).val; }, XS, YS, { class: 's-acc', 'stroke-width': 2 }, 360);
       L.dot(svgS, XS(theta), YS(sg.val), 4.5, 'f-warn');
       if (out) out.innerHTML = 'θ = ' + L.fmt(theta, 0) + '°, u = (' + L.fmt(u[0], 2) + ', ' + L.fmt(u[1], 2) + '): <b>σ_C(u) = ' + L.fmt(sg.val, 3) + '</b> (polygon);  ‖u‖_q = <b>' + L.fmt(nq, 3) + '</b> = support of the q*-ball in direction u, attained at y = (' + L.fmt(ym[0], 2) + ', ' + L.fmt(ym[1], 2) + ') with ‖y‖_q* = 1';

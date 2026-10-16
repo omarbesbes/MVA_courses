@@ -839,5 +839,167 @@ window.LSD_REGISTRY = {
 "k": "ex",
 "t": "A primal-dual algorithm for $f+\\sum_ig_i\\circ L_i+h$",
 "s": "<p>Let $\\H$ and $(\\G_i)_{1\\le i\\le m}$ be real Hilbert spaces. Let $f\\in\\Gz{\\H}$, $h\\in\\Gz{\\H}$, and, for every $i\\in\\{1,\\dots,m\\}$, $g_i\\in\\Gz{\\G_i}$ and $L_i\\in\\B(\\H,\\G_i)$. It is assumed that $h$ is differentiable and has a $\\beta$-Lipschitzian gradient with $\\beta\\in\\,]0,+\\infty[$. Propose a primal-dual algorithm to solve\n$$\\underset{x\\in\\H}{\\text{minimize}}\\ f(x)+\\sum_{i=1}^mg_i(L_ix)+h(x).$$</p>"
+},
+"mm-principle": {
+"p": "07_majorization_minimization.html",
+"k": "rem",
+"t": "The Majorization–Minimization principle",
+"s": "<p><em>\"When it is successful, the MM algorithm substitutes a simple optimization problem for a difficult optimization problem.\"</em> — K. Lange.</p>\n<p>Majorization–Minimization (MM; also called <em>optimization transfer</em>, <em>iterative majorization</em>, <em>auxiliary function method</em>, <em>surrogate minimization</em>) solves a minimization problem by alternating two steps:</p>\n<ol><li><strong>Majorize</strong> the criterion at the current iterate with a majorant function;</li><li><strong>Minimize</strong> the majorant function to define the next iterate.</li></ol>\n<p>Building an MM algorithm therefore requires (i) a strategy for building majorant functions and (ii) a strategy for minimizing them.</p>"
+},
+"majorant": {
+"p": "07_majorization_minimization.html",
+"k": "def",
+"t": "Majorant function of $f$ at $y$",
+"s": "<p>Let $f:\\H\\to\\,]-\\infty,+\\infty]$ where $\\H$ is a Hilbert space, and let $y\\in\\H$. A function $h(\\cdot,y):\\H\\to\\,]-\\infty,+\\infty]$ is a <strong>majorant function of $f$ at $y$</strong> if\n$$\\begin{cases}(\\forall x\\in\\H)\\quad f(x)\\le h(x,y),\\\\ f(y)=h(y,y).\\end{cases}$$</p>"
+},
+"majorant-calculus": {
+"p": "07_majorization_minimization.html",
+"k": "prop",
+"t": "Sums, products and compositions of majorants",
+"s": "<p>Let $f_1,f_2:\\H\\to\\,]-\\infty,+\\infty]$ and $y\\in\\H$. Let $h_1(\\cdot,y)$ be a majorant function of $f_1$ at $y$ and $h_2(\\cdot,y)$ a majorant function of $f_2$ at $y$.</p>\n<ul>\n<li><strong>Sum.</strong> $h_1(\\cdot,y)+h_2(\\cdot,y)$ is a majorant function of $f_1+f_2$ at $y$.</li>\n<li><strong>Product.</strong> If, for all $x\\in\\H$, $f_1(x)\\ge0$ and $f_2(x)\\ge0$, then $h_1(\\cdot,y)\\,h_2(\\cdot,y)$ is a majorant function of $f_1f_2$ at $y$.</li>\n<li><strong>Composition.</strong> If $\\varphi:\\R\\to\\,]-\\infty,+\\infty]$ is an increasing function, then $\\varphi\\big(h_1(\\cdot,y)\\big)$ is a majorant function of $\\varphi(f_1)$ at $y$.</li>\n</ul>"
+},
+"mm-algorithm": {
+"p": "07_majorization_minimization.html",
+"k": "algo",
+"t": "The MM algorithm and the monotone decrease of $f(x_n)$",
+"s": "<p>Minimize $f:\\H\\to\\,]-\\infty,+\\infty]$.</p>\n<div class=\"algo-box\"><div class=\"algo-name\">MM algorithm</div>\n<p>Let $x_0\\in\\H$. For $n=0,1,\\dots$</p>\n<ol><li>choose a majorant function $h(\\cdot,x_n)$ of $f$ at $x_n$ <span class=\"mini\">(majorization)</span></li>\n<li>$x_{n+1}\\in\\Argmin_{x\\in\\H} h(x,x_n)$ <span class=\"mini\">(minimization)</span></li></ol></div>\n<p><strong>Monotone decrease.</strong> The sequence $(f(x_n))_{n\\in\\N}$ is decreasing:\n$$(\\forall n\\in\\N)\\qquad f(x_{n+1})\\;\\underset{\\text{M}}{\\le}\\;h(x_{n+1},x_n)\\;\\underset{\\text{M}}{\\le}\\;h(x_n,x_n)=f(x_n).$$</p>"
+},
+"majorization-concave": {
+"p": "07_majorization_minimization.html",
+"k": "prop",
+"t": "Tangent majorant of a concave function",
+"s": "<p>Let $f:\\H\\to[-\\infty,+\\infty[$ be a concave function. Let $y\\in\\H$ and $(-t)\\in\\partial(-f)(y)$. A majorant function for $f$ at $y$ is\n$$(\\forall x\\in\\H)\\qquad h(x,y)=f(y)+\\ps{t}{x-y}.$$</p>"
+},
+"majorization-lipschitz": {
+"p": "07_majorization_minimization.html",
+"k": "prop",
+"t": "Quadratic majorant of a $\\beta$-Lipschitz differentiable function",
+"s": "<p>Let $f:\\H\\to\\,]-\\infty,+\\infty]$ be a $\\beta$-Lipschitz differentiable function on $\\H$. Then, for every $y\\in\\H$ and every $\\mu\\in[\\beta,+\\infty[$, a majorant function for $f$ at $y$ is\n$$(\\forall x\\in\\H)\\qquad h(x,y)=f(y)+\\ps{\\nabla f(y)}{x-y}+\\frac{\\mu}{2}\\norm{x-y}^2.$$</p>"
+},
+"majorization-hessian": {
+"p": "07_majorization_minimization.html",
+"k": "prop",
+"t": "Quadratic majorant from a Hessian bound $A\\succcurlyeq\\nabla^2f(x)$",
+"s": "<p>Let $f:\\R^N\\to\\,]-\\infty,+\\infty]$ be a twice differentiable function on $\\R^N$ with Hessian $\\nabla^2f$. Let $A\\in\\R^{N\\times N}$ be a positive semidefinite matrix such that, for every $x\\in\\R^N$, $A-\\nabla^2f(x)$ is positive semidefinite. Then, for every $y\\in\\R^N$, a majorant function for $f$ at $y$ is\n$$(\\forall x\\in\\R^N)\\qquad h(x,y)=f(y)+\\ps{\\nabla f(y)}{x-y}+\\tfrac12\\underbrace{\\ps{x-y}{A(x-y)}}_{\\norm{x-y}^2_A}.$$</p>"
+},
+"jensen": {
+"p": "07_majorization_minimization.html",
+"k": "prop",
+"t": "Jensen's inequality",
+"s": "<p>Let $\\psi:\\R\\to\\,]-\\infty,+\\infty]$ be a convex function and let $\\omega=(\\omega^{(i)})_{1\\le i\\le N}\\in[0,+\\infty[^N$ be such that $\\sum_{i=1}^N\\omega^{(i)}=1$. Then\n$$\\big(\\forall(x^{(1)},\\dots,x^{(N)})\\big)\\qquad\\psi\\Big(\\sum_{i=1}^N\\omega^{(i)}x^{(i)}\\Big)\\le\\sum_{i=1}^N\\omega^{(i)}\\psi\\big(x^{(i)}\\big).$$</p>"
+},
+"ex-majorization": {
+"p": "07_majorization_minimization.html",
+"k": "ex",
+"t": "Five majorization inequalities",
+"s": "<p>Prove the following majorizing properties:</p>\n<ol>\n<li>$\\big(\\forall(x,y)\\in(\\R_+)^2\\big)(\\forall q\\in\\,]0,1[)\\qquad x^q\\le q\\,y^{q-1}x+(1-q)y^q$</li>\n<li>$\\big(\\forall(x,y)\\in(\\R_+^*)^2\\big)\\qquad\\log x\\le\\dfrac{x}{y}+\\log y-1$</li>\n<li>$(\\forall x\\in\\R^N)\\qquad\\exp\\Big(\\dfrac1N\\sum_{i=1}^Nx^{(i)}\\Big)\\le\\dfrac1N\\sum_{i=1}^Ne^{x^{(i)}}$</li>\n<li>$(\\forall x\\in\\R^N)(\\forall y\\in\\R^N\\setminus\\{0\\})\\qquad-\\norm{x}\\le-\\dfrac{\\ps{x}{y}}{\\norm{y}}$</li>\n<li>$\\big(\\forall(x,z)\\in\\R^2\\big)\\big(\\forall(y,t)\\in(\\R_+^*)^2\\big)\\qquad 2xz\\le\\dfrac{x^2t}{y}+\\dfrac{z^2y}{t}$</li>\n</ol>"
+},
+"half-quadratic": {
+"p": "07_majorization_minimization.html",
+"k": "thm",
+"t": "Half-quadratic majorant of $f=\\psi(|\\cdot|)$ when $\\psi(\\sqrt\\cdot)$ is concave",
+"s": "<p>Let $f$ be defined as $(\\forall x\\in\\R)\\ f(x)=\\psi(|x|)$, where</p>\n<ol>\n<li>$\\psi$ is differentiable on $]0,+\\infty[$,</li>\n<li>$\\psi(\\sqrt\\cdot)$ is concave on $]0,+\\infty[$,</li>\n<li>$(\\forall x\\in[0,+\\infty[)\\ \\dot\\psi(x)\\ge0$,</li>\n<li>$\\displaystyle\\lim_{\\substack{x\\to0\\\\x\\gt0}}\\Big(\\omega(x):=\\frac{\\dot\\psi(x)}{x}\\Big)\\in\\R$.</li>\n</ol>\n<p>Then, for all $y\\in\\R$,\n$$(\\forall x\\in\\R)\\qquad f(x)\\le f(y)+\\dot f(y)(x-y)+\\tfrac12\\,\\omega(|y|)\\,(x-y)^2.$$</p>"
+},
+"potential-table": {
+"p": "07_majorization_minimization.html",
+"k": "rem",
+"t": "Examples of potential functions $f$ and their weights $\\omega$",
+"s": "<div class=\"table-scroll\"><table class=\"cmp pot\"><thead><tr><th></th><th>$f(x)$</th><th>$\\omega(x)$</th></tr></thead><tbody>\n<tr><td>Convex</td><td>$|x|-\\delta\\log(|x|/\\delta+1)$</td><td>$(|x|+\\delta)^{-1}$</td></tr>\n<tr><td>Convex</td><td>$\\begin{cases}x^2&amp;\\text{if }|x|\\lt\\delta\\\\2\\delta|x|-\\delta^2&amp;\\text{otherwise}\\end{cases}$</td><td>$\\begin{cases}2&amp;\\text{if }|x|\\lt\\delta\\\\2\\delta/|x|&amp;\\text{otherwise}\\end{cases}$</td></tr>\n<tr><td>Convex</td><td>$\\log(\\cosh(x))$</td><td>$\\tanh(x)/x$</td></tr>\n<tr><td>Convex</td><td>$(1+x^2/\\delta^2)^{\\kappa/2}-1$</td><td>$(\\kappa/\\delta^2)(1+x^2/\\delta^2)^{\\kappa/2-1}$</td></tr>\n<tr><td>Nonconvex</td><td>$1-\\exp(-x^2/(2\\delta^2))$</td><td>$(1/\\delta^2)\\exp(-x^2/(2\\delta^2))$</td></tr>\n<tr><td>Nonconvex</td><td>$x^2/(2\\delta^2+x^2)$</td><td>$4\\delta^2/(2\\delta^2+x^2)^2$</td></tr>\n<tr><td>Nonconvex</td><td>$\\begin{cases}1-(1-x^2/(6\\delta^2))^3&amp;\\text{if }|x|\\le\\sqrt6\\,\\delta\\\\1&amp;\\text{otherwise}\\end{cases}$</td><td>$\\begin{cases}(1/\\delta^2)(1-x^2/(6\\delta^2))^2&amp;\\text{if }|x|\\le\\sqrt6\\,\\delta\\\\0&amp;\\text{otherwise}\\end{cases}$</td></tr>\n<tr><td>Nonconvex</td><td>$\\tanh(x^2/(2\\delta^2))$</td><td>$(1/\\delta^2)(\\cosh(x^2/(2\\delta^2)))^{-2}$</td></tr>\n<tr><td>Nonconvex</td><td>$\\log(1+x^2/\\delta^2)$</td><td>$2/(\\delta^2+x^2)$</td></tr>\n</tbody></table></div>\n<p class=\"mini\">$(\\lambda,\\delta)\\in\\,]0,+\\infty[^2$, $\\kappa\\in[1,2]$ (as printed on the slide; $\\lambda$ does not appear in the table — it is the regularization weight in front of the penalty).</p>"
+},
+"mm-quadratic": {
+"p": "07_majorization_minimization.html",
+"k": "algo",
+"t": "MM quadratic algorithm: $x_{n+1}=x_n-\\theta_nA(x_n)^{-1}\\nabla f(x_n)$",
+"s": "<p><strong>Problem:</strong> minimization of a differentiable function $f:\\H\\to\\R$.</p>\n<p><strong>Assumption:</strong> for every $y\\in\\H$, there exists a strongly positive self-adjoint operator $A(y)$ such that the quadratic function\n$$(\\forall x\\in\\H)\\qquad h(x,y)=f(y)+\\ps{\\nabla f(y)}{x-y}+\\tfrac12\\norm{x-y}^2_{A(y)}$$\nis a majorant function of $f$ at $y$.</p>\n<div class=\"algo-box\"><div class=\"algo-name\">MM quadratic algorithm</div>\n<p>Let $x_0\\in\\H$. For $n=0,1,\\dots$</p>\n<ol><li>$x_{n+1}=x_n-\\theta_n\\,A(x_n)^{-1}\\nabla f(x_n)$, with $\\theta_n\\in\\,]0,2[$ <span class=\"mini\">(solve $A(x_n)d_n=\\nabla f(x_n)$, then step $-\\theta_nd_n$)</span></li></ol></div>\n<p>$(\\theta_n)_n$ acts as a stepsize parameter. For $\\theta_n\\equiv1$ we recover the basic MM algorithm.</p>"
+},
+"mm-quadratic-convergence": {
+"p": "07_majorization_minimization.html",
+"k": "thm",
+"t": "Sufficient descent and convergence of the MM quadratic algorithm",
+"s": "<p><strong>Assumptions.</strong></p>\n<ol>\n<li>$f:\\H\\to\\R$ is a coercive, differentiable function.</li>\n<li>There exists $(\\nu,\\bar\\nu)\\in\\,]0,+\\infty[^2$ such that $(\\forall n\\in\\N)\\ \\nu\\Id\\preccurlyeq A(x_n)\\preccurlyeq\\bar\\nu\\Id$.</li>\n<li>There exists $(\\underline\\theta,\\bar\\theta)\\in\\,]0,+\\infty[^2$ such that $(\\forall n\\in\\N)\\ \\underline\\theta\\le\\theta_n\\le2-\\bar\\theta$.</li>\n</ol>\n<p><strong>Sufficient descent property.</strong> There exists $(\\mu_1,\\mu_2)\\in\\,]0,+\\infty[^2$ such that\n$$(\\forall n\\in\\N)\\qquad f(x_n)-f(x_{n+1})\\ \\ge\\ \\mu_1\\norm{x_{n+1}-x_n}^2\\ \\ge\\ \\mu_2\\norm{\\nabla f(x_n)}^2 .$$</p>\n<p><strong>Convergence theorem (in finite dimension).</strong></p>\n<ol>\n<li>$\\nabla f(x_n)\\to0$ and $f(x_n)\\searrow f(\\tilde x)$ for some $\\tilde x\\in\\H$.</li>\n<li>If $f$ is continuously differentiable, any sequential cluster point of $(x_n)_{n\\in\\N}$ is a stationary point of $f$.</li>\n<li>If $f$ is convex, any sequential cluster point of $(x_n)_{n\\in\\N}$ is a minimizer of $f$.</li>\n<li>If $f$ is strictly convex, then $x_n\\to\\hat x$ where $\\hat x$ is the unique minimizer of $f$.</li>\n</ol>"
+},
+"subspace-strategy": {
+"p": "07_majorization_minimization.html",
+"k": "rem",
+"t": "Subspace acceleration and the table of subspaces",
+"s": "<p><strong>Problem:</strong> minimization of a differentiable function $f:\\H\\to\\R$. <strong>MM quadratic algorithm:</strong> $x_{n+1}\\in\\Argmin_{x\\in\\H}h(x,x_n)$.</p>\n<p><strong>Difficulty:</strong> in the context of large scale optimization, the minimization of $h$ over $\\H$ may become untractable.</p>\n<p>⇒ <strong>Subspace strategy:</strong> instead of minimizing $h$ over the whole set $\\H$, restrict the minimization space to a subspace spanned by a small number of vectors.</p>\n<p><strong>MM quadratic subspace algorithm:</strong> $$x_{n+1}\\in\\Argmin_{x\\in x_n+\\operatorname{span}(d_n^1,d_n^2,\\dots,d_n^{M_n})}h(x,x_n),$$ where, for every $n\\in\\N$, $M_n\\ge1$ and $D_n=[d_n^1\\,|\\,d_n^2\\,|\\dots|\\,d_n^{M_n}]\\in\\H^{M_n}$.</p><p class=\"mini\">…</p>"
+},
+"mm-subspace": {
+"p": "07_majorization_minimization.html",
+"k": "algo",
+"t": "MM quadratic subspace algorithm and 3MG",
+"s": "<p><strong>Problem:</strong> minimization of $f:\\H\\to\\R$ where $f$ is differentiable. <strong>Assumption:</strong> for all $y\\in\\H$, there exists a strongly positive self-adjoint operator $A(y)$ such that $h(x,y)=f(y)+\\ps{\\nabla f(y)}{x-y}+\\tfrac12\\norm{x-y}^2_{A(y)}$ is a majorant function of $f$ at $y$.</p>\n<div class=\"algo-box\"><div class=\"algo-name\">MM quadratic subspace algorithm</div>\n<p>Let $x_0\\in\\H$. For $n=0,1,\\dots$</p>\n<ol><li>choose $D_n=[d_n^1|\\dots|d_n^{M_n}]\\in\\H^{M_n}$ <span class=\"mini\">(a row of the table)</span></li>\n<li>$u_n\\in\\Argmin_{u\\in\\R^{M_n}}h\\Big(x_n+\\sum_{m=1}^{M_n}u^{(m)}d_n^m,\\ x_n\\Big)$ <span class=\"mini\">(an $M_n$-dimensional quadratic problem)</span></li>\n<li>$x_{n+1}=x_n+\\sum_{m=1}^{M_n}u_n^{(m)}d_n^m$</li></ol></div>\n<p>⇒ the <strong>3MG algorithm</strong> (MM Memory Gradient) is obtained when $(D_n)_n$ is the memory gradient subspace, $D_n=[-\\nabla f(x_n)\\,|\\,x_n-x_{n-1}]$ (with $D_0=-\\nabla f(x_0)$).</p>"
+},
+"mm-subspace-convergence": {
+"p": "07_majorization_minimization.html",
+"k": "thm",
+"t": "Convergence of the MM quadratic subspace algorithm",
+"s": "<p><strong>Assumptions.</strong></p>\n<ol>\n<li>$f:\\H\\to\\R$ is a coercive, differentiable function.</li>\n<li>There exists $(\\nu,\\bar\\nu)\\in\\,]0,+\\infty[^2$ such that $(\\forall n\\in\\N)\\ \\nu\\Id\\preccurlyeq A(x_n)\\preccurlyeq\\bar\\nu\\Id$.</li>\n<li>There exists $(\\gamma_0,\\gamma_1)\\in\\,]0,+\\infty[^2$ such that $$(\\forall n\\in\\N)\\qquad\\ps{\\nabla f(x_n)}{d_n^1}\\le-\\gamma_0\\norm{\\nabla f(x_n)}^2\\quad\\text{and}\\quad\\norm{d_n^1}\\le\\gamma_1\\norm{\\nabla f(x_n)}.$$</li>\n</ol>\n<p><strong>Sufficient descent property.</strong> There exists $(\\mu_1,\\mu_2)\\in\\,]0,+\\infty[^2$ such that $(\\forall n\\in\\N)\\ f(x_n)-f(x_{n+1})\\ge\\mu_1\\norm{x_{n+1}-x_n}^2\\ge\\mu_2\\norm{\\nabla f(x_n)}^2$.</p>\n<p><strong>Convergence theorem (in finite dimension).</strong></p>\n<ol>\n<li>$\\nabla f(x_n)\\to0$ and $f(x_n)\\searrow f(\\tilde x)$ where $\\tilde x$ is a critical point of $f$.</li>\n<li>If $f$ is convex, any sequential cluster point of $(x_n)_{n\\in\\N}$ is a minimizer of $f$.</li>\n<li>If $f$ is strictly convex, then $x_n\\to\\hat x$ where $\\hat x$ is the unique minimizer of $f$.</li>\n</ol>"
+},
+"block-coordinate": {
+"p": "07_majorization_minimization.html",
+"k": "rem",
+"t": "Block-coordinate strategy",
+"s": "<p><strong>Problem:</strong> minimization of $f:\\H\\to\\,]-\\infty,+\\infty]$, where $\\H=\\bigtimes_{j=1}^J\\H_j$ and $\\H_1,\\dots,\\H_J$ are separable real Hilbert spaces. Every $x\\in\\H$ is written $x=(x^{(1)},\\dots,x^{(J)})$ with $x^{(j)}\\in\\H_j$, and $f(x)=f(x^{(1)},\\dots,x^{(J)})$.</p>\n<p>⇒ <strong>Block-coordinate strategy:</strong> instead of updating the whole vector $x$ at iteration $n\\in\\N$, restrict the update to a block $j_n\\in\\{1,\\dots,J\\}$.</p>"
+},
+"block-mm-quadratic": {
+"p": "07_majorization_minimization.html",
+"k": "algo",
+"t": "Block-coordinate MM quadratic algorithm",
+"s": "<p><strong>Problem:</strong> minimization of $f:\\H\\to\\R$ where $f$ is differentiable. <strong>Assumption:</strong> for every $y\\in\\H$ and every $j\\in\\{1,\\dots,J\\}$, there exists a strongly positive self-adjoint operator $A_j(y)$ on $\\H_j$ such that the quadratic function\n$$(\\forall x^{(j)}\\in\\H_j)\\qquad h_j(x^{(j)},y^{(j)};y)=f(y)+\\ps{\\nabla_jf(y)}{x^{(j)}-y^{(j)}}+\\tfrac12\\norm{x^{(j)}-y^{(j)}}^2_{A_j(y)}$$\nis a majorant function at $y^{(j)}$ of the restriction of $f$ to its $j$-th block, $x^{(j)}\\mapsto f(y^{(1)},\\dots,y^{(j-1)},x^{(j)},y^{(j+1)},\\dots,y^{(J)})$.</p>\n<div class=\"algo-box\"><div class=\"algo-name\">Block-coordinate MM quadratic algorithm</div>\n<p>Let $x_0\\in\\H$. For $n=0,1,\\dots$</p>\n<ol><li>select $j_n\\in\\{1,\\dots,J\\}$ <span class=\"mini\">(a <a href=\"#block-selection\">selection rule</a>)</span></li>\n<li>$x_{n+1}^{(j_n)}=x_n^{(j_n)}-\\theta_n\\,A_{j_n}(x_n)^{-1}\\nabla_{j_n}f(x_n)$ <span class=\"mini\">(MM quadratic step on the selected block)</span></li>\n<li>$x_{n+1}^{(\\bar\\jmath_n)}=x_n^{(\\bar\\jmath_n)}$, where $\\bar\\jmath_n=\\{1,\\dots,J\\}\\setminus\\{j_n\\}$ <span class=\"mini\">(the other blocks do not move)</span></li></ol></div>"
+},
+"block-selection": {
+"p": "07_majorization_minimization.html",
+"k": "def",
+"t": "Selection of blocks: cyclic, quasi-cyclic, random",
+"s": "<p>At each iteration $n\\in\\N$, $j_n\\in\\{1,\\dots,J\\}$ can be chosen according to:</p>\n<ul>\n<li>the <strong>cyclic rule</strong>: $(\\forall n\\in\\N)\\ j_n-1=n\\bmod J$;</li>\n<li>a <strong>quasi-cyclic rule</strong>: there exists a constant $K\\ge J$ such that, for every $n\\in\\N$, $\\{1,\\dots,J\\}\\subset\\{j_n,\\dots,j_{n+K-1}\\}$;</li>\n<li>a <strong>random rule</strong>: for every $n\\in\\N$, $j_n$ is a realization of a random variable.</li>\n</ul>\n<p>⇒ The convergence properties of the algorithm may depend on the block selection rule.</p>"
+},
+"block-mm-convergence": {
+"p": "07_majorization_minimization.html",
+"k": "thm",
+"t": "Convergence of block-coordinate MM quadratic ((quasi-)cyclic rule)",
+"s": "<p><strong>Assumptions.</strong></p>\n<ol>\n<li>$f:\\R^N\\to\\R$ is a coercive, differentiable function.</li>\n<li>There exists $(\\nu,\\bar\\nu)\\in\\,]0,+\\infty[^2$ such that $(\\forall n\\in\\N)\\ \\nu\\Id\\preccurlyeq A_{j_n}(x_n)\\preccurlyeq\\bar\\nu\\Id$.</li>\n<li>There exists $(\\underline\\theta,\\bar\\theta)\\in\\,]0,+\\infty[^2$ such that $(\\forall n\\in\\N)\\ \\underline\\theta\\le\\theta_n\\le2-\\bar\\theta$.</li>\n</ol>\n<p><strong>Sufficient descent property.</strong> There exists $(\\mu_1,\\mu_2)\\in\\,]0,+\\infty[^2$ such that $$(\\forall n\\in\\N)\\qquad f(x_n)-f(x_{n+1})\\ge\\mu_1\\norm{x_{n+1}-x_n}^2\\ge\\mu_2\\norm{\\nabla_{j_n}f(x_n)}^2 .$$</p>\n<p><strong>Convergence theorem (in finite dimension and (quasi-)cyclic rule).</strong></p>\n<ol>\n<li>$\\nabla f(x_n)\\to0$ and $f(x_n)\\searrow f(\\tilde x)$ where $\\tilde x$ is a critical point of $f$.</li>\n<li>If $f$ is convex, any sequential cluster point of $(x_n)_{n\\in\\N}$ is a minimizer of $f$.</li>\n<li>If $f$ is strictly convex, then $x_n\\to\\hat x$ where $\\hat x$ is the unique minimizer of $f$.</li>\n</ol>"
+},
+"parallel-mm": {
+"p": "07_majorization_minimization.html",
+"k": "prop",
+"t": "Parallel MM: a diagonal majorant by Jensen, $A(x)\\preccurlyeq B(x)$",
+"s": "<p>Let $H\\in\\R^{M\\times N}$. For every $d\\in\\R^N$,\n$$d^\\top H^\\top Hd=\\norm{Hd}^2\\ \\le\\ \\sum_{i=1}^Nb_i\\,d_i^2,\\qquad b_i=\\sum_{m=1}^M|H_{mi}|\\sum_{p=1}^N|H_{mp}|=\\big[\\,|H|^\\top|H|\\mathbf 1\\,\\big]_i ,$$\ni.e. $H^\\top H\\preccurlyeq\\operatorname{Diag}(b)$. Consequently, for the lab's criterion $f(x)=\\tfrac12\\norm{Hx-y}^2+\\lambda\\sum_n\\psi([Gx]_n)$ with curvature $A(x)=H^\\top H+\\lambda G^\\top\\operatorname{Diag}(\\omega(Gx))G$, the diagonal matrix $B(x)=\\operatorname{Diag}(b(x))$ with\n$$b_i(x)=\\sum_m|H_{mi}|\\sum_p|H_{mp}|\\ +\\ \\lambda\\sum_n|G_{ni}|\\,\\omega([Gx]_n)\\sum_p|G_{np}|$$\nsatisfies $A(x)\\preccurlyeq B(x)$ for every $x$, so $x\\mapsto f(y)+\\ps{\\nabla f(y)}{x-y}+\\tfrac12\\norm{x-y}^2_{B(y)}$ is a <em>separable</em> quadratic majorant of $f$ at $y$. The <strong>parallel MM quadratic algorithm</strong> is $x_{n+1}=x_n-\\theta_nB(x_n)^{-1}\\nabla f(x_n)$, i.e. $x_{n+1,i}=x_{n,i}-\\theta_n\\,\\partial_if(x_n)/b_i(x_n)$ for all $i$ simultaneously.</p>"
+},
+"mm-nondifferentiable": {
+"p": "07_majorization_minimization.html",
+"k": "rem",
+"t": "Nondifferentiable $f=f_1+f_2$: two approaches",
+"s": "<p><strong>Problem:</strong> minimization of $f:\\H\\to\\,]-\\infty,+\\infty]$ where $f=f_1+f_2$ with $f_1$ differentiable and $f_2$ not necessarily differentiable. <strong>MM algorithm:</strong> $x_{n+1}\\in\\Argmin_{x\\in\\H}h(x,x_n)$.</p>\n<p><strong>Difficulty:</strong> how to majorize the nondifferentiable function $f$, so that the majorants remain easy to minimize?</p>\n<p>⇒ Two main approaches:</p>\n<ol>\n<li>Use quadratic majorant functions for $f$ (but numerical issues at nondifferentiability points): <strong>Iterative Reweighted Least Squares</strong> algorithms (e.g. Weiszfeld, FOCUSS, IRLS, …).</li>\n<li>Use a quadratic majorant function for $f_1$ and keep $f_2$ untouched, $x_{n+1}\\in\\Argmin_{x\\in\\H}h(x,x_n)+f_2(x)$: the <strong>variable metric forward–backward algorithm</strong>.</li>\n</ol>"
+},
+"prox-metric": {
+"p": "07_majorization_minimization.html",
+"k": "def",
+"t": "Proximity operator within a metric",
+"s": "<p>Let $f\\in\\Gz{\\H}$. Let $A:\\H\\to\\H$ be a strongly positive self-adjoint operator. For all $x\\in\\H$, $\\prox_{A,f}(x)$ is the proximity operator of $f$ in $(\\H,\\norm\\cdot_A)$, i.e. the unique minimizer of\n$$y\\mapsto f(y)+\\tfrac12\\norm{x-y}^2_A .$$</p>\n<p><strong>Remarks.</strong></p>\n<ul>\n<li>If $A=\\alpha^{-1}\\Id$ with $\\alpha\\gt0$, then $\\prox_{\\alpha^{-1}\\Id,f}\\equiv\\prox_{\\alpha f}$ corresponds to the usual proximity operator.</li>\n<li>We have $(\\forall x\\in\\R^N)\\quad\\prox_{A,f}(x)=A^{-1/2}\\prox_{f\\circ A^{-1/2}}\\big(A^{1/2}x\\big)$.</li>\n</ul>"
+},
+"prox-metric-separable": {
+"p": "07_majorization_minimization.html",
+"k": "prop",
+"t": "Separable $f$ and diagonal $A$: componentwise prox",
+"s": "<p>Let $f\\in\\Gz{\\R^N}$. Assume that $f$ is separable, i.e. $\\big(\\forall x=(x^{(i)})_{1\\le i\\le N}\\in\\R^N\\big)\\ f(x)=\\sum_{i=1}^Nf_i(x^{(i)})$, and that $A$ is diagonal with (strictly) positive diagonal elements $(a_i)_{1\\le i\\le N}$. Then, for every $x\\in\\R^N$, $\\prox_{A,f}(x)=p$ where $p=(p^{(i)})_{1\\le i\\le N}\\in\\R^N$ is given by\n$$(\\forall i\\in\\{1,\\dots,N\\})\\qquad p^{(i)}=\\prox_{a_i^{-1}f_i}\\big(x^{(i)}\\big).$$</p>"
+},
+"vmfb": {
+"p": "07_majorization_minimization.html",
+"k": "algo",
+"t": "Variable metric forward–backward algorithm (VMFB)",
+"s": "<p><strong>Problem:</strong> minimization of $f:\\H\\to\\,]-\\infty,+\\infty]$ where $f=f_1+f_2$ with $f_1$ differentiable and $f_2$ convex, not necessarily differentiable.</p>\n<p><strong>Assumption:</strong> for every $y\\in\\H$, there exists a strongly positive self-adjoint operator $A(y):\\H\\to\\H$ such that the quadratic function $h(x,y)=f_1(y)+\\ps{\\nabla f_1(y)}{x-y}+\\tfrac12\\norm{x-y}^2_{A(y)}$ is a majorant function of $f_1$ at $y$.</p>\n<div class=\"algo-box\"><div class=\"algo-name\">VMFB algorithm</div>\n<p>Let $x_0\\in\\H$. For $n=0,1,\\dots$</p>\n<ol><li>$y_n=x_n-\\theta_n\\,A(x_n)^{-1}\\nabla f_1(x_n)$ <span class=\"mini\">(forward step in the metric $A(x_n)$, stepsize $\\theta_n$)</span></li>\n<li>$x_{n+1}=\\prox_{\\theta_n^{-1}A(x_n),\\,f_2}(y_n)$ <span class=\"mini\">(backward step: prox of $f_2$ in the metric $\\theta_n^{-1}A(x_n)$)</span></li></ol>\n<p>In one line: $x_{n+1}=\\prox_{\\theta_n^{-1}A(x_n),\\,f_2}\\big(x_n-\\theta_nA(x_n)^{-1}\\nabla f_1(x_n)\\big)$.</p></div>\n<p>⇒ $(\\theta_n)_n$ acts as a stepsize parameter.</p>"
+},
+"vmfb-mm-link": {
+"p": "07_majorization_minimization.html",
+"k": "prop",
+"t": "Link between MM and VMFB: $\\theta_n\\equiv1$ gives $x_{n+1}=\\operatorname{argmin}h(\\cdot,x_n)+f_2$; $A\\equiv\\beta\\Id$ gives FB",
+"s": "<p>Let $\\theta_n\\equiv1$. According to the definition of the proximity operator,\n$$\\begin{aligned}x_{n+1}&amp;=\\argmin_{x\\in\\H}\\ \\tfrac12\\norm{x-x_n+A(x_n)^{-1}\\nabla f_1(x_n)}^2_{A(x_n)}+f_2(x)\\\\&amp;=\\argmin_{x\\in\\H}\\ \\ps{x-x_n}{A(x_n)^{-1}\\nabla f_1(x_n)}_{A(x_n)}+\\tfrac12\\norm{x-x_n}^2_{A(x_n)}+f_2(x)\\\\&amp;=\\argmin_{x\\in\\H}\\ \\ps{x-x_n}{\\nabla f_1(x_n)}+\\tfrac12\\norm{x-x_n}^2_{A(x_n)}+f_2(x)\\\\&amp;=\\argmin_{x\\in\\H}\\ h(x,x_n)+f_2(x).\\end{aligned}$$</p>\n<p><strong>Particular case.</strong> Assume that $f_1$ is $\\beta$-Lipschitz differentiable. According to the descent lemma, a possible choice for the metric is $A(x_n)\\equiv\\beta\\,\\Id$. Then the VMFB algorithm becomes equivalent to the usual forward–backward algorithm.</p>"
+},
+"vmfb-convergence": {
+"p": "07_majorization_minimization.html",
+"k": "thm",
+"t": "Convergence of VMFB",
+"s": "<p><strong>Assumptions.</strong></p>\n<ol>\n<li>$f_1:\\H\\to\\R$ is a coercive, differentiable function. $f_2\\in\\Gz{\\H}$ is continuous on its domain.</li>\n<li>There exists $(\\nu,\\bar\\nu)\\in\\,]0,+\\infty[^2$ such that $(\\forall n\\in\\N)\\ \\nu\\Id\\preccurlyeq A(x_n)\\preccurlyeq\\bar\\nu\\Id$.</li>\n<li>There exists $(\\underline\\theta,\\bar\\theta)\\in\\,]0,+\\infty[^2$ such that $(\\forall n\\in\\N)\\ \\underline\\theta\\le\\theta_n\\le2-\\bar\\theta$.</li>\n</ol>\n<p><strong>Sufficient descent property.</strong> There exists $(\\mu_1,\\mu_2)\\in\\,]0,+\\infty[^2$ such that\n$$(\\forall n\\in\\N)\\qquad f(x_n)-f(x_{n+1})\\ge\\mu_1\\norm{x_{n+1}-x_n}^2\\ge\\mu_2\\norm{\\nabla f_1(x_n)+r_n}^2,\\quad\\text{with }r_n\\in\\partial f_2(x_n).$$</p>\n<p><strong>Convergence theorem (in finite dimension).</strong></p>\n<ol>\n<li>$\\nabla f_1(x_n)+r_n\\to0$ and $f(x_n)\\searrow f(\\tilde x)$ where $\\tilde x$ is a critical point of $f$ (i.e. $0\\in\\nabla f_1(\\tilde x)+\\partial f_2(\\tilde x)$).</li>\n<li>If $f_1$ is convex, any sequential cluster point of $(x_n)_{n\\in\\N}$ is a minimizer of $f$.</li>\n<li>If $f$ is strictly convex, then $(x_n)_n\\to\\hat x$ where $\\hat x$ is a minimizer of $f$.</li>\n</ol>"
 }
 };
