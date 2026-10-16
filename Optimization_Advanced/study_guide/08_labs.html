@@ -578,7 +578,7 @@ def prox_ent(v, g):
 
 <div class="widget" id="w-entropy-prox">
 <div class="w-title">Interactive · the entropy prox through the Lambert function: a barrier, not a threshold</div>
-<p class="w-help">Left: $\varphi(u)=u\log u$ on $[0,3]$ (minimum $-1/e$ at $u=1/e$, infinite slope at $0$). Right: $\xi\mapsto\prox_{\gamma\varphi}(\xi)=\gamma W(\gamma^{-1}e^{\xi/\gamma-1})$, computed by Newton's method on $w+\log w=\log z$ (the log form of $we^w=z$), against the identity (dashed) and soft-thresholding at $\gamma$ (grey) for comparison. Move $\gamma$ and $\xi$: the marker shows the solution of $p+\gamma(1+\log p)=\xi$, always strictly positive.</p>
+<p class="w-help">Left: $\varphi(u)=u\log u$ on $[0,4.2]$ (minimum $-1/e$ at $u=1/e$, infinite slope at $0$). Right: $\xi\mapsto\prox_{\gamma\varphi}(\xi)=\gamma W(\gamma^{-1}e^{\xi/\gamma-1})$, computed by Newton's method on $w+\log w=\log z$ (the log form of $we^w=z$), against the identity (dashed) and soft-thresholding at $\gamma$ (grey) for comparison. Move $\gamma$ and $\xi$: the marker shows the solution of $p+\gamma(1+\log p)=\xi$, always strictly positive.</p>
 <div class="w-ctls">
 <label class="ctl">γ <input type="range" id="ep-gamma" min="0.05" max="2" step="0.05" value="0.5"><output id="ep-gamma-v"></output></label>
 <label class="ctl">ξ <input type="range" id="ep-xi" min="-3" max="4" step="0.05" value="1"><output id="ep-xi-v"></output></label>
@@ -1030,7 +1030,7 @@ x_mm, hist_mm, k_mm = run(mm_step)</code></pre>
 <div><svg class="w-svg" id="hq-svg-omega" viewBox="0 0 380 240" role="img" aria-label="the weight omega as a function of the edge value"></svg><p class="w-cap">$\log_{10}\omega(u)$ with $\omega(u)=1/(\delta^2\psi(u))$; green: $\log_{10}\ddot\psi(u)$; dashed: $\log_{10}(1/\delta^2)$</p></div>
 <div><svg class="w-svg" id="hq-svg-plane" viewBox="0 0 380 240" role="img" aria-label="level lines of f with the metric ellipses of A and B and the two steps"></svg><p class="w-cap">plane $(x_1,x_2)$; dashed diagonal: $x_1=x_2$ (no edge, $\omega$ maximal)</p></div>
 </div>
-<div class="leg"><span><i style="border-color:var(--s1)"></i>$A(x)$ ellipse and MM step</span><span><i style="border-color:var(--s2)"></i>$B(x)$ ellipse and parallel step</span><span><i class="dot" style="background:var(--idea)"></i>minimizer $\hat x$</span></div>
+<div class="leg"><span><i style="border-color:var(--s1)"></i>A(x) ellipse and MM step</span><span><i style="border-color:var(--s2)"></i>B(x) ellipse and parallel step</span><span><i class="dot" style="background:var(--idea)"></i>minimizer x̂</span><span><i style="border-color:var(--ink-2)"></i>level line of f through x</span></div>
 <div class="readout" id="hq-read"></div>
 <p class="w-cap">The orange ellipse is axis-aligned ($B$ is diagonal: each pixel moves independently) and lies inside the blue one ($B\succeq A$: a looser majorant, hence a shorter step). The weight $\omega(u)$ always lies between the true curvature $\ddot\psi(u)$ (that is what makes $h$ a majorant) and the Lipschitz bound $1/\delta^2$. For a strong edge ($\abs u\gg\delta$) it is far below $1/\delta^2$, which is why the half-quadratic metric beats a gradient step.</p>
 </div>
@@ -1207,6 +1207,12 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   function within(fn, lo, hi) { return function (x) { var y = fn(x); return (isFinite(y) && y >= lo && y <= hi) ? y : NaN; }; }
   function polyPts(xs, ys, X, Y, lo, hi) { var p = []; for (var i = 0; i < xs.length; i++) { var v = Math.max(lo, Math.min(hi, ys[i])); p.push(X(xs[i]).toFixed(2) + ',' + Y(v).toFixed(2)); } return p.join(' '); }
+  function polyBreak(svg, xs, ys, X, Y, hi, attrs) {   /* polyline that stops (instead of clamping) above hi */
+    var seg = [];
+    function flush() { if (seg.length > 1) L.el('polyline', Object.assign({ points: seg.join(' '), fill: 'none' }, attrs), svg); seg = []; }
+    for (var i = 0; i < xs.length; i++) { if (ys[i] <= hi) seg.push(X(xs[i]).toFixed(2) + ',' + Y(ys[i]).toFixed(2)); else flush(); }
+    flush();
+  }
   function lbl(svg, x, y, s, cls, anchor) { return L.text(svg, x, y, s, cls || 'f-ink2', { 'font-size': 12, 'text-anchor': anchor || 'start' }); }
   function soft(xi, t) { return Math.sign(xi) * Math.max(Math.abs(xi) - t, 0); }
 
@@ -1257,17 +1263,16 @@ document.addEventListener('DOMContentLoaded', function () {
       for (var i = 0; i < N; i++) { var ci = cbar[i] + sig * cz[i]; c.push(ci); var h = i < NA ? ci : shrink(ci, chi); chat.push(h); if (i >= NA && h !== 0) nz++; }
       var yv = ihaar(c), xh = ihaar(chat);
       var X = L.scale(0, N - 1, 34, 372), Y = L.scale(-2.6, 3.6, 228, 10);
-      L.axes(svgS, X, Y, { nx: 4, ny: 6, dx: 0, dy: 0 });
+      L.axes(svgS, X, Y, { xlabel: 'n', nx: 4, ny: 6, dx: 0, dy: 0 });
       L.el('polyline', { points: polyPts(idx, yv, X, Y, -2.6, 3.6), fill: 'none', class: 's-faint', 'stroke-width': 1 }, svgS);
       L.el('polyline', { points: polyPts(idx, xbar, X, Y, -2.6, 3.6), fill: 'none', class: 's-mut', 'stroke-width': 3.2, 'stroke-opacity': 0.5 }, svgS);
       L.el('polyline', { points: polyPts(idx, xh, X, Y, -2.6, 3.6), fill: 'none', class: 's-acc', 'stroke-width': 1.8 }, svgS);
-      lbl(svgS, 40, 22, 'n', 'tm f-ink2');
       var chis = [], ms = [], best = 0, bestv = Infinity, m0 = mseAt(0);
       for (var j = 0; j <= 150; j++) { var ch = 3 * j / 150, m = mseAt(ch); chis.push(ch); ms.push(m); if (m < bestv) { bestv = m; best = ch; } }
       var ymax = 1.5 * m0, X2 = L.scale(0, 3, 46, 370), Y2 = L.scale(0, ymax, 222, 12), mc = mseAt(chi);
       L.axes(svgM, X2, Y2, { xlabel: 'χ', nx: 6, ny: 4, dx: 1, dy: 3 });
       L.line(svgM, X2(0), Y2(m0), X2(3), Y2(m0), 's-mut dash', { 'stroke-width': 1 });
-      L.el('polyline', { points: polyPts(chis, ms, X2, Y2, 0, ymax), fill: 'none', class: 's-acc', 'stroke-width': 2 }, svgM);
+      polyBreak(svgM, chis, ms, X2, Y2, ymax, { class: 's-acc', 'stroke-width': 2 });
       L.line(svgM, X2(chi), Y2(0), X2(chi), Y2(Math.min(mc, ymax)), 's-2', { 'stroke-width': 1 });
       L.dot(svgM, X2(chi), Y2(Math.min(mc, ymax)), 4.5, 'f-2');
       L.dot(svgM, X2(best), Y2(bestv), 3.5, 'f-idea');
@@ -1324,14 +1329,14 @@ document.addEventListener('DOMContentLoaded', function () {
       [1, 5, 10, 15, 20, 25].forEach(function (k) { L.line(svgV, X(k), yb, X(k), yb + 4, 's-mut', { 'stroke-width': 1 }); lbl(svgV, X(k), yb + 15, String(k), 'f-mut', 'middle'); });
       lbl(svgV, 370, yb - 6, 'k', 'tm f-ink2', 'end');
       L.el('rect', { x: x0 + 1, y: Y(-15.3), width: 372 - x0 - 1, height: yb - Y(-15.3), style: 'fill:var(--rule);opacity:.45' }, svgV);
-      lbl(svgV, 368, Y(-15.3) + 13, 'below machine precision', 'f-mut', 'end');
+      lbl(svgV, x0 + 6, Y(-15.3) + 13, 'below machine precision', 'f-mut');
       L.line(svgV, x0, Y(thr), 372, Y(thr), 's-warn dash', { 'stroke-width': 1.5 });
       lbl(svgV, 368, Y(thr) - 5, 'noise ' + L.fmt(noise, 1) + '%', 'f-warn', 'end');
       var usable = 0;
       sv.forEach(function (s, i) {
         var lv = Math.log10(s / sv[0]), ok = lv > thr; if (ok) usable++;
         var shown = Math.max(lv, -16.9);
-        L.dot(svgV, X(i + 1), Y(shown), 3.6, lv < -15.3 ? 'f-faint' : (ok ? 'f-acc' : 'f-mut'));
+        var dd = L.dot(svgV, X(i + 1), Y(shown), lv < -15.3 ? 2.6 : 3.6, ok ? 'f-acc' : 'f-mut'); if (lv < -15.3) dd.setAttribute('opacity', '0.35');
       });
       var ratios = []; for (var k = 0; k < 10; k++) ratios.push(sv[k] / sv[k + 1]); ratios.sort(function (a, b) { return a - b; });
       if (out) out.textContent = 't_max = ' + L.fmt(tmax, 1) + ' · σ₁ = ' + L.fmt(sv[0], 2) + ' · usable directions (σ_k/σ₁ above the noise): ' + usable + ' of ' + Mk +
@@ -1355,7 +1360,6 @@ document.addEventListener('DOMContentLoaded', function () {
       L.plotFn(svgF, within(phi, -0.6, 6.2), X, Y, { class: 's-acc', 'stroke-width': 2.4 }, 400);
       L.plotFn(svgF, within(function (u) { return phi(p) + slope * (u - p); }, -0.6, 6.2), X, Y, { class: 's-2', 'stroke-width': 1.4 }, 200);
       L.dot(svgF, X(Math.exp(-1)), Y(-Math.exp(-1)), 3, 'f-mut');
-      lbl(svgF, X(Math.exp(-1)) + 4, Y(-Math.exp(-1)) + 14, 'min at 1/e', 'f-mut');
       L.dot(svgF, X(p), Y(phi(p)), 4.5, 'f-2');
       lbl(svgF, 44, 26, 'tangent at p: slope 1 + log p = (ξ − p)/γ', 'f-2');
       lbl(svgF, 44, 42, 'φ(u) = u log u', 'f-acc');
@@ -1403,7 +1407,7 @@ document.addEventListener('DOMContentLoaded', function () {
       L.plotFn(svgP, function (s) { return proxTheta(s, gam); }, X2, Y2, { class: 's-acc', 'stroke-width': 2.4 }, 600);
       L.line(svgP, X2(xi), Y2(0), X2(xi), Y2(p), 's-2 dash', { 'stroke-width': 1 });
       L.dot(svgP, X2(xi), Y2(p), 4.5, 'f-2');
-      lbl(svgP, X2(1 - gam) - 3, 26, '1 − γ', 'f-mut', 'end'); lbl(svgP, X2(1 + gam) + 3, 26, '1 + γ', 'f-mut');
+      lbl(svgP, X2(1 - gam) - 3, 46, '1 − γ', 'f-mut', 'end'); lbl(svgP, X2(1 + gam) + 3, 46, '1 + γ', 'f-mut');
       var txt;
       if (xi < 1 - gam) txt = 'ξ < 1 − γ: cubic branch, ζ = ' + L.fmt(p, 5) + ' ∈ ]0, 1[, residual ζ³ − ξζ² − γ = ' + (p * p * p - xi * p * p - gam).toExponential(1);
       else if (xi <= 1 + gam) txt = 'ξ ∈ [1 − γ, 1 + γ]: plateau, p = 1 (ξ − 1 ∈ γ∂θ(1) = [−γ, γ])';
