@@ -90,7 +90,7 @@ async function validate(browser, page_name, opts) {
   if (report.overflow) report.warnings++;
   // full page screenshot (top) for a visual sanity check
   if (opts.shots) {
-    try { const dir = path.join(SHOTS, page_name.replace(/\.html$/, '')); fs.mkdirSync(dir, { recursive: true }); await page.setViewportSize({ width: 1280, height: 900 }); await page.waitForTimeout(200); await page.screenshot({ path: path.join(dir, '_page_top.png'), fullPage: false }); } catch (e) { }
+    try { const dir = path.join(SHOTS, page_name.replace(/\.html$/, '')); fs.mkdirSync(dir, { recursive: true }); await page.setViewportSize({ width: 1280, height: 900 }); await page.evaluate(() => window.scrollTo(0, 0)); await page.waitForTimeout(250); await page.screenshot({ path: path.join(dir, '_page_top.png'), fullPage: false }); } catch (e) { }
   }
   report.blocking += report.pageErrors.length + report.consoleErrors.length + report.katexErrors.length;
   report.warnings += report.unrendered.length;

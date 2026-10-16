@@ -76,6 +76,16 @@
   }
   document.addEventListener('DOMContentLoaded', initToc);
 
+  /* ---------- TOC collapsed on phones, always open on desktop ---------- */
+  function syncTocOpen() {
+    var d = document.getElementById('toc-det'); if (!d) return;
+    if (window.matchMedia('(max-width: 980px)').matches) d.removeAttribute('open'); else d.setAttribute('open', '');
+  }
+  document.addEventListener('DOMContentLoaded', function () {
+    syncTocOpen();
+    try { window.matchMedia('(max-width: 980px)').addEventListener('change', syncTocOpen); } catch (e) { window.addEventListener('resize', syncTocOpen); }
+  });
+
   /* ---------- expand/collapse proofs ---------- */
   document.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('[data-toggle-details]'); if (!b) return;
