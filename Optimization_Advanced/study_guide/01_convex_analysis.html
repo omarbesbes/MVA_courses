@@ -1109,3 +1109,564 @@ By step 3 this set is nonempty; by the <a class="xref" data-id="minimizers-conve
 </footer>
 </main>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  'use strict';
+  var L = window.LSD;
+  function $(id) { return document.getElementById(id); }
+  function sc(x0, x1, p0, p1) { return L.scale(x0, x1, p0, p1); }
+  /* light axes through the origin (or at the border), no ticks */
+  function thinAxes(svg, X, Y, xlab, ylab) {
+    var y0 = (Y.d[0] <= 0 && Y.d[1] >= 0) ? Y(0) : Y(Y.d[0]);
+    var x0 = (X.d[0] <= 0 && X.d[1] >= 0) ? X(0) : X(X.d[0]);
+    L.line(svg, X(X.d[0]), y0, X(X.d[1]), y0, 's-mut', { 'stroke-width': 1 });
+    L.line(svg, x0, Y(Y.d[0]), x0, Y(Y.d[1]), 's-mut', { 'stroke-width': 1 });
+    if (xlab) L.text(svg, X(X.d[1]) - 2, y0 - 5, xlab, 'tm f-ink2', { 'text-anchor': 'end' });
+    if (ylab) L.text(svg, x0 + 5, Y(Y.d[1]) + 11, ylab, 'tm f-ink2');
+  }
+  function cross(svg, X, Y) {
+    var a = X.d[0] + 0.15 * (X.d[1] - X.d[0]), b = X.d[1] - 0.15 * (X.d[1] - X.d[0]);
+    var c = Y.d[0] + 0.1 * (Y.d[1] - Y.d[0]), d = Y.d[1] - 0.1 * (Y.d[1] - Y.d[0]);
+    L.line(svg, X(a), Y(c), X(b), Y(d), 's-warn dash', { 'stroke-width': 1.5 });
+    L.line(svg, X(a), Y(d), X(b), Y(c), 's-warn dash', { 'stroke-width': 1.5 });
+  }
+  function verdict(svg, x, y, ok, txt) { L.text(svg, x, y, txt || (ok ? '✓' : '✗'), 'verdict ' + (ok ? 'f-idea' : 'f-warn')); }
+  function hollow(svg, x, y, r, cls) { return L.el('circle', { cx: x, cy: y, r: r || 4, class: (cls || 's-ink') + ' f-none', 'stroke-width': 1.8 }, svg); }
+  function fill(svg, x, y, r, cls) { return L.el('circle', { cx: x, cy: y, r: r || 4, class: cls || 'f-ink' }, svg); }
+  function seg(svg, X, Y, a, b, closedA, closedB, cls, fcls) {
+    L.line(svg, X(a), Y(0), X(b), Y(0), cls || 's-acc', { 'stroke-width': 3 });
+    if (closedA) fill(svg, X(a), Y(0), 4, fcls || 'f-acc'); else hollow(svg, X(a), Y(0), 4, cls || 's-acc');
+    if (closedB) fill(svg, X(b), Y(0), 4, fcls || 'f-acc'); else hollow(svg, X(b), Y(0), 4, cls || 's-acc');
+  }
+  function wall(svg, X, Y, x) { L.line(svg, X(x), Y(0), X(x), Y(Y.d[1]), 's-acc dash', { 'stroke-width': 1.2 }); }
+
+  /* ================= static figures ================= */
+  function initFigures() {
+    var svg, X, Y;
+    /* --- domain --- */
+    svg = $('fig-domain');
+    if (svg) {
+      X = sc(-2.2, 2.2, 20, 240); Y = sc(-0.6, 4, 135, 12);
+      thinAxes(svg, X, Y, 'x', 'f(x)');
+      L.plotFn(svg, function (x) { return x * x - 0.3; }, X, Y, { class: 's-acc' });
+      L.text(svg, 130, 148, 'dom f = ℝ (proper)', 'f-ink2', { 'text-anchor': 'middle' });
+      var d = 1.6; X = sc(-0.4, 2.2, 280, 500);
+      thinAxes(svg, X, Y, 'x', 'f(x)');
+      L.plotFn(svg, function (x) { return (x > 0 && x <= d) ? 0.45 / x + 0.6 * (x - 0.9) * (x - 0.9) + 0.1 : NaN; }, X, Y, { class: 's-acc' }, 400);
+      fill(svg, X(d), Y(0.45 / d + 0.6 * (d - 0.9) * (d - 0.9) + 0.1), 4, 'f-acc');
+      L.line(svg, X(d), Y(0), X(d), Y(4), 's-mut dash', { 'stroke-width': 1 });
+      L.text(svg, X(d), Y(0) + 13, 'δ', 'tm f-ink2', { 'text-anchor': 'middle' });
+      L.text(svg, 390, 148, 'dom f = ]0, δ] (proper)', 'f-ink2', { 'text-anchor': 'middle' });
+    }
+    /* --- indicator --- */
+    svg = $('fig-indicator');
+    if (svg) {
+      X = sc(-3, 3, 40, 480); Y = sc(-0.7, 3, 135, 12);
+      thinAxes(svg, X, Y, 'x', 'ι(x)');
+      wall(svg, X, Y, -1.5); wall(svg, X, Y, 1.2);
+      seg(svg, X, Y, -1.5, 1.2, true, true);
+      L.text(svg, X(-1.5), Y(0) + 15, 'δ₁', 'tm f-ink2', { 'text-anchor': 'middle' });
+      L.text(svg, X(1.2), Y(0) + 15, 'δ₂', 'tm f-ink2', { 'text-anchor': 'middle' });
+      L.text(svg, X(-2.6), Y(2.6), '+∞', 'f-acc'); L.text(svg, X(2.1), Y(2.6), '+∞', 'f-acc');
+      L.text(svg, X(-0.15), Y(0) - 8, '0 on [δ₁, δ₂]', 'f-acc', { 'text-anchor': 'middle' });
+    }
+    /* --- epigraphs --- */
+    svg = $('fig-epi');
+    if (svg) {
+      X = sc(-2.2, 2.2, 20, 240); Y = sc(-0.5, 2.3, 135, 12);
+      L.el('polygon', { points: [X(-2.2), Y(2.2), X(0), Y(0), X(2.2), Y(2.2), X(2.2), Y(2.3), X(-2.2), Y(2.3)].join(','), class: 'f-k' }, svg);
+      thinAxes(svg, X, Y, 'x', 'f(x) = |x|');
+      L.plotFn(svg, function (x) { return Math.abs(x); }, X, Y, { class: 's-acc' });
+      L.text(svg, X(0), Y(1.6), 'epi f', 'tm f-ink', { 'text-anchor': 'middle' });
+      X = sc(-2.2, 2.2, 280, 500);
+      L.el('rect', { x: X(-1.2), y: Y(2.3), width: X(1.2) - X(-1.2), height: Y(0) - Y(2.3), class: 'f-k' }, svg);
+      thinAxes(svg, X, Y, 'x', 'f(x) = ι[−δ,δ](x)');
+      wall(svg, X, Y, -1.2); wall(svg, X, Y, 1.2); seg(svg, X, Y, -1.2, 1.2, true, true);
+      L.text(svg, X(-1.2), Y(0) + 14, '−δ', 'tm f-ink2', { 'text-anchor': 'middle' });
+      L.text(svg, X(1.2), Y(0) + 14, 'δ', 'tm f-ink2', { 'text-anchor': 'middle' });
+      L.text(svg, X(0), Y(1.3), 'epi f', 'tm f-ink', { 'text-anchor': 'middle' });
+    }
+    /* --- lsc: four pictures --- */
+    svg = $('fig-lsc');
+    if (svg) {
+      var fL = function (x) { return 1.6 - 0.7 * (x + 1.3) * (x + 1.3); };
+      var fR = function (x) { return -0.4 + 0.8 * (x - 0.7) * (x - 0.7); };
+      var fR2 = function (x) { return fR(x) + 1.0; };
+      var pan = [[15, 245, 12, 140], [275, 505, 12, 140], [15, 245, 162, 290], [275, 505, 162, 290]];
+      var Yd = [-1.2, 2.6];
+      pan.forEach(function (p, i) {
+        var Xp = sc(-2.2, 2.2, p[0], p[1]), Yp = sc(Yd[0], Yd[1], p[3], p[2]);
+        thinAxes(svg, Xp, Yp, 'x', 'f(x)');
+        if (i === 0) {
+          L.plotFn(svg, function (x) { return x <= 0 ? fL(x) : NaN; }, Xp, Yp, { class: 's-acc' });
+          L.plotFn(svg, function (x) { return x > 0 ? fR(x) : NaN; }, Xp, Yp, { class: 's-acc' });
+          fill(svg, Xp(0), Yp(fL(0)), 4, 'f-acc'); hollow(svg, Xp(0), Yp(fR(0)), 4, 's-acc');
+          cross(svg, Xp, Yp); verdict(svg, p[0] + 4, p[2] + 12, false, 'not l.s.c. at the jump: f(0) is the high value');
+        } else if (i === 1) {
+          L.plotFn(svg, function (x) { return x <= 0 ? fL(x) : NaN; }, Xp, Yp, { class: 's-acc' });
+          L.plotFn(svg, function (x) { return x > 0 ? fR2(x) : NaN; }, Xp, Yp, { class: 's-acc' });
+          fill(svg, Xp(0), Yp(fL(0)), 4, 'f-acc'); hollow(svg, Xp(0), Yp(fR2(0)), 4, 's-acc');
+          verdict(svg, p[0] + 4, p[2] + 12, true, 'l.s.c.: f(0) is the low value');
+        } else if (i === 2) {
+          seg(svg, Xp, Yp, -1.3, 1.3, false, false); cross(svg, Xp, Yp);
+          verdict(svg, p[0] + 4, p[2] + 12, false, 'ι of an open interval: not l.s.c.');
+        } else {
+          seg(svg, Xp, Yp, -1.3, 1.3, true, true);
+          verdict(svg, p[0] + 4, p[2] + 12, true, 'ι of a closed interval: l.s.c.');
+        }
+      });
+    }
+    /* --- coercive: three pictures --- */
+    svg = $('fig-coercive');
+    if (svg) {
+      var pan3 = [[15, 175], [180, 340], [345, 505]];
+      pan3.forEach(function (p, i) {
+        var Xp = sc(-2.2, 2.2, p[0], p[1]), Yp = sc(-0.5, 3.1, 140, 12);
+        thinAxes(svg, Xp, Yp, 'x', 'f(x)');
+        L.text(svg, Xp(0) + 6, Yp(2.8) - 3, '+∞', 'f-ink2');
+        if (i === 0) {
+          L.line(svg, Xp(-2.2), Yp(2.8), Xp(2.2), Yp(2.8), 's-mut dash', { 'stroke-width': 1 });
+          L.plotFn(svg, function (x) { return Math.exp(-x); }, Xp, Yp, { class: 's-acc' });
+          cross(svg, Xp, Yp); verdict(svg, p[0] + 4, 12, false, 'e^(−x) → 0: not coercive');
+        } else if (i === 1) {
+          L.line(svg, Xp(-2.2), Yp(2.8), Xp(2.2), Yp(2.8), 's-mut dash', { 'stroke-width': 1 });
+          L.plotFn(svg, function (x) { return Math.abs(x) < 2.1 ? 0.4 * x * x + 0.25 / (2.1 - Math.abs(x)) : NaN; }, Xp, Yp, { class: 's-acc' }, 400);
+          verdict(svg, p[0] + 4, 12, true, 'f → +∞ at both ends: coercive');
+        } else {
+          L.line(svg, Xp(-2.2), Yp(2.8), Xp(-1.3), Yp(2.8), 's-acc dash', { 'stroke-width': 1.5 });
+          L.line(svg, Xp(1.3), Yp(2.8), Xp(2.2), Yp(2.8), 's-acc dash', { 'stroke-width': 1.5 });
+          seg(svg, Xp, Yp, -1.3, 1.3, true, true);
+          verdict(svg, p[0] + 4, 12, true, 'ι of a bounded set: coercive');
+        }
+      });
+    }
+    /* --- convex sets --- */
+    svg = $('fig-convex-sets');
+    if (svg) {
+      L.el('polygon', { points: '35,25 150,25 150,70 90,70 90,130 35,130', class: 'f-k s-acc', 'stroke-width': 1.5 }, svg);
+      L.text(svg, 48, 44, 'C', 'tm f-ink');
+      L.line(svg, 130, 48, 62, 110, 's-warn dash', { 'stroke-width': 1.5 }); fill(svg, 130, 48, 3.5, 'f-warn'); fill(svg, 62, 110, 3.5, 'f-warn');
+      verdict(svg, 20, 146, false, 'a chord leaves C: not convex');
+      L.el('ellipse', { cx: 265, cy: 76, rx: 62, ry: 46, transform: 'rotate(-20 265 76)', class: 'f-k s-acc', 'stroke-width': 1.5 }, svg);
+      L.text(svg, 225, 60, 'C', 'tm f-ink');
+      L.line(svg, 230, 50, 300, 100, 's-idea dash', { 'stroke-width': 1.5 }); fill(svg, 230, 50, 3.5, 'f-idea'); fill(svg, 300, 100, 3.5, 'f-idea');
+      verdict(svg, 200, 146, true, 'convex');
+      L.el('polygon', { points: '385,30 495,45 480,125 372,118', class: 'f-k s-acc', 'stroke-width': 1.5 }, svg);
+      L.text(svg, 395, 52, 'C', 'tm f-ink');
+      verdict(svg, 372, 146, true, 'convex');
+    }
+    /* --- convex functions --- */
+    svg = $('fig-convex-fns');
+    if (svg) {
+      var pan3b = [[15, 175], [180, 340], [345, 505]];
+      pan3b.forEach(function (p, i) {
+        var Xp = sc(-2.2, 2.2, p[0], p[1]), Yp = sc(-0.5, 2.4, 140, 12);
+        thinAxes(svg, Xp, Yp, 'x', i === 0 ? 'f(x) = |x|' : (i === 1 ? 'f(x) = √|x|' : 'f(x) = ι[−δ,δ](x)'));
+        if (i === 0) {
+          L.plotFn(svg, function (x) { return Math.abs(x); }, Xp, Yp, { class: 's-acc' });
+          L.line(svg, Xp(-1.5), Yp(1.5), Xp(1.8), Yp(1.8), 's-idea dash', { 'stroke-width': 1.5 });
+          verdict(svg, p[0] + 4, 150, true, 'convex (chords above the graph)');
+        } else if (i === 1) {
+          L.plotFn(svg, function (x) { return Math.sqrt(Math.abs(x)); }, Xp, Yp, { class: 's-acc' }, 400);
+          L.line(svg, Xp(0), Yp(0), Xp(1.8), Yp(Math.sqrt(1.8)), 's-warn dash', { 'stroke-width': 1.5 });
+          cross(svg, Xp, Yp); verdict(svg, p[0] + 4, 150, false, 'not convex (chord below the graph)');
+        } else {
+          wall(svg, Xp, Yp, -1.2); wall(svg, Xp, Yp, 1.2); seg(svg, Xp, Yp, -1.2, 1.2, true, true);
+          L.text(svg, Xp(-1.2), Yp(0) + 13, '−δ', 'tm f-ink2', { 'text-anchor': 'middle' }); L.text(svg, Xp(1.2), Yp(0) + 13, 'δ', 'tm f-ink2', { 'text-anchor': 'middle' });
+          verdict(svg, p[0] + 4, 150, true, 'convex');
+        }
+      });
+    }
+    /* --- strictly convex --- */
+    svg = $('fig-strict');
+    if (svg) {
+      var pan3c = [[15, 175], [180, 340], [345, 505]];
+      var fs = [function (x) { return x <= 0 ? 0.6 * x * x : (x <= 1 ? 0 : 1.2 * (x - 1) * (x - 1)); },
+                function (x) { var t = Math.max(Math.abs(x) - 0.8, 0); return 1.3 * t * t; },
+                function (x) { return 0.5 * x * x + 0.1; }];
+      pan3c.forEach(function (p, i) {
+        var Xp = sc(-2.2, 2.2, p[0], p[1]), Yp = sc(-0.5, 2.6, 140, 12);
+        thinAxes(svg, Xp, Yp, 'x', 'f(x)');
+        L.plotFn(svg, fs[i], Xp, Yp, { class: 's-acc' }, 400);
+        if (i < 2) { cross(svg, Xp, Yp); verdict(svg, p[0] + 4, 150, false, 'flat piece: not strictly convex'); }
+        else verdict(svg, p[0] + 4, 150, true, 'strictly convex');
+      });
+    }
+    /* --- minimizers --- */
+    svg = $('fig-minimizers');
+    if (svg) {
+      X = sc(-2.8, 2.8, 30, 500); Y = sc(-0.2, 5.4, 150, 10);
+      var P = function (x) { return (x + 2) * (x + 2) * (x - 0.2) * (x - 0.2) * (x - 2.2) * (x - 2.2); };
+      var h = function (x) { return 0.08 * P(x) + 1.2 - 0.25 * x; };
+      var f = function (x) { if (x < -2.5 || x > 2.6) return NaN; var v = h(x); return (x > -0.9 && x < 1.3) ? Math.max(1.5, v) : v; };
+      thinAxes(svg, X, Y, 'x', 'f(x)');
+      L.line(svg, X(-2.5), Y(0), X(2.6), Y(0), 's-acc', { 'stroke-width': 4 }); L.text(svg, X(-2.5), Y(0) + 14, 'S', 'tm f-acc');
+      L.plotFn(svg, f, X, Y, { class: 's-ink' }, 500);
+      /* locate the minima numerically */
+      function argmin(a, b) { var best = a, bv = Infinity; for (var i = 0; i <= 400; i++) { var x = a + (b - a) * i / 400, v = f(x); if (v < bv) { bv = v; best = x; } } return best; }
+      var m1 = argmin(-2.5, -1), m3 = argmin(1.3, 2.6);
+      var flatA = -0.9, flatB = 1.3; for (var x = -0.9; x < 1.3; x += 0.002) { if (h(x) <= 1.5) { flatA = x; break; } } for (x = 1.3; x > -0.9; x -= 0.002) { if (h(x) <= 1.5) { flatB = x; break; } }
+      fill(svg, X(m1), Y(f(m1)), 4.5, 'f-2'); L.text(svg, X(m1), Y(f(m1)) - 10, 'strict local', 'f-2', { 'text-anchor': 'middle' });
+      L.line(svg, X(flatA), Y(1.5), X(flatB), Y(1.5), 's-2', { 'stroke-width': 4 }); L.text(svg, X((flatA + flatB) / 2), Y(1.5) - 10, 'local, not strict (flat)', 'f-2', { 'text-anchor': 'middle' });
+      fill(svg, X(m3), Y(f(m3)), 4.5, 'f-idea'); L.text(svg, X(m3), Y(f(m3)) + 18, 'strict global x̂', 'f-idea', { 'text-anchor': 'middle' });
+    }
+    /* --- liminf --- */
+    svg = $('fig-liminf');
+    if (svg) {
+      var N = 16; X = sc(-0.5, N + 0.5, 35, 500); Y = sc(-2.3, 2.3, 160, 10);
+      var xi = []; for (var n = 0; n <= N; n++) xi.push((n % 2 ? -1 : 1) * (1 + 1 / (n + 1)));
+      thinAxes(svg, X, Y, 'n', 'ξₙ');
+      L.line(svg, X(-0.5), Y(1), X(N + 0.5), Y(1), 's-idea dash', { 'stroke-width': 1 }); L.text(svg, X(N + 0.5), Y(1) - 4, 'lim sup = 1', 'f-idea', { 'text-anchor': 'end' });
+      L.line(svg, X(-0.5), Y(-1), X(N + 0.5), Y(-1), 's-2 dash', { 'stroke-width': 1 }); L.text(svg, X(N + 0.5), Y(-1) + 12, 'lim inf = −1', 'f-2', { 'text-anchor': 'end' });
+      var inf = [], sup = [];
+      for (n = 0; n <= N; n++) { var mi = Infinity, ma = -Infinity; for (var k = n; k <= N + 40; k++) { var v = (k % 2 ? -1 : 1) * (1 + 1 / (k + 1)); mi = Math.min(mi, v); ma = Math.max(ma, v); } inf.push(mi); sup.push(ma); }
+      var pi = [], ps = [];
+      for (n = 0; n <= N; n++) { pi.push(X(n - 0.5) + ',' + Y(inf[n]), X(n + 0.5) + ',' + Y(inf[n])); ps.push(X(n - 0.5) + ',' + Y(sup[n]), X(n + 0.5) + ',' + Y(sup[n])); }
+      L.el('polyline', { points: pi.join(' '), class: 's-2', fill: 'none', 'stroke-width': 1.5 }, svg);
+      L.el('polyline', { points: ps.join(' '), class: 's-idea', fill: 'none', 'stroke-width': 1.5 }, svg);
+      for (n = 0; n <= N; n++) fill(svg, X(n), Y(xi[n]), 3.5, 'f-ink');
+      L.text(svg, X(3), Y(sup[3]) - 6, 'sup_{k≥n} ξ_k', 'f-idea'); L.text(svg, X(3), Y(inf[3]) + 14, 'inf_{k≥n} ξ_k', 'f-2');
+    }
+  }
+
+  /* ================= widget: rates ================= */
+  function initRates() {
+    var svg = $('rt-svg'), out = $('rt-out'); if (!svg) return;
+    function draw(rho) {
+      L.clear(svg);
+      var N = 30, X = sc(0, N, 50, 505), Y = sc(0, 16, 235, 15);
+      L.axes(svg, X, Y, { xlabel: 'n', ylabel: 'digits of accuracy  −log₁₀ eₙ', nx: 6, ny: 4, dx: 0, dy: 0 });
+      var seqs = [
+        { f: function (n) { return -n * Math.log10(rho); }, cls: 's-1', fc: 'f-1', lab: 'Q-linear ρⁿ' },
+        { f: function (n) { return -n * (n + 1) / 2 * Math.log10(rho); }, cls: 's-3', fc: 'f-3', lab: 'Q-superlinear' },
+        { f: function (n) { return Math.log10(n + 1); }, cls: 's-2', fc: 'f-2', lab: 'sublinear 1/(n+1)' }];
+      seqs.forEach(function (s) {
+        var pts = [], last = null;
+        for (var n = 0; n <= N; n++) { var v = s.f(n); if (v > 16.4) break; pts.push(X(n).toFixed(1) + ',' + Y(v).toFixed(1)); L.dot(svg, X(n), Y(v), 2.6, s.fc); last = [n, v]; }
+        L.el('polyline', { points: pts.join(' '), class: s.cls, fill: 'none', 'stroke-width': 1.5 }, svg);
+        if (last) L.text(svg, Math.min(X(last[0]) + 6, 470), Y(last[1]) - 6, s.lab, s.fc.replace('f-', 'f-'), { 'text-anchor': last[0] >= N ? 'end' : 'start' });
+      });
+      var n0 = 10;
+      out.textContent = 'quotients e₁₁/e₁₀:  Q-linear ' + L.fmt(rho, 2) + '   ·   Q-superlinear ρ¹¹ = ' + L.fmt(Math.pow(rho, 11), 4) + '   ·   sublinear 11/12 = ' + L.fmt(11 / 12, 3) + ' (→ 1: no Q-linear rate)';
+    }
+    L.bindRange('rt-rho', draw);
+  }
+
+  /* ================= widget: epigraph explorer ================= */
+  function initEpi() {
+    var svg = $('ep-svg'), steps = $('ep-steps'); if (!svg) return;
+    var fn = 'abs', zeta = 1;
+    var X = sc(-3, 3, 40, 500), Y = sc(-1.5, 3.6, 272, 18), TOP = 3.6;
+    var fLj = function (x) { return 1 - 0.5 * x; }, fRj = function (x) { return 0.5 * (x - 1) * (x - 1) - 0.5; };
+    function levJump(high) {
+      return function (z) {
+        if (z >= 1) return [[2 * (1 - z), 1 + Math.sqrt(2 * z + 1), true, true]];
+        if (z >= 0) return [[0, 1 + Math.sqrt(2 * z + 1), !high, true]];
+        if (z >= -0.5) { var r = Math.sqrt(2 * z + 1); return [[1 - r, 1 + r, true, true]]; }
+        return [];
+      };
+    }
+    var D = {
+      abs: { name: 'f(x) = |x|', f: function (x) { return Math.abs(x); }, lsc: true, cvx: true, lev: function (z) { return z < 0 ? [] : [[-z, z, true, true]]; } },
+      sqrt: { name: 'f(x) = √|x|', f: function (x) { return Math.sqrt(Math.abs(x)); }, lsc: true, cvx: false, lev: function (z) { return z < 0 ? [] : [[-z * z, z * z, true, true]]; } },
+      dwell: { name: 'f(x) = (x² − 2)²/4 − 1', f: function (x) { return (x * x - 2) * (x * x - 2) / 4 - 1; }, lsc: true, cvx: false,
+        lev: function (z) { if (z < -1) return []; var r = 2 * Math.sqrt(z + 1), hi = Math.sqrt(2 + r); if (z >= 0) return [[-hi, hi, true, true]]; var lo = Math.sqrt(2 - r); return [[-hi, -lo, true, true], [lo, hi, true, true]]; } },
+      jumpup: { name: 'jump at 0, f(0) = 1 (high value)', jump: true, high: true, lsc: false, cvx: false, lev: levJump(true) },
+      jumpdown: { name: 'jump at 0, f(0) = 0 (low value)', jump: true, high: false, lsc: true, cvx: false, lev: levJump(false) },
+      open: { name: 'f = ι of ]−1.5, 1.5[', ind: true, closedInd: false, lsc: false, cvx: true, lev: function (z) { return z < 0 ? [] : [[-1.5, 1.5, false, false]]; } },
+      closed: { name: 'f = ι of [−1.5, 1.5]', ind: true, closedInd: true, lsc: true, cvx: true, lev: function (z) { return z < 0 ? [] : [[-1.5, 1.5, true, true]]; } }
+    };
+    function epiPoly(f, a, b, n) {
+      var pts = [[X(a), Y(TOP)]];
+      for (var i = 0; i <= n; i++) { var x = a + (b - a) * i / n; var v = Math.min(f(x), TOP); pts.push([X(x), Y(v)]); }
+      pts.push([X(b), Y(TOP)]);
+      L.el('polygon', { points: pts.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' '), class: 'f-k' }, svg);
+    }
+    function draw() {
+      L.clear(svg);
+      var d = D[fn];
+      /* epigraph */
+      if (d.ind) {
+        L.el('rect', { x: X(-1.5), y: Y(TOP), width: X(1.5) - X(-1.5), height: Y(0) - Y(TOP), class: 'f-k' }, svg);
+      } else if (d.jump) {
+        epiPoly(fLj, -3, 0, 60); epiPoly(fRj, 0, 3, 120);
+      } else epiPoly(d.f, -3, 3, 300);
+      L.axes(svg, X, Y, { xlabel: 'x', nx: 6, ny: 5, dx: 0, dy: 0 });
+      /* graph */
+      if (d.ind) {
+        wall(svg, X, Y, -1.5); wall(svg, X, Y, 1.5);
+        seg(svg, X, Y, -1.5, 1.5, d.closedInd, d.closedInd);
+        if (!d.closedInd) { L.line(svg, X(-1.5), Y(0), X(-1.5), Y(TOP), 's-warn dash', { 'stroke-width': 1.5 }); L.line(svg, X(1.5), Y(0), X(1.5), Y(TOP), 's-warn dash', { 'stroke-width': 1.5 }); L.text(svg, X(1.5) + 6, Y(2.6), 'boundary missing from epi f', 'f-warn'); }
+      } else if (d.jump) {
+        L.plotFn(svg, function (x) { return x <= 0 ? fLj(x) : NaN; }, X, Y, { class: 's-acc', 'stroke-width': 2.2 });
+        L.plotFn(svg, function (x) { return x > 0 ? fRj(x) : NaN; }, X, Y, { class: 's-acc', 'stroke-width': 2.2 });
+        if (d.high) { fill(svg, X(0), Y(1), 4.5, 'f-acc'); hollow(svg, X(0), Y(0), 4.5, 's-acc'); L.line(svg, X(0), Y(0), X(0), Y(1), 's-warn dash', { 'stroke-width': 1.5 }); L.text(svg, X(0) + 8, Y(0.5), 'segment {0}×[0,1[ missing from epi f', 'f-warn'); }
+        else { fill(svg, X(0), Y(0), 4.5, 'f-acc'); hollow(svg, X(0), Y(1), 4.5, 's-acc'); }
+      } else L.plotFn(svg, d.f, X, Y, { class: 's-acc', 'stroke-width': 2.2 }, 400);
+      L.text(svg, X(-2.9), Y(TOP) + 14, 'epi f', 'tm f-ink');
+      L.text(svg, X(-2.9), Y(TOP) + 30, d.name, 'f-ink2');
+      /* level line and level set */
+      L.line(svg, X(-3), Y(zeta), X(3), Y(zeta), 's-2 dash', { 'stroke-width': 1.3 });
+      L.text(svg, X(3) - 2, Y(zeta) - 5, 'ζ = ' + L.fmt(zeta, 1), 'f-2', { 'text-anchor': 'end' });
+      var iv = d.lev(zeta), txt = [];
+      iv.forEach(function (I) {
+        L.line(svg, X(I[0]), Y(0), X(I[1]), Y(0), 's-2', { 'stroke-width': 6, 'stroke-linecap': 'butt' });
+        if (I[2]) fill(svg, X(I[0]), Y(0), 5, 'f-2'); else hollow(svg, X(I[0]), Y(0), 5, 's-2');
+        if (I[3]) fill(svg, X(I[1]), Y(0), 5, 'f-2'); else hollow(svg, X(I[1]), Y(0), 5, 's-2');
+        txt.push((I[2] ? '[' : ']') + L.fmt(I[0], 2) + ', ' + L.fmt(I[1], 2) + (I[3] ? ']' : '['));
+      });
+      var levTxt = iv.length ? txt.join(' ∪ ') : '∅';
+      var levClosed = iv.every(function (I) { return I[2] && I[3]; });
+      var levConvex = iv.length <= 1;
+      steps.innerHTML = '';
+      function li(ok, html) { var e = document.createElement('li'); e.className = ok ? 'ok' : 'ko'; e.innerHTML = html; steps.appendChild(e); }
+      li(d.lsc, 'epi f ' + (d.lsc ? 'is closed' : 'is <b>not</b> closed') + ' ⇒ f is ' + (d.lsc ? 'l.s.c.' : '<b>not</b> l.s.c.' + (d.jump ? ' (x<sub>n</sub> → 0⁺ gives f(x<sub>n</sub>) → 0 < f(0) = 1)' : ' (x<sub>n</sub> → 1.5 from inside gives 0 < +∞ = f(1.5))')));
+      li(d.cvx, 'epi f ' + (d.cvx ? 'is convex' : 'is <b>not</b> convex') + ' ⇒ f is ' + (d.cvx ? 'convex' : '<b>not</b> convex'));
+      li(levClosed, 'lev<sub>≤ζ</sub> f = ' + levTxt + ': ' + (levClosed ? 'closed' : '<b>not</b> closed') + (d.lsc ? ' (always, since f is l.s.c.)' : ''));
+      li(levConvex, 'lev<sub>≤ζ</sub> f ' + (levConvex ? 'is convex' : 'is <b>not</b> convex (two pieces)') + (d.cvx ? ' (always, since f is convex)' : (levConvex ? ' — convex level sets do not make f convex' : '')));
+    }
+    L.bindSeg('ep-fn', function (v) { fn = v; draw(); });
+    L.bindRange('ep-zeta', function (v) { zeta = v; draw(); });
+  }
+
+  /* ================= widget: minimizing sequences ================= */
+  function initMinSeq() {
+    var svg = $('ms-svg'), steps = $('ms-steps'); if (!svg) return;
+    var cs = 'compact', n = 6;
+    var C = {
+      compact: { S: [-2, 2], f: function (x) { return (x * x - 1) * (x * x - 1); }, x: function (k) { return (k % 2 ? -1 : 1) * (1 + 1 / (k + 1)); }, xr: [-2.6, 2.6], yr: [-0.6, 3.2], mins: [-1, 1], name: 'f(x) = (x² − 1)² on S = [−2, 2],  xₙ = (−1)ⁿ(1 + 1/(n+1))' },
+      noncoercive: { S: null, f: function (x) { return Math.exp(x); }, x: function (k) { return -k / 2; }, xr: [-13, 2.6], yr: [-0.6, 3.2], mins: [], name: 'f(x) = eˣ on S = ℝ,  xₙ = −n/2' },
+      notlsc: { S: [-2, 2], f: function (x) { return x === 0 ? 1 : x * x; }, x: function (k) { return 2 / (k + 1); }, xr: [-2.6, 2.6], yr: [-0.6, 3.2], mins: [], name: 'f(x) = x² (x ≠ 0), f(0) = 1 on S = [−2, 2],  xₙ = 2/(n+1)' }
+    };
+    function draw() {
+      L.clear(svg);
+      var c = C[cs], X = sc(c.xr[0], c.xr[1], 40, 500), Y = sc(c.yr[0], c.yr[1], 250, 18);
+      L.axes(svg, X, Y, { xlabel: 'x', nx: 6, ny: 4, dx: 0, dy: 0 });
+      if (c.S) { L.line(svg, X(c.S[0]), Y(0), X(c.S[1]), Y(0), 's-acc', { 'stroke-width': 5 }); L.text(svg, X(c.S[1]) + 6, Y(0) + 4, 'S', 'tm f-acc'); }
+      else { L.line(svg, X(c.xr[0]), Y(0), X(c.xr[1]), Y(0), 's-acc', { 'stroke-width': 5 }); L.text(svg, X(c.xr[1]) - 2, Y(0) - 8, 'S = ℝ', 'tm f-acc', { 'text-anchor': 'end' }); }
+      L.plotFn(svg, function (x) { return (c.S && (x < c.S[0] || x > c.S[1])) ? NaN : (cs === 'notlsc' ? x * x : c.f(x)); }, X, Y, { class: 's-ink' }, 400);
+      if (cs === 'notlsc') { fill(svg, X(0), Y(1), 4.5, 'f-ink'); hollow(svg, X(0), Y(0), 4.5, 's-ink'); L.text(svg, X(0) + 8, Y(1) + 4, 'f(0) = 1', 'f-ink2'); }
+      c.mins.forEach(function (m) { fill(svg, X(m), Y(c.f(m)), 5, 'f-idea'); L.text(svg, X(m), Y(c.f(m)) + 20, 'minimizer', 'f-idea', { 'text-anchor': 'middle' }); });
+      L.text(svg, 44, 272, c.name, 'f-ink2');
+      for (var k = 0; k <= n; k++) {
+        var xk = c.x(k), fk = c.f(xk);
+        var e = L.dot(svg, X(xk), Y(fk), k === n ? 5.5 : 3.5, 'f-2');
+        if (k < n) e.setAttribute('opacity', String(0.25 + 0.6 * (k + 1) / (n + 1)));
+      }
+      var xn = c.x(n), fn_ = c.f(xn);
+      L.text(svg, X(xn), Y(fn_) - 10, 'x' + sub(n), 'tm f-2', { 'text-anchor': 'middle' });
+      L.line(svg, X(xn), Y(fn_), X(xn), Y(0), 's-2 dash', { 'stroke-width': 1 });
+      steps.innerHTML = '';
+      function li(ok, html) { var e2 = document.createElement('li'); e2.className = ok ? 'ok' : 'ko'; e2.innerHTML = html; steps.appendChild(e2); }
+      li(true, 'minimizing sequence: f(x<sub>' + n + '</sub>) = ' + L.fmt(fn_, 4) + ' → inf f = 0');
+      if (cs === 'compact') { li(true, 'compactness: (x<sub>n</sub>) does not converge, but x<sub>2k</sub> → 1 and x<sub>2k+1</sub> → −1, both in S'); li(true, 'lsc at the limit: f(±1) = 0 ≤ lim inf f(x<sub>k<sub>n</sub></sub>) = 0'); li(true, 'conclusion: inf f is attained, Argmin f = {−1, 1}'); }
+      else if (cs === 'noncoercive') { li(false, 'compactness: x<sub>n</sub> = ' + L.fmt(xn, 1) + ' → −∞, no bounded (hence no convergent) subsequence'); li(false, 'lsc at the limit: there is no limit point to test'); li(false, 'conclusion: inf f = 0 is not attained (f > 0 everywhere)'); }
+      else { li(true, 'compactness: x<sub>n</sub> = ' + L.fmt(xn, 3) + ' → 0 ∈ S'); li(false, 'lsc at the limit: f(0) = 1 > lim inf f(x<sub>n</sub>) = 0 — the inequality f(x̂) ≤ lim inf f(x<sub>n</sub>) fails'); li(false, 'conclusion: the limit 0 is not a minimizer; inf f = 0 is not attained'); }
+    }
+    function sub(k) { var s = String(k), o = '', m = '₀₁₂₃₄₅₆₇₈₉'; for (var i = 0; i < s.length; i++) o += m[parseInt(s[i], 10)]; return o; }
+    L.bindSeg('ms-case', function (v) { cs = v; draw(); });
+    L.bindRange('ms-n', function (v) { n = Math.round(v); draw(); });
+  }
+
+  /* ================= widget: chord ================= */
+  function initChord() {
+    var svg = $('ch-svg'), out = $('ch-out'); if (!svg) return;
+    var fn = 'quad', px = -2.2, py = 1.6, al = 0.5;
+    var F = { quad: function (x) { return x * x / 2; }, flat: function (x) { return Math.max(Math.abs(x) - 1, 0); }, dwell: function (x) { return x * x * x * x / 8 - x * x + 1; } };
+    var X = sc(-3.2, 3.2, 40, 500), Y = sc(-1.6, 5, 275, 15);
+    function draw() {
+      L.clear(svg);
+      var f = F[fn];
+      L.axes(svg, X, Y, { xlabel: 'x', nx: 6, ny: 6, dx: 0, dy: 0 });
+      L.plotFn(svg, f, X, Y, { class: 's-ink', 'stroke-width': 2 }, 400);
+      var fx = f(px), fy = f(py);
+      /* chord pieces coloured by validity */
+      var M = 120, prev = null, fails = 0;
+      for (var i = 0; i <= M; i++) {
+        var a = i / M, z = a * px + (1 - a) * py, cv = a * fx + (1 - a) * fy, ok = f(z) <= cv + 1e-9;
+        if (!ok) fails++;
+        if (prev) L.line(svg, X(prev[0]), Y(prev[1]), X(z), Y(cv), ok ? 's-idea' : 's-warn', { 'stroke-width': 2.5 });
+        prev = [z, cv];
+      }
+      var zc = al * px + (1 - al) * py, fz = f(zc), cz = al * fx + (1 - al) * fy, gap = cz - fz, okc = gap >= -1e-9;
+      L.line(svg, X(zc), Y(fz), X(zc), Y(cz), okc ? 's-idea dash' : 's-warn dash', { 'stroke-width': 2 });
+      fill(svg, X(px), Y(fx), 5, 'f-ink'); fill(svg, X(py), Y(fy), 5, 'f-ink');
+      L.text(svg, X(px), Y(fx) + 18, '(x, f(x))', 'tm f-ink', { 'text-anchor': 'middle' });
+      L.text(svg, X(py), Y(fy) + 18, '(y, f(y))', 'tm f-ink', { 'text-anchor': 'middle' });
+      fill(svg, X(zc), Y(fz), 4.5, okc ? 'f-idea' : 'f-warn'); fill(svg, X(zc), Y(cz), 4.5, okc ? 'f-idea' : 'f-warn');
+      L.text(svg, X(zc) + 8, Y(cz) - 6, 'αf(x) + (1−α)f(y)', okc ? 'f-idea' : 'f-warn');
+      L.text(svg, X(zc) + 8, Y(fz) + 14, 'f(αx + (1−α)y)', okc ? 'f-idea' : 'f-warn');
+      L.line(svg, X(zc), Y(0), X(zc), Y(Math.min(fz, cz)), 's-mut dash', { 'stroke-width': 1 });
+      L.text(svg, X(zc), Y(0) + 26, 'αx + (1−α)y', 'tm f-ink2', { 'text-anchor': 'middle' });
+      out.textContent = 'z = αx + (1−α)y = ' + L.fmt(zc, 2) + '   f(z) = ' + L.fmt(fz, 3) + '   chord = ' + L.fmt(cz, 3) + '   gap = chord − f(z) = ' + L.fmt(gap, 3) + (okc ? '  ≥ 0 ✓' : '  < 0 ✗ (convexity fails for this pair)') + (fails ? '   ·   the chord inequality fails for ' + fails + ' of ' + (M + 1) + ' sampled α' : '   ·   holds for every sampled α');
+    }
+    L.bindSeg('ch-fn', function (v) { fn = v; draw(); });
+    L.bindRange('ch-x', function (v) { px = v; draw(); });
+    L.bindRange('ch-y', function (v) { py = v; draw(); });
+    L.bindRange('ch-a', function (v) { al = v; draw(); });
+  }
+
+  /* ================= widget: variational inequality on a disc ================= */
+  function initVarIneq() {
+    var svg = $('vi-svg'), out = $('vi-out'); if (!svg) return;
+    var cx = 1.8, cy = 1, th = 60;
+    var X = sc(-3.3, 3.3, 10, 510), Y = sc(-2.1, 2.1, 320, 2);
+    function draw() {
+      L.clear(svg);
+      var arr = L.arrowDefs(svg, 'vi-arrow', 'f-2');
+      var c = [cx, cy], xb = [Math.cos(th * Math.PI / 180), Math.sin(th * Math.PI / 180)];
+      var g = [xb[0] - c[0], xb[1] - c[1]], ng = Math.hypot(g[0], g[1]);
+      var nc = Math.hypot(c[0], c[1]), xh = nc <= 1 ? c : [c[0] / nc, c[1] / nc];
+      var minv = -ng - (g[0] * xb[0] + g[1] * xb[1]);
+      var holds = minv >= -1e-9;
+      /* level circles of f */
+      for (var k = 1; k <= 9; k++) L.el('circle', { cx: X(c[0]), cy: Y(c[1]), r: (X(0.4 * k) - X(0)), class: 's-faint f-none', 'stroke-width': 1 }, svg);
+      thinAxes(svg, X, Y, '', '');
+      /* half-plane {⟨g | y − x̄⟩ ≥ 0} */
+      if (ng > 1e-9) {
+        var gh = [g[0] / ng, g[1] / ng], t = [-gh[1], gh[0]];
+        var P = [[xb[0] - 4 * t[0], xb[1] - 4 * t[1]], [xb[0] + 4 * t[0], xb[1] + 4 * t[1]], [xb[0] + 4 * t[0] + 6 * gh[0], xb[1] + 4 * t[1] + 6 * gh[1]], [xb[0] - 4 * t[0] + 6 * gh[0], xb[1] - 4 * t[1] + 6 * gh[1]]];
+        L.el('polygon', { points: P.map(function (p) { return X(p[0]).toFixed(1) + ',' + Y(p[1]).toFixed(1); }).join(' '), class: 'f-acc', opacity: 0.08 }, svg);
+        L.line(svg, X(P[0][0]), Y(P[0][1]), X(P[1][0]), Y(P[1][1]), 's-ink2 dash', { 'stroke-width': 1.2 });
+      }
+      /* the disc */
+      L.el('circle', { cx: X(0), cy: Y(0), r: X(1) - X(0), class: 'f-k s-acc', 'stroke-width': 2 }, svg);
+      L.text(svg, X(0) - 4, Y(0) - 50, 'C', 'tm f-acc');
+      /* normal ray at x̄ */
+      L.line(svg, X(xb[0]), Y(xb[1]), X(2.4 * xb[0]), Y(2.4 * xb[1]), 's-idea dash', { 'stroke-width': 1.5 });
+      L.text(svg, X(2.45 * xb[0]), Y(2.45 * xb[1]) + 4, 'N_C(x̄)', 'tm f-idea', { 'text-anchor': xb[0] < 0 ? 'end' : 'start' });
+      /* −∇f(x̄) arrow (scaled by 0.5 for display) */
+      var s = 0.5;
+      L.line(svg, X(xb[0]), Y(xb[1]), X(xb[0] - s * g[0]), Y(xb[1] - s * g[1]), 's-2', { 'stroke-width': 2.5, 'marker-end': arr });
+      L.text(svg, X(xb[0] - s * g[0]), Y(xb[1] - s * g[1]) - 8, '−∇f(x̄)', 'tm f-2', { 'text-anchor': 'middle' });
+      /* points */
+      fill(svg, X(c[0]), Y(c[1]), 4.5, 'f-ink'); L.text(svg, X(c[0]) + 8, Y(c[1]) + 4, 'c', 'tm f-ink');
+      if (ng > 1e-9) { var ys = [-g[0] / ng, -g[1] / ng]; fill(svg, X(ys[0]), Y(ys[1]), 5, 'f-5'); L.text(svg, X(ys[0]) + 8, Y(ys[1]) + 14, 'y*', 'tm f-5'); }
+      fill(svg, X(xh[0]), Y(xh[1]), 6, 'f-idea'); L.text(svg, X(xh[0]) + 9, Y(xh[1]) - 6, 'x̂', 'tm f-idea');
+      fill(svg, X(xb[0]), Y(xb[1]), 5.5, 'f-2'); L.text(svg, X(xb[0]) - 9, Y(xb[1]) + 16, 'x̄', 'tm f-2');
+      L.text(svg, 14, 316, holds ? '✓ ⟨∇f(x̄) | y − x̄⟩ ≥ 0 for every y ∈ C: x̄ = x̂' : '✗ fails at y*: x̄ is not the minimizer', 'verdict ' + (holds ? 'f-idea' : 'f-warn'));
+      out.textContent = '∇f(x̄) = x̄ − c = (' + L.fmt(g[0], 2) + ', ' + L.fmt(g[1], 2) + ')   min over y ∈ C of ⟨∇f(x̄) | y − x̄⟩ = ' + L.fmt(minv, 3) + (holds ? ' ≥ 0: the variational inequality holds; −∇f(x̄) lies on the normal ray' : ' < 0: violated (worst y = y*)') + '   ·   x̂ = P_C(c) = (' + L.fmt(xh[0], 2) + ', ' + L.fmt(xh[1], 2) + ')' + (nc <= 1 ? ', interior, ∇f(x̂) = 0' : ', on the boundary');
+    }
+    L.bindRange('vi-cx', function (v) { cx = v; draw(); });
+    L.bindRange('vi-cy', function (v) { cy = v; draw(); });
+    L.bindRange('vi-th', function (v) { th = v; draw(); }, function (v) { return L.fmt(v, 0) + '°'; });
+  }
+
+  /* ================= widget: weak vs strong ================= */
+  function initWeakStrong() {
+    var svg = $('ws-svg'), out = $('ws-out'); if (!svg) return;
+    var mode = 'ortho', n = 4, K = 14;
+    function coord(m, k) { if (m === 'ortho') return k === m_n ? 1 : 0; return 0; }
+    var m_n = n;
+    function xk(m, k, nn) { if (m === 'ortho') return k === nn ? 1 : 0; if (m === 'strong') return k === nn ? 1 / nn : 0; return k === 1 ? (nn % 2 ? -1 : 1) : 0; }
+    function draw() {
+      L.clear(svg);
+      var Xl = sc(0.5, K + 0.5, 40, 250), Yl = sc(-1.15, 1.15, 240, 20);
+      L.axes(svg, Xl, Yl, { xlabel: 'k', ylabel: 'coordinate', nx: 7, ny: 4, dx: 0, dy: 1 });
+      var w = (Xl(2) - Xl(1)) * 0.36;
+      for (var k = 1; k <= K; k++) {
+        L.el('rect', { x: Xl(k) - w, y: Yl(1 / k), width: w, height: Yl(0) - Yl(1 / k), class: 'f-mut', opacity: 0.3 }, svg);
+        var v = xk(mode, k, n); if (Math.abs(v) > 1e-12) L.el('rect', { x: Xl(k), y: Yl(Math.max(v, 0)), width: w, height: Math.abs(Yl(v) - Yl(0)), class: 'f-1' }, svg);
+      }
+      L.text(svg, 44, 262, 'coordinates of x' + subs(n) + ' (blue) and of y = (1/k) (grey)', 'f-ink2');
+      var Xr = sc(0.5, K + 0.5, 300, 505), Yr = sc(-1.15, 1.15, 240, 20);
+      L.axes(svg, Xr, Yr, { xlabel: 'n', nx: 7, ny: 4, dx: 0, dy: 1 });
+      var pi = [], pn = [];
+      for (k = 1; k <= K; k++) {
+        var ip = 0, nr = 0; for (var j = 1; j <= K; j++) { var vv = xk(mode, j, k); ip += vv / j; nr += vv * vv; }
+        nr = Math.sqrt(nr);
+        pi.push(Xr(k) + ',' + Yr(ip)); pn.push(Xr(k) + ',' + Yr(nr));
+        L.dot(svg, Xr(k), Yr(ip), 3, 'f-2'); L.dot(svg, Xr(k), Yr(nr), 3, 'f-1');
+      }
+      L.el('polyline', { points: pi.join(' '), class: 's-2', fill: 'none', 'stroke-width': 1.5 }, svg);
+      L.el('polyline', { points: pn.join(' '), class: 's-1', fill: 'none', 'stroke-width': 1.5 }, svg);
+      L.line(svg, Xr(n), Yr(-1.15), Xr(n), Yr(1.15), 's-mut dash', { 'stroke-width': 1 });
+      L.text(svg, Xr(K) + 2, Yr(1) - 6, '‖xₙ‖', 'f-1', { 'text-anchor': 'end' });
+      L.text(svg, 304, 262, '⟨y | xₙ⟩ (orange) and ‖xₙ‖ (blue) against n', 'f-ink2');
+      var ipn = 0, nrn = 0, dn = 0; for (j = 1; j <= K; j++) { var a = xk(mode, j, n), b = n > 1 ? xk(mode, j, n - 1) : 0; ipn += a / j; nrn += a * a; dn += (a - b) * (a - b); }
+      out.textContent = '‖x' + subs(n) + '‖ = ' + L.fmt(Math.sqrt(nrn), 3) + '   ⟨y | x' + subs(n) + '⟩ = ' + L.fmt(ipn, 4) + (n > 1 ? '   ‖x' + subs(n) + ' − x' + subs(n - 1) + '‖ = ' + L.fmt(Math.sqrt(dn), 3) : '') +
+        (mode === 'ortho' ? '   ·   weak limit 0, no strong limit (no Cauchy subsequence)' : mode === 'strong' ? '   ·   ‖xₙ‖ = 1/n → 0: strong (hence weak) convergence to 0' : '   ·   ⟨y | xₙ⟩ = (−1)ⁿ: no weak limit although ‖xₙ‖ = 1');
+    }
+    function subs(k) { var s = String(k), o = '', m = '₀₁₂₃₄₅₆₇₈₉'; for (var i = 0; i < s.length; i++) o += m[parseInt(s[i], 10)]; return o; }
+    L.bindSeg('ws-seq', function (v) { mode = v; draw(); });
+    L.bindRange('ws-n', function (v) { n = Math.round(v); draw(); });
+  }
+
+  /* ================= widget: coercivity in 2-D ================= */
+  function initCoercive2d() {
+    var svg = $('co-svg'), steps = $('co-steps'); if (!svg) return;
+    var a1 = 1, a2 = 0.4, z = 1;
+    var X = sc(-3.3, 3.3, 10, 510), Y = sc(-2.05, 2.05, 318, 8);
+    function f(x, y) { return 0.5 * (a1 * x * x + a2 * y * y); }
+    function draw() {
+      L.clear(svg);
+      var h = 0.15, nx = Math.round(6.6 / h), ny = Math.round(4.1 / h);
+      var g = L.el('g', null, svg);
+      for (var i = 0; i < nx; i++) for (var j = 0; j < ny; j++) {
+        var x = -3.3 + (i + 0.5) * h, y = -2.05 + (j + 0.5) * h;
+        if (f(x, y) <= z) L.el('rect', { x: X(x - h / 2), y: Y(y + h / 2), width: X(h) - X(0) + 0.5, height: Y(0) - Y(h) + 0.5, class: 'f-acc', opacity: 0.16 }, g);
+      }
+      thinAxes(svg, X, Y, 'x₁', 'x₂');
+      /* marching squares at level z (and at z/3, 3z faint) */
+      [[z / 3, 's-faint'], [3 * z, 's-faint'], [z, 's-2']].forEach(function (lv) { contour(lv[0], lv[1], lv[1] === 's-2' ? 2.2 : 1); });
+      function contour(level, cls, sw) {
+        var hh = 0.08, N1 = Math.round(6.6 / hh), N2 = Math.round(4.1 / hh);
+        for (var i = 0; i < N1; i++) for (var j = 0; j < N2; j++) {
+          var x0 = -3.3 + i * hh, y0 = -2.05 + j * hh, x1 = x0 + hh, y1 = y0 + hh;
+          var c = [[x0, y0, f(x0, y0) - level], [x1, y0, f(x1, y0) - level], [x1, y1, f(x1, y1) - level], [x0, y1, f(x0, y1) - level]];
+          var pts = [];
+          for (var e = 0; e < 4; e++) { var p = c[e], q = c[(e + 1) % 4]; if ((p[2] < 0) !== (q[2] < 0)) { var t = p[2] / (p[2] - q[2]); pts.push([p[0] + t * (q[0] - p[0]), p[1] + t * (q[1] - p[1])]); } }
+          for (var m = 0; m + 1 < pts.length; m += 2) L.line(svg, X(pts[m][0]), Y(pts[m][1]), X(pts[m + 1][0]), Y(pts[m + 1][1]), cls, { 'stroke-width': sw });
+        }
+      }
+      var coer = a1 > 0 && a2 > 0, argmin, inf;
+      if (a1 > 0 && a2 > 0) { fill(svg, X(0), Y(0), 5, 'f-idea'); argmin = '{0}'; inf = '0'; }
+      else if (a1 === 0 && a2 > 0) { L.line(svg, X(-3.3), Y(0), X(3.3), Y(0), 's-idea', { 'stroke-width': 3 }); argmin = 'the line x₂ = 0'; inf = '0'; }
+      else if (a1 > 0 && a2 === 0) { L.line(svg, X(0), Y(-2.05), X(0), Y(2.05), 's-idea', { 'stroke-width': 3 }); argmin = 'the line x₁ = 0'; inf = '0'; }
+      else if (a1 === 0 && a2 === 0) { argmin = 'the whole plane (f ≡ 0)'; inf = '0'; }
+      else { argmin = '∅'; inf = '−∞'; }
+      L.text(svg, 14, 20, 'f(x) = ½(' + L.fmt(a1, 1) + ' x₁² + ' + L.fmt(a2, 1) + ' x₂²),  shaded: lev≤ζ f with ζ = ' + L.fmt(z, 1), 'f-ink2');
+      steps.innerHTML = '';
+      function li(ok, html) { var e2 = document.createElement('li'); e2.className = ok ? 'ok' : 'ko'; e2.innerHTML = html; steps.appendChild(e2); }
+      li(coer, 'coercive: ' + (coer ? 'yes (a₁ > 0 and a₂ > 0: f ≥ ½ min(a₁,a₂)‖x‖² → +∞)' : 'no (along the axis of a vanishing or negative coefficient, f does not go to +∞)'));
+      li(coer, 'lev<sub>≤ζ</sub> f bounded: ' + (coer ? 'yes, an ellipse' : 'no, it is unbounded'));
+      li(argmin !== '∅', 'inf f = ' + inf + ',  Argmin f = ' + argmin + (argmin !== '∅' && !coer ? ' — minimizers exist without coercivity (sufficient, not necessary)' : ''));
+    }
+    L.bindRange('co-a1', function (v) { a1 = v; draw(); });
+    L.bindRange('co-a2', function (v) { a2 = v; draw(); });
+    L.bindRange('co-z', function (v) { z = v; draw(); });
+  }
+
+  /* ================= widget: Hessian test on the logistic loss ================= */
+  function initHessian() {
+    var sf = $('hs-svg-f'), sd = $('hs-svg-d'), out = $('hs-out'); if (!sf || !sd) return;
+    function softplus(t) { return t > 30 ? t : Math.log1p(Math.exp(t)); }
+    function draw(y) {
+      L.clear(sf); L.clear(sd);
+      var X = sc(-4, 4, 38, 350), Yf = sc(-0.4, 6.2, 205, 14), Yd = sc(-0.15, 2.45, 205, 14);
+      L.axes(sf, X, Yf, { xlabel: 'x', ylabel: 'f', nx: 4, ny: 4, dx: 0, dy: 0 });
+      L.plotFn(sf, function (x) { return softplus(-y * x); }, X, Yf, { class: 's-ink', 'stroke-width': 2.2 });
+      L.axes(sd, X, Yd, { xlabel: 'x', ylabel: "f''", nx: 4, ny: 4, dx: 0, dy: 1 });
+      L.plotFn(sd, function (x) { var s = 1 / (1 + Math.exp(-y * x)); return y * y * s * (1 - s); }, X, Yd, { class: 's-2', 'stroke-width': 2.2 });
+      L.line(sd, X(-4), Yd(y * y / 4), X(4), Yd(y * y / 4), 's-faint dash', { 'stroke-width': 1 });
+      L.text(sd, X(4) - 2, Yd(y * y / 4) - 5, 'y²/4 = ' + L.fmt(y * y / 4, 3), 'f-ink2', { 'text-anchor': 'end' });
+      if (Math.abs(y) < 1e-12) L.text(sf, X(0), Yf(Math.log(2)) - 8, 'f ≡ log 2', 'f-ink2', { 'text-anchor': 'middle' });
+      out.textContent = 'y = ' + L.fmt(y, 2) + ':  f′′ ≥ 0 everywhere ⇒ convex;  ' + (Math.abs(y) < 1e-12 ? 'f′′ ≡ 0 (f constant): convex but not strictly convex' : 'f′′ > 0 everywhere ⇒ strictly convex');
+    }
+    L.bindRange('hs-y', draw);
+  }
+
+  try { initFigures(); } catch (e) { console.error('figures', e); }
+  try { initRates(); } catch (e) { console.error('widget w-rates', e); }
+  try { initEpi(); } catch (e) { console.error('widget w-epi-explorer', e); }
+  try { initMinSeq(); } catch (e) { console.error('widget w-min-seq', e); }
+  try { initChord(); } catch (e) { console.error('widget w-chord', e); }
+  try { initVarIneq(); } catch (e) { console.error('widget w-var-ineq', e); }
+  try { initWeakStrong(); } catch (e) { console.error('widget w-weak-strong', e); }
+  try { initCoercive2d(); } catch (e) { console.error('widget w-coercive-2d', e); }
+  try { initHessian(); } catch (e) { console.error('widget w-hessian-1d', e); }
+});
+</script>
+</body>
+</html>
