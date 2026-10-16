@@ -1001,5 +1001,35 @@ window.LSD_REGISTRY = {
 "k": "thm",
 "t": "Convergence of VMFB",
 "s": "<p><strong>Assumptions.</strong></p>\n<ol>\n<li>$f_1:\\H\\to\\R$ is a coercive, differentiable function. $f_2\\in\\Gz{\\H}$ is continuous on its domain.</li>\n<li>There exists $(\\nu,\\bar\\nu)\\in\\,]0,+\\infty[^2$ such that $(\\forall n\\in\\N)\\ \\nu\\Id\\preccurlyeq A(x_n)\\preccurlyeq\\bar\\nu\\Id$.</li>\n<li>There exists $(\\underline\\theta,\\bar\\theta)\\in\\,]0,+\\infty[^2$ such that $(\\forall n\\in\\N)\\ \\underline\\theta\\le\\theta_n\\le2-\\bar\\theta$.</li>\n</ol>\n<p><strong>Sufficient descent property.</strong> There exists $(\\mu_1,\\mu_2)\\in\\,]0,+\\infty[^2$ such that\n$$(\\forall n\\in\\N)\\qquad f(x_n)-f(x_{n+1})\\ge\\mu_1\\norm{x_{n+1}-x_n}^2\\ge\\mu_2\\norm{\\nabla f_1(x_n)+r_n}^2,\\quad\\text{with }r_n\\in\\partial f_2(x_n).$$</p>\n<p><strong>Convergence theorem (in finite dimension).</strong></p>\n<ol>\n<li>$\\nabla f_1(x_n)+r_n\\to0$ and $f(x_n)\\searrow f(\\tilde x)$ where $\\tilde x$ is a critical point of $f$ (i.e. $0\\in\\nabla f_1(\\tilde x)+\\partial f_2(\\tilde x)$).</li>\n<li>If $f_1$ is convex, any sequential cluster point of $(x_n)_{n\\in\\N}$ is a minimizer of $f$.</li>\n<li>If $f$ is strictly convex, then $(x_n)_n\\to\\hat x$ where $\\hat x$ is a minimizer of $f$.</li>\n</ol>"
+},
+"lab-denoising": {
+"p": "08_labs.html",
+"k": "lab",
+"t": "Lab 1 · Proximal denoising in an orthonormal wavelet basis",
+"s": "<p>An image is stored as $x\\in\\R^N$ (pixels stacked). We observe $y=\\bar x+w$ with $w\\sim\\mathcal N(0,\\sigma^2\\Id)$, $\\sigma=30$ on the $[0,255]$ scale. The estimate is\n$$\\hat x=\\argmin_{x\\in\\R^N}\\ \\tfrac12\\norm{x-y}^2+f(Lx),\\qquad(1)$$\nwhere $L\\in\\R^{N\\times N}$ is an <em>orthogonal</em> transform ($L^\\top L=LL^\\top=\\Id$, so $L^{-1}=L^\\top=L^*$) and $f$ is separable: $f(u)=\\sum_{i=1}^N f_i(u_i)$ with every $f_i\\in\\Gz{\\R}$. In question 4, $L$ is a 2-D orthonormal wavelet decomposition, $f_i=0$ on the set $K$ of approximation coefficients and $f_i=\\varphi=\\chi\\abs{\\cdot}^q$ on the detail coefficients, $q\\in\\{1,4/3,3/2,2,3,4\\}$, $\\chi\\gt0$.</p>"
+},
+"lab-nmr1": {
+"p": "08_labs.html",
+"k": "lab",
+"t": "Lab 2 (part I) · DOSY NMR reconstruction with smoothness, box and sparsity priors",
+"s": "<p>A DOSY NMR experiment measures $y^{(m)}=\\int\\chi(T)\\,e^{-t^{(m)}T}\\,dT$ for $M$ gradient settings $t^{(m)}$: a Laplace transform of the unknown diffusion distribution $\\chi$. Discretized on a grid $(T^{(n)})_{1\\le n\\le N}$,\n$$y=Kx+w,\\qquad K^{(m,n)}=\\exp\\big(-T^{(n)}t^{(m)}\\big),\\qquad K\\in\\R^{M\\times N},$$\nwith $w\\sim\\mathcal N(0,\\sigma^2\\Id_M)$. The estimate is\n$$\\hat x=\\argmin_{x\\in\\R^N}\\ \\tfrac12\\norm{Kx-y}^2+\\beta g(x),\\qquad(4)$$\n$g\\in\\Gz{\\R^N}$, $\\beta\\ge0$, for three priors: smoothness $g=\\tfrac12\\norm{D\\cdot}^2$ with $[Dx]^{(n)}=x^{(n)}-x^{(n-1)}$ (circular, $x^{(0)}=x^{(N)}$); smoothness + box $g=\\tfrac12\\norm{D\\cdot}^2+\\ind_{[x_{\\min},x_{\\max}]^N}$ with $0\\lt x_{\\min}\\lt x_{\\max}$ the extreme values of the true signal; sparsity $g=\\norm{\\cdot}_1$. For each prior: existence and uniqueness, an algorithm, its implementation, the normalized error $E(\\hat x,x)=\\norm{\\hat x-x}^2/\\norm{x}^2$, and a manual search of $\\beta$.</p>"
+},
+"lab-nmr2": {
+"p": "08_labs.html",
+"k": "lab",
+"t": "Lab 2 (part II) · Maximum-entropy regularization: FB and DR with the Lambert $W$ function, then a constrained formulation",
+"s": "<p>Same data $y=Kx+w$ as part I. The maximum-entropy estimate is\n$$\\hat x=\\argmin_{x\\in\\R^N}\\ \\tfrac12\\norm{Kx-y}^2+\\beta\\,\\mathrm{ent}(x),\\qquad \\mathrm{ent}(x)=\\sum_{n=1}^N\\varphi(x^{(n)}),\\qquad \\varphi(u)=\\begin{cases}u\\log u&amp;u\\gt0\\\\0&amp;u=0\\\\+\\infty&amp;u\\lt0.\\end{cases}\\qquad(1)$$\nQuestions: is $\\mathrm{ent}$ convex, proper, lsc, differentiable? existence and uniqueness; the prox of $\\mathrm{ent}$ (Lambert $W$); a Forward–Backward and a Douglas–Rachford algorithm; their implementation and performance at $\\beta=10^{-2}$; the best $\\beta$; comparison with part I; and the constrained formulation $\\min\\mathrm{ent}(x)$ s.t. $\\norm{Kx-y}^2\\le\\eta M\\sigma^2$.</p>"
+},
+"lab-dbsm": {
+"p": "08_labs.html",
+"k": "lab",
+"t": "Lab 3 · Selectivity estimation by a primal-dual algorithm",
+"s": "<p>$\\Omega$ is a finite set of $N$ elements, $x\\in\\R^N$ their unknown probabilities (selectivities). For $M$ events (subsets of $\\Omega$), rough estimates $b=(b^{(i)})_{1\\le i\\le M}\\in\\,]0,1]^M$ of their probabilities are available. With $A\\in\\{0,1\\}^{M\\times N}$ the incidence matrix ($A^{(i,j)}=1$ iff element $j$ belongs to event $i$, so $[Ax]^{(i)}$ is the model probability of event $i$), the problem is\n$$\\min_{x\\in C}\\ q_b(Ax),\\qquad C=\\Big\\{x\\in[0,1]^N:\\ \\textstyle\\sum_{j=1}^Nx^{(j)}=1\\Big\\},\\qquad q_b(y)=\\sum_{i=1}^M\\theta\\big(y^{(i)}/b^{(i)}\\big),\\qquad(1)$$\n$$\\theta(\\xi)=\\begin{cases}\\xi&amp;\\xi\\ge1\\\\ \\xi^{-1}&amp;0\\lt\\xi\\lt1\\\\+\\infty&amp;\\xi\\le0.\\end{cases}$$\nQuestions: convexity and lsc of $q_b$; existence; the prox of $\\gamma q_b$ from the given $\\prox_{\\gamma\\theta}$; a function computing it; a primal-dual algorithm (a projection onto $C$ is provided); the $6\\times7$ example; applicability of ADMM.</p>"
+},
+"lab-tomography": {
+"p": "08_labs.html",
+"k": "lab",
+"t": "Lab 4 · X-ray tomography with MM, 3MG, block-coordinate and parallel MM",
+"s": "<p>$y=Hx+w\\in\\R^M$, $w\\sim\\mathcal N(0,\\sigma^2\\Id)$ with $\\sigma=1$; $H\\in\\R^{M\\times N}$ sparse, $H^{(m,n)}$ = length of the intersection of ray $m$ with pixel $n$; $N=90\\times90=8100$, $M=L\\times N_\\theta=90\\times180=16200$ (90 detector cells, 180 angles in $[0,\\pi[$). The reconstruction minimizes\n$$f(x)=\\tfrac12\\norm{Hx-y}^2+\\lambda\\sum_{n=1}^{2N}\\psi\\big([Gx]^{(n)}\\big),\\qquad\\psi(u)=\\sqrt{1+u^2/\\delta^2},\\qquad(\\lambda,\\delta)=(0.13,0.02),$$\nwhere $G\\in\\R^{2N\\times N}$ stacks the horizontal and vertical finite differences of the image. Questions: the gradient; the Lipschitz constant $L=\\norm{H}^2+(\\lambda/\\delta^2)\\norm{G}^2$; gradient descent; a quadratic majorant with curvature $A(x)$ and the MM quadratic algorithm; 3MG; block-coordinate MM; the diagonal bound $A(x)\\preceq B(x)$ and parallel MM; comparison in time, stopping rule $\\norm{\\nabla f(x_k)}\\le\\sqrt N\\,10^{-4}$, SNR, and a search for $(\\lambda,\\delta)$.</p>"
 }
 };
