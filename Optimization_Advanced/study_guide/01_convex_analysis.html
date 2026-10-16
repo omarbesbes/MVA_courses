@@ -774,6 +774,7 @@ $$\frac{f\big(\hat x+\alpha(y-\hat x)\big)-f(\hat x)}{\alpha}\ \ge\ 0 .$$</p>
 <label class="ctl">c₁ <input type="range" id="vi-cx" min="-2.5" max="2.5" step="0.1" value="1.8"><output id="vi-cx-v"></output></label>
 <label class="ctl">c₂ <input type="range" id="vi-cy" min="-2.5" max="2.5" step="0.1" value="1"><output id="vi-cy-v"></output></label>
 <label class="ctl">θ (°) <input type="range" id="vi-th" min="0" max="360" step="2" value="60"><output id="vi-th-v"></output></label>
+<button class="btn" type="button" id="vi-snap">snap x̄ to P_C(c)</button>
 </div>
 <svg class="w-svg" id="vi-svg" viewBox="0 0 520 330" role="img" aria-label="Unit disc, level circles of the objective, the candidate point, minus its gradient, the normal ray, the worst feasible direction and the true minimizer"></svg>
 <div class="leg"><span><i class="dot" style="background:var(--s2)"></i>candidate x̄ and −∇f(x̄)</span><span><i class="dot" style="background:var(--idea)"></i>true minimizer x̂ = P_C(c)</span><span><i class="dot" style="background:var(--s5)"></i>worst y*</span><span><i style="border-color:var(--ink-3);border-top-style:dashed"></i>half-plane ⟨∇f(x̄)|y−x̄⟩ ≥ 0</span></div>
@@ -1459,11 +1460,11 @@ document.addEventListener('DOMContentLoaded', function () {
       if (d.ind) {
         wall(svg, X, Y, -1.5); wall(svg, X, Y, 1.5);
         seg(svg, X, Y, -1.5, 1.5, d.closedInd, d.closedInd);
-        if (!d.closedInd) { L.line(svg, X(-1.5), Y(0), X(-1.5), Y(TOP), 's-warn dash', { 'stroke-width': 1.5 }); L.line(svg, X(1.5), Y(0), X(1.5), Y(TOP), 's-warn dash', { 'stroke-width': 1.5 }); L.text(svg, X(1.5) + 6, Y(2.6), 'boundary missing from epi f', 'f-warn'); }
+        if (!d.closedInd) { L.line(svg, X(-1.5), Y(0), X(-1.5), Y(TOP), 's-warn dash', { 'stroke-width': 1.5 }); L.line(svg, X(1.5), Y(0), X(1.5), Y(TOP), 's-warn dash', { 'stroke-width': 1.5 }); htext(svg, X(1.5) + 6, Y(2.6), 'boundary ∉ epi f', 'f-warn'); }
       } else if (d.jump) {
         L.plotFn(svg, function (x) { return x <= 0 ? fLj(x) : NaN; }, X, Y, { class: 's-acc', 'stroke-width': 2.2 });
         L.plotFn(svg, function (x) { return x > 0 ? fRj(x) : NaN; }, X, Y, { class: 's-acc', 'stroke-width': 2.2 });
-        if (d.high) { fill(svg, X(0), Y(1), 4.5, 'f-acc'); hollow(svg, X(0), Y(0), 4.5, 's-acc'); L.line(svg, X(0), Y(0), X(0), Y(1), 's-warn dash', { 'stroke-width': 1.5 }); L.text(svg, X(0) + 8, Y(0.5), 'segment {0}×[0,1[ missing from epi f', 'f-warn'); }
+        if (d.high) { fill(svg, X(0), Y(1), 4.5, 'f-acc'); hollow(svg, X(0), Y(0), 4.5, 's-acc'); L.line(svg, X(0), Y(0), X(0), Y(1), 's-warn dash', { 'stroke-width': 1.5 }); htext(svg, X(0) - 8, Y(0.25), '{0}×[0,1[ ∉ epi f, yet in its closure', 'f-warn', { 'text-anchor': 'end' }); }
         else { fill(svg, X(0), Y(0), 4.5, 'f-acc'); hollow(svg, X(0), Y(1), 4.5, 's-acc'); }
       } else L.plotFn(svg, d.f, X, Y, { class: 's-acc', 'stroke-width': 2.2 }, 400);
       L.text(svg, X(-2.9), Y(TOP) + 14, 'epi f', 'tm f-ink');
@@ -1506,7 +1507,7 @@ document.addEventListener('DOMContentLoaded', function () {
       var c = C[cs], X = sc(c.xr[0], c.xr[1], 40, 500), Y = sc(c.yr[0], c.yr[1], 250, 18);
       L.axes(svg, X, Y, { xlabel: 'x', nx: 6, ny: 4, dx: 0, dy: 0 });
       if (c.S) { L.line(svg, X(c.S[0]), Y(0), X(c.S[1]), Y(0), 's-acc', { 'stroke-width': 5 }); L.text(svg, X(c.S[1]) + 6, Y(0) + 4, 'S', 'tm f-acc'); }
-      else { L.line(svg, X(c.xr[0]), Y(0), X(c.xr[1]), Y(0), 's-acc', { 'stroke-width': 5 }); L.text(svg, X(c.xr[1]) - 2, Y(0) - 8, 'S = ℝ', 'tm f-acc', { 'text-anchor': 'end' }); }
+      else { L.line(svg, X(c.xr[0]), Y(0), X(c.xr[1]), Y(0), 's-acc', { 'stroke-width': 5 }); htext(svg, X(c.xr[0]) + 4, Y(0) - 10, 'S = ℝ', 'tm f-acc'); }
       L.plotFn(svg, function (x) { return (c.S && (x < c.S[0] || x > c.S[1])) ? NaN : (cs === 'notlsc' ? x * x : c.f(x)); }, X, Y, { class: 's-ink' }, 400);
       if (cs === 'notlsc') { fill(svg, X(0), Y(1), 4.5, 'f-ink'); hollow(svg, X(0), Y(0), 4.5, 's-ink'); L.text(svg, X(0) + 8, Y(1) + 4, 'f(0) = 1', 'f-ink2'); }
       c.mins.forEach(function (m) { fill(svg, X(m), Y(c.f(m)), 5, 'f-idea'); htext(svg, X(m), Y(0) + 30, 'minimizer', 'f-idea', { 'text-anchor': 'middle' }); });
@@ -1536,7 +1537,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var svg = $('ch-svg'), out = $('ch-out'); if (!svg) return;
     var fn = 'quad', px = -2.2, py = 1.6, al = 0.5;
     var F = { quad: function (x) { return x * x / 2; }, flat: function (x) { return Math.max(Math.abs(x) - 1, 0); }, dwell: function (x) { return x * x * x * x / 8 - x * x + 1; } };
-    var X = sc(-3.2, 3.2, 40, 500), Y = sc(-1.6, 5, 275, 15);
+    var X = sc(-3.2, 3.2, 40, 500), Y = sc(-1.6, 5, 268, 15);
     function draw() {
       L.clear(svg);
       var f = F[fn];
@@ -1554,15 +1555,19 @@ document.addEventListener('DOMContentLoaded', function () {
       var zc = al * px + (1 - al) * py, fz = f(zc), cz = al * fx + (1 - al) * fy, gap = cz - fz, okc = gap >= -1e-9;
       L.line(svg, X(zc), Y(fz), X(zc), Y(cz), okc ? 's-idea dash' : 's-warn dash', { 'stroke-width': 2 });
       fill(svg, X(px), Y(fx), 5, 'f-ink'); fill(svg, X(py), Y(fy), 5, 'f-ink');
-      var lft = px <= py;
-      htext(svg, X(px) + (lft ? -8 : 8), Y(fx) + 18, '(x, f(x))', 'tm f-ink', { 'text-anchor': lft ? 'end' : 'start' });
-      htext(svg, X(py) + (lft ? 8 : -8), Y(fy) + 18, '(y, f(y))', 'tm f-ink', { 'text-anchor': lft ? 'start' : 'end' });
       fill(svg, X(zc), Y(fz), 4.5, okc ? 'f-idea' : 'f-warn'); fill(svg, X(zc), Y(cz), 4.5, okc ? 'f-idea' : 'f-warn');
-      var hi = Math.max(cz, fz), lo = Math.min(cz, fz);
-      htext(svg, X(zc) + 8, Y(hi) - 8, okc ? 'αf(x) + (1−α)f(y)' : 'f(αx + (1−α)y)', okc ? 'f-idea' : 'f-warn');
-      htext(svg, X(zc) + 8, Y(lo) + 16, okc ? 'f(αx + (1−α)y)' : 'αf(x) + (1−α)f(y)', okc ? 'f-idea' : 'f-warn');
-      L.line(svg, X(zc), Y(0), X(zc), Y(Math.min(fz, cz)), 's-mut dash', { 'stroke-width': 1 });
-      htext(svg, X(zc), Y(0) + 30, 'αx + (1−α)y', 'tm f-ink2', { 'text-anchor': 'middle' });
+      /* guides and labels x, z, y at the bottom of the plot */
+      var yb = Y(Y.d[0]);
+      [[px, 'x', fx], [py, 'y', fy], [zc, 'z', Math.min(fz, cz)]].forEach(function (q) { L.line(svg, X(q[0]), Y(q[2]), X(q[0]), yb - 12, 's-faint dash', { 'stroke-width': 1 }); });
+      var lab = [[px, 'x'], [py, 'y'], [zc, 'z']];
+      lab.forEach(function (q) { htext(svg, X(q[0]), yb + 2, q[1], 'tm f-ink2', { 'text-anchor': 'middle' }); });
+      var hi = Math.max(cz, fz), lo = Math.min(cz, fz), close = (Y(lo) - Y(hi)) < 26;
+      var lx = X(zc) + (zc > 1.6 ? -8 : 8), anc = zc > 1.6 ? 'end' : 'start';
+      if (close) htext(svg, lx, Y(hi) - 8, okc ? 'f(z) ≤ αf(x) + (1−α)f(y)  (gap ' + L.fmt(gap, 2) + ')' : 'f(z) > αf(x) + (1−α)f(y)', okc ? 'f-idea' : 'f-warn', { 'text-anchor': anc });
+      else {
+        htext(svg, lx, Y(hi) - 8, okc ? 'αf(x) + (1−α)f(y)' : 'f(z)', okc ? 'f-idea' : 'f-warn', { 'text-anchor': anc });
+        htext(svg, lx, Y(lo) + 16, okc ? 'f(z)' : 'αf(x) + (1−α)f(y)', okc ? 'f-idea' : 'f-warn', { 'text-anchor': anc });
+      }
       out.textContent = 'z = αx + (1−α)y = ' + L.fmt(zc, 2) + '   f(z) = ' + L.fmt(fz, 3) + '   chord = ' + L.fmt(cz, 3) + '   gap = chord − f(z) = ' + L.fmt(gap, 3) + (okc ? '  ≥ 0 ✓' : '  < 0 ✗ (convexity fails for this pair)') + (fails ? '   ·   the chord inequality fails for ' + fails + ' of ' + (M + 1) + ' sampled α' : '   ·   holds for every sampled α');
     }
     L.bindSeg('ch-fn', function (v) { fn = v; draw(); });
@@ -1599,15 +1604,17 @@ document.addEventListener('DOMContentLoaded', function () {
       L.text(svg, X(0) - 4, Y(0) - 50, 'C', 'tm f-acc');
       /* normal ray at x̄ */
       L.line(svg, X(xb[0]), Y(xb[1]), X(1.85 * xb[0]), Y(1.85 * xb[1]), 's-idea dash', { 'stroke-width': 1.5 });
-      htext(svg, X(1.9 * xb[0]) + (xb[0] < 0 ? -4 : 4), Y(1.9 * xb[1]) + (xb[1] > 0 ? 2 : 12), 'N_C(x̄)', 'tm f-idea', { 'text-anchor': xb[0] < 0 ? 'end' : 'start' });
+      var pp = [-xb[1], xb[0]], lp = [1.85 * xb[0] + 0.22 * pp[0], 1.85 * xb[1] + 0.22 * pp[1]];
+      htext(svg, X(lp[0]), Y(lp[1]) + 4, 'N_C(x̄)', 'tm f-idea', { 'text-anchor': 'middle' });
       /* −∇f(x̄) arrow (scaled by 0.5 for display) */
       var s = 0.5;
       L.line(svg, X(xb[0]), Y(xb[1]), X(xb[0] - s * g[0]), Y(xb[1] - s * g[1]), 's-2', { 'stroke-width': 2.5, 'marker-end': arr });
-      htext(svg, X(xb[0] - s * g[0]), Y(xb[1] - s * g[1]) - 8, '−∇f(x̄)', 'tm f-2', { 'text-anchor': 'middle' });
+      var dg = ng > 1e-9 ? [-g[0] / ng, -g[1] / ng] : [xb[0], xb[1]], qg = [dg[1], -dg[0]];
+      htext(svg, X(xb[0] - s * g[0] + 0.25 * qg[0]), Y(xb[1] - s * g[1] + 0.25 * qg[1]) + 4, '−∇f(x̄)', 'tm f-2', { 'text-anchor': 'middle' });
       /* points */
-      fill(svg, X(c[0]), Y(c[1]), 4.5, 'f-ink'); L.text(svg, X(c[0]) + 8, Y(c[1]) + 4, 'c', 'tm f-ink');
+      fill(svg, X(c[0]), Y(c[1]), 4.5, 'f-ink'); if (nc > 1) htext(svg, X(c[0]) + 8, Y(c[1]) + 4, 'c', 'tm f-ink');
       if (ng > 1e-9) { var ys = [-g[0] / ng, -g[1] / ng]; fill(svg, X(ys[0]), Y(ys[1]), 5, 'f-5'); L.text(svg, X(ys[0]) + 8, Y(ys[1]) + 14, 'y*', 'tm f-5'); }
-      fill(svg, X(xh[0]), Y(xh[1]), 6, 'f-idea'); htext(svg, X(xh[0]) + 9, Y(xh[1]) - 6, 'x̂', 'tm f-idea');
+      fill(svg, X(xh[0]), Y(xh[1]), 6, 'f-idea'); htext(svg, X(xh[0]) + 9, Y(xh[1]) - 6, nc <= 1 ? 'x̂ = c (interior)' : 'x̂', 'tm f-idea');
       fill(svg, X(xb[0]), Y(xb[1]), 5.5, 'f-2'); htext(svg, X(xb[0]) - 9, Y(xb[1]) + 16, 'x̄', 'tm f-2');
       htext(svg, 14, 312, holds ? '✓ ⟨∇f(x̄) | y − x̄⟩ ≥ 0 for every y ∈ C: x̄ = x̂' : '✗ fails at y*: x̄ is not the minimizer', 'verdict ' + (holds ? 'f-idea' : 'f-warn'));
       out.textContent = '∇f(x̄) = x̄ − c = (' + L.fmt(g[0], 2) + ', ' + L.fmt(g[1], 2) + ')   min over y ∈ C of ⟨∇f(x̄) | y − x̄⟩ = ' + L.fmt(minv, 3) + (holds ? ' ≥ 0: the variational inequality holds; −∇f(x̄) lies on the normal ray' : ' < 0: violated (worst y = y*)') + '   ·   x̂ = P_C(c) = (' + L.fmt(xh[0], 2) + ', ' + L.fmt(xh[1], 2) + ')' + (nc <= 1 ? ', interior, ∇f(x̂) = 0' : ', on the boundary');
@@ -1615,6 +1622,14 @@ document.addEventListener('DOMContentLoaded', function () {
     L.bindRange('vi-cx', function (v) { cx = v; draw(); });
     L.bindRange('vi-cy', function (v) { cy = v; draw(); });
     L.bindRange('vi-th', function (v) { th = v; draw(); }, function (v) { return L.fmt(v, 0) + '°'; });
+    var snap = $('vi-snap');
+    if (snap) snap.addEventListener('click', function () {
+      var nc = Math.hypot(cx, cy);
+      if (nc <= 1) { L.toast('c is inside the disc: the minimizer x̂ = c is interior, not on the circle'); return; }
+      th = Math.atan2(cy, cx) * 180 / Math.PI; if (th < 0) th += 360;
+      var o = $('vi-th-v'); if (o) o.textContent = L.fmt(th, 1) + '°';
+      draw();
+    });
   }
 
   /* ================= widget: weak vs strong ================= */
@@ -1717,8 +1732,8 @@ document.addEventListener('DOMContentLoaded', function () {
       L.plotFn(sf, function (x) { return softplus(-y * x); }, X, Yf, { class: 's-ink', 'stroke-width': 2.2 });
       L.axes(sd, X, Yd, { xlabel: 'x', ylabel: "f''", nx: 4, ny: 4, dx: 0, dy: 1 });
       L.plotFn(sd, function (x) { var s = 1 / (1 + Math.exp(-y * x)); return y * y * s * (1 - s); }, X, Yd, { class: 's-2', 'stroke-width': 2.2 });
-      L.line(sd, X(-4), Yd(y * y / 4), X(4), Yd(y * y / 4), 's-faint dash', { 'stroke-width': 1 });
-      L.text(sd, X(4) - 2, Yd(y * y / 4) - 5, 'y²/4 = ' + L.fmt(y * y / 4, 3), 'f-ink2', { 'text-anchor': 'end' });
+      if (Math.abs(y) > 1e-12) { L.line(sd, X(-4), Yd(y * y / 4), X(4), Yd(y * y / 4), 's-faint dash', { 'stroke-width': 1 }); htext(sd, X(4) - 2, Yd(y * y / 4) - 5, 'y²/4 = ' + L.fmt(y * y / 4, 3), 'f-ink2', { 'text-anchor': 'end' }); }
+      else htext(sd, X(1.2), Yd(0) - 8, 'f\u2032\u2032 ≡ 0', 'f-2');
       if (Math.abs(y) < 1e-12) L.text(sf, X(0), Yf(Math.log(2)) - 8, 'f ≡ log 2', 'f-ink2', { 'text-anchor': 'middle' });
       out.textContent = 'y = ' + L.fmt(y, 2) + ':  f′′ ≥ 0 everywhere ⇒ convex;  ' + (Math.abs(y) < 1e-12 ? 'f′′ ≡ 0 (f constant): convex but not strictly convex' : 'f′′ > 0 everywhere ⇒ strictly convex');
     }
