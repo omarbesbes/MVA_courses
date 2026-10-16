@@ -1,0 +1,786 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>1 · Convexity · LSD study guide</title>
+<meta name="description" content="Study guide for Parts I–II (optimization problems, Hilbert spaces, lower semicontinuity, existence of minimizers, convexity) of Foundations of Distributed and Large Scale Computing Optimization (MVA): every result explained, proved, visualized and made memorable.">
+<link rel="stylesheet" href="assets/katex/katex.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+.figrow{margin:10px 0 14px}
+.figrow svg{width:100%;height:auto;display:block;background:var(--paper);border-radius:6px}
+.figrow .cap{font-size:14px;color:var(--ink-3);margin:6px 0 0}
+.verdict{font-family:var(--f-ui);font-size:12px;font-weight:600}
+.qmap td:first-child{font-family:var(--f-ui);font-weight:600;font-size:14px;color:var(--accent)}
+</style>
+<script defer src="assets/katex/katex.min.js"></script>
+<script defer src="assets/katex/contrib/auto-render.min.js"></script>
+<script defer src="assets/registry.js"></script>
+<script defer src="assets/guide.js"></script>
+</head>
+<body>
+
+<header class="site"><div class="site-in">
+<a class="home" href="index.html">LSD study guide<small>Large Scale &amp; Distributed Optimization · MVA</small></a>
+<span class="spacer"></span>
+<ul class="strip" aria-label="Pages">
+<li><a href="index.html"><span class="n">⌂</span>Home</a></li>
+<li><a href="01_convex_analysis.html" class="on"><span class="n">1</span>Convexity</a></li>
+<li><a href="02_subdifferential_conjugate.html"><span class="n">2</span>Subdifferential &amp; conjugate</a></li>
+<li><a href="03_proximity_operator.html"><span class="n">3</span>Prox</a></li>
+<li><a href="04_fixed_point_forward_backward.html"><span class="n">4</span>Fixed points &amp; FB</a></li>
+<li><a href="05_douglas_rachford_ppxa.html"><span class="n">5</span>DR &amp; PPXA</a></li>
+<li><a href="06_duality_admm_primal_dual.html"><span class="n">6</span>Duality, ADMM &amp; primal-dual</a></li>
+<li><a href="07_majorization_minimization.html"><span class="n">7</span>MM</a></li>
+<li><a href="08_labs.html"><span class="n">L</span>Labs</a></li>
+<li><a href="09_toolbox.html"><span class="n">T</span>Toolbox</a></li>
+<li><a href="10_memorize.html"><span class="n">M</span>Memorize</a></li>
+</ul>
+<button class="btn theme-toggle" type="button">☾ Dark</button>
+</div></header>
+
+<div class="page">
+<nav class="toc" aria-label="Contents">
+<details id="toc-det" open>
+<summary><span><span class="mark">1 · Convexity</span><span class="submark">Parts I–II · 17 + 29 slides</span></span><span class="toc-btn">Contents</span></summary>
+<div class="toc-body">
+<!--TOC-->
+<div class="tools">
+<button class="btn" type="button" data-toggle-details="details.proof" data-label-open="Collapse all proofs" data-label-closed="Expand all proofs" aria-pressed="false">Expand all proofs</button>
+<span class="mini" id="known-count"></span>
+<button class="btn small" type="button" id="known-reset">Reset "known" marks</button>
+</div>
+</div>
+</details>
+</nav>
+
+<main>
+<header class="hero" id="top">
+<div>
+<div class="eyebrow">Lecture 1 · Part I (slides 2–17) and Part II (slides 2–29)</div>
+<h1>Convexity, lower semicontinuity and existence</h1>
+<p class="lead">The vocabulary that every later theorem assumes: Hilbert spaces and adjoints, functions with values in $]-\infty,+\infty]$, epigraphs, lower semicontinuity, coercivity, convex sets and convex functions. The goal of the page is one object, the class $\Gz{\H}$, and one reflex: when does a minimizer exist, and when is it unique?</p>
+</div>
+<svg viewBox="0 0 220 170" role="img" aria-label="A convex function, its shaded epigraph and a chord lying above the graph.">
+<path d="M15,150 L15,15 L205,15 L205,150 Q110,-40 15,150 Z" class="f-k" stroke="none"/>
+<path d="M15,150 Q110,-40 205,150" class="s-acc f-none" stroke-width="2.5"/>
+<line x1="45" y1="110" x2="185" y2="128" class="s-2" stroke-width="2"/>
+<circle cx="45" cy="110" r="3.5" class="f-2"/><circle cx="185" cy="128" r="3.5" class="f-2"/>
+<line x1="115" y1="119" x2="115" y2="57" class="s-idea dash" stroke-width="1.5"/>
+<circle cx="115" cy="57" r="3" class="f-idea"/>
+<text x="120" y="40" class="tm f-ink2">epi f</text>
+<line x1="8" y1="152" x2="212" y2="152" class="s-mut" stroke-width="1"/>
+</svg>
+</header>
+
+<ol class="howto">
+<li><b>Read the statement, then the "in one sentence".</b> Try to say why it is true before opening "Why it is true".</li>
+<li><b>Try the proof</b> with the hint before unfolding it; note the trick chips, they come back on every page.</li>
+<li><b>Play with the widgets</b>, then tick "known" when you can restate the result and its mechanism from memory.</li>
+</ol>
+<div class="legend" aria-label="Legend">
+<span><span class="tag tag-slides">Slides</span> on the official slides</span>
+<span><span class="tag tag-key">Key</span> used everywhere afterwards</span>
+<span><span class="tag tag-extra">Extra</span> context, not on the slides</span>
+<span><span class="tag tag-exam">Exam</span> classic exam question</span>
+<span><span class="tag tag-lab">Lab</span> needed in a lab</span>
+</div>
+
+<section class="chapter" id="overview">
+<header><div class="eyebrow">Overview</div><h2>Where we are</h2>
+<p class="lead">The whole course follows one line of thought. This page builds the ground it stands on.</p></header>
+<p>Every algorithm of the course minimizes a sum of functions, typically a smooth data-fit term plus a nonsmooth regularizer plus a constraint, and every convergence proof follows the same chain:</p>
+<div class="box">
+<p><strong>Fermat's rule</strong> $0\in\partial f(\hat x)$ (page 2) turns "being a minimizer" into "being a zero of an operator"; writing $f=g+h$ turns it into a <strong>zero of a sum of operators</strong>; a short algebraic rewrite turns that into a <strong>fixed point of a nonexpansive map</strong> built from gradient steps and proximity operators (pages 3–5); the <strong>Fejér / Krasnosel'skii–Mann</strong> machinery then proves that the iteration converges (pages 4–6). When no prox is available, page 7 replaces the exact step by a <strong>majorize–minimize</strong> step.</p>
+</div>
+<p>Each link of this chain needs the functions to belong to one class, $\Gz{\H}$: <em>proper</em> (there is something to minimize), <em>lower semicontinuous</em> (the epigraph is closed, so limits of good points are good points), <em>convex</em> (local minimizers are global, the subdifferential is well behaved, the prox is nonexpansive). This page defines these three words, proves what each of them buys, and answers the first of the four questions of the course:</p>
+<div class="table-scroll"><table class="cmp qmap"><thead><tr><th>Question</th><th>What it asks</th><th>Where it is answered</th></tr></thead><tbody>
+<tr><td>Q1</td><td>Does a solution $\hat x$ exist? Is it unique?</td><td>This page: <a class="xref" data-id="weierstrass" href="#weierstrass">Weierstrass</a>, <a class="xref" data-id="existence-coercive" href="#existence-coercive">coercivity</a>, <a class="xref" data-id="existence-uniqueness-convex" href="#existence-uniqueness-convex">strict convexity</a></td></tr>
+<tr><td>Q2</td><td>How do we recognize a solution (necessary / sufficient conditions)?</td><td>Here for differentiable $f$ over a convex set (<a class="xref" data-id="optimality-convex-set" href="#optimality-convex-set">variational inequality</a>); page 2 in general (<a class="xref" data-id="fermat-rule" href="02_subdifferential_conjugate.html#fermat-rule">Fermat's rule</a>)</td></tr>
+<tr><td>Q3</td><td>How do we build a sequence $x_n\to\hat x$ when there is no closed form?</td><td>Pages 3–7 (prox, Forward–Backward, Douglas–Rachford, ADMM, primal-dual, MM)</td></tr>
+<tr><td>Q4</td><td>How good is the algorithm: speed, robustness, parallelism?</td><td><a class="xref" data-id="convergence-rates" href="#convergence-rates">rates</a> here; convergence theorems of pages 4–7; product-space tricks of pages 5–6</td></tr>
+</tbody></table></div>
+<p>Read the page in this order: what an optimization problem is and why $+\infty$ is allowed as a value (Part I), then the Hilbert-space vocabulary, then the three words of $\Gz{\H}$ one by one, with the existence theorems in between. The exercises at the end are short and are exactly the kind of question asked at the exam.</p>
+</section>
+
+<section class="chapter" id="s-part1">
+<header><div class="eyebrow">Part I · slides 3–16</div><h2>Optimization problems and the four questions</h2>
+<p class="lead">What we minimize, over what, and the one convention that makes constrained and unconstrained problems the same object: a function allowed to take the value $+\infty$.</p></header>
+
+<article class="card def" id="optim-problem">
+<header class="card-head"><span class="kind">Definition</span><h3>Minimization problem, Argmin, and the $+\infty$ convention</h3><span class="src">Part I · slides 3–5</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#optim-problem" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Definition</span>
+<p>Let $f:D\to[-\infty,+\infty]$ be a <em>cost function</em> on a set $D\subset\R^N$. A minimization problem is
+$$\text{Find }\hat x\in D\ \text{ such that }\ (\forall x\in D)\ f(\hat x)\le f(x)\ \iff\ f(\hat x)=\inf_{x\in D}f(x)\ \iff\ \hat x\in\Argmin_{x\in D} f(x).$$
+A maximization problem ($f$ a <em>reward</em>) is the same thing for $-f$: $\ (\forall x\in D)\ f(\hat x)\ge f(x)\iff \hat x\in\Argmin_{x\in D}\big(-f(x)\big)$. Without loss of generality we study minimization problems with $f:D\to\,]-\infty,+\infty]$.</p>
+<p><strong>Types.</strong> $D=\R^N$: unconstrained. $D$ countable: discrete ($D$ finite: combinatorial; $D\subset\Z^N$: integer). $D$ uncountable: continuous. With $P$ equality and $Q$ inequality constraints,
+$$D=\{x\in\R^N\mid (\forall i\in\{1,\dots,P\})\ \varphi_i(x)=\delta_i\ \text{ and }\ (\forall j\in\{1,\dots,Q\})\ \psi_j(x)\le\eta_j\},$$
+with $\delta_i,\eta_j\in\R$ and $\varphi_i,\psi_j:\R^N\to\,]-\infty,+\infty]$. If $\varphi_i=\ps{\cdot}{u_i}$ (resp. $\psi_j=\ps{\cdot}{u_j}$) the constraint is linear (affine); if in addition $f$ is linear, the problem is a <em>linear program</em>.</p>
+<p><strong>Remark ($+\infty$ convention).</strong> $\displaystyle \hat x\in\Argmin_{x\in D}f(x)\iff \hat x\in\Argmin_{x\in\R^N}\tilde f(x)$, where $\tilde f(x)=f(x)$ if $x\in D$ and $\tilde f(x)=+\infty$ otherwise. Allowing non-finite values gives a unifying view of constrained and unconstrained problems.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">A constraint is a wall of height $+\infty$: minimizing $f$ over $D$ is minimizing $f+\ind_D$ over everything.</p>
+<div class="rub">Why the definition is set up this way</div>
+<div class="why">
+<p><strong>$\inf$ versus $\min$.</strong> The infimum $\inf_D f$ always exists in $[-\infty,+\infty]$; a <em>minimizer</em> is a point where it is attained. "$\Argmin$" (capital A, a <em>set</em> in the slides' notation) may be empty ($f=e^x$ on $\R$), a single point, or a whole set (a segment for $f=\abs{\cdot}$ with a flat bottom, a subspace for least squares). Whether it is nonempty is the first of the four questions.</p>
+<p><strong>Why values in $]-\infty,+\infty]$ and not $[-\infty,+\infty]$.</strong> After the switch from max to min we only need $+\infty$ (to encode "forbidden"). Excluding $-\infty$ keeps every difference $f(x)-f(y)$ meaningful and avoids $\infty-\infty$; it is also what makes "$f(\hat x)=\inf f$" a real number once a minimizer exists.</p>
+<p><strong>Why the $+\infty$ trick is more than notation.</strong> Once a constraint set is a function, it can be <em>added</em> to other functions, it has an epigraph, a subdifferential (the normal cone, page 2), a prox (the projection, page 3), a conjugate (the support function, page 2). The splitting algorithms of pages 4–6 treat $\ind_D$ exactly like any other nonsmooth term. The reader should be able to say: <em>a constrained problem is an unconstrained problem whose objective is $+\infty$ outside the feasible set.</em></p>
+</div>
+<div class="callout trick"><span class="lbl">Trick</span><p><a class="chip t" href="09_toolbox.html#T01"><b>T01</b> indicator trick</a> Whenever a statement is proved for unconstrained problems with $f:\H\to\,]-\infty,+\infty]$, you get the constrained version for free by replacing $f$ with $f+\ind_C$. The price is that the hypotheses must now be checked for $f+\ind_C$ (proper: $\dom f\cap C\neq\emptyset$; lsc: $C$ closed; convex: $C$ convex). This is how <a class="xref" data-id="existence-uniqueness-convex" href="#existence-uniqueness-convex">existence over a convex set</a> is proved below.</p></div>
+<div class="callout note"><span class="lbl">Worked example</span><p>Denoise $y\in\R^N$ under box constraints: $\min_{x\in[0,1]^N}\tfrac12\norm{x-y}^2$. In the unified form, $\tilde f=\tfrac12\norm{\cdot-y}^2+\ind_{[0,1]^N}$. The solution is the clipping $\hat x=\min(\max(y,0),1)$: on page 3 you will read it as $\hat x=\prox_{\ind_{[0,1]^N}}y=P_{[0,1]^N}y$.</p></div>
+<div class="callout pitfall"><span class="lbl">Pitfall</span><p>$D$ finite (segmentation with a finite label set below) is a <em>combinatorial</em> problem: the convex theory of this course does not apply to it directly, even if the formula for $f$ looks convex. Convexity is a property of the function <em>and</em> of its domain.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Argmin = where the inf is attained</strong> (a set, possibly empty). <strong>Constraint = $+\infty$ wall</strong>: $\Argmin_D f=\Argmin_{\R^N}(f+\ind_D)$.</p></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="indicator-function" href="#indicator-function">indicator function</a><a class="chip xref" data-id="existence-uniqueness-convex" href="#existence-uniqueness-convex">existence over a convex set</a><a class="chip xref" data-id="normal-cone" href="02_subdifferential_conjugate.html#normal-cone">normal cone</a><a class="chip xref" data-id="prox-projection" href="03_proximity_operator.html#prox-projection">prox of an indicator = projection</a></div>
+</article>
+
+<article class="card rem" id="main-questions">
+<header class="card-head"><span class="kind">Remark</span><h3>The four questions: existence, characterization, algorithm, performance</h3><span class="src">Part I · slide 6</span><span class="tag tag-slides">Slides</span><a class="anchor" href="#main-questions" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Main questions to be addressed</span>
+<ol>
+<li><strong>Existence / uniqueness</strong> of a solution $\hat x$?</li>
+<li><strong>Characterization</strong> of solutions: necessary / sufficient conditions for $\hat x$ to be a solution.</li>
+<li><strong>Designing an algorithm</strong> to approximate a solution in the frequent case when no closed form is available, i.e. building a sequence $(x_n)_{n\in\N}$ of $\R^N$ such that $\lim_{n\to+\infty}x_n=\hat x$.</li>
+<li><strong>Evaluation of the performance</strong> of the algorithm: convergence speed (<a class="xref" data-id="convergence-rates" href="#convergence-rates">rates</a>), robustness to numerical errors, amenability to parallel / distributed implementations.</li>
+</ol>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Exist, recognize, compute, measure: every page of the course answers one of these four verbs for a wider class of problems.</p>
+<div class="why">
+<p>Keep the order in mind, because the logic of the proofs follows it. You cannot characterize a solution that does not exist (question 1 before 2); an algorithm is designed by <em>rewriting the characterization</em> as a fixed-point equation (2 before 3: Fermat's rule becomes $\hat x=\prox_{\gamma f}(\hat x-\gamma\nabla g(\hat x))$ on page 4); and the performance analysis reads the contraction or averagedness constants off that rewriting (3 before 4).</p>
+<p>Question 3 is where this course differs from a generic optimization course: "large scale and distributed" means that the sequence must be computable with cheap operations (gradients, proximity operators of simple pieces, projections) that can run <em>in parallel</em> on the pieces of $f$. That is why the examples below are all written as <em>sums</em> of simple terms over a graph.</p>
+</div>
+<div class="callout memo"><span class="lbl">To remember</span><p>Q1 existence (this page) → Q2 Fermat (page 2) → Q3 fixed-point algorithms (pages 3–7) → Q4 rates, robustness, parallelism.</p></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="fermat-rule" href="02_subdifferential_conjugate.html#fermat-rule">Fermat's rule</a><a class="chip xref" data-id="splitting-goal" href="04_fixed_point_forward_backward.html#splitting-goal">the splitting goal</a></div>
+</article>
+
+<article class="card def" id="convergence-rates">
+<header class="card-head"><span class="kind">Definition</span><h3>Q-linear and Q-superlinear convergence</h3><span class="src">Part I · slide 6</span><span class="tag tag-slides">Slides</span><a class="anchor" href="#convergence-rates" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Definition</span>
+<p>Let $(x_n)_{n\in\N}$ converge to $\hat x$. If there exist $\rho\in\,]0,1[$ and $n^*\in\N$ such that
+$$(\forall n\ge n^*)\qquad \norm{x_{n+1}-\hat x}\le\rho\,\norm{x_n-\hat x},$$
+the convergence rate is <strong>Q-linear</strong>. If $\displaystyle\lim_{n\to+\infty}\frac{\norm{x_{n+1}-\hat x}}{\norm{x_n-\hat x}}=0$, the rate is <strong>Q-superlinear</strong>.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">"Q" is for quotient: compare each error with the previous one; a fixed fraction is linear, a vanishing fraction is superlinear.</p>
+<div class="why">
+<p>Q-linear convergence means that, after $n^*$, every iteration gains at least a fixed number of digits: $\norm{x_n-\hat x}\le\rho^{\,n-n^*}\norm{x_{n^*}-\hat x}$, a straight line on a logarithmic plot. Contractions give it directly (<a class="xref" data-id="picard" href="04_fixed_point_forward_backward.html#picard">Picard's theorem</a>, page 4, with $\rho$ the Lipschitz constant). Superlinear means the line keeps bending downwards: the number of correct digits grows faster than linearly in $n$ (Newton-type methods double it at each step).</p>
+<p>Most algorithms of this course are only proved to converge, with no rate, or with a sublinear rate such as $o(1/\sqrt n)$ on the residual $\norm{x_{n+1}-x_n}$: that is the honest price of handling nonsmooth terms with weak hypotheses. Rates reappear when strong convexity or an error bound is added.</p>
+</div>
+<div class="widget" id="w-rates">
+<div class="w-title">Interactive · what linear, superlinear and sublinear look like on a log scale</div>
+<p class="w-help">Three error sequences $e_n=\norm{x_n-\hat x}$: Q-linear $e_n=\rho^n$ (a straight line), Q-superlinear $e_n=\rho^{\,n(n+1)/2}$ (the quotient $e_{n+1}/e_n=\rho^{\,n+1}\to0$), and sublinear $e_n=1/(n+1)$ (the quotient tends to $1$: not Q-linear for any $\rho\lt1$). Move $\rho$.</p>
+<div class="w-ctls">
+<label class="ctl">ρ <input type="range" id="rt-rho" min="0.05" max="0.98" step="0.01" value="0.6"><output id="rt-rho-v"></output></label>
+</div>
+<svg class="w-svg" id="rt-svg" viewBox="0 0 520 260" role="img" aria-label="Logarithm of the error against the iteration index for three rates"></svg>
+<div class="leg"><span><i style="border-color:var(--s1)"></i>Q-linear ρⁿ</span><span><i style="border-color:var(--s3)"></i>Q-superlinear</span><span><i style="border-color:var(--s2)"></i>sublinear 1/(n+1)</span></div>
+<p class="readout" id="rt-out"></p>
+</div>
+<div class="callout pitfall"><span class="lbl">Pitfall</span><p>"Linear" sounds fast but $\rho=0.99$ is linear too: $460$ iterations per digit. And a rate is a statement about the <em>quotient</em> of consecutive errors, not about the error itself: $e_n=1/(n+1)$ goes to zero but with quotient $\frac{n+1}{n+2}\to1$, so it is not Q-linear.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p>Q-linear: $e_{n+1}\le\rho\,e_n$, $\rho\lt1$ (straight line on a log plot). Q-superlinear: $e_{n+1}/e_n\to0$ (the line bends down).</p></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="picard" href="04_fixed_point_forward_backward.html#picard">Picard iteration (linear rate)</a><a class="chip xref" data-id="krasnoselskii-mann" href="04_fixed_point_forward_backward.html#krasnoselskii-mann">Krasnosel'skii–Mann (no rate)</a></div>
+</article>
+
+<article class="card rem" id="examples-applications">
+<header class="card-head"><span class="kind">Remark</span><h3>Running examples: mesh denoising, segmentation, consensus, logistic regression</h3><span class="src">Part I · slides 7–15</span><span class="tag tag-slides">Slides</span><span class="tag tag-lab">Lab</span><a class="anchor" href="#examples-applications" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Valued graphs and four problems</span>
+<p><strong>Valued graph.</strong> $\mathcal V=\{v^{(i)}\mid i\in\{1,\dots,M\}\}$ is the set of vertices (objects), $\mathcal E=\{e^{(i,j)}\mid (i,j)\in\mathbb E\}$ the set of edges (object relationships). A directed reflexive graph has $|\mathbb E|\le M^2$ edges, a directed nonreflexive one $|\mathbb E|\le M(M-1)$, an undirected nonreflexive one $|\mathbb E|\le M(M-1)/2$. Weights $(x^{(i)})_{1\le i\le M}$ live on vertices and $(x^{(i,j)})_{(i,j)\in\mathbb E}$ on edges (scalars or vectors).</p>
+<p><strong>Mesh denoising</strong> (undirected nonreflexive graph: vertices and edges of the mesh; $x^{(i)}\in\R^3$ the true coordinates of vertex $i$, $y^{(i)}$ the measured ones; $N=3M$, $D=\R^N$):
+$$f(x)=\sum_{i=1}^M\Big(\norm{x^{(i)}-y^{(i)}}^2+\Big(\sum_{j\in\mathbb N_i}\omega_{i,j}\norm{x^{(i)}-x^{(j)}}^2\Big)^{1/2}\Big),$$
+$\mathbb N_i$ the neighbourhood of vertex $i$, $(\omega_{i,j})_{j\in\mathbb N_i}$ nonnegative regularization constants.</p>
+<p><strong>Segmentation</strong> (undirected nonreflexive regular graph of pixels; $x^{(i)}\in\mathbb L$ the label of pixel $i$, $\mathbb L\subset\R$ finite; $y^{(i)}$ its intensity; $N=M$, $D=\mathbb L^M$):
+$$f(x)=\sum_{i=1}^M\alpha_i^p\,\abs{x^{(i)}-y^{(i)}}^p+\sum_{(i,j)\in\mathbb E}\omega_{i,j}^q\,\abs{x^{(i)}-x^{(j)}}^q,\qquad (p,q)\in[1,+\infty[^2,$$
+$(\alpha_i)_i$, $(\omega_{i,j})_{(i,j)}$ nonnegative constants.</p>
+<p><strong>Multiagent consensus</strong> (directed nonreflexive graph of agents; $x^{(i)}\in\R^P$ the estimate at node $i$, $y^{(i)}\in\R^Q$ its observations; $N=MP$):
+$$D=\big\{(x^{(i)})_{1\le i\le M}\in(\R^P)^M\ \big|\ x^{(1)}=\dots=x^{(M)}\big\},\qquad f(x)=\sum_{i=1}^M g_i(x^{(i)},y^{(i)}),$$
+where $-g_i:\R^P\times\R^Q\to\,]-\infty,+\infty]$ is the utility function at node $i$.</p>
+<p><strong>Linear classification / logistic regression.</strong> Learn linear functions $\ell_k(z)=x_{k,0}+x_k^\top z$ dividing the input space into $K$ regions, with
+$\Pr(G=k\mid Z=z)=\dfrac{\exp(x_{k,0}+x_k^\top z)}{1+\sum_{\ell=1}^{K-1}\exp(x_{\ell,0}+x_\ell^\top z)}$ for $k\le K-1$ and $\Pr(G=K\mid Z=z)=\dfrac{1}{1+\sum_{\ell=1}^{K-1}\exp(x_{\ell,0}+x_\ell^\top z)}$. Binary case ($y_i=-1$ if $g_i=1$, $y_i=+1$ if $g_i=2$):
+$$L(x)=\sum_{i=1}^n\log\big(1+\exp(-y_i\,x^\top z_i)\big),\qquad\text{minimize } f(x)=L(x)+\lambda\norm{x}_1$$
+(the $\ell_1$ term regularizes against over-fitting for large $n$).</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Every example is a sum of simple terms indexed by vertices and edges: a smooth part, a nonsmooth part, a constraint. The algorithms of pages 4–6 are built to split exactly along these lines.</p>
+<div class="why">
+<p>Read each cost as a sum "data fidelity + regularization (+ constraint)". What matters for the rest of the course is <em>which piece has which regularity</em>, because that decides which algorithm applies:</p>
+<div class="table-scroll"><table class="cmp"><thead><tr><th>Problem</th><th>Smooth (gradient step)</th><th>Nonsmooth (prox step)</th><th>Constraint</th><th>Where it goes</th></tr></thead><tbody>
+<tr><td>Mesh denoising</td><td>$\sum_i\norm{x^{(i)}-y^{(i)}}^2$</td><td>the square roots (a sum of Euclidean norms of linear maps of $x$, non-differentiable where a neighbourhood is flat)</td><td>none</td><td>Forward–Backward (page 4) or a primal-dual method for the "norm of a linear map" (page 6)</td></tr>
+<tr><td>Segmentation</td><td>$p,q\gt1$: both sums</td><td>$p=1$ or $q=1$: $\ell_1$ terms, total-variation-like edge term</td><td>$x\in\mathbb L^M$: finite, <strong>not convex</strong></td><td>convex relaxation ($\mathbb L\to$ its convex hull) then page 4–6 methods; the discrete problem itself is combinatorial</td></tr>
+<tr><td>Consensus</td><td>$g_i$ if smooth</td><td>$g_i$ otherwise</td><td>$x^{(1)}=\dots=x^{(M)}$: a <strong>linear subspace</strong>, closed and convex</td><td>product-space trick (<a class="xref" data-id="adjoint-example" href="#adjoint-example">next section</a>), parallel Douglas–Rachford / PPXA+ (page 5), ADMM (page 6)</td></tr>
+<tr><td>Logistic regression + $\ell_1$</td><td>$L$ (convex, smooth, <a class="xref" data-id="ex-basics-3" href="#ex-basics-3">exercise 3</a>)</td><td>$\lambda\norm{\cdot}_1$ (prox = soft-thresholding, page 3)</td><td>none</td><td>Forward–Backward = ISTA (page 4)</td></tr>
+</tbody></table></div>
+<p>Two of these are convex problems in $\Gz{\R^N}$ and will be solved exactly; segmentation is combinatorial (the domain is finite, hence not convex), which is why in practice one relaxes the label set to an interval. The consensus constraint is the prototype of a constraint one <em>never</em> eliminates: keeping it as $\ind_D$ is what allows every agent to work in parallel.</p>
+</div>
+<div class="callout memo"><span class="lbl">To remember</span><p>Cost = $\sum$ (vertex terms) + $\sum$ (edge terms) + constraint. Identify <em>smooth / nonsmooth / constraint</em> first; the algorithm follows.</p></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="adjoint-example" href="#adjoint-example">product-space adjoint</a><a class="chip xref" data-id="ex-basics-3" href="#ex-basics-3">exercise 3 (logistic loss)</a><a class="chip xref" data-id="forward-backward" href="04_fixed_point_forward_backward.html#forward-backward">Forward–Backward</a><a class="chip xref" data-id="consensus-sharing" href="06_duality_admm_primal_dual.html#consensus-sharing">consensus and sharing</a><a class="chip xref" data-id="lab-denoising" href="08_labs.html#lab-denoising">denoising lab</a></div>
+</article>
+</section>
+
+<section class="chapter" id="s-hilbert">
+<header><div class="eyebrow">Part II · slides 2–4</div><h2>Hilbert spaces and bounded operators</h2>
+<p class="lead">The course is written in a real Hilbert space $\H$, not only in $\R^N$. Nothing is lost for the practitioner (think $\R^N$ throughout), and two things are gained: the proofs never use coordinates, and the difference between strong and weak convergence, which is what the algorithms really deliver, becomes visible.</p></header>
+
+<article class="card def" id="hilbert-space">
+<header class="card-head"><span class="kind">Definition</span><h3>Hilbert space, bounded linear operators, adjoint</h3><span class="src">Part II · slides 2–4</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#hilbert-space" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Definition</span>
+<p>A (real) <strong>Hilbert space</strong> $\H$ is a complete real vector space endowed with an inner product $\ps{\cdot}{\cdot}$. The associated norm is $(\forall x\in\H)\ \norm{x}=\sqrt{\ps{x}{x}}$. Particular case: $\H=\R^N$ (Euclidean space of dimension $N$). $2^{\H}$ denotes the power set of $\H$ (the family of all subsets of $\H$).</p>
+<p>Let $\H$ and $\G$ be two Hilbert spaces. A linear operator $L:\H\to\G$ is <strong>bounded</strong> (or continuous) if
+$$\norm{L}=\sup_{\norm{x}\le1}\norm{Lx}\lt+\infty.$$
+In finite dimension, every linear operator is bounded. $\B(\H,\G)$ is the Banach space of bounded linear operators from $\H$ to $\G$.</p>
+<p>Let $L\in\B(\H,\G)$. Its <strong>adjoint</strong> $L^*$ is the operator in $\B(\G,\H)$ defined by
+$$(\forall(x,y)\in\H\times\G)\qquad \ps{Lx}{y}=\ps{x}{L^*y}.$$
+We have $\norm{L^*}=\norm{L}$. If $L$ is bijective (an <em>isomorphism</em>), then $L^{-1}\in\B(\G,\H)$ and $(L^{-1})^*=(L^*)^{-1}$. If $\H=\R^N$ and $\G=\R^M$, then $L^*=L^\top$.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">A Hilbert space is "$\R^N$ with the right to be infinite-dimensional": angles and lengths from the inner product, limits guaranteed by completeness; the adjoint is the transpose written without coordinates.</p>
+<div class="why">
+<p><strong>What each word buys.</strong> The <em>inner product</em> gives orthogonality, projections, the Cauchy–Schwarz inequality $\abs{\ps{x}{y}}\le\norm x\norm y$ and the identity $\norm{x+y}^2=\norm x^2+2\ps{x}{y}+\norm y^2$ that every proof of pages 2–6 expands. <em>Completeness</em> (every Cauchy sequence converges) is what makes "the iterates converge to something in $\H$" possible at all: the Fejér/Krasnosel'skii–Mann theorems produce Cauchy-like behaviour and need a space in which to land.</p>
+<p><strong>Bounded = continuous.</strong> For a linear map, $\norm{Lx-Ly}=\norm{L(x-y)}\le\norm{L}\norm{x-y}$, so boundedness is Lipschitz continuity with constant $\norm{L}$; conversely continuity at $0$ gives a bound on the unit ball. The number $\norm{L}$ is the constant that appears in every step-size condition involving a linear operator ($\tau^{-1}-\sigma\norm{L}^2\gt\beta/2$ on page 6, $\gamma\lt2/\norm{L}^2$ for a least-squares gradient step).</p>
+<p><strong>The adjoint</strong> is the operator that lets you move $L$ from one side of an inner product to the other. It exists and is unique by the Riesz representation theorem (for fixed $y$, $x\mapsto\ps{Lx}{y}$ is a bounded linear form, hence equals $\ps{x}{\cdot}$ for a unique vector, called $L^*y$). In coordinates it is the transpose. You will use it every time you differentiate a composition: the gradient of $x\mapsto\tfrac12\norm{Lx-z}^2$ is $L^*(Lx-z)$ (see <a class="xref" data-id="gateaux" href="#gateaux">Gâteaux differentiability</a>), the subdifferential of $f\circ L$ involves $L^*\partial f(L\cdot)$ (page 2), and the dual variable of page 6 lives in $\G$ and comes back through $L^*$.</p>
+</div>
+<div class="callout note"><span class="lbl">Examples</span><p>$\R^N$ with $\ps{x}{y}=x^\top y$; $\ell^2(\N)$, the square-summable sequences with $\ps{x}{y}=\sum_k x_ky_k$ (the infinite-dimensional example used below for weak convergence); $L^2(\Omega)$ with $\ps{u}{v}=\int uv$ (images as functions); the product space $\H^n$ with $\ps{x}{y}=\sum_{i=1}^n\ps{x_i}{y_i}$ (used in the next card). A matrix $A\in\R^{M\times N}$ is an element of $\B(\R^N,\R^M)$ with $\norm{A}$ its largest singular value and $A^*=A^\top$.</p></div>
+<div class="callout pitfall"><span class="lbl">Pitfall</span><p>$\norm{L}$ is the <em>operator</em> norm (largest singular value), not the Frobenius norm. For a convolution with a kernel $h$, $\norm{L}=\max_\nu\abs{\hat h(\nu)}$ (the largest modulus of the Fourier transform of $h$); for a wavelet or tight frame $L^*L=\mu\Id$ and $\norm{L}=\sqrt\mu$. You will need this number in the labs.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p>$\ps{Lx}{y}=\ps{x}{L^*y}$; $\norm{L}=\sup_{\norm x\le1}\norm{Lx}=\norm{L^*}$; in $\R^N$, $L^*=L^\top$.</p></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="adjoint-example" href="#adjoint-example">adjoint of $x\mapsto(x,\dots,x)$</a><a class="chip xref" data-id="convergence-strong-weak" href="#convergence-strong-weak">strong and weak convergence</a><a class="chip xref" data-id="gateaux" href="#gateaux">Gâteaux gradient</a><a class="chip xref" data-id="prox-quadratic" href="03_proximity_operator.html#prox-quadratic">prox of a quadratic</a><a class="chip xref" data-id="primal-dual-algorithm" href="06_duality_admm_primal_dual.html#primal-dual-algorithm">primal-dual algorithm</a></div>
+</article>
+
+<article class="card prop" id="adjoint-example">
+<header class="card-head"><span class="kind">Proposition</span><h3>The adjoint of $x\mapsto(x,\dots,x)$ is the sum</h3><span class="src">Part II · slide 4</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#adjoint-example" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $n\ge1$ and let $\H^n$ carry the inner product $\ps{x}{y}=\sum_{i=1}^n\ps{x_i}{y_i}$. If
+$$L:\H\to\H^n:\ x\mapsto(x,\dots,x),\qquad\text{then}\qquad L^*:\H^n\to\H:\ y=(y_1,\dots,y_n)\mapsto\sum_{i=1}^n y_i.$$</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Copying a vector $n$ times is adjoint to adding $n$ vectors together.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>The inner product on the product space is a sum over the components; pairing the $n$ identical copies of $x$ with the $n$ components of $y$ gives $n$ inner products with the same left factor $x$, and bilinearity pulls the sum inside the right factor. The sentence to say out loud: <em>the adjoint of "duplicate" is "sum", because the product inner product is itself a sum.</em></p></div>
+<details class="pl hint"><summary>Hint <span class="aid">— try it first</span></summary><div class="dc"><p>Compute $\ps{Lx}{y}$ with the definition of the inner product of $\H^n$ and read off what multiplies $x$.</p></div></details>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T16"><b>T16</b> product-space lifting</a></summary><div class="dc">
+<p><span class="step">1. Expand.</span> For $x\in\H$ and $y=(y_1,\dots,y_n)\in\H^n$,
+$$\ps{Lx}{y}=\ps{(x,\dots,x)}{(y_1,\dots,y_n)}=\sum_{i=1}^n\ps{x}{y_i}=\Big\langle x\ \Big|\ \sum_{i=1}^n y_i\Big\rangle.$$</p>
+<p><span class="step">2. Identify.</span> By definition of the adjoint, $\ps{Lx}{y}=\ps{x}{L^*y}$ for all $x$; since the vector $u=\sum_i y_i$ satisfies $\ps{x}{u}=\ps{Lx}{y}$ for every $x$, and a vector is determined by its inner products with all $x$ (take $x=u-L^*y$), $L^*y=\sum_{i=1}^ny_i$.</p>
+<p><span class="step">3. Two by-products.</span> $\norm{Lx}^2=\sum_{i=1}^n\norm{x}^2=n\norm x^2$, so $\norm{L}=\sqrt n$; and $L^*Lx=\sum_{i=1}^nx=nx$, i.e. $L^*L=n\,\Id$.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout insight"><span class="lbl">Why this tiny example matters</span>
+<p>It is the <a class="chip t" href="09_toolbox.html#T16"><b>T16</b> product-space trick</a>, the engine of every parallel algorithm of pages 5–6. A sum $\sum_{i=1}^nf_i(x)$ of $n$ functions of the <em>same</em> variable is hard to handle with one prox; but on $\H^n$ the separable function $F(y)=\sum_if_i(y_i)$ has a prox computed <em>component by component, in parallel</em> ($\prox_F y=(\prox_{f_1}y_1,\dots,\prox_{f_n}y_n)$, page 3), and
+$$\sum_{i=1}^nf_i(x)=F(Lx)=\min_{y\in D}\,F(y)\quad\text{with}\quad D=\ran L=\{(x,\dots,x)\mid x\in\H\}$$
+the <em>consensus subspace</em>. Minimizing $\sum_if_i$ becomes minimizing $F+\ind_D$ on $\H^n$: a separable term plus one linear constraint. The projection onto $D$ is averaging: since $L^*L=n\Id$,
+$$P_D=L(L^*L)^{-1}L^*=\tfrac1n LL^*:\ (y_1,\dots,y_n)\mapsto(\bar y,\dots,\bar y),\qquad \bar y=\tfrac1n\sum_{i=1}^ny_i .$$
+So an iteration alternates "each agent solves its own prox" and "everybody averages": this is exactly parallel Douglas–Rachford / PPXA+ (page 5) and consensus ADMM (page 6).</p></div>
+<div class="callout pitfall"><span class="lbl">Pitfall</span><p>The adjoint depends on the inner product chosen on $\H^n$. With weights $\ps{x}{y}=\sum_i\omega_i\ps{x_i}{y_i}$ the adjoint becomes $y\mapsto\sum_i\omega_iy_i$ and the projection onto $D$ a weighted average. Always say which inner product you use.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p>$L=$ duplicate, $L^*=$ sum, $L^*L=n\Id$, $P_{\ran L}=$ average. "Lift to the product space, split, then average."</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="hilbert-space" href="#hilbert-space">adjoint</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="parallel-dr" href="05_douglas_rachford_ppxa.html#parallel-dr">parallel Douglas–Rachford</a><a class="chip xref" data-id="ppxa" href="05_douglas_rachford_ppxa.html#ppxa">PPXA+</a><a class="chip xref" data-id="consensus-sharing" href="06_duality_admm_primal_dual.html#consensus-sharing">consensus and sharing</a><a class="chip xref" data-id="prox-separable" href="03_proximity_operator.html#prox-separable">prox of a separable function</a></div>
+</article>
+</section>
+
+<section class="chapter" id="s-functions">
+<header><div class="eyebrow">Part II · slides 5–11</div><h2>Functions with values in $]-\infty,+\infty]$: domain, indicator, epigraph, lower semicontinuity</h2>
+<p class="lead">Four definitions that turn a function into a geometric object. The epigraph is the dictionary: "proper" means it is nonempty, "lower semicontinuous" means it is closed, "convex" means it is convex.</p></header>
+
+<article class="card def" id="domain-proper">
+<header class="card-head"><span class="kind">Definition</span><h3>Domain and proper functions</h3><span class="src">Part II · slide 5</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#domain-proper" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Definition</span>
+<p>Let $f:\H\to\,]-\infty,+\infty]$ where $\H$ is a Hilbert space.</p>
+<ul><li>The <strong>domain</strong> of $f$ is $\dom f=\{x\in\H\mid f(x)\lt+\infty\}$.</li>
+<li>The function $f$ is <strong>proper</strong> if $\dom f\neq\emptyset$.</li></ul>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">The domain is where the function is "really defined"; proper means there is at least one admissible point, so that minimizing $f$ is not a vacuous question.</p>
+<div class="why">
+<p>With the $+\infty$ convention, "$f(x)=+\infty$" reads "$x$ is forbidden". The domain collects the allowed points. A function that is $+\infty$ everywhere has $\inf f=+\infty$ and every point is trivially a minimizer: the theory would say nothing. "Proper" rules this out, and together with "$-\infty$ is not a value" it guarantees that $\inf f\lt+\infty$ and that $f(\hat x)$ is a real number whenever a minimizer exists.</p>
+<p>Two pictures from the slides, with their domains:</p>
+<div class="figrow"><svg id="fig-domain" viewBox="0 0 520 150" role="img" aria-label="Two functions: a parabola with domain the whole real line, and a function defined on the half-open interval ]0, δ] with a vertical asymptote at 0"></svg><p class="cap">Left: $\dom f=\R$ (proper). Right: $f$ blows up at $0$ and is $+\infty$ outside $]0,\delta]$, so $\dom f=\,]0,\delta]$ (proper). Note that a domain need be neither open nor closed.</p></div>
+</div>
+<div class="callout note"><span class="lbl">Examples</span><p>$\dom\ind_C=C$; $\dom(-\log)=\,]0,+\infty[$ once $-\log$ is extended by $+\infty$ on $]-\infty,0]$; $\dom(f+g)=\dom f\cap\dom g$, which is why "$\dom f\cap C\neq\emptyset$" is a hypothesis of the <a class="xref" data-id="existence-uniqueness-convex" href="#existence-uniqueness-convex">existence theorem over $C$</a>: it says precisely that $f+\ind_C$ is proper.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p>$\dom f=\{f\lt+\infty\}$; proper $\iff\dom f\neq\emptyset$ (and $f\gt-\infty$ everywhere).</p></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="indicator-function" href="#indicator-function">indicator</a><a class="chip xref" data-id="epigraph" href="#epigraph">epigraph</a><a class="chip xref" data-id="convex-stability" href="#convex-stability">$\Gz{\H}$</a><a class="chip xref" data-id="subdifferential" href="02_subdifferential_conjugate.html#subdifferential">subdifferential</a></div>
+</article>
+
+<article class="card def" id="indicator-function">
+<header class="card-head"><span class="kind">Definition</span><h3>Indicator function of a set</h3><span class="src">Part II · slide 6</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#indicator-function" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Definition</span>
+<p>Let $C\subset\H$. The indicator function of $C$ is
+$$(\forall x\in\H)\qquad \ind_C(x)=\begin{cases}0 &amp; \text{if } x\in C\\ +\infty &amp; \text{otherwise.}\end{cases}$$
+Example: $C=[\delta_1,\delta_2]$.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">$\ind_C$ is the constraint "$x\in C$" written as a cost: free inside, infinitely expensive outside.</p>
+<div class="why">
+<p>It is the concrete form of the <a class="chip t" href="09_toolbox.html#T01"><b>T01</b> indicator trick</a>: $\inf_{x\in C}f(x)=\inf_{x\in\H}\big(f(x)+\ind_C(x)\big)$ and the two Argmin sets coincide. All the properties of $\ind_C$ are properties of $C$ in disguise: $\dom\ind_C=C$; $\ind_C$ is proper iff $C\neq\emptyset$; lsc iff $C$ is closed; convex iff $C$ is convex (<a class="xref" data-id="convex-stability" href="#convex-stability">proved below</a> through $\epi\ind_C=C\times[0,+\infty[$); coercive iff $C$ is bounded. Later, its subdifferential is the normal cone $N_C$ (page 2), its prox is the projection $P_C$ (page 3), its conjugate is the support function $\sigma_C$ (page 2).</p>
+<div class="figrow"><svg id="fig-indicator" viewBox="0 0 520 150" role="img" aria-label="Graph of the indicator function of a closed interval: zero on the interval, plus infinity outside"></svg><p class="cap">$f=\ind_{[\delta_1,\delta_2]}$: the graph is the flat segment at height $0$; outside, the value is $+\infty$ (drawn as walls).</p></div>
+</div>
+<div class="callout pitfall"><span class="lbl">Pitfall</span><p>Do not confuse $\ind_C$ with the characteristic function $\mathbf 1_C$ ($1$ on $C$, $0$ outside) of probability theory. In convex analysis the indicator takes the values $0$ and $+\infty$; that is what makes it a convex function when $C$ is convex (the characteristic function never is, except for trivial $C$).</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p>$\ind_C=0$ on $C$, $+\infty$ outside. Constraint $\leftrightarrow$ function. $\ind_C\in\Gz{\H}\iff C$ nonempty closed convex.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="optim-problem" href="#optim-problem">$+\infty$ convention</a><a class="chip xref" data-id="domain-proper" href="#domain-proper">domain</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="convex-stability" href="#convex-stability">$\ind_C\in\Gz{\H}$</a><a class="chip xref" data-id="existence-uniqueness-convex" href="#existence-uniqueness-convex">existence over $C$</a><a class="chip xref" data-id="normal-cone" href="02_subdifferential_conjugate.html#normal-cone">normal cone</a><a class="chip xref" data-id="prox-projection" href="03_proximity_operator.html#prox-projection">projection</a><a class="chip xref" data-id="support-function" href="02_subdifferential_conjugate.html#support-function">support function</a></div>
+</article>
+
+<article class="card def" id="epigraph">
+<header class="card-head"><span class="kind">Definition</span><h3>Epigraph</h3><span class="src">Part II · slide 9</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#epigraph" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Definition</span>
+<p>Let $f:\H\to\,]-\infty,+\infty]$. The epigraph of $f$ is
+$$\epi f=\{(x,\zeta)\in\dom f\times\R\mid f(x)\le\zeta\}\subset\H\times\R.$$</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Everything on or above the graph: the epigraph turns statements about a function into statements about a set.</p>
+<div class="why">
+<p>The epigraph is the translation device of the whole subject. It lives in $\H\times\R$ (a Hilbert space again, with $\ps{(x,\zeta)}{(y,\xi)}=\ps xy+\zeta\xi$), so the notions "closed" and "convex" make sense for it, and they correspond exactly to properties of $f$:</p>
+<div class="table-scroll"><table class="cmp"><thead><tr><th>$f$ is …</th><th>$\iff$ $\epi f$ is …</th><th>proved in</th></tr></thead><tbody>
+<tr><td>proper</td><td>nonempty</td><td>immediate: $(x,f(x))\in\epi f$ for $x\in\dom f$</td></tr>
+<tr><td>lower semicontinuous</td><td>closed</td><td><a class="xref" data-id="lsc-epi-closed" href="#lsc-epi-closed">lsc $\iff$ closed epigraph</a></td></tr>
+<tr><td>convex</td><td>convex</td><td><a class="xref" data-id="convex-epi" href="#convex-epi">convex $\iff$ convex epigraph</a></td></tr>
+<tr><td>$\sup_i f_i$</td><td>$\bigcap_i\epi f_i$</td><td>used for the <a class="xref" data-id="lsc-stability" href="#lsc-stability">stability under suprema</a></td></tr>
+</tbody></table></div>
+<p>Two remarks on the definition. The condition $x\in\dom f$ is automatic from $f(x)\le\zeta\lt+\infty$; it is written to insist that there is nothing above the forbidden points. And $\zeta$ ranges over $\R$: the epigraph is unbounded above (a "vertical cylinder" over the graph), which is why its closedness only tests what happens at the <em>bottom</em>, on the graph.</p>
+<div class="figrow"><svg id="fig-epi" viewBox="0 0 520 150" role="img" aria-label="Epigraphs of the absolute value (a wedge above the V) and of the indicator of an interval (a vertical strip)"></svg><p class="cap">Left: $\epi\abs{\cdot}$ is the wedge above the V. Right: $\epi\ind_{[-\delta,\delta]}=[-\delta,\delta]\times[0,+\infty[$, a vertical strip. Both are closed and convex.</p></div>
+</div>
+<div class="callout memo"><span class="lbl">To remember</span><p>$\epi f=\{(x,\zeta):f(x)\le\zeta\}$. Dictionary: proper $=$ nonempty, lsc $=$ closed, convex $=$ convex, $\sup=\cap$.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="domain-proper" href="#domain-proper">domain</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="lsc-epi-closed" href="#lsc-epi-closed">lsc $\iff$ closed epigraph</a><a class="chip xref" data-id="convex-epi" href="#convex-epi">convex $\iff$ convex epigraph</a><a class="chip xref" data-id="ex-basics-4" href="#ex-basics-4">perspective (ex. 4)</a><a class="chip xref" data-id="conjugate" href="02_subdifferential_conjugate.html#conjugate">conjugate</a></div>
+</article>
+
+<article class="card def" id="lsc">
+<header class="card-head"><span class="kind">Definition</span><h3>Lower semicontinuity: the sequential definition</h3><span class="src">Part II · slide 10</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#lsc" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Definition</span>
+<p>Let $f:\H\to\,]-\infty,+\infty]$. $f$ is <strong>lower semi-continuous (l.s.c.) at $x\in\H$</strong> if, for every sequence $(x_n)_{n\in\N}$ of $\H$,
+$$x_n\to x\quad\Rightarrow\quad \liminf_{n\to+\infty} f(x_n)\ \ge\ f(x).$$
+$f$ is lower semi-continuous on $\H$ if it is l.s.c. at every $x\in\H$. Equivalently (<a class="xref" data-id="lsc-epi-closed" href="#lsc-epi-closed">next card</a>): $f$ is l.s.c. on $\H$ if and only if $\epi f$ is closed.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Along any approach to $x$, the value at $x$ is never higher than what the approaching values promise: the function may jump up when you leave a point, never drop below the limit at the point itself.</p>
+<div class="why">
+<p>Continuity says $f(x_n)\to f(x)$; lower semicontinuity keeps only one half of it, the half that minimization needs. If $x_n$ is a minimizing sequence converging to $x$, we want $f(x)\le\lim f(x_n)=\inf f$, i.e. we want the limit point to be at least as good as the sequence: that is exactly $f(x)\le\liminf f(x_n)$. The other half ($f(x)\ge\limsup f(x_n)$, "upper semicontinuity") would prevent nothing useful and would exclude indicator functions of closed sets, which jump from $0$ to $+\infty$.</p>
+<p>The $\liminf$ is used (not $\lim$) because $f(x_n)$ need not converge; $\liminf$ always exists in $[-\infty,+\infty]$ (<a class="xref" data-id="liminf-limsup" href="#liminf-limsup">definition below</a>). Equivalent formulations, worth knowing: $f$ is lsc on $\H$ iff $\epi f$ is closed, iff every lower level set $\lev_{\le\zeta}f=\{x\mid f(x)\le\zeta\}$ is closed (take a sequence $x_n\to x$ with $f(x_n)\le\zeta$: then $f(x)\le\liminf f(x_n)\le\zeta$).</p>
+<p>The four pictures of the slides, with the verdicts:</p>
+<div class="figrow"><svg id="fig-lsc" viewBox="0 0 520 300" role="img" aria-label="Four graphs: a jump where the value at the jump point is the upper one (not lsc), a jump where it is the lower one (lsc), the indicator of an open interval (not lsc), the indicator of a closed interval (lsc)"></svg><p class="cap">Top: at a jump, lsc holds exactly when the function takes the <em>lower</em> value at the jump point (filled dot). Bottom: $\ind_{]a,b[}$ is not lsc at $a$ (approach $a$ from inside: $f(x_n)=0$ but $f(a)=+\infty$), while $\ind_{[a,b]}$ is lsc (approach from outside: $f(x_n)=+\infty\ge f(a)=0$, fine; from inside: $0\ge0$).</p></div>
+</div>
+<div class="callout pitfall"><span class="lbl">Pitfall</span><p>Lsc is a condition <em>at the limit point</em>, with the inequality in one direction only. A function can be lsc and wildly discontinuous ($\ind_C$ for $C$ closed, or $\abs{\cdot}$ with the value at $0$ lowered to $-1$). Conversely $x\mapsto\ind_{\{0\}}(x)$ with the value at $0$ raised to $1$ and $0$ elsewhere, i.e. $f=\mathbf 1_{\{0\}}$, is <em>not</em> lsc: $x_n=1/n\to0$, $f(x_n)=0$, $f(0)=1$.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>lsc: $f(x)\le\liminf f(x_n)$ whenever $x_n\to x$</strong>. "The limit is at least as good as the sequence." Jumps are allowed if the point takes the low value.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="liminf-limsup" href="#liminf-limsup">liminf</a><a class="chip xref" data-id="convergence-strong-weak" href="#convergence-strong-weak">strong convergence</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="lsc-epi-closed" href="#lsc-epi-closed">closed epigraph</a><a class="chip xref" data-id="weierstrass" href="#weierstrass">Weierstrass</a><a class="chip xref" data-id="existence-coercive" href="#existence-coercive">existence (coercive)</a><a class="chip xref" data-id="convex-stability" href="#convex-stability">$\Gz{\H}$</a></div>
+</article>
+
+<article class="card prop" id="lsc-epi-closed">
+<header class="card-head"><span class="kind">Proposition</span><h3>$f$ is l.s.c. on $\H$ $\iff$ $\epi f$ is closed</h3><span class="src">Part II · slide 10</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#lsc-epi-closed" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $f:\H\to\,]-\infty,+\infty]$. Then $f$ is lower semi-continuous on $\H$ if and only if $\epi f$ is a closed subset of $\H\times\R$.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">"Limits of points above the graph stay above the graph" is the same sentence as "the value at a limit point is below the limit of the values".</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>A point of the epigraph is a pair (point, height) with height $\ge$ value. A converging sequence of such pairs has converging heights; lsc pushes the value at the limit point below the limit of the values, hence below the limit height, so the limit pair is in the epigraph. Conversely, if the epigraph is closed, run the argument on the pairs $(x_n,f(x_n))$ (after extracting a subsequence that realizes the $\liminf$): their limit $(x,\liminf f(x_n))$ must be in the epigraph, which is precisely the lsc inequality.</p></div>
+<div class="callout note"><span class="lbl">Note</span><p>The slides state the equivalence without proof; here is a complete one. The topology on $\H\times\R$ is the product one: $(x_n,\zeta_n)\to(x,\zeta)$ iff $x_n\to x$ and $\zeta_n\to\zeta$.</p></div>
+<details class="pl hint"><summary>Hint <span class="aid">— try it first</span></summary><div class="dc"><p>($\Rightarrow$) take $(x_n,\zeta_n)\in\epi f$ converging and compare $f(x)$ with $\liminf f(x_n)$ and with $\liminf\zeta_n$. ($\Leftarrow$) use a subsequence along which $f(x_{k_n})\to\liminf f(x_n)$ and feed the pairs $(x_{k_n},\ell+\varepsilon)$ to the closed epigraph.</p></div></details>
+<details class="pl proof"><summary>Proof</summary><div class="dc">
+<p><span class="step">1. lsc ⇒ closed.</span> Let $(x_n,\zeta_n)_{n\in\N}$ be a sequence of $\epi f$ converging to $(x,\zeta)\in\H\times\R$. Then $x_n\to x$, $\zeta_n\to\zeta$ and $f(x_n)\le\zeta_n$ for every $n$. Lower semicontinuity at $x$ and monotonicity of $\liminf$ give
+$$f(x)\le\liminf_{n}f(x_n)\le\liminf_n\zeta_n=\zeta .$$
+In particular $f(x)\le\zeta\lt+\infty$, so $x\in\dom f$ and $(x,\zeta)\in\epi f$. Hence $\epi f$ is closed.</p>
+<p><span class="step">2. closed ⇒ lsc.</span> Assume $\epi f$ closed, let $x_n\to x$ and set $\ell=\liminf_nf(x_n)\in[-\infty,+\infty]$. If $\ell=+\infty$ there is nothing to prove. Otherwise, by the <a class="xref" data-id="liminf-limsup" href="#liminf-limsup">definition of $\liminf$</a> there is a subsequence $(x_{k_n})$ with $f(x_{k_n})\to\ell$.</p>
+<p><span class="step">3. The case $\ell=-\infty$ is impossible.</span> If $\ell=-\infty$, fix any $\zeta\in\R$: for $n$ large, $f(x_{k_n})\le\zeta$, so $(x_{k_n},\zeta)\in\epi f$; these pairs converge to $(x,\zeta)$, which belongs to the closed set $\epi f$, so $f(x)\le\zeta$. Since $\zeta\in\R$ was arbitrary, $f(x)=-\infty$, contradicting $f(x)\in\,]-\infty,+\infty]$. So $\ell\in\R$.</p>
+<p><span class="step">4. The case $\ell\in\R$.</span> Fix $\varepsilon\gt0$. For $n$ large, $f(x_{k_n})\le\ell+\varepsilon$, hence $(x_{k_n},\ell+\varepsilon)\in\epi f$, and $(x_{k_n},\ell+\varepsilon)\to(x,\ell+\varepsilon)\in\epi f$ by closedness: $f(x)\le\ell+\varepsilon$. Letting $\varepsilon\to0$: $f(x)\le\ell=\liminf_nf(x_n)$, which is lsc at $x$.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout trick"><span class="lbl">Trick</span><p>To prove a property of a function, move to its epigraph and use set topology ("an intersection of closed sets is closed", "a product of closed sets is closed"). The stability results below and the proof that $\ind_C\in\Gz{\H}$ are one-liners with this move.</p></div>
+<div class="widget" id="w-epi-explorer">
+<div class="w-title">Interactive · epigraph and lower level sets: read lsc and convexity off the picture</div>
+<p class="w-help">Choose a function and move the level $\zeta$. The shaded region is $\epi f$; the thick segment on the axis is $\lev_{\le\zeta}f=\{x\mid f(x)\le\zeta\}$ (filled end = included, hollow end = excluded). Check: $f$ is lsc exactly when $\epi f$ is closed, and then every level set is closed; $f$ is convex exactly when $\epi f$ is convex, and then every level set is convex, but not conversely ($\sqrt{\abs x}$).</p>
+<div class="w-ctls">
+<div class="seg" id="ep-fn" role="group" aria-label="function"><button class="btn" type="button" data-v="abs" aria-pressed="true">|x|</button><button class="btn" type="button" data-v="sqrt">√|x|</button><button class="btn" type="button" data-v="dwell">double well</button><button class="btn" type="button" data-v="jumpup">jump (high value)</button><button class="btn" type="button" data-v="jumpdown">jump (low value)</button><button class="btn" type="button" data-v="open">ι of ]−1.5, 1.5[</button><button class="btn" type="button" data-v="closed">ι of [−1.5, 1.5]</button></div>
+<label class="ctl">ζ <input type="range" id="ep-zeta" min="-1.2" max="3" step="0.1" value="1"><output id="ep-zeta-v"></output></label>
+</div>
+<svg class="w-svg" id="ep-svg" viewBox="0 0 520 300" role="img" aria-label="Graph of the chosen function with its epigraph shaded and its lower level set at level zeta"></svg>
+<ul class="w-steps" id="ep-steps"><li>…</li></ul>
+</div>
+<div class="callout memo"><span class="lbl">To remember</span><p>lsc $\iff$ $\epi f$ closed $\iff$ all $\lev_{\le\zeta}f$ closed. Proof pattern: pairs $(x_n,\zeta_n)$ with $f(x_n)\le\zeta_n$, pass to the limit.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="lsc" href="#lsc">lsc</a><a class="chip xref" data-id="epigraph" href="#epigraph">epigraph</a><a class="chip xref" data-id="liminf-limsup" href="#liminf-limsup">liminf</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="lsc-stability" href="#lsc-stability">stability of lsc</a><a class="chip xref" data-id="convex-stability" href="#convex-stability">$\ind_C\in\Gz{\H}$</a><a class="chip xref" data-id="lemma-weakly-closed" href="04_fixed_point_forward_backward.html#lemma-weakly-closed">closed convex ⇒ weakly closed</a></div>
+</article>
+
+<article class="card prop" id="lsc-stability">
+<header class="card-head"><span class="kind">Proposition</span><h3>Continuous ⇒ l.s.c.; finite sums and suprema of l.s.c. functions are l.s.c.</h3><span class="src">Part II · slide 11</span><span class="tag tag-slides">Slides</span><a class="anchor" href="#lsc-stability" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<ul><li>Every continuous function on $\H$ is l.s.c.</li>
+<li>Every finite sum of l.s.c. functions is l.s.c.</li>
+<li>Let $(f_i)_{i\in I}$ be a family of l.s.c. functions. Then $\sup_{i\in I}f_i$ is l.s.c.</li></ul>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Lsc survives the two operations that build cost functions, adding finitely many terms and taking a supremum of arbitrarily many, because the $\liminf$ is superadditive and closed sets survive arbitrary intersections.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>Continuity gives $\lim f(x_n)=f(x)$, which is more than the one-sided inequality. For sums, the inequality $\liminf(a_n+b_n)\ge\liminf a_n+\liminf b_n$ does the work (the worst case of a sum is at least the sum of the worst cases). For suprema, the cleanest view is geometric: $\epi(\sup_if_i)=\bigcap_i\epi f_i$ (being above the sup means being above each $f_i$), and an intersection of closed sets is closed, whatever the number of sets. Say it out loud: <em>sup $=$ intersection of epigraphs, and intersections preserve closedness.</em></p></div>
+<details class="pl hint"><summary>Hint <span class="aid">— try it first</span></summary><div class="dc"><p>For the sum, write $a_n+b_n\ge\inf_{k\ge m}a_k+\inf_{k\ge m}b_k$ for $n\ge m$. For the sup, either use $f_i(x)\le\liminf f_i(x_n)\le\liminf\sup_jf_j(x_n)$ for each $i$, or intersect the epigraphs.</p></div></details>
+<details class="pl proof"><summary>Proof</summary><div class="dc">
+<p><span class="step">1. Continuous ⇒ lsc.</span> If $x_n\to x$ and $f$ is continuous at $x$, then $f(x_n)\to f(x)$, so $\liminf f(x_n)=\lim f(x_n)=f(x)\ge f(x)$.</p>
+<p><span class="step">2. Sums.</span> Let $f,g$ be lsc with values in $]-\infty,+\infty]$ and $x_n\to x$. For $n\ge m$, $f(x_n)+g(x_n)\ge\inf_{k\ge m}f(x_k)+\inf_{k\ge m}g(x_k)$ (no $\infty-\infty$ can occur since neither function takes the value $-\infty$). Taking $\inf_{n\ge m}$ on the left and letting $m\to+\infty$:
+$$\liminf_n\big(f(x_n)+g(x_n)\big)\ \ge\ \liminf_nf(x_n)+\liminf_ng(x_n)\ \ge\ f(x)+g(x).$$
+Induction gives any finite sum.</p>
+<p><span class="step">3. Suprema, sequential route.</span> Let $g=\sup_{i\in I}f_i$ and $x_n\to x$. For each $i$, $f_i(x_n)\le g(x_n)$, so $f_i(x)\le\liminf_nf_i(x_n)\le\liminf_ng(x_n)$. Taking the supremum over $i$: $g(x)\le\liminf_ng(x_n)$.</p>
+<p><span class="step">3'. Suprema, epigraph route.</span> $(x,\zeta)\in\epi g\iff\sup_if_i(x)\le\zeta\iff(\forall i)\ f_i(x)\le\zeta\iff(x,\zeta)\in\bigcap_i\epi f_i$. Each $\epi f_i$ is closed (<a class="xref" data-id="lsc-epi-closed" href="#lsc-epi-closed">previous card</a>), an arbitrary intersection of closed sets is closed, so $\epi g$ is closed and $g$ is lsc.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout pitfall"><span class="lbl">Pitfall</span><p>An <em>infimum</em> of lsc functions is not lsc in general: $f_n(x)=1-\min(1,n\abs x)$ are continuous, but $\inf_nf_n=\mathbf 1_{\{0\}}$ ($1$ at $0$, $0$ elsewhere) is not lsc at $0$. This matters: the Moreau envelope $\inf_y f(y)+\tfrac1{2\gamma}\norm{y-x}^2$ (page 3) is an infimum, and its continuity has to be proved by other means.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p>lsc is stable under $+$ (finite) and $\sup$ (arbitrary), not under $\inf$. Continuous $\Rightarrow$ lsc. Norms, affine maps, $\ind_C$ with $C$ closed: all lsc, hence so are the sums you will build from them.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="lsc" href="#lsc">lsc</a><a class="chip xref" data-id="lsc-epi-closed" href="#lsc-epi-closed">closed epigraph</a><a class="chip xref" data-id="liminf-limsup" href="#liminf-limsup">liminf</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="convex-stability" href="#convex-stability">$\Gz{\H}$ stability</a><a class="chip xref" data-id="existence-uniqueness-convex" href="#existence-uniqueness-convex">existence over $C$</a><a class="chip xref" data-id="conjugate-properties" href="02_subdifferential_conjugate.html#conjugate-properties">$f^*$ is lsc (sup of affine functions)</a><a class="chip xref" data-id="support-function" href="02_subdifferential_conjugate.html#support-function">support function</a></div>
+</article>
+</section>
+
+<section class="chapter" id="s-convergence">
+<header><div class="eyebrow">Part II · slides 7–8</div><h2>Convergence, compactness, limits inferior</h2>
+<p class="lead">Three tools of analysis, stated exactly as the slides state them. They are the gears of every existence proof: a minimizing sequence, a convergent subsequence, and an inequality that survives the limit.</p></header>
+
+<article class="card def" id="convergence-strong-weak">
+<header class="card-head"><span class="kind">Definition</span><h3>Strong and weak convergence</h3><span class="src">Part II · slide 7</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#convergence-strong-weak" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Definition</span>
+<p>Let $\H$ be a Hilbert space, $(x_n)_{n\in\N}$ a sequence in $\H$ and $\hat x\in\H$.</p>
+<ul><li>$(x_n)_{n\in\N}$ <strong>converges strongly</strong> to $\hat x$ if $\displaystyle\lim_{n\to+\infty}\norm{x_n-\hat x}=0$. Notation: $x_n\to\hat x$.</li>
+<li>$(x_n)_{n\in\N}$ <strong>converges weakly</strong> to $\hat x$ if $\displaystyle(\forall y\in\H)\ \lim_{n\to+\infty}\ps{y}{x_n-\hat x}=0$. Notation: $x_n\wto\hat x$.</li></ul>
+<p><em>Remark:</em> $x_n\to x\ \Rightarrow\ x_n\wto x$. In a finite-dimensional Hilbert space, strong and weak convergence are equivalent.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Strong: the distance to the limit vanishes. Weak: every "measurement" $\ps{y}{\cdot}$ of the sequence converges to the measurement of the limit, coordinate by coordinate, without control of the norm.</p>
+<div class="why">
+<p><strong>Strong ⇒ weak</strong> by Cauchy–Schwarz: $\abs{\ps{y}{x_n-\hat x}}\le\norm y\,\norm{x_n-\hat x}\to0$.</p>
+<p><strong>Finite dimension: weak ⇒ strong.</strong> Take $y=e_k$, the $k$-th basis vector: the $k$-th coordinate of $x_n-\hat x$ tends to $0$; there are finitely many coordinates, so $\norm{x_n-\hat x}^2=\sum_{k=1}^N\ps{e_k}{x_n-\hat x}^2\to0$. In infinite dimension the sum has infinitely many terms and the argument breaks, as the example below shows.</p>
+<p><strong>Why weak convergence is the natural output of the algorithms.</strong> The Fejér / Krasnosel'skii–Mann theorems of page 4 produce <em>bounded</em> sequences. In infinite dimension a bounded sequence need not have a strongly convergent subsequence, but it always has a weakly convergent one (the closed ball is weakly sequentially compact). The convergence theorems of pages 4–6 therefore conclude "$x_n\wto\hat x$"; in $\R^N$ that is plain convergence, so nothing is lost in practice, and the proofs gain in honesty: they identify exactly what is true in general.</p>
+</div>
+<div class="callout note"><span class="lbl">Extra · the standard infinite-dimensional example</span><span class="tag tag-extra">Extra</span><p>In $\ell^2(\N)$ let $e_n$ be the $n$-th basis sequence ($1$ in position $n$, $0$ elsewhere). For any $y\in\ell^2$, Bessel's inequality $\sum_n\ps{y}{e_n}^2\le\norm y^2\lt+\infty$ forces $\ps{y}{e_n}=y_n\to0$: so $e_n\wto0$. But $\norm{e_n-0}=1$ for all $n$ and $\norm{e_n-e_m}=\sqrt2$ for $n\neq m$: no subsequence converges strongly. The weak limit $0$ is not even on the unit sphere where the sequence lives: the norm is only weakly <em>lower</em> semicontinuous ($\norm{\hat x}\le\liminf\norm{x_n}$ when $x_n\wto\hat x$), a fact used in Opial's lemma on page 4.</p></div>
+<div class="widget" id="w-weak-strong">
+<div class="w-title">Interactive · a sequence that converges weakly but not strongly (and two that behave differently)</div>
+<p class="w-help">Left: the coordinates of $x_n$ in $\ell^2$ (bars) against the fixed test vector $y=(1/k)_{k\ge1}$ (faint bars). Right: the measurements $\ps{y}{x_n}$ and the norms $\norm{x_n}$ against $n$. Orthonormal $x_n=e_n$: the bump runs away, $\ps{y}{x_n}=1/n\to0$ for every $y$ (weak limit $0$) while $\norm{x_n}=1$ never shrinks. Shrinking $x_n=e_n/n$: strong convergence. Alternating $x_n=(-1)^ne_1$: bounded, but $\ps{y}{x_n}=(-1)^n$ has no limit, so no weak limit either.</p>
+<div class="w-ctls">
+<div class="seg" id="ws-seq" role="group" aria-label="sequence"><button class="btn" type="button" data-v="ortho" aria-pressed="true">xₙ = eₙ</button><button class="btn" type="button" data-v="strong">xₙ = eₙ/n</button><button class="btn" type="button" data-v="alt">xₙ = (−1)ⁿe₁</button></div>
+<label class="ctl">n <input type="range" id="ws-n" min="1" max="14" step="1" value="4"><output id="ws-n-v"></output></label>
+</div>
+<svg class="w-svg" id="ws-svg" viewBox="0 0 520 280" role="img" aria-label="Coordinates of the sequence and the values of the inner products with a fixed vector"></svg>
+<p class="readout" id="ws-out"></p>
+</div>
+<div class="callout memo"><span class="lbl">To remember</span><p>$x_n\to\hat x$: $\norm{x_n-\hat x}\to0$. $x_n\wto\hat x$: $\ps{y}{x_n-\hat x}\to0$ for all $y$. Strong $\Rightarrow$ weak; equivalent in $\R^N$; $e_n\wto0$ but $\norm{e_n}=1$.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="hilbert-space" href="#hilbert-space">inner product, Cauchy–Schwarz</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="lsc" href="#lsc">lsc</a><a class="chip xref" data-id="bounded-closed-compact" href="#bounded-closed-compact">closed and compact sets</a><a class="chip xref" data-id="weak-convergence-criterion" href="04_fixed_point_forward_backward.html#weak-convergence-criterion">weak convergence criterion</a><a class="chip xref" data-id="lemma-opial" href="04_fixed_point_forward_backward.html#lemma-opial">Opial's lemma</a><a class="chip xref" data-id="krasnoselskii-mann" href="04_fixed_point_forward_backward.html#krasnoselskii-mann">Krasnosel'skii–Mann</a></div>
+</article>
+
+<article class="card def" id="bounded-closed-compact">
+<header class="card-head"><span class="kind">Definition</span><h3>Bounded, closed and compact sets</h3><span class="src">Part II · slide 7</span><span class="tag tag-slides">Slides</span><a class="anchor" href="#bounded-closed-compact" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Definition</span>
+<p>Let $S$ be a subset of a Hilbert space $\H$.</p>
+<ul><li>$S$ is <strong>bounded</strong> if it is included in a ball.</li>
+<li>$S$ is <strong>closed</strong> if the limit of every converging sequence of elements of $S$ belongs to $S$.</li>
+<li>$S$ is <strong>compact</strong> if, from every sequence $(x_n)_{n\in\N}$ of $S$, one can extract a subsequence $(x_{n_k})_{k\in\N}$ which converges to a point of $S$.</li></ul>
+<p>If $S$ is compact, then it is closed and bounded. The converse holds when $\H$ is finite-dimensional.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Compact = "every sequence has a convergent subsequence, and the limit stays inside": the one property that manufactures limit points out of nothing.</p>
+<div class="why">
+<p>Existence proofs need to produce a candidate minimizer out of a minimizing sequence. Nothing forces that sequence to converge (it can oscillate between two minimizers, see the <a class="xref" data-id="weierstrass" href="#weierstrass">widget of Weierstrass' theorem</a>); compactness supplies a subsequence that does, and closedness keeps the limit in the admissible set. This is why "compact" is defined here <em>sequentially</em>: it is exactly the form used in the proofs.</p>
+<p><strong>Compact ⇒ closed and bounded.</strong> Closed: a convergent sequence of $S$ has a subsequence converging in $S$, and a subsequence of a convergent sequence has the same limit, so the limit is in $S$. Bounded: if $S$ were unbounded, pick $x_n\in S$ with $\norm{x_n}\ge n$; no subsequence can converge (a convergent sequence is bounded), contradiction.</p>
+<p><strong>Finite dimension ⇒ converse (Bolzano–Weierstrass).</strong> In $\R^N$ a bounded sequence has a convergent subsequence (extract coordinate by coordinate); closedness puts the limit in $S$. In infinite dimension this fails: the closed unit ball of $\ell^2$ is closed and bounded, but $(e_n)$ has no convergent subsequence since $\norm{e_n-e_m}=\sqrt2$. This single fact is the reason the course states Weierstrass' theorem with "compact" and the coercivity theorem with "finite-dimensional".</p>
+</div>
+<div class="callout note"><span class="lbl">Examples</span><p>$[a,b]$ and closed balls of $\R^N$: compact. $]a,b[$: bounded, not closed. $\R$, a closed half-space, a closed subspace: closed, not bounded. The consensus subspace $\{x^{(1)}=\dots=x^{(M)}\}$: closed (a kernel of a continuous linear map), unbounded. The segmentation domain $\mathbb L^M$ with $\mathbb L$ finite: compact (finite), not convex.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p>Compact $\Rightarrow$ closed $+$ bounded; $\Leftarrow$ in $\R^N$ only. Compact is the <em>extraction</em> property.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="convergence-strong-weak" href="#convergence-strong-weak">strong convergence</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="weierstrass" href="#weierstrass">Weierstrass</a><a class="chip xref" data-id="existence-coercive" href="#existence-coercive">existence (coercive)</a><a class="chip xref" data-id="convex-stability" href="#convex-stability">$\ind_C\in\Gz{\H}$</a></div>
+</article>
+
+<article class="card def" id="liminf-limsup">
+<header class="card-head"><span class="kind">Definition</span><h3>Limits inferior and superior</h3><span class="src">Part II · slide 8</span><span class="tag tag-slides">Slides</span><a class="anchor" href="#liminf-limsup" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Definition</span>
+<p>Let $(\xi_n)_{n\in\N}$ be a sequence of elements of $[-\infty,+\infty]$. Its <strong>infimum limit</strong> is
+$$\liminf_{n\to+\infty}\xi_n=\lim_{n\to+\infty}\inf\{\xi_k\mid k\ge n\}\in[-\infty,+\infty]$$
+and its <strong>supremum limit</strong> is $\displaystyle\limsup_{n\to+\infty}\xi_n=\lim_{n\to+\infty}\sup\{\xi_k\mid k\ge n\}\in[-\infty,+\infty]$.</p>
+<ul><li>$\limsup\xi_n=-\liminf(-\xi_n)$;</li>
+<li>$\liminf\xi_n\le\limsup\xi_n$;</li>
+<li>$\lim_{n\to+\infty}\xi_n=\xi\in[-\infty,+\infty]$ if and only if $\liminf\xi_n=\limsup\xi_n=\xi$.</li></ul>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">The liminf is the lowest value the sequence keeps coming back to; it always exists, which is why lsc is phrased with it.</p>
+<div class="why">
+<p>The tail infimum $m_n=\inf\{\xi_k\mid k\ge n\}$ can only increase with $n$ (we remove terms from the set), so it has a limit in $[-\infty,+\infty]$, with no assumption on $(\xi_n)$. That limit is the $\liminf$. Symmetrically the tail supremum decreases to the $\limsup$. The three listed properties follow: the first by $\inf(-A)=-\sup A$, the second from $m_n\le M_n$, the third because a sequence squeezed between two tails with the same limit converges, and conversely.</p>
+<p>Facts used in the proofs of this page (all immediate from the definition): (i) there is a subsequence $(\xi_{k_n})$ with $\xi_{k_n}\to\liminf\xi_n$ (choose $k_n\ge n$ with $\xi_{k_n}$ close to $m_n$); (ii) the $\liminf$ along any subsequence is $\ge$ the $\liminf$ of the full sequence; (iii) $\liminf(a_n+b_n)\ge\liminf a_n+\liminf b_n$ when no $-\infty$ occurs; (iv) if $\xi_n\le\zeta_n$ for all $n$ then $\liminf\xi_n\le\liminf\zeta_n$.</p>
+<div class="figrow"><svg id="fig-liminf" viewBox="0 0 520 170" role="img" aria-label="An oscillating sequence with its tail infimum and tail supremum envelopes converging to the liminf and the limsup"></svg><p class="cap">$\xi_n=(-1)^n\big(1+\tfrac{1}{n+1}\big)$: the tail infima (lower staircase) rise to $\liminf\xi_n=-1$, the tail suprema fall to $\limsup\xi_n=1$; the sequence has no limit.</p></div>
+</div>
+<div class="callout memo"><span class="lbl">To remember</span><p>$\liminf=\lim_n\inf_{k\ge n}$ (nondecreasing tails, always exists). $\lim$ exists $\iff\liminf=\limsup$. Some subsequence attains the $\liminf$.</p></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="lsc" href="#lsc">lsc</a><a class="chip xref" data-id="lsc-epi-closed" href="#lsc-epi-closed">closed epigraph</a><a class="chip xref" data-id="weierstrass" href="#weierstrass">Weierstrass</a><a class="chip xref" data-id="fejer-convergence" href="04_fixed_point_forward_backward.html#fejer-convergence">Fejér sequences</a></div>
+</article>
+</section>
+
+<section class="chapter" id="s-existence">
+<header><div class="eyebrow">Part II · slides 12–15</div><h2>Existence of a minimizer</h2>
+<p class="lead">The first of the four questions. Two theorems, one mechanism: a minimizing sequence, a convergent subsequence (compactness), and lower semicontinuity to pass to the limit. Coercivity is the device that produces compactness when the domain is not bounded.</p></header>
+
+<article class="card def" id="minimizers">
+<header class="card-head"><span class="kind">Definition</span><h3>Local, global and strict minimizers</h3><span class="src">Part II · slide 12</span><span class="tag tag-slides">Slides</span><a class="anchor" href="#minimizers" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Definition</span>
+<p>Let $S$ be a nonempty set of a Hilbert space $\H$, let $f:S\to\,]-\infty,+\infty]$ be a proper function and let $\hat x\in S$.</p>
+<ul>
+<li>$\hat x$ is a <strong>local minimizer</strong> of $f$ if $\hat x\in\dom f$ and there exists an open neighbourhood $O$ of $\hat x$ such that $(\forall x\in O\cap S)\ f(\hat x)\le f(x)$.</li>
+<li>$\hat x$ is a <strong>(global) minimizer</strong> of $f$ if $(\forall x\in S)\ f(\hat x)\le f(x)$.</li>
+<li>$\hat x$ is a <strong>strict local minimizer</strong> of $f$ if there exists an open neighbourhood $O$ of $\hat x$ such that $(\forall x\in(O\cap S)\setminus\{\hat x\})\ f(\hat x)\lt f(x)$.</li>
+<li>$\hat x$ is a <strong>strict (global) minimizer</strong> of $f$ if $(\forall x\in S\setminus\{\hat x\})\ f(\hat x)\lt f(x)$.</li>
+</ul>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Global: nobody beats $\hat x$. Local: nobody nearby beats it. Strict: nobody even ties.</p>
+<div class="why">
+<p>The requirement $\hat x\in\dom f$ in the local definition is not decoration: without it, any point in the interior of $\{f=+\infty\}$ would be a "local minimizer" (all its neighbours tie at $+\infty$). The global definition needs no such clause: if $f$ is proper, a global minimizer automatically has a finite value.</p>
+<p>The gap between local and global is the whole difficulty of nonconvex optimization (think of the segmentation problem or any deep-learning loss). Convexity closes the gap: <a class="xref" data-id="minimizers-convex" href="#minimizers-convex">every local minimizer of a convex function is global</a>. Strictness is what uniqueness statements are made of: a strict global minimizer is the unique minimizer, and <a class="xref" data-id="minimizers-convex" href="#minimizers-convex">strict convexity</a> makes every minimizer strict.</p>
+<div class="figrow"><svg id="fig-minimizers" viewBox="0 0 520 170" role="img" aria-label="A nonconvex function with a strict local minimizer, a flat segment of non-strict local minimizers and the global minimizer"></svg><p class="cap">A nonconvex $f$ on $S=[-3,3]$: a strict local minimizer (left), a flat stretch of local minimizers that are not strict (middle), and the strict global minimizer (right).</p></div>
+</div>
+<div class="callout memo"><span class="lbl">To remember</span><p>Local: $f(\hat x)\le f(x)$ on $O\cap S$, with $\hat x\in\dom f$. Global: on all of $S$. Strict: $\lt$ for $x\neq\hat x$. Convex $\Rightarrow$ local $=$ global.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="domain-proper" href="#domain-proper">proper, domain</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="weierstrass" href="#weierstrass">Weierstrass</a><a class="chip xref" data-id="optimality-convex-set" href="#optimality-convex-set">first-order condition</a><a class="chip xref" data-id="minimizers-convex" href="#minimizers-convex">minimizers of a convex function</a><a class="chip xref" data-id="fermat-rule" href="02_subdifferential_conjugate.html#fermat-rule">Fermat's rule</a></div>
+</article>
+
+<article class="card thm" id="weierstrass">
+<header class="card-head"><span class="kind">Theorem</span><h3>Weierstrass: l.s.c. on a compact set ⇒ a minimizer exists</h3><span class="src">Part II · slide 13</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><span class="tag tag-exam">Exam</span><a class="anchor" href="#weierstrass" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $S$ be a nonempty compact set of a Hilbert space $\H$. Let $f:S\to\,]-\infty,+\infty]$ be a proper l.s.c. function. Then there exists $\hat x\in S$ such that
+$$f(\hat x)=\inf_{x\in S}f(x).$$</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Take a sequence that drives $f$ down to its infimum; compactness gives it a limit point; lsc says the limit point is at least as good as the sequence: it is a minimizer.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>The infimum $\delta$ exists but may be approached without being attained. A minimizing sequence approaches it. Two things could go wrong: the sequence could escape (no limit point), or the limit point could be a bad point (the function could jump up there). Compactness forbids the first, lower semicontinuity forbids the second. There is nothing else in the proof. Say it: <em>minimizing sequence + extraction + lsc at the limit.</em></p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul>
+<li><strong>$S$ compact</strong>: a convergent subsequence of the minimizing sequence, with limit in $S$. Drop it: $f=e^x$ on $S=\R$ (lsc, proper, $\inf f=0$ not attained; the minimizing sequence $x_n=-n$ escapes), or $f(x)=x$ on $S=\,]0,1]$ (not closed; $x_n=1/n$ converges to $0\notin S$).</li>
+<li><strong>$f$ lsc</strong>: passing to the limit in "$f(x_{k_n})\to\delta$". Drop it: $f(x)=x^2$ for $x\neq0$ and $f(0)=1$ on $S=[-1,1]$: compact, $\inf f=0$ not attained.</li>
+<li><strong>$f$ proper</strong>: $\delta\lt+\infty$, so there is a genuine minimizing sequence; otherwise the statement is empty.</li>
+<li><strong>values $\gt-\infty$</strong>: the conclusion $f(\hat x)=\delta$ with $\delta\in\R$ shows a posteriori that $f$ is bounded below on $S$.</li>
+</ul></div>
+<details class="pl hint"><summary>Hint <span class="aid">— try it first</span></summary><div class="dc"><p>Let $\delta=\inf_Sf$. Build $(x_n)$ in $S$ with $f(x_n)\to\delta$; extract; use the lsc inequality at the limit and the definition of $\inf$.</p></div></details>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T02"><b>T02</b> direct method</a></summary><div class="dc">
+<p><span class="step">1. Minimizing sequence.</span> Let $\delta=\inf_{x\in S}f(x)$. Since $f$ is proper, $\delta\in[-\infty,+\infty[$. By definition of the infimum there is a sequence $(x_n)_{n\in\N}$ of elements of $S$ such that $\lim_{n\to+\infty}f(x_n)=\delta$ (if $\delta\in\R$ choose $x_n$ with $f(x_n)\le\delta+\tfrac1{n+1}$; if $\delta=-\infty$ choose $f(x_n)\le-n$).</p>
+<p><span class="step">2. Extraction.</span> Since $S$ is compact, there exists a subsequence $(x_{k_n})_{n\in\N}$ of $(x_n)_{n\in\N}$ such that $x_{k_n}\to\hat x\in S$.</p>
+<p><span class="step">3. Lower semicontinuity.</span> Then $f(\hat x)\le\liminf_{n}f(x_{k_n})=\delta$, because a subsequence of a convergent sequence has the same limit $\delta$.</p>
+<p><span class="step">4. Conclusion.</span> On the other hand $f(\hat x)\ge\delta$ since $\hat x\in S$ and $\delta$ is the infimum. Hence $f(\hat x)=\delta$; and since $f(\hat x)\gt-\infty$, $\delta\in\R$: the infimum is finite and attained at $\hat x$.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout trick"><span class="lbl">Trick</span><p><a class="chip t" href="09_toolbox.html#T02"><b>T02</b> direct method</a>: whenever you must prove that something is attained, take a sequence that approaches it, make it converge (compactness, or boundedness in finite dimension), and use a semicontinuity property to pass to the limit. The same three moves prove the <a class="xref" data-id="existence-coercive" href="#existence-coercive">coercive existence theorem</a>, the existence of the prox (page 3) and the convergence of the MM schemes (page 7).</p></div>
+<div class="widget" id="w-min-seq">
+<div class="w-title">Interactive · the direct method, and the two ways it can break</div>
+<p class="w-help">Step through a minimizing sequence $(x_n)$ (points on the graph). On the compact case the sequence itself does not converge (it alternates between the two minimizers $\pm1$ of $f(x)=(x^2-1)^2$), but each subsequence converges to a minimizer: that is what extraction is for. For $f=e^x$ on $\R$ the sequence $x_n=-n/2$ drives $f$ to $\inf f=0$ and escapes: no compactness. For the non-lsc $f$ ($x^2$ except $f(0)=1$) the sequence $x_n=2/(n+1)$ converges to $0$, but $f(0)=1\gt0=\lim f(x_n)$: the limit is not a minimizer.</p>
+<div class="w-ctls">
+<div class="seg" id="ms-case" role="group" aria-label="case"><button class="btn" type="button" data-v="compact" aria-pressed="true">compact S, lsc f</button><button class="btn" type="button" data-v="noncoercive">S = ℝ, f = eˣ</button><button class="btn" type="button" data-v="notlsc">compact S, f not lsc</button></div>
+<label class="ctl">n <input type="range" id="ms-n" min="0" max="24" step="1" value="6"><output id="ms-n-v"></output></label>
+</div>
+<svg class="w-svg" id="ms-svg" viewBox="0 0 520 280" role="img" aria-label="Graph of the function, the set S, and the first terms of a minimizing sequence"></svg>
+<ul class="w-steps" id="ms-steps"><li>…</li></ul>
+</div>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Weierstrass:</strong> proper $+$ lsc $+$ compact $\Rightarrow$ $\inf$ attained. Proof: minimizing sequence, extract, lsc. (Three words, three hypotheses.)</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="bounded-closed-compact" href="#bounded-closed-compact">compactness</a><a class="chip xref" data-id="lsc" href="#lsc">lsc</a><a class="chip xref" data-id="liminf-limsup" href="#liminf-limsup">liminf</a><a class="chip xref" data-id="minimizers" href="#minimizers">minimizers</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="existence-coercive" href="#existence-coercive">existence (coercive)</a><a class="chip xref" data-id="existence-uniqueness-convex" href="#existence-uniqueness-convex">existence over $C$</a><a class="chip xref" data-id="prox-existence-uniqueness" href="03_proximity_operator.html#prox-existence-uniqueness">existence of the prox</a></div>
+</article>
+
+<article class="card def" id="coercive">
+<header class="card-head"><span class="kind">Definition</span><h3>Coercive function</h3><span class="src">Part II · slide 14</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#coercive" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Definition</span>
+<p>Let $\H$ be a Hilbert space and $f:\H\to\,]-\infty,+\infty]$. $f$ is <strong>coercive</strong> if
+$$\lim_{\norm x\to+\infty}f(x)=+\infty,$$
+i.e. for every $M\in\R$ there exists $R\gt0$ such that $\norm x\gt R\Rightarrow f(x)\gt M$.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Far away, the function is huge: whatever happens, the minimum has to be looked for inside some ball.</p>
+<div class="why">
+<p>Coercivity is the substitute for a bounded domain. If $f$ is $+\infty$ at infinity, no minimizing sequence can escape: once $f(x_n)\le f(x_0)$ the points $x_n$ are trapped in a ball (<a class="chip t" href="09_toolbox.html#T03"><b>T03</b></a>). In finite dimension that ball is compact and Weierstrass finishes the job. An equivalent formulation worth knowing: $f$ is coercive iff all its lower level sets $\lev_{\le\zeta}f$ are bounded.</p>
+<p>The three pictures of the slides:</p>
+<div class="figrow"><svg id="fig-coercive" viewBox="0 0 520 150" role="img" aria-label="Three graphs: a decreasing exponential that tends to zero (not coercive), a convex function that blows up at both ends (coercive), the indicator of a bounded interval (coercive)"></svg><p class="cap">Left: $f(x)=e^{-x}$ tends to $0$ as $x\to+\infty$: not coercive. Middle: $f\to+\infty$ at both ends: coercive. Right: $\ind_{[a,b]}$ equals $+\infty$ outside a bounded set: coercive.</p></div>
+</div>
+<div class="callout note"><span class="lbl">Examples to classify at once</span><p>Coercive: $\norm{\cdot}^2$, $\norm{\cdot}$, $\norm{\cdot}_1$, $\ind_C$ with $C$ bounded, $f+g$ when $f$ is coercive and $g$ bounded below, $x\mapsto\norm{Ax-z}^2$ iff $\Ker A=\{0\}$ (<a class="xref" data-id="ex-basics-5" href="#ex-basics-5">exercise 5</a>). Not coercive: constants, affine functions, $e^x$, $\log(1+e^{-yx})$ (bounded below by $0$, never blows up), $\ind_C$ with $C$ unbounded.</p></div>
+<div class="widget" id="w-coercive-2d">
+<div class="w-title">Interactive · coercivity in 2-D is "all level sets are bounded"</div>
+<p class="w-help">$f(x_1,x_2)=\tfrac12(a_1x_1^2+a_2x_2^2)$. The shaded region is the lower level set $\lev_{\le\zeta}f$, the curve its boundary. With $a_1,a_2\gt0$ the level sets are ellipses (bounded: coercive, unique minimizer $0$). With one coefficient equal to $0$ they are unbounded strips: not coercive, yet minimizers exist (a whole line): coercivity is sufficient, not necessary. With a negative coefficient they are unbounded hyperbolic regions and $\inf f=-\infty$.</p>
+<div class="w-ctls">
+<label class="ctl">a₁ <input type="range" id="co-a1" min="-1" max="2" step="0.1" value="1"><output id="co-a1-v"></output></label>
+<label class="ctl">a₂ <input type="range" id="co-a2" min="-1" max="2" step="0.1" value="0.4"><output id="co-a2-v"></output></label>
+<label class="ctl">ζ <input type="range" id="co-z" min="0.2" max="3" step="0.1" value="1"><output id="co-z-v"></output></label>
+</div>
+<svg class="w-svg" id="co-svg" viewBox="0 0 520 320" role="img" aria-label="Lower level set of a quadratic function in the plane"></svg>
+<ul class="w-steps" id="co-steps"><li>…</li></ul>
+</div>
+<div class="callout pitfall"><span class="lbl">Pitfall</span><p>Coercive does not mean bounded below or well behaved near the origin: $f(x)=x^2-1/\abs x$ for $x\neq0$, $f(0)=0$ is coercive with $\inf f=-\infty$. It is not lsc at $0$; lsc is the hypothesis that controls what happens at finite distance, coercivity the one that controls infinity. Both are needed in the next theorem.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p>Coercive: $f(x)\to+\infty$ as $\norm x\to+\infty$ $\iff$ bounded level sets. Confines minimizing sequences to a ball. Sufficient for existence (with proper, lsc, finite dimension), not necessary.</p></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="existence-coercive" href="#existence-coercive">existence (coercive)</a><a class="chip xref" data-id="existence-uniqueness-convex" href="#existence-uniqueness-convex">existence over $C$</a><a class="chip xref" data-id="prox-existence-uniqueness" href="03_proximity_operator.html#prox-existence-uniqueness">existence of the prox</a></div>
+</article>
+
+<article class="card thm" id="existence-coercive">
+<header class="card-head"><span class="kind">Theorem</span><h3>Existence in finite dimension: proper + l.s.c. + coercive ⇒ Argmin nonempty compact</h3><span class="src">Part II · slide 15</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><span class="tag tag-exam">Exam</span><a class="anchor" href="#existence-coercive" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $\H$ be a finite-dimensional Hilbert space. Let $f:\H\to\,]-\infty,+\infty]$ be a proper l.s.c. coercive function. Then the set of minimizers of $f$ is a nonempty compact set.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Coercivity shrinks the problem to a closed ball, finite dimension makes the ball compact, Weierstrass gives a minimizer; the same two facts make Argmin closed and bounded.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>Pick any admissible point $x_0$. Far from $x_0$ the function exceeds $f(x_0)$, so no point out there can be a minimizer: everything relevant happens in a ball around $x_0$. A closed ball in finite dimension is compact, and $f$ restricted to it is still proper and lsc, so Weierstrass produces a minimizer of $f$ on the ball; it is a minimizer on all of $\H$ because outside the ball $f$ is larger than $f(x_0)$. Argmin sits inside that ball (bounded) and is closed because lsc passes "being a minimizer" to limits. Say it: <em>coercivity confines, compactness extracts, lsc passes to the limit.</em></p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul>
+<li><strong>coercive</strong>: the ball $S$ on which to apply Weierstrass. Without it: $f=e^x$ (proper, lsc, bounded below, no minimizer).</li>
+<li><strong>lsc</strong>: Weierstrass on $S$, and closedness of $\Argmin f$. Without it: $x^2$ with $f(0)=1$ (coercive, no minimizer).</li>
+<li><strong>proper</strong>: the starting point $x_0$ with $f(x_0)\in\R$.</li>
+<li><strong>finite dimension</strong>: closed bounded $\Rightarrow$ compact. In infinite dimension the theorem fails as stated; it is rescued by convexity (<a class="xref" data-id="existence-uniqueness-convex" href="#existence-uniqueness-convex">next section</a>), because convex lsc functions are weakly lsc and closed balls are weakly compact.</li>
+</ul></div>
+<details class="pl hint"><summary>Hint <span class="aid">— try it first</span></summary><div class="dc"><p>Use coercivity with $M=f(x_0)$ to find a radius $\eta$ such that $f\gt f(x_0)$ outside the ball $S=\{\norm{x-x_0}\le\eta\}$. Apply Weierstrass on $S$. For compactness of Argmin, show it is contained in $S$ and closed.</p></div></details>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T03"><b>T03</b> coercivity confines</a> <a class="chip t" href="09_toolbox.html#T02"><b>T02</b> direct method</a></summary><div class="dc">
+<p><span class="step">1. An admissible point.</span> Since $f$ is proper, there exists $x_0\in\H$ such that $f(x_0)\in\R$.</p>
+<p><span class="step">2. Confinement.</span> The coercivity of $f$ implies that there exists $\eta\in\,]0,+\infty[$ such that, for every $x\in\H$ satisfying $\norm{x-x_0}\gt\eta$, $f(x)\gt f(x_0)$. (Indeed, with $M=f(x_0)$ there is $R$ with $\norm x\gt R\Rightarrow f(x)\gt f(x_0)$; take $\eta=R+\norm{x_0}$: $\norm{x-x_0}\gt\eta$ implies $\norm x\ge\norm{x-x_0}-\norm{x_0}\gt R$.)</p>
+<p><span class="step">3. A compact set.</span> Let $S=\{x\in\H\mid\norm{x-x_0}\le\eta\}$. Then $S\cap\dom f\neq\emptyset$ (it contains $x_0$) and $S$ is compact, being closed and bounded in a finite-dimensional space.</p>
+<p><span class="step">4. Weierstrass on $S$.</span> The restriction of $f$ to $S$ is proper and lsc, so there exists $\hat x\in S$ such that $f(\hat x)=\inf_{x\in S}f(x)\le f(x_0)$. For $x\notin S$, $f(x)\gt f(x_0)\ge f(\hat x)$. Thus $f(\hat x)=\inf_{x\in\H}f(x)$: $\Argmin f\neq\emptyset$.</p>
+<p><span class="step">5. Argmin is bounded.</span> Every minimizer $x$ satisfies $f(x)=f(\hat x)\le f(x_0)$, hence $x\in S$ by step 2: $\Argmin f\subset S$ is bounded.</p>
+<p><span class="step">6. Argmin is closed.</span> Let $(x_n)_{n\in\N}$ be a sequence of minimizers converging to some $\bar x\in\H$. By lsc, $f(\bar x)\le\liminf_nf(x_n)=\inf_{x\in\H}f(x)$, and consequently $\bar x\in\Argmin f$. Therefore $\Argmin f$ is closed, and, being closed and bounded in finite dimension, compact.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout trick"><span class="lbl">Trick</span><p><a class="chip t" href="09_toolbox.html#T03"><b>T03</b></a> "Coercivity confines": compare with the value at one admissible point to cut the space down to a ball, then forget about the outside. This is also how page 3 proves that $\prox_fx$ exists: $f+\tfrac12\norm{\cdot-x}^2$ is coercive because $f$ has an affine minorant.</p></div>
+<div class="callout pitfall"><span class="lbl">Pitfall</span><p>Nonempty compact, not "a single point": $f=\abs{\,\abs x-1\,}$ is coercive, continuous, and $\Argmin f=\{-1,1\}$. Uniqueness is a job for strict convexity, not for coercivity.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p>In $\R^N$: <strong>proper $+$ lsc $+$ coercive $\Rightarrow$ Argmin nonempty compact.</strong> Proof: confine to a ball (T03), Weierstrass (T02), lsc closes Argmin.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="weierstrass" href="#weierstrass">Weierstrass</a><a class="chip xref" data-id="coercive" href="#coercive">coercivity</a><a class="chip xref" data-id="bounded-closed-compact" href="#bounded-closed-compact">closed bounded ⇒ compact</a><a class="chip xref" data-id="lsc" href="#lsc">lsc</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="existence-uniqueness-convex" href="#existence-uniqueness-convex">existence over $C$</a><a class="chip xref" data-id="prox-existence-uniqueness" href="03_proximity_operator.html#prox-existence-uniqueness">existence of the prox</a><a class="chip xref" data-id="ex-basics-5" href="#ex-basics-5">exercise 5</a><a class="chip xref" data-id="mm-quadratic-convergence" href="07_majorization_minimization.html#mm-quadratic-convergence">MM convergence</a></div>
+</article>
+</section>
+
+<section class="chapter" id="s-convexity">
+<header><div class="eyebrow">Part II · slides 16–24</div><h2>Convexity</h2>
+<p class="lead">The third word of $\Gz{\H}$ and the one that makes optimization tractable: chords lie above the graph, hence level sets and Argmin are convex, local minimizers are global, and a first-order condition becomes a full characterization.</p></header>
+
+<article class="card def" id="convex-set">
+<header class="card-head"><span class="kind">Definition</span><h3>Convex set</h3><span class="src">Part II · slide 16</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#convex-set" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Definition</span>
+<p>$C\subset\H$ is a <strong>convex set</strong> if
+$$(\forall(x,y)\in C^2)(\forall\alpha\in\,]0,1[)\qquad \alpha x+(1-\alpha)y\in C .$$</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">A set is convex when it contains the whole segment between any two of its points: no bites, no holes, no corners pointing inward.</p>
+<div class="why">
+<p>The point $\alpha x+(1-\alpha)y$ runs along the segment $[x,y]$ as $\alpha$ goes from $1$ ($=x$) to $0$ ($=y$). Convexity is exactly what the <a class="chip t" href="09_toolbox.html#T04"><b>T04</b> chord argument</a> needs: from a point $\hat x\in C$ you can move <em>a little</em> towards any other point $y\in C$ and stay in $C$. That is the only property of $C$ used in the <a class="xref" data-id="optimality-convex-set" href="#optimality-convex-set">first-order optimality condition</a>.</p>
+<div class="figrow"><svg id="fig-convex-sets" viewBox="0 0 520 150" role="img" aria-label="Three planar sets: an L-shaped region with a chord leaving the set (not convex), a rounded convex blob, a convex quadrilateral"></svg><p class="cap">Left: a chord between two points of $C$ leaves $C$: not convex. Middle and right: convex.</p></div>
+</div>
+<div class="callout note"><span class="lbl">Examples</span><p>Convex: $\emptyset$, $\H$, affine subspaces (in particular the consensus subspace $\{x^{(1)}=\dots=x^{(M)}\}$ and $\Ker L$, $\ran L$), balls, half-spaces $\{\ps{u}{x}\le\eta\}$, boxes $[a,b]^N$, the simplex, cones $\{x\ge0\}$, any intersection of convex sets (so the feasible set of linear constraints $\varphi_i(x)=\delta_i$, $\psi_j(x)\le\eta_j$ with affine $\varphi_i,\psi_j$). Not convex: a finite set with at least two points (the segmentation domain $\mathbb L^M$), the unit sphere, the set of $k$-sparse vectors, the union of two disjoint balls.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p>$C$ convex $\iff$ $[x,y]\subset C$ for all $x,y\in C$. Intersections of convex sets are convex.</p></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="optimality-convex-set" href="#optimality-convex-set">first-order condition</a><a class="chip xref" data-id="convex-epi" href="#convex-epi">convex epigraph</a><a class="chip xref" data-id="convex-stability" href="#convex-stability">$\ind_C\in\Gz{\H}$</a><a class="chip xref" data-id="normal-cone" href="02_subdifferential_conjugate.html#normal-cone">normal cone</a><a class="chip xref" data-id="prox-projection" href="03_proximity_operator.html#prox-projection">projection</a></div>
+</article>
+
+<article class="card def" id="gateaux">
+<header class="card-head"><span class="kind">Definition</span><h3>Gâteaux differentiability</h3><span class="src">Part II · slide 17</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#gateaux" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Definition</span>
+<p>Let $\H$ be a Hilbert space and let $f:\H\to\,]-\infty,+\infty]$ be a proper function. $f$ is <strong>Gâteaux differentiable</strong> at $x\in\dom f$ if there exists $\nabla f(x)\in\H$ such that
+$$(\forall y\in\H)\qquad \ps{\nabla f(x)}{y}=\lim_{\substack{\alpha\to0\\ \alpha\neq0}}\frac{f(x+\alpha y)-f(x)}{\alpha}.$$</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">All directional derivatives exist and they are given by one vector through the inner product: $\nabla f(x)$ is the direction of steepest ascent and $\ps{\nabla f(x)}{y}$ the slope in direction $y$.</p>
+<div class="why">
+<p>This is the weakest notion of gradient that still gives the <a class="xref" data-id="optimality-convex-set" href="#optimality-convex-set">first-order condition</a>: the proof only needs the one-sided limit along a direction $y-\hat x$. Fréchet differentiability (the limit is uniform in $y$) implies Gâteaux differentiability; in finite dimension with continuous partial derivatives they coincide, and $\nabla f(x)$ is the usual gradient. Note that $\alpha$ may be negative: the slopes in directions $y$ and $-y$ must be opposite, which rules out kinks.</p>
+<p><strong>Two computations you will redo all year.</strong> For $f(x)=\tfrac12\norm{Lx-z}^2$ with $L\in\B(\H,\G)$:
+$f(x+\alpha y)-f(x)=\alpha\ps{Lx-z}{Ly}+\tfrac{\alpha^2}2\norm{Ly}^2$, so the quotient tends to $\ps{Lx-z}{Ly}=\ps{L^*(Lx-z)}{y}$ and $\nabla f(x)=L^*(Lx-z)$. For $f(x)=\tfrac12\ps{x}{Ax}+\ps{b}{x}$ with $A=A^*$: $\nabla f(x)=Ax+b$.</p>
+</div>
+<div class="callout pitfall"><span class="lbl">Pitfall</span><p>$\abs{\cdot}$ is not Gâteaux differentiable at $0$: the quotient $\abs{\alpha y}/\alpha=\abs y\,\sgn(\alpha)$ has different limits for $\alpha\to0^+$ and $\alpha\to0^-$. Page 2 repairs this with the subdifferential ($\partial\abs{\cdot}(0)=[-1,1]$). Also, $x$ must be in $\dom f$: a gradient at a forbidden point makes no sense, and the quotient must be finite for every $y$, so in practice $x$ is interior to $\dom f$.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p>Gâteaux: $\ps{\nabla f(x)}{y}=\lim_{\alpha\to0}\frac{f(x+\alpha y)-f(x)}\alpha$ for every direction $y$. $\nabla\tfrac12\norm{L\cdot-z}^2=L^*(L\cdot-z)$.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="hilbert-space" href="#hilbert-space">inner product, adjoint</a><a class="chip xref" data-id="domain-proper" href="#domain-proper">domain</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="optimality-convex-set" href="#optimality-convex-set">first-order condition</a><a class="chip xref" data-id="second-order-convexity" href="#second-order-convexity">Hessian criterion</a><a class="chip xref" data-id="subdiff-gateaux" href="02_subdifferential_conjugate.html#subdiff-gateaux">$\partial f=\{\nabla f\}$</a><a class="chip xref" data-id="gradient-inequality" href="02_subdifferential_conjugate.html#gradient-inequality">gradient inequality</a><a class="chip xref" data-id="descent-lemma" href="04_fixed_point_forward_backward.html#descent-lemma">descent lemma</a></div>
+</article>
+
+<article class="card thm" id="optimality-convex-set">
+<header class="card-head"><span class="kind">Theorem</span><h3>First-order optimality over a convex set (variational inequality)</h3><span class="src">Part II · slide 17</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><span class="tag tag-exam">Exam</span><a class="anchor" href="#optimality-convex-set" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $C$ be a nonempty convex subset of a Hilbert space $\H$. Let $f:\H\to\,]-\infty,+\infty]$ be Gâteaux differentiable at $\hat x\in C$. If $\hat x$ is a local minimizer of $f$ over $C$, then
+$$(\forall y\in C)\qquad \ps{\nabla f(\hat x)}{y-\hat x}\ \ge\ 0 .$$
+If $\hat x\in\inte(C)$, the condition reduces to $\nabla f(\hat x)=0$.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">At a minimizer, no feasible direction goes downhill: the gradient makes an angle of at most $90°$ with every $y-\hat x$, i.e. $-\nabla f(\hat x)$ points <em>out</em> of $C$, into the normal cone.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>Convexity of $C$ lets you walk from $\hat x$ straight towards any $y\in C$ while staying in $C$; local minimality says $f$ cannot decrease at the start of that walk; the Gâteaux derivative in the direction $y-\hat x$ is precisely the initial slope of that walk, hence $\ge0$. When $\hat x$ is interior you can walk in every direction and its opposite, so every slope is both $\ge0$ and $\le0$: the gradient vanishes. Out loud: <em>feasible segment, nonnegative difference quotient, pass to the limit.</em></p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul>
+<li><strong>$C$ convex</strong>: the segment $[\hat x,y]$ is feasible, so the difference quotient is computed inside $C$. Drop it: $C=\{0,1\}\subset\R$ and $f(x)=(x-0.4)^2$. The minimizer of $f$ over $C$ is $\hat x=0$, but with $y=1$, $\ps{f'(0)}{y-\hat x}=-0.8\lt0$: the inequality fails. The segment $[0,1]$ is not in $C$, so moving slightly from $\hat x$ towards $y$ leaves $C$ and the proof cannot even start.</li>
+<li><strong>Gâteaux differentiable at $\hat x$</strong>: the one-sided quotient converges. For nonsmooth $f$, page 2 replaces $\nabla f(\hat x)$ by a subgradient: $0\in\partial f(\hat x)+N_C(\hat x)$.</li>
+<li><strong>local</strong> minimizer suffices: only small $\alpha$ are used. The condition is <em>necessary</em>; it becomes <em>sufficient</em> when $f$ is convex (gradient inequality, page 2).</li>
+</ul></div>
+<details class="pl hint"><summary>Hint <span class="aid">— try it first</span></summary><div class="dc"><p>For $y\in C$ and small $\alpha\gt0$, $\hat x+\alpha(y-\hat x)\in O\cap C$. Compare $f$ there with $f(\hat x)$, divide by $\alpha$, let $\alpha\to0^+$.</p></div></details>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T04"><b>T04</b> chord argument</a></summary><div class="dc">
+<p><span class="step">1. A feasible segment.</span> Let $O$ be an open neighbourhood of $\hat x$ on which $f(\hat x)\le f(x)$ for all $x\in O\cap C$, and fix $y\in C$. For $\alpha\in[0,1]$, $(1-\alpha)\hat x+\alpha y=\hat x+\alpha(y-\hat x)\in C$ by convexity of $C$. Since $O$ is open and $\hat x+\alpha(y-\hat x)\to\hat x$ as $\alpha\to0$, there exists $\delta\in\,]0,1]$ such that, for every $\alpha\in\,]0,\delta]$, $\hat x+\alpha(y-\hat x)\in O\cap C$, hence
+$$f\big(\hat x+\alpha(y-\hat x)\big)\ \ge\ f(\hat x).$$</p>
+<p><span class="step">2. Nonnegative difference quotients.</span> For $\alpha\in\,]0,\delta]$, dividing by $\alpha\gt0$:
+$$\frac{f\big(\hat x+\alpha(y-\hat x)\big)-f(\hat x)}{\alpha}\ \ge\ 0 .$$</p>
+<p><span class="step">3. Pass to the limit.</span> By Gâteaux differentiability at $\hat x$ in the direction $y-\hat x$, the quotient converges to $\ps{\nabla f(\hat x)}{y-\hat x}$ as $\alpha\to0$ (in particular as $\alpha\to0^+$). Limits preserve weak inequalities, so $\ps{\nabla f(\hat x)}{y-\hat x}\ge0$.</p>
+<p><span class="step">4. Interior point.</span> If $\hat x\in\inte(C)$, there is $r\gt0$ with $B(\hat x,r)\subset C$. For any $z\in\H\setminus\{0\}$, the points $y_\pm=\hat x\pm\tfrac r{2\norm z}z$ belong to $C$; applying step 3 to $y_\pm$ gives $\pm\tfrac r{2\norm z}\ps{\nabla f(\hat x)}{z}\ge0$, so $\ps{\nabla f(\hat x)}{z}=0$ for every $z$, i.e. $\nabla f(\hat x)=0$ (take $z=\nabla f(\hat x)$).</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout note"><span class="lbl">Note on the slide</span><p>The slide writes "there exists $\delta\in[0,1]$"; the argument needs $\delta\gt0$ (so that there are admissible $\alpha$), which is what the openness of $O$ provides. The slide's quotient also reads $f(\hat x+\alpha(y-\hat x))-f(x)$ with a stray $x$ for $\hat x$.</p></div>
+<div class="callout trick"><span class="lbl">Trick</span><p><a class="chip t" href="09_toolbox.html#T04"><b>T04</b> chord argument</a>: to extract a first-order statement from a zeroth-order one (an inequality between values), move along $\hat x+\alpha(y-\hat x)$, divide by $\alpha$ and let $\alpha\to0^+$. The same move gives "local $=$ global" for convex functions below and the inclusion $\nabla f(x)\in\partial f(x)$ on page 2. Step 4 is <a class="chip t" href="09_toolbox.html#T07"><b>T07</b></a>: choose the test point $y=\hat x\pm tz$ to turn "$\ge0$ for all $y$" into an equality.</p></div>
+<div class="callout insight"><span class="lbl">Geometric reading (page 2 in advance)</span><p>Rewrite the condition as $\ps{-\nabla f(\hat x)}{y-\hat x}\le0$ for all $y\in C$: the vector $-\nabla f(\hat x)$ belongs to the <em>normal cone</em> $N_C(\hat x)=\{u\mid(\forall y\in C)\ \ps{u}{y-\hat x}\le0\}$. At an interior point the normal cone is $\{0\}$ and you recover $\nabla f(\hat x)=0$; on the boundary of a disc it is the outward ray; at a corner of a box it is the cone spanned by the active constraint normals. Page 2 shows $N_C(\hat x)=\partial\ind_C(\hat x)$, so the condition is Fermat's rule $0\in\nabla f(\hat x)+\partial\ind_C(\hat x)$ for $f+\ind_C$: the indicator trick again. Page 3 then rewrites it as the fixed-point equation $\hat x=P_C(\hat x-\gamma\nabla f(\hat x))$, which is the projected gradient algorithm.</p></div>
+<div class="widget" id="w-var-ineq">
+<div class="w-title">Interactive · the variational inequality on a disc as an angle condition</div>
+<p class="w-help">$f(x)=\tfrac12\norm{x-c}^2$ (circles are its level sets), $C$ the unit disc. Move the centre $c$ and a candidate $\bar x$ on the boundary circle (angle $\theta$). The widget computes $\min_{y\in C}\ps{\nabla f(\bar x)}{y-\bar x}=-\norm{\nabla f(\bar x)}-\ps{\nabla f(\bar x)}{\bar x}$ exactly (the worst $y$ is $y^\star=-\nabla f(\bar x)/\norm{\nabla f(\bar x)}$). The condition holds only when $-\nabla f(\bar x)$ points along the outward normal of the disc at $\bar x$, i.e. $\bar x=c/\norm c$ (with $\norm c\ge1$): the true minimizer $\hat x=P_C(c)$ is drawn in green. If $c$ is inside the disc, $\hat x=c$ is interior and $\nabla f(\hat x)=0$: no boundary point satisfies the inequality.</p>
+<div class="w-ctls">
+<label class="ctl">c₁ <input type="range" id="vi-cx" min="-2.5" max="2.5" step="0.1" value="1.8"><output id="vi-cx-v"></output></label>
+<label class="ctl">c₂ <input type="range" id="vi-cy" min="-2.5" max="2.5" step="0.1" value="1"><output id="vi-cy-v"></output></label>
+<label class="ctl">θ (°) <input type="range" id="vi-th" min="0" max="360" step="2" value="60"><output id="vi-th-v"></output></label>
+</div>
+<svg class="w-svg" id="vi-svg" viewBox="0 0 520 330" role="img" aria-label="Unit disc, level circles of the objective, the candidate point, minus its gradient, the normal ray, the worst feasible direction and the true minimizer"></svg>
+<div class="leg"><span><i class="dot" style="background:var(--s2)"></i>candidate x̄ and −∇f(x̄)</span><span><i class="dot" style="background:var(--idea)"></i>true minimizer x̂ = P_C(c)</span><span><i class="dot" style="background:var(--s5)"></i>worst y*</span><span><i style="border-color:var(--ink-3);border-top-style:dashed"></i>half-plane ⟨∇f(x̄)|y−x̄⟩ ≥ 0</span></div>
+<p class="readout" id="vi-out"></p>
+</div>
+<div class="callout pitfall"><span class="lbl">Pitfall</span><p>Necessary, not sufficient, without convexity of $f$: $f(x)=-x^2$ on $C=[-1,1]$ has $f'(0)=0$ at $\hat x=0$, which is the <em>maximizer</em>. And the inequality must hold for <em>all</em> $y\in C$, not just nearby ones; on a convex set the two are the same, which is one more thing convexity buys.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Variational inequality:</strong> $\hat x$ local min of $f$ over convex $C$ $\Rightarrow$ $\ps{\nabla f(\hat x)}{y-\hat x}\ge0$ $\ \forall y\in C$, i.e. $-\nabla f(\hat x)\in N_C(\hat x)$. Interior $\Rightarrow\nabla f(\hat x)=0$.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="convex-set" href="#convex-set">convex set</a><a class="chip xref" data-id="gateaux" href="#gateaux">Gâteaux derivative</a><a class="chip xref" data-id="minimizers" href="#minimizers">local minimizer</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="minimizers-convex" href="#minimizers-convex">local = global</a><a class="chip xref" data-id="ex-basics-5" href="#ex-basics-5">exercise 5 (normal equations)</a><a class="chip xref" data-id="fermat-rule" href="02_subdifferential_conjugate.html#fermat-rule">Fermat's rule</a><a class="chip xref" data-id="normal-cone" href="02_subdifferential_conjugate.html#normal-cone">normal cone</a><a class="chip xref" data-id="ex-constrained-minimizer" href="02_subdifferential_conjugate.html#ex-constrained-minimizer">constrained minimizer (ex.)</a><a class="chip xref" data-id="projected-gradient" href="04_fixed_point_forward_backward.html#projected-gradient">projected gradient</a></div>
+</article>
+
+<article class="card def" id="convex-function">
+<header class="card-head"><span class="kind">Definition</span><h3>Convex function, concave function</h3><span class="src">Part II · slides 18–20</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#convex-function" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Definition</span>
+<p>$f:\H\to\,]-\infty,+\infty]$ is a <strong>convex function</strong> if
+$$(\forall(x,y)\in\H^2)(\forall\alpha\in\,]0,1[)\qquad f(\alpha x+(1-\alpha)y)\ \le\ \alpha f(x)+(1-\alpha)f(y),$$
+with the conventions $a+(+\infty)=+\infty$ and $\alpha\cdot(+\infty)=+\infty$ for $\alpha\gt0$.</p>
+<p>$f:\H\to[-\infty,+\infty[$ is <strong>concave</strong> if $-f$ is convex.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Chords lie above the graph: between two points, the function never bulges above the straight line joining their values.</p>
+<div class="why">
+<p>Read the inequality on the segment $[x,y]$: the left side is the value of $f$ at the point of parameter $\alpha$, the right side the value of the <em>chord</em> (the affine interpolation of $f(x)$ and $f(y)$) at the same point. Convexity says the graph is below every chord. Three consequences drive the whole course: (i) a convex function has no "valley you can be trapped in" (<a class="xref" data-id="minimizers-convex" href="#minimizers-convex">local $=$ global</a>); (ii) it has a well-behaved set of supporting lines at every interior point (the subdifferential, page 2); (iii) adding $\tfrac12\norm{\cdot-x}^2$ to it gives a function with a unique minimizer (the prox, page 3).</p>
+<p>The conventions with $+\infty$ mean: if $x$ or $y$ is forbidden, the right side is $+\infty$ and the inequality says nothing; so convexity only tests pairs in $\dom f$, and in particular forces $\dom f$ to be convex (<a class="xref" data-id="convex-epi" href="#convex-epi">next card</a>).</p>
+<div class="figrow"><svg id="fig-convex-fns" viewBox="0 0 520 150" role="img" aria-label="Three graphs: the absolute value (convex), the square root of the absolute value (not convex), the indicator of a symmetric interval (convex)"></svg><p class="cap">$\abs x$: convex. $\sqrt{\abs x}$: not convex (the chord from $0$ to $1$ passes below the graph). $\ind_{[-\delta,\delta]}$: convex.</p></div>
+</div>
+<div class="widget" id="w-chord">
+<div class="w-title">Interactive · the chord inequality, read as a vertical gap</div>
+<p class="w-help">Pick $x$, $y$ and $\alpha$. The dashed vertical segment at $z=\alpha x+(1-\alpha)y$ joins $f(z)$ to the chord value $\alpha f(x)+(1-\alpha)f(y)$: green when the inequality holds, red when it fails. The portions of the chord drawn in red are the $\alpha$'s for which it fails; a convex function never shows red. The flat function $\max(\abs x-1,0)$ is convex but not strictly: the gap can be exactly $0$ with $x\neq y$.</p>
+<div class="w-ctls">
+<div class="seg" id="ch-fn" role="group" aria-label="function"><button class="btn" type="button" data-v="quad" aria-pressed="true">x²/2 (strictly convex)</button><button class="btn" type="button" data-v="flat">max(|x|−1, 0) (convex, not strictly)</button><button class="btn" type="button" data-v="dwell">x⁴/8 − x² + 1 (not convex)</button></div>
+<label class="ctl">x <input type="range" id="ch-x" min="-3" max="3" step="0.1" value="-2.2"><output id="ch-x-v"></output></label>
+<label class="ctl">y <input type="range" id="ch-y" min="-3" max="3" step="0.1" value="1.6"><output id="ch-y-v"></output></label>
+<label class="ctl">α <input type="range" id="ch-a" min="0" max="1" step="0.02" value="0.5"><output id="ch-a-v"></output></label>
+</div>
+<svg class="w-svg" id="ch-svg" viewBox="0 0 520 300" role="img" aria-label="Graph of the function, the chord between two points and the vertical gap at the interpolated point"></svg>
+<p class="readout" id="ch-out"></p>
+</div>
+<div class="callout note"><span class="lbl">Examples</span><p>Convex: affine functions, every norm (triangle inequality $+$ homogeneity), $\norm{\cdot}^2$, $\ind_C$ for $C$ convex, $e^x$, $-\log$ on $]0,+\infty[$, $x\log x$, $\log(1+e^{-yx})$ (<a class="xref" data-id="ex-basics-3" href="#ex-basics-3">exercise 3</a>), $f\circ L$ for $f$ convex and $L$ affine (<a class="xref" data-id="ex-basics-5" href="#ex-basics-5">exercise 5</a>), $\max(f,g)$, $f+g$. Not convex: $\sqrt{\abs x}$, $x^3$, $\cos$, $\norm{\cdot}_0$, $-\norm{\cdot}$ (concave), $\ind_C$ for $C$ not convex.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Convex: $f(\alpha x+(1-\alpha)y)\le\alpha f(x)+(1-\alpha)f(y)$, $\alpha\in\,]0,1[$.</strong> "Graph below chords." Concave $=$ $-$convex.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="convex-set" href="#convex-set">convex set</a><a class="chip xref" data-id="domain-proper" href="#domain-proper">domain</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="convex-epi" href="#convex-epi">convex epigraph</a><a class="chip xref" data-id="convex-stability" href="#convex-stability">stability, $\Gz{\H}$</a><a class="chip xref" data-id="strictly-convex" href="#strictly-convex">strict convexity</a><a class="chip xref" data-id="minimizers-convex" href="#minimizers-convex">minimizers</a><a class="chip xref" data-id="ex-basics-2" href="#ex-basics-2">level sets (ex. 2)</a><a class="chip xref" data-id="subdifferential" href="02_subdifferential_conjugate.html#subdifferential">subdifferential</a><a class="chip xref" data-id="gradient-inequality" href="02_subdifferential_conjugate.html#gradient-inequality">gradient inequality</a></div>
+</article>
+
+<article class="card prop" id="convex-epi">
+<header class="card-head"><span class="kind">Proposition</span><h3>$f$ is convex $\iff$ $\epi f$ is convex; the domain of a convex function is convex</h3><span class="src">Part II · slides 19–20</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#convex-epi" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $f:\H\to\,]-\infty,+\infty]$. Then $f$ is convex if and only if its epigraph $\epi f$ is a convex subset of $\H\times\R$. Consequently, if $f$ is convex then $\dom f$ is convex.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">"Graph below chords" and "the region above the graph contains its segments" are the same picture.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>A segment between two points above the graph is a chord shifted upwards; it stays above the graph exactly when the chord does. For the converse, apply the convexity of the epigraph to the two points <em>on</em> the graph, $(x,f(x))$ and $(y,f(y))$: the segment between them is the chord, and "it lies in the epigraph" is the chord inequality. The domain is the projection of the epigraph on $\H$, and projections of convex sets are convex. Out loud: <em>chords of the graph are segments of the epigraph.</em></p></div>
+<div class="callout note"><span class="lbl">Note</span><p>The slides state the equivalence without proof; here is one in both directions.</p></div>
+<details class="pl hint"><summary>Hint <span class="aid">— try it first</span></summary><div class="dc"><p>($\Rightarrow$) take $(x,\zeta),(y,\xi)\in\epi f$ and bound $f(\alpha x+(1-\alpha)y)$. ($\Leftarrow$) if $x,y\in\dom f$, use the points $(x,f(x))$ and $(y,f(y))$.</p></div></details>
+<details class="pl proof"><summary>Proof</summary><div class="dc">
+<p><span class="step">1. convex ⇒ convex epigraph.</span> Let $(x,\zeta),(y,\xi)\in\epi f$ and $\alpha\in\,]0,1[$. Then $f(x)\le\zeta$, $f(y)\le\xi$ and, by convexity,
+$$f(\alpha x+(1-\alpha)y)\le\alpha f(x)+(1-\alpha)f(y)\le\alpha\zeta+(1-\alpha)\xi\lt+\infty .$$
+Hence $\alpha x+(1-\alpha)y\in\dom f$ and $\alpha(x,\zeta)+(1-\alpha)(y,\xi)=(\alpha x+(1-\alpha)y,\ \alpha\zeta+(1-\alpha)\xi)\in\epi f$.</p>
+<p><span class="step">2. convex epigraph ⇒ convex.</span> Let $x,y\in\H$ and $\alpha\in\,]0,1[$. If $f(x)=+\infty$ or $f(y)=+\infty$, the right-hand side of the chord inequality is $+\infty$ and there is nothing to prove. Otherwise $(x,f(x))$ and $(y,f(y))$ belong to $\epi f$, so by convexity of $\epi f$ the point $(\alpha x+(1-\alpha)y,\ \alpha f(x)+(1-\alpha)f(y))$ belongs to $\epi f$, which reads $f(\alpha x+(1-\alpha)y)\le\alpha f(x)+(1-\alpha)f(y)$.</p>
+<p><span class="step">3. The domain.</span> If $x,y\in\dom f$ and $\alpha\in\,]0,1[$, the chord inequality gives $f(\alpha x+(1-\alpha)y)\le\alpha f(x)+(1-\alpha)f(y)\lt+\infty$, so $\alpha x+(1-\alpha)y\in\dom f$. (Equivalently: $\dom f$ is the image of the convex set $\epi f$ by the linear projection $(x,\zeta)\mapsto x$, and linear images of convex sets are convex.)</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout trick"><span class="lbl">Trick</span><p>When a function is built geometrically (a supremum of affine functions, a perspective, a cone construction as in <a class="xref" data-id="ex-basics-4" href="#ex-basics-4">exercise 4</a>), prove convexity on the epigraph: set operations (intersection, product, cone generated, linear image) preserve convexity, with no inequality to manipulate.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p>$f$ convex $\iff$ $\epi f$ convex $\Rightarrow$ $\dom f$ convex. The dictionary of the <a class="xref" data-id="epigraph" href="#epigraph">epigraph card</a> is now complete.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="convex-function" href="#convex-function">convex function</a><a class="chip xref" data-id="epigraph" href="#epigraph">epigraph</a><a class="chip xref" data-id="convex-set" href="#convex-set">convex set</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="convex-stability" href="#convex-stability">sup of convex, $\ind_C\in\Gz{\H}$</a><a class="chip xref" data-id="ex-basics-4" href="#ex-basics-4">perspective (ex. 4)</a><a class="chip xref" data-id="conjugate-properties" href="02_subdifferential_conjugate.html#conjugate-properties">$f^*$ convex</a></div>
+</article>

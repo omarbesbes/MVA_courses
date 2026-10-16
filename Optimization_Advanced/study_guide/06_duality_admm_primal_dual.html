@@ -1,0 +1,975 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>6 · Duality, ADMM &amp; primal-dual · LSD study guide</title>
+<meta name="description" content="Study guide for the primal-dual deck (Fenchel–Rockafellar duality, Lagrangian, ADMM, Douglas–Rachford ↔ ADMM, primal-dual algorithms) of Foundations of Distributed and Large Scale Computing Optimization (MVA): every result explained, proved, visualized and made memorable.">
+<link rel="stylesheet" href="assets/katex/katex.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+.roadmap{width:100%;height:auto;display:block;margin:10px 0 16px}
+.roadmap .bx{fill:var(--sheet);stroke:var(--rule-2);stroke-width:1}
+.roadmap .bx.k{stroke:var(--accent);fill:var(--accent-tint)}
+.roadmap .bt{font-size:12.5px;font-weight:600;fill:var(--ink)}
+.roadmap .bs{font-size:11px;fill:var(--ink-3)}
+.roadmap .ar{stroke:var(--ink-3);stroke-width:1.2;fill:none}
+.roadmap .al{font-size:11px;fill:var(--ink-3)}
+.widget .cond{font-family:var(--f-mono);font-size:13px;padding:3px 8px;border-radius:4px;border:1px solid var(--rule-2)}
+.widget .cond.ok{color:var(--idea);border-color:var(--idea)}
+.widget .cond.ko{color:var(--warn);border-color:var(--warn)}
+</style>
+<script defer src="assets/katex/katex.min.js"></script>
+<script defer src="assets/katex/contrib/auto-render.min.js"></script>
+<script defer src="assets/registry.js"></script>
+<script defer src="assets/guide.js"></script>
+</head>
+<body>
+
+<header class="site"><div class="site-in">
+<a class="home" href="index.html">LSD study guide<small>Large Scale &amp; Distributed Optimization · MVA</small></a>
+<span class="spacer"></span>
+<ul class="strip" aria-label="Pages">
+<li><a href="index.html"><span class="n">⌂</span>Home</a></li>
+<li><a href="01_convex_analysis.html"><span class="n">1</span>Convexity</a></li>
+<li><a href="02_subdifferential_conjugate.html"><span class="n">2</span>Subdifferential &amp; conjugate</a></li>
+<li><a href="03_proximity_operator.html"><span class="n">3</span>Prox</a></li>
+<li><a href="04_fixed_point_forward_backward.html"><span class="n">4</span>Fixed points &amp; FB</a></li>
+<li><a href="05_douglas_rachford_ppxa.html"><span class="n">5</span>DR &amp; PPXA</a></li>
+<li><a href="06_duality_admm_primal_dual.html" class="on"><span class="n">6</span>Duality, ADMM &amp; primal-dual</a></li>
+<li><a href="07_majorization_minimization.html"><span class="n">7</span>MM</a></li>
+<li><a href="08_labs.html"><span class="n">L</span>Labs</a></li>
+<li><a href="09_toolbox.html"><span class="n">T</span>Toolbox</a></li>
+<li><a href="10_memorize.html"><span class="n">M</span>Memorize</a></li>
+</ul>
+<button class="btn theme-toggle" type="button">☾ Dark</button>
+</div></header>
+
+<div class="page">
+<!--TOC-->
+
+<main>
+<header class="hero" id="top">
+<div>
+<div class="eyebrow">Lecture 4 · Part II.5 (Paris-Saclay deck) · slides 3–36</div>
+<h1>Duality, ADMM and primal-dual algorithms</h1>
+<p class="lead">One template, $\min_x f(x)+g(Lx)$, and its mirror image $\min_v f^*(-L^*v)+g^*(v)$. Weak and strong duality, Kuhn–Tucker points as certificates, the Lagrangian and its saddle points, ADMM as Douglas–Rachford in disguise, and the primal-dual algorithm as Forward–Backward in a clever metric.</p>
+</div>
+<svg viewBox="0 0 220 170" role="img" aria-label="Contour lines of a saddle function with the saddle point marked at the centre.">
+<line x1="10" y1="85" x2="210" y2="85" class="s-mut" stroke-width="1"/>
+<line x1="110" y1="160" x2="110" y2="10" class="s-mut" stroke-width="1"/>
+<polyline points="125,18 132,40 139,51 147,58 154,62 161,66 169,68 176,70 183,71 190,73 198,74 205,74" class="s-acc" fill="none" stroke-width="1.6"/>
+<polyline points="95,152 88,130 81,119 73,112 66,108 59,104 51,102 44,100 37,99 30,97 22,96 15,96" class="s-acc" fill="none" stroke-width="1.6"/>
+<polyline points="154,17 161,27 169,34 176,40 183,44 190,48 198,51 205,54" class="s-acc" fill="none" stroke-width="1.6"/>
+<polyline points="66,153 59,143 51,136 44,130 37,126 30,122 22,119 15,116" class="s-acc" fill="none" stroke-width="1.6"/>
+<polyline points="125,152 132,130 139,119 147,112 154,108 161,104 169,102 176,100 183,99 190,97 198,96 205,96" class="s-2" fill="none" stroke-width="1.6"/>
+<polyline points="95,18 88,40 81,51 73,58 66,62 59,66 51,68 44,70 37,71 30,73 22,74 15,74" class="s-2" fill="none" stroke-width="1.6"/>
+<polyline points="154,153 161,143 169,136 176,130 183,126 190,122 198,119 205,116" class="s-2" fill="none" stroke-width="1.6"/>
+<polyline points="66,17 59,27 51,34 44,40 37,44 30,48 22,51 15,54" class="s-2" fill="none" stroke-width="1.6"/>
+<circle cx="110" cy="85" r="4" class="f-idea"/>
+<text x="118" y="80" class="tm f-ink2">(x̂, v̂)</text>
+<text x="196" y="98" class="tm f-ink2">x</text>
+<text x="114" y="20" class="tm f-ink2">v</text>
+</svg>
+</header>
+
+<ol class="howto">
+<li><b>Read the statement, then the "in one sentence".</b> Try to say why it is true before opening "Why it is true".</li>
+<li><b>Try the proof</b> with the hint before unfolding it; note the trick chips, they come back on every page.</li>
+<li><b>Play with the widgets</b>, then tick "known" when you can restate the result and its mechanism from memory.</li>
+</ol>
+<div class="legend" aria-label="Legend">
+<span><span class="tag tag-slides">Slides</span> on the official slides</span>
+<span><span class="tag tag-key">Key</span> used everywhere afterwards</span>
+<span><span class="tag tag-extra">Extra</span> context, not on the slides</span>
+<span><span class="tag tag-exam">Exam</span> classic exam question</span>
+<span><span class="tag tag-lab">Lab</span> needed in a lab</span>
+</div>
+
+<section class="chapter" id="overview">
+<header><div class="eyebrow">Overview</div><h2>Where we are</h2>
+<p class="lead">Pages 3–5 gave us algorithms that need the prox of each piece. This page is about the piece that has <em>no</em> cheap prox, $g\circ L$, and about the trick that makes it cheap again: go to the dual.</p></header>
+
+<p><strong>The template.</strong> Every problem of this page has the shape
+$$\textstyle\underset{x\in\H}{\text{minimize}}\ f(x)+g(Lx),\qquad f\in\Gz{\H},\ g\in\Gz{\G},\ L\in\B(\H,\G).$$
+It is not a special case, it is <em>the</em> case:</p>
+<ul>
+<li><strong>TV denoising</strong>: $f=\tfrac12\norm{\cdot-z}^2$, $g=\lambda\norm{\cdot}_1$, $L=$ discrete gradient. The prox of $\lambda\norm{\cdot}_1$ is soft-thresholding; the prox of $\lambda\norm{L\,\cdot}_1$ has no closed form.</li>
+<li><strong>Constraints</strong> $Lx\in C$: $g=\ind_C$. The prox of $\ind_C$ is $P_C$; the prox of $\ind_C\circ L$ is a projection onto $L^{-1}(C)$, usually unavailable.</li>
+<li><strong>Consensus</strong> $x_1=\dots=x_m$ between $m$ agents, each with its own cost $g_i$: $f=\ind_{\Lambda_m}$ (the consensus subspace), $g=\sum_i g_i$, $L=\Id$.</li>
+<li><strong>Linear programs</strong>: $f=\ps{c}{\cdot}+\ind_{[0,+\infty[^N}$, $g=\ind_{[0,+\infty[^K}(\cdot-b)$.</li>
+</ul>
+<p><strong>Why dualize.</strong> $\prox_{g\circ L}$ is hard, but $\prox_{g^*}$ is free: by the <a class="xref" data-id="moreau-decomposition" href="03_proximity_operator.html#moreau-decomposition">Moreau decomposition</a>, $\prox_{\gamma g^*}x=x-\gamma\prox_{g/\gamma}(x/\gamma)$. And in the dual problem the operator $L$ only appears <em>inside</em> $f^*(-L^*v)$, where it can be handled by a gradient step (when $f^*$ is smooth) or absorbed by a change of variables. The engine of the page is one identity (<a class="chip t" href="09_toolbox.html#T17"><b>T17</b> dualize by conjugation</a>):
+$$g(Lx)=\sup_{v\in\G}\ \ps{v}{Lx}-g^*(v)\qquad(g\in\Gz{\G},\ \text{Fenchel–Moreau}).$$
+Replace $g(Lx)$ by this supremum, and the primal becomes an $\inf\sup$ of a function that is <em>linear in the coupling</em>: that is the Lagrangian, and everything else (dual problem, saddle points, ADMM, primal-dual algorithms) is what you do with it.</p>
+
+<svg class="roadmap" viewBox="0 0 760 250" role="img" aria-label="Road map of the page: primal and dual problems linked by weak and strong duality and Kuhn–Tucker points; the Lagrangian with its saddle points; ADMM obtained from the augmented Lagrangian and equal to Douglas–Rachford on the dual; the primal-dual algorithm obtained as Forward–Backward on the saddle inclusion.">
+<rect x="14" y="18" width="190" height="52" rx="6" class="bx k"/><text x="109" y="40" text-anchor="middle" class="bt">Primal: min f(x) + g(Lx)</text><text x="109" y="58" text-anchor="middle" class="bs">value µ</text>
+<rect x="556" y="18" width="190" height="52" rx="6" class="bx k"/><text x="651" y="40" text-anchor="middle" class="bt">Dual: min f*(−L*v) + g*(v)</text><text x="651" y="58" text-anchor="middle" class="bs">value µ*</text>
+<line x1="204" y1="44" x2="556" y2="44" class="ar"/><text x="380" y="36" text-anchor="middle" class="al">weak duality µ ≥ −µ* · strong duality µ = −µ*</text><text x="380" y="60" text-anchor="middle" class="al">Kuhn–Tucker pair (x̂, v̂): −L*v̂ ∈ ∂f(x̂), Lx̂ ∈ ∂g*(v̂)</text>
+<rect x="285" y="96" width="190" height="52" rx="6" class="bx"/><text x="380" y="118" text-anchor="middle" class="bt">Lagrangian L(x, y, v)</text><text x="380" y="136" text-anchor="middle" class="bs">saddle points = KT points, ŷ = Lx̂</text>
+<line x1="109" y1="70" x2="300" y2="96" class="ar"/><text x="178" y="92" text-anchor="middle" class="al">inf sup</text>
+<line x1="651" y1="70" x2="460" y2="96" class="ar"/><text x="585" y="92" text-anchor="middle" class="al">sup inf</text>
+<rect x="60" y="184" width="250" height="52" rx="6" class="bx"/><text x="185" y="206" text-anchor="middle" class="bt">ADMM (augmented Lagrangian)</text><text x="185" y="224" text-anchor="middle" class="bs">= Douglas–Rachford on the dual</text>
+<rect x="450" y="184" width="250" height="52" rx="6" class="bx"/><text x="575" y="206" text-anchor="middle" class="bt">Primal-dual algorithm</text><text x="575" y="224" text-anchor="middle" class="bs">= Forward–Backward in a metric on H × G</text>
+<line x1="330" y1="148" x2="220" y2="184" class="ar"/><text x="240" y="168" text-anchor="middle" class="al">alternate, penalize</text>
+<line x1="430" y1="148" x2="540" y2="184" class="ar"/><text x="520" y="168" text-anchor="middle" class="al">explicit/implicit steps</text>
+</svg>
+
+<p><strong>The three products of the page.</strong> (1) <em>Duality theory</em>: the dual problem, weak and strong duality, and the Kuhn–Tucker characterization of solutions, with two examples (linear programming; consensus ↔ sharing). (2) <em>ADMM</em>: alternating minimization of the augmented Lagrangian, which turns out to be Douglas–Rachford applied to the dual problem, hence converges. (3) <em>The primal-dual algorithm</em> (Condat–Vũ / Chambolle–Pock): explicit steps on $h$, prox steps on $f$ and $g^*$, no inversion of $L$, condition $\tau^{-1}-\sigma\norm{L}^2\gt\beta/2$.</p>
+<div class="callout insight"><span class="lbl">The one principle, dual version</span><p>Pages 2–5 ran on "Fermat's rule → zeros of a sum of operators → fixed points of a nonexpansive map → Fejér convergence". Here the sum is $\partial f+L^*\partial g L$, whose zeros are hard to reach because of $L$. Duality replaces the single unknown $x$ by a <em>pair</em> $(x,v)$ and the inclusion $0\in\partial f(x)+L^*\partial g(Lx)$ by the two decoupled inclusions $-L^*v\in\partial f(x)$, $Lx\in\partial g^*(v)$: each one involves one function only, so each one is one prox.</p></div>
+<div class="callout note"><span class="lbl">Slide numbers</span><p>This deck is the Paris-Saclay deck "Part II.5: Primal-dual methods". Slide numbers below are the frame numbers printed on the slides ($k/36$). Prerequisites are on other pages: conjugates and Fenchel–Young on <a class="xref" data-id="fenchel-young" href="02_subdifferential_conjugate.html#fenchel-young">page 2</a>, the Moreau decomposition on <a class="xref" data-id="moreau-decomposition" href="03_proximity_operator.html#moreau-decomposition">page 3</a>, Forward–Backward on <a class="xref" data-id="forward-backward" href="04_fixed_point_forward_backward.html#forward-backward">page 4</a>, Douglas–Rachford on <a class="xref" data-id="douglas-rachford" href="05_douglas_rachford_ppxa.html#douglas-rachford">page 5</a>.</p></div>
+</section>
+
+<section class="chapter" id="s-fenchel-rockafellar">
+<header><div class="eyebrow">Part II.5 · slides 3–12</div><h2>Fenchel–Rockafellar duality</h2>
+<p class="lead">A second problem, built from the conjugates and the adjoint, whose value is never above the primal value (weak duality), equals it under a qualification condition (strong duality), and whose solutions come in pairs with the primal ones (Kuhn–Tucker points).</p></header>
+
+<article class="card def" id="primal-dual-problems">
+<header class="card-head"><span class="kind">Definition</span><h3>Primal and dual problems</h3><span class="src">Part II.5 · slide 3</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#primal-dual-problems" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Definition</span>
+<p>Let $\H$ and $\G$ be two real Hilbert spaces, $f:\H\to\,]-\infty,+\infty]$, $g:\G\to\,]-\infty,+\infty]$ and $L\in\B(\H,\G)$. The <strong>primal problem</strong> is
+$$\underset{x\in\H}{\text{minimize}}\ f(x)+g(Lx),$$
+and the <strong>dual problem</strong> is
+$$\underset{v\in\G}{\text{minimize}}\ f^*(-L^*v)+g^*(v).$$</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Conjugate both functions, replace $L$ by its adjoint, flip one sign: the dual lives in $\G$ (the space of the constraint), not in $\H$.</p>
+<div class="rub">Where the dual comes from</div>
+<div class="why"><p>Write $g(Lx)$ through its conjugate (<a class="chip t" href="09_toolbox.html#T17"><b>T17</b> dualize by conjugation</a>; for $g\in\Gz{\G}$ this is Fenchel–Moreau $g^{**}=g$, on <a class="xref" data-id="moreau-fenchel" href="02_subdifferential_conjugate.html#moreau-fenchel">page 2</a>):
+$$\inf_{x\in\H} f(x)+g(Lx)=\inf_{x\in\H}\sup_{v\in\G}\ f(x)+\ps{v}{Lx}-g^*(v).$$
+Now do the formal (illegal in general!) swap of $\inf$ and $\sup$, and use $\ps{v}{Lx}=\ps{L^*v}{x}$:
+$$\sup_{v\in\G}\Big(\inf_{x\in\H}\ f(x)-\ps{-L^*v}{x}\Big)-g^*(v)=\sup_{v\in\G}\ -f^*(-L^*v)-g^*(v)=-\inf_{v\in\G}\ f^*(-L^*v)+g^*(v),$$
+because $\inf_x f(x)-\ps{u}{x}=-\sup_x\ps{u}{x}-f(x)=-f^*(u)$ with $u=-L^*v$. So the dual problem is "the primal with $\inf$ and $\sup$ swapped", its value is $\mu^*$ and one expects $\mu=-\mu^*$. The swap is where everything can go wrong: $\sup\inf\le\inf\sup$ always (weak duality), with equality only under a condition (strong duality).</p>
+<p><strong>Reading the sign.</strong> The minus sign in $-L^*v$ is not cosmetic: it is what makes the two Fenchel–Young inequalities cancel exactly in the proof of weak duality ($\ps{x}{-L^*v}+\ps{Lx}{v}=0$). With $+L^*v$ you would get a problem whose value has nothing to do with $\mu$.</p>
+<p><strong>Examples.</strong> TV denoising $f=\tfrac12\norm{\cdot-z}^2$, $g=\lambda\norm{\cdot}_1$: $f^*(u)=\tfrac12\norm{u}^2+\ps{u}{z}$ and $g^*=\ind_{[-\lambda,\lambda]^K}$, so the dual is $\min_v\tfrac12\norm{L^*v}^2-\ps{L^*v}{z}+\ind_{[-\lambda,\lambda]^K}(v)$: a smooth function plus a box constraint, solvable by projected gradient (<a class="xref" data-id="projected-gradient" href="04_fixed_point_forward_backward.html#projected-gradient">page 4</a>). Linear programming and consensus are the two examples of the deck, below.</p></div>
+<div class="callout pitfall"><span class="lbl">Pitfall</span><p>The dual is written as a <em>minimization</em> of $f^*(-L^*v)+g^*(v)$ (value $\mu^*$), so the relation with the primal value is $\mu=-\mu^*$, not $\mu=\mu^*$. Many textbooks write the dual as $\max_v -f^*(-L^*v)-g^*(v)$; same object, opposite sign.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Dual = conjugate both, adjoint $L$, minus sign:</strong> $\min_{v\in\G} f^*(-L^*v)+g^*(v)$. It comes from $g(Lx)=\sup_v\ps{v}{Lx}-g^*(v)$ and the swap $\inf\sup\to\sup\inf$.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="conjugate" href="02_subdifferential_conjugate.html#conjugate">conjugate</a><a class="chip xref" data-id="moreau-fenchel" href="02_subdifferential_conjugate.html#moreau-fenchel">Fenchel–Moreau</a><a class="chip xref" data-id="hilbert-space" href="01_convex_analysis.html#hilbert-space">adjoint</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="weak-duality" href="#weak-duality">weak duality</a><a class="chip xref" data-id="strong-duality" href="#strong-duality">strong duality</a><a class="chip xref" data-id="lagrangian-minimax" href="#lagrangian-minimax">Lagrangian</a><a class="chip xref" data-id="dr-dual-form" href="#dr-dual-form">dual DR</a></div>
+</article>
+
+<article class="card thm" id="weak-duality">
+<header class="card-head"><span class="kind">Theorem</span><h3>Weak duality: $\mu\ge-\mu^*$, and the duality gap</h3><span class="src">Part II.5 · slide 4</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><span class="tag tag-exam">Exam</span><a class="anchor" href="#weak-duality" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $\H$, $\G$ be real Hilbert spaces, $f$ a proper function from $\H$ to $]-\infty,+\infty]$, $g$ a proper function from $\G$ to $]-\infty,+\infty]$, and $L\in\B(\H,\G)$. Let
+$$\mu=\inf_{x\in\H} f(x)+g(Lx)\qquad\text{and}\qquad\mu^*=\inf_{v\in\G} f^*(-L^*v)+g^*(v).$$
+Then $\mu\ge-\mu^*$. If $\mu\in\R$, the number $\mu+\mu^*\ (\ge0)$ is called the <strong>duality gap</strong>.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Any primal candidate $x$ and any dual candidate $v$ satisfy $f(x)+g(Lx)\ge-\big(f^*(-L^*v)+g^*(v)\big)$: every dual value is a lower bound on every primal value.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>Fenchel–Young says $\varphi(a)+\varphi^*(b)\ge\ps{a}{b}$ for <em>any</em> pair of points. Apply it to $f$ at the pair $(x,-L^*v)$ and to $g$ at the pair $(Lx,v)$, and add: the two inner products are $\ps{x}{-L^*v}$ and $\ps{Lx}{v}$, which are opposite by definition of the adjoint. So the sum of the four terms is $\ge0$, for every $x$ and every $v$. No convexity, no lower semicontinuity, no qualification: weak duality is free, it only needs the functions to be proper so that the conjugates never take the value $-\infty$ and the sums make sense.</p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul>
+<li><em>$f$, $g$ proper</em>: then $f^*\gt-\infty$ and $g^*\gt-\infty$ everywhere (a conjugate of a proper function is a supremum of affine functions over a nonempty set), so $f^*(-L^*v)+g^*(v)$ is a well-defined element of $]-\infty,+\infty]$ and $\mu^*\gt-\infty$.</li>
+<li><em>$L$ bounded</em>: the adjoint exists, which is all the identity $\ps{x}{-L^*v}+\ps{Lx}{v}=0$ needs.</li>
+<li>Nothing else. Convexity and closedness only enter for <em>strong</em> duality.</li></ul></div>
+<details class="pl hint"><summary>Hint <span class="aid">— try it first</span></summary><div class="dc"><p>Write Fenchel–Young for $f$ at $(x,-L^*v)$ and for $g$ at $(Lx,v)$, add, and watch the inner products cancel.</p></div></details>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T10"><b>T10</b> Fenchel–Young as a lever</a><a class="chip t" href="09_toolbox.html#T06"><b>T06</b> write it twice and add</a></summary><div class="dc">
+<p><span class="step">1. Fenchel–Young twice.</span> For every $x\in\H$ and $v\in\G$, by the <a class="xref" data-id="fenchel-young" href="02_subdifferential_conjugate.html#fenchel-young">Fenchel–Young inequality</a>,
+$$f(x)+f^*(-L^*v)\ge\ps{x}{-L^*v}\qquad\text{and}\qquad g(Lx)+g^*(v)\ge\ps{Lx}{v}.$$</p>
+<p><span class="step">2. Add.</span> $f(x)+g(Lx)+f^*(-L^*v)+g^*(v)\ge\ps{x}{-L^*v}+\ps{Lx}{v}=-\ps{Lx}{v}+\ps{Lx}{v}=0$, using $\ps{x}{L^*v}=\ps{Lx}{v}$.</p>
+<p><span class="step">3. Take infima.</span> The left-hand side is $\ge0$ for all $(x,v)$. Taking the infimum over $x$ then over $v$: $\mu+\mu^*\ge0$, i.e. $\mu\ge-\mu^*$ (with the convention that the inequality is trivial when $\mu^*=+\infty$; and if $\mu=-\infty$ it forces $\mu^*=+\infty$).</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout trick"><span class="lbl">Trick</span><p>Whenever you must compare a primal value and a dual value, write Fenchel–Young once per function and add: the coupling terms are built to cancel. The same two lines, with the <em>equality</em> case of Fenchel–Young, prove that a Kuhn–Tucker pair has zero gap (<a class="xref" data-id="duality-theorem-2" href="#duality-theorem-2">below</a>).</p></div>
+
+<div class="widget" id="w-duality-gap">
+<div class="w-title">Interactive · the duality gap of a candidate pair $(x,v)$ is always $\ge0$ and vanishes exactly at the Kuhn–Tucker pair</div>
+<p class="w-help">1-D problem $f(x)=\tfrac12(x-c)^2$, $g=\lambda\abs{\cdot}$ with $\lambda=1$, $L=a$ with $a=1.5$. Left: the primal objective $P(x)=f(x)+g(ax)$. Right: the dual function $D(v)=-\big(f^*(-av)+g^*(v)\big)=-\tfrac12a^2v^2+acv$ on $[-\lambda,\lambda]$ ($g^*=\ind_{[-\lambda,\lambda]}$), $-\infty$ outside. Move $x$ and $v$: the bar $P(x)-D(v)\ge0$ is the gap of the pair; it is $0$ only at $(\hat x,\hat v)$. Move $c$ to put the solution on the kink ($\hat x=0$, $\abs{c}\le\lambda a$) or away from it.</p>
+<div class="w-ctls">
+<label class="ctl">c <input type="range" id="dg-c" min="-3" max="3" step="0.1" value="2"><output id="dg-c-v"></output></label>
+<label class="ctl">x <input type="range" id="dg-x" min="-3" max="3" step="0.05" value="-1"><output id="dg-x-v"></output></label>
+<label class="ctl">v <input type="range" id="dg-v" min="-1.5" max="1.5" step="0.05" value="0.3"><output id="dg-v-v"></output></label>
+</div>
+<svg class="w-svg" id="dg-svg" viewBox="0 0 720 300" role="img" aria-label="Primal objective and dual function with the current candidate pair and the gap bar"></svg>
+<div class="readout" id="dg-read"></div>
+<div class="leg"><span><i style="border-color:var(--s1)"></i>primal $P(x)$</span><span><i style="border-color:var(--s2)"></i>dual $D(v)$</span><span><i class="dot" style="background:var(--idea)"></i>optimal $\hat x$, $\hat v$</span><span><i class="dot" style="background:var(--accent)"></i>current $x$, $v$</span></div>
+<p class="w-cap">Strong duality holds here (finite dimension, everything finite on the right sets): $\max D=\min P$, the two dotted levels coincide. The Kuhn–Tucker pair is $\hat x=\operatorname{soft}_{\lambda a}(c)$ and $\hat v=(c-\hat x)/a$: when $\hat x=0$ the dual solution is interior ($\hat v=c/a$), when $\hat x\ne0$ it sits on the boundary $\hat v=\pm\lambda$.</p>
+</div>
+
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Weak duality is Fenchel–Young twice.</strong> $\mu\ge-\mu^*$ for proper $f,g$; gap $=\mu+\mu^*\ge0$. Every dual point is a lower bound certificate.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="fenchel-young" href="02_subdifferential_conjugate.html#fenchel-young">Fenchel–Young</a><a class="chip xref" data-id="primal-dual-problems" href="#primal-dual-problems">primal and dual problems</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="strong-duality" href="#strong-duality">strong duality</a><a class="chip xref" data-id="duality-theorem-2" href="#duality-theorem-2">Kuhn–Tucker points</a><a class="chip xref" data-id="lagrangian-maximin" href="#lagrangian-maximin">sup inf ≤ inf sup</a></div>
+</article>
+
+<article class="card thm" id="strong-duality">
+<header class="card-head"><span class="kind">Theorem</span><h3>Strong duality under a qualification condition</h3><span class="src">Part II.5 · slide 5</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#strong-duality" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $\H$, $\G$ be real Hilbert spaces, $f\in\Gz{\H}$, $g\in\Gz{\G}$ and $L\in\B(\H,\G)$. If
+$$\inte(\dom g)\cap L(\dom f)\ne\emptyset\qquad\text{or}\qquad\dom g\cap\inte\big(L(\dom f)\big)\ne\emptyset,$$
+then
+$$\mu=\inf_{x\in\H} f(x)+g(Lx)=-\min_{v\in\G} f^*(-L^*v)+g^*(v)=-\mu^*.$$
+In particular the dual problem has a solution and the duality gap is $0$.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">If the constraint "$Lx$ must land in $\dom g$" can be met with room to spare (an interior point), then swapping $\inf$ and $\sup$ is legitimate: no gap, and the dual infimum is attained.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>The qualification condition is <em>exactly</em> the condition that makes the sum rule an equality, $\partial(f+g\circ L)=\partial f+L^*\partial g L$ (<a class="xref" data-id="moreau-rockafellar" href="02_subdifferential_conjugate.html#moreau-rockafellar">Moreau–Rockafellar</a>, slide 9). That is no coincidence: at a primal solution $\hat x$, Fermat gives $0\in\partial(f+g\circ L)(\hat x)$; with the sum rule you can <em>split</em> this zero into a piece $-L^*\hat v\in\partial f(\hat x)$ and a piece $\hat v\in\partial g(L\hat x)$, and the splitting vector $\hat v$ is precisely a dual solution with zero gap (that is the Kuhn–Tucker mechanism of <a class="xref" data-id="duality-theorem-2" href="#duality-theorem-2">duality theorem (2)</a>). So "strong duality" is "the sum rule applied to Fermat's rule and read through Fenchel–Young's equality case". When no primal solution exists the statement remains true, but the proof then needs a separation argument (Bauschke–Combettes, Thm 15.23); the slides state the theorem without proof.</p>
+<p>Why an interior point? Because the sum rule can fail when the domains only touch: the classical counterexample on page 2 is two closed convex sets of $\R^2$ tangent at one point, whose indicators have $\partial(\ind_A+\ind_B)\ne\partial\ind_A+\partial\ind_B$ at the contact point; the corresponding duality has a gap or a non-attained dual.</p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul>
+<li><em>$f,g\in\Gz{}$</em>: lower semicontinuity and convexity make $f^{**}=f$, $g^{**}=g$ (Fenchel–Moreau), so the dual of the dual is the primal and the conjugates carry all the information.</li>
+<li><em>Qualification</em>: it is what permits the sum rule with equality, hence the splitting of a primal optimality condition into a Kuhn–Tucker pair. Drop it: weak duality survives, equality and attainment may fail.</li>
+<li><em>"min" in the conclusion</em>: the dual is attained even if the primal is not; the asymmetry comes from the condition being imposed on the primal domains.</li></ul></div>
+<details class="pl proof"><summary>Proof <span class="aid">(when the primal has a solution; the slides state the theorem without proof)</span> <a class="chip t" href="09_toolbox.html#T08"><b>T08</b> Fermat + sum rule</a><a class="chip t" href="09_toolbox.html#T10"><b>T10</b> Fenchel–Young equality</a></summary><div class="dc">
+<p><span class="step">0. Scope.</span> Assume in addition that $\hat x\in\Argmin(f+g\circ L)$ exists (this is the case in every application of this page; the general case is Thm 15.23 in Bauschke–Combettes). Then $\mu=f(\hat x)+g(L\hat x)\in\R$.</p>
+<p><span class="step">1. Fermat + sum rule.</span> $0\in\partial(f+g\circ L)(\hat x)=\partial f(\hat x)+L^*\partial g(L\hat x)$, the equality by the <a class="xref" data-id="moreau-rockafellar" href="02_subdifferential_conjugate.html#moreau-rockafellar">sum rule</a> under the qualification condition. So there is $\hat v\in\partial g(L\hat x)$ with $-L^*\hat v\in\partial f(\hat x)$.</p>
+<p><span class="step">2. Fenchel–Young with equality.</span> The equality case of <a class="xref" data-id="fenchel-young" href="02_subdifferential_conjugate.html#fenchel-young">Fenchel–Young</a> ($u\in\partial\varphi(a)\iff\varphi(a)+\varphi^*(u)=\ps{a}{u}$) gives
+$f(\hat x)+f^*(-L^*\hat v)=\ps{\hat x}{-L^*\hat v}$ and $g(L\hat x)+g^*(\hat v)=\ps{L\hat x}{\hat v}$. Adding: $f(\hat x)+g(L\hat x)+f^*(-L^*\hat v)+g^*(\hat v)=0$, i.e. $\mu+\big(f^*(-L^*\hat v)+g^*(\hat v)\big)=0$.</p>
+<p><span class="step">3. Conclude.</span> By weak duality, $f^*(-L^*v)+g^*(v)\ge-\mu$ for every $v$, and step 2 shows equality at $\hat v$: so $\hat v$ minimizes the dual, $\mu^*=f^*(-L^*\hat v)+g^*(\hat v)=-\mu$, the minimum is attained.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout pitfall"><span class="lbl">Pitfall</span><p>Strong duality does <em>not</em> say the primal is attained: $\mu$ is an $\inf$, $\mu^*$ a $\min$. And the qualification is on $\dom g$ versus $L(\dom f)$, in $\G$; checking $\dom f\cap\dom g\ne\emptyset$ "in $\H$" makes no sense since $g$ lives on $\G$.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Same condition as the sum rule, same mechanism:</strong> $\inte(\dom g)\cap L(\dom f)\ne\emptyset$ ⇒ $\mu=-\min(\text{dual})$. Strong duality = Fermat + sum rule + Fenchel–Young equality.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="weak-duality" href="#weak-duality">weak duality</a><a class="chip xref" data-id="moreau-rockafellar" href="02_subdifferential_conjugate.html#moreau-rockafellar">sum rule</a><a class="chip xref" data-id="fenchel-young" href="02_subdifferential_conjugate.html#fenchel-young">Fenchel–Young</a><a class="chip xref" data-id="fermat-rule" href="02_subdifferential_conjugate.html#fermat-rule">Fermat</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="saddle-point" href="#saddle-point">saddle points</a><a class="chip xref" data-id="augmented-lagrangian-saddle" href="#augmented-lagrangian-saddle">augmented Lagrangian</a><a class="chip xref" data-id="admm-convergence" href="#admm-convergence">ADMM convergence</a><a class="chip xref" data-id="lp-duality" href="#lp-duality">LP duality</a></div>
+</article>
+
+<article class="card prop" id="lp-duality">
+<header class="card-head"><span class="kind">Proposition</span><h3>Example 1: linear programming duality</h3><span class="src">Part II.5 · slide 6</span><span class="tag tag-slides">Slides</span><span class="tag tag-exam">Exam</span><a class="anchor" href="#lp-duality" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $L\in\R^{K\times N}$, $b\in\R^K$ and $c\in\R^N$. The primal problem
+$$\text{Primal-LP}:\qquad\underset{x\in[0,+\infty[^N}{\text{minimize}}\ \ps{c}{x}\quad\text{s.t.}\quad Lx\ge b$$
+is associated with the dual problem
+$$\text{Dual-LP}:\qquad\underset{y\in[0,+\infty[^K}{\text{maximize}}\ \ps{b}{y}\quad\text{s.t.}\quad L^{\top}y\le c.$$
+In addition, if the primal problem has a solution, then strong duality holds.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Put the constraints into indicators, conjugate them, and the Fenchel–Rockafellar dual of an LP is the textbook dual LP: "$\min c^\top x$, $Lx\ge b$, $x\ge0$" ↔ "$\max b^\top y$, $L^\top y\le c$, $y\ge0$".</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>The two conjugates are elementary: the conjugate of a linear function plus the indicator of the positive orthant is the indicator of "slope below $c$" (a sup of $\ps{u-c}{x}$ over $x\ge0$ is $0$ or $+\infty$), and the conjugate of the indicator of the shifted orthant $\{z\ge b\}$ is $\ps{v}{b}$ plus the indicator of $v\le0$. Plug them into $f^*(-L^{\top}v)+g^*(v)$ and the dual constraints appear by themselves; the substitution $y=-v$ turns "$v\le0$" into "$y\ge0$" and the minimization of $\ps{v}{b}$ into the maximization of $\ps{b}{y}$. Both conjugates were computed in the exercise of <a class="xref" data-id="ex-conjugate-linear-indicator" href="02_subdifferential_conjugate.html#ex-conjugate-linear-indicator">page 2</a>.</p></div>
+<details class="pl hint"><summary>Hint <span class="aid">— try it first</span></summary><div class="dc"><p>$f(x)=\ps{c}{x}+\ind_{[0,+\infty[^N}(x)$, $g(z)=\ind_{[0,+\infty[^K}(z-b)$, $y=-v$. Compute $f^*$ and $g^*$ coordinate by coordinate.</p></div></details>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T01"><b>T01</b> indicator trick</a><a class="chip t" href="09_toolbox.html#T07"><b>T07</b> freeze all coordinates but one</a></summary><div class="dc">
+<p><span class="step">1. Fit the template.</span> With $\H=\R^N$, $\G=\R^K$, set $f(x)=\ps{c}{x}+\ind_{[0,+\infty[^N}(x)$ and $g(z)=\ind_{[0,+\infty[^K}(z-b)$. Then $f(x)+g(Lx)$ equals $\ps{c}{x}$ when $x\ge0$ and $Lx\ge b$, and $+\infty$ otherwise: the primal problem is Primal-LP.</p>
+<p><span class="step">2. Conjugate of $f$.</span> $f^*(u)=\sup_{x\ge0}\ps{u-c}{x}=\sum_{i=1}^N\sup_{x_i\ge0}(u_i-c_i)x_i$. Each one-dimensional sup is $0$ if $u_i-c_i\le0$ and $+\infty$ otherwise. Hence $f^*(u)=\ind_{]-\infty,0]^N}(u-c)$: $0$ if $u\le c$, $+\infty$ otherwise.</p>
+<p><span class="step">3. Conjugate of $g$.</span> $g^*(v)=\sup_{z\ge b}\ps{v}{z}=\ps{v}{b}+\sup_{w\ge0}\ps{v}{w}$ (write $z=b+w$). The last sup is $\ind_{]-\infty,0]^K}(v)$ by the same coordinate argument. Hence $g^*(v)=\ps{v}{b}+\ind_{]-\infty,0]^K}(v)$.</p>
+<p><span class="step">4. Write the dual.</span> $f^*(-L^{\top}v)+g^*(v)=\ind_{]-\infty,0]^N}(-L^{\top}v-c)+\ps{v}{b}+\ind_{]-\infty,0]^K}(v)$, i.e. minimize $\ps{b}{v}$ subject to $-L^{\top}v\le c$ and $v\le0$.</p>
+<p><span class="step">5. Change of sign.</span> Put $y=-v$: minimize $-\ps{b}{y}$ subject to $L^{\top}y\le c$ and $y\ge0$, which is "maximize $\ps{b}{y}$ s.t. $L^{\top}y\le c$, $y\in[0,+\infty[^K$": Dual-LP. The primal value is $\mu$, the dual value is $\mu^*=-\max\ps{b}{y}$, and weak duality $\mu\ge-\mu^*$ reads $\min\ps{c}{x}\ge\max\ps{b}{y}$.</p>
+<p><span class="step">6. Strong duality.</span> The slides state without proof that it holds as soon as the primal has a solution. If moreover the Slater-type condition of <a class="xref" data-id="strong-duality" href="#strong-duality">strong duality</a> holds (some $x\ge0$ with $Lx\gt b$, i.e. $\inte(\dom g)\cap L(\dom f)\ne\emptyset$), this is the theorem above. Without an interior point the claim is the classical LP duality theorem: for <em>polyhedral</em> functions the interiority condition can be dropped (Bauschke–Combettes, Prop. 27.21 and Rockafellar's polyhedral refinement) <span class="tag tag-extra">Extra</span>.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout trick"><span class="lbl">Trick</span><p>To conjugate a separable function (sum over coordinates), conjugate each coordinate function separately (<a class="xref" data-id="conjugate-separable" href="02_subdifferential_conjugate.html#conjugate-separable">conjugate of a separable sum</a>): a sup over $\R^N_+$ of a sum of one-variable functions is the sum of the one-variable sups.</p></div>
+
+<div class="widget" id="w-lp-duality">
+<div class="w-title">Interactive · a dual feasible point is a certificate: $\ps{b}{y}\le\ps{c}{\hat x}$, with equality at the dual optimum</div>
+<p class="w-help">Primal: minimize $x_1+1.2x_2$ s.t. $x_1+x_2\ge2$, $x_1+3x_2\ge3$, $x\ge0$ (left, feasible region shaded, optimal vertex $\hat x$ computed by vertex enumeration). Dual: maximize $2y_1+3y_2$ s.t. $y_1+y_2\le1$, $y_1+3y_2\le1.2$, $y\ge0$ (right). Move the dual candidate $y$: as long as it is feasible, $\ps{b}{y}$ is a lower bound on the primal optimum; it reaches it at the dual optimal vertex.</p>
+<div class="w-ctls">
+<label class="ctl">y₁ <input type="range" id="lp-y1" min="0" max="1.2" step="0.02" value="0.5"><output id="lp-y1-v"></output></label>
+<label class="ctl">y₂ <input type="range" id="lp-y2" min="0" max="0.6" step="0.02" value="0.2"><output id="lp-y2-v"></output></label>
+</div>
+<div class="w-cols">
+<div><svg class="w-svg" id="lp-svg-p" viewBox="0 0 340 300" role="img" aria-label="Primal feasible polygon with level line of the cost at the optimum"></svg><p class="w-cap">primal: $\{x\ge0,\ Lx\ge b\}$, level line of $\ps{c}{x}$ at $\hat x$</p></div>
+<div><svg class="w-svg" id="lp-svg-d" viewBox="0 0 340 300" role="img" aria-label="Dual feasible polygon with the current candidate and its level line"></svg><p class="w-cap">dual: $\{y\ge0,\ L^{\top}y\le c\}$, level line of $\ps{b}{y}$ at the candidate</p></div>
+</div>
+<div class="readout" id="lp-read"></div>
+<p class="w-cap">Vertices of both polygons are enumerated and the optimum is the best feasible vertex (an LP optimum is always attained at a vertex when the feasible set has one). The two optimal values coincide: strong duality.</p>
+</div>
+
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>LP dual by the template:</strong> $f=\ps{c}{\cdot}+\ind_{\R^N_+}$, $g=\ind_{\R^K_+}(\cdot-b)$, $f^*=\ind_{\{\cdot\le c\}}$, $g^*=\ps{\cdot}{b}+\ind_{\{\cdot\le0\}}$, $y=-v$ ⇒ $\max\ps{b}{y}$, $L^{\top}y\le c$, $y\ge0$.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="primal-dual-problems" href="#primal-dual-problems">primal and dual problems</a><a class="chip xref" data-id="ex-conjugate-linear-indicator" href="02_subdifferential_conjugate.html#ex-conjugate-linear-indicator">conjugates of page 2</a><a class="chip xref" data-id="indicator-function" href="01_convex_analysis.html#indicator-function">indicator</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="weak-duality" href="#weak-duality">weak duality (certificates)</a><a class="chip xref" data-id="admm-idea" href="#admm-idea">why plain alternating minimization fails (LP)</a></div>
+</article>
+
+<article class="card prop" id="consensus-sharing">
+<header class="card-head"><span class="kind">Proposition</span><h3>Example 2: sharing is the dual of consensus</h3><span class="src">Part II.5 · slides 7–8</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><span class="tag tag-exam">Exam</span><a class="anchor" href="#consensus-sharing" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $\H$ be a real Hilbert space. For every $i\in\{1,\dots,m\}$, let $g_i:\H\to\,]-\infty,+\infty]$ and $h_i:\H\to\,]-\infty,+\infty]$. The <strong>consensus problem</strong> is
+$$\underset{\substack{(x_1,\dots,x_m)\in\H^m\\ x_1=\dots=x_m}}{\text{minimize}}\ \sum_{i=1}^m g_i(x_i).$$
+The <strong>sharing problem</strong> is
+$$\underset{\substack{(u_1,\dots,u_m)\in\H^m\\ u_1+\dots+u_m=\overline u}}{\text{maximize}}\ \sum_{i=1}^m h_i(u_i),\qquad\overline u\in\H.$$
+If, for every $i$, $h_i=-g_i^*(\cdot-\overline u/m)$, then sharing is the dual problem of consensus.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">"Everybody agrees on one $x$" has as dual "the prices $v_i$ sum to zero": the conjugate of the indicator of the diagonal $\Lambda_m$ is the indicator of the orthogonal $\{v:\sum_i v_i=0\}$, and shifting $v_i$ by $\overline u/m$ turns "sum $=0$" into "sum $=\overline u$".</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>Consensus is the template with $f=\ind_{\Lambda_m}$ (<a class="chip t" href="09_toolbox.html#T01"><b>T01</b></a>: the constraint is an indicator), $g(x)=\sum_i g_i(x_i)$ and $L=\Id$ on $\H^m$ (<a class="chip t" href="09_toolbox.html#T16"><b>T16</b> product space</a>). The dual is $\min_v f^*(-v)+g^*(v)$. Now $f^*$ is the support function of the diagonal subspace $\Lambda_m$: a supremum of the linear form $\ps{v}{(x,\dots,x)}=\ps{\sum_iv_i}{x}$ over $x\in\H$, which is $0$ if $\sum_iv_i=0$ and $+\infty$ otherwise. And $g^*$ is separable: $g^*(v)=\sum_ig_i^*(v_i)$. So the dual is "minimize $\sum_ig_i^*(v_i)$ subject to $\sum_iv_i=0$". The sharing problem is the same thing after the translation $u_i=v_i+\overline u/m$ (which moves the sum from $0$ to $\overline u$) and a change of sign (min of $g_i^*$ ↔ max of $h_i=-g_i^*$).</p>
+<p><strong>The distributed reading.</strong> Agent $i$ owns $g_i$ (its private data) and the variable $x_i$; the only coupling is the consensus constraint. In the dual, agent $i$ owns the "price" $v_i$ and the coupling is the single linear constraint $\sum_iv_i=0$: a resource $\overline u$ (zero, or $\overline u$ after the shift) is <em>shared</em>. At the optimum, by the Kuhn–Tucker conditions of <a class="xref" data-id="duality-theorem-2" href="#duality-theorem-2">duality theorem (2)</a>: $\hat v_i\in\partial g_i(\hat x)$ for every $i$ (from $L\hat x\in\partial g^*(\hat v)$, inverted coordinatewise) and $\sum_i\hat v_i=0$ (from $-\hat v\in\partial\ind_{\Lambda_m}(\hat x)=\Lambda_m^\perp$). Algorithmically (ADMM on consensus, widget below) each agent only computes $\prox_{g_i/\gamma}$ on its own data and <em>exchanges one vector</em> with a coordinator that averages: nothing else is communicated. The exercise <a class="xref" data-id="ex-consensus-sharing" href="#ex-consensus-sharing">below</a> asks you to prove the result; the full solution is there.</p></div>
+<details class="pl proof"><summary>Proof <span class="aid">(as on slide 8; detailed version in the exercise)</span> <a class="chip t" href="09_toolbox.html#T01"><b>T01</b> indicator trick</a><a class="chip t" href="09_toolbox.html#T16"><b>T16</b> product space</a><a class="chip t" href="09_toolbox.html#T17"><b>T17</b> conjugation</a></summary><div class="dc">
+<p><span class="step">1. Template.</span> For $x=(x_1,\dots,x_m)\in\H^m$ set $g(x)=\sum_{i=1}^mg_i(x_i)$ and $\Lambda_m=\{(x_1,\dots,x_m)\in\H^m:\ x_1=\dots=x_m\}$. The consensus problem reads $\min_{x\in\H^m}\ \underbrace{\ind_{\Lambda_m}(x)}_{f(x)}+g(x)$, so $L=\Id$ and the dual problem is $\min_{v\in\H^m}f^*(-v)+g^*(v)$.</p>
+<p><span class="step">2. $f^*$.</span> For $v=(v_i)_{1\le i\le m}\in\H^m$,
+$$f^*(v)=\sup_{x\in\Lambda_m}\ps{v}{x}=\sup_{x_1\in\H}\sum_{i=1}^m\ps{v_i}{x_1}=\sup_{x_1\in\H}\Big\langle\sum_{i=1}^mv_i\,\Big|\,x_1\Big\rangle=\ind_{\{0\}}\Big(\sum_{i=1}^mv_i\Big).$$</p>
+<p><span class="step">3. Dual.</span> Since $f^*(-v)=\ind_{\{0\}}(-\sum_iv_i)=\ind_{\{0\}}(\sum_iv_i)$ and $g^*(v)=\sum_ig_i^*(v_i)$, the dual reads
+$$\underset{\substack{(v_1,\dots,v_m)\in\H^m\\ v_1+\dots+v_m=0}}{\text{minimize}}\ \sum_{i=1}^mg_i^*(v_i).$$</p>
+<p><span class="step">4. Change of variables.</span> Setting $u_i=v_i+\overline u/m$ for every $i$ (so that $\sum_iu_i=\sum_iv_i+\overline u$) and $h_i(u_i)=-g_i^*(u_i-\overline u/m)$ yields the sharing problem.</p>
+<span class="qed">□</span>
+</div></details>
+
+<div class="widget" id="w-consensus-sharing">
+<div class="w-title">Interactive · consensus ADMM: each agent computes its own prox, only averages travel, and the dual variables (prices) sum to zero</div>
+<p class="w-help">$m=3$ agents with $g_i(x)=\tfrac12a_i(x-c_i)^2$, $a=(1,2,0.5)$. Consensus solution $\hat x=\sum_ia_ic_i/\sum_ia_i$, prices $\hat v_i=g_i'(\hat x)=a_i(\hat x-c_i)$ with $\sum_i\hat v_i=0$. ADMM with $f=\ind_{\Lambda_m}$, $L=\Id$: coordinator $\bar x_n=\frac1m\sum_i(y_{i,n}-z_{i,n})$; agent $i$ computes $y_{i,n+1}=\prox_{g_i/\gamma}(z_{i,n}+\bar x_n)$ and $z_{i,n+1}=z_{i,n}+\bar x_n-y_{i,n+1}$. Press "step".</p>
+<div class="w-ctls">
+<label class="ctl">c₁ <input type="range" id="cs-c1" min="-3" max="3" step="0.1" value="-2"><output id="cs-c1-v"></output></label>
+<label class="ctl">c₂ <input type="range" id="cs-c2" min="-3" max="3" step="0.1" value="1"><output id="cs-c2-v"></output></label>
+<label class="ctl">c₃ <input type="range" id="cs-c3" min="-3" max="3" step="0.1" value="2.5"><output id="cs-c3-v"></output></label>
+<label class="ctl">γ <input type="range" id="cs-gamma" min="0.2" max="4" step="0.1" value="1"><output id="cs-gamma-v"></output></label>
+<div class="seg" role="group" aria-label="run"><button class="btn" type="button" id="cs-step">step</button><button class="btn" type="button" id="cs-run">run ×10</button><button class="btn" type="button" id="cs-reset">reset</button></div>
+</div>
+<div class="w-cols">
+<div><svg class="w-svg" id="cs-svg-a" viewBox="0 0 360 260" role="img" aria-label="The three local costs, the consensus point and the local iterates"></svg><p class="w-cap">local costs $g_i$, consensus $\hat x$ (green), local $y_{i,n}$ (dots), average $\bar x_n$ (blue)</p></div>
+<div><svg class="w-svg" id="cs-svg-b" viewBox="0 0 360 260" role="img" aria-label="The dual variables and their sum over the iterations"></svg><p class="w-cap">prices $\gamma z_{i,n}\to\hat v_i$ and their sum $\to0$</p></div>
+</div>
+<div class="readout" id="cs-read"></div>
+<p class="w-cap">What is exchanged: agent $i$ sends $y_{i,n}-z_{i,n}$ (one vector of $\H$), receives $\bar x_n$. Its data $(a_i,c_i)$ never leave. The limit of $\gamma z_{i,n}$ is the price $\hat v_i$: the slope of $g_i$ at the consensus, positive if agent $i$ would rather move left, negative otherwise, and the slopes balance.</p>
+</div>
+
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Consensus $\leftrightarrow$ sharing:</strong> $f=\ind_{\Lambda_m}$, $f^*(v)=\ind_{\{0\}}(\sum_iv_i)$; dual $=\min\sum_ig_i^*(v_i)$ s.t. $\sum_iv_i=0$; shift $u_i=v_i+\overline u/m$ to share $\overline u$.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="primal-dual-problems" href="#primal-dual-problems">primal and dual problems</a><a class="chip xref" data-id="support-function" href="02_subdifferential_conjugate.html#support-function">support function</a><a class="chip xref" data-id="conjugate-separable" href="02_subdifferential_conjugate.html#conjugate-separable">separable conjugate</a><a class="chip xref" data-id="adjoint-example" href="01_convex_analysis.html#adjoint-example">adjoint of $x\mapsto(x,\dots,x)$</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="ex-consensus-sharing" href="#ex-consensus-sharing">exercise</a><a class="chip xref" data-id="ppxa" href="05_douglas_rachford_ppxa.html#ppxa">PPXA+ (same product space)</a><a class="chip xref" data-id="examples-applications" href="01_convex_analysis.html#examples-applications">consensus example of Part I</a></div>
+</article>
+
+<article class="card rem" id="sum-rule-recall">
+<header class="card-head"><span class="kind">Recall</span><h3>The sum rule for $f+g\circ L$ (slide 9)</h3><span class="src">Part II.5 · slide 9</span><span class="tag tag-slides">Slides</span><a class="anchor" href="#sum-rule-recall" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $f:\H\to\,]-\infty,+\infty]$, $g:\G\to\,]-\infty,+\infty]$, $L\in\B(\H,\G)$. If $\dom g\cap L(\dom f)\ne\emptyset$, then for every $x\in\H$, $\partial f(x)+L^*\partial g(Lx)\subset\partial(f+g\circ L)(x)$. If moreover $f\in\Gz{\H}$, $g\in\Gz{\G}$ and $\inte(\dom g)\cap L(\dom f)\ne\emptyset$ or $\dom g\cap\inte(L(\dom f))\ne\emptyset$, then $\partial f+L^*\partial gL=\partial(f+g\circ L)$.</p>
+</div>
+<p class="idea">The inclusion is free (write two subgradient inequalities and add); the equality needs an interior point. Both are proved on <a class="xref" data-id="subdiff-sum-inclusion" href="02_subdifferential_conjugate.html#subdiff-sum-inclusion">page 2 (inclusion)</a> and <a class="xref" data-id="moreau-rockafellar" href="02_subdifferential_conjugate.html#moreau-rockafellar">page 2 (equality)</a>. On this page the inclusion is what makes a Kuhn–Tucker point a solution, and the equality is what makes a solution a Kuhn–Tucker point.</p>
+<div class="callout memo"><span class="lbl">To remember</span><p>$\partial f+L^*\partial gL\subset\partial(f+g\circ L)$ always (if domains meet); "$=$" under the interior-point condition, the same one as strong duality.</p></div>
+</article>
+
+<article class="card thm" id="duality-theorem-1">
+<header class="card-head"><span class="kind">Theorem</span><h3>Duality theorem (1): primal zeros exist ⇔ dual zeros exist</h3><span class="src">Part II.5 · slide 10</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#duality-theorem-1" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $\H$, $\G$ be real Hilbert spaces, $f\in\Gz{\H}$, $g\in\Gz{\G}$ and $L\in\B(\H,\G)$. Then
+$$\zer\big(\partial f+L^*\partial gL\big)\ne\emptyset\iff\zer\big((-L)\partial f^*(-L^*\cdot)+\partial g^*\big)\ne\emptyset.$$</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">The primal inclusion $0\in\partial f(x)+L^*\partial g(Lx)$ and the dual inclusion $0\in-L\partial f^*(-L^*v)+\partial g^*(v)$ are the same system of two coupled inclusions, read once for $x$ and once for $v$; the dictionary between them is $\partial f^*=(\partial f)^{-1}$.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>Unpack the primal zero: $0\in\partial f(x)+L^*\partial g(Lx)$ means that some $v\in\partial g(Lx)$ satisfies $-L^*v\in\partial f(x)$. Now invert both inclusions with the Fenchel–Young dictionary ($u\in\partial\varphi(a)\iff a\in\partial\varphi^*(u)$ for $\varphi\in\Gz{}$): $x\in\partial f^*(-L^*v)$ and $Lx\in\partial g^*(v)$. Apply $-L$ to the first and add to the second: $0=-Lx+Lx\in-L\partial f^*(-L^*v)+\partial g^*(v)$. Every step is reversible, so the two existence statements are equivalent. The operator $(-L)\partial f^*(-L^*\cdot)$ is the chain-rule candidate for $\partial(f^*\circ(-L^*))$, hence dual zeros are dual solutions (next theorem).</p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul><li><em>$f,g\in\Gz{}$</em>: needed for $\partial f^*=(\partial f)^{-1}$ and $\partial g^*=(\partial g)^{-1}$ (the equality case of Fenchel–Young uses $\varphi^{**}=\varphi$).</li><li>No qualification condition: this theorem compares two <em>operator</em> inclusions, not the subdifferentials of the sums.</li></ul></div>
+<details class="pl hint"><summary>Hint <span class="aid">— try it first</span></summary><div class="dc"><p>Name the two pieces of the zero: $-L^*v\in\partial f(x)$, $v\in\partial g(Lx)$. Invert each with $\partial\varphi^*=(\partial\varphi)^{-1}$.</p></div></details>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T10"><b>T10</b> Fenchel–Young ($\partial f^*=(\partial f)^{-1}$)</a><a class="chip t" href="09_toolbox.html#T15"><b>T15</b> zeros dictionary</a></summary><div class="dc">
+<p><span class="step">1. Unpack the sum.</span> $(\exists x\in\H)\ 0\in\partial f(x)+L^*\partial g(Lx)$ $\iff$ $(\exists x\in\H)(\exists v\in\G)$ $-L^*v\in\partial f(x)$ and $v\in\partial g(Lx)$. (A zero of a sum of two sets is a pair of opposite elements, one in each set; here the element of $L^*\partial g(Lx)$ is $L^*v$ with $v\in\partial g(Lx)$.)</p>
+<p><span class="step">2. Invert.</span> By the equality case of <a class="xref" data-id="fenchel-young" href="02_subdifferential_conjugate.html#fenchel-young">Fenchel–Young</a>, for $\varphi\in\Gz{}$: $u\in\partial\varphi(a)\iff a\in\partial\varphi^*(u)$. So the system is equivalent to $(\exists x)(\exists v)$ $x\in\partial f^*(-L^*v)$ and $Lx\in\partial g^*(v)$.</p>
+<p><span class="step">3. Repack.</span> If $x\in\partial f^*(-L^*v)$ and $Lx\in\partial g^*(v)$ then $0=-Lx+Lx\in-L\partial f^*(-L^*v)+\partial g^*(v)$. Conversely, if $0\in-L\partial f^*(-L^*v)+\partial g^*(v)$, there is $x\in\partial f^*(-L^*v)$ with $Lx\in\partial g^*(v)$. Hence the system is equivalent to $(\exists v\in\G)\ 0\in-L\partial f^*(-L^*v)+\partial g^*(v)$.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Same system, two readings:</strong> $\{-L^*v\in\partial f(x),\ v\in\partial g(Lx)\}\iff\{x\in\partial f^*(-L^*v),\ Lx\in\partial g^*(v)\}$. Primal zeros ⇔ dual zeros.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="fenchel-young" href="02_subdifferential_conjugate.html#fenchel-young">Fenchel–Young, $\partial f^*=(\partial f)^{-1}$</a><a class="chip xref" data-id="fix-zer" href="04_fixed_point_forward_backward.html#fix-zer">zer</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="duality-theorem-2" href="#duality-theorem-2">duality theorem (2)</a><a class="chip xref" data-id="admm-convergence" href="#admm-convergence">ADMM convergence</a><a class="chip xref" data-id="primal-dual-algorithm" href="#primal-dual-algorithm">primal-dual algorithm</a></div>
+</article>
+
+<article class="card thm" id="duality-theorem-2">
+<header class="card-head"><span class="kind">Theorem</span><h3>Duality theorem (2): Kuhn–Tucker points give primal and dual solutions</h3><span class="src">Part II.5 · slides 11–12</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><span class="tag tag-exam">Exam</span><a class="anchor" href="#duality-theorem-2" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $\H$, $\G$ be real Hilbert spaces, $f\in\Gz{\H}$, $g\in\Gz{\G}$ and $L\in\B(\H,\G)$.</p>
+<ul>
+<li>If there exists $\hat x\in\H$ such that $0\in\partial f(\hat x)+L^*\partial g(L\hat x)$, then $\hat x$ is a solution to the primal problem. Moreover, there exists a solution $\hat v$ to the dual problem such that $-L^*\hat v\in\partial f(\hat x)$ and $L\hat x\in\partial g^*(\hat v)$.</li>
+<li>If there exists $(\hat x,\hat v)\in\H\times\G$ such that $-L^*\hat v\in\partial f(\hat x)$ and $L\hat x\in\partial g^*(\hat v)$, then $\hat x$ (resp. $\hat v$) is a solution to the primal (resp. dual) problem.</li>
+</ul>
+<p>A pair $(\hat x,\hat v)\in\H\times\G$ such that $-L^*\hat v\in\partial f(\hat x)$ and $L\hat x\in\partial g^*(\hat v)$ is called a <strong>Kuhn–Tucker point</strong>.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">A Kuhn–Tucker point is a pair in which each inclusion involves one function only; it certifies both solutions at once, and it is what every algorithm of this page actually computes.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>Two inclusions, two Fermat rules. The pair $(-L^*\hat v,\hat v)$ with $\hat v\in\partial g(L\hat x)$ assembles into $0\in\partial f(\hat x)+L^*\partial g(L\hat x)\subset\partial(f+g\circ L)(\hat x)$ (the free inclusion of the sum rule), and Fermat says $\hat x$ is a primal solution. Symmetrically, inverting with $\partial f^*=(\partial f)^{-1}$, the pair $(\hat x,L\hat x)$ assembles into $0\in-L\partial f^*(-L^*\hat v)+\partial g^*(\hat v)\subset\partial\big(f^*\circ(-L^*)+g^*\big)(\hat v)$, and Fermat says $\hat v$ is a dual solution. The only non-trivial direction is "primal zero ⇒ dual solution exists", which is duality theorem (1).</p>
+<p><strong>Certificate.</strong> Given a candidate pair $(\hat x,\hat v)$ you can check optimality without solving anything: verify the two inclusions (or, equivalently, that the gap $f(\hat x)+g(L\hat x)+f^*(-L^*\hat v)+g^*(\hat v)$ is zero, by the equality case of Fenchel–Young). This is how one monitors an algorithm: the gap of the current pair is a computable upper bound on the suboptimality of $x_n$.</p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul><li><em>$f,g\in\Gz{}$</em>: the inversion $\partial\varphi^*=(\partial\varphi)^{-1}$ and Fermat's rule for the dual function.</li><li>No qualification condition: the inclusions $\partial f+L^*\partial gL\subset\partial(f+g\circ L)$ and $-L\partial f^*(-L^*\cdot)\subset\partial(f^*\circ(-L^*))$ are free (the domains meet automatically: $\hat x\in\dom f$, $L\hat x\in\dom g$ because the subdifferentials are nonempty).</li><li>The converse "primal solution ⇒ KT point exists" is <em>not</em> claimed: it needs the sum rule with equality, hence the qualification condition (used in <a class="xref" data-id="admm-convergence" href="#admm-convergence">ADMM</a>).</li></ul></div>
+<details class="pl hint"><summary>Hint <span class="aid">— try it first</span></summary><div class="dc"><p>First bullet: Fermat on $f+g\circ L$ via the sum inclusion, then duality theorem (1)'s dictionary. Second bullet: assemble the two inclusions into a primal zero and a dual zero.</p></div></details>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T08"><b>T08</b> Fermat + sum inclusion</a><a class="chip t" href="09_toolbox.html#T10"><b>T10</b> $\partial f^*=(\partial f)^{-1}$</a></summary><div class="dc">
+<p><span class="step">1. Primal solution.</span> $0\in\partial f(\hat x)+L^*\partial g(L\hat x)\subset\partial(f+g\circ L)(\hat x)$ by the <a class="xref" data-id="subdiff-sum-inclusion" href="02_subdifferential_conjugate.html#subdiff-sum-inclusion">sum inclusion</a>. By <a class="xref" data-id="fermat-rule" href="02_subdifferential_conjugate.html#fermat-rule">Fermat's rule</a>, $\hat x\in\Argmin(f+g\circ L)$.</p>
+<p><span class="step">2. A dual partner.</span> The zero of the sum splits: there exists $\hat v\in\G$ with
+$$\begin{cases}0\in\partial f(\hat x)+L^*\hat v\\ \hat v\in\partial g(L\hat x)\end{cases}\iff\begin{cases}-L^*\hat v\in\partial f(\hat x)\\ L\hat x\in\partial g^*(\hat v),\end{cases}$$
+the second line by the Fenchel–Young dictionary $\hat v\in\partial g(L\hat x)\iff L\hat x\in\partial g^*(\hat v)$.</p>
+<p><span class="step">3. $\hat v$ is a dual zero.</span> Inverting the first line too, $\hat x\in\partial f^*(-L^*\hat v)$, which implies $0=-L\hat x+L\hat x\in-L\partial f^*(-L^*\hat v)+\partial g^*(\hat v)$.</p>
+<p><span class="step">4. $\hat v$ is a dual solution.</span> $0\in-L\partial f^*(-L^*\hat v)+\partial g^*(\hat v)\subset\partial\big(f^*\circ(-L^*)+g^*\big)(\hat v)$: the sum inclusion again, applied to the functions $f^*\circ(-L^*)$ and $g^*$, together with the chain inclusion $(-L)\partial f^*(-L^*\hat v)=(-L^*)^*\partial f^*(-L^*\hat v)\subset\partial(f^*\circ(-L^*))(\hat v)$ (the sum inclusion with a zero first function). By Fermat, $\hat v$ minimizes the dual function.</p>
+<p><span class="step">5. Second assertion.</span> If $-L^*\hat v\in\partial f(\hat x)$ and $L\hat x\in\partial g^*(\hat v)$: invert the second, $\hat v\in\partial g(L\hat x)$, so $0=-L^*\hat v+L^*\hat v\in\partial f(\hat x)+L^*\partial g(L\hat x)$ and step 1 gives $\hat x$ primal solution; invert the first, $\hat x\in\partial f^*(-L^*\hat v)$, so steps 3–4 give $\hat v$ dual solution.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout trick"><span class="lbl">Trick</span><p><strong>Split the zero.</strong> "$0\in A(x)+B(x)$" is the same as "$\exists v$: $-v\in A(x)$ and $v\in B(x)$". Naming the splitting vector $v$ is the birth of the dual variable; inverting one of the two inclusions ($\partial\varphi^*=(\partial\varphi)^{-1}$) is the birth of the dual problem (<a class="chip t" href="09_toolbox.html#T15"><b>T15</b></a>, <a class="chip t" href="09_toolbox.html#T17"><b>T17</b></a>).</p></div>
+<div class="callout pitfall"><span class="lbl">Pitfall</span><p>A Kuhn–Tucker point mixes $\partial f$ (primal side) with $\partial g^*$ (dual side): $-L^*\hat v\in\partial f(\hat x)$ and $L\hat x\in\partial g^*(\hat v)$. Writing $\hat v\in\partial g(L\hat x)$ instead is equivalent (for $g\in\Gz{}$) but the $\partial g^*$ form is the one the algorithms read: $\prox_{\sigma g^*}$ appears, not $\prox_{\sigma g}\circ L$.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>KT point:</strong> $-L^*\hat v\in\partial f(\hat x)$, $L\hat x\in\partial g^*(\hat v)$ ⇒ $\hat x$ primal solution, $\hat v$ dual solution, zero gap. Primal zero ⇒ some KT partner exists.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="duality-theorem-1" href="#duality-theorem-1">duality theorem (1)</a><a class="chip xref" data-id="fermat-rule" href="02_subdifferential_conjugate.html#fermat-rule">Fermat</a><a class="chip xref" data-id="subdiff-sum-inclusion" href="02_subdifferential_conjugate.html#subdiff-sum-inclusion">sum inclusion</a><a class="chip xref" data-id="fenchel-young" href="02_subdifferential_conjugate.html#fenchel-young">Fenchel–Young</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="kt-prox-form" href="#kt-prox-form">prox form of KT</a><a class="chip xref" data-id="saddle-point" href="#saddle-point">saddle points</a><a class="chip xref" data-id="admm-convergence" href="#admm-convergence">ADMM convergence</a><a class="chip xref" data-id="primal-dual-algorithm" href="#primal-dual-algorithm">primal-dual algorithm</a></div>
+</article>
+
+<article class="card rem" id="kt-prox-form">
+<header class="card-head"><span class="kind">Remark</span><h3>Particular case: $f=\varphi+\tfrac12\norm{\cdot-z}^2$ gives $\hat x=\prox_\varphi(-L^*\hat v+z)$</h3><span class="src">Part II.5 · slide 12</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><span class="tag tag-lab">Lab</span><a class="anchor" href="#kt-prox-form" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>If $f=\varphi+\tfrac12\norm{\cdot-z}^2$ with $\varphi\in\Gz{\H}$ and $z\in\H$, then for every $(\hat x,\hat v)\in\H\times\G$,
+$$-L^*\hat v\in\partial f(\hat x)\iff-L^*\hat v\in\partial\varphi(\hat x)+\hat x-z\iff0\in\hat x+L^*\hat v-z+\partial\varphi(\hat x),$$
+hence $\hat x=\prox_\varphi(-L^*\hat v+z)$.</p>
+</div>
+<p class="idea">When the primal has a quadratic data term, the primal solution is an explicit function of the dual solution: solve the dual, then apply one prox. This is how TV denoising and the "dual Forward–Backward" recover $\hat x$.</p>
+<div class="rub">Derivation</div>
+<div class="why"><p>The quadratic $\tfrac12\norm{\cdot-z}^2$ is finite and differentiable everywhere with gradient $\hat x-z$ at $\hat x$, so the sum rule needs no qualification: $\partial f(\hat x)=\partial\varphi(\hat x)+\hat x-z$. Then $-L^*\hat v\in\partial\varphi(\hat x)+\hat x-z$ reads $(-L^*\hat v+z)-\hat x\in\partial\varphi(\hat x)$, which is exactly the <a class="xref" data-id="prox-characterization" href="03_proximity_operator.html#prox-characterization">characterization of the prox</a>: $\hat x=\prox_\varphi(-L^*\hat v+z)$ (<a class="chip t" href="09_toolbox.html#T08"><b>T08</b></a>).</p>
+<p><strong>Use.</strong> TV denoising, $\min_x\tfrac12\norm{x-z}^2+\lambda\norm{Dx}_1$: $\varphi=0$, so $\hat x=z-D^*\hat v$ where $\hat v$ solves the dual $\min_v\tfrac12\norm{D^*v}^2-\ps{D^*v}{z}+\ind_{[-\lambda,\lambda]^K}(v)$, a smooth function (gradient $D(D^*v-z)$, Lipschitz constant $\norm{D}^2$) plus a box: projected gradient on the dual with step $\gamma\in\,]0,2/\norm{D}^2[$ (Chambolle's algorithm). More generally $f^*(u)=\varphi^*$-free: with $f=\tfrac12\norm{\cdot-z}^2$ alone, $f^*(u)=\tfrac12\norm{u}^2+\ps{u}{z}$ is smooth, and the dual is "smooth + $g^*$": Forward–Backward applies (<a class="xref" data-id="forward-backward" href="04_fixed_point_forward_backward.html#forward-backward">page 4</a>) with the prox of $g^*$ given by Moreau. This is the structure of the <a href="08_labs.html#lab-denoising">denoising lab</a> when the regularizer is composed with an operator.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Quadratic data term ⇒ primal from dual in one prox:</strong> $\hat x=\prox_\varphi(z-L^*\hat v)$.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="duality-theorem-2" href="#duality-theorem-2">Kuhn–Tucker points</a><a class="chip xref" data-id="prox-characterization" href="03_proximity_operator.html#prox-characterization">prox characterization</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="dr-dual-form" href="#dr-dual-form">dual DR</a><a class="chip xref" data-id="lab-denoising" href="08_labs.html#lab-denoising">denoising lab</a></div>
+</article>
+</section>
+
+<section class="chapter" id="s-lagrangian">
+<header><div class="eyebrow">Part II.5 · slides 13–15</div><h2>Link with Lagrange duality</h2>
+<p class="lead">Introduce the constraint $Lx=y$ explicitly, price it with a multiplier $v$, and the primal is an $\inf\sup$, the dual a $\sup\inf$, of one function of three variables. Solutions are its saddle points.</p></header>
+
+<article class="card prop" id="lagrangian-minimax">
+<header class="card-head"><span class="kind">Proposition</span><h3>Minimax problem: the primal as $\inf\sup$ of the Lagrangian</h3><span class="src">Part II.5 · slide 13</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#lagrangian-minimax" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $\H$, $\G$ be real Hilbert spaces, $f:\H\to\,]-\infty,+\infty]$, $g:\G\to\,]-\infty,+\infty]$ and $L\in\B(\H,\G)$. The primal problem is equivalent to finding
+$$\mu=\inf_{(x,y)\in\H\times\G}\ \sup_{v\in\G}\ \Lag(x,y,v),$$
+where $\Lag$ is the <strong>Lagrange function</strong> defined by
+$$\big(\forall(x,y,v)\in\H\times\G^2\big)\qquad\Lag(x,y,v)=f(x)+g(y)+\ps{v}{Lx-y}.$$</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Decouple $f$ from $g$ by giving $g$ its own variable $y$, then enforce $y=Lx$ with a multiplier: the sup over $v$ of $\ps{v}{Lx-y}$ is $0$ if the constraint holds and $+\infty$ otherwise.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>$\ind_{\{0\}}$ is the support function of the whole space: $\sup_{v\in\G}\ps{v}{w}$ is $0$ when $w=0$ and $+\infty$ when $w\ne0$ (take $v=tw$, $t\to+\infty$). So the constraint $Lx-y=0$, written as an indicator (<a class="chip t" href="09_toolbox.html#T01"><b>T01</b></a>), is a sup of linear functions (<a class="chip t" href="09_toolbox.html#T17"><b>T17</b></a>, the simplest conjugation: $\ind_{\{0\}}^*=0$, so $\ind_{\{0\}}=\sup_v\ps{v}{\cdot}-0$). Substituting this sup inside the inf gives the minimax form. Nothing is swapped here: the sup is simply <em>inside</em>.</p></div>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T01"><b>T01</b> indicator trick</a><a class="chip t" href="09_toolbox.html#T17"><b>T17</b> $\ind_{\{0\}}=\sup_v\ps{v}{\cdot}$</a></summary><div class="dc">
+<p><span class="step">1. Introduce $y$.</span> $\mu=\inf_{x\in\H}f(x)+g(Lx)=\inf_{(x,y)\in\H\times\G}f(x)+g(y)+\ind_{\{0\}}(Lx-y)$: the only $y$ that does not give $+\infty$ is $y=Lx$.</p>
+<p><span class="step">2. Indicator as a sup.</span> $\ind_{\{0\}}(Lx-y)=\sup_{v\in\G}\ps{v}{Lx-y}$ (value $0$ if $Lx=y$; if $Lx\ne y$, $v=t(Lx-y)$ gives $t\norm{Lx-y}^2\to+\infty$).</p>
+<p><span class="step">3. Put the sup inside.</span> $\mu=\inf_{(x,y)}\ f(x)+g(y)+\sup_{v}\ps{v}{Lx-y}=\inf_{(x,y)}\sup_{v}\ f(x)+g(y)+\ps{v}{Lx-y}$, since $f(x)+g(y)$ does not depend on $v$.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>$\Lag(x,y,v)=f(x)+g(y)+\ps{v}{Lx-y}$; primal $=\inf_{x,y}\sup_v\Lag$.</strong> The multiplier prices the constraint $Lx=y$.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="indicator-function" href="01_convex_analysis.html#indicator-function">indicator</a><a class="chip xref" data-id="support-function" href="02_subdifferential_conjugate.html#support-function">support function</a><a class="chip xref" data-id="primal-dual-problems" href="#primal-dual-problems">primal problem</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="lagrangian-maximin" href="#lagrangian-maximin">maximin</a><a class="chip xref" data-id="saddle-point" href="#saddle-point">saddle points</a><a class="chip xref" data-id="admm-idea" href="#admm-idea">ADMM</a></div>
+</article>
+
+<article class="card prop" id="lagrangian-maximin">
+<header class="card-head"><span class="kind">Proposition</span><h3>Maximin problem: the dual as $\sup\inf$ of the Lagrangian; Lagrange multipliers</h3><span class="src">Part II.5 · slide 13</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#lagrangian-maximin" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>With the same notation, the dual problem is equivalent to finding
+$$-\mu^*=\sup_{v\in\G}\ \inf_{(x,y)\in\H\times\G}\ \Lag(x,y,v),\qquad\Lag(x,y,v)=f(x)+g(y)+\ps{v}{Lx-y}.$$
+<em>Remark.</em> $v$ is called the <strong>Lagrange multiplier</strong> associated with the constraint $Lx=y$.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">For fixed $v$ the Lagrangian separates into a function of $x$ and a function of $y$; minimizing each is computing a conjugate, and $-\big(f^*(-L^*v)+g^*(v)\big)$ comes out. Weak duality is just "$\sup\inf\le\inf\sup$".</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>$\inf_{x,y}\Lag(x,y,v)=\inf_x\big(f(x)+\ps{L^*v}{x}\big)+\inf_y\big(g(y)-\ps{v}{y}\big)$ because the two groups of terms share no variable. Each infimum is minus a conjugate: $\inf_x f(x)-\ps{-L^*v}{x}=-f^*(-L^*v)$, $\inf_y g(y)-\ps{v}{y}=-g^*(v)$. So the inner inf is $-\big(f^*(-L^*v)+g^*(v)\big)$, and taking the sup over $v$ gives $-\mu^*$. Compare with the minimax: same function, the order of $\inf$ and $\sup$ reversed. Since $\sup_v\inf_{x,y}\Lag\le\inf_{x,y}\sup_v\Lag$ always holds (for any function of two groups of variables), this is a second proof of weak duality $-\mu^*\le\mu$; strong duality is the statement that the order can be exchanged.</p></div>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T17"><b>T17</b> dualize by conjugation</a></summary><div class="dc">
+<p><span class="step">1. Expand the conjugates.</span>
+$$\mu^*=\inf_{v\in\G}\ f^*(-L^*v)+g^*(v)=\inf_{v\in\G}\ \Big(\sup_{x\in\H}\ps{x}{-L^*v}-f(x)\Big)+\Big(\sup_{y\in\G}\ps{y}{v}-g(y)\Big).$$</p>
+<p><span class="step">2. Merge the two sups.</span> A sum of two suprema over independent variables is the supremum over the pair, and $\ps{x}{-L^*v}+\ps{y}{v}=-\ps{v}{Lx-y}$:
+$$\mu^*=\inf_{v\in\G}\ \sup_{(x,y)\in\H\times\G}\ -\big(f(x)+g(y)+\ps{v}{Lx-y}\big)=\inf_{v\in\G}\ -\inf_{(x,y)\in\H\times\G}\Lag(x,y,v).$$</p>
+<p><span class="step">3. Flip the sign.</span> $\inf_v(-\phi(v))=-\sup_v\phi(v)$, so $\mu^*=-\sup_{v}\inf_{(x,y)}\Lag(x,y,v)$, i.e. $-\mu^*=\sup_v\inf_{(x,y)}\Lag(x,y,v)$.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout insight"><span class="lbl">Insight</span><p>Why "multiplier"? If $g=\ind_{\{b\}}$ (constraint $Lx=b$), then $y=b$ is forced and $\Lag(x,b,v)=f(x)+\ps{v}{Lx-b}$ is the classical Lagrangian of $\min f(x)$ s.t. $Lx=b$. The Kuhn–Tucker inclusion $-L^*\hat v\in\partial f(\hat x)$ is the classical "$\nabla f(\hat x)+L^*\hat v=0$": the gradient of the cost is a combination of the constraint normals, with coefficients $\hat v$.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Dual $=\sup_v\inf_{x,y}\Lag$, primal $=\inf_{x,y}\sup_v\Lag$.</strong> $\inf_{x,y}\Lag(\cdot,\cdot,v)=-f^*(-L^*v)-g^*(v)$. Weak duality $=$ "$\sup\inf\le\inf\sup$".</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="conjugate" href="02_subdifferential_conjugate.html#conjugate">conjugate</a><a class="chip xref" data-id="lagrangian-minimax" href="#lagrangian-minimax">minimax</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="saddle-point" href="#saddle-point">saddle points</a><a class="chip xref" data-id="arrow-hurwicz" href="#arrow-hurwicz">Arrow–Hurwicz</a></div>
+</article>
+
+<article class="card thm" id="saddle-point">
+<header class="card-head"><span class="kind">Theorem</span><h3>Saddle points of the Lagrangian ⇔ Kuhn–Tucker points with $\hat y=L\hat x$</h3><span class="src">Part II.5 · slides 14–15</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><span class="tag tag-exam">Exam</span><a class="anchor" href="#saddle-point" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p><strong>Definition.</strong> $(\hat x,\hat y,\hat v)\in\H\times\G^2$ is a <strong>saddle point</strong> of the Lagrange function $\Lag$ if
+$$\big(\forall(x,y,v)\in\H\times\G^2\big)\qquad\Lag(\hat x,\hat y,v)\le\Lag(\hat x,\hat y,\hat v)\le\Lag(x,y,\hat v).$$
+<strong>Theorem.</strong> Let $f\in\Gz{\H}$, $g\in\Gz{\G}$, $L\in\B(\H,\G)$ and $(\hat x,\hat y,\hat v)\in\H\times\G^2$. Assume that $\inte(\dom g)\cap L(\dom f)\ne\emptyset$ or $\dom g\cap\inte(L(\dom f))\ne\emptyset$. Then
+$$(\hat x,\hat y,\hat v)\ \text{is a saddle point of }\Lag\iff(\hat x,\hat v)\ \text{is a Kuhn–Tucker point and}\ \hat y=L\hat x.$$</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">A saddle point is a point that minimizes in $(x,y)$ and maximizes in $v$; the three first-order conditions are exactly the two KT inclusions plus the constraint.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>(⇒) The right inequality says $(\hat x,\hat y)$ minimizes $\Lag(\cdot,\cdot,\hat v)=\big[f(x)+\ps{\hat v}{Lx}\big]+\big[g(y)-\ps{\hat v}{y}\big]$, a sum of a function of $x$ and a function of $y$: Fermat on each gives $-L^*\hat v\in\partial f(\hat x)$ and $\hat v\in\partial g(\hat y)$. The left inequality says $\hat v$ maximizes the affine function $v\mapsto\Lag(\hat x,\hat y,v)=\text{const}+\ps{v}{L\hat x-\hat y}$, which is bounded above only if its slope vanishes: $L\hat x=\hat y$. Then $\hat v\in\partial g(L\hat x)\iff L\hat x\in\partial g^*(\hat v)$. (⇐) The slides' route: a KT point gives a primal solution $\hat x$ and a dual solution $\hat v$; the minimax and maximin formulas identify $\sup_v\Lag(\hat x,\hat y,v)=\mu$ and $\inf_{x,y}\Lag(x,y,\hat v)=-\mu^*$; strong duality $\mu=-\mu^*$ then squeezes $\Lag(\hat x,\hat y,\hat v)$ between the two.</p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul><li><em>$f,g\in\Gz{}$</em>: Fermat's rule and the $\partial g\leftrightarrow\partial g^*$ inversion.</li><li><em>Qualification condition</em>: used in the slides' proof of (⇐) through strong duality. The insight below shows it is not needed for this equivalence; it <em>is</em> needed to know that saddle points exist whenever the primal has a solution.</li></ul></div>
+<details class="pl hint"><summary>Hint <span class="aid">— try it first</span></summary><div class="dc"><p>(⇒): write the three optimality conditions $0\in\partial_x\Lag$, $0\in\partial_y\Lag$, $0=\nabla_v\Lag$. (⇐): use that $\hat x$ and $\hat v$ are solutions, the minimax/maximin formulas and $\mu=-\mu^*$.</p></div></details>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T08"><b>T08</b> Fermat + sum rule</a><a class="chip t" href="09_toolbox.html#T10"><b>T10</b> $\partial g^*=(\partial g)^{-1}$</a></summary><div class="dc">
+<p><span class="step">(⇒) 1. First-order conditions.</span> If $(\hat x,\hat y,\hat v)$ is a saddle point, then $(\hat x,\hat y)$ minimizes $\Lag(\cdot,\cdot,\hat v)$ and $\hat v$ maximizes $\Lag(\hat x,\hat y,\cdot)$. Since $\Lag(\cdot,\cdot,\hat v)=[f+\ps{L^*\hat v}{\cdot}]\oplus[g-\ps{\hat v}{\cdot}]$ is a separable sum and $\Lag(\hat x,\hat y,\cdot)$ is affine (differentiable), Fermat's rule and the sum rule (a continuous linear term needs no qualification) give
+$$\begin{cases}0\in\partial_x\Lag(\hat x,\hat y,\hat v)=\partial f(\hat x)+L^*\hat v\\ 0\in\partial_y\Lag(\hat x,\hat y,\hat v)=\partial g(\hat y)-\hat v\\ 0=\nabla_v\Lag(\hat x,\hat y,\hat v)=L\hat x-\hat y.\end{cases}$$</p>
+<p><span class="step">(⇒) 2. Rewrite.</span> This is $-L^*\hat v\in\partial f(\hat x)$, $\hat v\in\partial g(\hat y)$, $\hat y=L\hat x$; and, by the Fenchel–Young dictionary, $\hat v\in\partial g(L\hat x)\iff L\hat x\in\partial g^*(\hat v)$. So $(\hat x,\hat v)$ is a Kuhn–Tucker point and $\hat y=L\hat x$.</p>
+<p><span class="step">(⇐) 3. Solutions.</span> Conversely, assume $(\hat x,\hat v)$ is a Kuhn–Tucker point and $\hat y=L\hat x$. By <a class="xref" data-id="duality-theorem-2" href="#duality-theorem-2">duality theorem (2)</a>, $\hat x$ solves the primal and $\hat v$ solves the dual problem. By the <a class="xref" data-id="lagrangian-minimax" href="#lagrangian-minimax">minimax</a> and <a class="xref" data-id="lagrangian-maximin" href="#lagrangian-maximin">maximin</a> formulas,
+$$\mu=\inf_{(x,y)}\sup_v\Lag(x,y,v)=\sup_v\Lag(\hat x,\hat y,v),\qquad-\mu^*=\sup_v\inf_{(x,y)}\Lag(x,y,v)=\inf_{(x,y)}\Lag(x,y,\hat v).$$
+(The first because $\sup_v\Lag(\hat x,\hat y,v)=f(\hat x)+g(L\hat x)=\mu$ as $\hat y=L\hat x$ and $\hat x$ is optimal; the second because $\inf_{x,y}\Lag(x,y,\hat v)=-f^*(-L^*\hat v)-g^*(\hat v)=-\mu^*$ as $\hat v$ is optimal.)</p>
+<p><span class="step">(⇐) 4. Strong duality.</span> Under the qualification condition, $\mu=-\mu^*$, hence $\sup_v\Lag(\hat x,\hat y,v)=\inf_{(x,y)}\Lag(x,y,\hat v)$, which can be rewritten as
+$$\big(\forall(x,y,v)\in\H\times\G^2\big)\qquad\Lag(\hat x,\hat y,v)\le\Lag(x,y,\hat v).$$</p>
+<p><span class="step">(⇐) 5. Squeeze.</span> Take $v=\hat v$: $\Lag(\hat x,\hat y,\hat v)\le\Lag(x,y,\hat v)$ for all $(x,y)$. Take $(x,y)=(\hat x,\hat y)$: $\Lag(\hat x,\hat y,v)\le\Lag(\hat x,\hat y,\hat v)$ for all $v$. Together: $\Lag(\hat x,\hat y,v)\le\Lag(\hat x,\hat y,\hat v)\le\Lag(x,y,\hat v)$, the saddle-point property.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout insight"><span class="lbl">Insight <span class="tag tag-extra">Extra</span></span><p>Steps 1–2 are reversible: $(\hat x,\hat y)$ minimizes the separable convex function $\Lag(\cdot,\cdot,\hat v)$ <em>iff</em> the two Fermat conditions hold, and $\hat v$ maximizes the affine $\Lag(\hat x,\hat y,\cdot)$ <em>iff</em> $L\hat x=\hat y$. So the equivalence "saddle ⇔ KT + $\hat y=L\hat x$" holds without any qualification condition; the slides' (⇐) route through strong duality is a different, instructive road to the same place, and it shows what the saddle value is: $\Lag(\hat x,\hat y,\hat v)=\mu=-\mu^*$.</p></div>
+
+<div class="widget" id="w-saddle-point">
+<div class="w-title">Interactive · a saddle point: minimum along $x$, maximum along $v$, and the two inequalities checked live</div>
+<p class="w-help">Problem $\min\tfrac12x^2$ s.t. $ax=b$ ($g=\ind_{\{b\}}$, so $y=b$ is frozen): Lagrangian $\Lag(x,v)=\tfrac12x^2+v(ax-b)$. Saddle point $\hat x=b/a$, $\hat v=-b/a^2$. Contours are hyperbolas; the saddle sits where the vertical slice is a minimum and the horizontal slice is a maximum. Move $x$ and $v$ and watch $\Lag(\hat x,v)\le\Lag(\hat x,\hat v)\le\Lag(x,\hat v)$.</p>
+<div class="w-ctls">
+<label class="ctl">a <input type="range" id="sp-a" min="0.5" max="2" step="0.1" value="1"><output id="sp-a-v"></output></label>
+<label class="ctl">b <input type="range" id="sp-b" min="-2" max="2" step="0.1" value="1"><output id="sp-b-v"></output></label>
+<label class="ctl">x <input type="range" id="sp-x" min="-3" max="3" step="0.05" value="2"><output id="sp-x-v"></output></label>
+<label class="ctl">v <input type="range" id="sp-v" min="-3" max="3" step="0.05" value="1"><output id="sp-v-v"></output></label>
+</div>
+<svg class="w-svg" id="sp-svg" viewBox="0 0 560 320" role="img" aria-label="Contour map of the Lagrangian in the (x, v) plane with the saddle point, the current point and the two slices"></svg>
+<ul class="w-steps" id="sp-steps"><li id="sp-s1"></li><li id="sp-s2"></li></ul>
+<p class="w-cap">At the saddle, $\partial_x\Lag=\hat x+a\hat v=0$ (the KT inclusion $-L^*\hat v\in\partial f(\hat x)$ with $f=\tfrac12(\cdot)^2$) and $\partial_v\Lag=a\hat x-b=0$ (the constraint $L\hat x=\hat y$). The saddle value $\Lag(\hat x,\hat v)=\tfrac12\hat x^2=\mu$ is the primal optimal value.</p>
+</div>
+
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Saddle $\iff$ KT $+$ $\hat y=L\hat x$.</strong> Three first-order conditions: $-L^*\hat v\in\partial f(\hat x)$, $\hat v\in\partial g(\hat y)$, $L\hat x=\hat y$. Saddle value $=\mu=-\mu^*$.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="duality-theorem-2" href="#duality-theorem-2">Kuhn–Tucker points</a><a class="chip xref" data-id="strong-duality" href="#strong-duality">strong duality</a><a class="chip xref" data-id="lagrangian-minimax" href="#lagrangian-minimax">minimax</a><a class="chip xref" data-id="lagrangian-maximin" href="#lagrangian-maximin">maximin</a><a class="chip xref" data-id="fermat-rule" href="02_subdifferential_conjugate.html#fermat-rule">Fermat</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="augmented-lagrangian-saddle" href="#augmented-lagrangian-saddle">augmented Lagrangian</a><a class="chip xref" data-id="admm-idea" href="#admm-idea">ADMM</a><a class="chip xref" data-id="arrow-hurwicz" href="#arrow-hurwicz">Arrow–Hurwicz</a></div>
+</article>
+</section>
+
+<section class="chapter" id="s-admm">
+<header><div class="eyebrow">Part II.5 · slides 16–28</div><h2>Alternating-direction method of multipliers (ADMM)</h2>
+<p class="lead">Look for a saddle point by alternating minimizations in $x$ and $y$ and an ascent step in the multiplier. On the plain Lagrangian this fails; on the augmented Lagrangian it is ADMM, and ADMM is Douglas–Rachford applied to the dual problem, hence it converges.</p></header>
+
+<article class="card rem" id="admm-idea">
+<header class="card-head"><span class="kind">Remark</span><h3>Alternating minimization of $\Lag$ fails in general; the augmented Lagrangian</h3><span class="src">Part II.5 · slide 16</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#admm-idea" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Idea</span>
+<p>Iterations for finding a saddle point $(\hat x,\hat y,\hat v)$:
+$$(\forall n\in\N)\qquad\begin{cases}x_n\in\Argmin\Lag(\cdot,y_n,v_n)\\ y_{n+1}\in\Argmin\Lag(x_n,\cdot,v_n)\\ v_{n+1}\ \text{such that}\ \Lag(x_n,y_{n+1},v_{n+1})\ge\Lag(x_n,y_{n+1},v_n).\end{cases}$$
+But the convergence is not guaranteed in general. <strong>Solution:</strong> introduce an <strong>augmented Lagrange function</strong>. Let $\gamma\in\,]0,+\infty[$ and define
+$$\big(\forall(x,y,z)\in\H\times\G^2\big)\qquad\widetilde{\Lag}(x,y,z)=f(x)+g(y)+\gamma\ps{z}{Lx-y}+\frac{\gamma}{2}\norm{Lx-y}^2.$$
+The Lagrange multiplier is $v=\gamma z$.</p>
+</div>
+<p class="idea">The plain Lagrangian is linear in the coupling, so its partial minimizations are often $-\infty$ or non-unique; adding $\tfrac\gamma2\norm{Lx-y}^2$ costs nothing at a saddle point (the constraint holds there) and makes every subproblem well posed.</p>
+<div class="rub">Why plain alternation fails</div>
+<div class="why"><p>For fixed $(y_n,v_n)$, $\Lag(\cdot,y_n,v_n)=f(x)+\ps{L^*v_n}{x}+\text{const}$. If $f$ is linear, or an indicator of an unbounded set, or simply has a linear growth direction, this is unbounded below unless $-L^*v_n$ happens to be a subgradient of $f$ somewhere, and then the Argmin is typically a whole face. Take the LP of <a class="xref" data-id="lp-duality" href="#lp-duality">Example 1</a>: $f=\ps{c}{\cdot}+\ind_{\R^N_+}$, so $\inf_x\Lag(x,y_n,v_n)=-\infty$ as soon as one coordinate of $c+L^*v_n$ is negative, and the $x$-step is meaningless except at the exact dual solution. Even when the minimizations are well defined, the multiplier step only "improves" an affine function, with no control on the size of the move: the three steps do not decrease any merit function. The augmented term fixes both defects at once: the $x$-subproblem becomes $f+\tfrac\gamma2\norm{L\cdot-y_n+z_n}^2$, which is strongly convex as soon as $L^*L$ is invertible, and the multiplier step becomes a <em>gradient</em> step on a strongly concave-in-the-residual function.</p>
+<p><strong>Why it changes nothing.</strong> On the constraint set $\{Lx=y\}$ the added term vanishes, and $\widetilde{\Lag}(x,y,z)=\Lag(x,y,\gamma z)+\tfrac\gamma2\norm{Lx-y}^2$ differs from the Lagrangian by a term that is $\ge0$ and $=0$ at every point satisfying the constraint. A saddle point of $\Lag$ satisfies the constraint, so the two functions have the same saddle points (next theorem). Completing the square (<a class="chip t" href="09_toolbox.html#T09"><b>T09</b></a>) will turn $\gamma\ps{z}{Lx-y}+\tfrac\gamma2\norm{Lx-y}^2$ into $\tfrac\gamma2\norm{Lx-y+z}^2$ up to a constant, which is why the variable $z=v/\gamma$ (the "scaled multiplier") is more convenient than $v$.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p>$\widetilde{\Lag}=\Lag(x,y,\gamma z)+\tfrac\gamma2\norm{Lx-y}^2$: same saddle points, well-posed subproblems. Multiplier $v=\gamma z$.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="saddle-point" href="#saddle-point">saddle points</a><a class="chip xref" data-id="lagrangian-minimax" href="#lagrangian-minimax">Lagrangian</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="augmented-lagrangian-saddle" href="#augmented-lagrangian-saddle">saddle points of $\widetilde{\Lag}$</a><a class="chip xref" data-id="admm-derivation" href="#admm-derivation">ADMM</a></div>
+</article>
+
+<article class="card thm" id="augmented-lagrangian-saddle">
+<header class="card-head"><span class="kind">Theorem</span><h3>Saddle points of the augmented Lagrangian</h3><span class="src">Part II.5 · slides 17–18</span><span class="tag tag-slides">Slides</span><a class="anchor" href="#augmented-lagrangian-saddle" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $\H$, $\G$ be real Hilbert spaces, $f\in\Gz{\H}$, $g\in\Gz{\G}$, $L\in\B(\H,\G)$ and $(\hat x,\hat y,\hat z)\in\H\times\G^2$. Assume that $\inte(\dom g)\cap L(\dom f)\ne\emptyset$ or $\dom g\cap\inte(L(\dom f))\ne\emptyset$. Then
+$$(\hat x,\hat y,\hat z)\ \text{is a saddle point of }\widetilde{\Lag}\iff(\hat x,\gamma\hat z)\ \text{is a Kuhn–Tucker point and}\ \hat y=L\hat x.$$</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">The penalty term has zero value and zero gradient on the constraint set, so it is invisible in the first-order conditions once $L\hat x=\hat y$; and it is $\ge0$ elsewhere, so it can only help the minimizing side of the saddle inequality.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>(⇒) Write the three first-order conditions of $\widetilde{\Lag}$. The $z$-condition is $\gamma(L\hat x-\hat y)=0$: the constraint holds. Substituting it into the $x$- and $y$-conditions erases the terms $\gamma L^*(L\hat x-\hat y)$ and $\gamma(\hat y-L\hat x)$, and what remains is exactly the first-order conditions of $\Lag$ at $(\hat x,\hat y,\gamma\hat z)$, hence (previous theorem) a KT point $(\hat x,\gamma\hat z)$ with $\hat y=L\hat x$. (⇐) A KT point with $\hat y=L\hat x$ is a saddle of $\Lag$ at the multiplier $\gamma\hat z$; the chain of inequalities for $\widetilde{\Lag}$ follows from the one for $\Lag$ because $\widetilde{\Lag}=\Lag(\cdot,\cdot,\gamma\,\cdot)+\tfrac\gamma2\norm{L\cdot-\cdot}^2$ with a penalty that vanishes at $(\hat x,\hat y)$ and is nonnegative at $(x,y)$.</p></div>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T08"><b>T08</b> Fermat + sum rule</a><a class="chip t" href="09_toolbox.html#T09"><b>T09</b> the penalty is a square</a></summary><div class="dc">
+<p><span class="step">(⇒) 1. First-order conditions.</span> If $(\hat x,\hat y,\hat z)$ is a saddle point of $\widetilde{\Lag}$, then (Fermat in $(x,y)$ on a separable convex function plus differentiable quadratic terms, Fermat in $z$ on a concave... in fact affine function):
+$$\begin{cases}0\in\partial_x\widetilde{\Lag}(\hat x,\hat y,\hat z)=\partial f(\hat x)+\gamma L^*\hat z+\gamma L^*(L\hat x-\hat y)\\ 0\in\partial_y\widetilde{\Lag}(\hat x,\hat y,\hat z)=\partial g(\hat y)-\gamma\hat z+\gamma(\hat y-L\hat x)\\ 0=\nabla_z\widetilde{\Lag}(\hat x,\hat y,\hat z)=\gamma(L\hat x-\hat y).\end{cases}$$</p>
+<p><span class="step">(⇒) 2. Erase the penalty terms.</span> The third line gives $L\hat x=\hat y$; inserting it in the first two,
+$$\begin{cases}0\in\partial_x\Lag(\hat x,\hat y,\gamma\hat z)=\partial f(\hat x)+L^*(\gamma\hat z)\\ 0\in\partial_y\Lag(\hat x,\hat y,\gamma\hat z)=\partial g(\hat y)-\gamma\hat z\\ 0=\nabla_v\Lag(\hat x,\hat y,\gamma\hat z)=L\hat x-\hat y,\end{cases}$$
+which, as in the proof of the <a class="xref" data-id="saddle-point" href="#saddle-point">saddle-point theorem</a> (steps 1–2), says that $(\hat x,\gamma\hat z)$ is a Kuhn–Tucker point and $\hat y=L\hat x$.</p>
+<p><span class="step">(⇐) 3. A saddle of $\Lag$.</span> Conversely, if $(\hat x,\gamma\hat z)$ is a Kuhn–Tucker point and $\hat y=L\hat x$, then $(\hat x,\hat y,\gamma\hat z)$ is a saddle point of $\Lag$ by the saddle-point theorem (this is where the qualification condition is used in the slides' route). In addition, for all $(x,y,z)$,
+$$\widetilde{\Lag}(x,y,z)=\Lag(x,y,\gamma z)+\frac\gamma2\norm{Lx-y}^2.$$</p>
+<p><span class="step">(⇐) 4. Chain.</span> Since $L\hat x=\hat y$, the penalty vanishes at $(\hat x,\hat y)$, and it is $\ge0$ at any $(x,y)$:
+$$\widetilde{\Lag}(\hat x,\hat y,z)=\Lag(\hat x,\hat y,\gamma z)\le\Lag(\hat x,\hat y,\gamma\hat z)=\widetilde{\Lag}(\hat x,\hat y,\hat z)\le\Lag(x,y,\gamma\hat z)\le\widetilde{\Lag}(x,y,\hat z).$$
+This is the saddle-point property of $\widetilde{\Lag}$ at $(\hat x,\hat y,\hat z)$.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout pitfall"><span class="lbl">Pitfall</span><p>The multiplier of the augmented Lagrangian is $\gamma\hat z$, not $\hat z$: the dual variable of ADMM is $\gamma z_n$. Forgetting the factor $\gamma$ when reading the dual limit is the classic slip (the ADMM theorem says $\gamma z_n\wto\hat v$).</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Same saddle points:</strong> saddle of $\widetilde{\Lag}$ at $(\hat x,\hat y,\hat z)$ ⇔ saddle of $\Lag$ at $(\hat x,\hat y,\gamma\hat z)$ ⇔ KT $(\hat x,\gamma\hat z)$, $\hat y=L\hat x$.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="saddle-point" href="#saddle-point">saddle points of $\Lag$</a><a class="chip xref" data-id="admm-idea" href="#admm-idea">augmented Lagrangian</a><a class="chip xref" data-id="strong-duality" href="#strong-duality">strong duality</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="admm-derivation" href="#admm-derivation">ADMM</a></div>
+</article>
+
+<article class="card algo" id="admm-derivation">
+<header class="card-head"><span class="kind">Algorithm</span><h3>ADMM derived from the augmented Lagrangian</h3><span class="src">Part II.5 · slide 19</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><span class="tag tag-exam">Exam</span><a class="anchor" href="#admm-derivation" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Derivation</span>
+<p>Algorithm for finding a saddle point of $\widetilde{\Lag}$:
+$$(\forall n\in\N)\qquad\begin{cases}x_n=\argmin_{x\in\H}\widetilde{\Lag}(x,y_n,z_n)\\ y_{n+1}=\argmin_{y\in\G}\widetilde{\Lag}(x_n,y,z_n)\\ z_{n+1}\ \text{such that}\ \widetilde{\Lag}(x_n,y_{n+1},z_{n+1})\ge\widetilde{\Lag}(x_n,y_{n+1},z_n).\end{cases}$$
+By performing a gradient ascent on the Lagrange multiplier (step $1/\gamma$),
+$$(\forall n\in\N)\qquad\begin{cases}x_n=\argmin_{x\in\H}\ f(x)+\gamma\ps{z_n}{Lx-y_n}+\frac\gamma2\norm{Lx-y_n}^2\\ y_{n+1}=\argmin_{y\in\G}\ g(y)+\gamma\ps{z_n}{Lx_n-y}+\frac\gamma2\norm{Lx_n-y}^2\\ z_{n+1}=z_n+\frac1\gamma\nabla_z\widetilde{\Lag}(x_n,y_{n+1},z_n)\end{cases}\iff\begin{cases}x_n=\argmin_{x\in\H}\ \frac12\norm{Lx-y_n+z_n}^2+\frac1\gamma f(x)\\ y_{n+1}=\prox_{g/\gamma}(z_n+Lx_n)\\ z_{n+1}=z_n+Lx_n-y_{n+1}.\end{cases}$$</p>
+</div>
+<div class="algo-box"><div class="algo-name">ADMM (scaled form)</div>
+<p>Let $\gamma\in\,]0,+\infty[$, $(y_0,z_0)\in\G^2$. For $n=0,1,\dots$</p>
+<ol><li>$x_n=\argmin_{x\in\H}\ \tfrac12\norm{Lx-y_n+z_n}^2+\tfrac1\gamma f(x)$ <span class="mini">(primal step: a prox-like problem with $L$ inside the square)</span></li>
+<li>$s_n=Lx_n$</li>
+<li>$y_{n+1}=\prox_{g/\gamma}(z_n+s_n)$ <span class="mini">(prox of $g$: the piece whose prox is cheap)</span></li>
+<li>$z_{n+1}=z_n+s_n-y_{n+1}$ <span class="mini">(multiplier update $=$ running sum of the residuals $Lx_n-y_{n+1}$)</span></li></ol></div>
+<p class="idea">Minimize in $x$, minimize in $y$, push the multiplier by the residual: ADMM is "alternating directions" on the penalized problem, with each minimization a prox-type computation.</p>
+<div class="rub">Derivation line by line</div>
+<div class="why"><p><strong>$x$-step.</strong> In $\widetilde{\Lag}(x,y_n,z_n)$ only $f(x)+\gamma\ps{z_n}{Lx-y_n}+\tfrac\gamma2\norm{Lx-y_n}^2$ depends on $x$. Complete the square (<a class="chip t" href="09_toolbox.html#T09"><b>T09</b></a>) with $w=Lx-y_n$:
+$$\gamma\ps{z_n}{w}+\frac\gamma2\norm{w}^2=\frac\gamma2\big(\norm{w}^2+2\ps{z_n}{w}+\norm{z_n}^2\big)-\frac\gamma2\norm{z_n}^2=\frac\gamma2\norm{w+z_n}^2-\frac\gamma2\norm{z_n}^2.$$
+The constant $-\tfrac\gamma2\norm{z_n}^2$ does not affect the argmin, and dividing the objective by $\gamma\gt0$ does not either: $x_n=\argmin\tfrac12\norm{Lx-y_n+z_n}^2+\tfrac1\gamma f(x)$. Existence and uniqueness: the quadratic is strongly convex when $L^*L$ is invertible (then $\norm{Lx}^2\ge c\norm{x}^2$ with $c\gt0$), so the sum with $f/\gamma\in\Gz{\H}$ has exactly one minimizer (<a class="xref" data-id="existence-uniqueness-convex" href="01_convex_analysis.html#existence-uniqueness-convex">page 1</a>).</p>
+<p><strong>$y$-step.</strong> Same square with $w=Lx_n-y$: $\gamma\ps{z_n}{Lx_n-y}+\tfrac\gamma2\norm{Lx_n-y}^2=\tfrac\gamma2\norm{Lx_n-y+z_n}^2-\tfrac\gamma2\norm{z_n}^2=\tfrac\gamma2\norm{y-(z_n+Lx_n)}^2+\text{const}$. Hence $y_{n+1}=\argmin_y\ \tfrac1\gamma g(y)+\tfrac12\norm{y-(z_n+Lx_n)}^2=\prox_{g/\gamma}(z_n+Lx_n)$ by definition of the <a class="xref" data-id="prox" href="03_proximity_operator.html#prox">prox</a>.</p>
+<p><strong>$z$-step.</strong> $\widetilde{\Lag}(x_n,y_{n+1},\cdot)$ is affine in $z$ with gradient $\nabla_z\widetilde{\Lag}=\gamma(Lx_n-y_{n+1})$. A gradient ascent step of size $1/\gamma$ gives $z_{n+1}=z_n+Lx_n-y_{n+1}$, and it does increase $\widetilde{\Lag}$: the increase is $\gamma\ps{Lx_n-y_{n+1}}{z_{n+1}-z_n}=\gamma\norm{Lx_n-y_{n+1}}^2\ge0$. In the unscaled multiplier $v=\gamma z$ this is $v_{n+1}=v_n+\gamma(Lx_n-y_{n+1})$: the classical "multiplier $+$ penalty parameter $\times$ residual".</p>
+<p><strong>Cost per iteration.</strong> One minimization of $\tfrac12\norm{L\cdot-w}^2+\tfrac1\gamma f$ (for $f=\tfrac12\norm{\cdot-c}^2$ or $f=0$: one linear system with matrix $L^*L+\gamma^{-1}\Id$ or $L^*L$; for $f=\ind_C$ it is a projection in the metric $L^*L$, rarely explicit), one $\prox_{g/\gamma}$, one product by $L$. Nothing is parallel across the three steps; the prox of $g$ is parallel when $g$ is separable.</p></div>
+<div class="callout trick"><span class="lbl">Trick</span><p><a class="chip t" href="09_toolbox.html#T09"><b>T09</b></a> <strong>Complete the square around the multiplier:</strong> $\gamma\ps{z}{w}+\tfrac\gamma2\norm{w}^2=\tfrac\gamma2\norm{w+z}^2-\tfrac\gamma2\norm{z}^2$. It is the reason for the scaled variable $z=v/\gamma$: every subproblem becomes "prox of something at $z_n+\dots$".</p></div>
+
+<div class="widget" id="w-admm-2d">
+<div class="w-title">Interactive · ADMM on $\min\tfrac12\norm{x-c}^2+\lambda\norm{Lx}_1$: the residual $Lx_n-y_n$ goes to $0$ and $\gamma z_n$ goes to the dual solution</div>
+<p class="w-help">$\H=\G=\R^2$, $c=(2,1)$, $L=\begin{pmatrix}1&amp;0.5\\-0.5&amp;1\end{pmatrix}$ ($L^*L=1.25\,\Id$, invertible), $\lambda=1$. $x$-step: solve $(L^*L+\gamma^{-1}\Id)x=L^*(y_n-z_n)+\gamma^{-1}c$; $y$-step: soft-thresholding of $z_n+Lx_n$ at level $\lambda/\gamma$; $z$-step: add the residual. Left: $Lx_n$ (dots) and $y_n$ (squares) in $\G$, converging to the same point $L\hat x$. Right: $\norm{Lx_n-y_n}$ and $\norm{x_n-\hat x}$ (log scale). Move $\gamma$: the speed changes, the limit does not.</p>
+<div class="w-ctls">
+<label class="ctl">γ <input type="range" id="ad-gamma" min="0.1" max="5" step="0.1" value="1"><output id="ad-gamma-v"></output></label>
+<label class="ctl">iterations <input type="range" id="ad-n" min="1" max="40" step="1" value="15"><output id="ad-n-v"></output></label>
+</div>
+<div class="w-cols">
+<div><svg class="w-svg" id="ad-svg-a" viewBox="0 0 360 300" role="img" aria-label="Iterates L x_n and y_n in the plane"></svg><p class="w-cap">$Lx_n$ (dots), $y_n$ (squares), $L\hat x$ (green)</p></div>
+<div><svg class="w-svg" id="ad-svg-b" viewBox="0 0 360 300" role="img" aria-label="Residual and distance to the solution over iterations"></svg><p class="w-cap">$\norm{Lx_n-y_n}$ (orange), $\norm{x_n-\hat x}$ (blue), $\norm{\gamma z_n-\hat v}$ (purple)</p></div>
+</div>
+<div class="readout" id="ad-read"></div>
+<p class="w-cap">The reference $(\hat x,\hat v)$ is computed by running $3000$ iterations; you can check the Kuhn–Tucker conditions on it: $\hat x=c-L^*\hat v$ (prox form of KT with $\varphi=0$) and $L\hat x\in\partial g^*(\hat v)=N_{[-\lambda,\lambda]^2}(\hat v)$.</p>
+</div>
+
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>ADMM $=$ $x$-argmin with $L$ in the square, prox of $g/\gamma$ at $z_n+Lx_n$, $z_{n+1}=z_n+Lx_n-y_{n+1}$.</strong> Multiplier $v=\gamma z$; $\gamma$ is also the penalty parameter.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="augmented-lagrangian-saddle" href="#augmented-lagrangian-saddle">saddle points of $\widetilde{\Lag}$</a><a class="chip xref" data-id="prox" href="03_proximity_operator.html#prox">prox</a><a class="chip xref" data-id="prox-quadratic" href="03_proximity_operator.html#prox-quadratic">prox of a quadratic with $L$</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="dr-admm-equivalence" href="#dr-admm-equivalence">DR ↔ ADMM</a><a class="chip xref" data-id="admm-convergence" href="#admm-convergence">convergence</a><a class="chip xref" data-id="admm-limitations" href="#admm-limitations">limitations</a></div>
+</article>
+
+<article class="card thm" id="dr-unrelaxed">
+<header class="card-head"><span class="kind">Theorem</span><h3>Unrelaxed Douglas–Rachford (reminder)</h3><span class="src">Part II.5 · slide 20</span><span class="tag tag-slides">Slides</span><a class="anchor" href="#dr-unrelaxed" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $\H$ be a Hilbert space, $f\in\Gz{\H}$, $g\in\Gz{\H}$ and $\gamma\in\,]0,+\infty[$. Assume that $\zer(\partial f+\partial g)\ne\emptyset$. Let $u_0\in\H$ and
+$$(\forall n\in\N)\qquad\begin{cases}v_n=\prox_{\gamma g}u_n\\ w_n=\prox_{\gamma f}(2v_n-u_n)\\ u_{n+1}=u_n+w_n-v_n.\end{cases}$$
+Then: 1. $u_n\wto\hat u$; 2. $v_n\wto\hat v=\prox_{\gamma g}\hat u\in\Argmin(f+g)$.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Douglas–Rachford with relaxation $\lambda_n\equiv1$: the governing sequence $u_n$ converges to a fixed point of $\rprox_{\gamma f}\rprox_{\gamma g}$, and its shadow $\prox_{\gamma g}u_n$ converges to a minimizer.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>With $T=\rprox_{\gamma f}\rprox_{\gamma g}$ (a composition of two nonexpansive reflections, <a class="chip t" href="09_toolbox.html#T11"><b>T11</b></a>), $u_{n+1}=\tfrac12(u_n+Tu_n)$: the Krasnosel'skii–Mann iteration with $\lambda_n=\tfrac12$ on a nonexpansive $T$, or equivalently the relaxed DR of <a class="xref" data-id="douglas-rachford" href="05_douglas_rachford_ppxa.html#douglas-rachford">page 5</a> with $\lambda_n\equiv1\in\,]0,2[$ and $\sum\lambda_n(2-\lambda_n)=+\infty$. Fixed points of $T$ are exactly the $u$ with $\prox_{\gamma g}u\in\zer(\partial f+\partial g)$ (<a class="xref" data-id="dr-fixed-points" href="05_douglas_rachford_ppxa.html#dr-fixed-points">page 5</a>), nonempty by hypothesis.</p></div>
+<details class="pl proof"><summary>Proof <span class="aid">(on page 5)</span> <a class="chip t" href="09_toolbox.html#T14"><b>T14</b> Fejér + demiclosedness</a></summary><div class="dc"><p><span class="step">1.</span> Write $v_n=\prox_{\gamma g}u_n$, $w_n=\prox_{\gamma f}(2v_n-u_n)$; then $2w_n-(2v_n-u_n)=\rprox_{\gamma f}\rprox_{\gamma g}u_n=Tu_n$ and $u_{n+1}=u_n+w_n-v_n=u_n+\tfrac12(Tu_n-u_n)$.</p><p><span class="step">2.</span> Apply the <a class="xref" data-id="douglas-rachford" href="05_douglas_rachford_ppxa.html#douglas-rachford">Douglas–Rachford theorem</a> with $\lambda_n\equiv1$: $u_n\wto\hat u\in\Fix T$ and $\prox_{\gamma g}u_n\wto\prox_{\gamma g}\hat u\in\Argmin(f+g)$. (The weak convergence of the shadow sequence is part of that theorem.)</p><span class="qed">□</span></div></details>
+<div class="callout memo"><span class="lbl">To remember</span><p>DR, $\lambda_n\equiv1$: $v_n=\prox_{\gamma g}u_n$, $w_n=\prox_{\gamma f}(2v_n-u_n)$, $u_{n+1}=u_n+w_n-v_n$; $v_n\wto$ a minimizer of $f+g$.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="douglas-rachford" href="05_douglas_rachford_ppxa.html#douglas-rachford">Douglas–Rachford</a><a class="chip xref" data-id="dr-fixed-points" href="05_douglas_rachford_ppxa.html#dr-fixed-points">DR fixed points</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="dr-dual-form" href="#dr-dual-form">dual DR</a></div>
+</article>
+
+<article class="card thm" id="dr-dual-form">
+<header class="card-head"><span class="kind">Theorem</span><h3>Dual form of unrelaxed Douglas–Rachford</h3><span class="src">Part II.5 · slide 21</span><span class="tag tag-slides">Slides</span><a class="anchor" href="#dr-dual-form" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $\H$, $\G$ be Hilbert spaces, $f\in\Gz{\H}$, $g\in\Gz{\G}$, $L\in\B(\H,\G)$ and $\gamma\in\,]0,+\infty[$. Assume that $\zer\big(\partial(f^*\circ(-L^*))+\partial g^*\big)\ne\emptyset$. Let $u_0\in\G$ and
+$$(\forall n\in\N)\qquad\begin{cases}v_n=\prox_{\gamma g^*}u_n\\ w_n=\prox_{\gamma f^*\circ(-L^*)}(2v_n-u_n)\\ u_{n+1}=u_n+w_n-v_n.\end{cases}$$
+Then: 1. $u_n\wto\hat u$; 2. $v_n\wto\hat v=\prox_{\gamma g^*}\hat u\in\Argmin\big(f^*\circ(-L^*)+g^*\big)$.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Run DR in $\G$ on the two pieces of the dual problem: the dual variable $v_n$ converges to a dual solution.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>It is the previous theorem applied in the Hilbert space $\G$ to the pair $(f^*\circ(-L^*),\,g^*)$: both are in $\Gz{\G}$ ($g^*$ because $g\in\Gz{\G}$; $f^*\circ(-L^*)$ is lsc convex as a composition of a lsc convex function with a bounded linear map, and proper because the zero assumption forces its domain to be nonempty). The prox of $g^*$ is free by the Moreau decomposition; the prox of $f^*\circ(-L^*)$ is the expensive one, and the next theorem shows it is exactly the ADMM $x$-step.</p></div>
+<details class="pl proof"><summary>Proof</summary><div class="dc"><p><span class="step">1.</span> $F=f^*\circ(-L^*)$ and $G=g^*$ belong to $\Gz{\G}$ and $\zer(\partial F+\partial G)\ne\emptyset$ by assumption.</p><p><span class="step">2.</span> Apply the <a class="xref" data-id="dr-unrelaxed" href="#dr-unrelaxed">unrelaxed DR theorem</a> in $\G$ with $(F,G)$ in place of $(f,g)$. The conclusions are exactly 1 and 2.</p><span class="qed">□</span></div></details>
+<div class="callout note"><span class="lbl">Slide typo</span><p>Slide 21 writes $L\in\B(\G,\H)$; for $f^*\circ(-L^*)$ to be defined on $\G$ (the DR variables live in $\G$) one needs $L^*:\G\to\H$, i.e. $L\in\B(\H,\G)$ as on slide 22 and everywhere else.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p>Dual DR: $\prox_{\gamma g^*}$ (Moreau: cheap) and $\prox_{\gamma f^*\circ(-L^*)}$ (the hard one), $v_n\wto$ dual solution.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="dr-unrelaxed" href="#dr-unrelaxed">unrelaxed DR</a><a class="chip xref" data-id="primal-dual-problems" href="#primal-dual-problems">dual problem</a><a class="chip xref" data-id="moreau-decomposition" href="03_proximity_operator.html#moreau-decomposition">Moreau decomposition</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="dr-admm-equivalence" href="#dr-admm-equivalence">DR ↔ ADMM</a><a class="chip xref" data-id="admm-convergence" href="#admm-convergence">ADMM convergence</a></div>
+</article>
+
+<article class="card thm" id="dr-admm-equivalence">
+<header class="card-head"><span class="kind">Theorem</span><h3>Douglas–Rachford on the dual <em>is</em> ADMM</h3><span class="src">Part II.5 · slides 22–24</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><span class="tag tag-exam">Exam</span><a class="anchor" href="#dr-admm-equivalence" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $\H$, $\G$ be Hilbert spaces, $f\in\Gz{\H}$, $g\in\Gz{\G}$, $L\in\B(\H,\G)$ such that $L^*L$ is an isomorphism, and $\gamma\in\,]0,+\infty[$. The dual form of the unrelaxed Douglas–Rachford algorithm
+$$(\forall n\in\N)\qquad\begin{cases}v_n=\prox_{\gamma g^*}u_n\\ w_n=\prox_{\gamma f^*\circ(-L^*)}(2v_n-u_n)\\ u_{n+1}=u_n+w_n-v_n\end{cases}$$
+can be re-expressed as
+$$(\forall n\in\N)\qquad\begin{cases}x_n=\argmin_{x\in\H}\ \tfrac12\norm{Lx-y_n+z_n}^2+\tfrac1\gamma f(x)\\ s_n=Lx_n\\ y_{n+1}=\prox_{g/\gamma}(z_n+s_n)\\ z_{n+1}=z_n+s_n-y_{n+1}\end{cases}$$
+by setting $y_n=\gamma^{-1}(u_n-v_n)$ and $z_n=\gamma^{-1}v_n$.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">ADMM's $z_n$ is the DR shadow $v_n/\gamma$, ADMM's $y_n$ is the DR "gap" $(u_n-v_n)/\gamma$, and the primal $x_n$ is the vector that realizes the subgradient inside the hard prox of $f^*\circ(-L^*)$.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>Three dictionaries, one per step (<a class="chip t" href="09_toolbox.html#T18"><b>T18</b> change variables to recognize an old algorithm</a>). (i) The prox of $g^*$ is a prox of $g$ in disguise: Moreau's decomposition $\prox_{\gamma g^*}u=u-\gamma\prox_{g/\gamma}(u/\gamma)$ says precisely that $y_n=(u_n-v_n)/\gamma=\prox_{g/\gamma}(u_n/\gamma)$. (ii) The prox of $f^*\circ(-L^*)$ is characterized by a subgradient inclusion; the chain rule $\partial(f^*\circ(-L^*))=-L\,\partial f^*(-L^*\cdot)$ (valid because $\ran L^*=\H$, a consequence of $L^*L$ being onto) says that this subgradient is $-Lx_n$ for some $x_n\in\partial f^*(-L^*w_n)$, i.e. $-L^*w_n\in\partial f(x_n)$; unwinding $w_n$ in terms of $u_n,v_n,x_n$ turns this inclusion into the optimality condition of the ADMM $x$-step. (iii) The DR update $u_{n+1}=u_n+w_n-v_n$ then reads $u_{n+1}/\gamma=z_n+Lx_n$, which feeds the $y$- and $z$-updates.</p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul><li><em>$L^*L$ isomorphism</em>: gives $\ran L^*=\H$ (since $\ran L^*\supset\ran(L^*L)=\H$), hence the qualification condition $\dom f^*\cap\inte(\ran L^*)=\dom f^*\ne\emptyset$ for the chain rule with <em>equality</em>, and it makes $x_n$ unique ($L$ injective) and the $x$-subproblem strongly convex.</li><li><em>$f,g\in\Gz{}$</em>: Moreau decomposition, $\partial f^*=(\partial f)^{-1}$, prox characterizations.</li></ul></div>
+<details class="pl hint"><summary>Hint <span class="aid">— try it first</span></summary><div class="dc"><p>Characterize $w_n$ by $2v_n-u_n-w_n\in\gamma\partial(f^*\circ(-L^*))(w_n)$, apply the chain rule, name $x_n$ the vector in $\partial f^*(-L^*w_n)$, and translate. Then Moreau for $v_n$. Then $u_{n+1}$.</p></div></details>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T18"><b>T18</b> change variables</a><a class="chip t" href="09_toolbox.html#T08"><b>T08</b> prox ⇔ inclusion</a><a class="chip t" href="09_toolbox.html#T10"><b>T10</b> $\partial f^*=(\partial f)^{-1}$</a></summary><div class="dc">
+<p><span class="step">1. Characterize $w_n$.</span> By the <a class="xref" data-id="prox-characterization" href="03_proximity_operator.html#prox-characterization">prox characterization</a> applied to $\gamma f^*\circ(-L^*)\in\Gz{\G}$,
+$$w_n=\prox_{\gamma f^*\circ(-L^*)}(2v_n-u_n)\iff2v_n-u_n-w_n\in\gamma\,\partial\big(f^*\circ(-L^*)\big)(w_n).$$</p>
+<p><span class="step">2. Chain rule with equality.</span> $L^*L$ isomorphism ⇒ $\ran L^*=\H$: indeed $\ran L^*\supset\ran(L^*L)=\H$. Hence $\dom f^*\cap\inte(\ran L^*)=\dom f^*\cap\H=\dom f^*\ne\emptyset$ ($f^*$ is proper since $f\in\Gz{\H}$). This is the qualification condition of the <a class="xref" data-id="moreau-rockafellar" href="02_subdifferential_conjugate.html#moreau-rockafellar">sum rule</a> for the composition $f^*\circ(-L^*)$ (with a zero first function, $L(\dom 0)=\ran(-L^*)$), so $\partial\big(f^*\circ(-L^*)\big)=(-L^*)^*\circ\partial f^*\circ(-L^*)=-L\circ\partial f^*\circ(-L^*)$. Consequently, step 1 says there exists $x_n\in\H$ such that
+$$\begin{cases}2v_n-u_n-w_n=-\gamma Lx_n\iff w_n=2v_n-u_n+\gamma Lx_n\\ x_n\in\partial f^*(-L^*w_n)\iff-L^*w_n\in\partial f(x_n)\end{cases}\quad\Rightarrow\quad L^*(u_n-2v_n-\gamma Lx_n)\in\partial f(x_n),$$
+the last inclusion by substituting $w_n$ in $-L^*w_n$. (Uniqueness of $x_n$: $Lx_n=(u_n+w_n-2v_n)/\gamma$ is fixed and $L$ is injective since $L^*L$ is.)</p>
+<p><span class="step">3. The $x$-update.</span> Since $y_n=(u_n-v_n)/\gamma$ and $z_n=v_n/\gamma$, we have $u_n-2v_n=\gamma(y_n-z_n)$, so
+$$L^*(y_n-z_n-Lx_n)\in\tfrac1\gamma\partial f(x_n)\iff0\in L^*(Lx_n-y_n+z_n)+\tfrac1\gamma\partial f(x_n)\iff x_n=\argmin_{x\in\H}\ \tfrac12\norm{Lx-y_n+z_n}^2+\tfrac1\gamma f(x),$$
+by Fermat and the sum rule (the quadratic is differentiable with gradient $L^*(Lx-y_n+z_n)$; the argmin is a single point because the quadratic is strongly convex, $L^*L$ being invertible).</p>
+<p><span class="step">4. The $y$-update (Moreau).</span> By the <a class="xref" data-id="moreau-decomposition" href="03_proximity_operator.html#moreau-decomposition">Moreau decomposition</a>,
+$$v_n=\prox_{\gamma g^*}u_n\iff v_n=u_n-\gamma\prox_{g/\gamma}\Big(\frac{u_n}{\gamma}\Big)\iff y_n=\frac{u_n-v_n}{\gamma}=\prox_{g/\gamma}\Big(\frac{u_n}{\gamma}\Big).$$</p>
+<p><span class="step">5. The DR update in the new variables.</span>
+$$\begin{cases}u_{n+1}=u_n+w_n-v_n\\ 2v_n-u_n-w_n=-\gamma Lx_n\iff u_n+w_n=2v_n+\gamma Lx_n\end{cases}\Rightarrow\frac{u_{n+1}}{\gamma}=\frac{v_n}{\gamma}+Lx_n=z_n+Lx_n.$$
+Hence, by step 4 at index $n+1$, $y_{n+1}=\prox_{g/\gamma}(u_{n+1}/\gamma)=\prox_{g/\gamma}(z_n+Lx_n)$.</p>
+<p><span class="step">6. The $z$-update.</span> Finally, using $v_{n+1}=u_{n+1}-\gamma y_{n+1}$ (step 4 at $n+1$),
+$$z_{n+1}=\frac{v_{n+1}}{\gamma}=\frac{u_{n+1}}{\gamma}-y_{n+1}=z_n+Lx_n-y_{n+1}.$$
+With $s_n=Lx_n$ this is the ADMM recursion.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout trick"><span class="lbl">Trick</span><p><a class="chip t" href="09_toolbox.html#T18"><b>T18</b></a> <strong>Name the hidden primal variable.</strong> A prox of a composition $\varphi\circ M$ is characterized by "$\text{point}-\text{prox}\in M^*\partial\varphi(M\,\text{prox})$"; the vector in $\partial\varphi(\dots)$ is a new unknown with its own meaning. Here it is $x_n$, the primal iterate; the dual DR was computing it all along.</p></div>
+<div class="callout pitfall"><span class="lbl">Pitfall</span><p>Without $\ran L^*=\H$ the chain rule may only give $\subset$, the primal $x_n$ may not exist or not be unique, and the identification breaks: this is the real reason ADMM's theory asks for $L^*L$ invertible, not a technicality.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>$z_n=v_n/\gamma$, $y_n=(u_n-v_n)/\gamma$, $x_n$ = the vector with $-L^*w_n\in\partial f(x_n)$:</strong> dual DR $=$ ADMM. Moreau gives the $y$-step, the chain rule gives the $x$-step.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="dr-dual-form" href="#dr-dual-form">dual DR</a><a class="chip xref" data-id="admm-derivation" href="#admm-derivation">ADMM</a><a class="chip xref" data-id="moreau-decomposition" href="03_proximity_operator.html#moreau-decomposition">Moreau decomposition</a><a class="chip xref" data-id="moreau-rockafellar" href="02_subdifferential_conjugate.html#moreau-rockafellar">chain rule</a><a class="chip xref" data-id="prox-characterization" href="03_proximity_operator.html#prox-characterization">prox characterization</a><a class="chip xref" data-id="fenchel-young" href="02_subdifferential_conjugate.html#fenchel-young">$\partial f^*=(\partial f)^{-1}$</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="admm-convergence" href="#admm-convergence">ADMM convergence</a></div>
+</article>
+
+<article class="card lemma" id="lemma-graph-closed">
+<header class="card-head"><span class="kind">Lemma</span><h3>The graph of $\partial f$ is closed for strong × weak convergence</h3><span class="src">Part II.5 · slide 26</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#lemma-graph-closed" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $\H$ be a Hilbert space and $f\in\Gz{\H}$. If $(x_n,v_n)_{n\in\N}$ is a sequence of $\H^2$ such that $v_n\in\partial f(x_n)$, $x_n\to\hat x$ and $v_n\wto\hat v$, then $\hat v\in\partial f(\hat x)$.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Subgradient inequalities survive limits: strong convergence of the points and weak convergence of the slopes is enough to pass to the limit in $f(y)\ge f(x_n)+\ps{v_n}{y-x_n}$.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>The inequality $f(y)\ge f(x_n)+\ps{v_n}{y-x_n}$ holds for every $y$. On the right, $f(x_n)$ can only drop in the limit (lsc gives $\liminf f(x_n)\ge f(\hat x)$), and $\ps{v_n}{y-x_n}\to\ps{\hat v}{y-\hat x}$ because a weakly convergent sequence paired with a strongly convergent one has convergent inner products (the weak one is bounded). So the limit inequality is $f(y)\ge f(\hat x)+\ps{\hat v}{y-\hat x}$, which is the definition of $\hat v\in\partial f(\hat x)$.</p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul><li><em>$f$ lsc</em>: $\liminf f(x_n)\ge f(\hat x)$. Without it the limit inequality could fail.</li><li><em>$x_n\to\hat x$ strongly</em>: needed to control $\ps{v_n}{x_n}$: weak × weak does not pass to the limit (e.g. $x_n=v_n=e_n$ an orthonormal sequence: $\ps{e_n}{e_n}=1$ but $e_n\wto0$).</li><li><em>$f$ convex</em>: so that $\partial f$ is the set of global affine minorant slopes, i.e. the inequality holds for all $y$.</li></ul></div>
+<details class="pl hint"><summary>Hint <span class="aid">— try it first</span></summary><div class="dc"><p>Write the subgradient inequality at $x_n$ with slope $v_n$ for a fixed $y$ and take $\liminf$.</p></div></details>
+<details class="pl proof"><summary>Proof <span class="aid">(the slides recall the lemma without proof; here is the short one)</span></summary><div class="dc">
+<p><span class="step">1. Subgradient inequality.</span> For every $n$ and every $y\in\H$: $f(y)\ge f(x_n)+\ps{v_n}{y-x_n}$ (definition of $v_n\in\partial f(x_n)$; it forces $x_n\in\dom f$).</p>
+<p><span class="step">2. The inner product converges.</span> $(v_n)$ is bounded (weakly convergent sequences are bounded, Banach–Steinhaus), say $\norm{v_n}\le M$. Then
+$$\abs{\ps{v_n}{y-x_n}-\ps{\hat v}{y-\hat x}}\le\abs{\ps{v_n-\hat v}{y-\hat x}}+\abs{\ps{v_n}{\hat x-x_n}}\le\abs{\ps{v_n-\hat v}{y-\hat x}}+M\norm{x_n-\hat x}\to0.$$</p>
+<p><span class="step">3. Pass to the limit.</span> Taking $\liminf$ in step 1 and using the lower semicontinuity of $f$ ($\liminf f(x_n)\ge f(\hat x)$ since $x_n\to\hat x$):
+$$f(y)\ge\liminf_n f(x_n)+\lim_n\ps{v_n}{y-x_n}\ge f(\hat x)+\ps{\hat v}{y-\hat x}.$$
+Choosing $y\in\dom f$ shows $f(\hat x)\lt+\infty$, so $\hat x\in\dom f$ and the inequality for all $y$ is exactly $\hat v\in\partial f(\hat x)$.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>$\partial f$ has a strong–weak closed graph:</strong> $v_n\in\partial f(x_n)$, $x_n\to\hat x$, $v_n\wto\hat v$ ⇒ $\hat v\in\partial f(\hat x)$. It is the demiclosedness of this page.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="subdifferential" href="02_subdifferential_conjugate.html#subdifferential">subdifferential</a><a class="chip xref" data-id="lsc" href="01_convex_analysis.html#lsc">lower semicontinuity</a><a class="chip xref" data-id="convergence-strong-weak" href="01_convex_analysis.html#convergence-strong-weak">weak convergence</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="admm-convergence" href="#admm-convergence">ADMM convergence</a><a class="chip xref" data-id="demiclosedness" href="04_fixed_point_forward_backward.html#demiclosedness">demiclosedness (same spirit)</a></div>
+</article>
+
+<article class="card thm" id="admm-convergence">
+<header class="card-head"><span class="kind">Theorem</span><h3>Convergence of ADMM</h3><span class="src">Part II.5 · slides 25–28</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><span class="tag tag-exam">Exam</span><a class="anchor" href="#admm-convergence" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $\H$, $\G$ be Hilbert spaces, $f\in\Gz{\H}$, $g\in\Gz{\G}$, $L\in\B(\H,\G)$ such that $L^*L$ is an isomorphism, and $\gamma\in\,]0,+\infty[$. Assume that $\inte(\dom g)\cap L(\dom f)\ne\emptyset$ or $\dom g\cap\inte(L(\dom f))\ne\emptyset$, and that $\Argmin(f+g\circ L)\ne\emptyset$. Let $(y_0,z_0)\in\G^2$ and
+$$(\forall n\in\N)\qquad\begin{cases}x_n=\argmin_{x\in\H}\ \tfrac12\norm{Lx-y_n+z_n}^2+\tfrac1\gamma f(x)\\ s_n=Lx_n\\ y_{n+1}=\prox_{g/\gamma}(z_n+s_n)\\ z_{n+1}=z_n+s_n-y_{n+1}.\end{cases}$$
+Then $x_n\wto\hat x$ where $\hat x\in\Argmin(f+g\circ L)$, and $\gamma z_n\wto\hat v$ where $\hat v\in\Argmin\big(f^*\circ(-L^*)+g^*\big)$.</p>
+<p class="mini">Slide 25 initializes with $u_0\in\G$, $v_0=\prox_{\gamma g^*}u_0$, $y_0=\gamma^{-1}(u_0-v_0)$, $z_0=\gamma^{-1}v_0$ (a genuine DR start); slide 28 states it for any $(y_0,z_0)\in\G^2$, which is equivalent since after one ADMM step $(y_1,z_1)$ is of that form with $u_1=\gamma(y_1+z_1)$.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">ADMM is DR on the dual, so the dual variables converge; $L^*L$ invertible lets you read the primal iterate off $Lx_n$, and the closed-graph lemma passes the Kuhn–Tucker inclusions to the limit.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>Three ingredients. (1) <em>The dual DR has fixed points</em>: the qualification condition turns Fermat's rule into a primal zero of $\partial f+L^*\partial gL$, and duality theorem (1) converts it into a dual zero. (2) <em>Dual DR converges</em>: $z_n=v_n/\gamma$, $y_n=(u_n-v_n)/\gamma$ converge, and so does $s_n=z_{n+1}-z_n+y_{n+1}$. (3) <em>Back to the primal</em>: $x_n=(L^*L)^{-1}L^*s_n$ is a continuous linear image of $s_n$, so it converges to some $\hat x$ with $L\hat x=\hat y$; then the two KT inclusions hold at the limit: $L\hat x\in\partial g^*(\hat v)$ comes from $\hat v=\prox_{\gamma g^*}\hat u$, and $-L^*\hat v\in\partial f(\hat x)$ comes from the $x$-step optimality condition $\gamma L^*(y_n-z_n-s_n)\in\partial f(x_n)$ and the lemma. Duality theorem (2) finishes.</p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul>
+<li><em>Qualification condition</em>: sum rule with equality ⇒ $\Argmin(f+g\circ L)=\zer(\partial f+L^*\partial gL)$, so that a primal solution yields a KT pair and the dual DR has a fixed point. Without it the dual DR might have nothing to converge to.</li>
+<li><em>$\Argmin(f+g\circ L)\ne\emptyset$</em>: the starting point of the chain.</li>
+<li><em>$L^*L$ isomorphism</em>: the DR ↔ ADMM dictionary (chain rule with equality) and the recovery $x_n=(L^*L)^{-1}L^*s_n$. For $L=\begin{pmatrix}1&amp;1\end{pmatrix}$ (so $L^*L$ has rank one) the $x$-step is not uniquely defined when $f=0$ and the argument breaks.</li>
+<li><em>Finite dimension (in the proof)</em>: turns the weak convergence of $s_n$ into strong convergence, needed by the lemma. The theorem is stated with $\wto$ in Hilbert spaces; the slides prove the finite-dimensional case "for simplicity".</li></ul></div>
+<details class="pl hint"><summary>Hint <span class="aid">— try it first</span></summary><div class="dc"><p>Check the hypothesis of the dual DR (sum rule + duality theorem (1)); use the dual DR convergence; recover $x_n$ from $s_n$; write both KT inclusions as limits.</p></div></details>
+<details class="pl proof"><summary>Proof <span class="aid">(finite dimension, as on the slides)</span> <a class="chip t" href="09_toolbox.html#T14"><b>T14</b> Fejér + closed graph</a><a class="chip t" href="09_toolbox.html#T15"><b>T15</b> zeros dictionary</a><a class="chip t" href="09_toolbox.html#T18"><b>T18</b> DR ↔ ADMM</a></summary><div class="dc">
+<p><span class="step">1. The primal has a zero.</span> The qualification condition gives $\partial(f+g\circ L)=\partial f+L^*\partial gL$ (<a class="xref" data-id="moreau-rockafellar" href="02_subdifferential_conjugate.html#moreau-rockafellar">sum rule</a>). Hence, by Fermat,
+$$\zer(\partial f+L^*\partial gL)=\zer\partial(f+g\circ L)=\Argmin(f+g\circ L)\ne\emptyset.$$</p>
+<p><span class="step">2. The dual DR has a fixed point.</span> By <a class="xref" data-id="duality-theorem-1" href="#duality-theorem-1">duality theorem (1)</a>, $\zer\big((-L)\partial f^*(-L^*\cdot)+\partial g^*\big)\ne\emptyset$. Since $(-L)\partial f^*(-L^*v)\subset\partial(f^*\circ(-L^*))(v)$ (chain inclusion; here even equality holds because $\ran L^*=\H$),
+$$\zer\big(\partial(f^*\circ(-L^*))+\partial g^*\big)\supset\zer\big((-L)\partial f^*(-L^*\cdot)+\partial g^*\big)\ne\emptyset.$$
+So the <a class="xref" data-id="dr-dual-form" href="#dr-dual-form">dual DR theorem</a> applies.</p>
+<p><span class="step">3. Dual convergence.</span> By <a class="xref" data-id="dr-admm-equivalence" href="#dr-admm-equivalence">DR ↔ ADMM</a> the ADMM sequence is the dual DR sequence in the variables $z_n=\gamma^{-1}v_n$, $y_n=\gamma^{-1}(u_n-v_n)$ (if $(y_0,z_0)$ is arbitrary, apply this from $n=1$ on with $u_1=\gamma(y_1+z_1)$, $v_1=\gamma z_1=\prox_{\gamma g^*}u_1$). In finite dimension weak and strong convergence coincide, so
+$$z_n=\gamma^{-1}v_n\to\gamma^{-1}\hat v,\qquad y_n=\gamma^{-1}(u_n-v_n)\to\gamma^{-1}(\hat u-\hat v)=:\hat y,\qquad s_n=z_{n+1}-z_n+y_{n+1}\to\hat y,$$
+where $\hat v=\prox_{\gamma g^*}\hat u\in\Argmin\big(f^*\circ(-L^*)+g^*\big)$ (the dual conclusion: $\gamma z_n\to\hat v$).</p>
+<p><span class="step">4. Primal convergence.</span> $s_n=Lx_n$ ⇒ $x_n=(L^*L)^{-1}L^*s_n\to(L^*L)^{-1}L^*\hat y=:\hat x$, and $L\hat x=\lim Lx_n=\lim s_n=\hat y$ by continuity of $L$.</p>
+<p><span class="step">5. First KT inclusion.</span> $\hat v=\prox_{\gamma g^*}\hat u\iff\hat u-\hat v\in\gamma\partial g^*(\hat v)\iff\gamma\hat y\in\gamma\partial g^*(\hat v)\iff L\hat x\in\partial g^*(\hat v)$.</p>
+<p><span class="step">6. Second KT inclusion.</span> The $x$-step says $x_n\in\Argmin\big(\tfrac12\norm{L\cdot-y_n+z_n}^2+\tfrac1\gamma f\big)$, i.e. (Fermat + sum rule) $0\in L^*(Lx_n-y_n+z_n)+\gamma^{-1}\partial f(x_n)$, i.e. $\gamma L^*(y_n-z_n-s_n)\in\partial f(x_n)$. Now $x_n\to\hat x$ and $\gamma L^*(y_n-z_n-s_n)\to\gamma L^*(\hat y-\gamma^{-1}\hat v-\hat y)=-L^*\hat v$. By the <a class="xref" data-id="lemma-graph-closed" href="#lemma-graph-closed">closed-graph lemma</a>, $-L^*\hat v\in\partial f(\hat x)$.</p>
+<p><span class="step">7. Conclusion.</span> $L\hat x\in\partial g^*(\hat v)$ and $-L^*\hat v\in\partial f(\hat x)$: $(\hat x,\hat v)$ is a Kuhn–Tucker point, so by <a class="xref" data-id="duality-theorem-2" href="#duality-theorem-2">duality theorem (2)</a> $\hat x\in\Argmin(f+g\circ L)$ and $\hat v$ is a dual solution: $(\hat x,\hat v)$ is a pair of primal/dual solutions.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout note"><span class="lbl">Slide typo</span><p>The last line of slide 27 reads "$L\hat x\in\partial g^*(\hat y)$"; it should be $L\hat x\in\partial g^*(\hat v)$, as established in step 5.</p></div>
+<div class="callout pitfall"><span class="lbl">Pitfall</span><p>The convergence of ADMM is <em>not</em> a Fejér argument on $(x_n,y_n,z_n)$ in the primal: the Fejér-monotone sequence is the hidden DR sequence $u_n$ in the dual. That is why nothing is said about the monotonicity of $f(x_n)+g(Lx_n)$ and why the residual $Lx_n-y_{n+1}=z_{n+1}-z_n$ goes to $0$ (it is $(u_{n+1}-u_n)/\gamma$ up to the DR bookkeeping: the residual of a KM iteration, <a class="chip t" href="09_toolbox.html#T13"><b>T13</b></a>).</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>ADMM converges because dual DR converges:</strong> $x_n\wto\hat x\in\Argmin(f+g\circ L)$, $\gamma z_n\wto\hat v$ dual solution. Needs $L^*L$ invertible, the qualification condition, a primal solution. Proof: DR limit → $x_n=(L^*L)^{-1}L^*s_n$ → two KT inclusions (one by Moreau/prox, one by the closed-graph lemma).</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="dr-admm-equivalence" href="#dr-admm-equivalence">DR ↔ ADMM</a><a class="chip xref" data-id="dr-dual-form" href="#dr-dual-form">dual DR</a><a class="chip xref" data-id="duality-theorem-1" href="#duality-theorem-1">duality (1)</a><a class="chip xref" data-id="duality-theorem-2" href="#duality-theorem-2">duality (2)</a><a class="chip xref" data-id="lemma-graph-closed" href="#lemma-graph-closed">closed-graph lemma</a><a class="chip xref" data-id="moreau-rockafellar" href="02_subdifferential_conjugate.html#moreau-rockafellar">sum rule</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="admm-limitations" href="#admm-limitations">limitations</a><a class="chip xref" data-id="lab-dbsm" href="08_labs.html#lab-dbsm">DBSM lab (question 7)</a><a class="chip xref" data-id="algo-chooser" href="09_toolbox.html#algo-chooser">algorithm chooser</a></div>
+</article>
+</section>
+
+<section class="chapter" id="s-primal-dual">
+<header><div class="eyebrow">Part II.5 · slides 29–35</div><h2>Primal-dual algorithms</h2>
+<p class="lead">Add a smooth term $h$, refuse to invert $L^*L$, and look for the saddle point of $f(x)+h(x)+\ps{v}{Lx}-g^*(v)$ directly: explicit steps fail, implicit steps almost work, and one extrapolation makes it Forward–Backward in a clever metric.</p></header>
+
+<article class="card def" id="pd-problem">
+<header class="card-head"><span class="kind">Definition</span><h3>The primal-dual problem $f+g\circ L+h$ with $h$ smooth</h3><span class="src">Part II.5 · slide 29</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#pd-problem" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Problem</span>
+<p>Let $\H$, $\G$ be real Hilbert spaces, $f\in\Gz{\H}$, $h\in\Gz{\H}$, $g\in\Gz{\G}$ and $L\in\B(\H,\G)$. It is assumed that $h$ is differentiable and has a $\beta$-Lipschitzian gradient with $\beta\in\,]0,+\infty[$. We want to
+$$\underset{x\in\H}{\text{minimize}}\ f(x)+g(Lx)+h(x).$$</p>
+</div>
+<p class="idea">Three pieces, three treatments: $f$ by its prox, $g\circ L$ by the prox of $g^*$ (the dual variable absorbs $L$), $h$ by its gradient. The algorithms of pages 4–5 handle two of the three; this one handles all three.</p>
+<div class="rub">Examples</div>
+<div class="why"><p>TV-regularized deblurring $\tfrac12\norm{Ax-z}^2+\lambda\norm{Dx}_1+\ind_{[0,1]^N}(x)$: $h=\tfrac12\norm{A\cdot-z}^2$ ($\beta=\norm{A}^2$), $g=\lambda\norm{\cdot}_1$, $L=D$, $f=\ind_{[0,1]^N}$. Selectivity estimation (<a class="xref" data-id="lab-dbsm" href="08_labs.html#lab-dbsm">lab 3</a>): $f=\ind_C$ (simplex-type set, projection available), $g=q_b$ (prox available), $L=A$ binary matrix, $h=0$. Logistic regression with $\ell_1$ and a linear constraint: $h$ = logistic loss, $f=\lambda\norm{\cdot}_1$, $g=\ind_{\{b\}}$, $L=$ constraint matrix. The dual problem of this template is $\min_v(f+h)^*(-L^*v)+g^*(v)$, since the "primal function" is $f+h$.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p>$f$: proximable; $g$: proximable, composed with $L$; $h$: $\beta$-Lipschitz gradient. Nothing is inverted.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="primal-dual-problems" href="#primal-dual-problems">primal problem</a><a class="chip xref" data-id="descent-lemma" href="04_fixed_point_forward_backward.html#descent-lemma">Lipschitz gradient</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="admm-limitations" href="#admm-limitations">ADMM for it</a><a class="chip xref" data-id="arrow-hurwicz" href="#arrow-hurwicz">Arrow–Hurwicz</a><a class="chip xref" data-id="primal-dual-algorithm" href="#primal-dual-algorithm">primal-dual algorithm</a></div>
+</article>
+
+<article class="card rem" id="admm-limitations">
+<header class="card-head"><span class="kind">Remark</span><h3>ADMM for $f+g\circ L+h$ and its three limitations</h3><span class="src">Part II.5 · slide 30</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#admm-limitations" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p><strong>ADMM algorithm.</strong> Let $\gamma\in\,]0,+\infty[$.
+$$(\forall n\in\N)\qquad\begin{cases}x_n=\argmin_{x\in\H}\ \tfrac12\norm{Lx-y_n+z_n}^2+\tfrac1\gamma\big(f(x)+h(x)\big)\\ y_{n+1}=\prox_{g/\gamma}(z_n+Lx_n)\\ z_{n+1}=z_n+Lx_n-y_{n+1}.\end{cases}$$
+<strong>Limitations.</strong> (i) The computation of $x_n$ at iteration $n$ may be complicated. (ii) Convergence requires $L^*L$ to be invertible. (iii) The smoothness of $h$ is not exploited.</p>
+</div>
+<p class="idea">ADMM treats $f+h$ as one block to be minimized jointly with a quadratic in $Lx$: an inner problem that is in general as hard as the original, and that needs $L^*L$ invertible to be well posed.</p>
+<div class="rub">Why these are real limitations</div>
+<div class="why"><p>(i) Even with $h=0$, the $x$-step is $\prox$-like only when $L^*L$ is a multiple of the identity (then it is $\prox_{f/(\gamma\nu)}$ of an explicit point, <a class="xref" data-id="prox-composition-semiorthogonal" href="03_proximity_operator.html#prox-composition-semiorthogonal">page 3</a>); otherwise it is a linear system (quadratic $f$) or an inner iterative solver (nonsmooth $f$). With $h\ne0$ smooth but not quadratic (logistic loss), the $x$-step is a full nonlinear problem. (ii) In the DBSM lab, $A\in\{0,1\}^{6\times7}$, so $A^*A$ is a singular $7\times7$ matrix: the theorem does not apply. (iii) A $\beta$-Lipschitz gradient is exactly what makes an explicit step cheap and safe (Forward–Backward); ADMM ignores it.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>ADMM's price:</strong> an inner argmin with $L$ in the square, $L^*L$ invertible, and no use of $\nabla h$. The primal-dual algorithm removes all three.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="admm-convergence" href="#admm-convergence">ADMM convergence</a><a class="chip xref" data-id="pd-problem" href="#pd-problem">the problem</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="primal-dual-algorithm" href="#primal-dual-algorithm">primal-dual algorithm</a><a class="chip xref" data-id="lab-dbsm" href="08_labs.html#lab-dbsm">DBSM lab</a></div>
+</article>
+
+<article class="card algo" id="arrow-hurwicz">
+<header class="card-head"><span class="kind">Algorithm</span><h3>Idea 1: Arrow–Hurwicz, explicit primal-dual subgradient steps</h3><span class="src">Part II.5 · slide 31</span><span class="tag tag-slides">Slides</span><a class="anchor" href="#arrow-hurwicz" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Idea 1</span>
+<p>The optimization problem is reformulated as finding
+$$\inf_{x\in\H}\ f(x)+h(x)+\underbrace{\sup_{v\in\G}\ \ps{v}{Lx}-g^*(v)}_{g(Lx)}=\inf_{x\in\H}\sup_{v\in\G}\ f(x)+h(x)+\ps{v}{Lx}-g^*(v).$$
+<strong>Arrow–Hurwicz method.</strong> Let $(\tau_n)_{n\in\N}$ and $(\sigma_n)_{n\in\N}$ be sequences in $]0,+\infty[$.
+$$(\forall n\in\N)\qquad\begin{cases}t_n\in\partial f(x_n)\\ x_{n+1}=x_n-\tau_n\big(t_n+\nabla h(x_n)+L^*v_n\big)\\ s_n\in\partial g^*(v_n)\\ v_{n+1}=v_n-\sigma_n\big(s_n-Lx_{n+1}\big)\end{cases}$$
+⇝ requires stringent conditions on the choice of the step-size (e.g. decaying to zero).</p>
+</div>
+<div class="algo-box"><div class="algo-name">Arrow–Hurwicz (subgradient descent-ascent)</div>
+<p>Let $x_0\in\H$, $v_0\in\G$. For $n=0,1,\dots$</p>
+<ol><li>pick $t_n\in\partial f(x_n)$; $x_{n+1}=x_n-\tau_n(t_n+\nabla h(x_n)+L^*v_n)$ <span class="mini">(subgradient <em>descent</em> in $x$ on the saddle function)</span></li>
+<li>pick $s_n\in\partial g^*(v_n)$; $v_{n+1}=v_n+\sigma_n(Lx_{n+1}-s_n)$ <span class="mini">(subgradient <em>ascent</em> in $v$: $\partial_v=Lx-\partial g^*(v)$)</span></li></ol></div>
+<p class="idea">Gradient descent on $x$ and gradient ascent on $v$ of the saddle function; on the bilinear coupling $\ps{v}{Lx}$ this is a rotation, and explicit rotations never settle unless the steps vanish.</p>
+<div class="rub">Why it needs vanishing steps</div>
+<div class="why"><p>The saddle function $K(x,v)=f(x)+h(x)+\ps{v}{Lx}-g^*(v)$ is convex in $x$, concave in $v$, and its coupling is bilinear. Take the pure coupling case $f=h=0$, $g=\ind_{\{b\}}$ (so $g^*=\ps{\cdot}{b}$), $\H=\G=\R$, $L=a$: $K(x,v)=v(ax-b)$, saddle point $(b/a,0)$. The simultaneous explicit scheme $x_{n+1}=x_n-\tau av_n$, $v_{n+1}=v_n+\sigma(ax_n-b)$ has iteration matrix $\begin{pmatrix}1&amp;-\tau a\\ \sigma a&amp;1\end{pmatrix}$ with eigenvalues $1\pm ia\sqrt{\tau\sigma}$ of modulus $\sqrt{1+a^2\tau\sigma}\gt1$: the iterates <em>spiral out</em> for every constant pair of steps, and only $\tau_n\sigma_n\to0$ (with $\sum\tau_n=+\infty$) can tame them. The slides' version uses $x_{n+1}$ in the $v$-step (Gauss–Seidel order); on the same example its matrix $\begin{pmatrix}1&amp;-\tau a\\ \sigma a&amp;1-\sigma\tau a^2\end{pmatrix}$ has determinant $1$, so the eigenvalues have modulus exactly $1$ when they are complex ($\sigma\tau a^2\lt4$): the iterates <em>circle</em> forever at constant distance from the saddle, Fejér but not convergent, like a rotation in the <a class="xref" data-id="krasnoselskii-mann" href="04_fixed_point_forward_backward.html#krasnoselskii-mann">Krasnosel'skii–Mann</a> picture. With nonsmooth $f$ or $g^*$, the subgradients $t_n,s_n$ add the usual subgradient-method chattering, which also forces $\tau_n,\sigma_n\to0$. <span class="tag tag-extra">Extra</span></p></div>
+
+<div class="widget" id="w-saddle-schemes">
+<div class="w-title">Interactive · on a bilinear saddle, explicit steps spiral out or circle, implicit steps circle, extrapolated steps converge</div>
+<p class="w-help">Saddle function $K(x,v)=\tfrac c2x^2+v(ax-b)$ with $a=1$, $b=1$ ($f=0$, $h=\tfrac c2(\cdot)^2$ with $\beta=c$, $g=\ind_{\{b\}}$). Saddle point $\hat x=b/a$, $\hat v=-c\hat x/a$. Three schemes with constant steps $\tau,\sigma$: "simultaneous" (both steps from $(x_n,v_n)$), "sequential" (the slides' Arrow–Hurwicz; here $f=0$ so it coincides with the implicit idea 2) and "extrapolated" (idea 3, $v$-step at $2x_{n+1}-x_n$). The spectral radius $\rho$ of the exact $2\times2$ iteration matrix is computed: $\rho\lt1$ means convergence. With $c=0$ the coupling is purely bilinear: compare the three.</p>
+<div class="w-ctls">
+<label class="ctl">τ <input type="range" id="ss-tau" min="0.05" max="1.5" step="0.05" value="0.5"><output id="ss-tau-v"></output></label>
+<label class="ctl">σ <input type="range" id="ss-sigma" min="0.05" max="1.5" step="0.05" value="0.5"><output id="ss-sigma-v"></output></label>
+<label class="ctl">c (curvature of h) <input type="range" id="ss-c" min="0" max="2" step="0.1" value="0"><output id="ss-c-v"></output></label>
+<div class="seg" id="ss-mode" role="group" aria-label="scheme"><button class="btn" type="button" data-v="jac" aria-pressed="true">simultaneous</button><button class="btn" type="button" data-v="seq">sequential (AH / idea 2)</button><button class="btn" type="button" data-v="ext">extrapolated (idea 3)</button></div>
+</div>
+<svg class="w-svg" id="ss-svg" viewBox="0 0 560 330" role="img" aria-label="Trajectory of the iterates in the (x, v) plane over the contours of the saddle function"></svg>
+<div class="readout" id="ss-read"></div>
+<p class="w-cap">The primal-dual theorem's condition $\tau^{-1}-\sigma\norm{L}^2\gt\beta/2$ reads $1/\tau-\sigma a^2\gt c/2$ here; it is sufficient for the extrapolated scheme ($\rho\lt1$ whenever it holds), not necessary. For $c=0$ the extrapolated scheme has $\rho=\sqrt{1-\sigma\tau a^2}$ when $\sigma\tau a^2\lt1$: the extrapolation turns a rotation into a contraction.</p>
+</div>
+
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Arrow–Hurwicz $=$ (sub)gradient descent in $x$, ascent in $v$, explicit:</strong> needs $\tau_n,\sigma_n\to0$ because the bilinear coupling rotates.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="lagrangian-maximin" href="#lagrangian-maximin">saddle formulation</a><a class="chip xref" data-id="pd-problem" href="#pd-problem">the problem</a><a class="chip xref" data-id="krasnoselskii-mann" href="04_fixed_point_forward_backward.html#krasnoselskii-mann">rotation example</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="pd-implicit" href="#pd-implicit">idea 2</a><a class="chip xref" data-id="primal-dual-algorithm" href="#primal-dual-algorithm">idea 3</a></div>
+</article>
+
+<article class="card algo" id="pd-implicit">
+<header class="card-head"><span class="kind">Algorithm</span><h3>Idea 2: implicit updates become prox steps</h3><span class="src">Part II.5 · slide 32</span><span class="tag tag-slides">Slides</span><a class="anchor" href="#pd-implicit" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Idea 2</span>
+<p>Use implicit updates (the subgradients are taken at the <em>new</em> points):
+$$(\forall n\in\N)\quad\begin{cases}t_n\in\partial f(x_{n+1})\\ x_{n+1}=x_n-\tau_n\big(t_n+\nabla h(x_n)+L^*v_n\big)\\ s_n\in\partial g^*(v_{n+1})\\ v_{n+1}=v_n-\sigma_n\big(s_n-Lx_{n+1}\big)\end{cases}\iff\begin{cases}0\in x_{n+1}-x_n+\tau_n\big(\nabla h(x_n)+L^*v_n\big)+\tau_n\partial f(x_{n+1})\\ 0\in v_{n+1}-v_n-\sigma_nLx_{n+1}+\sigma_n\partial g^*(v_{n+1})\end{cases}$$
+$$\iff\begin{cases}x_{n+1}=\prox_{\tau_nf}\big(x_n-\tau_n(\nabla h(x_n)+L^*v_n)\big)\\ v_{n+1}=\prox_{\sigma_ng^*}\big(v_n+\sigma_nLx_{n+1}\big)\end{cases}$$
+⇝ still does not converge for constant values of the step-size.</p>
+</div>
+<div class="algo-box"><div class="algo-name">Implicit primal-dual steps (idea 2)</div>
+<p>Let $x_0\in\H$, $v_0\in\G$. For $n=0,1,\dots$</p>
+<ol><li>$x_{n+1}=\prox_{\tau_nf}\big(x_n-\tau_n(\nabla h(x_n)+L^*v_n)\big)$ <span class="mini">(forward step on $h$ and on the coupling, backward step on $f$)</span></li>
+<li>$v_{n+1}=\prox_{\sigma_ng^*}\big(v_n+\sigma_nLx_{n+1}\big)$ <span class="mini">(forward step on the coupling, backward step on $g^*$)</span></li></ol></div>
+<p class="idea">Taking the subgradient at the arrival point is exactly what a prox does ("$x-p\in\partial f(p)$"), so the nonsmooth chattering disappears; but the bilinear coupling is still handled explicitly and still rotates.</p>
+<div class="rub">Derivation of the two prox updates</div>
+<div class="why"><p>Move everything to one side: $0\in x_{n+1}-\big(x_n-\tau_n(\nabla h(x_n)+L^*v_n)\big)+\tau_n\partial f(x_{n+1})$, i.e. $p-w\in-\tau_n\partial f(p)$ with $p=x_{n+1}$ and $w=x_n-\tau_n(\nabla h(x_n)+L^*v_n)$; by the <a class="xref" data-id="prox-characterization" href="03_proximity_operator.html#prox-characterization">prox characterization</a> $w-p\in\partial(\tau_nf)(p)\iff p=\prox_{\tau_nf}w$ (<a class="chip t" href="09_toolbox.html#T08"><b>T08</b></a>). Same for $v$: $0\in v_{n+1}-(v_n+\sigma_nLx_{n+1})+\sigma_n\partial g^*(v_{n+1})$ gives $v_{n+1}=\prox_{\sigma_ng^*}(v_n+\sigma_nLx_{n+1})$. Both proxes are available: $\prox_{\sigma g^*}=\Id-\sigma\prox_{g/\sigma}(\cdot/\sigma)$ by Moreau. Why no convergence with constant steps: in the bilinear example of the previous card ($f=0$, $g=\ind_{\{b\}}$), idea 2 is <em>the same</em> as the sequential Arrow–Hurwicz, whose eigenvalues lie on the unit circle (widget above, mode "sequential"): the iterates neither converge nor blow up.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Implicit subgradient $=$ prox:</strong> $x_{n+1}=\prox_{\tau f}(x_n-\tau(\nabla h(x_n)+L^*v_n))$, $v_{n+1}=\prox_{\sigma g^*}(v_n+\sigma Lx_{n+1})$. Not yet convergent.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="arrow-hurwicz" href="#arrow-hurwicz">idea 1</a><a class="chip xref" data-id="prox-characterization" href="03_proximity_operator.html#prox-characterization">prox characterization</a><a class="chip xref" data-id="moreau-decomposition" href="03_proximity_operator.html#moreau-decomposition">Moreau decomposition</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="primal-dual-algorithm" href="#primal-dual-algorithm">idea 3</a></div>
+</article>
+
+<article class="card thm" id="primal-dual-algorithm">
+<header class="card-head"><span class="kind">Theorem</span><h3>Idea 3: extrapolate $2x_{n+1}-x_n$ — the primal-dual algorithm and its convergence</h3><span class="src">Part II.5 · slides 33–34</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><span class="tag tag-exam">Exam</span><span class="tag tag-lab">Lab</span><a class="anchor" href="#primal-dual-algorithm" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p><strong>Idea 3.</strong> Use the approximation $x_{n+1}\simeq2x_{n+1}-x_n$ in the dual step.</p>
+<p><strong>Convergence of the PD algorithm.</strong> Let $\H$, $\G$ be Hilbert spaces, $L\in\B(\H,\G)$, $f\in\Gz{\H}$, $g\in\Gz{\G}$, and $h\in\Gz{\H}$ with a $\beta$-Lipschitzian gradient. Let $\tau\in\,]0,+\infty[$ and $\sigma\in\,]0,+\infty[$. Assume that
+$$\tau^{-1}-\sigma\norm{L}^2\gt\beta/2\qquad\text{and}\qquad\zer\big(\partial f+\nabla h+L^*\partial gL\big)\ne\emptyset.$$
+Let $x_0\in\H$, $v_0\in\G$, and
+$$(\forall n\in\N)\qquad\begin{cases}x_{n+1}=\prox_{\tau f}\big(x_n-\tau(\nabla h(x_n)+L^*v_n)\big)\\ v_{n+1}=\prox_{\sigma g^*}\big(v_n+\sigma L(2x_{n+1}-x_n)\big).\end{cases}$$
+Then $x_n\wto\hat x\in\Argmin(f+h+g\circ L)$ and $v_n\wto\hat v\in\Argmin\big((f+h)^*\circ(-L^*)+g^*\big)$.</p>
+<p><em>Remark.</em> When $g=0$, we recover the Forward–Backward algorithm.</p>
+</div>
+<div class="algo-box"><div class="algo-name">Primal-dual algorithm (Condat–Vũ; Chambolle–Pock when $h=0$)</div>
+<p>Choose $\tau,\sigma\gt0$ with $\tau^{-1}-\sigma\norm{L}^2\gt\beta/2$. Let $x_0\in\H$, $v_0\in\G$. For $n=0,1,\dots$</p>
+<ol><li>$x_{n+1}=\prox_{\tau f}\big(x_n-\tau\nabla h(x_n)-\tau L^*v_n\big)$ <span class="mini">(gradient step on $h$, dual correction $L^*v_n$, prox of $f$)</span></li>
+<li>$\bar x_{n+1}=2x_{n+1}-x_n$ <span class="mini">(extrapolation)</span></li>
+<li>$v_{n+1}=\prox_{\sigma g^*}\big(v_n+\sigma L\bar x_{n+1}\big)=v_n+\sigma L\bar x_{n+1}-\sigma\prox_{g/\sigma}\big(v_n/\sigma+L\bar x_{n+1}\big)$ <span class="mini">(Moreau: prox of $g$, no prox of $g^*$ needed)</span></li></ol>
+<p class="mini">Cost per iteration: one $\nabla h$, one $L$, one $L^*$, one $\prox_{\tau f}$, one $\prox_{g/\sigma}$. No linear system, no inner loop. The two prox steps are sequential within an iteration ($v_{n+1}$ needs $x_{n+1}$), but when $g=\sum_ig_i\circ L_i$ the $m$ dual updates are independent and run in parallel (exercise below).</p></div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">The pair $(x_n,v_n)$ follows a Forward–Backward iteration in $\H\times\G$ for the metric $\begin{pmatrix}\tau^{-1}\Id&amp;-L^*\\-L&amp;\sigma^{-1}\Id\end{pmatrix}$: the extrapolation is what makes the off-diagonal $-L$ blocks appear, and the condition $\tau^{-1}-\sigma\norm{L}^2\gt\beta/2$ is the FB step condition in that metric.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p><strong>Fixed points are the right points.</strong> $(\hat x,\hat v)$ is a fixed point of the iteration iff $-\tau(\nabla h(\hat x)+L^*\hat v)\in\tau\partial f(\hat x)$ and $\sigma L\hat x\in\sigma\partial g^*(\hat v)$, i.e. $-L^*\hat v\in\partial f(\hat x)+\nabla h(\hat x)=\partial(f+h)(\hat x)$ and $L\hat x\in\partial g^*(\hat v)$: a Kuhn–Tucker point of the problem with "$f$" $=f+h$. By <a class="xref" data-id="duality-theorem-2" href="#duality-theorem-2">duality theorem (2)</a> such a point gives $\hat x\in\Argmin(f+h+g\circ L)$ and $\hat v\in\Argmin((f+h)^*\circ(-L^*)+g^*)$; by <a class="xref" data-id="duality-theorem-1" href="#duality-theorem-1">duality theorem (1)</a> the hypothesis $\zer(\partial f+\nabla h+L^*\partial gL)\ne\emptyset$ guarantees that one exists (<a class="chip t" href="09_toolbox.html#T15"><b>T15</b></a>).</p>
+<p><strong>The iteration is Forward–Backward in disguise</strong> (<a class="chip t" href="09_toolbox.html#T18"><b>T18</b></a>). Rewrite each prox as an inclusion. The $x$-step: $x_n-\tau(\nabla h(x_n)+L^*v_n)-x_{n+1}\in\tau\partial f(x_{n+1})$, i.e.
+$$\tau^{-1}(x_n-x_{n+1})-L^*(v_n-v_{n+1})\in\partial f(x_{n+1})+L^*v_{n+1}+\nabla h(x_n).$$
+The $v$-step: $v_n+\sigma L(2x_{n+1}-x_n)-v_{n+1}\in\sigma\partial g^*(v_{n+1})$, i.e.
+$$\sigma^{-1}(v_n-v_{n+1})-L(x_n-x_{n+1})\in\partial g^*(v_{n+1})-Lx_{n+1}.$$
+Stack $w=(x,v)\in\H\times\G$ and define the bounded self-adjoint operator $V$, the set-valued operator $A$ and the single-valued operator $B$ by
+$$V=\begin{pmatrix}\tau^{-1}\Id&amp;-L^*\\-L&amp;\sigma^{-1}\Id\end{pmatrix},\qquad A(x,v)=\big(\partial f(x)+L^*v,\ \partial g^*(v)-Lx\big),\qquad B(x,v)=\big(\nabla h(x),0\big).$$
+The two inclusions are exactly $V(w_n-w_{n+1})\in Aw_{n+1}+Bw_n$, i.e. $w_{n+1}=(V+A)^{-1}(V-B)w_n=(\Id+V^{-1}A)^{-1}(\Id-V^{-1}B)w_n$: a <a class="xref" data-id="forward-backward" href="04_fixed_point_forward_backward.html#forward-backward">Forward–Backward</a> step of size $1$ for the inclusion $0\in V^{-1}Aw+V^{-1}Bw$ (whose zeros are the zeros of $A+B$, the KT points above). <em>Why the extrapolation:</em> without it (idea 2) the $v$-inclusion would read $\sigma^{-1}(v_n-v_{n+1})\in\partial g^*(v_{n+1})-Lx_{n+1}$, the operator on the left would be block-diagonal, and the skew part $(L^*v,-Lx)$ of $A$ would have to be treated forward, which is not co-coercive: that is the rotation. The term $-L(x_n-x_{n+1})$ created by $2x_{n+1}-x_n$ is exactly what completes the symmetric block $V$.</p>
+<p><strong>The metric.</strong> $V$ is positive definite iff $\tau\sigma\norm{L}^2\lt1$ (Schur complement: $\tau^{-1}\Id-\sigma L^*L\succ0$), which follows from the hypothesis since $\tau^{-1}-\sigma\norm{L}^2\gt\beta/2\gt0$. Then $\ps{w}{w'}_V=\ps{Vw}{w'}$ is a Hilbert inner product on $\H\times\G$, equivalent to the usual one (so weak convergence is the same). In this metric, $V^{-1}A$ is maximally monotone (because $A$ is: the subdifferential of $f\oplus g^*$ plus a bounded skew-adjoint linear operator), so $(\Id+V^{-1}A)^{-1}$ is firmly nonexpansive, and $V^{-1}B$ is co-coercive: $\ps{V^{-1}Bw-V^{-1}Bw'}{w-w'}_V=\ps{\nabla h(x)-\nabla h(x')}{x-x'}\ge\beta^{-1}\norm{\nabla h(x)-\nabla h(x')}^2$ (<a class="xref" data-id="baillon-haddad" href="04_fixed_point_forward_backward.html#baillon-haddad">Baillon–Haddad</a>), while $\norm{V^{-1}(u,0)}_V^2=\ps{u}{(\tau^{-1}\Id-\sigma L^*L)^{-1}u}\le(\tau^{-1}-\sigma\norm{L}^2)^{-1}\norm{u}^2$ (the $(1,1)$ block of $V^{-1}$ is the inverse Schur complement). Hence $V^{-1}B$ is $\nu$-Lipschitz-co-coercive in the $V$-metric with $\nu=\beta/(\tau^{-1}-\sigma\norm{L}^2)$, and the FB condition "$\gamma\nu\lt2$" with step $\gamma=1$ is $\beta\lt2(\tau^{-1}-\sigma\norm{L}^2)$: the hypothesis of the theorem, to the letter. The FB theorem (in its monotone-operator form) gives $w_n\wto$ a zero of $A+B$.</p>
+<p><strong>What the slides leave as a sketch.</strong> Slide 34 only says "rewrite the algorithm as a Forward–Backward iteration for solving a saddle point problem in the space $\H\times\G$". The missing pieces, all standard: (a) the computation of $V$, $A$, $B$ above; (b) maximal monotonicity of $A$ (sum of a maximally monotone operator and a bounded skew linear one); (c) the FB convergence theorem for a maximally monotone $+$ co-coercive pair in a Hilbert space with the $V$-metric (same proof as on page 4, with $J_{V^{-1}A}$ in place of $\prox$: it is $\tfrac12$-averaged, $\Id-V^{-1}B$ is $\nu/2$-averaged, the composition is averaged, KM concludes, <a class="chip t" href="09_toolbox.html#T22"><b>T22</b></a>); (d) the identification of the weak limit as a KT point and the conclusion by duality theorem (2).</p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul>
+<li><em>$\tau^{-1}-\sigma\norm{L}^2\gt\beta/2$</em>: positive definiteness of the metric <em>and</em> the FB step condition; "pay for $L$ with $\sigma$, pay for $h$ with $\beta/2$". Violate it and the iterates can diverge (widget below).</li>
+<li><em>$\zer(\partial f+\nabla h+L^*\partial gL)\ne\emptyset$</em>: existence of a KT pair, hence of a fixed point; it is implied by "$\Argmin(f+h+g\circ L)\ne\emptyset$ + qualification condition".</li>
+<li><em>$h$ with $\beta$-Lipschitz gradient</em>: Baillon–Haddad co-coercivity, the only reason an explicit step on $h$ is allowed.</li>
+<li><em>$f,g\in\Gz{}$</em>: the proxes exist and $\partial g^*=(\partial g)^{-1}$.</li></ul></div>
+<details class="pl proof"><summary>Proof sketch <span class="aid">(as on the slides, with the rewriting made explicit)</span> <a class="chip t" href="09_toolbox.html#T18"><b>T18</b> FB in a metric</a><a class="chip t" href="09_toolbox.html#T15"><b>T15</b> fixed points = KT points</a><a class="chip t" href="09_toolbox.html#T22"><b>T22</b> averagedness count</a></summary><div class="dc">
+<p><span class="step">1. Inclusions.</span> By the prox characterization, the two updates are equivalent to
+$$\tau^{-1}(x_n-x_{n+1})-L^*(v_n-v_{n+1})\in\partial f(x_{n+1})+L^*v_{n+1}+\nabla h(x_n),\qquad\sigma^{-1}(v_n-v_{n+1})-L(x_n-x_{n+1})\in\partial g^*(v_{n+1})-Lx_{n+1}.$$
+(Add and subtract $L^*v_{n+1}$ in the first; use $L(2x_{n+1}-x_n)=Lx_{n+1}-L(x_n-x_{n+1})$ in the second.)</p>
+<p><span class="step">2. Product space.</span> With $w_n=(x_n,v_n)$ and $V,A,B$ as above, this is $V(w_n-w_{n+1})\in Aw_{n+1}+Bw_n$, i.e. $w_{n+1}=(V+A)^{-1}(V-B)w_n$.</p>
+<p><span class="step">3. The metric.</span> $V$ is self-adjoint; $\ps{Vw}{w}=\tau^{-1}\norm{x}^2-2\ps{Lx}{v}+\sigma^{-1}\norm{v}^2\ge\tau^{-1}\norm{x}^2-2\norm{L}\norm{x}\norm{v}+\sigma^{-1}\norm{v}^2\ge(\tau^{-1}-\sigma\norm{L}^2)\norm{x}^2+\sigma^{-1}(\norm{v}-\sigma\norm{L}\norm{x})^2\gt0$ for $w\ne0$ under $\tau\sigma\norm{L}^2\lt1$. So $\norm{\cdot}_V$ is an equivalent Hilbert norm.</p>
+<p><span class="step">4. Forward–Backward.</span> In $(\H\times\G,\ps{\cdot}{\cdot}_V)$, $w_{n+1}=J_{V^{-1}A}(\Id-V^{-1}B)w_n$ with $V^{-1}A$ maximally monotone and $V^{-1}B$ co-coercive with constant $(\tau^{-1}-\sigma\norm{L}^2)/\beta$ (computation in "Why it is true"). The Forward–Backward theorem with step $1$ requires $1\cdot\beta/(\tau^{-1}-\sigma\norm{L}^2)\lt2$, i.e. $\tau^{-1}-\sigma\norm{L}^2\gt\beta/2$: $w_n\wto\hat w\in\zer(A+B)$, the set of KT points, nonempty by the second hypothesis.</p>
+<p><span class="step">5. Identify.</span> $\hat w=(\hat x,\hat v)\in\zer(A+B)$ means $-L^*\hat v\in\partial(f+h)(\hat x)$ and $L\hat x\in\partial g^*(\hat v)$; duality theorem (2) applied to $(f+h,g,L)$ gives the two Argmin memberships.</p>
+<p><span class="step">6. Remark $g=0$.</span> Then $g^*=\ind_{\{0\}}$, $\prox_{\sigma g^*}=0$, so $v_n=0$ for $n\ge1$ and $x_{n+1}=\prox_{\tau f}(x_n-\tau\nabla h(x_n))$: Forward–Backward with step $\tau$; the condition reads $\tau^{-1}\gt\beta/2$, i.e. $\tau\lt2/\beta$, the FB range of page 4.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout note"><span class="lbl">Names <span class="tag tag-extra">Extra</span></span><p>With $h=0$ this is the Chambolle–Pock algorithm (2011); with $h\ne0$ it is the Condat–Vũ algorithm (2013), both proved by the FB-in-a-metric argument. The condition is sometimes written $\tau(\sigma\norm{L}^2+\beta/2)\lt1$.</p></div>
+<div class="callout trick"><span class="lbl">Trick</span><p><a class="chip t" href="09_toolbox.html#T18"><b>T18</b></a> <strong>Find the metric that makes an algorithm a known one.</strong> Write each step as an inclusion "something$\,\times(w_n-w_{n+1})\in A w_{n+1}+Bw_n$", read the "something" as a matrix $V$, and check it is symmetric positive definite. If yes, you are running FB (or PPA, or DR) in the $V$-metric and the whole convergence theory of pages 4–5 transfers. The same trick identifies VMFB with MM on page 7.</p></div>
+<div class="callout insight"><span class="lbl">Practical choice</span><p>Pick $\sigma$, then $\tau\lt1/(\sigma\norm{L}^2+\beta/2)$; a common balanced choice when $h=0$ is $\tau=\sigma=0.99/\norm{L}$. Estimate $\norm{L}$ by power iterations. The gap of $(x_n,v_n)$ (weak-duality certificate) or the residuals $\norm{x_{n+1}-x_n}$, $\norm{v_{n+1}-v_n}$ serve as stopping criteria.</p></div>
+
+<div class="widget" id="w-primal-dual-tv">
+<div class="w-title">Interactive · primal-dual on 1-D TV denoising: watch the condition $\tau^{-1}-\sigma\norm{L}^2\gt\beta/2$ decide convergence</div>
+<p class="w-help">$\min_x\tfrac12\norm{x-z}^2+\lambda\norm{Dx}_1$ with $N=40$, $D$ the finite-difference operator ($\norm{D}^2=4\sin^2\!\big(\tfrac{\pi(N-1)}{2N}\big)\lt4$), $h=\tfrac12\norm{\cdot-z}^2$ ($\beta=1$), $f=0$, $g=\lambda\abs{\cdot}_1$, $\lambda=0.8$. Iteration: $x_{n+1}=x_n-\tau(x_n-z+D^*v_n)$, $v_{n+1}=P_{[-\lambda,\lambda]^{N-1}}\big(v_n+\sigma D(2x_{n+1}-x_n)\big)$. Move $\tau$ and $\sigma$; the indicator turns red when the condition fails.</p>
+<div class="w-ctls">
+<label class="ctl">τ <input type="range" id="pd-tau" min="0.05" max="1.5" step="0.05" value="0.3"><output id="pd-tau-v"></output></label>
+<label class="ctl">σ <input type="range" id="pd-sigma" min="0.05" max="1.5" step="0.05" value="0.5"><output id="pd-sigma-v"></output></label>
+<label class="ctl">iterations <input type="range" id="pd-n" min="0" max="200" step="1" value="60"><output id="pd-n-v"></output></label>
+<span class="cond" id="pd-cond"></span>
+</div>
+<div class="w-cols">
+<div><svg class="w-svg" id="pd-svg-a" viewBox="0 0 360 260" role="img" aria-label="Noisy signal, current iterate and the solution"></svg><p class="w-cap">data $z$ (grey dots), $x_n$ (blue), solution $\hat x$ (green dashed)</p></div>
+<div><svg class="w-svg" id="pd-svg-b" viewBox="0 0 360 260" role="img" aria-label="Objective gap over iterations on a log scale"></svg><p class="w-cap">$F(x_n)-F(\hat x)$, log scale (clipped)</p></div>
+</div>
+<div class="readout" id="pd-read"></div>
+<p class="w-cap">$\hat x$ is computed once by $4000$ iterations with safe steps. The condition is sufficient: slightly beyond it the method may still converge, far beyond it the iterates blow up. Note the trade-off: a large $\sigma$ forces a small $\tau$.</p>
+</div>
+
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>PD $=$ prox$_{\tau f}$(gradient step on $h$ − $\tau L^*v_n$), then prox$_{\sigma g^*}$ at $v_n+\sigma L(2x_{n+1}-x_n)$.</strong> Condition $\tau^{-1}-\sigma\norm{L}^2\gt\beta/2$: pay for $L$ with $\sigma$, pay for $h$ with $\beta/2$. It is FB in the metric $\begin{pmatrix}\tau^{-1}\Id&amp;-L^*\\-L&amp;\sigma^{-1}\Id\end{pmatrix}$; $g=0$ gives back FB.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="pd-implicit" href="#pd-implicit">idea 2</a><a class="chip xref" data-id="forward-backward" href="04_fixed_point_forward_backward.html#forward-backward">Forward–Backward</a><a class="chip xref" data-id="baillon-haddad" href="04_fixed_point_forward_backward.html#baillon-haddad">Baillon–Haddad</a><a class="chip xref" data-id="duality-theorem-2" href="#duality-theorem-2">Kuhn–Tucker points</a><a class="chip xref" data-id="moreau-decomposition" href="03_proximity_operator.html#moreau-decomposition">Moreau decomposition</a><a class="chip xref" data-id="averaged-calculus" href="04_fixed_point_forward_backward.html#averaged-calculus">averaged composition</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="primal-dual-relaxed" href="#primal-dual-relaxed">relaxed PD</a><a class="chip xref" data-id="ex-primal-dual-sum" href="#ex-primal-dual-sum">exercise</a><a class="chip xref" data-id="lab-dbsm" href="08_labs.html#lab-dbsm">DBSM lab</a><a class="chip xref" data-id="vmfb" href="07_majorization_minimization.html#vmfb">VMFB (same metric trick)</a></div>
+</article>
+
+<article class="card thm" id="primal-dual-relaxed">
+<header class="card-head"><span class="kind">Theorem</span><h3>Relaxed form of the primal-dual algorithm</h3><span class="src">Part II.5 · slide 35</span><span class="tag tag-slides">Slides</span><a class="anchor" href="#primal-dual-relaxed" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $\H$, $\G$ be Hilbert spaces, $L\in\B(\H,\G)$, $f\in\Gz{\H}$, $g\in\Gz{\G}$, and $h\in\Gz{\H}$ with a $\beta$-Lipschitzian gradient, $\beta\in\,]0,+\infty[$. Let $\tau\in\,]0,+\infty[$ and $\sigma\in\,]0,+\infty[$. Assume that $\tau^{-1}-\sigma\norm{L}^2\ge\beta/2$ and $\zer(\partial f+\nabla h+L^*\partial gL)\ne\emptyset$. Let
+$$\delta=2-\frac\beta2\big(\tau^{-1}-\sigma\norm{L}^2\big)^{-1}\in[1,2[,$$
+and let $(\lambda_n)_{n\in\N}$ be a sequence in $[0,\delta]$ such that $\sum_{n\in\N}\lambda_n(\delta-\lambda_n)=+\infty$. Let $x_0\in\H$, $v_0\in\G$ and
+$$(\forall n\in\N)\qquad\begin{cases}p_n=\prox_{\tau f}\big(x_n-\tau(\nabla h(x_n)+L^*v_n)\big)\\ q_n=\prox_{\sigma g^*}\big(v_n+\sigma L(2p_n-x_n)\big)\\ (x_{n+1},v_{n+1})=(x_n,v_n)+\lambda_n\big(p_n-x_n,\ q_n-v_n\big).\end{cases}$$
+Then $(x_n)_{n\in\N}$ converges weakly to a minimizer of $f+h+g\circ L$.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">The unrelaxed step is an averaged operator in the $V$-metric with averagedness $1/\delta$; relaxing with $\lambda_n\in[0,\delta]$ is the usual KM range, exactly as for Forward–Backward ($\delta=2-\gamma\nu/2$).</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>In the FB rewriting, the operator $T=J_{V^{-1}A}(\Id-V^{-1}B)$ is the composition of a $\tfrac12$-averaged map and of a $\nu/2$-averaged map with $\nu=\beta/(\tau^{-1}-\sigma\norm{L}^2)$; the <a class="xref" data-id="averaged-calculus" href="04_fixed_point_forward_backward.html#averaged-calculus">composition formula</a> gives an $\alpha$-averaged operator with $1/\alpha=2-\nu/2=2-\frac\beta2(\tau^{-1}-\sigma\norm{L}^2)^{-1}=\delta$ (<a class="chip t" href="09_toolbox.html#T22"><b>T22</b></a>). The <a class="xref" data-id="averaged-iteration" href="04_fixed_point_forward_backward.html#averaged-iteration">relaxed iteration of an averaged operator</a> converges weakly for $\lambda_n\in[0,1/\alpha]=[0,\delta]$ with $\sum\lambda_n(\delta-\lambda_n)=+\infty$. Compare with FB on page 4: $\delta=2-\gamma\nu/2$ with $\gamma=1$. The borderline case $\tau^{-1}-\sigma\norm{L}^2=\beta/2$ gives $\delta=1$: $T$ is then merely nonexpansive and the relaxation becomes plain Krasnosel'skii–Mann averaging ($\lambda_n\in[0,1]$, $\sum\lambda_n(1-\lambda_n)=+\infty$), which excludes $\lambda_n\equiv1$: consistent with the strict inequality required by the unrelaxed theorem.</p></div>
+<details class="pl proof"><summary>Proof <span class="aid">(sketch, same route as the unrelaxed case)</span> <a class="chip t" href="09_toolbox.html#T22"><b>T22</b> count averagedness</a></summary><div class="dc">
+<p><span class="step">1.</span> $(p_n,q_n)=T(x_n,v_n)$ with $T=J_{V^{-1}A}(\Id-V^{-1}B)$ the primal-dual operator in the $V$-metric (previous card, steps 1–4), $\Fix T=\zer(A+B)\ne\emptyset$.</p>
+<p><span class="step">2.</span> $J_{V^{-1}A}$ is $\tfrac12$-averaged (resolvent of a maximally monotone operator); $\Id-V^{-1}B$ is $\tfrac\nu2$-averaged with $\nu=\beta(\tau^{-1}-\sigma\norm{L}^2)^{-1}\le2$ (Baillon–Haddad in the $V$-metric). By the composition formula, $T$ is $\alpha$-averaged with $\alpha=\frac{1}{2-\nu/2}=1/\delta$ when $\nu\lt2$, and nonexpansive when $\nu=2$ ($\delta=1$).</p>
+<p><span class="step">3.</span> $w_{n+1}=w_n+\lambda_n(Tw_n-w_n)$ with $\lambda_n\in[0,\delta]=[0,1/\alpha]$ and $\sum\lambda_n(\delta-\lambda_n)=+\infty$: the relaxed averaged iteration theorem (or KM when $\delta=1$) gives $w_n\wto\hat w\in\Fix T$, a Kuhn–Tucker point; its first component is a minimizer of $f+h+g\circ L$ by duality theorem (2).</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout note"><span class="lbl">Slide typos</span><p>Slide 35 writes the relaxation as "$(x_{n+1},v_{n+1})=(x_n,v_n)+\lambda_n(p_n-x_n,q_n-y_n)$"; it should read $q_n-v_n$ (there is no $y_n$ in this algorithm). The conclusion "converges weakly to a solution to a minimize of $f+h+g\circ L$" means "to a minimizer of $f+h+g\circ L$". Note also that this slide assumes $\tau^{-1}-\sigma\norm{L}^2\ge\beta/2$ (non-strict), which is what makes $\delta\in[1,2[$ rather than $]1,2[$.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Relaxed PD:</strong> $\delta=2-\frac\beta2(\tau^{-1}-\sigma\norm{L}^2)^{-1}\in[1,2[$, $\lambda_n\in[0,\delta]$, $\sum\lambda_n(\delta-\lambda_n)=+\infty$. Same shape as FB's $\delta=2-\gamma\nu/2$.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="primal-dual-algorithm" href="#primal-dual-algorithm">PD algorithm</a><a class="chip xref" data-id="averaged-calculus" href="04_fixed_point_forward_backward.html#averaged-calculus">composition of averaged operators</a><a class="chip xref" data-id="averaged-iteration" href="04_fixed_point_forward_backward.html#averaged-iteration">relaxed averaged iteration</a><a class="chip xref" data-id="krasnoselskii-mann" href="04_fixed_point_forward_backward.html#krasnoselskii-mann">Krasnosel'skii–Mann</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="constants-cheatsheet" href="09_toolbox.html#constants-cheatsheet">constants cheat-sheet</a></div>
+</article>
+</section>
+
+<section class="chapter" id="s-exercises">
+<header><div class="eyebrow">Exercises</div><h2>Exercises of the deck</h2>
+<p class="lead">Two exercises, both about distributing a computation: the first dualizes a consensus constraint, the second parallelizes the dual updates of the primal-dual algorithm.</p></header>
+
+<article class="card ex" id="ex-consensus-sharing">
+<header class="card-head"><span class="kind">Exercise</span><h3>Prove that sharing is the dual of consensus</h3><span class="src">Part II.5 · slide 7</span><span class="lvl">★★☆</span><a class="anchor" href="#ex-consensus-sharing" title="link to this card">#</a></header>
+<div class="ex-statement"><p>Let $\H$ be a real Hilbert space, $g_i,h_i:\H\to\,]-\infty,+\infty]$ for $i\in\{1,\dots,m\}$, $\overline u\in\H$. Prove that if $h_i=-g_i^*(\cdot-\overline u/m)$ for every $i$, then the sharing problem $\max\sum_ih_i(u_i)$ s.t. $u_1+\dots+u_m=\overline u$ is the dual of the consensus problem $\min\sum_ig_i(x_i)$ s.t. $x_1=\dots=x_m$. Make the distributed-computing reading explicit: what does each agent compute, what is exchanged?</p></div>
+<p class="reflex">Reflex: a constraint is an indicator (<a class="chip t" href="09_toolbox.html#T01"><b>T01</b></a>); a product-space problem $\min_{x\in\H^m}$ has $L=\Id$ (<a class="chip t" href="09_toolbox.html#T16"><b>T16</b></a>); the conjugate of the indicator of a subspace is the indicator of its orthogonal.</p>
+<details class="pl hint"><summary>Hint</summary><div class="dc"><p>$f=\ind_{\Lambda_m}$, $g=\bigoplus g_i$, dual $=\min f^*(-v)+g^*(v)$. Compute $f^*(v)=\sup_{x\in\Lambda_m}\ps{v}{x}$ by parametrizing $\Lambda_m$ with one vector $x_1$. Then translate $v_i$.</p></div></details>
+<details class="pl solution"><summary>Solution</summary><div class="dc">
+<p><span class="step">1. The template.</span> Work in the Hilbert space $\H^m$ with $\ps{x}{x'}=\sum_i\ps{x_i}{x'_i}$. Define $g:\H^m\to\,]-\infty,+\infty]$, $g(x)=\sum_{i=1}^mg_i(x_i)$, and the closed subspace $\Lambda_m=\{(x_1,\dots,x_m)\in\H^m:\ x_1=\dots=x_m\}$. The consensus problem is $\min_{x\in\H^m}\ind_{\Lambda_m}(x)+g(x)$: it is the primal template with $f=\ind_{\Lambda_m}$, $L=\Id_{\H^m}$ (so $L^*=\Id$ and $\G=\H^m$). Its dual is therefore
+$$\underset{v\in\H^m}{\text{minimize}}\ f^*(-v)+g^*(v).$$</p>
+<p><span class="step">2. The conjugate of $f$.</span> For $v=(v_i)_{1\le i\le m}$, since $\Lambda_m=\{(x_1,\dots,x_1):x_1\in\H\}$,
+$$f^*(v)=\sup_{x\in\Lambda_m}\ps{v}{x}=\sup_{x_1\in\H}\sum_{i=1}^m\ps{v_i}{x_1}=\sup_{x_1\in\H}\Big\langle\sum_{i=1}^mv_i\,\Big|\,x_1\Big\rangle=\ind_{\{0\}}\Big(\sum_{i=1}^mv_i\Big),$$
+because the supremum of a continuous linear form $\ps{s}{\cdot}$ over $\H$ is $0$ if $s=0$ and $+\infty$ otherwise (take $x_1=ts$, $t\to+\infty$). This is the general fact $\ind_E^*=\sigma_E=\ind_{E^\perp}$ for a closed subspace $E$: here $\Lambda_m^\perp=\{v:\sum_iv_i=0\}$ (the adjoint of $x\mapsto(x,\dots,x)$ is the sum, <a class="xref" data-id="adjoint-example" href="01_convex_analysis.html#adjoint-example">page 1</a>). Note $f^*(-v)=f^*(v)$ since the condition $\sum_iv_i=0$ is symmetric.</p>
+<p><span class="step">3. The conjugate of $g$.</span> $g$ is separable, so $g^*(v)=\sup_x\sum_i\big(\ps{v_i}{x_i}-g_i(x_i)\big)=\sum_i\sup_{x_i}\big(\ps{v_i}{x_i}-g_i(x_i)\big)=\sum_{i=1}^mg_i^*(v_i)$ (<a class="xref" data-id="conjugate-separable" href="02_subdifferential_conjugate.html#conjugate-separable">page 2</a>).</p>
+<p><span class="step">4. The dual problem.</span> Hence the dual reads
+$$\underset{\substack{(v_1,\dots,v_m)\in\H^m\\ v_1+\dots+v_m=0}}{\text{minimize}}\ \sum_{i=1}^mg_i^*(v_i).$$</p>
+<p><span class="step">5. Change of variables.</span> Set $u_i=v_i+\overline u/m$. Then $\sum_iu_i=\sum_iv_i+\overline u$, so the constraint $\sum_iv_i=0$ becomes $\sum_iu_i=\overline u$, and $g_i^*(v_i)=g_i^*(u_i-\overline u/m)=-h_i(u_i)$. Minimizing $\sum_ig_i^*(v_i)=-\sum_ih_i(u_i)$ is maximizing $\sum_ih_i(u_i)$: the dual problem is the sharing problem, with value $\mu^*=-\max(\text{sharing})$, so that weak duality reads $\min(\text{consensus})\ge\max(\text{sharing})$, with equality under the qualification condition ($\inte(\dom g)\cap\Lambda_m\ne\emptyset$: a common point in the interior of all the $\dom g_i$).</p>
+<p><span class="step">6. Distributed reading.</span> <em>Primal side.</em> Agent $i$ holds $g_i$ and a local copy $x_i$; the coupling is only "all copies equal". <em>Dual side.</em> Agent $i$ holds a price $v_i$ (or a share $u_i$ of the resource $\overline u$); the coupling is only "prices sum to zero" (shares sum to $\overline u$). <em>At the optimum</em> (Kuhn–Tucker, $L=\Id$): $L\hat x\in\partial g^*(\hat v)$ means $\hat x\in\partial g_i^*(\hat v_i)$, i.e. $\hat v_i\in\partial g_i(\hat x)$ for every $i$: each price is a slope of the local cost at the consensus; and $-\hat v\in\partial\ind_{\Lambda_m}(\hat x)=\Lambda_m^\perp$ means $\sum_i\hat v_i=0$: the slopes balance. <em>Algorithm</em> (ADMM with $f=\ind_{\Lambda_m}$, $L=\Id$, so $L^*L=\Id$ is invertible): the $x$-step is $x_n=P_{\Lambda_m}(y_n-z_n)$, i.e. the coordinator computes the average $\bar x_n=\frac1m\sum_i(y_{i,n}-z_{i,n})$ and broadcasts it; the $y$-step is $y_{i,n+1}=\prox_{g_i/\gamma}(z_{i,n}+\bar x_n)$, computed by agent $i$ alone; the $z$-step $z_{i,n+1}=z_{i,n}+\bar x_n-y_{i,n+1}$ is local too. Exchanged per iteration: each agent sends one vector ($y_{i,n}-z_{i,n}$) and receives one ($\bar x_n$); the functions $g_i$ never leave the agents, and $\gamma z_{i,n}\to\hat v_i$ are the prices (widget in the <a class="xref" data-id="consensus-sharing" href="#consensus-sharing">consensus card</a>).</p>
+<span class="qed">□</span>
+</div></details>
+</article>
+
+<article class="card ex" id="ex-primal-dual-sum">
+<header class="card-head"><span class="kind">Exercise</span><h3>A primal-dual algorithm for $f+\sum_ig_i\circ L_i+h$</h3><span class="src">Part II.5 · slide 36</span><span class="lvl">★★☆</span><span class="tag tag-exam">Exam</span><a class="anchor" href="#ex-primal-dual-sum" title="link to this card">#</a></header>
+<div class="ex-statement"><p>Let $\H$ and $(\G_i)_{1\le i\le m}$ be real Hilbert spaces. Let $f\in\Gz{\H}$, $h\in\Gz{\H}$, and, for every $i\in\{1,\dots,m\}$, $g_i\in\Gz{\G_i}$ and $L_i\in\B(\H,\G_i)$. It is assumed that $h$ is differentiable and has a $\beta$-Lipschitzian gradient with $\beta\in\,]0,+\infty[$. Propose a primal-dual algorithm to solve
+$$\underset{x\in\H}{\text{minimize}}\ f(x)+\sum_{i=1}^mg_i(L_ix)+h(x).$$</p></div>
+<p class="reflex">Reflex: several $g_i\circ L_i$ ⇒ product space (<a class="chip t" href="09_toolbox.html#T16"><b>T16</b></a>): one $g$ on $\G=\G_1\times\dots\times\G_m$ and one $L=(L_1,\dots,L_m)$; then apply the PD theorem and translate $\prox_{\sigma g^*}$, $L^*$ and $\norm{L}$.</p>
+<details class="pl hint"><summary>Hint</summary><div class="dc"><p>$g(y_1,\dots,y_m)=\sum_ig_i(y_i)$, $Lx=(L_1x,\dots,L_mx)$. Compute $L^*$, $\norm{L}^2\le\sum_i\norm{L_i}^2$, $g^*$ and its prox (separable).</p></div></details>
+<details class="pl solution"><summary>Solution</summary><div class="dc">
+<p><span class="step">1. Lifting.</span> Let $\G=\G_1\times\dots\times\G_m$ with $\ps{y}{y'}=\sum_i\ps{y_i}{y'_i}$, a Hilbert space. Define $g:\G\to\,]-\infty,+\infty]$, $g(y)=\sum_{i=1}^mg_i(y_i)$, and $L:\H\to\G$, $Lx=(L_1x,\dots,L_mx)$. Then $g\in\Gz{\G}$ (a separable sum of $\Gz{}$ functions: proper, lsc, convex), $L\in\B(\H,\G)$, and $g(Lx)=\sum_ig_i(L_ix)$. The problem is $\min_x f(x)+g(Lx)+h(x)$: the primal-dual template.</p>
+<p><span class="step">2. Adjoint and norm.</span> $\ps{Lx}{y}=\sum_i\ps{L_ix}{y_i}=\sum_i\ps{x}{L_i^*y_i}=\ps{x}{\sum_iL_i^*y_i}$, so $L^*y=\sum_{i=1}^mL_i^*y_i$. And $\norm{Lx}^2=\sum_i\norm{L_ix}^2\le\big(\sum_i\norm{L_i}^2\big)\norm{x}^2$, hence $\norm{L}^2\le\sum_{i=1}^m\norm{L_i}^2$ (an upper bound; the exact value is $\norm{\sum_iL_i^*L_i}$).</p>
+<p><span class="step">3. Conjugate and prox of $g^*$.</span> $g^*(v)=\sum_ig_i^*(v_i)$ (<a class="xref" data-id="conjugate-separable" href="02_subdifferential_conjugate.html#conjugate-separable">separable conjugate</a>) and the prox of a separable sum is the product of the proxes (<a class="xref" data-id="prox-separable" href="03_proximity_operator.html#prox-separable">page 3</a>): $\prox_{\sigma g^*}(v)=\big(\prox_{\sigma g_i^*}(v_i)\big)_{1\le i\le m}$, each computed from $\prox_{g_i/\sigma}$ by Moreau: $\prox_{\sigma g_i^*}(v_i)=v_i-\sigma\prox_{g_i/\sigma}(v_i/\sigma)$.</p>
+<p><span class="step">4. The algorithm.</span> Apply the <a class="xref" data-id="primal-dual-algorithm" href="#primal-dual-algorithm">PD theorem</a> with $(f,g,L,h)$. With $v_n=(v_{1,n},\dots,v_{m,n})$:</p>
+<div class="algo-box"><div class="algo-name">Primal-dual algorithm for $f+\sum_ig_i\circ L_i+h$</div>
+<p>Let $\tau,\sigma\gt0$ with $\tau^{-1}-\sigma\sum_{i=1}^m\norm{L_i}^2\gt\beta/2$; $x_0\in\H$, $v_{i,0}\in\G_i$. For $n=0,1,\dots$</p>
+<ol><li>$x_{n+1}=\prox_{\tau f}\Big(x_n-\tau\Big(\nabla h(x_n)+\sum_{i=1}^mL_i^*v_{i,n}\Big)\Big)$ <span class="mini">(coordinator: one gradient, one sum of the agents' contributions)</span></li>
+<li>$\bar x_{n+1}=2x_{n+1}-x_n$ broadcast to the $m$ agents</li>
+<li>for $i=1,\dots,m$ <strong>in parallel</strong>: $v_{i,n+1}=\prox_{\sigma g_i^*}\big(v_{i,n}+\sigma L_i\bar x_{n+1}\big)$, then send $L_i^*v_{i,n+1}$ back</li></ol></div>
+<p><span class="step">5. Convergence.</span> The condition $\tau^{-1}-\sigma\sum_i\norm{L_i}^2\gt\beta/2$ implies $\tau^{-1}-\sigma\norm{L}^2\gt\beta/2$ by step 2. If moreover $\zer(\partial f+\nabla h+\sum_iL_i^*\partial g_iL_i)\ne\emptyset$ (the lifted condition $\zer(\partial f+\nabla h+L^*\partial gL)\ne\emptyset$, since $\partial g(y)=\prod_i\partial g_i(y_i)$ and $L^*\partial g(Lx)=\sum_iL_i^*\partial g_i(L_ix)$), then $x_n\wto\hat x\in\Argmin\big(f+h+\sum_ig_i\circ L_i\big)$ and $v_n\wto\hat v$ with $\hat v_i\in\partial g_i(L_i\hat x)$ for all $i$ and $-\sum_iL_i^*\hat v_i\in\partial f(\hat x)+\nabla h(\hat x)$ (the Kuhn–Tucker conditions of the lifted problem).</p>
+<p><span class="step">6. What is distributed.</span> Agent $i$ stores $(g_i,L_i)$ and $v_{i,n}$, receives $\bar x_{n+1}$, computes one $L_i$, one $\prox_{g_i/\sigma}$ and one $L_i^*$, and sends back $L_i^*v_{i,n+1}$ (a vector of $\H$). The coordinator sums $m$ vectors, takes one gradient of $h$ and one $\prox_{\tau f}$. Per iteration: two communication rounds (broadcast, gather), no inner loop, no inversion. Compare with <a class="xref" data-id="ppxa" href="05_douglas_rachford_ppxa.html#ppxa">PPXA+</a>, which handles the same sum but needs the inversion of $\Id+\sum_iL_i^*L_i$ (or a trick to avoid it) and no smooth $h$. A refinement (not asked): one may use a different $\sigma_i$ per block, with the condition $\tau^{-1}-\sum_i\sigma_i\norm{L_i}^2\gt\beta/2$ <span class="tag tag-extra">Extra</span>.</p>
+<span class="qed">□</span>
+</div></details>
+</article>
+</section>

@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>L · Labs · LSD study guide</title>
+<meta name="description" content="The five labs of Foundations of Distributed and Large Scale Computing Optimization (MVA) worked theoretically: proximal denoising, DOSY NMR reconstruction (smoothness, box, sparsity, maximum entropy), selectivity estimation by a primal-dual algorithm, X-ray tomography by MM methods. Every question derived, every algorithm justified, implementation guidance.">
+<link rel="stylesheet" href="assets/katex/katex.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+.qblock{border:1px solid var(--rule);border-left:3px solid var(--exo);border-radius:6px;padding:12px 16px 6px;margin:16px 0;background:var(--sheet)}
+.qblock .qhead{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;margin-bottom:8px}
+.qblock .qnum{font-family:var(--f-ui);font-size:12px;font-weight:650;letter-spacing:.1em;text-transform:uppercase;color:var(--exo)}
+.qblock h4{margin:0;flex:1 1 auto;font-size:17.5px}
+.qblock .qtext{background:var(--exo-tint);border-radius:6px;padding:10px 14px;margin:0 0 10px;font-style:italic}
+.qblock .qtext p:last-child{margin-bottom:0}
+.lab-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin:10px 0 14px;font-family:var(--f-ui);font-size:13.5px}
+.lab-meta div{border:1px solid var(--rule);border-radius:6px;padding:8px 12px;background:var(--def-tint)}
+.lab-meta b{display:block;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-bottom:3px}
+</style>
+<script defer src="assets/katex/katex.min.js"></script>
+<script defer src="assets/katex/contrib/auto-render.min.js"></script>
+<script defer src="assets/registry.js"></script>
+<script defer src="assets/guide.js"></script>
+</head>
+<body>
+
+<header class="site"><div class="site-in">
+<a class="home" href="index.html">LSD study guide<small>Large Scale &amp; Distributed Optimization · MVA</small></a>
+<span class="spacer"></span>
+<ul class="strip" aria-label="Pages">
+<li><a href="index.html"><span class="n">⌂</span>Home</a></li>
+<li><a href="01_convex_analysis.html"><span class="n">1</span>Convexity</a></li>
+<li><a href="02_subdifferential_conjugate.html"><span class="n">2</span>Subdifferential &amp; conjugate</a></li>
+<li><a href="03_proximity_operator.html"><span class="n">3</span>Prox</a></li>
+<li><a href="04_fixed_point_forward_backward.html"><span class="n">4</span>Fixed points &amp; FB</a></li>
+<li><a href="05_douglas_rachford_ppxa.html"><span class="n">5</span>DR &amp; PPXA</a></li>
+<li><a href="06_duality_admm_primal_dual.html"><span class="n">6</span>Duality, ADMM &amp; primal-dual</a></li>
+<li><a href="07_majorization_minimization.html"><span class="n">7</span>MM</a></li>
+<li><a href="08_labs.html" class="on"><span class="n">L</span>Labs</a></li>
+<li><a href="09_toolbox.html"><span class="n">T</span>Toolbox</a></li>
+<li><a href="10_memorize.html"><span class="n">M</span>Memorize</a></li>
+</ul>
+<button class="btn theme-toggle" type="button">☾ Dark</button>
+</div></header>
+
+<div class="page">
+<nav class="toc" aria-label="Contents">
+<details id="toc-det" open>
+<summary><span><span class="mark">Labs</span><span class="submark">5 subjects · 4 sessions</span></span><span class="toc-btn">Contents</span></summary>
+<div class="toc-body">
+<!--TOC-->
+<div class="tools">
+<button class="btn" type="button" data-toggle-details="details.proof" data-label-open="Collapse all derivations" data-label-closed="Expand all derivations" aria-pressed="false">Expand all derivations</button>
+<span class="mini" id="known-count"></span>
+<button class="btn small" type="button" id="known-reset">Reset "known" marks</button>
+</div>
+</div>
+</details>
+</nav>
+
+<main>
+<header class="hero" id="top">
+<div>
+<div class="eyebrow">Labs · TP 1 to TP 4 · five subjects</div>
+<h1>The labs, worked theoretically</h1>
+<p class="lead">Each lab is a lecture in disguise: denoising is one prox, NMR is Forward–Backward and Douglas–Rachford on an ill-posed kernel, selectivity estimation is a primal-dual algorithm on a simplex, tomography is Majorization–Minimization at scale. Every question of every subject is derived here, with the algorithm, the implementation choices and the behaviour you should expect, so that your notebook explains <em>why</em> and not only <em>what</em>.</p>
+</div>
+<svg viewBox="0 0 220 170" role="img" aria-label="A noisy signal and its denoised version, with a thresholding curve.">
+<line x1="10" y1="150" x2="210" y2="150" class="s-mut" stroke-width="1"/>
+<polyline points="10,120 20,124 30,116 40,122 50,118 60,80 70,84 80,76 90,82 100,78 110,110 120,114 130,106 140,112 150,108 160,60 170,66 180,58 190,64 200,60 210,62" class="s-faint" fill="none" stroke-width="1.5"/>
+<polyline points="10,120 55,120 55,80 105,80 105,110 155,110 155,61 210,61" class="s-acc" fill="none" stroke-width="2.5"/>
+<text x="14" y="40" class="tm f-ink2">y = x̄ + w</text>
+<text x="120" y="40" class="tm f-acc">x̂ = L*prox(Ly)</text>
+</svg>
+</header>
+
+<ol class="howto">
+<li><b>Read the subject question, then the "theory it tests".</b> Open the lecture card from the chips before reading the derivation; the lab is an application, never a new result.</li>
+<li><b>Redo each derivation on paper</b> (existence, prox, step size) before opening it: these are exactly the sentences the report must contain.</li>
+<li><b>Code from the algorithm box</b>, not from the sketch: the sketches show the vectorized shape of one step, the box tells you what to iterate and when to stop.</li>
+</ol>
+<div class="legend" aria-label="Legend">
+<span><span class="tag tag-slides">Slides</span> on the official slides</span>
+<span><span class="tag tag-key">Key</span> used everywhere afterwards</span>
+<span><span class="tag tag-extra">Extra</span> context, not on the slides</span>
+<span><span class="tag tag-exam">Exam</span> classic exam question</span>
+<span><span class="tag tag-lab">Lab</span> needed in a lab</span>
+</div>

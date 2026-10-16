@@ -1,0 +1,1044 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>4 · Fixed points &amp; Forward–Backward · LSD study guide</title>
+<meta name="description" content="Study guide for Part V (fixed point algorithms: Picard, Fejér monotonicity, Krasnosel'skii–Mann, averaged operators, Baillon–Haddad, Forward–Backward, projected gradient, proximal point) of Foundations of Distributed and Large Scale Computing Optimization (MVA): every result explained, proved, visualized and made memorable.">
+<link rel="stylesheet" href="assets/katex/katex.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+.w-cols3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:700px){.w-cols3{grid-template-columns:minmax(0,1fr)}}
+.widget .readout b{color:var(--ink);font-weight:600}
+.widget .readout .bad{color:var(--warn);font-weight:600}
+.widget .readout .good{color:var(--idea);font-weight:600}
+svg.map .ed{stroke:var(--ink-3);stroke-width:1.2;fill:none}
+</style>
+<script defer src="assets/katex/katex.min.js"></script>
+<script defer src="assets/katex/contrib/auto-render.min.js"></script>
+<script defer src="assets/registry.js"></script>
+<script defer src="assets/guide.js"></script>
+</head>
+<body>
+
+<header class="site"><div class="site-in">
+<a class="home" href="index.html">LSD study guide<small>Large Scale &amp; Distributed Optimization · MVA</small></a>
+<span class="spacer"></span>
+<ul class="strip" aria-label="Pages">
+<li><a href="index.html"><span class="n">⌂</span>Home</a></li>
+<li><a href="01_convex_analysis.html"><span class="n">1</span>Convexity</a></li>
+<li><a href="02_subdifferential_conjugate.html"><span class="n">2</span>Subdifferential &amp; conjugate</a></li>
+<li><a href="03_proximity_operator.html"><span class="n">3</span>Prox</a></li>
+<li><a href="04_fixed_point_forward_backward.html" class="on"><span class="n">4</span>Fixed points &amp; FB</a></li>
+<li><a href="05_douglas_rachford_ppxa.html"><span class="n">5</span>DR &amp; PPXA</a></li>
+<li><a href="06_duality_admm_primal_dual.html"><span class="n">6</span>Duality, ADMM &amp; primal-dual</a></li>
+<li><a href="07_majorization_minimization.html"><span class="n">7</span>MM</a></li>
+<li><a href="08_labs.html"><span class="n">L</span>Labs</a></li>
+<li><a href="09_toolbox.html"><span class="n">T</span>Toolbox</a></li>
+<li><a href="10_memorize.html"><span class="n">M</span>Memorize</a></li>
+</ul>
+<button class="btn theme-toggle" type="button">☾ Dark</button>
+</div></header>
+
+<div class="page">
+<nav class="toc" aria-label="Contents">
+<details id="toc-det" open>
+<summary><span><span class="mark">4 · Fixed points &amp; Forward–Backward</span><span class="submark">Part V · slides 2–30</span></span><span class="toc-btn">Contents</span></summary>
+<div class="toc-body">
+<!--TOC-->
+<div class="tools">
+<button class="btn" type="button" data-toggle-details="details.proof" data-label-open="Collapse all proofs" data-label-closed="Expand all proofs" aria-pressed="false">Expand all proofs</button>
+<span class="mini" id="known-count"></span>
+<button class="btn small" type="button" id="known-reset">Reset "known" marks</button>
+</div>
+</div>
+</details>
+</nav>
+
+<main>
+<header class="hero" id="top">
+<div>
+<div class="eyebrow">Lecture 2 · Part V · slides 2–30</div>
+<h1>Fixed points &amp; Forward–Backward</h1>
+<p class="lead">The algorithmic half of the course's one principle: a minimizer is a fixed point of a prox-type map $T$, so iterate $T$. Picard's theorem needs a strict contraction and $T$ is only nonexpansive; this page builds the replacement, Fejér monotonicity + demiclosedness + relaxation, and harvests Forward–Backward, projected gradient, gradient descent and the proximal point algorithm.</p>
+</div>
+<svg viewBox="0 0 220 170" role="img" aria-label="Iterates of a relaxed rotation spiralling to the fixed point 0.">
+<circle cx="110" cy="85" r="78" class="s-faint dash f-none" stroke-width="1"/>
+<polyline points="188.0,85.0 161.6,44.7 123.3,31.6 91.2,42.8 75.7,66.8 77.9,90.7 91.7,105.4 108.4,108.0 120.8,101.0 125.4,90.0 122.8,80.3 116.1,75.3 109.0,75.4 104.4,79.2" class="s-acc f-none" stroke-width="2"/>
+<circle cx="188" cy="85" r="3.5" class="f-ink2"/>
+<circle cx="161.6" cy="44.7" r="3" class="f-acc"/><circle cx="123.3" cy="31.6" r="3" class="f-acc"/><circle cx="91.2" cy="42.8" r="3" class="f-acc"/><circle cx="75.7" cy="66.8" r="3" class="f-acc"/><circle cx="77.9" cy="90.7" r="3" class="f-acc"/><circle cx="91.7" cy="105.4" r="3" class="f-acc"/>
+<circle cx="110" cy="85" r="4" class="f-idea"/>
+<text x="192" y="76" class="tm f-ink2">x₀</text>
+<text x="116" y="80" class="tm f-idea">x̂</text>
+</svg>
+</header>
+
+<ol class="howto">
+<li><b>Read the statement, then the "in one sentence".</b> Try to say why it is true before opening "Why it is true".</li>
+<li><b>Try the proof</b> with the hint before unfolding it; note the trick chips, they come back on every page.</li>
+<li><b>Play with the widgets</b>, then tick "known" when you can restate the result and its mechanism from memory.</li>
+</ol>
+<div class="legend" aria-label="Legend">
+<span><span class="tag tag-slides">Slides</span> on the official slides</span>
+<span><span class="tag tag-key">Key</span> used everywhere afterwards</span>
+<span><span class="tag tag-extra">Extra</span> context, not on the slides</span>
+<span><span class="tag tag-exam">Exam</span> classic exam question</span>
+<span><span class="tag tag-lab">Lab</span> needed in a lab</span>
+</div>
+
+<section class="chapter" id="overview">
+<header><div class="eyebrow">Overview</div><h2>Where we are</h2>
+<p class="lead">Pages 1–3 gave the <em>static</em> half of the principle: $\hat x$ minimizes $f+g$ iff $0\in\partial f(\hat x)+\nabla g(\hat x)$, and $\prox_{\gamma f}=(\Id+\gamma\partial f)^{-1}$ turns such inclusions into equations. This page gives the <em>dynamic</em> half: rewrite the inclusion as $\hat x=T\hat x$ and iterate $T$.</p></header>
+
+<p>The dictionary is one line long (<a class="chip t" href="09_toolbox.html#T15"><b>T15</b> zeros ⇔ fixed points</a>):
+$$0\in\partial f(\hat x)+\nabla g(\hat x)\iff \hat x-\gamma\nabla g(\hat x)\in(\Id+\gamma\partial f)(\hat x)\iff \hat x=\underbrace{\prox_{\gamma f}\big(\hat x-\gamma\nabla g(\hat x)\big)}_{T\hat x}.$$
+So minimizing $f+g$ means finding a fixed point of $T=\prox_{\gamma f}\circ(\Id-\gamma\nabla g)$, and the natural algorithm is $x_{n+1}=Tx_n$. The only theorem you know about such iterations is <a class="xref" data-id="picard" href="#picard">Picard's</a>: it needs $T$ to be a <em>strict</em> contraction. Neither factor of $T$ is one: $\prox_{\gamma f}$ and $\Id-\gamma\nabla g$ are merely <em>nonexpansive</em> (they do not increase distances, but may keep them). A rotation of the plane is nonexpansive too, and its Picard iteration circles forever. Something has to replace contraction.</p>
+
+<p>The replacement has three layers, and the whole page is the story of fitting them together:</p>
+<ol>
+<li><strong>Fejér monotonicity</strong> replaces "the error shrinks by a factor $\rho$" with "the distance to <em>every</em> solution never increases". It costs nothing (every nonexpansive iteration has it) and already gives boundedness and convergence of the distances. <a class="xref" data-id="lemma-opial" href="#lemma-opial">Lemma 1</a> says that this plus "all weak cluster points are solutions" forces weak convergence.</li>
+<li><strong>Demiclosedness</strong> produces cluster points that are fixed points, provided the residual $Tx_n-x_n$ goes to $0$.</li>
+<li><strong>Relaxation</strong> $x_{n+1}=x_n+\lambda_n(Tx_n-x_n)$ with $\lambda_n\in\,]0,1[$ makes the residual go to $0$: the <a class="chip t" href="09_toolbox.html#T12"><b>T12</b> λ-identity</a> turns "non-increasing" into "decreasing by $\lambda_n(1-\lambda_n)\norm{Tx_n-x_n}^2$", and a telescoping sum does the rest. This is the <a class="xref" data-id="krasnoselskii-mann" href="#krasnoselskii-mann">Krasnosel'skii–Mann</a> theorem, the central result of the page.</li>
+</ol>
+<p>Then comes the second idea: some operators carry their relaxation <em>inside</em>. An <a class="xref" data-id="averaged" href="#averaged">$\alpha$-averaged</a> operator is $(1-\alpha)\Id+\alpha R$ with $R$ nonexpansive, so iterating it <em>is</em> a KM iteration on $R$. Gradient steps $\Id-\gamma\nabla g$ (<a class="xref" data-id="baillon-haddad" href="#baillon-haddad">Baillon–Haddad</a>) and $\prox$ (<a class="xref" data-id="prox-firmly-nonexpansive" href="#prox-firmly-nonexpansive">firmly nonexpansive</a>) are averaged, averagedness survives composition with an explicit constant (<a class="chip t" href="09_toolbox.html#T22"><b>T22</b></a>), and the <a class="xref" data-id="forward-backward" href="#forward-backward">Forward–Backward</a> theorem falls out with its exact constants $\gamma\lt 2/\nu$, $\delta=2-\gamma\nu/2$.</p>
+
+<figure class="fig">
+<svg class="map" viewBox="0 0 760 310" role="img" aria-label="Dependency map of the results of this page">
+<defs><marker id="map-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="f-mut"/></marker></defs>
+<a href="#weak-convergence-criterion"><rect class="nb" x="10" y="14" width="200" height="36" rx="6"/><text class="nt" x="110" y="37" text-anchor="middle">Weak convergence criterion</text></a>
+<a href="#lemma-weakly-closed"><rect class="nb" x="250" y="14" width="230" height="36" rx="6"/><text class="nt" x="365" y="37" text-anchor="middle">Lemma 2 · closed convex ⇒ weakly closed</text></a>
+<a href="09_toolbox.html#T12"><rect class="nb" x="560" y="14" width="150" height="36" rx="6"/><text class="nt" x="635" y="37" text-anchor="middle">T12 · the λ-identity</text></a>
+<a href="#fejer-convergence"><rect class="nb key" x="10" y="90" width="200" height="36" rx="6"/><text class="nt" x="110" y="113" text-anchor="middle">Lemma 1 · Fejér convergence</text></a>
+<a href="#demiclosedness"><rect class="nb key" x="290" y="90" width="150" height="36" rx="6"/><text class="nt" x="365" y="113" text-anchor="middle">Demiclosedness</text></a>
+<a href="#krasnoselskii-mann"><rect class="nb key" x="545" y="90" width="180" height="36" rx="6"/><text class="nt" x="635" y="113" text-anchor="middle">Krasnosel'skii–Mann</text></a>
+<a href="#baillon-haddad"><rect class="nb" x="10" y="166" width="230" height="36" rx="6"/><text class="nt" x="125" y="189" text-anchor="middle">Baillon–Haddad · Id − γ∇g averaged</text></a>
+<a href="#prox-firmly-nonexpansive"><rect class="nb" x="270" y="166" width="200" height="36" rx="6"/><text class="nt" x="370" y="189" text-anchor="middle">prox firmly nonexpansive</text></a>
+<a href="#averaged-iteration"><rect class="nb key" x="545" y="166" width="180" height="36" rx="6"/><text class="nt" x="635" y="189" text-anchor="middle">Averaged iteration</text></a>
+<a href="#averaged-calculus"><rect class="nb" x="120" y="246" width="210" height="36" rx="6"/><text class="nt" x="225" y="269" text-anchor="middle">T22 · composition formula</text></a>
+<a href="#forward-backward"><rect class="nb key" x="380" y="246" width="170" height="36" rx="6"/><text class="nt" x="465" y="269" text-anchor="middle">Forward–Backward</text></a>
+<a href="#projected-gradient"><rect class="nb" x="590" y="246" width="150" height="36" rx="6"/><text class="nt" x="665" y="269" text-anchor="middle">PG · GD · PPA</text></a>
+<path class="ed" d="M110,50 L110,88" marker-end="url(#map-arrow)"/>
+<path class="ed" d="M365,50 L365,88" marker-end="url(#map-arrow)"/>
+<path class="ed" d="M635,50 L635,88" marker-end="url(#map-arrow)"/>
+<path class="ed" d="M210,108 C 300,108 450,108 543,108" marker-end="url(#map-arrow)"/>
+<path class="ed" d="M440,108 L543,108" marker-end="url(#map-arrow)"/>
+<path class="ed" d="M635,126 L635,164" marker-end="url(#map-arrow)"/>
+<path class="ed" d="M125,202 C 125,230 300,235 378,262" marker-end="url(#map-arrow)"/>
+<path class="ed" d="M370,202 C 370,225 420,230 440,244" marker-end="url(#map-arrow)"/>
+<path class="ed" d="M635,202 C 635,225 560,235 552,262" marker-end="url(#map-arrow)"/>
+<path class="ed" d="M330,264 L378,264" marker-end="url(#map-arrow)"/>
+<path class="ed" d="M550,264 L588,264" marker-end="url(#map-arrow)"/>
+</svg>
+<figcaption>How the page fits together. Boxes with a blue outline are the results you must be able to prove; the bottom row is what you use in practice. Click a box to jump to it.</figcaption>
+</figure>
+
+<div class="callout insight"><span class="lbl">The one sentence of the page</span><p>Nonexpansive is not enough to converge, but <strong>nonexpansive + relaxation</strong> is: every relaxed iterate is at least as close to every fixed point as the previous one (Fejér), the residual $Tx_n-x_n$ is summable (λ-identity), and a weak limit with vanishing residual is a fixed point (demiclosedness). Averaged operators are those whose relaxation is already built in, and Forward–Backward is the averaged operator $\prox_{\gamma f}\circ(\Id-\gamma\nabla g)$.</p></div>
+</section>
+
+<section class="chapter" id="s-picard">
+<header><div class="eyebrow">Part V · slides 2–4</div><h2>A first answer: Picard's theorem, and why it is not enough</h2>
+<p class="lead">The oldest fixed point theorem gives everything one could wish for: existence, uniqueness, convergence, and a linear rate. Its price is a strict contraction, and that is exactly what optimization operators do not provide.</p></header>
+
+<article class="card thm" id="picard">
+<header class="card-head"><span class="kind">Theorem</span><h3>Picard's fixed point theorem (strict contractions)</h3><span class="src">Part V · slides 2–3</span><span class="tag tag-slides">Slides</span><a class="anchor" href="#picard" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $T:\H\to\H$ be such that</p>
+<ul>
+<li>$\hat x\in\H$ is a fixed point of $T$, i.e. $\hat x=T\hat x$;</li>
+<li>$T$ is a <span class="hl">strict contraction</span>: there exists $\rho\in[0,1[$ such that $\big(\forall (x,x')\in\H^2\big)\ \norm{Tx-Tx'}\le\rho\norm{x-x'}$.</li>
+</ul>
+<p>Then the sequence defined by $x_0\in\H$ and $(\forall n\in\N)\ x_{n+1}=Tx_n$ converges to $\hat x$, and $\norm{x_n-\hat x}\le\rho^n\norm{x_0-\hat x}$ (linear convergence).</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Each application of $T$ multiplies the error by at most $\rho\lt1$, so the error dies geometrically.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>The fixed point is invisible to the iteration ($T\hat x=\hat x$), so $x_{n+1}-\hat x=Tx_n-T\hat x$ is the image of the error $x_n-\hat x$ by "one step of $T$ between two points", and a strict contraction shrinks the distance between any two points by the factor $\rho$. Nothing else is used: no convexity, no finite dimension, no structure of $T$. The sentence to say out loud: <em>the error is a difference of two images, and $T$ contracts differences.</em></p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul>
+<li><strong>$\rho\lt1$</strong> is the whole theorem: with $\rho=1$ (nonexpansive) the error is only non-increasing, and a rotation shows that it may never decrease at all (<a class="xref" data-id="krasnoselskii-mann" href="#krasnoselskii-mann">widget below</a>).</li>
+<li><strong>A fixed point exists</strong> is assumed on the slides. It is in fact automatic (Banach): the iterates form a Cauchy sequence because $\norm{x_{n+1}-x_n}\le\rho^n\norm{x_1-x_0}$ is summable, and $\H$ is complete; the limit is a fixed point by continuity of $T$. The fixed point is also unique: two fixed points $\hat x,\hat x'$ satisfy $\norm{\hat x-\hat x'}\le\rho\norm{\hat x-\hat x'}$. <span class="tag tag-extra">Extra</span></li>
+</ul></div>
+<details class="pl hint"><summary>Hint <span class="aid">— try it first</span></summary><div class="dc"><p>Write $x_{n+1}-\hat x$ as $Tx_n-T\hat x$ and apply the contraction inequality; then induct.</p></div></details>
+<details class="pl proof"><summary>Proof <span class="aid">(as on the slides)</span></summary><div class="dc">
+<p><span class="step">1. One step.</span> For every $n\in\N$, since $\hat x=T\hat x$,
+$$\norm{x_{n+1}-\hat x}=\norm{Tx_n-T\hat x}\le\rho\norm{x_n-\hat x}.$$</p>
+<p><span class="step">2. Induction.</span> Applying step 1 $n$ times gives $\norm{x_n-\hat x}\le\rho^n\norm{x_0-\hat x}$. Since $\rho\in[0,1[$, $\rho^n\to0$, hence $x_n\to\hat x$, and the rate is linear (the error is bounded by a geometric sequence; see <a class="xref" data-id="convergence-rates" href="01_convex_analysis.html#convergence-rates">convergence rates</a>).</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout pitfall"><span class="lbl">Pitfall: what optimization gives you is $\rho=1$</span><p>$\prox_{\gamma f}$, projections $P_C$, gradient steps $\Id-\gamma\nabla g$ with $\gamma\le 2/\nu$: all are nonexpansive and none is a strict contraction in general. Soft-thresholding ($\prox$ of $\gamma\abs{\cdot}$) has slope exactly $1$ outside $[-\gamma,\gamma]$; $P_C$ is the identity on $C$; $\Id-\gamma\nabla g$ is the identity along any flat direction of $g$. The constant $\rho$ you would need equals $1$, and Picard's argument gives nothing. The rest of the page is the theory that replaces it.</p></div>
+
+<div class="widget" id="w-picard">
+<div class="w-title">Interactive · Picard iteration of an affine contraction: the error is multiplied by ρ at each step</div>
+<p class="w-help">$T(x)=\hat x+\rho\,(x-\hat x)$ with fixed point $\hat x=1$. Left: the cobweb diagram of $x_{n+1}=Tx_n$. Right: $\log_{10}\norm{x_n-\hat x}$ against $n$ is a straight line of slope $\log_{10}\rho$ (that is what "linear convergence" means). Push $\rho$ to $1$ and beyond: the line becomes flat, then rises.</p>
+<div class="w-ctls">
+<label class="ctl">ρ <input type="range" id="pc-rho" min="-1.1" max="1.1" step="0.05" value="0.6"><output id="pc-rho-v"></output></label>
+<label class="ctl">x₀ <input type="range" id="pc-x0" min="-3" max="3" step="0.25" value="3"><output id="pc-x0-v"></output></label>
+</div>
+<div class="w-cols">
+<div><svg class="w-svg" id="pc-svg-cob" viewBox="0 0 360 260" role="img" aria-label="Cobweb diagram of the Picard iteration"></svg><p class="w-cap">cobweb: $x\mapsto Tx$ (blue), diagonal (grey), iterates (orange)</p></div>
+<div><svg class="w-svg" id="pc-svg-err" viewBox="0 0 360 260" role="img" aria-label="Logarithm of the error against the iteration index"></svg><p class="w-cap">$\log_{10}\abs{x_n-\hat x}$: a line of slope $\log_{10}\abs{\rho}$</p></div>
+</div>
+<div class="readout" id="pc-read"></div>
+</div>
+
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Contraction ⇒ geometric error</strong>: $\norm{x_n-\hat x}\le\rho^n\norm{x_0-\hat x}$. Proof in one line: $x_{n+1}-\hat x=Tx_n-T\hat x$.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="convergence-rates" href="01_convex_analysis.html#convergence-rates">linear convergence</a><a class="chip xref" data-id="hilbert-space" href="01_convex_analysis.html#hilbert-space">completeness of $\H$</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="splitting-goal" href="#splitting-goal">what we want instead</a><a class="chip xref" data-id="krasnoselskii-mann" href="#krasnoselskii-mann">Krasnosel'skii–Mann (the $\rho=1$ replacement)</a><a class="chip xref" data-id="mm-quadratic-convergence" href="07_majorization_minimization.html#mm-quadratic-convergence">MM rates (page 7)</a></div>
+</article>
+
+<article class="card rem" id="splitting-goal">
+<header class="card-head"><span class="kind">Objective</span><h3>What we want: weaker operators, varying parameters, compositions (splitting)</h3><span class="src">Part V · slide 4</span><span class="tag tag-slides">Slides</span><a class="anchor" href="#splitting-goal" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Programme of Part V</span>
+<p>Extend Picard's theorem to operators that are</p>
+<ul>
+<li><strong>not necessarily strictly contractive</strong> (only nonexpansive, or "averaged");</li>
+<li><strong>possibly dependent on the iteration number $n$</strong> (varying step sizes $\gamma_n$, relaxation parameters $\lambda_n$);</li>
+<li><strong>built from compositions of simpler operators</strong> — the <em>splitting</em> idea: $T=\prox_{\gamma f}\circ(\Id-\gamma\nabla g)$ handles $f$ and $g$ separately, each with the tool that suits it;</li>
+</ul>
+<p>and then apply this to minimization: <em>how do we relate $T$ to the objective $f$?</em> Answer: through Fermat's rule and the resolvent, $\Argmin f=\zer\partial f=\Fix\prox_{\gamma f}$ (<a class="chip t" href="09_toolbox.html#T15"><b>T15</b></a>).</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Replace "contraction" by a property that is stable under composition and cheap to verify, and that still forces convergence of the relaxed iterates: that property will be averagedness.</p>
+<div class="callout insight"><span class="lbl">Why "splitting" is the whole game</span><p>You can rarely compute $\prox_{\gamma(f+g)}$, but you can often compute $\prox_{\gamma f}$ and $\nabla g$ separately. An algorithm that only ever calls these two black boxes and still minimizes $f+g$ is a <em>splitting</em> algorithm. Forward–Backward (this page) splits a smooth $g$ from a proximable $f$; Douglas–Rachford (<a class="xref" data-id="douglas-rachford" href="05_douglas_rachford_ppxa.html#douglas-rachford">page 5</a>) splits two proximable functions; the primal-dual algorithms (<a class="xref" data-id="primal-dual-algorithm" href="06_duality_admm_primal_dual.html#primal-dual-algorithm">page 6</a>) also split a linear operator $L$ off. The convergence theory is the same for all of them, which is why this page matters so much.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p>Three wishes: <strong>no contraction, $n$-dependent parameters, compositions</strong>. One tool answers all three: Fejér monotonicity with respect to $\Fix T$.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="picard" href="#picard">Picard</a><a class="chip xref" data-id="prox-characterization" href="03_proximity_operator.html#prox-characterization">prox = resolvent</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="forward-backward" href="#forward-backward">Forward–Backward</a><a class="chip xref" data-id="douglas-rachford" href="05_douglas_rachford_ppxa.html#douglas-rachford">Douglas–Rachford</a></div>
+</article>
+</section>
+
+<section class="chapter" id="s-convergence-tools">
+<header><div class="eyebrow">Part V · slides 6–10</div><h2>Convergence tools: weak limits and Fejér monotonicity</h2>
+<p class="lead">In infinite dimension the iterates will only converge <em>weakly</em>, so we need a criterion for weak convergence that does not mention the limit. Lemma 1 is that criterion; Fejér monotonicity is the cheap way to satisfy its first half.</p></header>
+
+<article class="card def" id="convergence-recall">
+<header class="card-head"><span class="kind">Definition</span><h3>Strong and weak convergence (recall)</h3><span class="src">Part V · slide 6</span><span class="tag tag-slides">Slides</span><a class="anchor" href="#convergence-recall" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Definition</span>
+<p>Let $\H$ be a Hilbert space, $(x_n)_{n\in\N}$ a sequence in $\H$ and $\hat x\in\H$.</p>
+<ul>
+<li>$(x_n)_{n\in\N}$ <strong>converges strongly</strong> to $\hat x$ if $\lim_{n\to+\infty}\norm{x_n-\hat x}=0$. Notation: $x_n\to\hat x$.</li>
+<li>$(x_n)_{n\in\N}$ <strong>converges weakly</strong> to $\hat x$ if $(\forall y\in\H)\ \lim_{n\to+\infty}\ps{y}{x_n-\hat x}=0$. Notation: $x_n\wto\hat x$.</li>
+</ul>
+<p><em>Remark.</em> In a finite-dimensional Hilbert space, strong and weak convergence are equivalent.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Weak convergence is convergence of every coordinate $\ps{y}{x_n}$, strong convergence is convergence of the length of the error; in $\R^d$ finitely many coordinates control the length, in $\ell^2$ they do not.</p>
+<div class="rub">Example</div>
+<p>In $\ell^2(\N)$ the basis vectors $e_n$ satisfy $\ps{y}{e_n}=y_n\to0$ for every $y$ (so $e_n\wto0$) while $\norm{e_n-0}=1$ (no strong convergence). Strong always implies weak by Cauchy–Schwarz: $\abs{\ps{y}{x_n-\hat x}}\le\norm{y}\norm{x_n-\hat x}$. See <a class="xref" data-id="convergence-strong-weak" href="01_convex_analysis.html#convergence-strong-weak">page 1</a> for the full discussion.</p>
+<div class="callout memo"><span class="lbl">To remember</span><p>$\to$: norm of the error $\to0$. $\wto$: every inner product $\to$. Finite dimension: same thing. All convergence theorems of this page are <strong>weak</strong>; they become strong in $\R^d$, which is where you compute.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="convergence-strong-weak" href="01_convex_analysis.html#convergence-strong-weak">strong vs weak (page 1)</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="weak-convergence-criterion" href="#weak-convergence-criterion">weak convergence criterion</a><a class="chip xref" data-id="demiclosedness" href="#demiclosedness">demiclosedness</a></div>
+</article>
+
+<article class="card prop" id="weak-convergence-criterion">
+<header class="card-head"><span class="kind">Proposition</span><h3>Weak convergence ⇔ bounded with at most one weak sequential cluster point</h3><span class="src">Part V · slides 6–7</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#weak-convergence-criterion" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $(x_n)_{n\in\N}$ be a sequence in $\H$. Then $(x_n)_{n\in\N}$ converges weakly if and only if</p>
+<ul>
+<li>$(x_n)_{n\in\N}$ is <span class="hl">bounded</span>, and</li>
+<li>$(x_n)_{n\in\N}$ possesses <span class="hl">at most one sequential cluster point in the weak topology</span>.</li>
+</ul>
+<p>($\hat x$ is a <em>sequential cluster point in the weak topology</em> — a <em>weak cluster point</em> for short — if some subsequence $(x_{n_k})_{k\in\N}$ converges weakly to $\hat x$.)</p>
+<p><em>Illustration (slide 7).</em> $x_n=(-1)^n$ in $\R$: bounded, but two cluster points $-1$ and $1$, hence no convergence.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Boundedness guarantees that cluster points exist (weak compactness of balls); uniqueness of the cluster point then leaves the sequence no choice but to converge to it.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>The direct implication is a sanity check (a weakly convergent sequence is bounded and its limit is the only possible cluster point). The useful direction is the converse, and the mechanism is the <em>sub-subsequence argument</em>: a sequence that does not converge to $\hat x$ has a subsequence staying away from $\hat x$ in some coordinate $\ps{y}{\cdot}$; this subsequence is bounded, so it has a weakly convergent sub-subsequence (bounded sets of a Hilbert space are weakly sequentially compact, <a class="xref" data-id="bounded-closed-compact" href="01_convex_analysis.html#bounded-closed-compact">page 1</a>); its limit is a cluster point of the whole sequence, hence equals $\hat x$, which contradicts "staying away". The sentence to say out loud: <em>bounded gives cluster points, uniqueness of the cluster point gives the limit.</em></p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul>
+<li><strong>Bounded</strong>: without it there may be no cluster point at all ($x_n=n\,e_0$ has none, yet "at most one" holds vacuously).</li>
+<li><strong>At most one cluster point</strong>: the $(-1)^n$ example has two; Fejér-monotone sequences that are not convergent are exactly those with several cluster points (<a class="xref" data-id="fejer-monotone" href="#fejer-monotone">widget below</a>).</li>
+</ul></div>
+<details class="pl proof"><summary>Proof <span class="aid">(the slides state this without proof; here is a short one)</span></summary><div class="dc">
+<p><span class="step">1. (⇒)</span> Suppose $x_n\wto\hat x$. Every subsequence converges weakly to $\hat x$, so $\hat x$ is the only weak cluster point. Boundedness is the uniform boundedness principle (Banach–Steinhaus) applied to the functionals $\ps{x_n}{\cdot}$, which are pointwise bounded since $\ps{y}{x_n}$ converges for every $y$. <span class="tag tag-extra">Extra</span></p>
+<p><span class="step">2. (⇐) Set-up.</span> Suppose $(x_n)$ bounded with at most one weak cluster point. Being bounded, $(x_n)$ has at least one weakly convergent subsequence (<a class="xref" data-id="bounded-closed-compact" href="01_convex_analysis.html#bounded-closed-compact">weak sequential compactness of bounded sets</a>), so it has exactly one weak cluster point, call it $\hat x$.</p>
+<p><span class="step">3. Sub-subsequence argument.</span> If $x_n\not\wto\hat x$, there exist $y\in\H$, $\eps\gt0$ and a subsequence $(x_{n_k})$ with $\abs{\ps{y}{x_{n_k}-\hat x}}\ge\eps$ for all $k$. This subsequence is bounded, so it has a further subsequence converging weakly to some $\tilde x$; $\tilde x$ is a weak cluster point of $(x_n)$, hence $\tilde x=\hat x$ by uniqueness. But along that sub-subsequence $\ps{y}{x_{n_{k_j}}-\hat x}\to\ps{y}{\tilde x-\hat x}=0$, contradicting $\abs{\ps{y}{x_{n_{k_j}}-\hat x}}\ge\eps$. Hence $x_n\wto\hat x$.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout trick"><span class="lbl">Trick</span><p>To prove weak convergence of an algorithm you never exhibit the limit: you prove <strong>bounded</strong> and <strong>all cluster points coincide</strong> (or, with Lemma 1, all cluster points lie in a set $D$ and the distances to $D$ converge). This is the pattern <a class="chip t" href="09_toolbox.html#T14"><b>T14</b> Fejér + demiclosedness</a>.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Weakly convergent = bounded + a single weak cluster point.</strong> Counterexample to keep: $(-1)^n$.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="bounded-closed-compact" href="01_convex_analysis.html#bounded-closed-compact">bounded ⇒ weakly sequentially compact</a><a class="chip xref" data-id="convergence-recall" href="#convergence-recall">weak convergence</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="lemma-opial" href="#lemma-opial">Lemma 1</a><a class="chip xref" data-id="fejer-convergence" href="#fejer-convergence">Fejér convergence</a></div>
+</article>
+
+<article class="card lemma" id="lemma-opial">
+<header class="card-head"><span class="kind">Lemma 1</span><h3>Converging distances + cluster points in $D$ ⇒ weak convergence to a point of $D$ (Opial's lemma)</h3><span class="src">Part V · slides 7–8</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><span class="tag tag-exam">Exam</span><a class="anchor" href="#lemma-opial" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $D$ be a nonempty subset of $\H$ and $(x_n)_{n\in\N}$ a sequence in $\H$. Then $(x_n)_{n\in\N}$ converges weakly to a point in $D$ if</p>
+<ul>
+<li>for every $x\in D$, $\big(\norm{x_n-x}\big)_{n\in\N}$ converges, and</li>
+<li>every weak sequential cluster point of $(x_n)_{n\in\N}$ lies in $D$.</li>
+</ul>
+<p><span class="tag tag-extra">Extra</span> The slides call it Lemma 1; in the literature it is <em>Opial's lemma</em> (1967).</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">If the sequence had two different cluster points $\hat x,\hat x'$ in $D$, the converging distances to $\hat x$ and $\hat x'$ would force $\ps{x_n}{\hat x'-\hat x}$ to converge, and its limit along the two subsequences would differ by $\norm{\hat x'-\hat x}^2$.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>The first hypothesis says the sequence cannot wander: its distance to any point of $D$ settles. The second says every place it may accumulate is in $D$. Suppose it accumulates at two points $\hat x\ne\hat x'$ of $D$. The quantity $\ps{x_n}{\hat x'-\hat x}$ — the coordinate of $x_n$ along the direction joining the two candidates — is a combination of $\norm{x_n-\hat x}^2$ and $\norm{x_n-\hat x'}^2$ (polarization), so it converges to some $\alpha$. Along the subsequence going to $\hat x$ it tends to $\ps{\hat x}{\hat x'-\hat x}$, along the other to $\ps{\hat x'}{\hat x'-\hat x}$; both equal $\alpha$, so their difference $\norm{\hat x'-\hat x}^2$ is $0$. The sentence to say out loud: <em>two cluster points would have to project to the same place on the line joining them, which is absurd.</em></p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul>
+<li><strong>Distances converge</strong>: gives boundedness (needed to have cluster points at all) <em>and</em> the convergence of $\ps{x_n}{\hat x'-\hat x}$, which is the heart of the uniqueness argument. Fejér monotonicity provides it for free.</li>
+<li><strong>Cluster points in $D$</strong>: without it the two candidate limits need not be in $D$ and the first hypothesis says nothing about them. The $(-1)^n$ example with $D=\{0\}$: distances to $0$ converge (constant), cluster points $\pm1\notin D$, no convergence.</li>
+<li><strong>$D\neq\emptyset$</strong>: otherwise there is no $x$ to measure distances from (and no conclusion to reach).</li>
+</ul></div>
+<details class="pl hint"><summary>Hint <span class="aid">— try it first</span></summary><div class="dc"><p>Use the <a class="xref" data-id="weak-convergence-criterion" href="#weak-convergence-criterion">criterion</a>: show boundedness, then that two weak cluster points $\hat x,\hat x'\in D$ must coincide. For the latter, expand $\norm{x_n-\hat x}^2-\norm{x_n-\hat x'}^2$.</p></div></details>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T09"><b>T09</b> expand the squares</a><a class="chip t" href="09_toolbox.html#T14"><b>T14</b> cluster points</a></summary><div class="dc">
+<p><span class="step">1. Boundedness.</span> Pick any $x\in D$ (nonempty). Since $\big(\norm{x_n-x}\big)_n$ converges it is bounded, say by $M$, hence $\norm{x_n}\le\norm{x_n-x}+\norm{x}\le M+\norm{x}$: $(x_n)_n$ is bounded.</p>
+<p><span class="step">2. Two cluster points.</span> Let $(x_{n_k})_k$ and $(x_{n_\ell})_\ell$ be subsequences with $x_{n_k}\wto\hat x$ and $x_{n_\ell}\wto\hat x'$. By the second hypothesis $(\hat x,\hat x')\in D^2$. For every $n\in\N$, expanding $\norm{x_n-\hat x}^2=\norm{x_n}^2-2\ps{x_n}{\hat x}+\norm{\hat x}^2$ and the same with $\hat x'$, and subtracting:
+$$2\ps{x_n}{\hat x'-\hat x}=\norm{x_n-\hat x}^2-\norm{x_n-\hat x'}^2-\norm{\hat x}^2+\norm{\hat x'}^2.$$</p>
+<p><span class="step">3. The coordinate along $\hat x'-\hat x$ converges.</span> Because $\hat x,\hat x'\in D$, both $\big(\norm{x_n-\hat x}\big)_n$ and $\big(\norm{x_n-\hat x'}\big)_n$ converge, so the right-hand side converges: there exists $\alpha\in\R$ with $\ps{x_n}{\hat x'-\hat x}\to\alpha$.</p>
+<p><span class="step">4. Evaluate $\alpha$ twice.</span> A convergent sequence has the same limit along every subsequence. Along $(n_k)$, weak convergence gives $\ps{x_{n_k}}{\hat x'-\hat x}\to\ps{\hat x}{\hat x'-\hat x}$, so $\ps{\hat x}{\hat x'-\hat x}=\alpha$. Along $(n_\ell)$, similarly $\ps{\hat x'}{\hat x'-\hat x}=\alpha$.</p>
+<p><span class="step">5. Conclude.</span> Subtracting, $\ps{\hat x'-\hat x}{\hat x'-\hat x}=\norm{\hat x'-\hat x}^2=0$, i.e. $\hat x=\hat x'$. Thus $(x_n)_n$ is bounded with at most one weak cluster point: by the <a class="xref" data-id="weak-convergence-criterion" href="#weak-convergence-criterion">criterion</a> it converges weakly, and its limit (a cluster point) lies in $D$.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout trick"><span class="lbl">Trick: polarization</span><p>An inner product $\ps{x_n}{u}$ is a difference of two squared distances. Whenever you control $\norm{x_n-x}$ for several $x$, you control the coordinates of $x_n$ along the differences of those $x$. The identity $2\ps{x_n}{\hat x'-\hat x}=\norm{x_n-\hat x}^2-\norm{x_n-\hat x'}^2-\norm{\hat x}^2+\norm{\hat x'}^2$ is worth knowing by heart.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Opial</strong>: distances to $D$ converge + cluster points in $D$ ⇒ $x_n\wto$ a point of $D$. Mechanism: two cluster points would give two values for $\lim\ps{x_n}{\hat x'-\hat x}$.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="weak-convergence-criterion" href="#weak-convergence-criterion">weak convergence criterion</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="fejer-convergence" href="#fejer-convergence">Fejér convergence</a><a class="chip xref" data-id="proximal-point" href="#proximal-point">proximal point algorithm</a></div>
+</article>
+
+<article class="card def" id="fejer-monotone">
+<header class="card-head"><span class="kind">Definition + properties</span><h3>Fejér-monotone sequences and their two properties</h3><span class="src">Part V · slide 9</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#fejer-monotone" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Definition</span>
+<p>Let $D$ be a nonempty subset of a Hilbert space $\H$ and $(x_n)_{n\in\N}$ a sequence in $\H$. $(x_n)_{n\in\N}$ is <span class="hl">Fejér-monotone with respect to $D$</span> if
+$$(\forall x\in D)(\forall n\in\N)\qquad\norm{x_{n+1}-x}\le\norm{x_n-x}.$$</p>
+<p><strong>Properties.</strong> If $(x_n)_{n\in\N}$ is Fejér-monotone with respect to $D$ then</p>
+<ul>
+<li>for every $x\in D$, $\big(\norm{x_n-x}\big)_{n\in\N}$ converges;</li>
+<li>$(x_n)_{n\in\N}$ is bounded.</li>
+</ul>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Each step brings you no farther from <em>any</em> point of $D$ — $D$ will be the solution set — so the iterates stay in the ball $B(x,\norm{x_0-x})$ around every solution $x$, and in the intersection of all these balls.</p>
+<div class="rub">Why the properties hold</div>
+<div class="why"><p>For a fixed $x\in D$ the real sequence $\norm{x_n-x}$ is non-increasing and bounded below by $0$, hence convergent (to $\inf_n\norm{x_n-x}$, not necessarily to $0$). Boundedness: $\norm{x_n}\le\norm{x_n-x}+\norm{x}\le\norm{x_0-x}+\norm{x}$ for any single $x\in D$. The sentence to say out loud: <em>Fejér monotone = trapped in shrinking balls around every solution.</em></p></div>
+<div class="callout pitfall"><span class="lbl">Pitfall: Fejér-monotone does not mean convergent</span><p>Rotations: $x_{n+1}=R_\theta x_n$ in $\R^2$ is Fejér-monotone with respect to $D=\{0\}$ ($\norm{x_n}$ constant) and never converges. Nor does Fejér monotonicity give $\norm{x_n-x}\to0$: the limit of the distances is in general positive, and different for different $x\in D$. What it gives is the <em>first</em> hypothesis of Lemma 1; the second (cluster points in $D$) must come from somewhere else, and that is the job of demiclosedness.</p></div>
+
+<div class="widget" id="w-fejer">
+<div class="w-title">Interactive · Fejér monotonicity = the balls around every point of D shrink; it does not force convergence</div>
+<p class="w-help">$D$ is the segment $[-1,1]\times\{0\}$. <em>Mode A</em>: gradient descent $x_{n+1}=x_n-\gamma\nabla g(x_n)$ on $g(x,y)=\tfrac12\max(0,\abs{x}-1)^2+\tfrac{3}{20}y^2$, whose set of minimizers is exactly $D$ ($\nu=1$, so the iteration is Fejér-monotone w.r.t. $D$ for $\gamma\in\,]0,2[$). <em>Mode B</em>: $x_n=(0,(-1)^n(1+\tfrac1{n+1}))$, which sits on the perpendicular bisector of $D$, hence is at the same distance from every point of $D$ at a given $n$, and that distance decreases: Fejér-monotone, two cluster points $(0,\pm1)\notin D$, no limit. Move $n$ and watch the two balls around $d_1=(-1,0)$ and $d_2=(0.5,0)$.</p>
+<div class="w-ctls">
+<div class="seg" id="fj-mode" role="group" aria-label="mode"><button class="btn" type="button" data-v="gd" aria-pressed="true">A · gradient descent (converges)</button><button class="btn" type="button" data-v="osc">B · Fejér but not convergent</button></div>
+<label class="ctl">n <input type="range" id="fj-n" min="0" max="30" step="1" value="4"><output id="fj-n-v"></output></label>
+<label class="ctl">γ <input type="range" id="fj-gamma" min="0.1" max="1.9" step="0.1" value="0.7"><output id="fj-gamma-v"></output></label>
+</div>
+<svg class="w-svg" id="fj-svg" viewBox="0 0 520 320" role="img" aria-label="A Fejér-monotone sequence and the balls around two points of D"></svg>
+<div class="leg"><span><i class="dot" style="background:var(--s2)"></i>iterates $x_0,\dots,x_n$</span><span><i style="border-color:var(--idea)"></i>$D$</span><span><i style="border-color:var(--s1)"></i>ball $B(d_1,\norm{x_n-d_1})$</span><span><i style="border-color:var(--s5)"></i>ball $B(d_2,\norm{x_n-d_2})$</span><span><i class="dash" style="border-top-style:dashed"></i>the same balls at $n=0$</span></div>
+<div class="readout" id="fj-read"></div>
+<p class="w-cap">In mode A the balls shrink and the iterates converge to a point of $D$ (the endpoint $(1,0)$ when you start to the right). In mode B the balls shrink too, but the sequence jumps between two cluster points outside $D$: Fejér monotonicity needs the second hypothesis of Lemma 1.</p>
+</div>
+
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Fejér w.r.t. $D$</strong>: $\norm{x_{n+1}-x}\le\norm{x_n-x}$ for all $x\in D$. Buys: distances converge, sequence bounded. Does not buy: convergence (rotation).</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="convergence-recall" href="#convergence-recall">convergence modes</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="fejer-convergence" href="#fejer-convergence">Fejér convergence</a><a class="chip xref" data-id="krasnoselskii-mann" href="#krasnoselskii-mann">Krasnosel'skii–Mann</a><a class="chip xref" data-id="douglas-rachford" href="05_douglas_rachford_ppxa.html#douglas-rachford">Douglas–Rachford</a><a class="chip xref" data-id="mm-quadratic-convergence" href="07_majorization_minimization.html#mm-quadratic-convergence">MM convergence (page 7)</a></div>
+</article>
+
+<article class="card thm" id="fejer-convergence">
+<header class="card-head"><span class="kind">Theorem</span><h3>Fejér-monotone convergence: Fejér w.r.t. $D$ + weak cluster points in $D$ ⇒ $x_n\wto$ a point of $D$</h3><span class="src">Part V · slides 9–10</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><span class="tag tag-exam">Exam</span><a class="anchor" href="#fejer-convergence" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $D$ be a nonempty subset of a Hilbert space $\H$ and $(x_n)_{n\in\N}$ a sequence in $\H$. Then $(x_n)_{n\in\N}$ converges weakly to a point in $D$ if</p>
+<ul>
+<li>$(x_n)_{n\in\N}$ is Fejér-monotone with respect to $D$, and</li>
+<li>every weak sequential cluster point of $(x_n)_{n\in\N}$ lies in $D$.</li>
+</ul>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Fejér monotonicity supplies the first hypothesis of Lemma 1 (distances converge); the second hypothesis is the same; so this is Lemma 1 with a cheaper first bullet.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>There is no new mechanism: a non-increasing sequence of distances converges, which is all Lemma 1 asked for. The value of restating it is methodological. The two hypotheses are exactly the two things an algorithm proof must deliver: (a) a Fejér inequality, usually obtained in one line from nonexpansiveness; (b) "a weak cluster point is a solution", usually obtained from demiclosedness once the residual $Tx_n-x_n$ tends to $0$. This split is the recipe <a class="chip t" href="09_toolbox.html#T14"><b>T14</b></a> used by every convergence proof of pages 4, 5 and 6.</p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul>
+<li><strong>Fejér w.r.t. $D$</strong>: boundedness (so cluster points exist) and convergence of $\norm{x_n-x}$ for $x\in D$ (so cluster points are unique, by polarization).</li>
+<li><strong>Cluster points in $D$</strong>: the only hypothesis that involves the structure of the algorithm; it is where $\Fix T$ enters.</li>
+</ul></div>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T14"><b>T14</b> Fejér + cluster points</a></summary><div class="dc">
+<p><span class="step">1.</span> By the <a class="xref" data-id="fejer-monotone" href="#fejer-monotone">properties of Fejér-monotone sequences</a>, for every $x\in D$ the sequence $\big(\norm{x_n-x}\big)_n$ converges.</p>
+<p><span class="step">2.</span> Every weak sequential cluster point lies in $D$ by hypothesis. <a class="xref" data-id="lemma-opial" href="#lemma-opial">Lemma 1</a> applies: $(x_n)_n$ converges weakly to a point of $D$.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Fejér + cluster points in $D$ ⇒ weak limit in $D$.</strong> In algorithm proofs, $D=\Fix T$ and "cluster points in $D$" comes from demiclosedness.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="lemma-opial" href="#lemma-opial">Lemma 1</a><a class="chip xref" data-id="fejer-monotone" href="#fejer-monotone">Fejér monotonicity</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="nonexpansive-iteration" href="#nonexpansive-iteration">nonexpansive iteration</a><a class="chip xref" data-id="krasnoselskii-mann" href="#krasnoselskii-mann">Krasnosel'skii–Mann</a><a class="chip xref" data-id="forward-backward-varying" href="#forward-backward-varying">FB with varying stepsize</a><a class="chip xref" data-id="proximal-point" href="#proximal-point">proximal point</a><a class="chip xref" data-id="douglas-rachford" href="05_douglas_rachford_ppxa.html#douglas-rachford">Douglas–Rachford</a><a class="chip xref" data-id="admm-convergence" href="06_duality_admm_primal_dual.html#admm-convergence">ADMM</a></div>
+</article>
+
+<article class="card lemma" id="lemma-weakly-closed">
+<header class="card-head"><span class="kind">Lemma 2</span><h3>Closed convex sets are weakly sequentially closed</h3><span class="src">Part V · slide 10</span><span class="tag tag-slides">Slides</span><a class="anchor" href="#lemma-weakly-closed" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $C$ be a nonempty closed convex subset of $\H$. If $(x_n)_{n\in\N}$ is a sequence in $C$ that converges weakly to $\hat x$, then $\hat x\in C$.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">A closed convex set is an intersection of closed half-spaces, and a half-space $\{x:\ps{u}{x}\le c\}$ is weakly closed because $\ps{u}{x_n}\to\ps{u}{\hat x}$.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>Weak convergence only controls linear functionals, so the sets that are preserved in the weak limit are those defined by linear inequalities: half-spaces. Convexity + closedness is exactly what makes a set an intersection of half-spaces (Hahn–Banach separation, or in a Hilbert space the projection theorem: $C=\{x:\ps{y-P_Cy}{x-P_Cy}\le0\ \forall y\}$). Without convexity the lemma fails: the unit sphere of $\ell^2$ is closed, contains $e_n$, and $e_n\wto0$, which is not on the sphere. The sentence to say out loud: <em>weak limits respect linear inequalities, and closed convex sets are made of linear inequalities.</em></p></div>
+<details class="pl proof"><summary>Proof <span class="aid">(not on the slides; one paragraph using the projection theorem)</span> <span class="tag tag-extra">Extra</span></summary><div class="dc">
+<p><span class="step">1. Separate $\hat x$ from $C$ with the projection.</span> Let $p=P_C\hat x$ (exists since $C$ is nonempty closed convex) and $u=\hat x-p$. The characterization of the projection (<a class="xref" data-id="prox-projection" href="03_proximity_operator.html#prox-projection">page 3</a>, or the <a class="xref" data-id="optimality-convex-set" href="01_convex_analysis.html#optimality-convex-set">variational inequality</a>) gives $(\forall y\in C)\ \ps{u}{y-p}\le0$.</p>
+<p><span class="step">2. Apply it to $y=x_n$ and pass to the weak limit.</span> $\ps{u}{x_n-p}\le0$ for every $n$, and $\ps{u}{x_n-p}\to\ps{u}{\hat x-p}=\norm{u}^2$ by weak convergence. Hence $\norm{u}^2\le0$, i.e. $\hat x=p\in C$.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout pitfall"><span class="lbl">Pitfall</span><p>Convexity is essential: closed is not enough for weak limits (sphere example above). In finite dimension the lemma is trivial because weak = strong; it is needed only to make the theory work in $\ell^2$ or $L^2$.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Closed convex ⇒ weakly closed</strong> (Mazur). Used once, in the demiclosedness principle, to know that $T\hat x$ makes sense.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="prox-projection" href="03_proximity_operator.html#prox-projection">projection onto a closed convex set</a><a class="chip xref" data-id="convex-set" href="01_convex_analysis.html#convex-set">convex sets</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="demiclosedness" href="#demiclosedness">demiclosedness principle</a><a class="chip xref" data-id="weak-continuity-bounded" href="05_douglas_rachford_ppxa.html#weak-continuity-bounded">page 5</a></div>
+</article>
+</section>
+
+<section class="chapter" id="s-nonexpansive">
+<header><div class="eyebrow">Part V · slides 11–15</div><h2>Nonexpansive operators and the Krasnosel'skii–Mann algorithm</h2>
+<p class="lead">The operators of optimization do not increase distances. Here is what that alone gives (demiclosedness), what is missing (a vanishing residual), and how relaxation supplies it.</p></header>
+
+<article class="card def" id="fix-zer">
+<header class="card-head"><span class="kind">Definition</span><h3>Fixed points $\Fix T$ and zeros $\zer S$</h3><span class="src">Part V · slide 11</span><span class="tag tag-slides">Slides</span><a class="anchor" href="#fix-zer" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Definition</span>
+<p>Let $C$ be a nonempty subset of a Hilbert space $\H$.</p>
+<ul>
+<li>For $T:C\to\H$, the set of <strong>fixed points</strong> of $T$ is $\Fix T=\{x\in C\mid x=Tx\}$.</li>
+<li>For a set-valued $S:C\to2^{\H}$, the set of <strong>zeros</strong> of $S$ is $\zer S=\{x\in C\mid 0\in Sx\}$.</li>
+</ul>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Minimizers are zeros ($\Argmin f=\zer\partial f$ by Fermat), and algorithms find fixed points; the whole page lives on the bridge $\zer(\cdot)=\Fix(\cdot)$.</p>
+<div class="rub">Examples</div>
+<ul>
+<li>$\Fix\prox_{\gamma f}=\zer\partial f=\Argmin f$ for $f\in\Gz{\H}$, $\gamma\gt0$: $x=\prox_{\gamma f}x\iff x-x\in\gamma\partial f(x)\iff0\in\partial f(x)$ (<a class="xref" data-id="prox-characterization" href="03_proximity_operator.html#prox-characterization">prox characterization</a> + <a class="xref" data-id="fermat-rule" href="02_subdifferential_conjugate.html#fermat-rule">Fermat</a>).</li>
+<li>$\Fix P_C=C$; $\Fix(\Id-\gamma\nabla g)=\zer\nabla g=\Argmin g$ for convex differentiable $g$ and $\gamma\gt0$.</li>
+<li>$\Fix\big(\prox_{\gamma f}\circ(\Id-\gamma\nabla g)\big)=\zer(\partial f+\nabla g)$: the <a class="xref" data-id="forward-backward" href="#forward-backward">Forward–Backward</a> dictionary.</li>
+<li>$\Fix R_\theta=\{0\}$ for a rotation of angle $\theta\in\,]0,2\pi[$ of $\R^2$.</li>
+</ul>
+<div class="callout memo"><span class="lbl">To remember</span><p>$\Fix T=\{x=Tx\}$, $\zer S=\{0\in Sx\}$, and the dictionary <a class="chip t" href="09_toolbox.html#T15"><b>T15</b></a>: $\zer(A+B)=\Fix\big((\Id+\gamma B)^{-1}(\Id-\gamma A)\big)$.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="fermat-rule" href="02_subdifferential_conjugate.html#fermat-rule">Fermat's rule</a><a class="chip xref" data-id="prox-characterization" href="03_proximity_operator.html#prox-characterization">prox characterization</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="krasnoselskii-mann" href="#krasnoselskii-mann">Krasnosel'skii–Mann</a><a class="chip xref" data-id="forward-backward" href="#forward-backward">Forward–Backward</a><a class="chip xref" data-id="dr-fixed-points" href="05_douglas_rachford_ppxa.html#dr-fixed-points">DR fixed points</a></div>
+</article>
+
+<article class="card def" id="nonexpansive">
+<header class="card-head"><span class="kind">Definition</span><h3>Nonexpansive operator</h3><span class="src">Part V · slide 11</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#nonexpansive" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Definition</span>
+<p>Let $C\subset\H$ be a nonempty set and $T:C\to\H$. $T$ is <span class="hl">nonexpansive</span> if
+$$\big(\forall(x,y)\in C^2\big)\qquad\norm{Tx-Ty}\le\norm{x-y}.$$</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">$1$-Lipschitz: distances never grow; a strict contraction is the case $\rho\lt1$, and all our operators sit exactly at $\rho=1$.</p>
+<div class="rub">Examples and non-examples</div>
+<ul>
+<li>Nonexpansive: $\Id$, $-\Id$, every isometry (rotations, reflections, unitary maps), $P_C$, $\prox_{\gamma f}$ (<a class="xref" data-id="prox-firmly-nonexpansive" href="#prox-firmly-nonexpansive">below</a>), $\Id-\gamma\nabla g$ for $\gamma\in\,]0,2/\nu]$, $2\prox_{\gamma f}-\Id$ (<a class="xref" data-id="rprox-nonexpansive" href="05_douglas_rachford_ppxa.html#rprox-nonexpansive">page 5</a>), convex combinations and compositions of nonexpansive operators.</li>
+<li>Not nonexpansive: $x\mapsto2x$; $\Id-\gamma\nabla g$ for $\gamma\gt2/\nu$ (take $g=\tfrac\nu2\norm{\cdot}^2$: $\Id-\gamma\nabla g=(1-\gamma\nu)\Id$ has Lipschitz constant $\abs{1-\gamma\nu}\gt1$).</li>
+</ul>
+<p>Nonexpansive operators are continuous, which is used silently in several proofs (e.g. "$\prox$ is continuous since nonexpansive" on page 5).</p>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Nonexpansive = 1-Lipschitz.</strong> Stable under composition and convex combination; $\Fix$ of a nonexpansive operator on a closed convex set is closed and convex (not needed here, but true).</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="picard" href="#picard">strict contraction</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="demiclosedness" href="#demiclosedness">demiclosedness</a><a class="chip xref" data-id="krasnoselskii-mann" href="#krasnoselskii-mann">Krasnosel'skii–Mann</a><a class="chip xref" data-id="averaged" href="#averaged">averaged operators</a><a class="chip xref" data-id="rprox-nonexpansive" href="05_douglas_rachford_ppxa.html#rprox-nonexpansive">rprox nonexpansive</a></div>
+</article>
+
+<article class="card thm" id="demiclosedness">
+<header class="card-head"><span class="kind">Theorem</span><h3>Demiclosedness principle</h3><span class="src">Part V · slides 11–12</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><span class="tag tag-exam">Exam</span><a class="anchor" href="#demiclosedness" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $C$ be a nonempty closed convex subset of a Hilbert space $\H$ and $T:C\to\H$ a nonexpansive operator. If $(x_n)_{n\in\N}$ is a sequence in $C$ that converges weakly to $\hat x$ and if $Tx_n-x_n\to0$, then $\hat x\in\Fix T$.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">"Weak limit" + "residual tends to $0$ strongly" ⇒ "the limit is a fixed point": the operator $\Id-T$ is closed for the mixed (weak in, strong out) convergence.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>You would like to write $T\hat x=\lim Tx_n=\lim x_n=\hat x$, but $T$ is not weakly continuous (a rotation of $\ell^2$ shows weak limits can be moved by nonexpansive maps). The way around is to never let $T$ act on a weak limit: measure $\norm{x_n-T\hat x}^2$ in two ways, once through $\hat x$ and once through $Tx_n$. Comparing the expansions, the term $\norm{Tx_n-T\hat x}^2$ is killed by nonexpansiveness against $\norm{x_n-\hat x}^2$, the cross terms contain either the residual $x_n-Tx_n\to0$ (strongly, so it beats the bounded factor next to it) or $\ps{x_n-\hat x}{\hat x-T\hat x}\to0$ (weak convergence against a <em>fixed</em> vector). What survives is $\norm{\hat x-T\hat x}^2\le0$. The sentence to say out loud: <em>expand the same distance twice; nonexpansiveness eats the only term that could hurt.</em></p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul>
+<li><strong>$C$ closed convex</strong>: by <a class="xref" data-id="lemma-weakly-closed" href="#lemma-weakly-closed">Lemma 2</a>, $\hat x\in C$, so $T\hat x$ is defined at all.</li>
+<li><strong>$T$ nonexpansive</strong>: replaces $\norm{Tx_n-T\hat x}$ by $\norm{x_n-\hat x}$, which is bounded and cancels. A merely continuous $T$ does not work (in infinite dimension, weak limits are not respected by nonlinear continuous maps).</li>
+<li><strong>$Tx_n-x_n\to0$ strongly</strong>: it multiplies $\norm{Tx_n-T\hat x}$, which is only bounded, so it must tend to $0$ in norm. Weak convergence of the residual would not suffice.</li>
+<li><strong>$x_n\wto\hat x$</strong>: enough, because the other factor $\hat x-T\hat x$ is a fixed vector.</li>
+</ul></div>
+<details class="pl hint"><summary>Hint <span class="aid">— try it first</span></summary><div class="dc"><p>Expand $\norm{x_n-T\hat x}^2$ by inserting $\hat x$ ($x_n-T\hat x=(x_n-\hat x)+(\hat x-T\hat x)$) and by inserting $Tx_n$. Equate, bound $\norm{Tx_n-T\hat x}\le\norm{x_n-\hat x}$, Cauchy–Schwarz on the cross term, pass to the limit.</p></div></details>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T09"><b>T09</b> expand twice</a> <span class="aid">(as on the slides)</span></summary><div class="dc">
+<p><span class="step">0. $T\hat x$ makes sense.</span> $x_n\in C$, $x_n\wto\hat x$ and $C$ is closed convex, so $\hat x\in C$ by <a class="xref" data-id="lemma-weakly-closed" href="#lemma-weakly-closed">Lemma 2</a>; thus $T\hat x$ is defined.</p>
+<p><span class="step">1. One distance, two expansions.</span> For every $n\in\N$, inserting $\hat x$ then inserting $Tx_n$:
+$$\begin{aligned}\norm{x_n-T\hat x}^2&amp;=\norm{x_n-\hat x}^2+\norm{\hat x-T\hat x}^2+2\ps{x_n-\hat x}{\hat x-T\hat x},\\ \norm{x_n-T\hat x}^2&amp;=\norm{x_n-Tx_n}^2+\norm{Tx_n-T\hat x}^2+2\ps{x_n-Tx_n}{Tx_n-T\hat x}.\end{aligned}$$
+Subtracting and isolating the quantity we care about:
+$$\norm{\hat x-T\hat x}^2=\norm{x_n-Tx_n}^2+\norm{Tx_n-T\hat x}^2-\norm{x_n-\hat x}^2+2\ps{x_n-Tx_n}{Tx_n-T\hat x}-2\ps{x_n-\hat x}{\hat x-T\hat x}.$$</p>
+<p><span class="step">2. Nonexpansiveness and Cauchy–Schwarz.</span> Since $T$ is nonexpansive, $\norm{Tx_n-T\hat x}^2-\norm{x_n-\hat x}^2\le0$, and by Cauchy–Schwarz then nonexpansiveness again,
+$$2\ps{x_n-Tx_n}{Tx_n-T\hat x}\le2\norm{x_n-Tx_n}\,\norm{Tx_n-T\hat x}\le2\norm{x_n-Tx_n}\,\norm{x_n-\hat x}.$$
+Hence
+$$\norm{\hat x-T\hat x}^2\le\norm{x_n-Tx_n}^2+2\norm{x_n-Tx_n}\,\norm{x_n-\hat x}-2\ps{x_n-\hat x}{\hat x-T\hat x}.$$</p>
+<p><span class="step">3. Pass to the limit.</span> $x_n\wto\hat x$ implies that $(x_n)_n$ is bounded (<a class="xref" data-id="weak-convergence-criterion" href="#weak-convergence-criterion">criterion</a>), so $\norm{x_n-\hat x}\le M$; $\norm{x_n-Tx_n}\to0$ by hypothesis, so the first two terms tend to $0$; and $\ps{x_n-\hat x}{\hat x-T\hat x}\to0$ by the definition of weak convergence applied to the fixed vector $y=\hat x-T\hat x$. The left-hand side does not depend on $n$: $\norm{\hat x-T\hat x}^2\le0$, i.e. $\hat x=T\hat x$.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout trick"><span class="lbl">Trick: never apply $T$ to a weak limit</span><p>Weak convergence survives only against fixed vectors ($\ps{x_n-\hat x}{y}\to0$) and products "strong → 0 × bounded". Arrange the computation so that every term is of one of these two kinds, and let nonexpansiveness remove the rest. The same device proves the demiclosedness of $\Id-T$ for every averaged $T$, and the weak closedness of the graph of $\partial f$ (<a class="xref" data-id="lemma-graph-closed" href="06_duality_admm_primal_dual.html#lemma-graph-closed">page 6</a>).</p></div>
+<div class="callout pitfall"><span class="lbl">Pitfall</span><p>The conclusion is not "$Tx_n\wto T\hat x$" (false in general) but "$\hat x$ is a fixed point". Also, the principle needs $x_n\in C$: it is a statement about sequences inside the domain of $T$.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Demiclosed</strong>: $x_n\wto\hat x$ and $Tx_n-x_n\to0$ ⇒ $T\hat x=\hat x$. Proof: expand $\norm{x_n-T\hat x}^2$ two ways.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="lemma-weakly-closed" href="#lemma-weakly-closed">Lemma 2</a><a class="chip xref" data-id="nonexpansive" href="#nonexpansive">nonexpansive</a><a class="chip xref" data-id="weak-convergence-criterion" href="#weak-convergence-criterion">weakly convergent ⇒ bounded</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="nonexpansive-iteration" href="#nonexpansive-iteration">nonexpansive iteration</a><a class="chip xref" data-id="krasnoselskii-mann" href="#krasnoselskii-mann">Krasnosel'skii–Mann</a><a class="chip xref" data-id="forward-backward-varying" href="#forward-backward-varying">FB with varying stepsize</a><a class="chip xref" data-id="gradient-descent" href="#gradient-descent">gradient descent</a><a class="chip xref" data-id="douglas-rachford" href="05_douglas_rachford_ppxa.html#douglas-rachford">Douglas–Rachford</a></div>
+</article>
+
+<article class="card prop" id="nonexpansive-iteration">
+<header class="card-head"><span class="kind">Proposition</span><h3>Picard iteration of a nonexpansive map converges weakly when the residual vanishes</h3><span class="src">Part V · slides 12–13</span><span class="tag tag-slides">Slides</span><a class="anchor" href="#nonexpansive-iteration" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $C$ be a nonempty closed convex subset of a Hilbert space $\H$ and $T:C\to C$ a nonexpansive operator such that $\Fix T\neq\emptyset$. Let $x_0\in C$ and $(\forall n\in\N)\ x_{n+1}=Tx_n$. If $x_n-Tx_n\to0$, then $(x_n)_{n\in\N}$ converges weakly to a point in $\Fix T$.</p>
+<p><em>Exercise (slide 13):</em> prove this result by showing that $(x_n)_{n\in\N}$ is Fejér-monotone with respect to $\Fix T$. Solution in <a class="xref" data-id="ex-nonexpansive-iteration" href="#ex-nonexpansive-iteration">exercise 1</a> below.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Nonexpansiveness gives Fejér monotonicity w.r.t. $\Fix T$ in one line, demiclosedness puts every cluster point in $\Fix T$, and the Fejér convergence theorem concludes — provided someone hands you $x_n-Tx_n\to0$.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>For $x\in\Fix T$: $\norm{x_{n+1}-x}=\norm{Tx_n-Tx}\le\norm{x_n-x}$. That is Picard's one-line computation with $\rho=1$: no decrease, but no increase either, for <em>every</em> fixed point simultaneously. The residual hypothesis is exactly what feeds demiclosedness. The proposition is honest about what nonexpansiveness alone cannot do: it cannot make the residual vanish (rotation), so the hypothesis $x_n-Tx_n\to0$ has to be assumed. KM below removes it by relaxing.</p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul>
+<li><strong>$T:C\to C$</strong>: the iterates stay in $C$, where $T$ is defined and nonexpansive.</li>
+<li><strong>$\Fix T\neq\emptyset$</strong>: Fejér monotonicity with respect to the empty set is vacuous; some fixed point is needed to pin the sequence down.</li>
+<li><strong>$x_n-Tx_n\to0$</strong>: the only ingredient of demiclosedness that nonexpansiveness does not supply. It fails for a rotation.</li>
+</ul></div>
+<details class="pl hint"><summary>Hint</summary><div class="dc"><p>Three lines: Fejér (nonexpansive at a fixed point), cluster points (demiclosedness), conclusion (Fejér convergence).</p></div></details>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T14"><b>T14</b> Fejér + demiclosedness</a></summary><div class="dc">
+<p><span class="step">1. Fejér monotonicity w.r.t. $\Fix T$.</span> For every $x\in\Fix T$ and $n\in\N$, $\norm{x_{n+1}-x}=\norm{Tx_n-Tx}\le\norm{x_n-x}$.</p>
+<p><span class="step">2. Cluster points are fixed points.</span> The sequence is bounded (Fejér), so it has weak cluster points. Let $x_{n_k}\wto\hat x$. Then $(x_{n_k})$ is a sequence of $C$ with $Tx_{n_k}-x_{n_k}\to0$: by the <a class="xref" data-id="demiclosedness" href="#demiclosedness">demiclosedness principle</a>, $\hat x\in\Fix T$.</p>
+<p><span class="step">3. Conclusion.</span> <a class="xref" data-id="fejer-convergence" href="#fejer-convergence">Fejér-monotone convergence</a> with $D=\Fix T$: $x_n\wto$ a point of $\Fix T$.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Nonexpansive + $\Fix T\ne\emptyset$ + residual → 0 ⇒ weak convergence to a fixed point.</strong> The residual is the missing piece; relaxation (KM) produces it.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="fejer-convergence" href="#fejer-convergence">Fejér convergence</a><a class="chip xref" data-id="demiclosedness" href="#demiclosedness">demiclosedness</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="krasnoselskii-mann" href="#krasnoselskii-mann">Krasnosel'skii–Mann</a><a class="chip xref" data-id="ex-nonexpansive-iteration" href="#ex-nonexpansive-iteration">exercise 1</a></div>
+</article>
+
+<article class="card thm" id="krasnoselskii-mann">
+<header class="card-head"><span class="kind">Theorem</span><h3>Krasnosel'skii–Mann algorithm</h3><span class="src">Part V · slides 14–15</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><span class="tag tag-exam">Exam</span><a class="anchor" href="#krasnoselskii-mann" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $C$ be a nonempty closed convex subset of a Hilbert space $\H$ and $T:C\to C$ a nonexpansive operator such that $\Fix T\neq\emptyset$. Let $(\lambda_n)_{n\in\N}$ be a sequence in $[0,1]$ such that
+$$\sum_{n\in\N}\lambda_n(1-\lambda_n)=+\infty.$$
+Let $x_0\in C$ and $(\forall n\in\N)\ x_{n+1}=x_n+\lambda_n(Tx_n-x_n)$. Then</p>
+<ul>
+<li>$(x_n)_{n\in\N}$ is Fejér-monotone with respect to $\Fix T$;</li>
+<li>$(Tx_n-x_n)_{n\in\N}$ converges strongly to $0$;</li>
+<li>$(x_n)_{n\in\N}$ converges weakly to a point in $\Fix T$.</li>
+</ul>
+<p><em>Typical choice:</em> $(\forall n\in\N)\ \lambda_n=\lambda\in\,]0,1[$.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Averaging $x_n$ with $Tx_n$ turns "no increase" into a strict decrease of $\lambda_n(1-\lambda_n)\norm{Tx_n-x_n}^2$ per step, the decreases are summable, so the residual must go to $0$ — and the rest is the previous proposition.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>Picture $x_n$, $Tx_n$ and a fixed point $x$. Nonexpansiveness says $Tx_n$ is no farther from $x$ than $x_n$ is: both lie in the ball $B(x,\norm{x_n-x})$. A point strictly between them, $x_{n+1}=(1-\lambda_n)x_n+\lambda_nTx_n$, lies <em>inside</em> the ball, and by how much is quantified by the <a class="chip t" href="09_toolbox.html#T12"><b>T12</b> λ-identity</a> $\norm{(1-\lambda)a+\lambda b}^2=(1-\lambda)\norm a^2+\lambda\norm b^2-\lambda(1-\lambda)\norm{a-b}^2$: the gain is $\lambda_n(1-\lambda_n)\norm{Tx_n-x_n}^2$, the squared chord between the two points. The gains are summable (they are bounded by the initial squared distance, by telescoping, <a class="chip t" href="09_toolbox.html#T13"><b>T13</b></a>), and since the weights $\lambda_n(1-\lambda_n)$ have an infinite sum, the residual $\norm{Tx_n-x_n}$ cannot stay away from $0$; nonexpansiveness makes it non-increasing, so it tends to $0$. Now demiclosedness turns weak cluster points into fixed points and Fejér convergence finishes. The sentence to say out loud: <em>a strict convex combination of two points of a ball is strictly inside; the λ-identity measures by how much, and that much is summable.</em></p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul>
+<li><strong>$\lambda_n\in[0,1]$</strong>: $x_{n+1}$ is a convex combination of $x_n$ and $Tx_n$, so it stays in $C$, and the λ-identity has a non-negative gain.</li>
+<li><strong>$\sum\lambda_n(1-\lambda_n)=+\infty$</strong>: the gains $\lambda_n(1-\lambda_n)\norm{Tx_n-x_n}^2$ are summable; infinite total weight forces $\liminf\norm{Tx_n-x_n}=0$. With $\lambda_n=1$ for all $n$ (Picard) the weight is $0$ and nothing is forced: the rotation (widget) keeps $\norm{Tx_n-x_n}$ constant. With $\lambda_n=1/n^2$ the sum is finite and the iterates may freeze before reaching a fixed point.</li>
+<li><strong>$\Fix T\neq\emptyset$</strong>: Fejér monotonicity needs a point to be monotone with respect to; and the theorem would be false without it (translation $x\mapsto x+u$ is nonexpansive with no fixed point, KM drifts to infinity).</li>
+<li><strong>$C$ closed convex, $T$ nonexpansive</strong>: the demiclosedness principle.</li>
+</ul></div>
+<details class="pl hint"><summary>Hint <span class="aid">— try it first</span></summary><div class="dc"><p>Write $x_{n+1}-x=(1-\lambda_n)(x_n-x)+\lambda_n(Tx_n-x)$ and apply the λ-identity. Sum the resulting inequality. Show $\norm{Tx_{n+1}-x_{n+1}}\le\norm{Tx_n-x_n}$. Finish with the previous proposition.</p></div></details>
+<details class="pl proof"><summary>Proof in four steps <a class="chip t" href="09_toolbox.html#T12"><b>T12</b> λ-identity</a><a class="chip t" href="09_toolbox.html#T13"><b>T13</b> telescoping</a><a class="chip t" href="09_toolbox.html#T14"><b>T14</b> Fejér + demiclosed</a></summary><div class="dc">
+<p><span class="step">0. Iterates stay in $C$.</span> $x_{n+1}=(1-\lambda_n)x_n+\lambda_nTx_n$ with $\lambda_n\in[0,1]$, $x_n\in C$, $Tx_n\in C$ and $C$ convex, so $x_{n+1}\in C$ (induction from $x_0\in C$).</p>
+<p><span class="step">(i) Fejér monotonicity w.r.t. $\Fix T$.</span> Let $x\in\Fix T$ and $n\in\N$. Then
+$$\begin{aligned}\norm{x_{n+1}-x}^2&amp;=\norm{x_n+\lambda_n(Tx_n-x_n)-x}^2=\norm{(1-\lambda_n)(x_n-x)+\lambda_n(Tx_n-x)}^2\\&amp;=(1-\lambda_n)^2\norm{x_n-x}^2+\lambda_n^2\norm{Tx_n-x}^2-2\lambda_n(1-\lambda_n)\ps{x-x_n}{Tx_n-x}\\&amp;=(1-\lambda_n)\norm{x_n-x}^2+\lambda_n\norm{Tx_n-x}^2-\lambda_n(1-\lambda_n)\norm{Tx_n-x+x-x_n}^2\qquad\text{(λ-identity)}\\&amp;=(1-\lambda_n)\norm{x_n-x}^2+\lambda_n\norm{Tx_n-Tx}^2-\lambda_n(1-\lambda_n)\norm{Tx_n-x_n}^2\qquad(x=Tx)\\&amp;\le(1-\lambda_n)\norm{x_n-x}^2+\lambda_n\norm{x_n-x}^2-\lambda_n(1-\lambda_n)\norm{Tx_n-x_n}^2\qquad\text{(nonexpansive)}\\&amp;=\norm{x_n-x}^2-\lambda_n(1-\lambda_n)\norm{Tx_n-x_n}^2\ \le\ \norm{x_n-x}^2.\end{aligned}$$
+(The third line is the λ-identity: $(1-\lambda)^2a^2+\lambda^2b^2-2\lambda(1-\lambda)\ps{-a}{b}$ with $a=x_n-x$, $b=Tx_n-x$ equals $(1-\lambda)a^2+\lambda b^2-\lambda(1-\lambda)\norm{a-b}^2$ because $(1-\lambda)^2=(1-\lambda)-\lambda(1-\lambda)$ and $\lambda^2=\lambda-\lambda(1-\lambda)$.) So $(x_n)$ is Fejér-monotone with respect to $\Fix T$, and we have the stronger inequality
+$$\norm{x_{n+1}-x}^2\le\norm{x_n-x}^2-\lambda_n(1-\lambda_n)\norm{Tx_n-x_n}^2.\tag{$\ast$}$$</p>
+<p><span class="step">(ii) Summability and $\liminf\norm{Tx_n-x_n}=0$.</span> Summing $(\ast)$ from $0$ to $N$ telescopes:
+$$\sum_{n=0}^{N}\lambda_n(1-\lambda_n)\norm{Tx_n-x_n}^2\le\norm{x_0-x}^2-\norm{x_{N+1}-x}^2\le\norm{x_0-x}^2,$$
+so $\sum_{n\in\N}\lambda_n(1-\lambda_n)\norm{Tx_n-x_n}^2\le\norm{x_0-x}^2\lt+\infty$. The tails of a convergent series tend to $0$, and for every $n$,
+$$\Big(\inf_{k\ge n}\norm{Tx_k-x_k}^2\Big)\sum_{k=n}^{+\infty}\lambda_k(1-\lambda_k)\ \le\ \sum_{k=n}^{+\infty}\lambda_k(1-\lambda_k)\norm{Tx_k-x_k}^2\ \xrightarrow[n\to+\infty]{}\ 0.$$
+By hypothesis $\sum_{k\ge n}\lambda_k(1-\lambda_k)=+\infty$ for every $n$ (a divergent series of non-negative terms has divergent tails), so the infimum must vanish: $\inf_{k\ge n}\norm{Tx_k-x_k}=0$ for every $n$, i.e. $\liminf_{n\to+\infty}\norm{Tx_n-x_n}=0$.</p>
+<p><span class="step">(iii) $\norm{Tx_n-x_n}$ is non-increasing, hence $\to0$.</span> Since $x_{n+1}-Tx_n=(1-\lambda_n)(x_n-Tx_n)$, we have $Tx_n-x_{n+1}=(1-\lambda_n)(Tx_n-x_n)$, and by nonexpansiveness
+$$\norm{Tx_{n+1}-x_{n+1}}=\norm{Tx_{n+1}-Tx_n+(1-\lambda_n)(Tx_n-x_n)}\le\norm{x_{n+1}-x_n}+(1-\lambda_n)\norm{Tx_n-x_n}=\lambda_n\norm{Tx_n-x_n}+(1-\lambda_n)\norm{Tx_n-x_n}=\norm{Tx_n-x_n}.$$
+A non-increasing non-negative sequence converges, and its limit equals its $\liminf$, which is $0$: $Tx_n-x_n\to0$ strongly.</p>
+<p><span class="step">(iv) Weak convergence.</span> $(x_n)$ is bounded (Fejér), so it has weak cluster points. Let $x_{n_k}\wto\hat x$. The $x_{n_k}$ lie in $C$ and $Tx_{n_k}-x_{n_k}\to0$, so the <a class="xref" data-id="demiclosedness" href="#demiclosedness">demiclosedness principle</a> gives $\hat x\in\Fix T$. Every weak cluster point lies in $\Fix T$ and the sequence is Fejér-monotone with respect to $\Fix T$: by <a class="xref" data-id="fejer-convergence" href="#fejer-convergence">Fejér-monotone convergence</a>, $x_n\wto$ a point of $\Fix T$.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout trick"><span class="lbl">Trick: the λ-identity, then telescope</span><p>Whenever an update is a convex combination $x_{n+1}=(1-\lambda)x_n+\lambda y_n$, compute $\norm{x_{n+1}-x}^2$ with $\norm{(1-\lambda)a+\lambda b}^2=(1-\lambda)\norm a^2+\lambda\norm b^2-\lambda(1-\lambda)\norm{a-b}^2$: the last term is a free "sufficient decrease". Sum it: the series of decreases is bounded by $\norm{x_0-x}^2$, so the decreases go to $0$ (<a class="chip t" href="09_toolbox.html#T13"><b>T13</b></a>). You will redo exactly this for Douglas–Rachford (with $\lambda_n/2$) and for ADMM.</p></div>
+<div class="callout pitfall"><span class="lbl">Pitfall: $\lambda_n=1$ is not allowed, and here is the counterexample</span><p>With $\lambda_n\equiv1$ the series $\sum\lambda_n(1-\lambda_n)$ is $0$. Take $T=R_\theta$, the rotation of angle $\theta\in\,]0,2\pi[$ in $\R^2$: nonexpansive, $\Fix T=\{0\}$, closed convex domain $C=\R^2$. Picard gives $x_n=R_\theta^nx_0$, which stays on the circle of radius $\norm{x_0}$ (Fejér w.r.t. $\{0\}$, bounded, but $\norm{Tx_n-x_n}=2\sin(\theta/2)\norm{x_0}$ constant and no convergence). With $\lambda\in\,]0,1[$ the relaxed operator $(1-\lambda)\Id+\lambda R_\theta$ has eigenvalues $(1-\lambda)+\lambda e^{\pm i\theta}$, of modulus $\sqrt{1-2\lambda(1-\lambda)(1-\cos\theta)}\lt1$: the iterates spiral to $0$. The best factor is at $\lambda=\tfrac12$: $\abs{\cos(\theta/2)}$.</p></div>
+
+<div class="widget" id="w-km-rotation">
+<div class="w-title">Interactive · a rotation is nonexpansive but its Picard iteration never converges; averaging fixes it</div>
+<p class="w-help">$T=R_\theta$ is the rotation of angle $\theta$ (nonexpansive, $\Fix T=\{0\}$). Left: the iterates $x_{n+1}=x_n+\lambda(Tx_n-x_n)$, computed exactly. Right: $\norm{x_n}$ (distance to the fixed point, blue) and $\norm{Tx_n-x_n}$ (residual, orange) against $n$. At $\lambda=1$ (Picard) both are constant; for $\lambda\in\,]0,1[$ both decrease geometrically with the factor $\sqrt{1-2\lambda(1-\lambda)(1-\cos\theta)}$ of the pitfall above.</p>
+<div class="w-ctls">
+<label class="ctl">θ (degrees) <input type="range" id="km-theta" min="5" max="175" step="5" value="60"><output id="km-theta-v"></output></label>
+<label class="ctl">λ <input type="range" id="km-lambda" min="0" max="1" step="0.05" value="0.5"><output id="km-lambda-v"></output></label>
+<div class="seg" id="km-mode" role="group" aria-label="mode"><button class="btn" type="button" data-v="km" aria-pressed="true">relaxed (λ from the slider)</button><button class="btn" type="button" data-v="picard">Picard (λ = 1)</button></div>
+</div>
+<div class="w-cols">
+<div><svg class="w-svg" id="km-svg" viewBox="0 0 320 300" role="img" aria-label="Iterates of a rotation with and without relaxation"></svg><p class="w-cap">iterates $x_0,\dots,x_{40}$; the dashed circle is $\norm{x}=\norm{x_0}$</p></div>
+<div><svg class="w-svg" id="km-svg2" viewBox="0 0 320 300" role="img" aria-label="Distance to the fixed point and residual against the iteration index"></svg><p class="w-cap">$\norm{x_n}$ (blue) and $\norm{Tx_n-x_n}$ (orange)</p></div>
+</div>
+<div class="leg"><span><i class="dot" style="background:var(--s1)"></i>iterates</span><span><i class="dot" style="background:var(--idea)"></i>fixed point $0$</span><span><i style="border-color:var(--s1)"></i>$\norm{x_n}$</span><span><i style="border-color:var(--s2)"></i>$\norm{Tx_n-x_n}$</span></div>
+<div class="readout" id="km-read"></div>
+<p class="w-cap">With λ = 1 the distance to $0$ is constant: Fejér-monotone but not convergent. With λ ∈ ]0,1[ the λ-identity gives a strict decrease of $\lambda(1-\lambda)\norm{Tx_n-x_n}^2$ at each step.</p>
+</div>
+
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>KM</strong>: $T$ nonexpansive on closed convex $C$, $\Fix T\ne\emptyset$, $\lambda_n\in[0,1]$, $\sum\lambda_n(1-\lambda_n)=+\infty$ ⇒ Fejér w.r.t. $\Fix T$, $Tx_n-x_n\to0$, $x_n\wto$ a fixed point. Proof: <em>λ-identity → telescope → residual monotone → demiclosed → Fejér</em>.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="nonexpansive" href="#nonexpansive">nonexpansive</a><a class="chip xref" data-id="fejer-convergence" href="#fejer-convergence">Fejér convergence</a><a class="chip xref" data-id="demiclosedness" href="#demiclosedness">demiclosedness</a><a class="chip xref" data-id="nonexpansive-iteration" href="#nonexpansive-iteration">nonexpansive iteration</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="averaged-iteration" href="#averaged-iteration">averaged iteration</a><a class="chip xref" data-id="forward-backward" href="#forward-backward">Forward–Backward</a><a class="chip xref" data-id="douglas-rachford" href="05_douglas_rachford_ppxa.html#douglas-rachford">Douglas–Rachford</a><a class="chip xref" data-id="admm-convergence" href="06_duality_admm_primal_dual.html#admm-convergence">ADMM</a><a class="chip xref" data-id="primal-dual-relaxed" href="06_duality_admm_primal_dual.html#primal-dual-relaxed">relaxed primal-dual</a></div>
+</article>
+</section>
+
+<section class="chapter" id="s-averaged">
+<header><div class="eyebrow">Part V · slides 16–24</div><h2>Averaged operators: relaxation built into the operator</h2>
+<p class="lead">KM relaxes a nonexpansive $T$ by hand. Some operators are already of the form $(1-\alpha)\Id+\alpha R$: for them the plain iteration converges, and — the decisive point for splitting — the property survives composition with a computable constant.</p></header>
+
+<article class="card def" id="averaged">
+<header class="card-head"><span class="kind">Definition + characterization</span><h3>$\alpha$-averaged operators; the inequality characterization; firmly nonexpansive</h3><span class="src">Part V · slide 16</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#averaged" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Definition</span>
+<p>Let $C\subset\H$ be a nonempty set, $A:C\to\H$ and $\alpha\in\,]0,1[$. $A$ is an <span class="hl">$\alpha$-averaged</span> operator if there exists a nonexpansive operator $R:C\to\H$ such that
+$$A=(1-\alpha)\Id+\alpha R.$$</p>
+<p><strong>Characterization.</strong> $A$ is $\alpha$-averaged if and only if
+$$\big(\forall(x,y)\in C^2\big)\qquad\norm{Ax-Ay}^2+\frac{1-\alpha}{\alpha}\norm{(\Id-A)x-(\Id-A)y}^2\le\norm{x-y}^2.$$</p>
+<p><em>Remark.</em> When $\alpha=\tfrac12$, we say that $A$ is <span class="hl">firmly nonexpansive</span>: $\norm{Ax-Ay}^2+\norm{(\Id-A)x-(\Id-A)y}^2\le\norm{x-y}^2$, equivalently $\ps{Ax-Ay}{x-y}\ge\norm{Ax-Ay}^2$.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">An averaged operator is a KM step of a nonexpansive one: $Ax=x+\alpha(Rx-x)$; the inequality says that $A$ not only does not expand, it loses $\frac{1-\alpha}{\alpha}\norm{(\Id-A)x-(\Id-A)y}^2$ — the smaller $\alpha$, the more it loses.</p>
+<div class="rub">Why the characterization holds, and the picture</div>
+<div class="why"><p>Given $A$ and $\alpha$, the candidate $R$ is forced: $R=\Id+\frac1\alpha(A-\Id)$. Write $Ax-Ay=(1-\alpha)(x-y)+\alpha(Rx-Ry)$ and apply the λ-identity with $\lambda=\alpha$: $\norm{Ax-Ay}^2=(1-\alpha)\norm{x-y}^2+\alpha\norm{Rx-Ry}^2-\alpha(1-\alpha)\norm{(x-y)-(Rx-Ry)}^2$. Since $(\Id-R)=\frac1\alpha(\Id-A)$, the last norm is $\frac1{\alpha^2}\norm{(\Id-A)x-(\Id-A)y}^2$, and "$R$ nonexpansive" becomes exactly the displayed inequality. <em>Picture:</em> fix $x,y$ and $d=x-y$. The vector $Ax-Ay=(1-\alpha)d+\alpha(Rx-Ry)$ with $\norm{Rx-Ry}\le\norm d$ lies in the closed ball of centre $(1-\alpha)d$ and radius $\alpha\norm d$. All these balls contain $d$ (the "$A=\Id$" case) and are nested: $\alpha=1$ gives the whole ball $B(0,\norm d)$ (nonexpansive), $\alpha=\tfrac12$ the ball of diameter $[0,d]$ (firmly nonexpansive), $\alpha\to0$ the single point $d$. The sentence to say out loud: <em>averaged means the difference $Ax-Ay$ is confined to a ball tangent at $d$, strictly inside the nonexpansive ball.</em></p></div>
+<div class="callout hyp"><span class="lbl">Reading the inequality</span><ul>
+<li>$\alpha\to1$: the coefficient $\frac{1-\alpha}{\alpha}\to0$ and the inequality degenerates to nonexpansiveness: averaged ⊂ nonexpansive, with a quantitative surplus.</li>
+<li>$\alpha=\tfrac12$: coefficient $1$. Expanding $\norm{(\Id-A)x-(\Id-A)y}^2=\norm{x-y}^2-2\ps{x-y}{Ax-Ay}+\norm{Ax-Ay}^2$, the inequality becomes $\norm{Ax-Ay}^2\le\ps{Ax-Ay}{x-y}$: this is the form in which $\prox$ will be proved firmly nonexpansive.</li>
+<li>Averaged with a smaller $\alpha$ implies averaged with a larger one (the coefficient decreases): $\alpha$-averaged ⇒ $\beta$-averaged for $\alpha\le\beta\lt1$. In particular firmly nonexpansive ⇒ $\alpha$-averaged for all $\alpha\ge\tfrac12$.</li>
+<li>A strict contraction with constant $\rho$ is $\alpha$-averaged for every $\alpha\ge\frac{1+\rho}{2}$. <span class="tag tag-extra">Extra</span></li>
+</ul></div>
+<details class="pl proof"><summary>Proof of the characterization <a class="chip t" href="09_toolbox.html#T12"><b>T12</b> λ-identity</a></summary><div class="dc">
+<p><span class="step">1. The only possible $R$.</span> If $A=(1-\alpha)\Id+\alpha R$ then $R=\Id+\frac1\alpha(A-\Id)$. Conversely define $R$ by this formula; then $A=(1-\alpha)\Id+\alpha R$ holds, and $A$ is $\alpha$-averaged iff this $R$ is nonexpansive. Note $\Id-R=\frac1\alpha(\Id-A)$.</p>
+<p><span class="step">2. λ-identity.</span> For $x,y\in C$, with $a=x-y$ and $b=Rx-Ry$, $Ax-Ay=(1-\alpha)a+\alpha b$ and
+$$\norm{Ax-Ay}^2=(1-\alpha)\norm{a}^2+\alpha\norm{b}^2-\alpha(1-\alpha)\norm{a-b}^2,\qquad a-b=(\Id-R)x-(\Id-R)y=\tfrac1\alpha\big((\Id-A)x-(\Id-A)y\big).$$
+Hence $\alpha\norm{Rx-Ry}^2=\norm{Ax-Ay}^2-(1-\alpha)\norm{x-y}^2+\frac{1-\alpha}{\alpha}\norm{(\Id-A)x-(\Id-A)y}^2$.</p>
+<p><span class="step">3. Translate.</span> $R$ nonexpansive $\iff\alpha\norm{Rx-Ry}^2\le\alpha\norm{x-y}^2$ for all $x,y$ $\iff\norm{Ax-Ay}^2+\frac{1-\alpha}{\alpha}\norm{(\Id-A)x-(\Id-A)y}^2\le(1-\alpha)\norm{x-y}^2+\alpha\norm{x-y}^2=\norm{x-y}^2$.</p>
+<span class="qed">□</span>
+</div></details>
+
+<div class="widget" id="w-averaged-disc">
+<div class="w-title">Interactive · where $Ax-Ay$ may lie: the ball of centre $(1-\alpha)d$ and radius $\alpha\norm d$, tangent to the nonexpansive ball at $d$</div>
+<p class="w-help">$d=x-y$ is the horizontal unit vector. The grey circle is the nonexpansive constraint $\norm{Ax-Ay}\le\norm d$ ($\alpha=1$); the blue disc is the $\alpha$-averaged constraint; the dashed circle is the firmly nonexpansive one ($\alpha=\tfrac12$, diameter $[0,d]$). The orange point is $Ax-Ay$ for the example $A=(1-\alpha)\Id+\alpha R_\theta$ ($R_\theta$ a rotation, an isometry, so the point runs on the boundary circle). The readout checks the inequality numerically.</p>
+<div class="w-ctls">
+<label class="ctl">α <input type="range" id="av-alpha" min="0.05" max="1" step="0.05" value="0.5"><output id="av-alpha-v"></output></label>
+<label class="ctl">θ (degrees) <input type="range" id="av-theta" min="0" max="360" step="5" value="120"><output id="av-theta-v"></output></label>
+</div>
+<svg class="w-svg" id="av-svg" viewBox="0 0 520 300" role="img" aria-label="Nested balls describing nonexpansive, averaged and firmly nonexpansive constraints"></svg>
+<div class="readout" id="av-read"></div>
+<p class="w-cap">Smaller $\alpha$ = smaller ball = stronger property. Every ball passes through $d$: an averaged operator may act like the identity on a pair of points, but it can never send $x-y$ to the far side of the circle (e.g. to $-d$, which a reflection does).</p>
+</div>
+
+<div class="callout pitfall"><span class="lbl">Pitfall: nonexpansive but not averaged</span><p>$-\Id$, rotations by $\theta\ne0$, and reflections $2P_C-\Id$ are nonexpansive but not $\alpha$-averaged for any $\alpha\lt1$: for $A=-\Id$ the inequality would read $\norm{d}^2+\frac{1-\alpha}{\alpha}\cdot4\norm{d}^2\le\norm{d}^2$. This is exactly why Douglas–Rachford (a composition of two reflections) needs an explicit relaxation $\lambda_n/2$, while Forward–Backward (a composition of two averaged operators) converges unrelaxed.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>$\alpha$-averaged = $(1-\alpha)\Id+\alpha R$, $R$ nonexpansive</strong> ⇔ $\norm{Ax-Ay}^2+\frac{1-\alpha}{\alpha}\norm{(\Id-A)x-(\Id-A)y}^2\le\norm{x-y}^2$. <strong>Firmly nonexpansive = $\tfrac12$-averaged</strong> ⇔ $\ps{Ax-Ay}{x-y}\ge\norm{Ax-Ay}^2$.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="nonexpansive" href="#nonexpansive">nonexpansive</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="averaged-calculus" href="#averaged-calculus">calculus</a><a class="chip xref" data-id="baillon-haddad" href="#baillon-haddad">Baillon–Haddad</a><a class="chip xref" data-id="prox-firmly-nonexpansive" href="#prox-firmly-nonexpansive">prox firmly nonexpansive</a><a class="chip xref" data-id="averaged-iteration" href="#averaged-iteration">averaged iteration</a><a class="chip xref" data-id="rprox-nonexpansive" href="05_douglas_rachford_ppxa.html#rprox-nonexpansive">rprox (page 5)</a></div>
+</article>
+
+<article class="card prop" id="averaged-calculus">
+<header class="card-head"><span class="kind">Proposition</span><h3>Convex combinations and compositions of averaged operators</h3><span class="src">Part V · slide 17</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#averaged-calculus" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $C\subset\H$ be a nonempty set, $A_1:C\to\H$ be $\alpha_1$-averaged and $A_2:C\to\H$ be $\alpha_2$-averaged, with $(\alpha_1,\alpha_2)\in\,]0,1[^2$.</p>
+<ul>
+<li><strong>Convex combination.</strong> Let $\lambda\in\,]0,1[$. $\lambda A_1+(1-\lambda)A_2$ is $\gamma$-averaged with $$\gamma=\lambda\alpha_1+(1-\lambda)\alpha_2.$$</li>
+<li><strong>Composition.</strong> Assume that $A_2(C)\subset C$. Then $A_1\circ A_2$ is $\gamma$-averaged with
+$$\gamma=\frac{\alpha_1+\alpha_2-2\alpha_1\alpha_2}{1-\alpha_1\alpha_2}.$$</li>
+</ul>
+<p><em>Exercise (slide 17):</em> prove the first property. Solution in <a class="xref" data-id="ex-averaged-combination" href="#ex-averaged-combination">exercise 2</a>.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Averagedness is a budget: convex combinations average the budgets, compositions add them in the "resistance" scale $\frac{\alpha}{1-\alpha}$ — the composed $\gamma$ satisfies $\frac{\gamma}{1-\gamma}=\frac{\alpha_1}{1-\alpha_1}+\frac{\alpha_2}{1-\alpha_2}$, and is always $\lt1$.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p><em>Convex combination:</em> write each $A_i=(1-\alpha_i)\Id+\alpha_iR_i$ and collect the $\Id$ terms; what multiplies the non-identity part is a convex combination of nonexpansive operators, hence nonexpansive. <em>Composition:</em> use the inequality characterization twice, at $(x,y)$ for $A_2$ and at $(A_2x,A_2y)$ for $A_1$, and add: you get $\norm{A_1A_2x-A_1A_2y}^2+\kappa_1\norm{\cdot}^2+\kappa_2\norm{\cdot}^2\le\norm{x-y}^2$ with $\kappa_i=\frac{1-\alpha_i}{\alpha_i}$ and two different residuals $b-c$ and $a-b$ whose sum is the residual $a-c$ of the composition. Convexity of $\norm{\cdot}^2$ (the λ-identity once more) lets you trade the two weighted residuals for one weighted residual $\kappa\norm{a-c}^2$ with $\frac1\kappa=\frac1{\kappa_1}+\frac1{\kappa_2}$, i.e. the resistance rule above. The sentence to say out loud: <em>compose the inequalities, then merge the two residual terms with the λ-identity; the price is the harmonic rule for $\kappa$.</em></p></div>
+<div class="callout hyp"><span class="lbl">Sanity checks on the composition formula</span><ul>
+<li>$\alpha_1=\alpha_2=\tfrac12$ (two firmly nonexpansive operators, e.g. two projections or two prox): $\gamma=\dfrac{1-\tfrac12}{1-\tfrac14}=\dfrac23$. In the resistance scale: $1+1=2=\frac{\gamma}{1-\gamma}$. So $P_{C_2}P_{C_1}$ is $\tfrac23$-averaged and can be relaxed up to $\lambda_n\lt\tfrac32$.</li>
+<li>$\gamma\lt1$ always: $1-\gamma=\dfrac{(1-\alpha_1)(1-\alpha_2)}{1-\alpha_1\alpha_2}\gt0$. Compositions of averaged operators are averaged, never merely nonexpansive.</li>
+<li>$\gamma\gt\max(\alpha_1,\alpha_2)$: composing costs budget. For $k$ operators, by induction $\frac{\gamma}{1-\gamma}=\sum_i\frac{\alpha_i}{1-\alpha_i}$.</li>
+<li>$A_2(C)\subset C$ is only there so that $A_1\circ A_2$ is defined on $C$; on $C=\H$ it is automatic.</li>
+<li>Forward–Backward: $\alpha_1=\tfrac12$ ($\prox$), $\alpha_2=\gamma\nu/2$ (gradient step) give $\frac{\gamma_{\rm FB}}{1-\gamma_{\rm FB}}=1+\frac{\gamma\nu/2}{1-\gamma\nu/2}=\frac1{1-\gamma\nu/2}$, so $\gamma_{\rm FB}=\frac1{2-\gamma\nu/2}$ and the relaxation range is $1/\gamma_{\rm FB}=2-\gamma\nu/2=\delta$ (<a class="chip t" href="09_toolbox.html#T22"><b>T22</b></a>).</li>
+</ul></div>
+<details class="pl hint"><summary>Hint for the composition</summary><div class="dc"><p>Set $a=x-y$, $b=A_2x-A_2y$, $c=A_1A_2x-A_1A_2y$ and $\kappa_i=\frac{1-\alpha_i}{\alpha_i}$. Write the two averaged inequalities, add them, and bound $\kappa\norm{a-c}^2=\kappa\norm{(a-b)+(b-c)}^2$ by $\kappa_2\norm{a-b}^2+\kappa_1\norm{b-c}^2$ using $\norm{u+v}^2\le\frac{\norm u^2}{t}+\frac{\norm v^2}{1-t}$ with the right $t$.</p></div></details>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T12"><b>T12</b> λ-identity</a><a class="chip t" href="09_toolbox.html#T22"><b>T22</b> count averagedness</a> <span class="aid">(convex combination: see exercise 2; composition: the slides give no proof, here is one)</span></summary><div class="dc">
+<p><span class="step">1. Convex combination.</span> See <a class="xref" data-id="ex-averaged-combination" href="#ex-averaged-combination">exercise 2</a>: with $A_i=(1-\alpha_i)\Id+\alpha_iR_i$, $\lambda A_1+(1-\lambda)A_2=(1-\gamma)\Id+\gamma\big[\tfrac{\lambda\alpha_1}{\gamma}R_1+\tfrac{(1-\lambda)\alpha_2}{\gamma}R_2\big]$ and the bracket is a convex combination of nonexpansive operators.</p>
+<p><span class="step">2. Composition: notation.</span> Fix $x,y\in C$ and set $a=x-y$, $b=A_2x-A_2y$, $c=A_1(A_2x)-A_1(A_2y)$, $\kappa_i=\frac{1-\alpha_i}{\alpha_i}\gt0$. The residual of the composition is $a-c=(\Id-A_1A_2)x-(\Id-A_1A_2)y$.</p>
+<p><span class="step">3. Two inequalities, added.</span> The characterization of $A_2$ at $(x,y)$ and of $A_1$ at $(A_2x,A_2y)\in C^2$ (this is where $A_2(C)\subset C$ is used) read $\norm b^2+\kappa_2\norm{a-b}^2\le\norm a^2$ and $\norm c^2+\kappa_1\norm{b-c}^2\le\norm b^2$. Adding,
+$$\norm c^2+\kappa_1\norm{b-c}^2+\kappa_2\norm{a-b}^2\le\norm a^2.$$</p>
+<p><span class="step">4. Merge the two residuals.</span> For $u,v\in\H$ and $t\in\,]0,1[$, the λ-identity gives $\norm{u+v}^2=\norm{t\tfrac ut+(1-t)\tfrac v{1-t}}^2\le t\norm{\tfrac ut}^2+(1-t)\norm{\tfrac v{1-t}}^2=\frac{\norm u^2}{t}+\frac{\norm v^2}{1-t}$. Apply it to $u=a-b$, $v=b-c$ and choose $t$ with $\frac\kappa t=\kappa_2$ and $\frac{\kappa}{1-t}=\kappa_1$, i.e. $t=\kappa/\kappa_2$, $1-t=\kappa/\kappa_1$, which forces $\frac1\kappa=\frac1{\kappa_1}+\frac1{\kappa_2}$ (and then $t\in\,]0,1[$). Thus $\kappa\norm{a-c}^2\le\kappa_2\norm{a-b}^2+\kappa_1\norm{b-c}^2$, and step 3 gives $\norm c^2+\kappa\norm{a-c}^2\le\norm a^2$: $A_1\circ A_2$ is $\gamma$-averaged with $\frac{1-\gamma}\gamma=\kappa$.</p>
+<p><span class="step">5. Identify $\gamma$.</span> $\frac1\kappa=\frac{\alpha_1}{1-\alpha_1}+\frac{\alpha_2}{1-\alpha_2}=\frac{\alpha_1+\alpha_2-2\alpha_1\alpha_2}{(1-\alpha_1)(1-\alpha_2)}$, and $\gamma=\frac{1}{1+\kappa}=\frac{1/\kappa}{1+1/\kappa}=\frac{\alpha_1+\alpha_2-2\alpha_1\alpha_2}{(1-\alpha_1)(1-\alpha_2)+\alpha_1+\alpha_2-2\alpha_1\alpha_2}=\frac{\alpha_1+\alpha_2-2\alpha_1\alpha_2}{1-\alpha_1\alpha_2}$.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout trick"><span class="lbl">Trick: count averagedness in the resistance scale</span><p>Remember $\frac{\gamma}{1-\gamma}=\frac{\alpha_1}{1-\alpha_1}+\frac{\alpha_2}{1-\alpha_2}$ rather than the fraction: firmly nonexpansive has resistance $1$, a gradient step with $\gamma\nu/2$ has resistance $\frac{\gamma\nu}{2-\gamma\nu}$, and the admissible relaxation range of the composition is $1/\gamma=1+\frac1{\text{total resistance}}$ (<a class="chip t" href="09_toolbox.html#T22"><b>T22</b></a>).</p></div>
+
+<div class="widget" id="w-averaged-calc">
+<div class="w-title">Interactive · averagedness calculator: compose two averaged operators, read the constant and the relaxation range</div>
+<p class="w-help">Left: $\gamma(\alpha_1,\alpha_2)=\frac{\alpha_1+\alpha_2-2\alpha_1\alpha_2}{1-\alpha_1\alpha_2}$ plotted against $\alpha_2$ for the chosen $\alpha_1$ (the dot is the current pair; the dashed line is $\max(\alpha_1,\alpha_2)$, always below $\gamma$). Right: the Forward–Backward case $\alpha_1=\tfrac12$, $\alpha_2=\gamma\nu/2$: the constant $\alpha_{\rm FB}=\frac{1}{2-\gamma\nu/2}$ and the relaxation bound $\delta=1/\alpha_{\rm FB}=2-\gamma\nu/2$ as functions of $\gamma\nu\in\,]0,2[$.</p>
+<div class="w-ctls">
+<label class="ctl">α₁ <input type="range" id="ac-a1" min="0.05" max="0.95" step="0.05" value="0.5"><output id="ac-a1-v"></output></label>
+<label class="ctl">α₂ <input type="range" id="ac-a2" min="0.05" max="0.95" step="0.05" value="0.5"><output id="ac-a2-v"></output></label>
+<label class="ctl">γν (FB) <input type="range" id="ac-gn" min="0.1" max="1.9" step="0.1" value="1"><output id="ac-gn-v"></output></label>
+</div>
+<div class="w-cols">
+<div><svg class="w-svg" id="ac-svg1" viewBox="0 0 360 250" role="img" aria-label="Composed averagedness constant against alpha 2"></svg><p class="w-cap">$\gamma$ of $A_1\circ A_2$ against $\alpha_2$</p></div>
+<div><svg class="w-svg" id="ac-svg2" viewBox="0 0 360 250" role="img" aria-label="Forward-Backward averagedness constant and relaxation bound against gamma nu"></svg><p class="w-cap">FB: $\alpha_{\rm FB}$ (blue) and $\delta=1/\alpha_{\rm FB}$ (green) against $\gamma\nu$</p></div>
+</div>
+<div class="readout" id="ac-read"></div>
+</div>
+
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Combination</strong>: $\gamma=\lambda\alpha_1+(1-\lambda)\alpha_2$. <strong>Composition</strong>: $\gamma=\dfrac{\alpha_1+\alpha_2-2\alpha_1\alpha_2}{1-\alpha_1\alpha_2}$, i.e. $\frac{\gamma}{1-\gamma}=\frac{\alpha_1}{1-\alpha_1}+\frac{\alpha_2}{1-\alpha_2}$; two firmly nonexpansive give $\tfrac23$; always $\lt1$.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="averaged" href="#averaged">averaged characterization</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="forward-backward" href="#forward-backward">Forward–Backward ($\delta=2-\gamma\nu/2$)</a><a class="chip xref" data-id="ex-averaged-combination" href="#ex-averaged-combination">exercise 2</a><a class="chip xref" data-id="primal-dual-relaxed" href="06_duality_admm_primal_dual.html#primal-dual-relaxed">relaxed primal-dual</a></div>
+</article>
+
+<article class="card lemma" id="descent-lemma">
+<header class="card-head"><span class="kind">Lemma</span><h3>Descent lemma: a $\nu$-Lipschitz gradient gives a quadratic upper bound</h3><span class="src">Part V · slide 18 (proof, part 1)</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><span class="tag tag-exam">Exam</span><a class="anchor" href="#descent-lemma" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $f\in\Gz{\H}$ be differentiable with a $\nu$-Lipschitzian gradient ($\nu\gt0$): $(\forall x,y)\ \norm{\nabla f(x)-\nabla f(y)}\le\nu\norm{x-y}$. Then
+$$\big(\forall(x,y)\in\H^2\big)\qquad f(y)\le f(x)+\ps{y-x}{\nabla f(x)}+\frac\nu2\norm{y-x}^2.$$</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">The gradient cannot change faster than $\nu$ per unit length, so along the segment from $x$ to $y$ the function cannot rise above its tangent by more than $\int_0^1\nu t\norm{y-x}^2dt=\frac\nu2\norm{y-x}^2$.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>Restrict $f$ to the segment: $\varphi(t)=f(x+t(y-x))$ has derivative $\varphi'(t)=\ps{y-x}{\nabla f(x+t(y-x))}$. The gap between $f(y)$ and the tangent value $f(x)+\ps{y-x}{\nabla f(x)}$ is $\int_0^1\big(\varphi'(t)-\varphi'(0)\big)dt$, and $\varphi'(t)-\varphi'(0)$ is an inner product of $y-x$ with a gradient difference over a distance $t\norm{y-x}$, hence at most $\nu t\norm{y-x}^2$ by Cauchy–Schwarz and the Lipschitz bound. Integrating $\nu t$ gives $\nu/2$. Convexity is not used; combined with convexity (tangent below), $f$ is squeezed between its tangent and the tangent $+\frac\nu2\norm{y-x}^2$. The sentence to say out loud: <em>integrate the Lipschitz bound of the derivative along the segment.</em></p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul>
+<li><strong>Differentiability</strong>: $\varphi$ is differentiable with the chain rule formula.</li>
+<li><strong>$\nu$-Lipschitz gradient</strong>: the bound $\norm{\nabla f(x+t(y-x))-\nabla f(x)}\le\nu t\norm{y-x}$. With a smaller constant the parabola dips below $f$ somewhere (widget).</li>
+<li><strong>Convexity ($f\in\Gz{\H}$)</strong>: not needed for this lemma; it is needed for the next step (Baillon–Haddad), where the lemma is fed into the conjugate.</li>
+</ul></div>
+<details class="pl hint"><summary>Hint <span class="aid">— try it first</span></summary><div class="dc"><p>$\varphi(t)=f(x+t(y-x))$, fundamental theorem of calculus, subtract $\varphi'(0)$ inside the integral, Cauchy–Schwarz.</p></div></details>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T05"><b>T05</b> integrate along the segment</a> <span class="aid">(as on the slides)</span></summary><div class="dc">
+<p><span class="step">1. Restrict to the segment.</span> For $(x,y)\in\H^2$ and $t\in\R$ let $\varphi(t)=f(x+t(y-x))$. $\varphi$ is differentiable and $\varphi'(t)=\ps{y-x}{\nabla f(x+t(y-x))}$ (chain rule). By the fundamental theorem of calculus $\varphi(1)-\varphi(0)=\int_0^1\varphi'(t)\,dt$, i.e., subtracting $\ps{y-x}{\nabla f(x)}=\int_0^1\varphi'(0)dt$ on both sides,
+$$f(y)-f(x)-\ps{y-x}{\nabla f(x)}=\int_0^1\ps{y-x}{\nabla f(x+t(y-x))-\nabla f(x)}\,dt.$$</p>
+<p><span class="step">2. Cauchy–Schwarz and Lipschitz.</span> For every $t\in[0,1]$,
+$$\ps{y-x}{\nabla f(x+t(y-x))-\nabla f(x)}\le\norm{y-x}\,\norm{\nabla f(x+t(y-x))-\nabla f(x)}\le\norm{y-x}\cdot\nu\norm{t(y-x)}=t\nu\norm{y-x}^2.$$</p>
+<p><span class="step">3. Integrate.</span> $\int_0^1t\nu\norm{y-x}^2dt=\frac\nu2\norm{y-x}^2$, hence $f(y)\le f(x)+\ps{y-x}{\nabla f(x)}+\frac\nu2\norm{y-x}^2$.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout trick"><span class="lbl">Trick</span><p>Any statement about $f$ on a segment is a statement about the one-variable function $\varphi(t)=f(x+t(y-x))$ (<a class="chip t" href="09_toolbox.html#T05"><b>T05</b></a>). The same device proves the gradient inequality of convex functions and the monotonicity of $\nabla f$ (<a class="xref" data-id="gradient-monotone" href="02_subdifferential_conjugate.html#gradient-monotone">page 2</a>).</p></div>
+
+<div class="widget" id="w-descent-lemma">
+<div class="w-title">Interactive · the descent lemma: the parabola $f(x)+f'(x)(y-x)+\frac{\nu}{2}(y-x)^2$ sits above $f$, and its minimizer is a gradient step</div>
+<p class="w-help">$f(y)=\sqrt{1+y^2}$ has $f''\le1$, so $\nu=1$ is the exact Lipschitz constant of $f'$. Move $x$: the tangent (green) stays below $f$ (convexity), the parabola (blue) stays above (descent lemma). Now lower the slider "ν used" below $1$: the parabola is no longer a majorant and cuts below $f$ (red region). The minimizer of the parabola is $x-\frac1\nu f'(x)$: a gradient step with $\gamma=1/\nu$ — this is the Majorization–Minimization reading of gradient descent (<a class="xref" data-id="majorization-lipschitz" href="07_majorization_minimization.html#majorization-lipschitz">page 7</a>).</p>
+<div class="w-ctls">
+<label class="ctl">x <input type="range" id="dl-x" min="-2.5" max="2.5" step="0.1" value="1.2"><output id="dl-x-v"></output></label>
+<label class="ctl">ν used <input type="range" id="dl-nu" min="0.3" max="2" step="0.1" value="1"><output id="dl-nu-v"></output></label>
+</div>
+<svg class="w-svg" id="dl-svg" viewBox="0 0 520 300" role="img" aria-label="A function, its tangent and the quadratic upper bound of the descent lemma"></svg>
+<div class="leg"><span><i style="border-color:var(--ink)"></i>$f$</span><span><i style="border-color:var(--idea)"></i>tangent at $x$</span><span><i style="border-color:var(--s1)"></i>quadratic upper bound</span><span><i class="dot" style="background:var(--s2)"></i>minimizer of the bound $=x-f'(x)/\nu$</span></div>
+<div class="readout" id="dl-read"></div>
+</div>
+
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Descent lemma</strong>: $f(y)\le f(x)+\ps{\nabla f(x)}{y-x}+\frac\nu2\norm{y-x}^2$. "Tangent plus $\frac\nu2$ parabola is a majorant." Convexity gives the matching minorant (the tangent).</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="gateaux" href="01_convex_analysis.html#gateaux">differentiability</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="baillon-haddad" href="#baillon-haddad">Baillon–Haddad</a><a class="chip xref" data-id="majorization-lipschitz" href="07_majorization_minimization.html#majorization-lipschitz">Lipschitz majorant (page 7)</a><a class="chip xref" data-id="lab-tomography" href="08_labs.html#lab-tomography">tomography lab</a></div>
+</article>
+
+<article class="card thm" id="baillon-haddad">
+<header class="card-head"><span class="kind">Theorem</span><h3>Baillon–Haddad: $\Id-\nabla f$ is $\nu/2$-averaged (co-coercivity of the gradient)</h3><span class="src">Part V · slides 18–19</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><span class="tag tag-exam">Exam</span><a class="anchor" href="#baillon-haddad" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $f\in\Gz{\H}$ and $\nu\in\,]0,2[$. If $f$ is differentiable with a $\nu$-Lipschitzian gradient then $\Id-\nabla f$ is a $\nu/2$-averaged operator.</p>
+<p>Along the way (and valid for every $\nu\gt0$) one proves the <span class="hl">Baillon–Haddad inequality</span> (co-coercivity):
+$$\big(\forall(x,y)\in\H^2\big)\qquad\ps{y-x}{\nabla f(y)-\nabla f(x)}\ \ge\ \frac1\nu\norm{\nabla f(y)-\nabla f(x)}^2.$$</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">For a convex function, "gradient $\nu$-Lipschitz" upgrades itself to "gradient $\frac1\nu$-co-coercive", which is a Lipschitz bound and a monotonicity bound at once; written for $\Id-\nabla f$, co-coercivity is exactly the $\nu/2$-averaged inequality.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>The surprise is that a Lipschitz condition (which only bounds $\norm{\nabla f(y)-\nabla f(x)}$) produces an inner-product inequality. Convexity is the lever, through the conjugate: the descent lemma bounds $f$ from above by a parabola, and taking the conjugate flips upper bounds on $f$ into lower bounds on $f^*$ — and the conjugate of $\frac\nu2\norm\cdot^2$ is $\frac1{2\nu}\norm\cdot^2$. One obtains that $f^*$, evaluated at gradients, satisfies a <em>strong convexity</em>-type inequality with modulus $1/\nu$: $f^*(\nabla f(y))\ge f^*(\nabla f(x))+\ps{x}{\nabla f(y)-\nabla f(x)}+\frac1{2\nu}\norm{\nabla f(y)-\nabla f(x)}^2$ (note that $x\in\partial f^*(\nabla f(x))$, so $x$ plays the role of the subgradient of $f^*$). Writing this inequality twice with $x,y$ swapped and adding (<a class="chip t" href="09_toolbox.html#T06"><b>T06</b></a>) kills the values of $f^*$ and leaves co-coercivity. Finally expanding $\norm{(\Id-\nabla f)x-(\Id-\nabla f)y}^2$ and inserting co-coercivity is the averaged inequality with $\frac{1-\alpha}{\alpha}=\frac{2-\nu}{\nu}$, i.e. $\alpha=\nu/2$. The sentence to say out loud: <em>Lipschitz gradient ⇒ quadratic majorant of $f$ ⇒ quadratic minorant of $f^*$ at gradients ⇒ (symmetrize) co-coercivity ⇒ averaged.</em></p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul>
+<li><strong>Convexity</strong>: the equality case of Fenchel–Young $f^*(\nabla f(x))=\ps{x}{\nabla f(x)}-f(x)$ (because $\nabla f(x)\in\partial f(x)$) and the very definition of $f^*$ as a supremum. Without convexity co-coercivity fails: $f=-\frac12\norm\cdot^2$ has a $1$-Lipschitz gradient and $\ps{y-x}{\nabla f(y)-\nabla f(x)}=-\norm{y-x}^2\lt0$.</li>
+<li><strong>$\nu$-Lipschitz gradient</strong>: the descent lemma, i.e. the parabola, i.e. the constant $\frac1{2\nu}$ after conjugation.</li>
+<li><strong>$\nu\lt2$</strong>: only to have $\alpha=\nu/2\in\,]0,1[$ so that "averaged" makes sense; co-coercivity itself holds for every $\nu\gt0$. The general step size version is the next corollary.</li>
+<li><strong>$f$ differentiable everywhere</strong>: $\dom f=\H$, so all values $f(x)$, $f^*(\nabla f(x))$ are finite and can be subtracted.</li>
+</ul></div>
+<details class="pl hint"><summary>Hint <span class="aid">— try it first</span></summary><div class="dc"><p>Start from $f^*(\nabla f(y))\ge\ps{z}{\nabla f(y)}-f(z)$ for all $z$, bound $f(z)$ from above by the descent lemma at $x$, recognize $f^*(\nabla f(x))$ by Fenchel–Young equality, then take the supremum over $z$ of what remains (a quadratic in $z-x$). Then symmetrize.</p></div></details>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T10"><b>T10</b> Fenchel–Young as a lever</a><a class="chip t" href="09_toolbox.html#T06"><b>T06</b> write twice and add</a><a class="chip t" href="09_toolbox.html#T09"><b>T09</b> complete the square</a> <span class="aid">(as on the slides, every step filled in)</span></summary><div class="dc">
+<p><span class="step">1. Descent lemma.</span> By the <a class="xref" data-id="descent-lemma" href="#descent-lemma">descent lemma</a>, for all $x,z\in\H$: $f(z)\le f(x)+\ps{z-x}{\nabla f(x)}+\frac\nu2\norm{z-x}^2$.</p>
+<p><span class="step">2. Lower bound on $f^*$ at a gradient.</span> Fix $x,y\in\H$. By definition of the conjugate, for every $z\in\H$, $f^*(\nabla f(y))=\sup_w\big(\ps{w}{\nabla f(y)}-f(w)\big)\ge\ps{z}{\nabla f(y)}-f(z)$. Insert step 1 (which bounds $f(z)$ from above, so $-f(z)$ from below):
+$$f^*(\nabla f(y))\ \ge\ \ps{z}{\nabla f(y)}-f(x)-\ps{z-x}{\nabla f(x)}-\frac\nu2\norm{z-x}^2\ =\ \ps{z}{\nabla f(y)-\nabla f(x)}+\ps{x}{\nabla f(x)}-f(x)-\frac\nu2\norm{z-x}^2.$$</p>
+<p><span class="step">3. Fenchel–Young with equality.</span> Since $f$ is convex and differentiable at $x$, $\nabla f(x)\in\partial f(x)$ and the <a class="xref" data-id="fenchel-young" href="02_subdifferential_conjugate.html#fenchel-young">Fenchel–Young inequality</a> is an equality: $\ps{x}{\nabla f(x)}-f(x)=f^*(\nabla f(x))$ (finite, as $f(x)\in\R$). Hence, for every $z$,
+$$f^*(\nabla f(y))\ge\ps{z}{\nabla f(y)-\nabla f(x)}+f^*(\nabla f(x))-\frac\nu2\norm{z-x}^2.$$</p>
+<p><span class="step">4. Split $z=x+(z-x)$ and take the supremum over $z$.</span> Writing $\ps{z}{u}=\ps{x}{u}+\ps{z-x}{u}$ with $u=\nabla f(y)-\nabla f(x)$,
+$$f^*(\nabla f(y))\ge f^*(\nabla f(x))+\ps{x}{u}+\Big[\ps{z-x}{u}-\frac\nu2\norm{z-x}^2\Big]\qquad\text{for every }z\in\H.$$
+The bracket, as a function of $w=z-x\in\H$, has supremum $\sup_w\big(\ps{w}{u}-\frac\nu2\norm w^2\big)=\big(\tfrac\nu2\norm\cdot^2\big)^*(u)=\frac1{2\nu}\norm u^2$ (<a class="xref" data-id="conjugate-examples" href="02_subdifferential_conjugate.html#conjugate-examples">conjugate of a quadratic</a>; directly: complete the square, $\ps wu-\frac\nu2\norm w^2=\frac1{2\nu}\norm u^2-\frac\nu2\norm{w-u/\nu}^2$, maximal at $w=u/\nu$). Taking the supremum over $z$:
+$$f^*(\nabla f(y))\ \ge\ f^*(\nabla f(x))+\ps{x}{\nabla f(y)-\nabla f(x)}+\frac1{2\nu}\norm{\nabla f(y)-\nabla f(x)}^2.\tag{1}$$</p>
+<p><span class="step">5. Symmetrize and add (Baillon–Haddad).</span> Exchanging the roles of $x$ and $y$ in (1):
+$$f^*(\nabla f(x))\ \ge\ f^*(\nabla f(y))+\ps{y}{\nabla f(x)-\nabla f(y)}+\frac1{2\nu}\norm{\nabla f(x)-\nabla f(y)}^2.\tag{2}$$
+Adding (1) and (2), the finite values $f^*(\nabla f(x))$, $f^*(\nabla f(y))$ cancel:
+$$0\ \ge\ \ps{x}{\nabla f(y)-\nabla f(x)}-\ps{y}{\nabla f(y)-\nabla f(x)}+\frac1\nu\norm{\nabla f(y)-\nabla f(x)}^2=-\ps{y-x}{\nabla f(y)-\nabla f(x)}+\frac1\nu\norm{\nabla f(y)-\nabla f(x)}^2,$$
+i.e. $\ps{y-x}{\nabla f(y)-\nabla f(x)}\ge\frac1\nu\norm{\nabla f(y)-\nabla f(x)}^2$.</p>
+<p><span class="step">6. The averaged inequality.</span> Let $A=\Id-\nabla f$, so $\Id-A=\nabla f$. Expanding,
+$$\norm{Ax-Ay}^2=\norm{(x-y)-(\nabla f(x)-\nabla f(y))}^2=\norm{x-y}^2-2\ps{x-y}{\nabla f(x)-\nabla f(y)}+\norm{\nabla f(x)-\nabla f(y)}^2\le\norm{x-y}^2-\Big(\frac2\nu-1\Big)\norm{\nabla f(x)-\nabla f(y)}^2$$
+by step 5. Since $\frac2\nu-1=\frac{2-\nu}{\nu}=\frac{1-\nu/2}{\nu/2}$, this is
+$$\norm{(\Id-\nabla f)x-(\Id-\nabla f)y}^2+\frac{1-\nu/2}{\nu/2}\norm{\nabla f(x)-\nabla f(y)}^2\le\norm{x-y}^2,$$
+the <a class="xref" data-id="averaged" href="#averaged">characterization</a> of a $\nu/2$-averaged operator (here $\nu/2\in\,]0,1[$ because $\nu\lt2$).</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout trick"><span class="lbl">Trick: conjugation flips bounds, symmetrization kills values</span><p>An upper bound $f\le q$ gives a lower bound $f^*\ge q^*$, and $q^*$ is explicit when $q$ is a quadratic ($\big(\tfrac\nu2\norm\cdot^2\big)^*=\tfrac1{2\nu}\norm\cdot^2$, <a class="chip t" href="09_toolbox.html#T10"><b>T10</b></a>). Then write the inequality at $(x,y)$ and at $(y,x)$ and add (<a class="chip t" href="09_toolbox.html#T06"><b>T06</b></a>): the function values disappear and an inequality between $\ps{y-x}{\nabla f(y)-\nabla f(x)}$ and $\norm{\nabla f(y)-\nabla f(x)}^2$ remains. The same two moves prove that $\nabla f$ is monotone (page 2) and the strong-convexity bounds of page 7.</p></div>
+<div class="callout pitfall"><span class="lbl">Pitfall</span><p>Co-coercivity is stronger than Lipschitz continuity (Cauchy–Schwarz: $\frac1\nu\norm{\nabla f(y)-\nabla f(x)}^2\le\norm{y-x}\norm{\nabla f(y)-\nabla f(x)}$ gives back $\nu$-Lipschitz) and it is <em>false</em> without convexity. The theorem is a statement about convex functions; do not quote it for a nonconvex $g$.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Baillon–Haddad</strong>: $f$ convex, $\nabla f$ $\nu$-Lipschitz ⇒ $\ps{y-x}{\nabla f(y)-\nabla f(x)}\ge\frac1\nu\norm{\nabla f(y)-\nabla f(x)}^2$ ⇒ $\Id-\nabla f$ is $\frac\nu2$-averaged. Route: descent lemma → conjugate at gradients → symmetrize.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="descent-lemma" href="#descent-lemma">descent lemma</a><a class="chip xref" data-id="conjugate" href="02_subdifferential_conjugate.html#conjugate">conjugate</a><a class="chip xref" data-id="fenchel-young" href="02_subdifferential_conjugate.html#fenchel-young">Fenchel–Young (equality case)</a><a class="chip xref" data-id="conjugate-examples" href="02_subdifferential_conjugate.html#conjugate-examples">$(\frac\nu2\norm\cdot^2)^*$</a><a class="chip xref" data-id="averaged" href="#averaged">averaged characterization</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="gradient-step-averaged" href="#gradient-step-averaged">$\Id-\gamma\nabla f$ averaged</a><a class="chip xref" data-id="forward-backward" href="#forward-backward">Forward–Backward</a><a class="chip xref" data-id="primal-dual-algorithm" href="06_duality_admm_primal_dual.html#primal-dual-algorithm">primal-dual algorithm</a></div>
+</article>
+
+<article class="card cor" id="gradient-step-averaged">
+<header class="card-head"><span class="kind">Corollary</span><h3>$\Id-\gamma\nabla f$ is $\gamma\nu/2$-averaged for $\gamma\in\,]0,2/\nu[$ (the gradient descent operator)</h3><span class="src">Part V · slide 20</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#gradient-step-averaged" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $f\in\Gz{\H}$, $\nu\in\,]0,+\infty[$ and $\gamma\in\,]0,2/\nu[$. If $f$ is differentiable with a $\nu$-Lipschitzian gradient then $\Id-\gamma\nabla f$ is a $\gamma\nu/2$-averaged operator.</p>
+<p><em>Remark.</em> $\Id-\gamma\nabla f$ is the gradient descent operator.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Apply the theorem to $\gamma f$, whose gradient is $\gamma\nu$-Lipschitz with $\gamma\nu\in\,]0,2[$.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>Scaling $f$ by $\gamma$ scales the gradient and its Lipschitz constant by $\gamma$; the theorem with $\nu$ replaced by $\gamma\nu$ is exactly the claim. The condition $\gamma\lt2/\nu$ is the condition $\gamma\nu\lt2$ that makes $\alpha=\gamma\nu/2$ smaller than $1$. The fixed points do not change: $\Fix(\Id-\gamma\nabla f)=\zer\nabla f=\Argmin f$ for every $\gamma\gt0$. The sentence to say out loud: <em>the step size $\gamma$ buys averagedness $\gamma\nu/2$; the classical bound $2/\nu$ is where averagedness is lost.</em></p></div>
+<details class="pl proof"><summary>Proof</summary><div class="dc">
+<p><span class="step">1.</span> $\gamma f\in\Gz{\H}$ is differentiable with $\nabla(\gamma f)=\gamma\nabla f$, and $\norm{\gamma\nabla f(x)-\gamma\nabla f(y)}\le\gamma\nu\norm{x-y}$: its gradient is $\gamma\nu$-Lipschitz, with $\gamma\nu\in\,]0,2[$.</p>
+<p><span class="step">2.</span> <a class="xref" data-id="baillon-haddad" href="#baillon-haddad">Baillon–Haddad</a> applied to $\gamma f$ and the constant $\gamma\nu$: $\Id-\nabla(\gamma f)=\Id-\gamma\nabla f$ is $\gamma\nu/2$-averaged.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout pitfall"><span class="lbl">At and beyond $2/\nu$</span><p>Take $f=\frac\nu2\norm\cdot^2$: $\Id-\gamma\nabla f=(1-\gamma\nu)\Id$. At $\gamma=2/\nu$ it is $-\Id$: nonexpansive, not averaged, and the plain iteration oscillates $x_0,-x_0,x_0,\dots$ (Fejér w.r.t. $\{0\}$, no convergence — the same phenomenon as the rotation). For $\gamma\gt2/\nu$ it is an expansion and gradient descent diverges. The <a class="xref" data-id="forward-backward" href="#forward-backward">FB widget</a> shows this.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Gradient step with $\gamma\in\,]0,2/\nu[$: $\frac{\gamma\nu}2$-averaged.</strong> At $\gamma=1/\nu$ it is firmly nonexpansive; at $\gamma\to2/\nu$ merely nonexpansive.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="baillon-haddad" href="#baillon-haddad">Baillon–Haddad</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="forward-backward" href="#forward-backward">Forward–Backward</a><a class="chip xref" data-id="gradient-descent" href="#gradient-descent">gradient descent</a><a class="chip xref" data-id="projected-gradient" href="#projected-gradient">projected gradient</a><a class="chip xref" data-id="vmfb" href="07_majorization_minimization.html#vmfb">variable metric FB (page 7)</a></div>
+</article>
+
+<article class="card thm" id="prox-firmly-nonexpansive">
+<header class="card-head"><span class="kind">Theorem</span><h3>$\prox_f$ is firmly nonexpansive (i.e. $\tfrac12$-averaged)</h3><span class="src">Part V · slides 21–22</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><span class="tag tag-exam">Exam</span><a class="anchor" href="#prox-firmly-nonexpansive" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $f\in\Gz{\H}$. Then $\prox_f$ is firmly nonexpansive, i.e. a $\tfrac12$-averaged operator:
+$$\big(\forall(u_1,u_2)\in\H^2\big)\qquad\norm{u_1-u_2}^2\ \ge\ \norm{\prox_fu_1-\prox_fu_2}^2+\norm{(\Id-\prox_f)u_1-(\Id-\prox_f)u_2}^2,$$
+equivalently $\ps{\prox_fu_1-\prox_fu_2}{u_1-u_2}\ge\norm{\prox_fu_1-\prox_fu_2}^2$. In particular $\prox_f$ is nonexpansive, and so is $\prox_{\gamma f}$ for every $\gamma\gt0$.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Monotonicity of $\partial f$ says $\ps{x_1-x_2}{u_1-u_2}\ge0$ for subgradients; adding $\norm{x_1-x_2}^2$ to both sides turns it into a statement about $\Id+\partial f$, and reading it through the resolvent $\prox_f=(\Id+\partial f)^{-1}$ gives firm nonexpansiveness.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>$\prox_f$ inverts $\Id+\partial f$. The operator $\Id+\partial f$ is "monotone plus identity": $\ps{x_1-x_2}{u'_1-u'_2}\ge\norm{x_1-x_2}^2$ whenever $u'_i\in(\Id+\partial f)x_i$, because the $\partial f$ part contributes $\ge0$ and the identity part contributes exactly $\norm{x_1-x_2}^2$. Now rename: $x_i=\prox_fu'_i$. The inequality says that the inner product of the input difference with the output difference dominates the squared output difference — which is firm nonexpansiveness. The sentence to say out loud: <em>prox is the inverse of a strongly monotone operator, and inverting "identity plus monotone" gives firmly nonexpansive.</em></p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul>
+<li><strong>$f$ convex</strong>: monotonicity of $\partial f$, the only ingredient.</li>
+<li><strong>$f$ proper lsc</strong>: $\prox_f$ is defined everywhere (existence and uniqueness), so that every $u'\in\H$ can be written $u'\in(\Id+\partial f)(\prox_fu')$: the inequality obtained for pairs in the graph of $\Id+\partial f$ is an inequality for all pairs of points of $\H$.</li>
+<li><strong>Any $\gamma\gt0$</strong>: $\gamma f\in\Gz{\H}$ too, so $\prox_{\gamma f}$ is firmly nonexpansive with no condition on $\gamma$ — the implicit step is unconditionally stable, unlike the explicit gradient step.</li>
+</ul></div>
+<details class="pl hint"><summary>Hint <span class="aid">— try it first</span></summary><div class="dc"><p>Take $u_i\in\partial f(x_i)$, write monotonicity, add $\norm{x_1-x_2}^2$ to both sides, set $u'_i=x_i+u_i$ and recognize $x_i=\prox_fu'_i$.</p></div></details>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T08"><b>T08</b> resolvent reading</a><a class="chip t" href="09_toolbox.html#T09"><b>T09</b> expand the square</a> <span class="aid">(as on the slides)</span></summary><div class="dc">
+<p><span class="step">1. Monotonicity, shifted by the identity.</span> Let $x_1,x_2\in\H$, $u_1\in\partial f(x_1)$ and $u_2\in\partial f(x_2)$. By <a class="xref" data-id="subdifferential-monotone" href="02_subdifferential_conjugate.html#subdifferential-monotone">monotonicity of $\partial f$</a>, $\ps{x_1-x_2}{u_1-u_2}\ge0$, which is equivalent to
+$$\ps{x_1-x_2}{(x_1+u_1)-(x_2+u_2)}=\norm{x_1-x_2}^2+\ps{x_1-x_2}{u_1-u_2}\ge\norm{x_1-x_2}^2.$$</p>
+<p><span class="step">2. Rename through the resolvent.</span> Set $u'_1=x_1+u_1\in(\Id+\partial f)x_1$ and $u'_2=x_2+u_2\in(\Id+\partial f)x_2$. Then $\ps{x_1-x_2}{u'_1-u'_2}\ge\norm{x_1-x_2}^2$. By the <a class="xref" data-id="prox-characterization" href="03_proximity_operator.html#prox-characterization">characterization of the proximity operator</a>, $u'_i-x_i\in\partial f(x_i)$ means $x_i=\prox_fu'_i$. Hence
+$$\ps{\prox_fu'_1-\prox_fu'_2}{u'_1-u'_2}\ge\norm{\prox_fu'_1-\prox_fu'_2}^2.$$
+Every $u'\in\H$ arises this way (take $x=\prox_fu'$, $u=u'-x\in\partial f(x)$), so the inequality holds for all $(u'_1,u'_2)\in\H^2$.</p>
+<p><span class="step">3. Rewrite as the $\tfrac12$-averaged inequality.</span> With $p_i=\prox_fu'_i$, expand $\norm{(\Id-\prox_f)u'_1-(\Id-\prox_f)u'_2}^2=\norm{(u'_1-u'_2)-(p_1-p_2)}^2=\norm{u'_1-u'_2}^2-2\ps{u'_1-u'_2}{p_1-p_2}+\norm{p_1-p_2}^2$. Therefore
+$$\norm{p_1-p_2}^2+\norm{(\Id-\prox_f)u'_1-(\Id-\prox_f)u'_2}^2=\norm{u'_1-u'_2}^2-2\big(\ps{u'_1-u'_2}{p_1-p_2}-\norm{p_1-p_2}^2\big)\le\norm{u'_1-u'_2}^2$$
+by step 2: this is the <a class="xref" data-id="averaged" href="#averaged">characterization</a> with $\alpha=\tfrac12$, i.e. $\prox_f$ is $\tfrac12$-averaged (firmly nonexpansive). Nonexpansiveness follows by dropping the second term (or by Cauchy–Schwarz in step 2).</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout trick"><span class="lbl">Trick</span><p>Anything you know about $\partial f$ (monotone) becomes a statement about $\prox_f$ by the renaming $u'=x+u$, $x=\prox_fu'$ (<a class="chip t" href="09_toolbox.html#T08"><b>T08</b></a>). Projections are the special case $f=\ind_C$: $P_C$ is firmly nonexpansive.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>prox is firmly nonexpansive</strong> ($\tfrac12$-averaged) for every $f\in\Gz{\H}$ and every $\gamma\gt0$: $\ps{\prox u_1-\prox u_2}{u_1-u_2}\ge\norm{\prox u_1-\prox u_2}^2$. Reason: monotone + identity, inverted.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="subdifferential-monotone" href="02_subdifferential_conjugate.html#subdifferential-monotone">monotonicity of $\partial f$</a><a class="chip xref" data-id="prox-characterization" href="03_proximity_operator.html#prox-characterization">prox characterization</a><a class="chip xref" data-id="averaged" href="#averaged">firmly nonexpansive</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="forward-backward" href="#forward-backward">Forward–Backward</a><a class="chip xref" data-id="proximal-point" href="#proximal-point">proximal point</a><a class="chip xref" data-id="rprox-nonexpansive" href="05_douglas_rachford_ppxa.html#rprox-nonexpansive">rprox nonexpansive</a><a class="chip xref" data-id="prox-metric" href="07_majorization_minimization.html#prox-metric">prox in a metric (page 7)</a></div>
+</article>
+
+<article class="card thm" id="averaged-iteration">
+<header class="card-head"><span class="kind">Theorem</span><h3>Relaxed iteration of an $\alpha$-averaged operator ($\lambda_n\in[0,1/\alpha]$)</h3><span class="src">Part V · slides 23–24</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#averaged-iteration" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $T:\H\to\H$ be an $\alpha$-averaged operator with $\alpha\in\,]0,1[$ such that $\Fix T\neq\emptyset$. Let $(\lambda_n)_{n\in\N}$ be a sequence in $[0,1/\alpha]$ such that
+$$\sum_{n\in\N}\lambda_n(1-\alpha\lambda_n)=+\infty.$$
+Let $x_0\in\H$ and $(\forall n\in\N)\ x_{n+1}=x_n+\lambda_n(Tx_n-x_n)$. Then</p>
+<ul>
+<li>$(x_n)_{n\in\N}$ is Fejér-monotone with respect to $\Fix T$;</li>
+<li>$(Tx_n-x_n)_{n\in\N}$ converges strongly to $0$;</li>
+<li>$(x_n)_{n\in\N}$ converges weakly to a point in $\Fix T$.</li>
+</ul>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">$T=(1-\alpha)\Id+\alpha R$ means $Tx-x=\alpha(Rx-x)$: the relaxed iteration of $T$ with parameter $\lambda_n$ is the KM iteration of $R$ with parameter $\mu_n=\alpha\lambda_n\in[0,1]$, and $\Fix R=\Fix T$.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>There is no new analysis: the theorem is KM read through the change of parameter $\mu_n=\alpha\lambda_n$. The reward is the enlarged relaxation range: the unrelaxed iteration $\lambda_n=1$ is admissible (since $1\le1/\alpha$ and $1-\alpha\gt0$), and even over-relaxation up to $1/\alpha\gt1$ is allowed. That is what averagedness buys over mere nonexpansiveness. The sentence to say out loud: <em>an averaged operator is a pre-relaxed nonexpansive one; relaxing it further by $\lambda_n$ relaxes $R$ by $\alpha\lambda_n$.</em></p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul>
+<li><strong>$\lambda_n\le1/\alpha$</strong>: $\mu_n=\alpha\lambda_n\le1$, the KM range. Beyond it the λ-identity gain becomes a loss and divergence is possible (FB widget with $\lambda\gt\delta$).</li>
+<li><strong>$\sum\lambda_n(1-\alpha\lambda_n)=+\infty$</strong>: this is $\frac1\alpha\sum\mu_n(1-\mu_n)=+\infty$, the KM condition. The constant choice $\lambda_n=1$ satisfies it.</li>
+<li><strong>$T:\H\to\H$</strong>: $C=\H$ is closed convex and $T(\H)\subset\H$, so KM applies to $R$ on $C=\H$.</li>
+</ul></div>
+<details class="pl hint"><summary>Hint</summary><div class="dc"><p>Write $T=(1-\alpha)\Id+\alpha R$ and compute $Tx_n-x_n$ in terms of $Rx_n-x_n$.</p></div></details>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T18"><b>T18</b> recognize an old algorithm</a> <span class="aid">(as on the slides)</span></summary><div class="dc">
+<p><span class="step">1. Unpack $T$.</span> Since $T$ is $\alpha$-averaged, there is a nonexpansive $R:\H\to\H$ with $T=(1-\alpha)\Id+\alpha R$. Hence $Tx-x=\alpha(Rx-x)$ for every $x$, and $\Fix R=\Fix T$ ($Tx=x\iff\alpha(Rx-x)=0\iff Rx=x$), so $\Fix R\ne\emptyset$.</p>
+<p><span class="step">2. Rewrite the iteration.</span> Set $\mu_n=\alpha\lambda_n\in[0,1]$. Then $x_{n+1}=x_n+\lambda_n(Tx_n-x_n)=x_n+\lambda_n\alpha(Rx_n-x_n)=x_n+\mu_n(Rx_n-x_n)$, and $\sum_n\mu_n(1-\mu_n)=\alpha\sum_n\lambda_n(1-\alpha\lambda_n)=+\infty$.</p>
+<p><span class="step">3. Krasnosel'skii–Mann for $R$.</span> $R$ is nonexpansive on the closed convex set $\H$, $R(\H)\subset\H$, $\Fix R\ne\emptyset$, $(\mu_n)$ satisfies the KM hypotheses: by <a class="xref" data-id="krasnoselskii-mann" href="#krasnoselskii-mann">KM</a>, $(x_n)$ is Fejér-monotone with respect to $\Fix R=\Fix T$, $Rx_n-x_n\to0$ hence $Tx_n-x_n=\alpha(Rx_n-x_n)\to0$, and $x_n\wto$ a point of $\Fix R=\Fix T$.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout insight"><span class="lbl">A direct Fejér inequality you will reuse</span><p>Combining the λ-identity with the averaged inequality at a fixed point $x$ gives, for $\lambda\in[0,1/\alpha]$,
+$$\norm{x_n+\lambda(Tx_n-x_n)-x}^2\le\norm{x_n-x}^2-\lambda\Big(\frac1\alpha-\lambda\Big)\norm{Tx_n-x_n}^2.$$
+(Proof: $\norm{(1-\lambda)(x_n-x)+\lambda(Tx_n-x)}^2=(1-\lambda)\norm{x_n-x}^2+\lambda\norm{Tx_n-x}^2-\lambda(1-\lambda)\norm{Tx_n-x_n}^2$ and $\norm{Tx_n-x}^2\le\norm{x_n-x}^2-\frac{1-\alpha}\alpha\norm{Tx_n-x_n}^2$; add the two coefficients of $\norm{Tx_n-x_n}^2$.) This inequality is the engine of the <a class="xref" data-id="forward-backward-varying" href="#forward-backward-varying">varying-stepsize</a> proof below, where the operator changes with $n$ and KM cannot be invoked as a black box. <span class="tag tag-extra">Extra</span></p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>$\alpha$-averaged ⇒ relax with $\lambda_n\in[0,1/\alpha]$, $\sum\lambda_n(1-\alpha\lambda_n)=+\infty$</strong>; $\lambda_n=1$ always works. Proof: $\mu_n=\alpha\lambda_n$ + KM on $R$.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="krasnoselskii-mann" href="#krasnoselskii-mann">Krasnosel'skii–Mann</a><a class="chip xref" data-id="averaged" href="#averaged">averaged</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="forward-backward" href="#forward-backward">Forward–Backward</a><a class="chip xref" data-id="projected-gradient" href="#projected-gradient">projected gradient</a><a class="chip xref" data-id="gradient-descent" href="#gradient-descent">gradient descent</a><a class="chip xref" data-id="primal-dual-relaxed" href="06_duality_admm_primal_dual.html#primal-dual-relaxed">relaxed primal-dual</a></div>
+</article>
+</section>
+
+<section class="chapter" id="s-algorithms">
+<header><div class="eyebrow">Part V · slides 25–30</div><h2>Optimization algorithms: Forward–Backward and its special cases</h2>
+<p class="lead">Everything is in place. The operator $\prox_{\gamma f}\circ(\Id-\gamma\nabla g)$ has the right fixed points (dictionary), is averaged (two averaged factors, composition formula), so the averaged iteration theorem converges. The constants $2/\nu$ and $\delta=2-\gamma\nu/2$ are not assumptions: they are computed.</p></header>
+
+<article class="card thm" id="forward-backward">
+<header class="card-head"><span class="kind">Theorem + algorithm</span><h3>Forward–Backward algorithm</h3><span class="src">Part V · slides 25–26</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><span class="tag tag-exam">Exam</span><span class="tag tag-lab">Lab</span><a class="anchor" href="#forward-backward" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $f\in\Gz{\H}$. Let $g\in\Gz{\H}$ be differentiable with a $\nu$-Lipschitzian gradient, $\nu\in\,]0,+\infty[$. Let $\gamma\in\,]0,2/\nu[$ and $\delta=2-\gamma\nu/2\in\,]1,2[$. Let $(\lambda_n)_{n\in\N}$ be a sequence in $[0,\delta]$ such that $\sum_{n\in\N}\lambda_n(\delta-\lambda_n)=+\infty$. We assume that $\Argmin(f+g)\neq\emptyset$. Let $x_0\in\H$ and
+$$(\forall n\in\N)\qquad\begin{cases}y_n=x_n-\gamma\nabla g(x_n)\\ x_{n+1}=x_n+\lambda_n\big(\prox_{\gamma f}y_n-x_n\big).\end{cases}$$
+Then $(x_n)_{n\in\N}$ converges weakly to a minimizer of $f+g$.</p>
+</div>
+<div class="algo-box"><div class="algo-name">Forward–Backward (proximal gradient)</div>
+<p>Choose $\gamma\in\,]0,2/\nu[$, $\lambda_n\in[0,\delta]$ with $\delta=2-\gamma\nu/2$ (e.g. $\lambda_n\equiv1$). Let $x_0\in\H$. For $n=0,1,\dots$</p>
+<ol><li>$y_n=x_n-\gamma\nabla g(x_n)$ <span class="mini">(forward / explicit gradient step on the smooth part $g$)</span></li>
+<li>$x_{n+1}=x_n+\lambda_n(\prox_{\gamma f}y_n-x_n)$ <span class="mini">(backward / implicit proximal step on the nonsmooth part $f$, relaxed)</span></li></ol>
+<p class="mini"><strong>Cost per iteration:</strong> one evaluation of $\nabla g$ and one of $\prox_{\gamma f}$. <strong>Parallelizable:</strong> the prox when $f$ is separable ($\prox$ acts coordinate-wise, e.g. soft-thresholding), the gradient when $g=\tfrac12\norm{A\cdot-b}^2$ (matrix–vector products). <strong>"Forward"</strong>: the gradient is evaluated at the current point $x_n$ (explicit, like forward Euler). <strong>"Backward"</strong>: the subgradient of $f$ is evaluated at the new point, since $x_{n+1}$ (for $\lambda_n=1$) satisfies $x_{n+1}\in y_n-\gamma\partial f(x_{n+1})$ (implicit, like backward Euler).</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">One explicit step on $g$, one implicit step on $f$: the composed operator $T=\prox_{\gamma f}\circ(\Id-\gamma\nabla g)$ has $\Fix T=\Argmin(f+g)$ and is $\frac{1}{2-\gamma\nu/2}$-averaged, so its relaxed iteration converges by the averaged iteration theorem with $1/\alpha=\delta$.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>Two facts, one for each conclusion. <em>Where it goes:</em> $x=\prox_{\gamma f}(x-\gamma\nabla g(x))$ unpacks, by the characterization of prox, to $-\gamma\nabla g(x)\in\gamma\partial f(x)$, i.e. $0\in\partial f(x)+\nabla g(x)=\partial(f+g)(x)$ (sum rule, legitimate because $g$ is finite everywhere), i.e. $x$ minimizes $f+g$: the fixed points of $T$ are exactly the minimizers. <em>Why it gets there:</em> $\prox_{\gamma f}$ is $\tfrac12$-averaged (for any $\gamma$), $\Id-\gamma\nabla g$ is $\frac{\gamma\nu}2$-averaged (for $\gamma\lt2/\nu$), and averagedness is stable under composition with $\frac{\alpha}{1-\alpha}=1+\frac{\gamma\nu/2}{1-\gamma\nu/2}=\frac1{1-\gamma\nu/2}$, giving $\alpha=\frac1{2-\gamma\nu/2}$. The averaged iteration theorem then allows $\lambda_n\in[0,1/\alpha]=[0,\delta]$ with $\sum\lambda_n(1-\alpha\lambda_n)=\frac1\delta\sum\lambda_n(\delta-\lambda_n)=+\infty$. The sentence to say out loud: <em>fixed points of prox∘gradient-step are minimizers of the sum, and the composition is averaged with constant $1/\delta$.</em></p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul>
+<li><strong>$g$ differentiable with $\nu$-Lipschitz gradient</strong>: Baillon–Haddad, i.e. the gradient step is averaged. For a nonsmooth $g$ the explicit step $x-\gamma u$, $u\in\partial g(x)$, is not even nonexpansive (subgradient methods need vanishing steps and converge slowly): use Douglas–Rachford instead (<a class="xref" data-id="dr-motivation" href="05_douglas_rachford_ppxa.html#dr-motivation">page 5</a>).</li>
+<li><strong>$g$ finite-valued (differentiable on all of $\H$)</strong>: the sum rule $\partial(f+g)=\partial f+\nabla g$ without any qualification condition (<a class="xref" data-id="moreau-rockafellar" href="02_subdifferential_conjugate.html#moreau-rockafellar">Moreau–Rockafellar</a>).</li>
+<li><strong>$\gamma\lt2/\nu$</strong>: $\gamma\nu/2\lt1$, the gradient step is averaged, not merely nonexpansive. At $\gamma=2/\nu$ the plain iteration may oscillate, beyond it diverges (widget).</li>
+<li><strong>$f\in\Gz{\H}$</strong>: $\prox_{\gamma f}$ exists and is firmly nonexpansive; $f$ may be nonsmooth and take the value $+\infty$ (constraints: next corollary).</li>
+<li><strong>$\Argmin(f+g)\neq\emptyset$</strong>: $\Fix T\ne\emptyset$, needed for Fejér monotonicity. (Use the existence theorems of page 1: coercivity, or a compact constraint.)</li>
+<li><strong>$\lambda_n\in[0,\delta]$, $\sum\lambda_n(\delta-\lambda_n)=+\infty$</strong>: the relaxation range of an $\frac1\delta$-averaged operator. $\lambda_n\equiv1$ is allowed since $\delta\gt1$; so is over-relaxation up to $\delta\lt2$, which can accelerate in practice.</li>
+</ul></div>
+<details class="pl hint"><summary>Hint <span class="aid">— try it first</span></summary><div class="dc"><p>(a) Unpack $x=\prox_{\gamma f}(x-\gamma\nabla g(x))$ with $p=\prox_{\gamma f}y\iff y-p\in\gamma\partial f(p)$. (b) Composition formula with $\alpha_1=\tfrac12$, $\alpha_2=\gamma\nu/2$; verify $1/\alpha=\delta$. (c) Averaged iteration theorem.</p></div></details>
+<details class="pl proof"><summary>Proof <a class="chip t" href="09_toolbox.html#T15"><b>T15</b> zeros ⇔ fixed points</a><a class="chip t" href="09_toolbox.html#T08"><b>T08</b> Fermat + sum rule</a><a class="chip t" href="09_toolbox.html#T22"><b>T22</b> count averagedness</a> <span class="aid">(as on the slides, the constant computed in full)</span></summary><div class="dc">
+<p><span class="step">1. The fixed points of $T=\prox_{\gamma f}\circ(\Id-\gamma\nabla g)$ are the minimizers.</span> For every $x\in\H$, using $p=\prox_{\gamma f}y\iff y-p\in\gamma\partial f(p)$ (<a class="xref" data-id="prox-characterization" href="03_proximity_operator.html#prox-characterization">characterization</a>, with $\partial(\gamma f)=\gamma\partial f$) applied to $y=x-\gamma\nabla g(x)$ and $p=x$:
+$$x\in\Fix T\iff x=\prox_{\gamma f}\big(x-\gamma\nabla g(x)\big)\iff(\Id-\gamma\nabla g)x\in(\Id+\gamma\partial f)x\iff-\gamma\nabla g(x)\in\gamma\partial f(x)\iff0\in\nabla g(x)+\partial f(x).$$
+Since $g$ is convex, differentiable and finite everywhere, the sum rule gives $\partial(f+g)=\partial f+\nabla g$ (<a class="xref" data-id="moreau-rockafellar" href="02_subdifferential_conjugate.html#moreau-rockafellar">Moreau–Rockafellar</a>: $\dom g=\H$ meets the interior condition trivially; or <a class="xref" data-id="subdiff-gateaux" href="02_subdifferential_conjugate.html#subdiff-gateaux">$\partial g=\{\nabla g\}$</a> and the sum rule with a differentiable term). Hence, by <a class="xref" data-id="fermat-rule" href="02_subdifferential_conjugate.html#fermat-rule">Fermat</a>,
+$$\Fix T=\zer(\nabla g+\partial f)=\zer\partial(g+f)=\Argmin(f+g)\neq\emptyset.$$</p>
+<p><span class="step">2. The iteration is a relaxed iteration of $T$.</span> For every $n$, $Tx_n=\prox_{\gamma f}(x_n-\gamma\nabla g(x_n))=\prox_{\gamma f}y_n$, so $x_{n+1}=x_n+\lambda_n(Tx_n-x_n)$.</p>
+<p><span class="step">3. $T$ is $\alpha$-averaged with $1/\alpha=\delta$.</span> $\prox_{\gamma f}$ is $\tfrac12$-averaged (<a class="xref" data-id="prox-firmly-nonexpansive" href="#prox-firmly-nonexpansive">firmly nonexpansive</a>, $\gamma f\in\Gz{\H}$) and $\Id-\gamma\nabla g$ is $\frac{\gamma\nu}2$-averaged (<a class="xref" data-id="gradient-step-averaged" href="#gradient-step-averaged">corollary of Baillon–Haddad</a>, $\gamma\in\,]0,2/\nu[$); both map $\H$ to $\H$. By the <a class="xref" data-id="averaged-calculus" href="#averaged-calculus">composition formula</a> with $\alpha_1=\tfrac12$, $\alpha_2=\frac{\gamma\nu}2$:
+$$\alpha=\frac{\alpha_1+\alpha_2-2\alpha_1\alpha_2}{1-\alpha_1\alpha_2}=\frac{\tfrac12+\tfrac{\gamma\nu}2-2\cdot\tfrac12\cdot\tfrac{\gamma\nu}2}{1-\tfrac12\cdot\tfrac{\gamma\nu}2}=\frac{\tfrac12+\tfrac{\gamma\nu}2-\tfrac{\gamma\nu}2}{1-\tfrac{\gamma\nu}4}=\frac{\tfrac12}{1-\tfrac{\gamma\nu}4}=\frac{2}{4-\gamma\nu},$$
+so that
+$$\frac1\alpha=\frac{4-\gamma\nu}{2}=2-\frac{\gamma\nu}2=\delta.$$
+(In the resistance scale: $\frac\alpha{1-\alpha}=1+\frac{\gamma\nu/2}{1-\gamma\nu/2}=\frac{1}{1-\gamma\nu/2}$, hence $\alpha=\frac1{2-\gamma\nu/2}$ directly.) Note $\delta\in\,]1,2[$ because $\gamma\nu\in\,]0,2[$.</p>
+<p><span class="step">4. Conclude with the averaged iteration theorem.</span> $T:\H\to\H$ is $\alpha$-averaged, $\Fix T=\Argmin(f+g)\neq\emptyset$, $\lambda_n\in[0,\delta]=[0,1/\alpha]$ and $\sum_n\lambda_n(1-\alpha\lambda_n)=\frac1\delta\sum_n\lambda_n(\delta-\lambda_n)=+\infty$. By the <a class="xref" data-id="averaged-iteration" href="#averaged-iteration">averaged iteration theorem</a>, $(x_n)$ is Fejér-monotone with respect to $\Argmin(f+g)$, $Tx_n-x_n\to0$, and $x_n\wto$ a point of $\Fix T=\Argmin(f+g)$.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout trick"><span class="lbl">Trick: the three-line pattern of every splitting proof</span><p>(1) <em>Dictionary</em>: show $\Fix T=$ solutions by unpacking prox as an inclusion (<a class="chip t" href="09_toolbox.html#T15"><b>T15</b></a>, <a class="chip t" href="09_toolbox.html#T08"><b>T08</b></a>). (2) <em>Count averagedness</em> of the factors and compose (<a class="chip t" href="09_toolbox.html#T22"><b>T22</b></a>); the relaxation range is $1/\alpha$. (3) <em>Invoke</em> the averaged iteration / KM theorem (<a class="chip t" href="09_toolbox.html#T14"><b>T14</b></a>). Douglas–Rachford, ADMM and the primal-dual algorithms follow the same three lines.</p></div>
+<div class="callout pitfall"><span class="lbl">Pitfalls</span><p>(a) The gradient step must be the explicit one on the <em>smooth</em> function and the prox on the other: $\prox_{\gamma g}(x-\gamma u)$ with $u\in\partial f(x)$ is a different (and in general non-convergent) algorithm. (b) $\nu$ is the Lipschitz constant of $\nabla g$ alone; for $g=\tfrac12\norm{A\cdot-b}^2$, $\nu=\norm{A}^2=\norm{A^*A}$. (c) $\delta$ depends on $\gamma$: a larger step leaves less room for relaxation. (d) Convergence is weak and of the iterates; the slides state nothing about rates (for the record, $f+g$ decreases at the rate $O(1/n)$ with $\gamma\le1/\nu$, $\lambda_n=1$ <span class="tag tag-extra">Extra</span>).</p></div>
+
+<div class="widget" id="w-fb-lasso">
+<div class="w-title">Interactive · Forward–Backward on a 2-D LASSO: step size up to and beyond $2/\nu$, relaxation up to $\delta$</div>
+<p class="w-help">Minimize $F(x)=\tfrac12\norm{Ax-b}^2+\mu\norm{x}_1$ with $A=\begin{pmatrix}1&amp;0.6\\0.3&amp;1.1\end{pmatrix}$, $b=(1.6,\,0.4)$; $\nu=\norm{A}^2$ is computed exactly. $\prox_{\gamma\mu\norm\cdot_1}$ is soft-thresholding. The step is set as a fraction $s=\gamma\nu/2$ of the limit ($s\lt1$ is the theorem, $s=1$ is $\gamma=2/\nu$, $s\gt1$ is forbidden). The relaxation slider shows $\delta=2-\gamma\nu/2$ live; above $\delta$ you leave the theorem. 60 iterations are drawn from $x_0=(-1.6,\,1.5)$.</p>
+<div class="w-ctls">
+<label class="ctl">s = γν/2 <input type="range" id="fb-s" min="0.05" max="1.3" step="0.05" value="0.5"><output id="fb-s-v"></output></label>
+<label class="ctl">λ <input type="range" id="fb-lam" min="0.1" max="2" step="0.05" value="1"><output id="fb-lam-v"></output></label>
+<label class="ctl">μ <input type="range" id="fb-mu" min="0" max="1.2" step="0.1" value="0.4"><output id="fb-mu-v"></output></label>
+</div>
+<div class="w-cols">
+<div><svg class="w-svg" id="fb-svg" viewBox="0 0 360 330" role="img" aria-label="Contours of the LASSO objective and the Forward-Backward iterates"></svg><p class="w-cap">level sets of $F$ and the iterates (orange); green dot: the minimizer</p></div>
+<div><svg class="w-svg" id="fb-svg2" viewBox="0 0 360 330" role="img" aria-label="Distance of the iterates to the minimizer against the iteration index, logarithmic scale"></svg><p class="w-cap">$\log_{10}\norm{x_n-\hat x}$ against $n$</p></div>
+</div>
+<div class="readout" id="fb-read"></div>
+<p class="w-cap">Inside the theorem ($s\lt1$, $\lambda\le\delta$) the distance to $\hat x$ is non-increasing (Fejér) and tends to $0$. At $s=1$, $\lambda=1$ the iteration may stall on an oscillation; for $s\gt1$ it diverges. Over-relaxation ($1\lt\lambda\le\delta$) often speeds things up.</p>
+</div>
+
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>FB</strong>: $x_{n+1}=x_n+\lambda_n\big(\prox_{\gamma f}(x_n-\gamma\nabla g(x_n))-x_n\big)$, $\gamma\in\,]0,2/\nu[$, $\lambda_n\in[0,\delta]$, $\delta=2-\gamma\nu/2$, $\sum\lambda_n(\delta-\lambda_n)=+\infty$ ⇒ $x_n\wto$ a minimizer of $f+g$. Mnemonic: <em>prox is ½-averaged, the gradient step is $\gamma\nu/2$-averaged, the composition is $1/\delta$-averaged.</em></p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="prox-characterization" href="03_proximity_operator.html#prox-characterization">prox characterization</a><a class="chip xref" data-id="moreau-rockafellar" href="02_subdifferential_conjugate.html#moreau-rockafellar">sum rule</a><a class="chip xref" data-id="fermat-rule" href="02_subdifferential_conjugate.html#fermat-rule">Fermat</a><a class="chip xref" data-id="prox-firmly-nonexpansive" href="#prox-firmly-nonexpansive">prox firmly nonexpansive</a><a class="chip xref" data-id="gradient-step-averaged" href="#gradient-step-averaged">gradient step averaged</a><a class="chip xref" data-id="averaged-calculus" href="#averaged-calculus">composition formula</a><a class="chip xref" data-id="averaged-iteration" href="#averaged-iteration">averaged iteration</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="forward-backward-varying" href="#forward-backward-varying">varying stepsize</a><a class="chip xref" data-id="projected-gradient" href="#projected-gradient">projected gradient</a><a class="chip xref" data-id="gradient-descent" href="#gradient-descent">gradient descent</a><a class="chip xref" data-id="proximal-point" href="#proximal-point">proximal point</a><a class="chip xref" data-id="lab-nmr1" href="08_labs.html#lab-nmr1">NMR lab 1</a><a class="chip xref" data-id="lab-nmr2" href="08_labs.html#lab-nmr2">NMR lab 2</a><a class="chip xref" data-id="lab-denoising" href="08_labs.html#lab-denoising">denoising lab</a><a class="chip xref" data-id="vmfb" href="07_majorization_minimization.html#vmfb">variable metric FB</a><a class="chip xref" data-id="primal-dual-algorithm" href="06_duality_admm_primal_dual.html#primal-dual-algorithm">primal-dual = FB in a metric</a></div>
+</article>
+
+<article class="card thm" id="forward-backward-varying">
+<header class="card-head"><span class="kind">Theorem</span><h3>Forward–Backward with varying stepsize</h3><span class="src">Part V · slide 27</span><span class="tag tag-slides">Slides</span><a class="anchor" href="#forward-backward-varying" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $f\in\Gz{\H}$. Let $g\in\Gz{\H}$ be differentiable with a $\nu$-Lipschitzian gradient, $\nu\in\,]0,+\infty[$. Let $(\gamma_n)_{n\in\N}$ be a sequence in $[\underline\gamma,\overline\gamma]$ where $0\lt\underline\gamma\lt\overline\gamma\lt2/\nu$, and let $(\lambda_n)_{n\in\N}$ be a sequence in $[\underline\lambda,1]$ with $0\lt\underline\lambda\le1$. We assume that $\Argmin(f+g)\neq\emptyset$. Let $x_0\in\H$ and
+$$(\forall n\in\N)\qquad\begin{cases}y_n=x_n-\gamma_n\nabla g(x_n)\\ x_{n+1}=x_n+\lambda_n\big(\prox_{\gamma_nf}y_n-x_n\big).\end{cases}$$
+Then $(x_n)_{n\in\N}$ converges weakly to a minimizer of $f+g$.</p>
+</div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Each $T_n=\prox_{\gamma_nf}\circ(\Id-\gamma_n\nabla g)$ has the same fixed point set $\Argmin(f+g)$ and is uniformly averaged (constant $\le\frac1{2-\overline\gamma\nu/2}\lt1$), so the Fejér inequality still holds step by step; the only new work is to pass from "$T_nx_n-x_n\to0$" to "a <em>fixed</em> operator has vanishing residual" in order to use demiclosedness.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>The fixed-point set does not depend on $\gamma$ (step 1 of the FB proof holds for every $\gamma\gt0$), so Fejér monotonicity with respect to $\Argmin(f+g)$ is inherited from the direct Fejér inequality of the <a class="xref" data-id="averaged-iteration" href="#averaged-iteration">averaged iteration card</a>, with a gain $\lambda_n(\delta_n-\lambda_n)\ge\underline\lambda(1-\overline\gamma\nu/2)\gt0$ bounded away from zero because $\lambda_n\le1\lt\delta_n$ and $\lambda_n\ge\underline\lambda$. The residuals $T_nx_n-x_n$ are therefore square-summable. Demiclosedness needs one operator: the residual of $T_{\underline\gamma}$ is controlled by that of $T_{\gamma_n}$ because $\gamma\mapsto\norm{x-T_\gamma x}$ is nondecreasing (a short monotonicity argument on $\partial f$). The sentence to say out loud: <em>same fixed points, uniform averagedness, and the residual is monotone in the step.</em></p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul>
+<li><strong>$\overline\gamma\lt2/\nu$</strong>: uniform averagedness $\alpha_n\le\frac1{2-\overline\gamma\nu/2}\lt1$, so the Fejér gain does not vanish.</li>
+<li><strong>$\underline\gamma\gt0$</strong>: a fixed comparison operator $T_{\underline\gamma}$ for demiclosedness (and it prevents $\gamma_n\to0$, which would freeze the iteration).</li>
+<li><strong>$\lambda_n\in[\underline\lambda,1]$</strong>: $\lambda_n\le1$ keeps all $\lambda_n$ below every $\delta_n\in\,]1,2[$ without knowing $\gamma_n$; $\lambda_n\ge\underline\lambda\gt0$ keeps the gain away from $0$. (The slide's "$0\lt\underline\gamma\lt\overline\gamma$" can be read with $\le$; the constant-step case is the previous theorem.)</li>
+</ul></div>
+<details class="pl proof"><summary>Proof <span class="aid">(the slides state this without proof; here is one, reusing the FB proof)</span> <a class="chip t" href="09_toolbox.html#T14"><b>T14</b></a><a class="chip t" href="09_toolbox.html#T13"><b>T13</b></a> <span class="tag tag-extra">Extra</span></summary><div class="dc">
+<p><span class="step">1. Fixed points and averagedness, uniformly.</span> For $\gamma\gt0$ let $T_\gamma=\prox_{\gamma f}\circ(\Id-\gamma\nabla g)$. Step 1 of the <a class="xref" data-id="forward-backward" href="#forward-backward">FB proof</a> gives $\Fix T_\gamma=\Argmin(f+g)=:D\neq\emptyset$ for every $\gamma\gt0$; step 3 gives, for $\gamma\in\,]0,2/\nu[$, that $T_\gamma$ is $\alpha_\gamma$-averaged with $1/\alpha_\gamma=\delta_\gamma=2-\gamma\nu/2$. For $\gamma_n\le\overline\gamma$, $\delta_{\gamma_n}\ge\underline\delta:=2-\overline\gamma\nu/2\gt1$.</p>
+<p><span class="step">2. Fejér inequality with a uniform gain.</span> Let $x\in D$ and $n\in\N$. $x_{n+1}=x_n+\lambda_n(T_{\gamma_n}x_n-x_n)$ with $\lambda_n\le1\le1/\alpha_{\gamma_n}$, so the direct Fejér inequality of the <a class="xref" data-id="averaged-iteration" href="#averaged-iteration">averaged iteration card</a> applies:
+$$\norm{x_{n+1}-x}^2\le\norm{x_n-x}^2-\lambda_n(\delta_{\gamma_n}-\lambda_n)\norm{T_{\gamma_n}x_n-x_n}^2\le\norm{x_n-x}^2-\underline\lambda\,(\underline\delta-1)\norm{T_{\gamma_n}x_n-x_n}^2,$$
+since $\lambda_n\ge\underline\lambda$ and $\delta_{\gamma_n}-\lambda_n\ge\underline\delta-1\gt0$. Hence $(x_n)$ is Fejér-monotone with respect to $D$ and, telescoping, $\sum_n\norm{T_{\gamma_n}x_n-x_n}^2\le\frac{\norm{x_0-x}^2}{\underline\lambda(\underline\delta-1)}\lt+\infty$: $T_{\gamma_n}x_n-x_n\to0$.</p>
+<p><span class="step">3. Lemma: $\gamma\mapsto\norm{x-T_\gamma x}$ is nondecreasing.</span> Fix $x$ and $0\lt\gamma\le\mu$; let $p_\gamma=T_\gamma x$, $p_\mu=T_\mu x$. By the prox characterization, $\frac{x-p_\gamma}{\gamma}-\nabla g(x)\in\partial f(p_\gamma)$ and $\frac{x-p_\mu}{\mu}-\nabla g(x)\in\partial f(p_\mu)$. Monotonicity of $\partial f$ (the $\nabla g(x)$ terms cancel) with $a=x-p_\gamma$, $b=x-p_\mu$, $p_\gamma-p_\mu=b-a$:
+$$\Big\langle b-a\,\Big|\,\frac a\gamma-\frac b\mu\Big\rangle\ge0\iff\Big(\frac1\gamma+\frac1\mu\Big)\ps ab\ge\frac{\norm a^2}\gamma+\frac{\norm b^2}\mu.$$
+With Cauchy–Schwarz $\ps ab\le\norm a\norm b$ this gives $\big(\norm b-\norm a\big)\big(\tfrac{\norm a}\gamma-\tfrac{\norm b}\mu\big)\ge0$. If $\norm b\lt\norm a$ then $\frac{\norm a}\gamma\le\frac{\norm b}\mu\lt\frac{\norm a}\mu\le\frac{\norm a}\gamma$, a contradiction; so $\norm{x-T_\mu x}=\norm b\ge\norm a=\norm{x-T_\gamma x}$.</p>
+<p><span class="step">4. Residual of the fixed operator $T_{\underline\gamma}$.</span> By step 3 with $\gamma=\underline\gamma\le\gamma_n=\mu$: $\norm{x_n-T_{\underline\gamma}x_n}\le\norm{x_n-T_{\gamma_n}x_n}\to0$.</p>
+<p><span class="step">5. Cluster points and conclusion.</span> $T_{\underline\gamma}$ is averaged, hence nonexpansive, on $C=\H$ with $\Fix T_{\underline\gamma}=D$. If $x_{n_k}\wto\hat x$, then $T_{\underline\gamma}x_{n_k}-x_{n_k}\to0$ and the <a class="xref" data-id="demiclosedness" href="#demiclosedness">demiclosedness principle</a> gives $\hat x\in D$. With Fejér monotonicity (step 2), <a class="xref" data-id="fejer-convergence" href="#fejer-convergence">Fejér-monotone convergence</a> yields $x_n\wto$ a point of $D=\Argmin(f+g)$.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>FB with $\gamma_n\in[\underline\gamma,\overline\gamma]\subset\,]0,2/\nu[$ and $\lambda_n\in[\underline\lambda,1]$ converges.</strong> Fixed points do not depend on $\gamma$; the gain is uniform; the residual is monotone in $\gamma$.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="forward-backward" href="#forward-backward">Forward–Backward</a><a class="chip xref" data-id="averaged-iteration" href="#averaged-iteration">direct Fejér inequality</a><a class="chip xref" data-id="demiclosedness" href="#demiclosedness">demiclosedness</a><a class="chip xref" data-id="fejer-convergence" href="#fejer-convergence">Fejér convergence</a><a class="chip xref" data-id="subdifferential-monotone" href="02_subdifferential_conjugate.html#subdifferential-monotone">monotonicity of $\partial f$</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="gradient-descent" href="#gradient-descent">gradient descent</a><a class="chip xref" data-id="vmfb-convergence" href="07_majorization_minimization.html#vmfb-convergence">VMFB convergence (page 7)</a></div>
+</article>
+
+<article class="card cor" id="projected-gradient">
+<header class="card-head"><span class="kind">Corollary + algorithm</span><h3>Projected gradient algorithm ($f=\ind_C$)</h3><span class="src">Part V · slide 28</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#projected-gradient" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $C$ be a nonempty closed convex subset of $\H$. Let $g\in\Gz{\H}$ be differentiable with a $\nu$-Lipschitzian gradient, $\nu\in\,]0,+\infty[$. Let $\gamma\in\,]0,2/\nu[$ and $\delta=2-\gamma\nu/2\in\,]1,2[$. Let $(\lambda_n)_{n\in\N}$ be a sequence in $[0,\delta]$ such that $\sum_{n\in\N}\lambda_n(\delta-\lambda_n)=+\infty$. We assume that $\Argmin_{x\in C}g(x)\neq\emptyset$. Let $x_0\in\H$ and
+$$(\forall n\in\N)\qquad\begin{cases}y_n=x_n-\gamma\nabla g(x_n)\\ x_{n+1}=x_n+\lambda_n\big(P_Cy_n-x_n\big).\end{cases}$$
+Then $(x_n)_{n\in\N}$ converges weakly to a minimizer of $g$ over $C$.</p>
+</div>
+<div class="algo-box"><div class="algo-name">Projected gradient</div>
+<ol><li>$y_n=x_n-\gamma\nabla g(x_n)$ <span class="mini">(gradient step, ignoring the constraint)</span></li><li>$x_{n+1}=x_n+\lambda_n(P_Cy_n-x_n)$ <span class="mini">(project back onto $C$, relaxed)</span></li></ol>
+<p class="mini"><strong>Cost per iteration:</strong> one gradient, one projection (cheap for boxes, balls, half-spaces, simplices; expensive for general polyhedra). With $\lambda_n=1$, the iterate stays in $C$.</p></div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Forward–Backward with $f=\ind_C$: the constraint is a $+\infty$ penalty, and $\prox_{\gamma\ind_C}=P_C$ for every $\gamma$.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>$\ind_C\in\Gz{\H}$ exactly when $C$ is nonempty closed convex (<a class="xref" data-id="indicator-function" href="01_convex_analysis.html#indicator-function">page 1</a>), $\Argmin(\ind_C+g)=\Argmin_Cg$ (<a class="chip t" href="09_toolbox.html#T01"><b>T01</b></a>), and $\prox_{\gamma\ind_C}=\prox_{\ind_C}=P_C$ (<a class="xref" data-id="prox-projection" href="03_proximity_operator.html#prox-projection">page 3</a>). Nothing else changes. The fixed point equation $x=P_C(x-\gamma\nabla g(x))$ is the <a class="xref" data-id="optimality-convex-set" href="01_convex_analysis.html#optimality-convex-set">variational inequality</a> $\ps{\nabla g(x)}{y-x}\ge0$ for all $y\in C$, i.e. $-\nabla g(x)\in N_C(x)$.</p></div>
+<details class="pl proof"><summary>Proof</summary><div class="dc">
+<p><span class="step">1.</span> $f=\ind_C\in\Gz{\H}$ ($C$ nonempty closed convex), and $\Argmin(f+g)=\Argmin_Cg\ne\emptyset$ since $f+g=g$ on $C$ and $+\infty$ outside.</p>
+<p><span class="step">2.</span> $\gamma\ind_C=\ind_C$, and $\prox_{\ind_C}=P_C$: so the FB iteration with this $f$ is exactly the displayed one. <a class="xref" data-id="forward-backward" href="#forward-backward">Forward–Backward</a> applies.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Projected gradient = FB with $f=\ind_C$</strong>; same constants $\gamma\lt2/\nu$, $\delta=2-\gamma\nu/2$. Fixed points: $-\nabla g(\hat x)\in N_C(\hat x)$.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="forward-backward" href="#forward-backward">Forward–Backward</a><a class="chip xref" data-id="prox-projection" href="03_proximity_operator.html#prox-projection">$\prox_{\ind_C}=P_C$</a><a class="chip xref" data-id="indicator-function" href="01_convex_analysis.html#indicator-function">indicator function</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="lab-nmr1" href="08_labs.html#lab-nmr1">NMR lab (positivity)</a><a class="chip xref" data-id="algo-chooser" href="09_toolbox.html#algo-chooser">algorithm chooser</a></div>
+</article>
+
+<article class="card cor" id="gradient-descent">
+<header class="card-head"><span class="kind">Corollary + algorithm</span><h3>Gradient descent ($f=0$)</h3><span class="src">Part V · slide 29</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#gradient-descent" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $g\in\Gz{\H}$ be a differentiable function with a $\nu$-Lipschitzian gradient, $\nu\in\,]0,+\infty[$. Let $(\gamma_n)_{n\in\N}$ be a sequence in $[\underline\gamma,\overline\gamma]$ where $0\lt\underline\gamma\lt\overline\gamma\lt2/\nu$. We assume that $\Argmin g\neq\emptyset$. Let $x_0\in\H$ and
+$$(\forall n\in\N)\qquad x_{n+1}=x_n-\gamma_n\nabla g(x_n).$$
+Then $(x_n)_{n\in\N}$ converges weakly to a minimizer of $g$.</p>
+</div>
+<div class="algo-box"><div class="algo-name">Gradient descent</div>
+<ol><li>$x_{n+1}=x_n-\gamma_n\nabla g(x_n)$, $\gamma_n\in[\underline\gamma,\overline\gamma]\subset\,]0,2/\nu[$</li></ol>
+<p class="mini"><strong>Cost per iteration:</strong> one gradient. The classical step range $]0,2/\nu[$ is explained by averagedness: $\Id-\gamma\nabla g$ is $\frac{\gamma\nu}2$-averaged iff $\gamma\lt2/\nu$. The "textbook" choice $\gamma=1/\nu$ makes the operator firmly nonexpansive and is the MM step of page 7.</p></div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Forward–Backward with $f=0$ ($\prox_{\gamma\cdot0}=\Id$) and $\lambda_n=1$; the iteration is the unrelaxed iteration of the averaged operators $\Id-\gamma_n\nabla g$, all with fixed point set $\Argmin g$.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>With $f=0$, $\prox_{\gamma f}=\Id$ and the varying-stepsize theorem with $\lambda_n=1$ is exactly the statement. A direct proof is just as short and worth knowing: the gradient operator $G_n=\Id-\gamma_n\nabla g$ is $\frac{\gamma_n\nu}2$-averaged with $\Fix G_n=\zer\nabla g=\Argmin g$, so the averaged inequality at a minimizer $x$ gives $\norm{x_{n+1}-x}^2\le\norm{x_n-x}^2-\big(\frac2{\gamma_n\nu}-1\big)\gamma_n^2\norm{\nabla g(x_n)}^2$: Fejér, and $\nabla g(x_n)\to0$; a weak cluster point $\hat x$ then satisfies $\hat x\in\Fix(\Id-\underline\gamma\nabla g)$ by demiclosedness. The sentence to say out loud: <em>a gradient step with $\gamma\lt2/\nu$ is averaged with fixed points the minimizers; iterate.</em></p></div>
+<details class="pl proof"><summary>Proof</summary><div class="dc">
+<p><span class="step">1. As a special case.</span> Take $f=0\in\Gz{\H}$: $\prox_{\gamma_nf}=\Id$, $\Argmin(f+g)=\Argmin g\ne\emptyset$, and with $\lambda_n=1\in[\underline\lambda,1]$ (any $\underline\lambda\in\,]0,1]$) the iteration of <a class="xref" data-id="forward-backward-varying" href="#forward-backward-varying">FB with varying stepsize</a> reads $x_{n+1}=x_n+1\cdot\big(y_n-x_n\big)=x_n-\gamma_n\nabla g(x_n)$. That theorem concludes.</p>
+<p><span class="step">2. Direct proof (optional).</span> For $x\in\Argmin g$, the <a class="xref" data-id="averaged" href="#averaged">averaged inequality</a> for $G_n=\Id-\gamma_n\nabla g$ ($\alpha_n=\gamma_n\nu/2$, $(\Id-G_n)x=\gamma_n\nabla g(x)=0$) gives $\norm{x_{n+1}-x}^2+\frac{1-\alpha_n}{\alpha_n}\gamma_n^2\norm{\nabla g(x_n)}^2\le\norm{x_n-x}^2$ with $\frac{1-\alpha_n}{\alpha_n}\gamma_n^2=\gamma_n\big(\frac2\nu-\gamma_n\big)\ge\underline\gamma\big(\frac2\nu-\overline\gamma\big)\gt0$. Telescoping: $\nabla g(x_n)\to0$, hence $(\Id-\underline\gamma\nabla g)x_n-x_n\to0$; demiclosedness of the nonexpansive $\Id-\underline\gamma\nabla g$ puts every weak cluster point in $\zer\nabla g=\Argmin g$; Fejér convergence concludes.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout pitfall"><span class="lbl">Pitfall</span><p>"Gradient descent converges for small steps" is only half of the truth: the admissible range is the open interval $]0,2/\nu[$ and the optimal fixed step for a quadratic is $2/(\nu+\mu)$ with $\mu$ the strong convexity constant, not $1/\nu$. At $\gamma=2/\nu$ the iteration can oscillate forever ($g=\frac\nu2\norm\cdot^2$).</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>Gradient descent = FB with $f=0$</strong>: $\gamma_n\in[\underline\gamma,\overline\gamma]\subset\,]0,2/\nu[$ ⇒ $x_n\wto$ a minimizer. "$2/\nu$" is "averagedness constant $\lt1$".</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="forward-backward-varying" href="#forward-backward-varying">FB with varying stepsize</a><a class="chip xref" data-id="gradient-step-averaged" href="#gradient-step-averaged">gradient step averaged</a><a class="chip xref" data-id="demiclosedness" href="#demiclosedness">demiclosedness</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="majorization-lipschitz" href="07_majorization_minimization.html#majorization-lipschitz">MM reading (page 7)</a><a class="chip xref" data-id="lab-tomography" href="08_labs.html#lab-tomography">tomography lab</a></div>
+</article>
+
+<article class="card cor" id="proximal-point">
+<header class="card-head"><span class="kind">Corollary + algorithm</span><h3>Proximal point algorithm ($g=0$)</h3><span class="src">Part V · slide 30</span><span class="tag tag-slides">Slides</span><span class="tag tag-key">Key</span><a class="anchor" href="#proximal-point" title="link to this card">#</a></header>
+<div class="statement"><span class="lbl">Statement</span>
+<p>Let $f\in\Gz{\H}$. Let $(\gamma_n)_{n\in\N}$ be a sequence in $]0,+\infty[$ such that $\sum_{n\in\N}\gamma_n=+\infty$. We assume that $\Argmin f\neq\emptyset$. Let $x_0\in\H$ and
+$$(\forall n\in\N)\qquad x_{n+1}=\prox_{\gamma_nf}x_n.$$
+Then $(x_n)_{n\in\N}$ converges weakly to a minimizer of $f$.</p>
+</div>
+<div class="algo-box"><div class="algo-name">Proximal point algorithm (PPA)</div>
+<ol><li>$x_{n+1}=\prox_{\gamma_nf}x_n=\argmin_y\ f(y)+\frac1{2\gamma_n}\norm{y-x_n}^2$, with $\gamma_n\gt0$, $\sum\gamma_n=+\infty$</li></ol>
+<p class="mini"><strong>Cost per iteration:</strong> one prox of $f$ — this is only useful when $\prox_{\gamma f}$ is much cheaper than minimizing $f$ (it is the <em>building block</em> of splitting methods rather than a method in itself). <strong>Step size:</strong> any $\gamma_n\gt0$, however large — there is no Lipschitz constant to respect, because $\prox_{\gamma f}$ is firmly nonexpansive for every $\gamma$.</p></div>
+<div class="rub idea-r">In one sentence</div>
+<p class="idea">Forward–Backward with $g=0$: no forward step, only the implicit step, which is unconditionally stable; $\sum\gamma_n=+\infty$ is needed because each prox step moves $x_n$ by a "time" $\gamma_n$ along the subgradient flow, and finite total time may not reach the minimizer.</p>
+<div class="rub">Why it is true</div>
+<div class="why"><p>Every $\prox_{\gamma_nf}$ is firmly nonexpansive with the same fixed point set $\zer\partial f=\Argmin f$, so the Fejér inequality $\norm{x_{n+1}-x}^2\le\norm{x_n-x}^2-\norm{x_{n+1}-x_n}^2$ holds at each minimizer $x$. The condition $\sum\gamma_n=+\infty$ enters when identifying cluster points: since $\frac{x_n-x_{n+1}}{\gamma_n}\in\partial f(x_{n+1})$, the subgradient inequality gives $\gamma_n\big(f(x_{n+1})-\inf f\big)\le\frac12\big(\norm{x_n-x}^2-\norm{x_{n+1}-x}^2\big)$, so the weighted sum $\sum\gamma_n(f(x_{n+1})-\inf f)$ is finite while $\sum\gamma_n$ is infinite, which forces $f(x_n)\to\inf f$ (the values are non-increasing). A weak cluster point then has $f\le\inf f$ by weak lower semicontinuity, hence is a minimizer. The sentence to say out loud: <em>Fejér from firm nonexpansiveness; $\sum\gamma_n=\infty$ drives the values down to the infimum; lsc identifies the limit.</em></p></div>
+<div class="callout hyp"><span class="lbl">What each hypothesis buys</span><ul>
+<li><strong>$\gamma_n\gt0$ arbitrary</strong>: $\gamma_nf\in\Gz{\H}$, so $\prox_{\gamma_nf}$ is firmly nonexpansive and well defined whatever the size of $\gamma_n$ (<a class="xref" data-id="prox-firmly-nonexpansive" href="#prox-firmly-nonexpansive">theorem</a>). Compare with the explicit step, which needs $\gamma\lt2/\nu$.</li>
+<li><strong>$\sum\gamma_n=+\infty$</strong> <span class="tag tag-extra">Extra</span>: without it the iterates can stop short. Example: $f=\abs\cdot$ on $\R$, $x_0=1$, $\gamma_n=2^{-n-2}$: $\prox_{\gamma\abs\cdot}$ is soft-thresholding, so $x_{n+1}=x_n-\gamma_n$ as long as $x_n\gt\gamma_n$, and $x_n=1-\sum_{k\lt n}\gamma_k\to\tfrac12\neq0=\argmin\abs\cdot$. The sequence is Fejér-monotone and convergent, but to the wrong point: finite total step length.</li>
+<li><strong>$\Argmin f\neq\emptyset$</strong>: a point to be Fejér-monotone with respect to.</li>
+</ul></div>
+<details class="pl proof"><summary>Proof <span class="aid">(the slides state this without proof; here is one)</span> <a class="chip t" href="09_toolbox.html#T14"><b>T14</b></a><a class="chip t" href="09_toolbox.html#T13"><b>T13</b></a> <span class="tag tag-extra">Extra</span></summary><div class="dc">
+<p><span class="step">1. Fejér monotonicity.</span> Let $x\in\Argmin f=\zer\partial f=\Fix\prox_{\gamma_nf}$ (for every $n$). Since $\prox_{\gamma_nf}$ is $\tfrac12$-averaged and $(\Id-\prox_{\gamma_nf})x=0$, the <a class="xref" data-id="averaged" href="#averaged">characterization</a> gives $\norm{x_{n+1}-x}^2+\norm{x_n-x_{n+1}}^2\le\norm{x_n-x}^2$: Fejér monotonicity w.r.t. $\Argmin f$, and $\sum_n\norm{x_{n+1}-x_n}^2\lt+\infty$.</p>
+<p><span class="step">2. Values decrease to the infimum.</span> By the prox characterization, $u_n:=\frac{x_n-x_{n+1}}{\gamma_n}\in\partial f(x_{n+1})$. The subgradient inequality at $x_{n+1}$ in the direction of a minimizer $x$: $f(x)\ge f(x_{n+1})+\ps{u_n}{x-x_{n+1}}$, i.e.
+$$\gamma_n\big(f(x_{n+1})-\inf f\big)\le\ps{x_n-x_{n+1}}{x_{n+1}-x}=\tfrac12\big(\norm{x_n-x}^2-\norm{x_{n+1}-x}^2-\norm{x_n-x_{n+1}}^2\big)\le\tfrac12\big(\norm{x_n-x}^2-\norm{x_{n+1}-x}^2\big)$$
+(the middle identity is $2\ps{a}{b}=\norm{a+b}^2-\norm a^2-\norm b^2$ with $a=x_n-x_{n+1}$, $b=x_{n+1}-x$). Summing, $\sum_n\gamma_n\big(f(x_{n+1})-\inf f\big)\le\tfrac12\norm{x_0-x}^2\lt+\infty$. Moreover the values are non-increasing: by definition of $x_{n+1}$ as a minimizer, $f(x_{n+1})+\frac1{2\gamma_n}\norm{x_{n+1}-x_n}^2\le f(x_n)$. If $f(x_n)-\inf f$ did not tend to $0$, it would stay $\ge\eps\gt0$ for all $n$ (non-increasing), and $\sum_n\gamma_n\eps\lt+\infty$ would contradict $\sum\gamma_n=+\infty$. Hence $f(x_n)\to\inf f$.</p>
+<p><span class="step">3. Cluster points are minimizers.</span> Let $x_{n_k}\wto\hat x$. $f$ is convex and lsc, hence weakly lsc (<a class="xref" data-id="lsc" href="01_convex_analysis.html#lsc">page 1</a>): $f(\hat x)\le\liminf_kf(x_{n_k})=\inf f$, so $\hat x\in\Argmin f$.</p>
+<p><span class="step">4. Conclusion.</span> <a class="xref" data-id="fejer-convergence" href="#fejer-convergence">Fejér-monotone convergence</a> with $D=\Argmin f$.</p>
+<span class="qed">□</span>
+</div></details>
+<div class="callout insight"><span class="lbl">Why the implicit step is so robust</span><p>$x_{n+1}=\prox_{\gamma f}x_n$ solves $x_{n+1}=x_n-\gamma u_{n+1}$ with $u_{n+1}\in\partial f(x_{n+1})$: it is the backward Euler discretization of the subgradient flow $\dot x\in-\partial f(x)$, and backward Euler is unconditionally stable. The explicit (forward) step $x_n-\gamma\nabla g(x_n)$ is forward Euler, stable only for $\gamma\lt2/\nu$. Forward–Backward mixes the two, each where it is affordable.</p></div>
+<div class="callout memo"><span class="lbl">To remember</span><p><strong>PPA</strong>: $x_{n+1}=\prox_{\gamma_nf}x_n$, any $\gamma_n\gt0$ with $\sum\gamma_n=+\infty$ ⇒ $x_n\wto$ a minimizer. Implicit = no step size limit; infinite total time = reach the minimizer.</p></div>
+<div class="chips"><span class="who">Uses</span><a class="chip xref" data-id="prox-firmly-nonexpansive" href="#prox-firmly-nonexpansive">prox firmly nonexpansive</a><a class="chip xref" data-id="prox-characterization" href="03_proximity_operator.html#prox-characterization">prox characterization</a><a class="chip xref" data-id="fejer-convergence" href="#fejer-convergence">Fejér convergence</a><a class="chip xref" data-id="lsc" href="01_convex_analysis.html#lsc">weak lsc</a></div>
+<div class="chips"><span class="who">Used by</span><a class="chip xref" data-id="dr-motivation" href="05_douglas_rachford_ppxa.html#dr-motivation">DR motivation</a><a class="chip xref" data-id="admm-derivation" href="06_duality_admm_primal_dual.html#admm-derivation">ADMM (PPA on the dual)</a></div>
+</article>
+
+<div class="sec-head"><span class="secnum">§</span><h3>The operator classes at a glance</h3><span class="src">synthesis</span></div>
+<div id="operator-classes">
+<p>Inclusions: <strong>strict contraction ⊂ $\alpha$-averaged ⊂ nonexpansive</strong>, with <strong>firmly nonexpansive = $\tfrac12$-averaged</strong>, and smaller $\alpha$ ⇒ stronger property. What each class buys for the iteration $x_{n+1}=x_n+\lambda_n(Tx_n-x_n)$:</p>
+<div class="table-scroll"><table class="cmp">
+<thead><tr><th>Class</th><th>Inequality</th><th>Examples</th><th>Plain iteration ($\lambda_n=1$)</th><th>Admissible $\lambda_n$</th></tr></thead>
+<tbody>
+<tr><td>strict contraction ($\rho\lt1$)</td><td>$\norm{Tx-Ty}\le\rho\norm{x-y}$</td><td>$\Id-\gamma\nabla g$ for $\mu$-strongly convex $g$ ($\rho=\max(\abs{1-\gamma\mu},\abs{1-\gamma\nu})$)</td><td class="ok">converges strongly, linear rate $\rho^n$ (Picard)</td><td>any $\lambda\in\,]0,\tfrac{2}{1+\rho}[$ keeps a contraction</td></tr>
+<tr><td>firmly nonexpansive ($\alpha=\tfrac12$)</td><td>$\ps{Tx-Ty}{x-y}\ge\norm{Tx-Ty}^2$</td><td>$\prox_{\gamma f}$, $P_C$, $\Id-\gamma\nabla g$ with $\gamma=1/\nu$, $\tfrac12(\Id+R)$ for $R$ nonexpansive</td><td class="ok">converges weakly to a fixed point</td><td>$[0,2]$, $\sum\lambda_n(2-\lambda_n)=+\infty$</td></tr>
+<tr><td>$\alpha$-averaged</td><td>$\norm{Tx-Ty}^2+\frac{1-\alpha}\alpha\norm{(\Id-T)x-(\Id-T)y}^2\le\norm{x-y}^2$</td><td>$\Id-\gamma\nabla g$ ($\alpha=\gamma\nu/2$), FB operator ($\alpha=1/\delta$), $P_{C_2}P_{C_1}$ ($\alpha=\tfrac23$)</td><td class="ok">converges weakly to a fixed point</td><td>$[0,1/\alpha]$, $\sum\lambda_n(1-\alpha\lambda_n)=+\infty$</td></tr>
+<tr><td>nonexpansive</td><td>$\norm{Tx-Ty}\le\norm{x-y}$</td><td>rotations, $-\Id$, reflections $2P_C-\Id$, $\rprox_{\gamma f}=2\prox_{\gamma f}-\Id$, the DR operator $\rprox_{\gamma f}\rprox_{\gamma g}$</td><td class="ko">may fail (rotation): only Fejér monotone</td><td>$[0,1]$, $\sum\lambda_n(1-\lambda_n)=+\infty$ (KM)</td></tr>
+</tbody></table></div>
+<p class="mini">Two useful conversions: $T$ nonexpansive ⇔ $\tfrac12(\Id+T)$ firmly nonexpansive; $A$ firmly nonexpansive ⇔ $2A-\Id$ nonexpansive. The second one is the Douglas–Rachford trick of <a class="xref" data-id="rprox-nonexpansive" href="05_douglas_rachford_ppxa.html#rprox-nonexpansive">page 5</a> (<a class="chip t" href="09_toolbox.html#T11"><b>T11</b></a>).</p>
+</div>
+</section>
