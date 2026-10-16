@@ -628,7 +628,7 @@ window.LSD_REGISTRY = {
 "p": "05_douglas_rachford_ppxa.html",
 "k": "thm",
 "t": "Solutions are shadows of fixed points: $\\zer(\\partial f+\\partial g)=\\prox_{\\gamma g}(\\Fix T)$, $T=\\rprox_{\\gamma f}\\circ\\rprox_{\\gamma g}$",
-"s": "<p>Let $\\gamma\\in\\,]0,+\\infty[$, let $f\\in\\Gz{\\H}$ and let $g\\in\\Gz{\\H}$. We have $$\\zer(\\partial f+\\partial g)=\\prox_{\\gamma g}(\\Fix T)\\qquad\\text{where }T=\\rprox_{\\gamma f}\\circ\\rprox_{\\gamma g}.$$ In words: $x$ is a zero of $\\partial f+\\partial g$ if and only if $x=\\prox_{\\gamma g}y$ for some fixed point $y$ of $T$.</p>"
+"s": "<p>Let $\\gamma\\in\\,]0,+\\infty[$, let $f\\in\\Gz{\\H}$ and let $g\\in\\Gz{\\H}$. We have $$\\zer(\\partial f+\\partial g)=\\prox_{\\gamma g}(\\Fix T)\\qquad\\text{where }T=\\rprox_{\\gamma f}\\circ\\rprox_{\\gamma g}.$$ In words: $x$ is a zero of $\\partial f+\\partial g$ if and only if $x=\\prox_{\\gamma g}y$ for some fixed point $y$ of $T$.</p>\n<p class=\"mini\">Letters: here, as on the slides, $x$ is the solution and $y$ the fixed point. In the <a href=\"#douglas-rachford\">algorithm</a> the roles swap: the governing sequence $x_n$ tends to a fixed point $\\hat x$, and the shadow $y_n=\\prox_{\\gamma g}x_n$ tends to the solution $\\hat y$.</p>"
 },
 "douglas-rachford": {
 "p": "05_douglas_rachford_ppxa.html",

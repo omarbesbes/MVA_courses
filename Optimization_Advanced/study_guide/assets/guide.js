@@ -76,14 +76,28 @@
   }
   document.addEventListener('DOMContentLoaded', initToc);
 
+  /* ---------- page strip: bring the current page into view when the strip scrolls (phones) ---------- */
+  document.addEventListener('DOMContentLoaded', function () {
+    var strip = document.querySelector('.site .strip'), on = strip && strip.querySelector('a.on');
+    if (!strip || !on || strip.scrollWidth <= strip.clientWidth) return;
+    var li = on.parentElement || on;
+    strip.scrollLeft = Math.max(0, li.offsetLeft - strip.offsetLeft - (strip.clientWidth - li.offsetWidth) / 2);
+  });
+
   /* ---------- TOC collapsed on phones, always open on desktop ---------- */
+  /* On phones the TOC body is hidden by CSS unless the reader opened it (class user-open), so it never
+     flashes open on load; on desktop the details element is always open. */
+  var TOC_MQ = window.matchMedia ? window.matchMedia('(max-width: 980px)') : null;
   function syncTocOpen() {
     var d = document.getElementById('toc-det'); if (!d) return;
-    if (window.matchMedia('(max-width: 980px)').matches) d.removeAttribute('open'); else d.setAttribute('open', '');
+    d.classList.remove('user-open');
+    if (TOC_MQ && TOC_MQ.matches) d.removeAttribute('open'); else d.setAttribute('open', '');
   }
   document.addEventListener('DOMContentLoaded', function () {
+    var d = document.getElementById('toc-det');
     syncTocOpen();
-    try { window.matchMedia('(max-width: 980px)').addEventListener('change', syncTocOpen); } catch (e) { window.addEventListener('resize', syncTocOpen); }
+    if (d) d.addEventListener('toggle', function () { if (TOC_MQ && TOC_MQ.matches) d.classList.toggle('user-open', d.open); });
+    try { TOC_MQ.addEventListener('change', syncTocOpen); } catch (e) { window.addEventListener('resize', syncTocOpen); }
   });
 
   /* ---------- expand/collapse proofs ---------- */
