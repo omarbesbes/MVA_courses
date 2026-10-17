@@ -1687,21 +1687,24 @@ document.addEventListener('DOMContentLoaded', function () {
       if (ng > 0.15) {
         /* its label goes to the candidate spot (beside or beyond the arrow) farthest from the other labels and dots */
         var dg = [-g[0] / ng, -g[1] / ng], pl = [-dg[1], dg[0]], tip = [xb[0] - s * g[0], xb[1] - s * g[1]], mid = [xb[0] - 0.5 * s * g[0], xb[1] - 0.5 * s * g[1]];
-        /* approximate centres of the dots and of the other labels (the anchoring below already keeps the text off the arrow) */
-        var avoid = [[X(lp[0]), Y(lp[1])], [X(c[0]), Y(c[1])], [X(xb[0]), Y(xb[1])], [X(xh[0]), Y(xh[1])],
-          holds ? [X(xb[0]) - 29, Y(xb[1]) + 12] : [X(xb[0]) - 5, Y(xb[1]) + 12]];
-        if (nc > 1) avoid.push([X(c[0]) + 12, Y(c[1])]);
+        /* what is already drawn, as [centre x, centre y, half-width + 26, half-height + 7] in pixels: dots (small) and labels
+           (the anchoring below already keeps the text off the arrow itself) */
+        var DOT = [32, 12], LAB = [52, 18];
+        function box(x, y, w) { return [x, y, w[0], w[1]]; }
+        var avoid = [box(X(lp[0]), Y(lp[1]), [56, 18]), box(X(c[0]), Y(c[1]), DOT), box(X(xb[0]), Y(xb[1]), DOT), box(X(xh[0]), Y(xh[1]), DOT),
+          holds ? box(X(xb[0]) - 29, Y(xb[1]) + 12, [46, 18]) : box(X(xb[0]) - 5, Y(xb[1]) + 12, [32, 18])];
+        if (nc > 1) avoid.push(box(X(c[0]) + 12, Y(c[1]), [32, 18]));
         if (!holds) {
-          avoid = avoid.concat(nc <= 1 ? [[X(xh[0]) + 30, Y(xh[1]) + 14], [X(xh[0]) + 75, Y(xh[1]) + 14], [X(xh[0]) + 115, Y(xh[1]) + 14]] : [[X(xh[0]) + 14, Y(xh[1]) - 10]]);
-          avoid.push([X(dg[0]), Y(dg[1])], [X(dg[0]) + 15, Y(dg[1]) + 10]);
+          avoid = avoid.concat(nc <= 1 ? [box(X(xh[0]) + 30, Y(xh[1]) + 13, LAB), box(X(xh[0]) + 75, Y(xh[1]) + 13, LAB), box(X(xh[0]) + 115, Y(xh[1]) + 13, LAB)] : [box(X(xh[0]) + 14, Y(xh[1]) - 10, [32, 18])]);
+          avoid.push(box(X(dg[0]), Y(dg[1]), DOT), box(X(dg[0]) + 15, Y(dg[1]) + 10, [32, 18]));
         }
         /* candidate spots beside the middle, beside the tip, beyond the tip; the text is anchored so that it extends away from the arrow */
-        var cands = [[mid, pl, 0.2], [mid, pl, -0.2], [tip, pl, 0.2], [tip, pl, -0.2], [tip, dg, 0.2]].map(function (q) {
+        var cands = [[mid, pl, 0.22], [mid, pl, -0.22], [tip, pl, 0.22], [tip, pl, -0.22], [tip, dg, 0.22]].map(function (q) {
           var p = [X(q[0][0] + q[2] * q[1][0]), Y(q[0][1] + q[2] * q[1][1])], vx = q[2] * q[1][0], anc = vx > 0.1 ? 'start' : (vx < -0.1 ? 'end' : 'middle');
-          return { p: p, anc: anc, ctr: [p[0] + (anc === 'start' ? 26 : (anc === 'end' ? -26 : 0)), p[1] - 4] };
+          return { p: p, anc: anc, ctr: [p[0] + (anc === 'start' ? 26 : (anc === 'end' ? -26 : 0)), p[1]] };
         });
         var best = cands[0], bs = -1;
-        cands.forEach(function (cd) { var sc_ = Infinity; avoid.forEach(function (q) { sc_ = Math.min(sc_, Math.max(Math.abs(cd.ctr[0] - q[0]) / 52, Math.abs(cd.ctr[1] - q[1]) / 18)); }); if (sc_ > bs) { bs = sc_; best = cd; } });
+        cands.forEach(function (cd) { var sc_ = Infinity; avoid.forEach(function (q) { sc_ = Math.min(sc_, Math.max(Math.abs(cd.ctr[0] - q[0]) / q[2], Math.abs(cd.ctr[1] - q[1]) / q[3])); }); if (sc_ > bs) { bs = sc_; best = cd; } });
         htext(svg, best.p[0], best.p[1] + 4, '−∇f(x̄)', 'tm f-2', { 'text-anchor': best.anc });
       }
       /* points (when the inequality holds, y* = x̄ = x̂: one dot, one label) */
