@@ -809,7 +809,7 @@ So if $\ps{\nabla f(\hat x)}{y-\hat x}\ge0$ for every $y\in C$, then $f(y)\ge f(
 <button class="btn" type="button" id="vi-snap">snap x̄ to P<sub>C</sub>(c)</button>
 </div>
 <svg class="w-svg" id="vi-svg" viewBox="0 0 520 330" role="img" aria-label="Unit disc, level circles of the objective, the candidate point, minus its gradient, the normal ray, the worst feasible direction and the true minimizer"></svg>
-<div class="leg"><span><i class="dot" style="background:var(--s2)"></i>candidate x̄ and −∇f(x̄)</span><span><i class="dot" style="background:var(--idea)"></i>true minimizer x̂ = P<sub>C</sub>(c)</span><span><i class="dot" style="background:var(--s5)"></i>worst y*</span><span><i style="border-color:var(--ink-3);border-top-style:dashed"></i>half-plane ⟨∇f(x̄)|y−x̄⟩ ≥ 0</span></div>
+<div class="leg"><span><i class="dot" style="background:var(--s2)"></i>candidate x̄ and −∇f(x̄)</span><span><i class="dot" style="background:var(--idea)"></i><bdi>true minimizer x̂ = P<sub>C</sub>(c)</bdi></span><span><i class="dot" style="background:var(--s5)"></i>worst y*</span><span><i style="border-color:var(--ink-3);border-top-style:dashed"></i>half-plane ⟨∇f(x̄)|y−x̄⟩ ≥ 0</span></div>
 <p class="readout" id="vi-out"></p>
 </div>
 <div class="callout pitfall"><span class="lbl">Pitfall</span><p>Necessary, not sufficient, without convexity of $f$: $f(x)=-x^2$ on $C=[-1,1]$ has $f'(0)=0$ at $\hat x=0$, which is the <em>maximizer</em>. And the inequality must hold for <em>all</em> $y\in C$, not only for $y$ near $\hat x$; on a convex set the two are equivalent, because $\ps{\nabla f(\hat x)}{y-\hat x}$ only depends on the direction of $y-\hat x$ (it scales by $\alpha$ along $\hat x+\alpha(y-\hat x)$) and the whole segment $[\hat x,y]$ lies in $C$.</p></div>
@@ -1681,15 +1681,19 @@ document.addEventListener('DOMContentLoaded', function () {
       var pp = [-xb[1], xb[0]], lp = [1.85 * xb[0] + 0.22 * pp[0], 1.85 * xb[1] + 0.22 * pp[1]];
       var tN = htext(svg, X(lp[0]), Y(lp[1]) + 4, 'N', 'tm f-idea', { 'text-anchor': 'middle' });
       L.el('tspan', { dy: 4, 'font-size': '75%', text: 'C' }, tN); L.el('tspan', { dy: -4, text: '(x̄)' }, tN);
-      /* −∇f(x̄) arrow (scaled by 0.5 for display); its label sits beside the middle of the arrow, on the side away from x̂ */
+      /* −∇f(x̄) arrow (scaled by 0.5 for display) */
       var s = 0.5;
       L.line(svg, X(xb[0]), Y(xb[1]), X(xb[0] - s * g[0]), Y(xb[1] - s * g[1]), 's-2', { 'stroke-width': 2.5, 'marker-end': arr });
       if (ng > 0.15) {
-        var dg = [-g[0] / ng, -g[1] / ng], pl = [-dg[1], dg[0]];
-        /* x̂ clearly on the right of the arrow: label on the left; otherwise (x̂ on the left, or on the arrow's line) on the right, away from the N_C label */
-        var side = ((xh[0] - xb[0]) * pl[0] + (xh[1] - xb[1]) * pl[1]) < -1e-6 ? 1 : -1;
-        var mid = [xb[0] - 0.5 * s * g[0] + side * 0.24 * pl[0], xb[1] - 0.5 * s * g[1] + side * 0.24 * pl[1]];
-        htext(svg, X(mid[0]), Y(mid[1]) + 4, '−∇f(x̄)', 'tm f-2', { 'text-anchor': 'middle' });
+        /* its label goes to the candidate spot (beside or beyond the arrow) farthest from the other labels and dots */
+        var avoid = [[X(lp[0]), Y(lp[1])], [X(c[0]), Y(c[1])], [X(c[0]) + 12, Y(c[1])], [X(xb[0]), Y(xb[1])], [X(xh[0]), Y(xh[1])],
+          holds ? [X(xb[0]) - 29, Y(xb[1]) + 12] : [X(xb[0]) - 5, Y(xb[1]) + 12]];
+        if (!holds) avoid.push(nc <= 1 ? [X(xh[0]) + 64, Y(xh[1]) - 10] : [X(xh[0]) + 14, Y(xh[1]) - 10], [X(-g[0] / ng), Y(-g[1] / ng)], [X(-g[0] / ng) + 15, Y(-g[1] / ng) + 10]);
+        var dg = [-g[0] / ng, -g[1] / ng], pl = [-dg[1], dg[0]], tip = [xb[0] - s * g[0], xb[1] - s * g[1]], mid = [xb[0] - 0.5 * s * g[0], xb[1] - 0.5 * s * g[1]];
+        var cands = [[mid, 0.28, pl], [mid, -0.28, pl], [tip, 0.28, pl], [tip, -0.28, pl], [tip, 0.45, dg]].map(function (q) { return [X(q[0][0] + q[1] * q[2][0]), Y(q[0][1] + q[1] * q[2][1])]; });
+        var best = cands[0], bs = -1;
+        cands.forEach(function (p) { var sc_ = Infinity; avoid.forEach(function (q) { sc_ = Math.min(sc_, Math.max(Math.abs(p[0] - q[0]) / 52, Math.abs(p[1] - q[1]) / 16)); }); if (sc_ > bs) { bs = sc_; best = p; } });
+        htext(svg, best[0], best[1] + 4, '−∇f(x̄)', 'tm f-2', { 'text-anchor': 'middle' });
       }
       /* points (when the inequality holds, y* = x̄ = x̂: one dot, one label) */
       fill(svg, X(c[0]), Y(c[1]), 4.5, 'f-ink'); if (nc > 1) htext(svg, X(c[0]) + 8, Y(c[1]) + 4, 'c', 'tm f-ink');

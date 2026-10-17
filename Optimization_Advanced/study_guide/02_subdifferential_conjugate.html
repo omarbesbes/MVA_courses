@@ -444,7 +444,7 @@ by Cauchy–Schwarz and $\norm{y-c}\le\rho$. Multiplying by $\alpha\ge0$: $\ps{u
 <label class="ctl">r <input type="range" id="nc-r" min="0" max="1" step="0.05" value="1"><output id="nc-r-v"></output></label>
 </div>
 <svg class="w-svg" id="nc-svg" viewBox="0 0 520 300" role="img" aria-label="a convex set, a point and its normal cone"></svg>
-<div class="leg"><span><i style="border-color:var(--trick)"></i>normal cone $N_C(x)$</span><span><i class="dot" style="background:var(--accent)"></i>a normal $u\in N_C(x)$</span><span><i style="border-color:var(--ink-3);border-top-style:dashed"></i>supporting hyperplane</span></div>
+<div class="leg"><span><i style="border-color:var(--trick)"></i>normal cone of C at x</span><span><i class="dot" style="background:var(--accent)"></i>a normal u in that cone</span><span><i style="border-color:var(--ink-3);border-top-style:dashed"></i>supporting hyperplane</span></div>
 <div class="readout" id="nc-read"></div>
 </div>
 
@@ -1290,7 +1290,10 @@ document.addEventListener('DOMContentLoaded', function () {
       /* a normal u and the supporting hyperplane */
       var u = gens.length ? nrm(gens.reduce(function (a, b) { return add(a, b); }, [0, 0])) : [0, 0];
       if (gens.length) {
-        var mk = L.arrowDefs(svg, 'nc-arrow', 'f-acc'), U1 = add(P, mul(u, 0.75));
+        var al = 0.75; /* arrow length, shortened so that the tip and its label stay in the picture */
+        [0, 1].forEach(function (k) { var D = k ? Y.d : X.d; if (Math.abs(u[k]) > 1e-9) al = Math.min(al, ((u[k] > 0 ? D[1] : D[0]) - P[k]) / u[k] - 0.22); });
+        al = Math.max(al, 0.3);
+        var mk = L.arrowDefs(svg, 'nc-arrow', 'f-acc'), U1 = add(P, mul(u, al));
         L.line(svg, X(P[0]), Y(P[1]), X(U1[0]), Y(U1[1]), 's-acc', { 'stroke-width': 2.5, 'marker-end': mk });
         L.text(svg, X(U1[0]) + 6, Y(U1[1]) + 4, 'u', 'tm f-acc');
         var perp = [-u[1], u[0]], H1 = add(P, mul(perp, 4)), H2 = sub(P, mul(perp, 4));
@@ -1422,13 +1425,13 @@ document.addEventListener('DOMContentLoaded', function () {
         L.line(svgF, X(x), Y(u * x - c), X(x), Y(fx), 's-warn', { 'stroke-width': 3.5 });
       } else L.text(svgF, X(-2.4), Y(4.3), 'f*(u) = +∞: no minorant of slope u, the gap is +∞', 'f-warn');
       drawF(svgF, key, F, X, Y);
-      L.dot(svgF, X(x), Y(fx), 4.5, 'f-ink'); L.text(svgF, X(x) + 7, Y(fx) - 8, '(x, f(x))', 'tm f-ink');
+      L.dot(svgF, X(x), Y(fx), 4.5, 'f-ink'); L.text(svgF, X(x) + (x > 1.5 ? -7 : 7), Y(fx) - 8, '(x, f(x))', 'tm f-ink', { 'text-anchor': x > 1.5 ? 'end' : 'start' });
       var U = L.scale(-2.5, 2.5, 28, 345), V = L.scale(lo, hi, 232, 12);
       L.axes(svgC, U, V, { xlabel: 'u', nx: 5, ny: 6 });
       affine(svgC, U, V, 0, -fx, x, 's-acc', { 'stroke-width': 2 });
       L.plotFn(svgC, F.fs, U, V, { class: 's-ink', 'stroke-width': 2.2 });
       drawFstarWalls(svgC, key, U, V, 's-ink');
-      if (isFinite(c)) { L.line(svgC, U(u), V(x * u - fx), U(u), V(c), 's-warn', { 'stroke-width': 3.5 }); L.dot(svgC, U(u), V(c), 4.5, 'f-ink'); L.text(svgC, U(u) + 7, V(c) - 8, '(u, f*(u))', 'tm f-ink'); }
+      if (isFinite(c)) { L.line(svgC, U(u), V(x * u - fx), U(u), V(c), 's-warn', { 'stroke-width': 3.5 }); L.dot(svgC, U(u), V(c), 4.5, 'f-ink'); L.text(svgC, U(u) + (u > 1.5 ? -7 : 7), V(c) - 8, '(u, f*(u))', 'tm f-ink', { 'text-anchor': u > 1.5 ? 'end' : 'start' }); }
       else L.line(svgC, U(u), V(V.d[0]), U(u), V(V.d[1]), 's-warn dash', { 'stroke-width': 1.5 });
       var eq = isFinite(gap) && gap < 1e-9;
       if (out) out.innerHTML = 'f(x) + f*(u) − ⟨x | u⟩ = ' + L.fmt(fx, 3) + ' + ' + (c < 0 ? '(' + L.fmt(c, 3) + ')' : L.fmt(c, 3)) + ' − ' + (x * u < 0 ? '(' + L.fmt(x * u, 3) + ')' : L.fmt(x * u, 3)) + ' = <b class="' + (eq ? 'ok' : 'ko') + '">' + (isFinite(gap) ? L.fmt(gap, 3) : '+∞') + '</b>' +
