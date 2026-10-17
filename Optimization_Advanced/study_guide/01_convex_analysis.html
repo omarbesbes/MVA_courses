@@ -1675,7 +1675,9 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       /* the disc */
       L.el('circle', { cx: X(0), cy: Y(0), r: X(1) - X(0), class: 'f-k s-acc', 'stroke-width': 2 }, svg);
-      L.text(svg, X(-0.6), Y(0.6), 'C', 'tm f-acc');
+      /* the C label sits inside the disc, upper left, unless x̄ is there (then lower left) */
+      var cL = Math.hypot(xb[0] + 0.6, xb[1] - 0.6) < 0.55 ? [-0.6, -0.6] : [-0.6, 0.6];
+      L.text(svg, X(cL[0]), Y(cL[1]), 'C', 'tm f-acc');
       /* normal ray at x̄, labelled N_C(x̄) with a real subscript */
       L.line(svg, X(xb[0]), Y(xb[1]), X(1.85 * xb[0]), Y(1.85 * xb[1]), 's-idea dash', { 'stroke-width': 1.5 });
       var pp = [-xb[1], xb[0]], lp = [1.85 * xb[0] + 0.22 * pp[0], 1.85 * xb[1] + 0.22 * pp[1]];
@@ -1684,6 +1686,26 @@ document.addEventListener('DOMContentLoaded', function () {
       /* −∇f(x̄) arrow (scaled by 0.5 for display) */
       var s = 0.5;
       L.line(svg, X(xb[0]), Y(xb[1]), X(xb[0] - s * g[0]), Y(xb[1] - s * g[1]), 's-2', { 'stroke-width': 2.5, 'marker-end': arr });
+      /* the x̄ label goes on the side of x̄ farthest (in angle) from the −∇f arrow, the normal ray and any nearby label or dot */
+      var xlTxt = holds ? 'x̄ = x̂' : 'x̄', xlHW = holds ? 20 : 5, dirs = [[xb[0], xb[1]]];
+      if (ng > 1e-9) dirs.push([-g[0] / ng, -g[1] / ng]);
+      var near = [cL];
+      if (!holds) {
+        near.push([xh[0], xh[1]]);
+        if (nc <= 1) near.push([xh[0] + 0.3, xh[1] - 0.24], [xh[0] + 0.9, xh[1] - 0.24]); else near.push([xh[0] + 0.25, xh[1] + 0.08]);
+        if (ng > 1e-9) near.push([-g[0] / ng, -g[1] / ng]);
+      }
+      if (nc > 1) near.push([c[0], c[1]]);
+      near.forEach(function (q) { var v = [q[0] - xb[0], q[1] - xb[1]], nv = Math.hypot(v[0], v[1]); if (nv > 1e-6 && nv < 0.6) dirs.push([v[0] / nv, v[1] / nv]); });
+      var ua = [-xb[0], -xb[1]], uaS = -1;
+      for (var q8 = 0; q8 < 16; q8++) {
+        var an = q8 * Math.PI / 8, u8 = [Math.cos(an), Math.sin(an)], d8 = Infinity;
+        dirs.forEach(function (v) { d8 = Math.min(d8, 1 - (u8[0] * v[0] + u8[1] * v[1])); });
+        if (d8 > uaS + 1e-9) { uaS = d8; ua = u8; }
+      }
+      var xlAnc = ua[0] > 0.38 ? 'start' : (ua[0] < -0.38 ? 'end' : 'middle');
+      var xlP = [X(xb[0]) + 15 * ua[0], Y(xb[1]) - 15 * ua[1]];
+      var xlC = [xlP[0] + (xlAnc === 'start' ? xlHW : (xlAnc === 'end' ? -xlHW : 0)), xlP[1]];
       if (ng > 0.15) {
         /* its label goes to the candidate spot (beside or beyond the arrow) farthest from the other labels and dots */
         var dg = [-g[0] / ng, -g[1] / ng], pl = [-dg[1], dg[0]], tip = [xb[0] - s * g[0], xb[1] - s * g[1]], mid = [xb[0] - 0.5 * s * g[0], xb[1] - 0.5 * s * g[1]];
@@ -1692,7 +1714,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var DOT = [32, 12], LAB = [52, 18];
         function box(x, y, w) { return [x, y, w[0], w[1]]; }
         var avoid = [box(X(lp[0]), Y(lp[1]), [56, 18]), box(X(c[0]), Y(c[1]), DOT), box(X(xb[0]), Y(xb[1]), DOT), box(X(xh[0]), Y(xh[1]), DOT),
-          holds ? box(X(xb[0]) - 29, Y(xb[1]) + 12, [46, 18]) : box(X(xb[0]) - 5, Y(xb[1]) + 12, [32, 18])];
+          box(xlC[0], xlC[1], [xlHW + 26, 18])];
         if (nc > 1) avoid.push(box(X(c[0]) + 12, Y(c[1]), [32, 18]));
         if (!holds) {
           avoid = avoid.concat(nc <= 1 ? [box(X(xh[0]) + 30, Y(xh[1]) + 13, LAB), box(X(xh[0]) + 75, Y(xh[1]) + 13, LAB), box(X(xh[0]) + 115, Y(xh[1]) + 13, LAB)] : [box(X(xh[0]) + 14, Y(xh[1]) - 10, [32, 18])]);
@@ -1711,7 +1733,7 @@ document.addEventListener('DOMContentLoaded', function () {
       fill(svg, X(c[0]), Y(c[1]), 4.5, 'f-ink'); if (nc > 1) htext(svg, X(c[0]) + 8, Y(c[1]) + 4, 'c', 'tm f-ink');
       if (ng > 1e-9 && !holds) { var ys = [-g[0] / ng, -g[1] / ng]; fill(svg, X(ys[0]), Y(ys[1]), 5, 'f-5'); htext(svg, X(ys[0]) + 8, Y(ys[1]) + 14, 'y*', 'tm f-5'); }
       fill(svg, X(xh[0]), Y(xh[1]), 6, 'f-idea'); if (!holds) htext(svg, X(xh[0]) + 9, Y(xh[1]) + (nc <= 1 ? 18 : -6), nc <= 1 ? 'x̂ = c (interior)' : 'x̂', 'tm f-idea');
-      fill(svg, X(xb[0]), Y(xb[1]), 5.5, 'f-2'); htext(svg, X(xb[0]) - 9, Y(xb[1]) + 16, holds ? 'x̄ = x̂' : 'x̄', 'tm ' + (holds ? 'f-idea' : 'f-2'), { 'text-anchor': holds ? 'end' : 'start' });
+      fill(svg, X(xb[0]), Y(xb[1]), 5.5, 'f-2'); htext(svg, xlP[0], xlP[1] + 5, xlTxt, 'tm ' + (holds ? 'f-idea' : 'f-2'), { 'text-anchor': xlAnc });
       htext(svg, 14, 312, holds ? '✓ ⟨∇f(x̄) | y − x̄⟩ ≥ 0 for every y ∈ C: x̄ = x̂' : '✗ fails at y*: x̄ is not the minimizer', 'verdict ' + (holds ? 'f-idea' : 'f-warn'));
       out.innerHTML = '∇f(x̄) = x̄ − c = (' + L.fmt(g[0], 2) + ', ' + L.fmt(g[1], 2) + ')   min over y ∈ C of ⟨∇f(x̄) | y − x̄⟩ = ' + L.fmt(minv, 3) + (holds ? ' ≥ 0: the variational inequality holds; −∇f(x̄) lies on the normal ray' : ' &lt; 0: violated (worst y = y*)') + '   ·   x̂ = P<sub>C</sub>(c) = (' + L.fmt(xh[0], 2) + ', ' + L.fmt(xh[1], 2) + ')' + (nc <= 1 ? ', interior, ∇f(x̂) = 0' : ', on the boundary');
     }

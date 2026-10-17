@@ -1247,5 +1247,11 @@ window.LSD_REGISTRY = {
 "k": "sec",
 "t": "Constants and ranges cheat-sheet",
 "s": ""
+},
+"skeleton": {
+"p": "10_memorize.html",
+"k": "sec",
+"t": "The course in 30 lines",
+"s": ""
 }
 };
