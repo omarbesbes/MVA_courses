@@ -1060,7 +1060,7 @@ window.LSD_REGISTRY = {
 "p": "09_toolbox.html",
 "k": "trick",
 "t": "T05 · Integrate along the segment: $\\varphi(t)=f(x+t(y-x))$",
-"s": "<p>Whenever you need a <em>global</em> inequality between $f(x)$, $f(y)$ and gradients, restrict $f$ to the segment: $\\varphi(t)=f(x+t(y-x))$, $t\\in[0,1]$, with\n$$\\varphi'(t)=\\ps{\\nabla f(x+t(y-x))}{y-x},\\qquad\\varphi''(t)=\\ps{y-x}{\\nabla^2f(x+t(y-x))(y-x)},\\qquad f(y)-f(x)=\\int_0^1\\varphi'(t)\\,dt,$$\nand do one-variable calculus: bound the integrand, or use the sign of $\\varphi''$.</p>"
+"s": "<p>Whenever you need a <em>global</em> inequality between $f(x)$, $f(y)$ and gradients, restrict $f$ to the segment: $\\varphi(t)=f(x+t(y-x))$, $t\\in[0,1]$, with\n$$\\begin{gathered}\\varphi'(t)=\\ps{\\nabla f(x+t(y-x))}{y-x},\\qquad\\varphi''(t)=\\ps{y-x}{\\nabla^2f(x+t(y-x))(y-x)},\\\\ f(y)-f(x)=\\int_0^1\\varphi'(t)\\,dt,\\end{gathered}$$\nand do one-variable calculus: bound the integrand, or use the sign of $\\varphi''$.</p>"
 },
 "T06": {
 "p": "09_toolbox.html",
@@ -1090,7 +1090,7 @@ window.LSD_REGISTRY = {
 "p": "09_toolbox.html",
 "k": "trick",
 "t": "T10 · Fenchel–Young as a lever: affine minorants, coercivity, weak duality in one line",
-"s": "<p>Whenever you need a lower bound of $f$, an inequality between a primal and a dual quantity, or a way to invert $\\partial f$, use\n$$f(x)+f^*(u)\\ge\\ps{x}{u}\\quad(f\\text{ proper}),\\qquad\\text{with equality}\\iff u\\in\\partial f(x)\\iff x\\in\\partial f^*(u)\\quad(\\text{last step: }f\\in\\Gz{\\H}).$$</p>"
+"s": "<p>Whenever you need a lower bound of $f$, an inequality between a primal and a dual quantity, or a way to invert $\\partial f$, use\n$$\\begin{gathered}f(x)+f^*(u)\\ge\\ps{x}{u}\\quad(f\\text{ proper}),\\\\ \\text{with equality}\\iff u\\in\\partial f(x)\\iff x\\in\\partial f^*(u)\\quad(\\text{last step: }f\\in\\Gz{\\H}).\\end{gathered}$$</p>"
 },
 "T11": {
 "p": "09_toolbox.html",
@@ -1120,13 +1120,13 @@ window.LSD_REGISTRY = {
 "p": "09_toolbox.html",
 "k": "trick",
 "t": "T15 · Zeros ⇔ fixed points dictionary",
-"s": "<p>Whenever an algorithm is a fixed-point iteration, translate its fixed-point equation into the optimality condition (and back) with the resolvent identity: for $\\gamma\\gt0$, $A$ single-valued and $B$ set-valued,\n$$x\\in\\zer(A+B)\\iff x-\\gamma Ax\\in x+\\gamma Bx\\iff x=(\\Id+\\gamma B)^{-1}(\\Id-\\gamma A)x,\\qquad(\\Id+\\gamma\\partial f)^{-1}=\\prox_{\\gamma f}.$$</p>"
+"s": "<p>Whenever an algorithm is a fixed-point iteration, translate its fixed-point equation into the optimality condition (and back) with the resolvent identity: for $\\gamma\\gt0$, $A$ single-valued and $B$ set-valued,\n$$\\begin{gathered}x\\in\\zer(A+B)\\iff x-\\gamma Ax\\in x+\\gamma Bx\\iff x=(\\Id+\\gamma B)^{-1}(\\Id-\\gamma A)x,\\\\ (\\Id+\\gamma\\partial f)^{-1}=\\prox_{\\gamma f}.\\end{gathered}$$</p>"
 },
 "T16": {
 "p": "09_toolbox.html",
 "k": "trick",
 "t": "T16 · Product-space lifting: $m$ functions become one, plus a consensus constraint",
-"s": "<p>Whenever you face $\\sum_{i=1}^mg_i(x)$ (or $\\sum_ig_i(L_iv)$) and only know each prox separately, give each term its own copy of the variable in $\\H^m$:\n$$\\operatorname*{minimize}_{x\\in\\H}\\ \\sum_{i=1}^mg_i(x)\\iff\\operatorname*{minimize}_{(x_1,\\dots,x_m)\\in\\H^m}\\ \\underbrace{\\sum_{i=1}^mg_i(x_i)}_{G\\ \\text{separable}}+\\ind_D(x_1,\\dots,x_m),\\qquad D=\\{(x,\\dots,x)\\}=\\ran L,$$\nwith $L:x\\mapsto(x,\\dots,x)$. Now there are only two functions: $G$, whose prox is $m$ independent proxes, and $\\ind_D$, whose prox is an average.</p>"
+"s": "<p>Whenever you face $\\sum_{i=1}^mg_i(x)$ (or $\\sum_ig_i(L_iv)$) and only know each prox separately, give each term its own copy of the variable in $\\H^m$:\n$$\\begin{gathered}\\operatorname*{minimize}_{x\\in\\H}\\ \\sum_{i=1}^mg_i(x)\\iff\\operatorname*{minimize}_{(x_1,\\dots,x_m)\\in\\H^m}\\ \\underbrace{\\sum_{i=1}^mg_i(x_i)}_{G\\ \\text{separable}}+\\ind_D(x_1,\\dots,x_m),\\\\ D=\\{(x,\\dots,x)\\}=\\ran L,\\end{gathered}$$\nwith $L:x\\mapsto(x,\\dots,x)$. Now there are only two functions: $G$, whose prox is $m$ independent proxes, and $\\ind_D$, whose prox is an average.</p>"
 },
 "T17": {
 "p": "09_toolbox.html",
