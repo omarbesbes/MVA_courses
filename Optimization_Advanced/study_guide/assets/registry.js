@@ -1066,7 +1066,7 @@ window.LSD_REGISTRY = {
 "p": "08_labs.html",
 "k": "lab",
 "t": "Lab 2 (part II) · Maximum-entropy regularization: FB and DR with the Lambert $W$ function, then a constrained formulation",
-"s": "<p>Same data $y=Kx+w$ as part I. The maximum-entropy estimate is\n$$\\hat x=\\argmin_{x\\in\\R^N}\\ \\tfrac12\\norm{Kx-y}^2+\\beta\\,\\mathrm{ent}(x),\\qquad \\mathrm{ent}(x)=\\sum_{n=1}^N\\varphi(x^{(n)}),\\qquad \\varphi(u)=\\begin{cases}u\\log u&amp;u\\gt0\\\\0&amp;u=0\\\\+\\infty&amp;u\\lt0.\\end{cases}\\qquad(1)$$\nQuestions: is $\\mathrm{ent}$ convex, proper, lsc, differentiable? existence and uniqueness; the prox of $\\mathrm{ent}$ (Lambert $W$); a Forward–Backward and a Douglas–Rachford algorithm; their implementation and performance at $\\beta=10^{-2}$; the best $\\beta$; comparison with part I; and the constrained formulation $\\min\\mathrm{ent}(x)$ s.t. $\\norm{Kx-y}^2\\le\\eta M\\sigma^2$.</p>"
+"s": "<p>Same data $y=Kx+w$ as part I. The maximum-entropy estimate is\n$$\\hat x=\\argmin_{x\\in\\R^N}\\ \\tfrac12\\norm{Kx-y}^2+\\beta\\,\\mathrm{ent}(x),\\qquad \\mathrm{ent}(x)=\\sum_{n=1}^N\\varphi(x^{(n)}),\\qquad(1)$$\n$$\\varphi(u)=\\begin{cases}u\\log u&amp;u\\gt0\\\\0&amp;u=0\\\\+\\infty&amp;u\\lt0.\\end{cases}$$\nQuestions: is $\\mathrm{ent}$ convex, proper, lsc, differentiable? existence and uniqueness; the prox of $\\mathrm{ent}$ (Lambert $W$); a Forward–Backward and a Douglas–Rachford algorithm; their implementation and performance at $\\beta=10^{-2}$; the best $\\beta$; comparison with part I; and the constrained formulation $\\min\\mathrm{ent}(x)$ s.t. $\\norm{Kx-y}^2\\le\\eta M\\sigma^2$.</p>"
 },
 "lab-dbsm": {
 "p": "08_labs.html",
@@ -1248,6 +1248,42 @@ window.LSD_REGISTRY = {
 "t": "Constants and ranges cheat-sheet",
 "s": ""
 },
+"ex-mem-lifting": {
+"p": "10_memorize.html",
+"k": "ex",
+"t": "A parallel algorithm for $\\sum_ig_i\\circ L_i$, built by lifting",
+"s": "<p>Let $\\G,\\H_1,\\dots,\\H_m$ be real Hilbert spaces, $g_i\\in\\Gz{\\H_i}$ and $L_i\\in\\B(\\G,\\H_i)$ for $i\\in\\{1,\\dots,m\\}$. Assume that $Q=\\sum_{i=1}^mL_i^*L_i$ is an isomorphism and that $\\zer\\big(\\sum_iL_i^*\\circ\\partial g_i\\circ L_i\\big)\\ne\\emptyset$. We want to minimize $\\sum_ig_i(L_iv)$ over $v\\in\\G$.</p>\n<ol type=\"a\">\n<li>On $\\H=\\H_1\\times\\dots\\times\\H_m$ (inner product $\\sum_i\\ps{x_i}{y_i}$) set $Lv=(L_1v,\\dots,L_mv)$ and $g(x)=\\sum_ig_i(x_i)$. Compute $L^*$ and $L^*L$; show that $L$ is injective with closed range $E=\\ran L$, and that the problem is equivalent to $\\min_{x\\in\\H}\\ind_E(x)+g(x)$.</li>\n<li>Compute $\\prox_{\\gamma g}$ and $P_E$.</li>\n<li>Write Douglas–Rachford for $\\ind_E+g$ (prox of $g$ first) and rewrite it with $c_n=Q^{-1}L^*y_n$ and $v_n=Q^{-1}L^*x_n$. Which algorithm do you get?</li>\n<li>Check the hypotheses of the Douglas–Rachford theorem and conclude that $v_n\\wto\\hat v\\in\\Argmin\\sum_ig_i\\circ L_i$.</li>\n<li>Write the algorithm when $L_i=\\Id$ for every $i$.</li>\n</ol>"
+},
+"ex-mem-fb-model": {
+"p": "10_memorize.html",
+"k": "ex",
+"t": "Nonnegative sparse least squares: a prox, then Forward–Backward",
+"s": "<p>Let $K\\in\\R^{M\\times N}$, $y\\in\\R^M$, $\\beta\\gt0$ and $F(x)=\\tfrac12\\norm{Kx-y}^2+\\beta\\norm x_1+\\ind_{[0,+\\infty[^N}(x)$.</p>\n<ol type=\"a\">\n<li>Show that $F$ has a minimizer. When is it unique?</li>\n<li>Compute $\\prox_{\\gamma\\varphi}$ for $\\varphi(\\xi)=\\beta\\xi+\\ind_{[0,+\\infty[}(\\xi)$, then $\\prox_{\\gamma f}$ for $f=\\beta\\norm\\cdot_1+\\ind_{[0,+\\infty[^N}$.</li>\n<li>Write the Forward–Backward algorithm with all its constants.</li>\n<li>Characterize the minimizers coordinate by coordinate and interpret.</li>\n<li>For $N=M=1$, $K=1$, $y=10$, $\\beta=1$, run the iteration with $\\gamma=2=2/\\norm K^2$ and $\\lambda_n\\equiv1$. What happens?</li>\n</ol>"
+},
+"ex-mem-averaged": {
+"p": "10_memorize.html",
+"k": "ex",
+"t": "Alternating projections are averaged, and they are Forward–Backward",
+"s": "<p>Let $C$ and $D$ be nonempty closed convex subsets of $\\H$ and $T=P_C\\circ P_D$.</p>\n<ol type=\"a\">\n<li>Show that $T$ is $\\tfrac23$-averaged and give the admissible relaxations of $x_{n+1}=x_n+\\lambda_n(Tx_n-x_n)$.</li>\n<li>Assume $C\\cap D\\ne\\emptyset$. Show that $\\Fix T=C\\cap D$.</li>\n<li>You may use that $\\frac12d_D^2$ is convex and differentiable with $\\nabla\\big(\\frac12d_D^2\\big)=\\Id-P_D$ (the envelope $\\env{1}{\\ind_D}$, page 3). Show that $\\Id-P_D$ is firmly nonexpansive, and that $T$ is the Forward–Backward operator of $\\ind_C+\\frac12d_D^2$ with $\\gamma=1$. Recompute the relaxation range from $\\delta$.</li>\n<li>What does the iteration solve when $C\\cap D=\\emptyset$? Give an example.</li>\n</ol>"
+},
+"ex-mem-mm": {
+"p": "10_memorize.html",
+"k": "ex",
+"t": "A majorant and its MM step for a smoothed $\\ell^1$ penalty",
+"s": "<p>Let $H\\in\\R^{M\\times N}$, $z\\in\\R^M$, $\\lambda,\\delta\\gt0$, $\\psi(u)=\\sqrt{\\delta^2+u^2}$ and $f(x)=\\tfrac12\\norm{Hx-z}^2+\\lambda\\sum_{i=1}^N\\psi(x_i)$.</p>\n<ol type=\"a\">\n<li>Check the four assumptions of the half-quadratic theorem for $\\psi$ and compute $\\omega$.</li>\n<li>Write a quadratic majorant $h(x,y)$ of $f$ at $y$, with its curvature $A(y)$, and justify it.</li>\n<li>Write the MM quadratic step. Show that for $\\theta_n=1$ it is the reweighted least-squares system $\\big(H^\\top H+\\lambda\\operatorname{Diag}(\\omega(x_n))\\big)x_{n+1}=H^\\top z$.</li>\n<li>Show that $f$ is coercive and strictly convex, find $\\nu,\\bar\\nu$ with $\\nu\\Id\\preccurlyeq A(x_n)\\preccurlyeq\\bar\\nu\\Id$ along the iterates, and conclude.</li>\n<li>Propose a parallel variant and its update.</li>\n</ol>"
+},
+"ex-mem-dual-ls": {
+"p": "10_memorize.html",
+"k": "ex",
+"t": "Dualize a constrained least-squares problem, then solve it two ways",
+"s": "<p>Let $L\\in\\B(\\H,\\G)$, $C\\subset\\G$ nonempty closed convex, $z\\in\\H$, and (P): minimize $\\tfrac12\\norm{x-z}^2$ subject to $Lx\\in C$.</p>\n<ol type=\"a\">\n<li>Write (P) as $\\min f+g\\circ L$ and show that it has a unique solution when $\\{x:Lx\\in C\\}\\ne\\emptyset$.</li>\n<li>Compute $f^*$ and $g^*$; write the dual problem (D).</li>\n<li>Give a qualification condition for strong duality. Show that a Kuhn–Tucker pair satisfies $\\hat x=z-L^*\\hat v$.</li>\n<li>Write Forward–Backward on (D), with its constants and the primal iterate.</li>\n<li>Write the primal-dual algorithm for (P) with $h=\\frac12\\norm{\\cdot-z}^2$ and its condition.</li>\n<li>Make (d) and (e) explicit for $\\H=\\R^N$, $L=D$ the forward differences ($\\norm D^2\\le4$), $C=[-\\eps,\\eps]^{N-1}$.</li>\n</ol>"
+},
+"ex-mem-dr-lines": {
+"p": "10_memorize.html",
+"k": "ex",
+"t": "Douglas–Rachford and Peaceman–Rachford on two lines, computed exactly",
+"s": "<p>In $\\R^2$ let $A=\\R\\times\\{0\\}$, $B=\\R\\,(\\cos\\theta,\\sin\\theta)$ with $\\theta\\in\\,]0,\\pi/2[$, $f=\\ind_A$, $g=\\ind_B$.</p>\n<ol type=\"a\">\n<li>Compute $\\prox_{\\gamma f}$, $\\prox_{\\gamma g}$ and the reflections $R_A$, $R_B$ as matrices (for every $\\gamma\\gt0$).</li>\n<li>Show that $T=R_AR_B$ is the rotation by $-2\\theta$; find $\\Fix T$ and check the dictionary $\\zer(\\partial f+\\partial g)=P_B(\\Fix T)$.</li>\n<li>Peaceman–Rachford ($\\lambda_n\\equiv2$): show that $\\norm{x_n}$ is constant. Which hypothesis of the DR theorem fails?</li>\n<li>Douglas–Rachford with constant $\\lambda\\in\\,]0,2[$: compute the moduli of the eigenvalues of the iteration matrix and the linear rate. Which $\\lambda$ is best? What happens when $\\theta\\to0$?</li>\n</ol>"
+},
 "skeleton": {
 "p": "10_memorize.html",
 "k": "sec",
@@ -1258,6 +1294,36 @@ window.LSD_REGISTRY = {
 "p": "10_memorize.html",
 "k": "sec",
 "t": "Flashcards",
+"s": ""
+},
+"minimal-pairs": {
+"p": "10_memorize.html",
+"k": "sec",
+"t": "Minimal pairs",
+"s": ""
+},
+"counterexamples": {
+"p": "10_memorize.html",
+"k": "sec",
+"t": "Counterexamples to keep in mind",
+"s": ""
+},
+"quiz": {
+"p": "10_memorize.html",
+"k": "sec",
+"t": "Graded quiz",
+"s": ""
+},
+"exam-style": {
+"p": "10_memorize.html",
+"k": "sec",
+"t": "Exam-style problems",
+"s": ""
+},
+"oral-drill": {
+"p": "10_memorize.html",
+"k": "sec",
+"t": "Oral drill: explain it in 60 seconds",
 "s": ""
 }
 };
