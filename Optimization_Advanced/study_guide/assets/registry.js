@@ -1210,7 +1210,7 @@ window.LSD_REGISTRY = {
 "p": "09_toolbox.html",
 "k": "trick",
 "t": "T22 · Count averagedness: the composition formula and the relaxation range",
-"s": "<p>Whenever an algorithm reads $x_{n+1}=x_n+\\lambda_n(Sx_n-x_n)$ with $S$ a composition of averaged maps: (1) count each factor ($\\prox_{\\gamma f}$: $\\tfrac12$; $\\Id-\\gamma\\nabla g$: $\\gamma\\nu/2$ for $\\gamma\\in\\,]0,2/\\nu[$); (2) compose,\n$$\\gamma_{12}=\\frac{\\alpha_1+\\alpha_2-2\\alpha_1\\alpha_2}{1-\\alpha_1\\alpha_2}\\iff\\frac{\\gamma_{12}}{1-\\gamma_{12}}=\\frac{\\alpha_1}{1-\\alpha_1}+\\frac{\\alpha_2}{1-\\alpha_2};$$\n(3) relax in $[0,1/\\gamma_{12}]$: $\\lambda_n\\in[0,\\delta]$ with $\\sum_n\\lambda_n(\\delta-\\lambda_n)=+\\infty$, $\\delta=1/\\gamma_{12}$.</p>"
+"s": "<p>Whenever an algorithm reads $x_{n+1}=x_n+\\lambda_n(Sx_n-x_n)$ with $S$ a composition of averaged maps: (1) count each factor ($\\prox_{\\gamma f}$, $f\\in\\Gz{\\H}$: $\\tfrac12$; $\\Id-\\gamma\\nabla g$, $g\\in\\Gz{\\H}$ with $\\nu$-Lipschitz gradient: $\\gamma\\nu/2$ for $\\gamma\\in\\,]0,2/\\nu[$); (2) compose,\n$$\\alpha_{12}=\\frac{\\alpha_1+\\alpha_2-2\\alpha_1\\alpha_2}{1-\\alpha_1\\alpha_2}\\iff\\frac{\\alpha_{12}}{1-\\alpha_{12}}=\\frac{\\alpha_1}{1-\\alpha_1}+\\frac{\\alpha_2}{1-\\alpha_2};$$\n(3) relax in $[0,1/\\alpha_{12}]$: $\\lambda_n\\in[0,\\delta]$ with $\\sum_n\\lambda_n(\\delta-\\lambda_n)=+\\infty$, $\\delta=1/\\alpha_{12}$. (Slide 16 of Part V calls the composed constant $\\gamma$; it is written $\\alpha_{12}$ here, as on page 4, so that it cannot be confused with the step size $\\gamma$.)</p>"
 },
 "algo-chooser": {
 "p": "09_toolbox.html",

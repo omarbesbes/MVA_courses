@@ -189,6 +189,19 @@
   });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') hidePop(); });
 
+  /* ---------- printing: open every collapsible block, restore afterwards ---------- */
+  var printOpened = [];
+  window.addEventListener('beforeprint', function () {
+    printOpened = [];
+    document.querySelectorAll('details').forEach(function (d) { if (!d.open) { d.setAttribute('open', ''); printOpened.push(d); } });
+    document.querySelectorAll('.spoiler').forEach(function (sp) { if (!sp.classList.contains('open')) { sp.classList.add('open', 'print-opened'); } });
+  });
+  window.addEventListener('afterprint', function () {
+    printOpened.forEach(function (d) { d.removeAttribute('open'); }); printOpened = [];
+    document.querySelectorAll('.spoiler.print-opened').forEach(function (sp) { sp.classList.remove('open', 'print-opened'); });
+    syncTocOpen();
+  });
+
   /* ---------- hash → open the enclosing details ---------- */
   function openTarget() {
     var id = location.hash.slice(1); if (!id) return; var el = document.getElementById(id); if (!el) return;
