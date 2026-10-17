@@ -22,7 +22,7 @@ window.LSD_REGISTRY = {
 "p": "01_convex_analysis.html",
 "k": "rem",
 "t": "Running examples: mesh denoising, segmentation, consensus, logistic regression",
-"s": "<p><strong>Valued graph.</strong> $\\mathcal V=\\{v^{(i)}\\mid i\\in\\{1,\\dots,M\\}\\}$ is the set of vertices (objects), $\\mathcal E=\\{e^{(i,j)}\\mid (i,j)\\in\\mathbb E\\}$ the set of edges (object relationships). A directed reflexive graph has $|\\mathbb E|\\le M^2$ edges, a directed nonreflexive one $|\\mathbb E|\\le M(M-1)$, an undirected nonreflexive one $|\\mathbb E|\\le M(M-1)/2$. Weights $(x^{(i)})_{1\\le i\\le M}$ live on vertices and $(x^{(i,j)})_{(i,j)\\in\\mathbb E}$ on edges (scalars or vectors).</p>\n<p><strong>Mesh denoising</strong> (undirected nonreflexive graph: vertices and edges of the mesh; $x^{(i)}\\in\\R^3$ the true coordinates of vertex $i$, $y^{(i)}$ the measured ones; $N=3M$, $D=\\R^N$):\n$$f(x)=\\sum_{i=1}^M\\Big(\\norm{x^{(i)}-y^{(i)}}^2+\\Big(\\sum_{j\\in\\mathbb N_i}\\omega_{i,j}\\norm{x^{(i)}-x^{(j)}}^2\\Big)^{1/2}\\Big),$$\n$\\mathbb N_i$ the neighbourhood of vertex $i$, $(\\omega_{i,j})_{j\\in\\mathbb N_i}$ nonnegative regularization constants.</p>\n<p><strong>Segmentation</strong> (undirected nonreflexive regular graph of pixels; $x^{(i)}\\in\\mathbb L$ the label of pixel $i$, $\\mathbb L\\subset\\R$ finite; $y^{(i)}$ its intensity; $N=M$, $D=\\mathbb L^M$):\n$$f(x)=\\sum_{i=1}^M\\alpha_i^p\\,\\abs{x^{(i)}-y^{(i)}}^p+\\sum_{(i,j)\\in\\mathbb E}\\omega_{i,j}^q\\,\\abs{x^{(i)}-x^{(j)}}^q,\\qquad (p,q)\\in[1,+\\infty[^2,$$\n$(\\alpha_i)_i$, $(\\omega_{i,j})_{(i,j)}$ nonnegative constants.</p><p class=\"mini\">…</p>"
+"s": "<p><strong>Valued graph.</strong> $\\mathcal V=\\{v^{(i)}\\mid i\\in\\{1,\\dots,M\\}\\}$ is the set of vertices (objects), $\\mathcal E=\\{e^{(i,j)}\\mid (i,j)\\in\\mathbb E\\}$ the set of edges (object relationships). A directed reflexive graph has $|\\mathbb E|\\le M^2$ edges, a directed nonreflexive one $|\\mathbb E|\\le M(M-1)$, an undirected nonreflexive one $|\\mathbb E|\\le M(M-1)/2$. Weights $(x^{(i)})_{1\\le i\\le M}$ live on vertices and $(x^{(i,j)})_{(i,j)\\in\\mathbb E}$ on edges (scalars or vectors).</p>\n<p><strong>Mesh denoising</strong>: remove uncertainties in mesh measurements (undirected nonreflexive graph: vertices and edges of the mesh; $x^{(i)}\\in\\R^3$ the true coordinates of vertex $i$, $y^{(i)}$ the measured ones; $N=3M$, $D=\\R^N$):\n$$f(x)=\\sum_{i=1}^M\\Big(\\norm{x^{(i)}-y^{(i)}}^2+\\Big(\\sum_{j\\in\\mathbb N_i}\\omega_{i,j}\\norm{x^{(i)}-x^{(j)}}^2\\Big)^{1/2}\\Big),$$\n$\\mathbb N_i$ the neighbourhood of vertex $i$, $(\\omega_{i,j})_{j\\in\\mathbb N_i}$ nonnegative regularization constants.</p>\n<p><strong>Segmentation</strong>: assign a label to every pixel in an image so that pixels with the same label share certain characteristics (undirected nonreflexive regular graph: the pixels, linked by their neighbourhood relationships; $x^{(i)}\\in\\mathbb L$ the label of pixel $i$, $\\mathbb L\\subset\\R$ finite; $y^{(i)}$ its intensity; $N=M$, $D=\\mathbb L^M$):\n$$f(x)=\\sum_{i=1}^M\\alpha_i^p\\,\\abs{x^{(i)}-y^{(i)}}^p+\\sum_{(i,j)\\in\\mathbb E}\\omega_{i,j}^q\\,\\abs{x^{(i)}-x^{(j)}}^q,\\qquad (p,q)\\in[1,+\\infty[^2,$$\n$(\\alpha_i)_i$, $(\\omega_{i,j})_{(i,j)}$ nonnegative constants.</p><p class=\"mini\">…</p>"
 },
 "hilbert-space": {
 "p": "01_convex_analysis.html",
@@ -340,7 +340,7 @@ window.LSD_REGISTRY = {
 "p": "02_subdifferential_conjugate.html",
 "k": "prop",
 "t": "Conjugate of a separable sum: $f^*(u)=\\sum_i f_i^*(u_i)$",
-"s": "<p>Let $(\\H_i)_{i\\in I}$, $I\\subset\\N$, be Hilbert spaces and $\\H=\\bigoplus_{i\\in I}\\H_i$. For every $i\\in I$ let $f_i:\\H_i\\to\\,]-\\infty,+\\infty]$, and set $f:\\H\\to\\,]-\\infty,+\\infty]:\\ x=(x_i)_{i\\in I}\\mapsto\\sum_{i\\in I}f_i(x_i)$. Then\n$$\\big(\\forall u=(u_i)_{i\\in I}\\in\\H\\big)\\qquad f^*(u)=\\sum_{i\\in I}f_i^*(u_i).$$</p>"
+"s": "<p>Let $(\\H_i)_{i\\in I}$, $I\\subset\\N$, be Hilbert spaces and $\\H=\\bigoplus_{i\\in I}\\H_i$. For every $i\\in I$ let $f_i:\\H_i\\to\\,]-\\infty,+\\infty]$ be proper (see the note), and set $f:\\H\\to\\,]-\\infty,+\\infty]:\\ x=(x_i)_{i\\in I}\\mapsto\\sum_{i\\in I}f_i(x_i)$. Then\n$$\\big(\\forall u=(u_i)_{i\\in I}\\in\\H\\big)\\qquad f^*(u)=\\sum_{i\\in I}f_i^*(u_i).$$</p>"
 },
 "ex-conjugate-linear-indicator": {
 "p": "02_subdifferential_conjugate.html",
@@ -352,7 +352,7 @@ window.LSD_REGISTRY = {
 "p": "03_proximity_operator.html",
 "k": "rem",
 "t": "Explicit versus implicit gradient steps",
-"s": "<p>Let $\\H$ be a real Hilbert space and $f\\in\\Gz{\\H}$ with a $\\beta$-Lipschitz gradient. We look for $\\hat x\\in\\Argmin f$.</p>\n<ul>\n<li><strong>Gradient descent</strong> (explicit): $\\gamma\\in\\,]0,+\\infty[$, $x_0\\in\\H$, $x_{n+1}=x_n-\\gamma\\nabla f(x_n)$. The sequence converges to a minimizer of $f$ provided one exists and <span class=\"hl\">$\\gamma\\in\\,]0,2/\\beta[$</span>.</li>\n<li><strong>Alternative scheme</strong> (implicit): $x_{n+1}=x_n-\\gamma\\nabla f(x_{n+1})$ — the gradient is evaluated at the <em>arrival</em> point.</li>\n</ul>\n<p>Three questions (slide 3): <em>How to determine $x_{n+1}$ at each iteration of the implicit scheme? Which values of $\\gamma$ guarantee convergence? What to do if $f$ is nonsmooth?</em></p>"
+"s": "<p>Let $\\H$ be a real Hilbert space and $f\\in\\Gz{\\H}$ with a $\\beta$-Lipschitz gradient. We look for $\\hat x\\in\\Argmin f$.</p>\n<ul>\n<li><strong>Gradient descent</strong> (explicit): $\\gamma\\in\\,]0,+\\infty[$, $x_0\\in\\H$, $x_{n+1}=x_n-\\gamma\\nabla f(x_n)$. The sequence converges to a minimizer of $f$ provided one exists and <span class=\"hl\">$\\gamma\\in\\,]0,2/\\beta[$</span>.</li>\n<li><strong>Alternative scheme</strong> (implicit): $x_{n+1}=x_n-\\gamma\\nabla f(x_{n+1})$ — the gradient is evaluated at the <em>arrival</em> point.</li>\n</ul>\n<p>Three questions (slide 2): <em>How to determine $x_{n+1}$ at each iteration of the implicit scheme? Which values of $\\gamma$ guarantee convergence? What to do if $f$ is nonsmooth?</em></p>"
 },
 "moreau-envelope": {
 "p": "03_proximity_operator.html",
@@ -412,13 +412,13 @@ window.LSD_REGISTRY = {
 "p": "03_proximity_operator.html",
 "k": "prop",
 "t": "Prox in an orthonormal basis; soft-thresholding for $\\lambda\\norm\\cdot_1$",
-"s": "<p>Let $\\H$ be a separable Hilbert space with an orthonormal basis $(b_i)_{i\\in I}$. For every $i\\in I$ let $\\varphi_i\\in\\Gz\\R$ with <span class=\"hl\">$\\varphi_i\\ge0$</span>. For every $x\\in\\H$, if\n$$f(x)=\\sum_{i\\in I}\\varphi_i\\big(\\ps x{b_i}\\big)\\qquad\\text{then}\\qquad\\prox_f(x)=\\sum_{i\\in I}\\prox_{\\varphi_i}\\big(\\ps x{b_i}\\big)\\,b_i .$$\n<em>Remark (slide 13):</em> the assumption $(\\forall i)\\ \\varphi_i\\ge0$ can be relaxed if $\\H$ is finite dimensional.</p>\n<p><em>Example (slide 14):</em> $\\H=\\R^N$, $(b_i)$ the canonical basis, $f=\\lambda\\norm\\cdot_1$ with $\\lambda\\in[0,+\\infty[$:\n$$\\big(\\forall x=(x^{(i)})_{1\\le i\\le N}\\in\\R^N\\big)\\qquad\\prox_{\\lambda\\norm\\cdot_1}(x)=\\big(\\prox_{\\lambda\\abs\\cdot}(x^{(i)})\\big)_{1\\le i\\le N}=\\big(\\sgn(x^{(i)})\\max\\{\\abs{x^{(i)}}-\\lambda,0\\}\\big)_{1\\le i\\le N}.$$</p>"
+"s": "<p>Let $\\H$ be a separable Hilbert space with an orthonormal basis $(b_i)_{i\\in I}$. For every $i\\in I$ let $\\varphi_i\\in\\Gz\\R$ with <span class=\"hl\">$\\varphi_i\\ge0$</span>. For every $x\\in\\H$, if\n$$f(x)=\\sum_{i\\in I}\\varphi_i\\big(\\ps x{b_i}\\big)\\qquad\\text{then}\\qquad\\prox_f(x)=\\sum_{i\\in I}\\prox_{\\varphi_i}\\big(\\ps x{b_i}\\big)\\,b_i .$$\n<em>Remark (slide 13):</em> the assumption $(\\forall i)\\ \\varphi_i\\ge0$ can be relaxed if $\\H$ is finite dimensional.</p>\n<p><em>Example (slide 13):</em> $\\H=\\R^N$, $(b_i)$ the canonical basis, $f=\\lambda\\norm\\cdot_1$ with $\\lambda\\in[0,+\\infty[$:\n$$\\big(\\forall x=(x^{(i)})_{1\\le i\\le N}\\in\\R^N\\big)\\qquad\\prox_{\\lambda\\norm\\cdot_1}(x)=\\big(\\prox_{\\lambda\\abs\\cdot}(x^{(i)})\\big)_{1\\le i\\le N}=\\big(\\sgn(x^{(i)})\\max\\{\\abs{x^{(i)}}-\\lambda,0\\}\\big)_{1\\le i\\le N}.$$</p>"
 },
 "moreau-decomposition": {
 "p": "03_proximity_operator.html",
 "k": "thm",
 "t": "Moreau decomposition: $\\prox_{\\gamma f^*}x=x-\\gamma\\prox_{\\gamma^{-1}f}(\\gamma^{-1}x)$",
-"s": "<p>Let $\\H$ be a Hilbert space, $f\\in\\Gz{\\H}$ and $\\gamma\\in\\,]0,+\\infty[$. Then\n$$(\\forall x\\in\\H)\\qquad\\prox_{\\gamma f^*}x=x-\\gamma\\,\\prox_{\\gamma^{-1}f}(\\gamma^{-1}x).$$\nWith $\\gamma=1$: $\\prox_{f^*}=\\Id-\\prox_f$, i.e. $x=\\prox_fx+\\prox_{f^*}x$ for every $x$.</p>\n<p><em>Example (slide 15):</em> if $\\H=\\R^N$ and $f=\\tfrac1q\\norm\\cdot_q^q$ with $q\\in\\,]1,+\\infty[$, then $f^*=\\tfrac1{q^*}\\norm\\cdot_{q^*}^{q^*}$ with $\\tfrac1q+\\tfrac1{q^*}=1$, and\n$$(\\forall x\\in\\R^N)\\qquad\\prox_{\\frac\\gamma{q^*}\\norm\\cdot_{q^*}^{q^*}}x=x-\\gamma\\,\\prox_{\\frac1{\\gamma q}\\norm\\cdot_q^q}(\\gamma^{-1}x).$$</p>"
+"s": "<p>Let $\\H$ be a Hilbert space, $f\\in\\Gz{\\H}$ and $\\gamma\\in\\,]0,+\\infty[$. Then\n$$(\\forall x\\in\\H)\\qquad\\prox_{\\gamma f^*}x=x-\\gamma\\,\\prox_{\\gamma^{-1}f}(\\gamma^{-1}x).$$\nWith $\\gamma=1$: $\\prox_{f^*}=\\Id-\\prox_f$, i.e. $x=\\prox_fx+\\prox_{f^*}x$ for every $x$.</p>\n<p><em>Example (slide 14):</em> if $\\H=\\R^N$ and $f=\\tfrac1q\\norm\\cdot_q^q$ with $q\\in\\,]1,+\\infty[$, then $f^*=\\tfrac1{q^*}\\norm\\cdot_{q^*}^{q^*}$ with $\\tfrac1q+\\tfrac1{q^*}=1$, and\n$$(\\forall x\\in\\R^N)\\qquad\\prox_{\\frac\\gamma{q^*}\\norm\\cdot_{q^*}^{q^*}}x=x-\\gamma\\,\\prox_{\\frac1{\\gamma q}\\norm\\cdot_q^q}(\\gamma^{-1}x).$$</p>"
 },
 "prox-support-function": {
 "p": "03_proximity_operator.html",
@@ -466,7 +466,7 @@ window.LSD_REGISTRY = {
 "p": "04_fixed_point_forward_backward.html",
 "k": "prop",
 "t": "Weak convergence ⇔ bounded with at most one weak sequential cluster point",
-"s": "<p>Let $(x_n)_{n\\in\\N}$ be a sequence in $\\H$. Then $(x_n)_{n\\in\\N}$ converges weakly if and only if</p>\n<ul>\n<li>$(x_n)_{n\\in\\N}$ is <span class=\"hl\">bounded</span>, and</li>\n<li>$(x_n)_{n\\in\\N}$ possesses <span class=\"hl\">at most one sequential cluster point in the weak topology</span>.</li>\n</ul>\n<p>($\\hat x$ is a <em>sequential cluster point in the weak topology</em> — a <em>weak cluster point</em> for short — if some subsequence $(x_{n_k})_{k\\in\\N}$ converges weakly to $\\hat x$.)</p>\n<p><em>Illustration (slide 7).</em> $x_n=(-1)^n$ in $\\R$: bounded, but two cluster points $-1$ and $1$, hence no convergence.</p>"
+"s": "<p>Let $(x_n)_{n\\in\\N}$ be a sequence in $\\H$. Then $(x_n)_{n\\in\\N}$ converges weakly if and only if</p>\n<ul>\n<li>$(x_n)_{n\\in\\N}$ is <span class=\"hl\">bounded</span>, and</li>\n<li>$(x_n)_{n\\in\\N}$ possesses <span class=\"hl\">at most one sequential cluster point in the weak topology</span>.</li>\n</ul>\n<p>($\\hat x$ is a <em>sequential cluster point in the weak topology</em> — a <em>weak cluster point</em> for short — if some subsequence $(x_{n_k})_{k\\in\\N}$ converges weakly to $\\hat x$.)</p>\n<p><em>Illustration (slide 6).</em> $x_n=(-1)^n$ in $\\R$: bounded, but two cluster points $-1$ and $1$, hence no convergence.</p>"
 },
 "lemma-opial": {
 "p": "04_fixed_point_forward_backward.html",
@@ -514,7 +514,7 @@ window.LSD_REGISTRY = {
 "p": "04_fixed_point_forward_backward.html",
 "k": "prop",
 "t": "Picard iteration of a nonexpansive map converges weakly when the residual vanishes",
-"s": "<p>Let $C$ be a nonempty closed convex subset of a Hilbert space $\\H$ and $T:C\\to C$ a nonexpansive operator such that $\\Fix T\\neq\\emptyset$. Let $x_0\\in C$ and $(\\forall n\\in\\N)\\ x_{n+1}=Tx_n$. If $x_n-Tx_n\\to0$, then $(x_n)_{n\\in\\N}$ converges weakly to a point in $\\Fix T$.</p>\n<p><em>Exercise (slide 13):</em> prove this result by showing that $(x_n)_{n\\in\\N}$ is Fejér-monotone with respect to $\\Fix T$. Solution in <a class=\"xref\" data-id=\"ex-nonexpansive-iteration\" href=\"#ex-nonexpansive-iteration\">exercise 1</a> below.</p>"
+"s": "<p>Let $C$ be a nonempty closed convex subset of a Hilbert space $\\H$ and $T:C\\to C$ a nonexpansive operator such that $\\Fix T\\neq\\emptyset$. Let $x_0\\in C$ and $(\\forall n\\in\\N)\\ x_{n+1}=Tx_n$. If $x_n-Tx_n\\to0$, then $(x_n)_{n\\in\\N}$ converges weakly to a point in $\\Fix T$.</p>\n<p><em>Exercise (slide 12):</em> prove this result by showing that $(x_n)_{n\\in\\N}$ is Fejér-monotone with respect to $\\Fix T$. Solution in <a class=\"xref\" data-id=\"ex-nonexpansive-iteration\" href=\"#ex-nonexpansive-iteration\">exercise 1</a> below.</p>"
 },
 "krasnoselskii-mann": {
 "p": "04_fixed_point_forward_backward.html",
@@ -532,7 +532,7 @@ window.LSD_REGISTRY = {
 "p": "04_fixed_point_forward_backward.html",
 "k": "prop",
 "t": "Convex combinations and compositions of averaged operators",
-"s": "<p>Let $C\\subset\\H$ be a nonempty set, $A_1:C\\to\\H$ be $\\alpha_1$-averaged and $A_2:C\\to\\H$ be $\\alpha_2$-averaged, with $(\\alpha_1,\\alpha_2)\\in\\,]0,1[^2$.</p>\n<ul>\n<li><strong>Convex combination.</strong> Let $\\lambda\\in\\,]0,1[$. $\\lambda A_1+(1-\\lambda)A_2$ is $\\gamma$-averaged with $$\\gamma=\\lambda\\alpha_1+(1-\\lambda)\\alpha_2.$$</li>\n<li><strong>Composition.</strong> Assume that $A_2(C)\\subset C$. Then $A_1\\circ A_2$ is $\\gamma$-averaged with\n$$\\gamma=\\frac{\\alpha_1+\\alpha_2-2\\alpha_1\\alpha_2}{1-\\alpha_1\\alpha_2}.$$</li>\n</ul>\n<p><em>Exercise (slide 17):</em> prove the first property. Solution in <a class=\"xref\" data-id=\"ex-averaged-combination\" href=\"#ex-averaged-combination\">exercise 2</a>.</p>"
+"s": "<p>Let $C\\subset\\H$ be a nonempty set, $A_1:C\\to\\H$ be $\\alpha_1$-averaged and $A_2:C\\to\\H$ be $\\alpha_2$-averaged, with $(\\alpha_1,\\alpha_2)\\in\\,]0,1[^2$.</p>\n<ul>\n<li><strong>Convex combination.</strong> Let $\\lambda\\in\\,]0,1[$. $\\lambda A_1+(1-\\lambda)A_2$ is $\\gamma$-averaged with $$\\gamma=\\lambda\\alpha_1+(1-\\lambda)\\alpha_2.$$</li>\n<li><strong>Composition.</strong> Assume that $A_2(C)\\subset C$. Then $A_1\\circ A_2$ is $\\gamma$-averaged with\n$$\\gamma=\\frac{\\alpha_1+\\alpha_2-2\\alpha_1\\alpha_2}{1-\\alpha_1\\alpha_2}.$$</li>\n</ul>\n<p><em>Exercise (slide 16):</em> prove the first property. Solution in <a class=\"xref\" data-id=\"ex-averaged-combination\" href=\"#ex-averaged-combination\">exercise 2</a>.</p>"
 },
 "descent-lemma": {
 "p": "04_fixed_point_forward_backward.html",
@@ -670,7 +670,7 @@ window.LSD_REGISTRY = {
 "p": "05_douglas_rachford_ppxa.html",
 "k": "ex",
 "t": "Parallel algorithms for $\\sum g_i$, for projections + support functions, and for $\\norm{\\cdot}_1$ over an intersection",
-"s": "<p>Let $\\G$ be a real Hilbert space. Let $m\\in\\N$, $m\\ge2$.</p>\n<ol>\n<li>For every $i\\in\\{1,\\dots,m\\}$, let $g_i$ be a function in $\\Gz{\\G}$ such that $\\dom g_1\\cap\\bigcap_{i=2}^m\\inte(\\dom g_i)\\neq\\emptyset$. Propose a parallel algorithm for finding a minimizer of $\\sum_{i=1}^mg_i$ when such a minimizer exists.</li>\n<li>Let $p\\in\\{1,\\dots,m-1\\}$ and let $(C_i)_{1\\le i\\le m}$ be nonempty closed convex subsets of $\\G$. We assume that $\\bigcap_{i=1}^p\\inte(C_i)\\neq\\emptyset$, and for every $j\\in\\{p+1,\\dots,m\\}$, $C_j$ is bounded. Propose a parallel algorithm for solving the problem $$\\operatorname*{minimize}_{x\\in\\bigcap_{i=1}^pC_i}\\ \\sum_{j=p+1}^m\\sigma_{C_j}(x)$$ when this problem admits a solution.</li>\n<li>Let $\\H=\\R^N$. Deduce an algorithm to $$\\operatorname*{minimize}_{x\\in\\bigcap_{i=1}^pC_i}\\ \\norm{x}_1 .$$</li>\n</ol>\n<p class=\"mini\">Part V version: item 1 without the qualification condition, item 2 without \"$C_j$ bounded\", no item 3.</p>"
+"s": "<p>Let $\\G$ be a real Hilbert space. Let $m\\in\\N$, $m\\ge2$.</p>\n<ol>\n<li>For every $i\\in\\{1,\\dots,m\\}$, let $g_i$ be a function in $\\Gz{\\G}$ such that $\\dom g_1\\cap\\bigcap_{i=2}^m\\inte(\\dom g_i)\\neq\\emptyset$. Propose a parallel algorithm for finding a minimizer of $\\sum_{i=1}^mg_i$ when such a minimizer exists.</li>\n<li>Let $p\\in\\{1,\\dots,m-1\\}$ and let $(C_i)_{1\\le i\\le m}$ be nonempty closed convex subsets of $\\G$. We assume that $\\bigcap_{i=1}^p\\inte(C_i)\\neq\\emptyset$, and for every $j\\in\\{p+1,\\dots,m\\}$, $C_j$ is bounded. Propose a parallel algorithm for solving the problem $$\\operatorname*{minimize}_{x\\in\\bigcap_{i=1}^pC_i}\\ \\sum_{j=p+1}^m\\sigma_{C_j}(x)$$ when this problem admits a solution.</li>\n<li>Let $\\H=\\R^N$. Deduce an algorithm to $$\\operatorname*{minimize}_{x\\in\\bigcap_{i=1}^pC_i}\\ \\norm{x}_1 .$$</li>\n</ol>\n<p class=\"mini\">Part V version (slide 38): item 1 without the qualification condition; item 2 without $\\bigcap_{i\\le p}\\inte(C_i)\\neq\\emptyset$ and without \"$C_j$ bounded\", and with \"Deduce\" instead of \"Propose\"; no item 3.</p>"
 },
 "primal-dual-problems": {
 "p": "06_duality_admm_primal_dual.html",
@@ -682,7 +682,7 @@ window.LSD_REGISTRY = {
 "p": "06_duality_admm_primal_dual.html",
 "k": "thm",
 "t": "Weak duality: $\\mu\\ge-\\mu^*$, and the duality gap",
-"s": "<p>Let $\\H$, $\\G$ be real Hilbert spaces, $f$ a proper function from $\\H$ to $]-\\infty,+\\infty]$, $g$ a proper function from $\\G$ to $]-\\infty,+\\infty]$, and $L\\in\\B(\\H,\\G)$. Let\n$$\\mu=\\inf_{x\\in\\H} f(x)+g(Lx)\\qquad\\text{and}\\qquad\\mu^*=\\inf_{v\\in\\G} f^*(-L^*v)+g^*(v).$$\nThen $\\mu\\ge-\\mu^*$. If $\\mu\\in\\R$, the number $\\mu+\\mu^*\\ (\\ge0)$ is called the <strong>duality gap</strong>.</p>"
+"s": "<p>Let $\\H$, $\\G$ be real Hilbert spaces, $f$ a proper function from $\\H$ to $]-\\infty,+\\infty]$, $g$ a proper function from $\\G$ to $]-\\infty,+\\infty]$, and $L\\in\\B(\\H,\\G)$. Let\n$$\\mu=\\inf_{x\\in\\H} f(x)+g(Lx)\\qquad\\text{and}\\qquad\\mu^*=\\inf_{v\\in\\G} f^*(-L^*v)+g^*(v).$$\nThen $\\mu\\ge-\\mu^*$. If $\\mu\\in\\R$, the number $\\mu+\\mu^*\\in[0,+\\infty]$ is called the <strong>duality gap</strong> (it is $+\\infty$ when the dual objective is identically $+\\infty$).</p>"
 },
 "strong-duality": {
 "p": "06_duality_admm_primal_dual.html",
@@ -808,7 +808,7 @@ window.LSD_REGISTRY = {
 "p": "06_duality_admm_primal_dual.html",
 "k": "algo",
 "t": "Idea 1: Arrow–Hurwicz, explicit primal-dual subgradient steps",
-"s": "<p>The optimization problem is reformulated as finding\n$$\\inf_{x\\in\\H}\\ f(x)+h(x)+\\underbrace{\\sup_{v\\in\\G}\\ \\ps{v}{Lx}-g^*(v)}_{g(Lx)}=\\inf_{x\\in\\H}\\sup_{v\\in\\G}\\ f(x)+h(x)+\\ps{v}{Lx}-g^*(v).$$\n<strong>Arrow–Hurwicz method.</strong> Let $(\\tau_n)_{n\\in\\N}$ and $(\\sigma_n)_{n\\in\\N}$ be sequences in $]0,+\\infty[$.\n$$(\\forall n\\in\\N)\\qquad\\begin{cases}t_n\\in\\partial f(x_n)\\\\ x_{n+1}=x_n-\\tau_n\\big(t_n+\\nabla h(x_n)+L^*v_n\\big)\\\\ s_n\\in\\partial g^*(v_n)\\\\ v_{n+1}=v_n-\\sigma_n\\big(s_n-Lx_{n+1}\\big)\\end{cases}$$\n⇝ requires stringent conditions on the choice of the step-size (e.g. decaying to zero).</p>"
+"s": "<p>The optimization problem is reformulated as finding\n$$\\inf_{x\\in\\H}\\ f(x)+h(x)+\\underbrace{\\sup_{v\\in\\G}\\ \\ps{v}{Lx}-g^*(v)}_{g(Lx)}=\\inf_{x\\in\\H}\\sup_{v\\in\\G}\\ f(x)+h(x)+\\ps{v}{Lx}-g^*(v).$$\n(<a class=\"chip t\" href=\"09_toolbox.html#T17\"><b>T17</b> dualize by conjugation</a>: $g=g^{**}$ for $g\\in\\Gz{\\G}$.)\n<strong>Arrow–Hurwicz method.</strong> Let $(\\tau_n)_{n\\in\\N}$ and $(\\sigma_n)_{n\\in\\N}$ be sequences in $]0,+\\infty[$.\n$$(\\forall n\\in\\N)\\qquad\\begin{cases}t_n\\in\\partial f(x_n)\\\\ x_{n+1}=x_n-\\tau_n\\big(t_n+\\nabla h(x_n)+L^*v_n\\big)\\\\ s_n\\in\\partial g^*(v_n)\\\\ v_{n+1}=v_n-\\sigma_n\\big(s_n-Lx_{n+1}\\big)\\end{cases}$$\n⇝ requires stringent conditions on the choice of the step-size (e.g. decaying to zero).</p>"
 },
 "pd-implicit": {
 "p": "06_duality_admm_primal_dual.html",
@@ -832,7 +832,7 @@ window.LSD_REGISTRY = {
 "p": "06_duality_admm_primal_dual.html",
 "k": "ex",
 "t": "Prove that sharing is the dual of consensus",
-"s": "<p>Let $\\H$ be a real Hilbert space, $g_i,h_i:\\H\\to\\,]-\\infty,+\\infty]$ for $i\\in\\{1,\\dots,m\\}$, $\\overline u\\in\\H$. Prove that if $h_i=-g_i^*(\\cdot-\\overline u/m)$ for every $i$, then the sharing problem $\\max\\sum_ih_i(u_i)$ s.t. $u_1+\\dots+u_m=\\overline u$ is the dual of the consensus problem $\\min\\sum_ig_i(x_i)$ s.t. $x_1=\\dots=x_m$. Make the distributed-computing reading explicit: what does each agent compute, what is exchanged?</p>"
+"s": "<p>Let $\\H$ be a real Hilbert space, $g_i,h_i:\\H\\to\\,]-\\infty,+\\infty]$ for $i\\in\\{1,\\dots,m\\}$, $\\overline u\\in\\H$. Prove that if $h_i=-g_i^*(\\cdot-\\overline u/m)$ for every $i$, then the sharing problem $\\max\\sum_ih_i(u_i)$ s.t. $u_1+\\dots+u_m=\\overline u$ is the dual of the consensus problem $\\min\\sum_ig_i(x_i)$ s.t. $x_1=\\dots=x_m$. <span class=\"tag tag-extra\">Extra</span> (question added by the guide, not on slide 7) Make the distributed-computing reading explicit: what does each agent compute, what is exchanged?</p>"
 },
 "ex-primal-dual-sum": {
 "p": "06_duality_admm_primal_dual.html",
@@ -910,7 +910,7 @@ window.LSD_REGISTRY = {
 "p": "07_majorization_minimization.html",
 "k": "algo",
 "t": "MM quadratic algorithm: $x_{n+1}=x_n-\\theta_nA(x_n)^{-1}\\nabla f(x_n)$",
-"s": "<p><strong>Problem:</strong> minimization of a differentiable function $f:\\H\\to\\R$.</p>\n<p><strong>Assumption:</strong> for every $y\\in\\H$, there exists a strongly positive self-adjoint operator $A(y)$ such that the quadratic function\n$$(\\forall x\\in\\H)\\qquad h(x,y)=f(y)+\\ps{\\nabla f(y)}{x-y}+\\tfrac12\\norm{x-y}^2_{A(y)}$$\nis a majorant function of $f$ at $y$.</p>\n<div class=\"algo-box\"><div class=\"algo-name\">MM quadratic algorithm</div>\n<p>Let $x_0\\in\\H$. For $n=0,1,\\dots$</p>\n<ol><li>$x_{n+1}=x_n-\\theta_n\\,A(x_n)^{-1}\\nabla f(x_n)$, with $\\theta_n\\in\\,]0,2[$ <span class=\"mini\">(solve $A(x_n)d_n=\\nabla f(x_n)$, then step $-\\theta_nd_n$)</span></li></ol></div>\n<p>$(\\theta_n)_n$ acts as a stepsize parameter. For $\\theta_n\\equiv1$ we recover the basic MM algorithm.</p>"
+"s": "<p><strong>Problem:</strong> minimization of a differentiable function $f:\\H\\to\\R$.</p>\n<p><strong>Assumption:</strong> for every $y\\in\\H$, there exists a strongly positive self-adjoint operator $A(y)$ such that the quadratic function\n$$(\\forall x\\in\\H)\\qquad h(x,y)=f(y)+\\ps{\\nabla f(y)}{x-y}+\\tfrac12\\norm{x-y}^2_{A(y)}$$\nis a majorant function of $f$ at $y$.</p>\n<div class=\"algo-box\"><div class=\"algo-name\">MM quadratic algorithm</div>\n<p>Let $x_0\\in\\H$. For $n=0,1,\\dots$</p>\n<ol><li>$x_{n+1}=x_n-\\theta_n\\,A(x_n)^{-1}\\nabla f(x_n)$, with $\\theta_n\\in\\,]0,2[$ <span class=\"mini\">(solve $A(x_n)p_n=\\nabla f(x_n)$, then step $-\\theta_np_n$)</span></li></ol></div>\n<p>$(\\theta_n)_n$ acts as a stepsize parameter. For $\\theta_n\\equiv1$ we recover the basic MM algorithm.</p>"
 },
 "mm-quadratic-convergence": {
 "p": "07_majorization_minimization.html",
@@ -922,7 +922,7 @@ window.LSD_REGISTRY = {
 "p": "07_majorization_minimization.html",
 "k": "rem",
 "t": "Subspace acceleration and the table of subspaces",
-"s": "<p><strong>Problem:</strong> minimization of a differentiable function $f:\\H\\to\\R$. <strong>MM quadratic algorithm:</strong> $x_{n+1}\\in\\Argmin_{x\\in\\H}h(x,x_n)$.</p>\n<p><strong>Difficulty:</strong> in the context of large scale optimization, the minimization of $h$ over $\\H$ may become untractable.</p>\n<p>⇒ <strong>Subspace strategy:</strong> instead of minimizing $h$ over the whole set $\\H$, restrict the minimization space to a subspace spanned by a small number of vectors.</p>\n<p><strong>MM quadratic subspace algorithm:</strong> $$x_{n+1}\\in\\Argmin_{x\\in x_n+\\operatorname{span}(d_n^1,d_n^2,\\dots,d_n^{M_n})}h(x,x_n),$$ where, for every $n\\in\\N$, $M_n\\ge1$ and $D_n=[d_n^1\\,|\\,d_n^2\\,|\\dots|\\,d_n^{M_n}]\\in\\H^{M_n}$.</p><p class=\"mini\">…</p>"
+"s": "<p><strong>Problem:</strong> minimization of a differentiable function $f:\\H\\to\\R$. <strong>MM quadratic algorithm:</strong> $x_{n+1}\\in\\Argmin_{x\\in\\H}h(x,x_n)$.</p>\n<p><strong>Difficulty:</strong> in the context of large scale optimization, the minimization of $h$ over $\\H$ may become intractable.</p>\n<p>⇒ <strong>Subspace strategy:</strong> instead of minimizing $h$ over the whole set $\\H$, restrict the minimization space to a subspace spanned by a small number of vectors.</p>\n<p><strong>MM quadratic subspace algorithm:</strong> $$x_{n+1}\\in\\Argmin_{x\\in x_n+\\operatorname{span}(d_n^1,d_n^2,\\dots,d_n^{M_n})}h(x,x_n),$$ where, for every $n\\in\\N$, $M_n\\ge1$ and $D_n=[d_n^1\\,|\\,d_n^2\\,|\\dots|\\,d_n^{M_n}]\\in\\H^{M_n}$.</p><p class=\"mini\">…</p>"
 },
 "mm-subspace": {
 "p": "07_majorization_minimization.html",
@@ -1000,7 +1000,7 @@ window.LSD_REGISTRY = {
 "p": "07_majorization_minimization.html",
 "k": "thm",
 "t": "Convergence of VMFB",
-"s": "<p><strong>Assumptions.</strong></p>\n<ol>\n<li>$f_1:\\H\\to\\R$ is a coercive, differentiable function. $f_2\\in\\Gz{\\H}$ is continuous on its domain.</li>\n<li>There exists $(\\nu,\\bar\\nu)\\in\\,]0,+\\infty[^2$ such that $(\\forall n\\in\\N)\\ \\nu\\Id\\preccurlyeq A(x_n)\\preccurlyeq\\bar\\nu\\Id$.</li>\n<li>There exists $(\\underline\\theta,\\bar\\theta)\\in\\,]0,+\\infty[^2$ such that $(\\forall n\\in\\N)\\ \\underline\\theta\\le\\theta_n\\le2-\\bar\\theta$.</li>\n</ol>\n<p><strong>Sufficient descent property.</strong> There exists $(\\mu_1,\\mu_2)\\in\\,]0,+\\infty[^2$ such that\n$$(\\forall n\\in\\N)\\qquad f(x_n)-f(x_{n+1})\\ge\\mu_1\\norm{x_{n+1}-x_n}^2\\ge\\mu_2\\norm{\\nabla f_1(x_n)+r_n}^2,\\quad\\text{with }r_n\\in\\partial f_2(x_n).$$</p>\n<p><strong>Convergence theorem (in finite dimension).</strong></p>\n<ol>\n<li>$\\nabla f_1(x_n)+r_n\\to0$ and $f(x_n)\\searrow f(\\tilde x)$ where $\\tilde x$ is a critical point of $f$ (i.e. $0\\in\\nabla f_1(\\tilde x)+\\partial f_2(\\tilde x)$).</li>\n<li>If $f_1$ is convex, any sequential cluster point of $(x_n)_{n\\in\\N}$ is a minimizer of $f$.</li>\n<li>If $f$ is strictly convex, then $(x_n)_n\\to\\hat x$ where $\\hat x$ is a minimizer of $f$.</li>\n</ol>"
+"s": "<p><strong>Assumptions.</strong></p>\n<ol>\n<li>$f_1:\\H\\to\\R$ is a coercive, differentiable function. $f_2\\in\\Gz{\\H}$ is continuous on its domain.</li>\n<li>There exists $(\\nu,\\bar\\nu)\\in\\,]0,+\\infty[^2$ such that $(\\forall n\\in\\N)\\ \\nu\\Id\\preccurlyeq A(x_n)\\preccurlyeq\\bar\\nu\\Id$.</li>\n<li>There exists $(\\underline\\theta,\\bar\\theta)\\in\\,]0,+\\infty[^2$ such that $(\\forall n\\in\\N)\\ \\underline\\theta\\le\\theta_n\\le2-\\bar\\theta$.</li>\n</ol>\n<p><strong>Sufficient descent property</strong> (in the form proved below; the slide's indexing is discussed in the note). There exists $(\\mu_1,\\mu_2)\\in\\,]0,+\\infty[^2$ such that\n$$(\\forall n\\in\\N)\\qquad f(x_n)-f(x_{n+1})\\ge\\mu_1\\norm{x_{n+1}-x_n}^2\\ge\\mu_2\\norm{\\nabla f_1(x_{n+1})+r_{n+1}}^2,$$\nwhere $r_{n+1}=-\\nabla f_1(x_n)-\\theta_n^{-1}A(x_n)(x_{n+1}-x_n)\\in\\partial f_2(x_{n+1})$ is the subgradient produced by the prox step.</p>\n<p><strong>Convergence theorem (in finite dimension).</strong></p>\n<ol>\n<li>$\\nabla f_1(x_n)+r_n\\to0$, with $r_n\\in\\partial f_2(x_n)$ the subgradient produced by the prox step ($n\\ge1$), and $f(x_n)\\searrow f(\\tilde x)$ where $\\tilde x$ is a critical point of $f$ (i.e. $0\\in\\nabla f_1(\\tilde x)+\\partial f_2(\\tilde x)$).</li>\n<li>If $f_1$ is convex, any sequential cluster point of $(x_n)_{n\\in\\N}$ is a minimizer of $f$.</li>\n<li>If $f$ is strictly convex, then $(x_n)_n\\to\\hat x$ where $\\hat x$ is a minimizer of $f$.</li>\n</ol>"
 },
 "lab-denoising": {
 "p": "08_labs.html",
@@ -1031,5 +1031,173 @@ window.LSD_REGISTRY = {
 "k": "lab",
 "t": "Lab 4 · X-ray tomography with MM, 3MG, block-coordinate and parallel MM",
 "s": "<p>$y=Hx+w\\in\\R^M$, $w\\sim\\mathcal N(0,\\sigma^2\\Id)$ with $\\sigma=1$; $H\\in\\R^{M\\times N}$ sparse, $H^{(m,n)}$ = length of the intersection of ray $m$ with pixel $n$; $N=90\\times90=8100$, $M=L\\times N_\\theta=90\\times180=16200$ (90 detector cells, 180 angles in $[0,\\pi[$). The reconstruction minimizes\n$$f(x)=\\tfrac12\\norm{Hx-y}^2+\\lambda\\sum_{n=1}^{2N}\\psi\\big([Gx]^{(n)}\\big),\\qquad\\psi(u)=\\sqrt{1+u^2/\\delta^2},\\qquad(\\lambda,\\delta)=(0.13,0.02),$$\nwhere $G\\in\\R^{2N\\times N}$ stacks the horizontal and vertical finite differences of the image. Questions: the gradient; the Lipschitz constant $L=\\norm{H}^2+(\\lambda/\\delta^2)\\norm{G}^2$; gradient descent; a quadratic majorant with curvature $A(x)$ and the MM quadratic algorithm; 3MG; block-coordinate MM; the diagonal bound $A(x)\\preceq B(x)$ and parallel MM; comparison in time, stopping rule $\\norm{\\nabla f(x_k)}\\le\\sqrt N\\,10^{-4}$, SNR, and a search for $(\\lambda,\\delta)$.</p>"
+},
+"T01": {
+"p": "09_toolbox.html",
+"k": "trick",
+"t": "T01 · Indicator trick: constraints become $+\\infty$ values",
+"s": "<p>Whenever a problem carries a constraint $x\\in C$, delete the constraint and add the term $\\ind_C$ to the objective:\n$$\\Argmin_{x\\in C}f(x)=\\Argmin_{x\\in\\H}\\big(f+\\ind_C\\big)(x),\\qquad \\ind_C(x)=\\begin{cases}0&amp;x\\in C\\\\+\\infty&amp;x\\notin C.\\end{cases}$$\nThen treat $\\ind_C$ like any other term of $\\Gz{\\H}$: subdifferentiate it ($\\partial\\ind_C=N_C$), prox it ($\\prox_{\\gamma\\ind_C}=P_C$ for every $\\gamma\\gt0$), conjugate it ($\\ind_C^*=\\sigma_C$). Equalities are constraints too: $Lx=b$ is $\\ind_{\\{b\\}}(Lx)$, consensus $x_1=\\dots=x_m$ is $\\ind_D$ of the diagonal.</p>"
+},
+"T02": {
+"p": "09_toolbox.html",
+"k": "trick",
+"t": "T02 · Direct method: minimizing sequence, compactness, lower semicontinuity",
+"s": "<p>Whenever you must prove that $\\inf f$ is attained: (1) take a <em>minimizing sequence</em>, $f(x_n)\\to\\inf f$; (2) <em>extract</em> a convergent subsequence $x_{n_k}\\to\\hat x$ (compactness); (3) <em>pass to the limit</em> with lower semicontinuity:\n$$\\inf f\\ \\le\\ f(\\hat x)\\ \\le\\ \\liminf_{k\\to+\\infty}f(x_{n_k})=\\inf f .$$\nHence $f(\\hat x)=\\inf f$ (and, in passing, $\\inf f\\gt-\\infty$).</p>"
+},
+"T03": {
+"p": "09_toolbox.html",
+"k": "trick",
+"t": "T03 · Coercivity confines minimizing sequences to a ball",
+"s": "<p>Whenever the domain is unbounded, use coercivity to come back to a bounded set: pick $x_0\\in\\dom f$; coercivity gives $R\\gt0$ such that $\\norm x\\gt R\\Rightarrow f(x)\\gt f(x_0)$; so every point outside $\\overline B(0,R)$ is worse than $x_0$, the minimization can be restricted to $\\overline B(0,R)$, and in finite dimension that ball is compact (then <a class=\"chip t\" href=\"#T02\"><b>T02</b></a>). Equivalently: the level set $\\lev_{\\le f(x_0)}f$ is bounded, and it contains every minimizing sequence (eventually) and every iterate of a descent method.</p>"
+},
+"T04": {
+"p": "09_toolbox.html",
+"k": "trick",
+"t": "T04 · Chord argument: move along $x+\\alpha(y-x)$ and let $\\alpha\\to0^+$",
+"s": "<p>Whenever you know an inequality at a point $x$ (a minimum, a subgradient, convexity) and want a statement about slopes: compare $x$ with the point $x+\\alpha(y-x)=(1-\\alpha)x+\\alpha y$ of the segment $[x,y]$ (it lies in $C$ when $C$ is convex), divide the inequality by $\\alpha\\gt0$, and let $\\alpha\\to0^+$:\n$$\\frac{f(x+\\alpha(y-x))-f(x)}{\\alpha}\\ \\xrightarrow[\\alpha\\to0^+]{}\\ \\ps{\\nabla f(x)}{y-x}.$$</p>"
+},
+"T05": {
+"p": "09_toolbox.html",
+"k": "trick",
+"t": "T05 · Integrate along the segment: $\\varphi(t)=f(x+t(y-x))$",
+"s": "<p>Whenever you need a <em>global</em> inequality between $f(x)$, $f(y)$ and gradients, restrict $f$ to the segment: $\\varphi(t)=f(x+t(y-x))$, $t\\in[0,1]$, with\n$$\\varphi'(t)=\\ps{\\nabla f(x+t(y-x))}{y-x},\\qquad\\varphi''(t)=\\ps{y-x}{\\nabla^2f(x+t(y-x))(y-x)},\\qquad f(y)-f(x)=\\int_0^1\\varphi'(t)\\,dt,$$\nand do one-variable calculus: bound the integrand, or use the sign of $\\varphi''$.</p>"
+},
+"T06": {
+"p": "09_toolbox.html",
+"k": "trick",
+"t": "T06 · Write the defining inequality twice and add",
+"s": "<p>Whenever a definition gives an inequality \"from the point of view of $x_1$\" (a subgradient inequality, Fenchel–Young, a descent inequality), write it once at $x_1$ tested against $x_2$, once at $x_2$ tested against $x_1$, and <em>add</em>: the function values cancel, and an inequality between points and slopes remains.</p>"
+},
+"T07": {
+"p": "09_toolbox.html",
+"k": "trick",
+"t": "T07 · Choose the test vector cleverly ($y=u-\\nabla f(x)$, $\\alpha\\to+\\infty$, freeze all coordinates but one)",
+"s": "<p>Whenever an inequality holds <em>for every</em> $y$ (or every $\\alpha\\gt0$, every competitor), plug in the one test point that turns it into your conclusion: the vector you want to kill ($y=u-\\nabla f(x)$ gives $-\\norm{u-\\nabla f(x)}^2\\ge0$); a dilation $\\alpha x$ with $\\alpha\\to+\\infty$ in a positively homogeneous expression (forces a value into $\\{0,+\\infty\\}$); the point equal to $x$ except in one coordinate (separates a sum); a competitor in one direction of a subspace (certifies a decrease).</p>"
+},
+"T08": {
+"p": "09_toolbox.html",
+"k": "trick",
+"t": "T08 · Fermat + sum rule, then rewrite $0\\in\\partial f(p)+p-x$ as $x\\in(\\Id+\\partial f)p$",
+"s": "<p>Whenever you must characterize or compute an argmin (a prox, a fixed point, a saddle point, a Kuhn–Tucker point): (1) <em>Fermat</em>: $p\\in\\Argmin F\\iff0\\in\\partial F(p)$; (2) <em>sum rule</em>: split $\\partial F$ into the subdifferentials of its pieces (free when the other pieces are finite and differentiable); (3) <em>rewrite</em> the inclusion so that the unknown sits inside a resolvent:\n$$p=\\prox_{\\gamma f}x\\iff0\\in\\partial f(p)+\\tfrac1\\gamma(p-x)\\iff\\frac{x-p}{\\gamma}\\in\\partial f(p)\\iff x\\in(\\Id+\\gamma\\partial f)(p).$$\nThen solve the inclusion case by case on the pieces of $\\partial f$.</p>"
+},
+"T09": {
+"p": "09_toolbox.html",
+"k": "trick",
+"t": "T09 · Complete the square: $\\ps{x}{u}-\\tfrac12\\norm x^2=\\tfrac12\\norm u^2-\\tfrac12\\norm{u-x}^2$",
+"s": "<p>Whenever a linear term meets a quadratic, absorb it into a shifted square and keep the leftover constant:\n$$\\ps{x}{u}-\\tfrac12\\norm x^2=\\tfrac12\\norm u^2-\\tfrac12\\norm{u-x}^2,\\qquad a\\ps{z}{w}+\\tfrac a2\\norm w^2=\\tfrac a2\\norm{w+z}^2-\\tfrac a2\\norm z^2 .$$\nThe square tells you where the minimum (or maximum) is; the constant does not move it. In reverse, expand squares $\\norm{a-b}^2=\\norm a^2-2\\ps ab+\\norm b^2$ to make inner products appear.</p>"
+},
+"T10": {
+"p": "09_toolbox.html",
+"k": "trick",
+"t": "T10 · Fenchel–Young as a lever: affine minorants, coercivity, weak duality in one line",
+"s": "<p>Whenever you need a lower bound of $f$, an inequality between a primal and a dual quantity, or a way to invert $\\partial f$, use\n$$f(x)+f^*(u)\\ge\\ps{x}{u}\\quad(f\\text{ proper}),\\qquad\\text{with equality}\\iff u\\in\\partial f(x)\\iff x\\in\\partial f^*(u)\\quad(\\text{last step: }f\\in\\Gz{\\H}).$$</p>"
+},
+"T11": {
+"p": "09_toolbox.html",
+"k": "trick",
+"t": "T11 · Reflect to compose: $2\\prox-\\Id$ is nonexpansive",
+"s": "<p>Whenever you must combine two proxes into one operator whose fixed points encode $0\\in\\partial f(x)+\\partial g(x)$, compose their <em>reflections</em> $\\rprox_{\\gamma h}=2\\prox_{\\gamma h}-\\Id$ (nonexpansive), never the proxes themselves:\n$$T=\\rprox_{\\gamma f}\\circ\\rprox_{\\gamma g}\\ \\text{ is nonexpansive},\\qquad\\zer(\\partial f+\\partial g)=\\prox_{\\gamma g}(\\Fix T),$$\nand iterate the firmly nonexpansive average $\\tfrac12(\\Id+T)$ (Douglas–Rachford).</p>"
+},
+"T12": {
+"p": "09_toolbox.html",
+"k": "trick",
+"t": "T12 · The λ-identity $\\norm{(1-\\lambda)a+\\lambda b}^2=(1-\\lambda)\\norm a^2+\\lambda\\norm b^2-\\lambda(1-\\lambda)\\norm{a-b}^2$",
+"s": "<p>Whenever a relaxed step $x_n+\\lambda(Tx_n-x_n)=(1-\\lambda)x_n+\\lambda Tx_n$ meets a squared distance, expand it with the identity, valid in every Hilbert space for all $a,b\\in\\H$ and <em>every</em> $\\lambda\\in\\R$:\n$$\\norm{(1-\\lambda)a+\\lambda b}^2=(1-\\lambda)\\norm a^2+\\lambda\\norm b^2-\\lambda(1-\\lambda)\\norm{a-b}^2 .$$\nWith $a=x_n-x$, $b=Tx_n-x$ ($x$ a fixed point) it gives the strict Fejér decrease of Krasnosel'skii–Mann.</p>"
+},
+"T13": {
+"p": "09_toolbox.html",
+"k": "trick",
+"t": "T13 · Telescoping sum ⇒ summable residuals ⇒ residual $\\to0$",
+"s": "<p>Whenever each step decreases a nonnegative quantity by at least a multiple of a residual, $a_{n+1}\\le a_n-c_nr_n$ with $a_n\\ge0$, $c_n\\ge0$, $r_n\\ge0$, sum the inequalities:\n$$\\sum_{n=0}^{N}c_nr_n\\le a_0-a_{N+1}\\le a_0\\qquad\\text{for every }N .$$\nThen (i) if $c_n\\ge c\\gt0$: $\\sum r_n\\lt+\\infty$, so $r_n\\to0$; (ii) if only $\\sum c_n=+\\infty$: $\\liminf r_n=0$, and $r_n\\to0$ as soon as $(r_n)$ is nonincreasing.</p>"
+},
+"T14": {
+"p": "09_toolbox.html",
+"k": "trick",
+"t": "T14 · Fejér + demiclosedness: the recipe for weak convergence",
+"s": "<p>To prove that $x_n\\wto$ a point of $D=\\Fix T$: (1) <em>Fejér</em>: $\\norm{x_{n+1}-x}\\le\\norm{x_n-x}$ for all $x\\in D$ (so the distances converge and $(x_n)$ is bounded); (2) <em>residual</em>: $Tx_n-x_n\\to0$ (<a class=\"chip t\" href=\"#T13\"><b>T13</b></a>); (3) <em>demiclosedness</em>: every weak cluster point $\\hat x$ (one exists by boundedness) satisfies $\\hat x\\in\\Fix T$; (4) <em>Fejér convergence theorem</em> (Opial): the whole sequence converges weakly to a point of $D$.</p>"
+},
+"T15": {
+"p": "09_toolbox.html",
+"k": "trick",
+"t": "T15 · Zeros ⇔ fixed points dictionary",
+"s": "<p>Whenever an algorithm is a fixed-point iteration, translate its fixed-point equation into the optimality condition (and back) with the resolvent identity: for $\\gamma\\gt0$, $A$ single-valued and $B$ set-valued,\n$$x\\in\\zer(A+B)\\iff x-\\gamma Ax\\in x+\\gamma Bx\\iff x=(\\Id+\\gamma B)^{-1}(\\Id-\\gamma A)x,\\qquad(\\Id+\\gamma\\partial f)^{-1}=\\prox_{\\gamma f}.$$</p>"
+},
+"T16": {
+"p": "09_toolbox.html",
+"k": "trick",
+"t": "T16 · Product-space lifting: $m$ functions become one, plus a consensus constraint",
+"s": "<p>Whenever you face $\\sum_{i=1}^mg_i(x)$ (or $\\sum_ig_i(L_iv)$) and only know each prox separately, give each term its own copy of the variable in $\\H^m$:\n$$\\operatorname*{minimize}_{x\\in\\H}\\ \\sum_{i=1}^mg_i(x)\\iff\\operatorname*{minimize}_{(x_1,\\dots,x_m)\\in\\H^m}\\ \\underbrace{\\sum_{i=1}^mg_i(x_i)}_{G\\ \\text{separable}}+\\ind_D(x_1,\\dots,x_m),\\qquad D=\\{(x,\\dots,x)\\}=\\ran L,$$\nwith $L:x\\mapsto(x,\\dots,x)$. Now there are only two functions: $G$, whose prox is $m$ independent proxes, and $\\ind_D$, whose prox is an average.</p>"
+},
+"T17": {
+"p": "09_toolbox.html",
+"k": "trick",
+"t": "T17 · Dualize by conjugation: $g(Lx)=\\sup_v\\ps{v}{Lx}-g^*(v)$",
+"s": "<p>Whenever a nonsmooth $g$ is composed with a linear $L$ (so that $\\prox_{g\\circ L}$ is not available), replace $g$ by its biconjugate:\n$$g(Lx)=g^{**}(Lx)=\\sup_{v\\in\\G}\\ \\ps{v}{Lx}-g^*(v)\\qquad(g\\in\\Gz{\\G}).$$\nThe operator $L$ leaves $g$ and enters a bilinear coupling $\\ps{v}{Lx}=\\ps{L^*v}{x}$; the dual variable $v$ lives in $\\G$; the prox of $g^*$ is free by Moreau; and swapping $\\inf_x$ and $\\sup_v$ produces the dual problem.</p>"
+},
+"T18": {
+"p": "09_toolbox.html",
+"k": "trick",
+"t": "T18 · Change variables to recognize an old algorithm (DR ↔ ADMM, PD = FB in a metric)",
+"s": "<p>Whenever a new iteration looks unfamiliar, look for a change of variables, of parameters or of metric under which it becomes an algorithm whose convergence you already know (KM, FB, DR): rescale the relaxation ($\\mu_n=\\alpha\\lambda_n$), rename the iterates (ADMM's $y_n,z_n$ in terms of DR's $u_n,v_n$), or rewrite the updates as $V(w_n-w_{n+1})\\in Aw_{n+1}+Bw_n$ with $V$ self-adjoint positive definite (Forward–Backward in the $V$-metric).</p>"
+},
+"T19": {
+"p": "09_toolbox.html",
+"k": "trick",
+"t": "T19 · Majorize then minimize: tangent majorants give monotone decrease and sufficient descent",
+"s": "<p>Whenever $f$ is hard to minimize but easy to bound from above near the current point, build a majorant $h(\\cdot,x_n)$ ($f\\le h(\\cdot,x_n)$ everywhere, $f(x_n)=h(x_n,x_n)$) and set $x_{n+1}\\in\\Argmin h(\\cdot,x_n)$. Decrease is free:\n$$f(x_{n+1})\\ \\le\\ h(x_{n+1},x_n)\\ \\le\\ h(x_n,x_n)=f(x_n).$$\nWith the quadratic majorant $h(x,y)=f(y)+\\ps{\\nabla f(y)}{x-y}+\\tfrac12\\norm{x-y}^2_{A(y)}$ and the step $x_{n+1}=x_n-\\theta_nA(x_n)^{-1}\\nabla f(x_n)$, $\\theta_n\\in\\,]0,2[$, the decrease is <em>sufficient</em>: $f(x_n)-f(x_{n+1})\\ge(\\theta_n^{-1}-\\tfrac12)\\norm{x_{n+1}-x_n}^2_{A(x_n)}$.</p>"
+},
+"T20": {
+"p": "09_toolbox.html",
+"k": "trick",
+"t": "T20 · Concavity gives tangent majorants; $x^2-y^2=(x-y)^2+2y(x-y)$",
+"s": "<p>Whenever a term is concave (in its argument, or in a transformed argument), its tangent is a majorant: $\\varphi$ concave ⇒ $\\varphi(u)\\le\\varphi(v)+\\varphi'(v)(u-v)$. For an even penalty $f(x)=\\psi(\\abs x)$ with $\\psi(\\sqrt\\cdot)$ concave, take the tangent in the variable $u=x^2$ and come back to $x$ with\n$$x^2-y^2=(x-y)^2+2y(x-y):$$\nthe tangent in $x^2$ becomes a parabola in $x$, tangent to $f$ at $y$, with curvature $\\omega(\\abs y)=\\dot\\psi(\\abs y)/\\abs y$.</p>"
+},
+"T21": {
+"p": "09_toolbox.html",
+"k": "trick",
+"t": "T21 · Bound the curvature by a diagonal (Jensen) to make updates parallel",
+"s": "<p>Whenever a quadratic majorant couples the coordinates (curvature $A(x)=H^\\top H+\\dots$), replace it by a diagonal $B(x)\\succcurlyeq A(x)$ obtained from Jensen's inequality for the convex square: with $r_m=\\sum_p\\abs{H_{mp}}$,\n$$\\Big(\\sum_iH_{mi}d_i\\Big)^2\\le r_m\\sum_i\\abs{H_{mi}}\\,d_i^2\\quad\\Longrightarrow\\quad H^\\top H\\preccurlyeq\\operatorname{Diag}\\big(\\abs H^\\top\\abs H\\mathbf1\\big).$$\nThe surrogate becomes separable and the MM step is coordinatewise: $x_{n+1,i}=x_{n,i}-\\theta_n\\,\\partial_if(x_n)/b_i(x_n)$, all $i$ in parallel.</p>"
+},
+"T22": {
+"p": "09_toolbox.html",
+"k": "trick",
+"t": "T22 · Count averagedness: the composition formula and the relaxation range",
+"s": "<p>Whenever an algorithm reads $x_{n+1}=x_n+\\lambda_n(Sx_n-x_n)$ with $S$ a composition of averaged maps: (1) count each factor ($\\prox_{\\gamma f}$: $\\tfrac12$; $\\Id-\\gamma\\nabla g$: $\\gamma\\nu/2$ for $\\gamma\\in\\,]0,2/\\nu[$); (2) compose,\n$$\\gamma_{12}=\\frac{\\alpha_1+\\alpha_2-2\\alpha_1\\alpha_2}{1-\\alpha_1\\alpha_2}\\iff\\frac{\\gamma_{12}}{1-\\gamma_{12}}=\\frac{\\alpha_1}{1-\\alpha_1}+\\frac{\\alpha_2}{1-\\alpha_2};$$\n(3) relax in $[0,1/\\gamma_{12}]$: $\\lambda_n\\in[0,\\delta]$ with $\\sum_n\\lambda_n(\\delta-\\lambda_n)=+\\infty$, $\\delta=1/\\gamma_{12}$.</p>"
+},
+"algo-chooser": {
+"p": "09_toolbox.html",
+"k": "sec",
+"t": "Which algorithm for which structure: the decision tree",
+"s": ""
+},
+"algo-table": {
+"p": "09_toolbox.html",
+"k": "sec",
+"t": "All algorithms side by side",
+"s": ""
+},
+"proof-patterns": {
+"p": "09_toolbox.html",
+"k": "sec",
+"t": "The convergence proof patterns",
+"s": ""
+},
+"hypotheses-checklist": {
+"p": "09_toolbox.html",
+"k": "sec",
+"t": "Hypotheses checklist: what each assumption buys",
+"s": ""
+},
+"prox-cookbook": {
+"p": "09_toolbox.html",
+"k": "sec",
+"t": "Prox cookbook",
+"s": ""
+},
+"constants-cheatsheet": {
+"p": "09_toolbox.html",
+"k": "sec",
+"t": "Constants and ranges cheat-sheet",
+"s": ""
 }
 };
