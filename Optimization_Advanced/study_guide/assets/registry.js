@@ -1253,5 +1253,11 @@ window.LSD_REGISTRY = {
 "k": "sec",
 "t": "The course in 30 lines",
 "s": ""
+},
+"flashcards": {
+"p": "10_memorize.html",
+"k": "sec",
+"t": "Flashcards",
+"s": ""
 }
 };
