@@ -1686,19 +1686,28 @@ document.addEventListener('DOMContentLoaded', function () {
       L.line(svg, X(xb[0]), Y(xb[1]), X(xb[0] - s * g[0]), Y(xb[1] - s * g[1]), 's-2', { 'stroke-width': 2.5, 'marker-end': arr });
       if (ng > 0.15) {
         /* its label goes to the candidate spot (beside or beyond the arrow) farthest from the other labels and dots */
-        var avoid = [[X(lp[0]), Y(lp[1])], [X(c[0]), Y(c[1])], [X(c[0]) + 12, Y(c[1])], [X(xb[0]), Y(xb[1])], [X(xh[0]), Y(xh[1])],
-          holds ? [X(xb[0]) - 29, Y(xb[1]) + 12] : [X(xb[0]) - 5, Y(xb[1]) + 12]];
-        if (!holds) avoid.push(nc <= 1 ? [X(xh[0]) + 64, Y(xh[1]) - 10] : [X(xh[0]) + 14, Y(xh[1]) - 10], [X(-g[0] / ng), Y(-g[1] / ng)], [X(-g[0] / ng) + 15, Y(-g[1] / ng) + 10]);
         var dg = [-g[0] / ng, -g[1] / ng], pl = [-dg[1], dg[0]], tip = [xb[0] - s * g[0], xb[1] - s * g[1]], mid = [xb[0] - 0.5 * s * g[0], xb[1] - 0.5 * s * g[1]];
-        var cands = [[mid, 0.28, pl], [mid, -0.28, pl], [tip, 0.28, pl], [tip, -0.28, pl], [tip, 0.45, dg]].map(function (q) { return [X(q[0][0] + q[1] * q[2][0]), Y(q[0][1] + q[1] * q[2][1])]; });
+        /* approximate centres of what is already drawn: the arrow, the dots and the other labels */
+        var avoid = [[X(lp[0]), Y(lp[1])], [X(c[0]), Y(c[1])], [X(xb[0]), Y(xb[1])], [X(xh[0]), Y(xh[1])], [X(tip[0]), Y(tip[1])], [X(mid[0]), Y(mid[1])],
+          holds ? [X(xb[0]) - 29, Y(xb[1]) + 12] : [X(xb[0]) - 5, Y(xb[1]) + 12]];
+        if (nc > 1) avoid.push([X(c[0]) + 12, Y(c[1])]);
+        if (!holds) {
+          avoid = avoid.concat(nc <= 1 ? [[X(xh[0]) + 30, Y(xh[1]) + 14], [X(xh[0]) + 75, Y(xh[1]) + 14], [X(xh[0]) + 115, Y(xh[1]) + 14]] : [[X(xh[0]) + 14, Y(xh[1]) - 10]]);
+          avoid.push([X(dg[0]), Y(dg[1])], [X(dg[0]) + 15, Y(dg[1]) + 10]);
+        }
+        /* candidate spots beside the middle, beside the tip, beyond the tip; the text is anchored so that it extends away from the arrow */
+        var cands = [[mid, pl, 0.2], [mid, pl, -0.2], [tip, pl, 0.2], [tip, pl, -0.2], [tip, dg, 0.2]].map(function (q) {
+          var p = [X(q[0][0] + q[2] * q[1][0]), Y(q[0][1] + q[2] * q[1][1])], vx = q[2] * q[1][0], anc = vx > 0.1 ? 'start' : (vx < -0.1 ? 'end' : 'middle');
+          return { p: p, anc: anc, ctr: [p[0] + (anc === 'start' ? 26 : (anc === 'end' ? -26 : 0)), p[1] - 4] };
+        });
         var best = cands[0], bs = -1;
-        cands.forEach(function (p) { var sc_ = Infinity; avoid.forEach(function (q) { sc_ = Math.min(sc_, Math.max(Math.abs(p[0] - q[0]) / 52, Math.abs(p[1] - q[1]) / 16)); }); if (sc_ > bs) { bs = sc_; best = p; } });
-        htext(svg, best[0], best[1] + 4, '−∇f(x̄)', 'tm f-2', { 'text-anchor': 'middle' });
+        cands.forEach(function (cd) { var sc_ = Infinity; avoid.forEach(function (q) { sc_ = Math.min(sc_, Math.max(Math.abs(cd.ctr[0] - q[0]) / 52, Math.abs(cd.ctr[1] - q[1]) / 18)); }); if (sc_ > bs) { bs = sc_; best = cd; } });
+        htext(svg, best.p[0], best.p[1] + 4, '−∇f(x̄)', 'tm f-2', { 'text-anchor': best.anc });
       }
       /* points (when the inequality holds, y* = x̄ = x̂: one dot, one label) */
       fill(svg, X(c[0]), Y(c[1]), 4.5, 'f-ink'); if (nc > 1) htext(svg, X(c[0]) + 8, Y(c[1]) + 4, 'c', 'tm f-ink');
       if (ng > 1e-9 && !holds) { var ys = [-g[0] / ng, -g[1] / ng]; fill(svg, X(ys[0]), Y(ys[1]), 5, 'f-5'); htext(svg, X(ys[0]) + 8, Y(ys[1]) + 14, 'y*', 'tm f-5'); }
-      fill(svg, X(xh[0]), Y(xh[1]), 6, 'f-idea'); if (!holds) htext(svg, X(xh[0]) + 9, Y(xh[1]) - 6, nc <= 1 ? 'x̂ = c (interior)' : 'x̂', 'tm f-idea');
+      fill(svg, X(xh[0]), Y(xh[1]), 6, 'f-idea'); if (!holds) htext(svg, X(xh[0]) + 9, Y(xh[1]) + (nc <= 1 ? 18 : -6), nc <= 1 ? 'x̂ = c (interior)' : 'x̂', 'tm f-idea');
       fill(svg, X(xb[0]), Y(xb[1]), 5.5, 'f-2'); htext(svg, X(xb[0]) - 9, Y(xb[1]) + 16, holds ? 'x̄ = x̂' : 'x̄', 'tm ' + (holds ? 'f-idea' : 'f-2'), { 'text-anchor': holds ? 'end' : 'start' });
       htext(svg, 14, 312, holds ? '✓ ⟨∇f(x̄) | y − x̄⟩ ≥ 0 for every y ∈ C: x̄ = x̂' : '✗ fails at y*: x̄ is not the minimizer', 'verdict ' + (holds ? 'f-idea' : 'f-warn'));
       out.innerHTML = '∇f(x̄) = x̄ − c = (' + L.fmt(g[0], 2) + ', ' + L.fmt(g[1], 2) + ')   min over y ∈ C of ⟨∇f(x̄) | y − x̄⟩ = ' + L.fmt(minv, 3) + (holds ? ' ≥ 0: the variational inequality holds; −∇f(x̄) lies on the normal ray' : ' &lt; 0: violated (worst y = y*)') + '   ·   x̂ = P<sub>C</sub>(c) = (' + L.fmt(xh[0], 2) + ', ' + L.fmt(xh[1], 2) + ')' + (nc <= 1 ? ', interior, ∇f(x̂) = 0' : ', on the boundary');
