@@ -1,0 +1,962 @@
+<!--
+title: Rappels — la boîte à outils
+short: Rappels
+description: Les prérequis du cours de statistiques avancées réexpliqués pas à pas : normes, rang, matrice de Gram, valeurs propres, projection, trace, gradient, convexité, Lagrange, Newton, vecteurs gaussiens, queues gaussiennes, biais-variance, vraisemblance, information de Fisher, validation croisée, tests.
+subtitle: Tout ce que les diapos supposent connu, réexpliqué depuis le début : algèbre linéaire, optimisation, probabilités, statistique. Chaque rappel dit où il sert dans le cours.
+-->
+<div class="box objectifs"><div class="box-h">Comment utiliser cette page</div>
+<p>Cette page n'est <strong>pas</strong> à lire d'une traite. C'est une boîte à outils : les pages des séances y renvoient au moment précis où un outil devient nécessaire (« voir le rappel sur la trace »). Quand vous suivez un tel lien, lisez le rappel, faites le mini-exercice, puis revenez à la séance.</p>
+<p>Chaque rappel suit le même plan :</p>
+<ol>
+<li><strong>Où ça sert</strong> : dans quelle séance et quelle diapo l'outil intervient (pour savoir pourquoi on s'embête) ;</li>
+<li><strong>l'énoncé en clair</strong>, avec les symboles expliqués ;</li>
+<li><strong>pourquoi c'est vrai</strong> : une preuve courte, ligne par ligne ;</li>
+<li>un <strong>exemple chiffré</strong> que vous pouvez refaire à la main ;</li>
+<li>un <strong>réflexe</strong> : la situation où il faut penser à cet outil ;</li>
+<li>un ou deux <strong>mini-exercices</strong> corrigés (cherchez avant d'ouvrir la solution).</li>
+</ol>
+<p>Si vous reprenez les statistiques après une longue pause, un bon plan est : lire <a href="#notations">Notations</a> maintenant, puis, avant chaque séance, les rappels indiqués dans la <a href="#carte">carte à la fin de cette page</a>.</p>
+</div>
+
+<h2 id="notations">Notations et conventions</h2>
+<p class="tldr">Le cours écrit beaucoup de choses en peu de symboles ; voici le dictionnaire, à garder sous la main.</p>
+
+<p><strong>Où ça sert :</strong> partout, dès la diapo 3 du Cours 1.</p>
+
+<h3 id="notations-vecteurs">Vecteurs, matrices, données</h3>
+<ul>
+<li>Un vecteur de $\R^n$ est une <strong>colonne</strong> de $n$ nombres. Sa transposée $u\T$ est la même liste écrite en ligne. Le produit scalaire de deux vecteurs est $u\T v=\sum_{i=1}^n u_iv_i$ (un nombre).</li>
+<li>$n$ = nombre d'<strong>observations</strong> (individus, lignes du tableau de données), $p$ = nombre de <strong>variables</strong> (colonnes).</li>
+<li>$X\in\R^{n\times p}$ est la <strong>matrice des données</strong> (ou <em>matrice de design</em>) : la case $(i,j)$ contient la valeur de la variable $j$ pour l'individu $i$.
+  <ul>
+  <li>$x_i$ = la <strong>ligne</strong> $i$ de $X$ (un vecteur ligne de taille $p$, comme dans les diapos) : tout ce qu'on sait de l'individu $i$ ;</li>
+  <li>$X_j$ = la <strong>colonne</strong> $j$ de $X$ (un vecteur de $\R^n$) : la variable $j$ mesurée sur les $n$ individus. Les diapos écrivent parfois $X^j$.</li>
+  </ul></li>
+<li>$Y\in\R^n$ = la réponse (ce qu'on veut prédire), $\eps\in\R^n$ = le bruit, $\bstar\in\R^p$ = le vrai paramètre (inconnu). Le modèle linéaire s'écrit $Y=X\bstar+\eps$.</li>
+<li>Un chapeau signifie « estimé à partir des données » : $\hb$ est un <strong>estimateur</strong> de $\bstar$. Un exposant dit lequel : $\hb\MC$ (moindres carrés), $\hb^{R}$ (Ridge), $\hb^{L}$ (Lasso).</li>
+<li>$I_n$ est la matrice identité $n\times n$ (des 1 sur la diagonale, des 0 ailleurs).</li>
+</ul>
+
+<h3 id="notations-normes">La norme « empirique » $\norm{\cdot}_n$</h3>
+<p>Les diapos utilisent $\norm{u}_n^2=\frac1n\norm{u}^2=\frac1n\sum_{i=1}^n u_i^2$ : c'est la <strong>moyenne</strong> des carrés au lieu de leur somme. Ainsi $\norm{Y-X\beta}_n^2$ est l'erreur quadratique moyenne sur les $n$ observations. Multiplier un critère par la constante $\frac1n$ ne change pas l'endroit où il est minimal, mais change le sens des constantes qu'on ajoute (le $\lambda$ d'une pénalité) : on y reviendra à chaque séance.</p>
+
+<h3 id="notations-argmin">min, argmin, « $\in\argmin$ »</h3>
+<ul>
+<li>$\min_{\beta} f(\beta)$ est la <strong>plus petite valeur</strong> de $f$ (un nombre).</li>
+<li>$\argmin_{\beta} f(\beta)$ est l'<strong>ensemble des points</strong> où cette valeur est atteinte. Exemple : $\argmin_{x\in\R}(x-3)^2=\{3\}$ et $\min_x(x-3)^2=0$.</li>
+<li>Quand le minimiseur peut ne pas être unique, les diapos écrivent $\hb\in\argmin$ (« $\hb$ est <em>un</em> des minimiseurs »). Quand il est unique, on écrit $\hb=\argmin$.</li>
+</ul>
+
+<h3 id="notations-fonctions">Petites fonctions qui reviennent</h3>
+<div class="table-wrap"><table>
+<tr><th>Symbole</th><th>Définition</th><th>Exemple</th></tr>
+<tr><td>$(x)_+$</td><td>$\max(x,0)$ : la partie positive</td><td>$(3)_+=3$, $(-2)_+=0$</td></tr>
+<tr><td>$\sgn(x)$</td><td>$1$ si $x>0$, $0$ si $x=0$, $-1$ si $x<0$</td><td>$\sgn(-4)=-1$</td></tr>
+<tr><td>$\ind\{\text{A}\}$ ou $\ind_{A}$</td><td>vaut 1 si la condition A est vraie, 0 sinon</td><td>$\ind\{2>1\}=1$</td></tr>
+<tr><td>$\abs{A}$ (A ensemble)</td><td>nombre d'éléments (cardinal)</td><td>$\abs{\{1,4,7\}}=3$</td></tr>
+<tr><td>$A^c$</td><td>complémentaire : les indices qui ne sont pas dans $A$</td><td>si $A=\{1,2\}\subset\{1,\dots,5\}$, $A^c=\{3,4,5\}$</td></tr>
+<tr><td>$\abs{x}$ (x nombre)</td><td>valeur absolue</td><td>$\abs{-3}=3$</td></tr>
+</table></div>
+
+<h3 id="notations-ordres">Ordres de grandeur : $o$, $O$, $\ll$, $\asymp$</h3>
+<p>Dans le cours, $n$ grandit et $p=p(n)$ peut grandir avec lui. On compare donc des suites.</p>
+<ul>
+<li>$a_n=o(b_n)$ (« petit o ») : $a_n/b_n\to0$. Exemple : $\log n=o(n)$. La diapo 7 du Cours 1 écrit $\frac{\rg(X)}{n}=o(1)$ : cela veut dire $\frac{\rg X}{n}\to0$.</li>
+<li>$a_n=O(b_n)$ (« grand O ») : $a_n/b_n$ reste borné. Exemple : $3n^2+n=O(n^2)$.</li>
+<li>$a\ll b$ : « $a$ beaucoup plus petit que $b$ » (informel). $p\gg n$ : beaucoup plus de variables que d'observations.</li>
+<li>$a\asymp b$ : même ordre de grandeur (le rapport reste entre deux constantes positives).</li>
+</ul>
+
+<h3 id="notations-proba">« Avec probabilité au moins $1-\delta$ »</h3>
+<p>Le théorème de la séance 3 dit : « avec probabilité au moins $1-p^{1-A^2/8}$, on a $\norm{\hb-\bstar}_1\le\dots$ » ($A$ est une constante du théorème ; ici $\delta=p^{1-A^2/8}$, et en séance 4 ce sera $\delta=2e^{-x}$). Lisez-le ainsi : <em>le bruit est aléatoire ; il existe un « mauvais » événement, de probabilité au plus $\delta$, où le bruit est exceptionnellement fort et où la borne peut échouer ; en dehors de lui, la borne est garantie</em>. Plus $\delta$ est petit, plus la garantie est forte.</p>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>Quand un symbole d'une diapo vous arrête, cherchez-le dans ce tableau <em>avant</em> de lire la suite : la plupart des blocages viennent d'une notation, pas d'une idée.</p></div>
+
+<h2 id="algebre">Algèbre linéaire</h2>
+<p class="lead">Le modèle linéaire est une histoire de matrices : presque toutes les difficultés du cours (« $p\ge n$ », « $X\T X$ non inversible », « condition RE ») se lisent dans l'algèbre linéaire de $X$. Voici, dans l'ordre où le cours en a besoin, ce qu'il faut avoir en tête.</p>
+
+<h3 id="vecteurs-normes">Vecteurs, produit scalaire, normes $\ell_0,\ell_1,\ell_2,\ell_\infty$</h3>
+<p class="tldr">Une norme mesure la « taille » d'un vecteur ; le cours en utilise quatre, et chacune correspond à une pénalité différente.</p>
+<p><strong>Où ça sert :</strong> Cours 1 (diapos 11, 15–16, 23 : pénalités Ridge $\norm\beta_2^2$, $\ell_0$ $\norm\beta_0$, Lasso $\norm\beta_1$), Cours 2 (diapo 30 : erreurs en norme $\ell_1$ et $\ell_\infty$), Cours 6 (bridge).</p>
+
+<div class="box def"><div class="box-h">Définition — Les quatre « normes » du cours</div>
+<p>Pour $v=(v_1,\dots,v_p)\in\R^p$ :</p>
+$$\begin{gathered}\norm v_0=\#\{j:\ v_j\neq0\},\qquad \norm v_1=\sum_{j=1}^p\abs{v_j},\\ \norm v_2=\Big(\sum_{j=1}^p v_j^2\Big)^{1/2},\qquad \norm v_\infty=\max_{1\le j\le p}\abs{v_j}.\end{gathered}$$
+<p>Sans indice, $\norm v$ désigne $\norm v_2$ (la norme euclidienne : la longueur usuelle). Et $\norm v_2^2=v\T v$.</p>
+</div>
+
+<div class="box exemple"><div class="box-h">Exemple chiffré</div>
+<p>Pour $v=(3,-4,0)$ : $\norm v_0=2$ (deux coordonnées non nulles), $\norm v_1=3+4+0=7$, $\norm v_2=\sqrt{9+16}=5$, $\norm v_\infty=4$.</p>
+</div>
+
+<p>Une <em class="new">norme</em> vérifie trois propriétés : $\norm v=0\iff v=0$ ; $\norm{tv}=\abs t\,\norm v$ (homogénéité) ; $\norm{u+v}\le\norm u+\norm v$ (inégalité triangulaire). $\ell_1$, $\ell_2$ et $\ell_\infty$ sont des normes.</p>
+
+<div class="box piege"><div class="box-h">Piège — $\norm\cdot_0$ n'est pas une norme</div>
+<p>Elle compte les coordonnées non nulles, sans regarder leur taille : $\norm{2v}_0=\norm v_0$, et pas $2\norm v_0$. L'homogénéité échoue. C'est précisément ce qui la rend difficile à optimiser (elle n'est pas convexe, voir <a href="#convexite">convexité</a>), et c'est pour cela que le cours la remplace par $\norm\cdot_1$.</p>
+</div>
+
+<p>La <em class="new">boule unité</em> d'une norme est l'ensemble $\{v:\norm v\le1\}$. En dimension 2, les trois boules ont des formes très différentes, et c'est la forme « pointue » de la boule $\ell_1$ qui fera apparaître des zéros dans le Lasso :</p>
+
+<figure class="fig">
+<svg viewBox="0 0 560 210" aria-label="Boules unité l1, l2 et l-infini en dimension 2">
+  <g>
+    <line class="ax" x1="20" y1="100" x2="170" y2="100"/><line class="ax" x1="95" y1="25" x2="95" y2="175"/>
+    <path class="ln c2 a2" d="M165 100 L95 30 L25 100 L95 170 Z"/>
+    <text class="tx-b" x="95" y="200" text-anchor="middle">ℓ₁ : |v₁| + |v₂| ≤ 1 (losange)</text>
+    <circle class="fk" cx="165" cy="100" r="3.5"/><circle class="fk" cx="95" cy="30" r="3.5"/><circle class="fk" cx="25" cy="100" r="3.5"/><circle class="fk" cx="95" cy="170" r="3.5"/>
+  </g>
+  <g>
+    <line class="ax" x1="205" y1="100" x2="355" y2="100"/><line class="ax" x1="280" y1="25" x2="280" y2="175"/>
+    <circle class="ln c1 a1" cx="280" cy="100" r="70"/>
+    <text class="tx-b" x="280" y="200" text-anchor="middle">ℓ₂ : v₁² + v₂² ≤ 1 (disque)</text>
+  </g>
+  <g>
+    <line class="ax" x1="390" y1="100" x2="540" y2="100"/><line class="ax" x1="465" y1="25" x2="465" y2="175"/>
+    <path class="ln c3 a3" d="M395 30 L535 30 L535 170 L395 170 Z"/>
+    <text class="tx-b" x="465" y="200" text-anchor="middle">ℓ∞ : max(|v₁|, |v₂|) ≤ 1 (carré)</text>
+  </g>
+</svg>
+<figcaption>Les boules unité en dimension 2. Les coins du losange $\ell_1$ (gros points) sont sur les axes : ce sont des vecteurs qui ont une coordonnée nulle.</figcaption>
+</figure>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>Quand vous voyez une pénalité, demandez-vous quelle norme elle utilise et dessinez sa boule en dimension 2. Coins sur les axes → la méthode met des coefficients exactement à 0 ; boule ronde → elle les rapetisse sans les annuler.</p></div>
+
+<div class="quiz"><p>Mini-exercice : calculez les quatre normes de $w=(1,-1,2,0,0)$.</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$\norm w_0=3$, $\norm w_1=1+1+2=4$, $\norm w_2=\sqrt{1+1+4}=\sqrt6\approx2{,}45$, $\norm w_\infty=2$.</p></div></details></div>
+
+<h3 id="inegalites-normes">Inégalités entre normes : Cauchy–Schwarz, Hölder, $\norm v_1\le\sqrt k\norm v_2$</h3>
+<p class="tldr">Trois inégalités qui permettent de passer d'une norme à l'autre ; elles sont au cœur des preuves des séances 3 et 4.</p>
+<p><strong>Où ça sert :</strong> Cours 3 (diapos 36–38, preuve du théorème de Bickel–Ritov–Tsybakov), Cours 4 (diapos 54–58, inégalités oracle).</p>
+
+<div class="box thm"><div class="box-h">Les trois inégalités</div>
+<ol>
+<li><strong>Cauchy–Schwarz</strong> : $\abs{a\T b}\le\norm a_2\norm b_2$.</li>
+<li><strong>Hölder ($\ell_1$–$\ell_\infty$)</strong> : $\abs{a\T b}\le\norm a_1\norm b_\infty$.</li>
+<li><strong>Vecteur parcimonieux</strong> : si $v$ a au plus $k$ coordonnées non nulles, $\norm v_1\le\sqrt k\,\norm v_2$.</li>
+</ol>
+<p>Et toujours : $\norm v_\infty\le\norm v_2\le\norm v_1$.</p>
+</div>
+
+<div class="box idee"><div class="box-h">Pourquoi c'est vrai</div>
+<ul>
+<li>Cauchy–Schwarz : c'est le fait qu'un cosinus est entre $-1$ et $1$ ($a\T b=\norm a\norm b\cos\theta$). Preuve algébrique : le polynôme $t\mapsto\norm{a+tb}^2=\norm a^2+2t\,a\T b+t^2\norm b^2$ est toujours $\ge0$, donc son discriminant est $\le0$ : $4(a\T b)^2-4\norm a^2\norm b^2\le0$.</li>
+<li>Hölder : on majore chaque $\abs{b_j}$ par le plus grand d'entre eux.</li>
+<li>Parcimonieux : Cauchy–Schwarz avec un vecteur de 1 bien choisi.</li>
+</ul></div>
+
+<details class="fold proof"><summary>Preuves de Hölder et de l'inégalité parcimonieuse</summary><div class="fold-body">
+<p><strong>Hölder.</strong></p>
+<ol class="steps">
+<li>$$\abs{a\T b}=\Big|\sum_j a_jb_j\Big|\le\sum_j\abs{a_j}\,\abs{b_j}$$<span class="why">inégalité triangulaire pour une somme de nombres</span></li>
+<li>$$\le\sum_j\abs{a_j}\cdot\max_k\abs{b_k}=\norm a_1\norm b_\infty$$<span class="why">chaque $\abs{b_j}$ est au plus le maximum</span></li>
+</ol>
+<p><strong>$\norm v_1\le\sqrt k\norm v_2$.</strong> Soit $S$ l'ensemble des indices où $v_j\neq0$ ($\abs S\le k$).</p>
+<ol class="steps">
+<li>$$\norm v_1=\sum_{j\in S}\abs{v_j}=\sum_{j\in S}1\cdot\abs{v_j}$$<span class="why">les autres coordonnées sont nulles</span></li>
+<li>$$\le\Big(\sum_{j\in S}1^2\Big)^{1/2}\Big(\sum_{j\in S}v_j^2\Big)^{1/2}=\sqrt{\abs S}\,\norm v_2\le\sqrt k\,\norm v_2$$<span class="why">Cauchy–Schwarz entre le vecteur $(1,\dots,1)$ (de taille $\abs S$) et $(\abs{v_j})_{j\in S}$</span></li>
+</ol>
+<p><strong>$\norm v_\infty\le\norm v_2\le\norm v_1$.</strong> $\max_j v_j^2\le\sum_j v_j^2$ donne la première. Pour la seconde, $\norm v_1^2=\big(\sum_j\abs{v_j}\big)^2=\sum_j v_j^2+\sum_{j\ne k}\abs{v_j}\abs{v_k}\ge\norm v_2^2$.</p>
+</div></details>
+
+<div class="box exemple"><div class="box-h">Exemple chiffré</div>
+<p>$v=(3,-4,0)$ a $k=2$ coordonnées non nulles : $\norm v_1=7\le\sqrt2\times5\approx7{,}07$. L'inégalité est presque une égalité parce que $\abs3$ et $\abs{-4}$ sont proches ; elle serait une égalité si les coordonnées non nulles avaient toutes la même valeur absolue.</p>
+<p>Hölder avec $a=(1,2)$ et $b=(3,-1)$ : $\abs{a\T b}=\abs{3-2}=1\le\norm a_1\norm b_\infty=3\times3=9$.</p>
+</div>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>Dans une preuve, quand vous voyez un <strong>produit scalaire bruit × erreur</strong> comme $\eps\T X\delta=(X\T\eps)\T\delta$ → Hölder : $\le\norm{X\T\eps}_\infty\,\norm\delta_1$. On sépare ainsi la partie aléatoire (un maximum, contrôlable) de l'erreur (une norme $\ell_1$).<br>
+Quand vous devez passer de $\norm\cdot_1$ à $\norm\cdot_2$ pour un vecteur à support de taille $s$ → $\norm\cdot_1\le\sqrt s\norm\cdot_2$ : c'est d'où vient le facteur $s$ dans les vitesses du Lasso.</p></div>
+
+<div class="quiz"><p>Mini-exercice 1 : montrez que $\norm v_2^2\le\norm v_1\,\norm v_\infty$.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Écrivez $v_j^2=\abs{v_j}\cdot\abs{v_j}$ et majorez l'un des deux facteurs.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$\norm v_2^2=\sum_j\abs{v_j}\abs{v_j}\le\sum_j\abs{v_j}\cdot\norm v_\infty=\norm v_1\norm v_\infty$. (C'est Hölder avec $a=b=\abs v$.)</p></div></details></div>
+<div class="quiz"><p>Mini-exercice 2 : pour $v=(1,1,1,1)$, comparez $\norm v_1$ et $\sqrt4\,\norm v_2$. Pour quels vecteurs l'inégalité $\norm v_1\le\sqrt k\norm v_2$ est-elle une égalité ?</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$\norm v_1=4$ et $\sqrt4\,\norm v_2=2\times2=4$ : égalité. Cauchy–Schwarz est une égalité quand les deux vecteurs sont proportionnels, ici quand $(\abs{v_j})_{j\in S}$ est proportionnel à $(1,\dots,1)$ et que $\abs S=k$ : toutes les coordonnées non nulles ont la même valeur absolue, et il y en a exactement $k$.</p></div></details></div>
+
+<h3 id="rang-noyau">Matrices : produit, transposée, rang, noyau, image</h3>
+<p class="tldr">$X\beta$ est une combinaison des colonnes de $X$ ; quand il y a plus de colonnes que de lignes, plusieurs $\beta$ donnent le même $X\beta$.</p>
+<p><strong>Où ça sert :</strong> Cours 1 (diapos 4–8 : identifiabilité, « colonnes liées », $p>n$), Cours 3 (diapo 35 : cas dégénéré).</p>
+
+<h4>Le produit $X\beta$, vu colonne par colonne</h4>
+<p>Si $X$ a pour colonnes $X_1,\dots,X_p$, alors</p>
+$$X\beta=\beta_1X_1+\beta_2X_2+\dots+\beta_pX_p=\sum_{j=1}^p\beta_jX_j .$$
+<p>C'est exactement la diapo 5 du Cours 1 : chaque $\beta_j$ dit « combien » de la variable $X_j$ entre dans la prédiction. Rappel utile : $(AB)\T=B\T A\T$ (l'ordre s'inverse), donc $(X\beta)\T=\beta\T X\T$.</p>
+
+<div class="box def"><div class="box-h">Définition — Image, noyau, rang</div>
+<ul>
+<li><strong>Image</strong> $\Ima X=\{X\beta:\beta\in\R^p\}\subset\R^n$ : tous les vecteurs qu'on peut fabriquer en combinant les colonnes. C'est l'ensemble des « prédictions possibles ».</li>
+<li><strong>Noyau</strong> $\Ker X=\{\beta\in\R^p:X\beta=0\}$ : les combinaisons de colonnes qui donnent 0.</li>
+<li><strong>Rang</strong> $\rg X=\dim\Ima X$ : le nombre de colonnes « vraiment différentes » (linéairement indépendantes). On a toujours $\rg X\le\min(n,p)$.</li>
+</ul></div>
+
+<div class="box thm"><div class="box-h">Théorème du rang</div>
+<p>Pour $X\in\R^{n\times p}$ : $\quad\rg X+\dim\Ker X=p\quad$ (le nombre de colonnes).</p>
+<p>Conséquence : si $p>n$, alors $\rg X\le n<p$, donc $\dim\Ker X\ge p-n\ge1$ : <strong>le noyau contient des vecteurs non nuls</strong>.</p></div>
+
+<div class="box intu"><div class="box-h">Pourquoi c'est grave pour la statistique</div>
+<p>Si $v\neq0$ est dans le noyau, alors pour tout $t$ : $X(\beta+tv)=X\beta+tXv=X\beta$. Les paramètres $\beta$ et $\beta+tv$ produisent <strong>exactement les mêmes prédictions</strong>, donc les données ne peuvent pas les distinguer. On dit que $\beta$ n'est pas <em class="new">identifiable</em>. C'est le premier problème de la grande dimension (Cours 1, diapo 8).</p></div>
+
+<div class="box exemple"><div class="box-h">Exemple chiffré ($n=2$, $p=3$)</div>
+<p>$X=\begin{pmatrix}1&0&1\\0&1&1\end{pmatrix}$ : la troisième colonne est la somme des deux premières. Le rang vaut 2, donc $\dim\Ker X=3-2=1$. Le vecteur $v=(1,1,-1)$ est dans le noyau : $Xv=(1+0-1,\ 0+1-1)=(0,0)$. Ainsi $\beta=(1,2,0)$ et $\beta+v=(2,3,-1)$ donnent tous deux $X\beta=(1,2)$.</p></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>Quand vous lisez « $p>n$ » → pensez « noyau non trivial » → « $\beta$ non identifiable » et « $X\T X$ non inversible ». Ces trois phrases disent la même chose.</p></div>
+
+<div class="quiz"><p>Mini-exercice : $X=\begin{pmatrix}1&1\\2&2\\3&3\end{pmatrix}$ (colonne dupliquée). Rang ? Noyau ? Donnez deux $\beta$ différents qui donnent le même $X\beta$.</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>Les deux colonnes sont égales : rang 1, et $\dim\Ker X=2-1=1$. $X(a,b)\T=(a+b)(1,2,3)\T$ est nul ssi $b=-a$ : $\Ker X=\{t(1,-1)\}$. Par exemple $\beta=(1,0)$ et $\beta=(0,1)$ donnent tous deux $(1,2,3)\T$ ; plus généralement tout $(a,b)$ avec $a+b=1$.</p></div></details></div>
+
+<h3 id="gram">La matrice de Gram $X\T X$</h3>
+<p class="tldr">$X\T X$ rassemble tous les produits scalaires entre colonnes ; elle est symétrique, positive, et inversible exactement quand les colonnes sont indépendantes.</p>
+<p><strong>Où ça sert :</strong> partout. Cours 1 (diapos 6, 8, 11–13 : formule des moindres carrés, Ridge), Cours 2 (diapo 31 : $\Psi_n=X\T X/n$), Cours 3 (diapos 34–37 : condition RE), Cours 4 (diapo 56 : $G$).</p>
+
+<div class="box def"><div class="box-h">Définition</div>
+<p>$X\T X$ est la matrice $p\times p$ dont la case $(j,k)$ vaut $(X\T X)_{jk}=X_j\T X_k=\sum_{i=1}^n x_{ij}x_{ik}$ : le produit scalaire de la colonne $j$ avec la colonne $k$. La matrice de Gram « normalisée » des diapos est $\Psi_n=\frac{X\T X}{n}$.</p></div>
+
+<div class="box exemple"><div class="box-h">Exemple chiffré</div>
+<p>$X=\begin{pmatrix}1&1\\1&0\\1&-1\\1&2\end{pmatrix}$ (colonnes $X_1=(1,1,1,1)$, $X_2=(1,0,-1,2)$). Alors $X_1\T X_1=4$, $X_1\T X_2=1+0-1+2=2$, $X_2\T X_2=1+0+1+4=6$, donc
+$X\T X=\begin{pmatrix}4&2\\2&6\end{pmatrix}$, de déterminant $24-4=20\neq0$ : inversible.</p></div>
+
+<div class="box thm"><div class="box-h">Les quatre propriétés à connaître</div>
+<ol>
+<li>$X\T X$ est <strong>symétrique</strong> : $(X\T X)\T=X\T(X\T)\T=X\T X$.</li>
+<li>Elle est <strong>positive</strong> : pour tout $v\in\R^p$, $v\T X\T Xv=\norm{Xv}^2\ge0$.</li>
+<li>$\Ker(X\T X)=\Ker X$, donc $\rg(X\T X)=\rg X$.</li>
+<li>$X\T X$ est inversible $\iff$ $\rg X=p$ $\iff$ les colonnes sont linéairement indépendantes. C'est <strong>impossible si $p>n$</strong>.</li>
+</ol></div>
+
+<details class="fold proof"><summary>Preuve des propriétés 2 à 4</summary><div class="fold-body">
+<ol class="steps">
+<li>$$v\T X\T Xv=(Xv)\T(Xv)=\norm{Xv}^2\ge0$$<span class="why">$(Xv)\T=v\T X\T$ ; un carré de norme est positif. C'est la propriété 2.</span></li>
+<li>Si $Xv=0$ alors $X\T Xv=X\T0=0$ : $\Ker X\subset\Ker X\T X$.<span class="why">une matrice appliquée au vecteur nul donne le vecteur nul</span></li>
+<li>Si $X\T Xv=0$ alors $0=v\T X\T Xv=\norm{Xv}^2$, donc $Xv=0$ : $\Ker X\T X\subset\Ker X$.<span class="why">on multiplie à gauche par $v\T$ et on utilise l'étape 1</span></li>
+<li>$\rg(X\T X)=p-\dim\Ker(X\T X)=p-\dim\Ker X=\rg X$.<span class="why">théorème du rang appliqué aux deux matrices, qui ont toutes deux $p$ colonnes</span></li>
+<li>Une matrice carrée $p\times p$ est inversible ssi son rang vaut $p$ ; or $\rg X\le n$, donc si $p>n$, $\rg(X\T X)\le n<p$.<span class="why">par l'étape 4, $\rg(X\T X)=\rg X$ : $X\T X$ est inversible ssi $\rg X=p$. Et $\rg X\le\min(n,p)$. C'est la propriété 4.</span></li>
+</ol></div></details>
+
+<div class="box intu"><div class="box-h">Lecture « statistique » quand les colonnes sont normalisées</div>
+<p>Les diapos (Cours 3 diapo 34, Cours 4 diapo 54) supposent $\norm{X_j}^2=n$ pour tout $j$. Alors la diagonale de $\Psi_n=X\T X/n$ vaut 1, et si de plus les colonnes sont centrées (moyenne nulle), le terme $(\Psi_n)_{jk}=\frac1nX_j\T X_k$ est la <strong>corrélation empirique</strong> entre les variables $j$ et $k$. Une matrice de Gram proche de l'identité = des variables presque non corrélées ; des termes hors diagonale proches de $\pm1$ = des variables presque redondantes.</p></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>Pour montrer qu'une matrice de la forme $X\T X$ (ou $X\T WX$ avec $W$ diagonale positive) est positive, écrivez $v\T X\T Xv=\norm{Xv}^2$. Une ligne, et c'est fini.</p></div>
+
+<div class="quiz"><p>Mini-exercice : calculez $X\T X$ pour $X=\begin{pmatrix}1&0&1\\0&1&1\end{pmatrix}$ et vérifiez qu'elle n'est pas inversible.</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$X\T X=\begin{pmatrix}1&0&1\\0&1&1\\1&1&2\end{pmatrix}$. Son déterminant vaut $1\cdot(2-1)-0+1\cdot(0-1)=0$ : non inversible, comme prévu ($p=3>n=2$). Le vecteur $(1,1,-1)$ est dans son noyau : $(1-1,\,1-1,\,1+1-2)=(0,0,0)$.</p></div></details></div>
+
+<h3 id="spectral">Valeurs propres, théorème spectral, matrices positives, conditionnement</h3>
+<p class="tldr">Une matrice symétrique agit comme un simple étirement le long de directions orthogonales ; les étirements (valeurs propres) disent si elle est inversible et si son inverse est stable.</p>
+<p><strong>Où ça sert :</strong> Cours 1 (diapos 8, 12–13 : valeurs propres de $X\T X$ proches de 0, Ridge qui les décale), Cours 3 (diapos 34–38 : $\varphi_{\max}$, valeurs propres « restreintes »), Cours 5 (diapo 72 : $\lambda_{\min}(X\T X)\to\infty$).</p>
+
+<div class="box def"><div class="box-h">Définition</div>
+<p>$v\neq0$ est un <strong>vecteur propre</strong> de la matrice carrée $A$, associé à la <strong>valeur propre</strong> $\mu$, si $Av=\mu v$ : $A$ ne fait que multiplier $v$ par $\mu$.</p></div>
+
+<div class="box thm"><div class="box-h">Théorème spectral (matrices symétriques)</div>
+<p>Si $A\in\R^{p\times p}$ est symétrique, il existe une base orthonormée $v_1,\dots,v_p$ de vecteurs propres, de valeurs propres réelles $\mu_1,\dots,\mu_p$. Matriciellement : $A=VDV\T$ avec $V=(v_1|\dots|v_p)$ orthogonale ($V\T V=I$) et $D=\diag(\mu_1,\dots,\mu_p)$.</p></div>
+
+<div class="box intu"><div class="box-h">Intuition</div>
+<p>Dans la base des $v_j$, la matrice $A$ est diagonale : elle étire la direction $v_j$ d'un facteur $\mu_j$. Tout ce qu'on veut savoir sur $A$ se lit sur les $\mu_j$ :</p>
+<ul>
+<li>$A$ inversible $\iff$ aucun $\mu_j$ n'est nul ; alors $A^{-1}=VD^{-1}V\T$ a pour valeurs propres $1/\mu_j$ ;</li>
+<li>$A+\lambda I$ a les <strong>mêmes</strong> vecteurs propres et les valeurs propres $\mu_j+\lambda$ (car $(A+\lambda I)v_j=\mu_jv_j+\lambda v_j$) — c'est la diapo 12 du Cours 1 ;</li>
+<li>$A$ est <em class="new">semi-définie positive</em> ($v\T Av\ge0$ pour tout $v$) $\iff$ tous les $\mu_j\ge0$ ; <em class="new">définie positive</em> ($v\T Av>0$ pour $v\neq0$) $\iff$ tous les $\mu_j>0$.</li>
+</ul></div>
+
+<div class="box thm"><div class="box-h">Encadrement de Rayleigh</div>
+<p>Pour $A$ symétrique, de plus petite valeur propre $\mu_{\min}$ et de plus grande valeur propre $\mu_{\max}$, et tout $v\in\R^p$ : $\quad\mu_{\min}\norm v^2\le v\T Av\le\mu_{\max}\norm v^2.$</p></div>
+<details class="fold proof"><summary>Preuve</summary><div class="fold-body">
+<ol class="steps">
+<li>$$v=\sum_j c_jv_j\quad\text{avec } c_j=v_j\T v$$<span class="why">on décompose $v$ dans la base orthonormée des vecteurs propres</span></li>
+<li>$$Av=\sum_j c_j\mu_jv_j,\qquad v\T Av=\sum_j\mu_jc_j^2,\qquad \norm v^2=\sum_jc_j^2$$<span class="why">$Av_j=\mu_jv_j$ et $v_j\T v_k=\ind\{j=k\}$ (orthonormalité)</span></li>
+<li>$$\mu_{\min}\sum_jc_j^2\le\sum_j\mu_jc_j^2\le\mu_{\max}\sum_jc_j^2$$<span class="why">chaque $\mu_j$ est entre le plus petit et le plus grand ; les $c_j^2$ sont positifs</span></li>
+</ol></div></details>
+
+<div class="box def"><div class="box-h">Conditionnement</div>
+<p>Pour $A$ symétrique définie positive, $\mathrm{cond}(A)=\mu_{\max}/\mu_{\min}$. S'il est énorme, résoudre $A\beta=c$ est <strong>instable</strong> : une petite erreur sur $c$ dans la direction $v_{\min}$ est multipliée par $1/\mu_{\min}$.</p></div>
+
+<div class="box exemple"><div class="box-h">Exemple chiffré : deux variables presque identiques</div>
+<p>Deux colonnes normalisées de corrélation $\rho=0{,}99$ donnent $\Psi=\begin{pmatrix}1&0{,}99\\0{,}99&1\end{pmatrix}$. Vecteurs propres $(1,1)/\sqrt2$ et $(1,-1)/\sqrt2$, valeurs propres $1+\rho=1{,}99$ et $1-\rho=0{,}01$ (vérifiez : $\Psi(1,1)\T=(1{,}99;1{,}99)\T$).</p>
+<ul>
+<li>$\Psi^{-1}$ a les valeurs propres $1/1{,}99\approx0{,}50$ et $1/0{,}01=100$ : conditionnement $199$.</li>
+<li>Avec $\Psi+0{,}1\,I$ (idée du Ridge) : valeurs propres $2{,}09$ et $0{,}11$, conditionnement $\approx19$, dix fois mieux.</li>
+</ul>
+<p>Interprétation : les données disent très bien ce que vaut $\beta_1+\beta_2$ (direction $(1,1)$, grande valeur propre) mais presque rien sur $\beta_1-\beta_2$ (direction $(1,-1)$, valeur propre 0,01).</p></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>Quand vous voyez « petite valeur propre de $X\T X$ » → « une direction de $\beta$ que les données voient mal » → « variance énorme dans cette direction » (division par $\mu_{\min}$). Et quand vous voyez « $+\lambda I$ » → « on décale toutes les valeurs propres de $\lambda$ ».</p></div>
+
+<div class="quiz"><p>Mini-exercice 1 : valeurs et vecteurs propres de $A=\begin{pmatrix}2&1\\1&2\end{pmatrix}$ ?</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$A(1,1)\T=(3,3)\T$ : valeur propre 3. $A(1,-1)\T=(1,-1)\T$ : valeur propre 1. Les deux sont positives : $A$ est définie positive, de conditionnement 3.</p></div></details></div>
+<div class="quiz"><p>Mini-exercice 2 : $A$ est symétrique semi-définie positive et $\lambda>0$. Montrez que $A+\lambda I$ est inversible.</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>Ses valeurs propres sont $\mu_j+\lambda\ge0+\lambda>0$ : aucune n'est nulle. Autre preuve sans valeurs propres : si $(A+\lambda I)v=0$, alors $0=v\T Av+\lambda\norm v^2\ge\lambda\norm v^2$, donc $v=0$. C'est l'argument du Ridge (Cours 1, diapo 11).</p></div></details></div>
+
+<h3 id="projection">Projection orthogonale et matrice de projection</h3>
+<p class="tldr">Les moindres carrés reviennent à projeter $Y$ orthogonalement sur l'ensemble des prédictions possibles $\Ima X$ ; la matrice qui fait ça s'appelle un projecteur.</p>
+<p><strong>Où ça sert :</strong> Cours 1 (diapos 6–7 : $X\hb\MC$ est la projection de $Y$ ; diapo 17 : $P_{\langle X\rangle}$ dans Cp/AIC), Cours 6 (diapo 77 : décomposition de $\norm{Y-X\beta}^2$).</p>
+
+<figure class="fig">
+<svg viewBox="0 0 540 270" aria-label="Projection orthogonale de Y sur le plan Im(X)">
+  <path class="am" d="M40 235 L360 235 L500 150 L180 150 Z"/>
+  <path class="ln cm thin" d="M40 235 L360 235 L500 150 L180 150 Z"/>
+  <text class="tx" x="58" y="228">plan Im X</text>
+  <line class="ln c1" x1="150" y1="205" x2="370" y2="45"/>
+  <circle class="fk" cx="150" cy="205" r="3.5"/><text class="tx" x="134" y="203">0</text>
+  <circle class="fk" cx="370" cy="45" r="4"/><text class="tx-b" x="380" y="45">Y</text>
+  <line class="ln c3" x1="150" y1="205" x2="370" y2="185"/>
+  <circle class="f3" cx="370" cy="185" r="4"/><text class="tx-b" x="380" y="200">PY</text>
+  <line class="ln c2 dash" x1="370" y1="45" x2="370" y2="185"/>
+  <path class="ln ck thin" d="M370 172 L358 173 L358 186"/>
+  <text class="tx" x="378" y="120">Y − PY</text>
+  <text class="tx" x="378" y="136">(résidu, ⊥ au plan)</text>
+  <circle class="fm" cx="265" cy="215" r="3.5"/><text class="tx" x="240" y="232">u</text>
+  <line class="ln cm thin dash" x1="370" y1="45" x2="265" y2="215"/>
+</svg>
+<figcaption>$Y$ (bleu) est projeté orthogonalement sur le plan $\Ima X$ (l'ensemble de toutes les prédictions $X\beta$). Le projeté $PY=X\hb\MC$ (vert) est le point du plan le plus proche de $Y$ : pour tout autre point $u$ du plan, le segment pointillé gris est plus long que le résidu orange.</figcaption>
+</figure>
+
+<div class="box def"><div class="box-h">Définition</div>
+<p>Une matrice $P\in\R^{n\times n}$ est un <em class="new">projecteur orthogonal</em> si $P^2=P$ (projeter deux fois ne change rien) et $P\T=P$ (symétrique). Quand $X$ est de rang $p$ (colonnes indépendantes), la projection sur $\Ima X$ est la « matrice chapeau »
+$$P=X(X\T X)^{-1}X\T .$$</p></div>
+
+<div class="box thm"><div class="box-h">Propriétés</div>
+<ol>
+<li>$P^2=P$ et $P\T=P$ ; $I-P$ est aussi un projecteur (sur l'orthogonal de $\Ima X$), et $P(I-P)=0$.</li>
+<li>Pythagore : $\norm Y^2=\norm{PY}^2+\norm{(I-P)Y}^2$.</li>
+<li>$PY$ est le point de $\Ima X$ le plus proche de $Y$.</li>
+<li>Les valeurs propres de $P$ valent 0 ou 1 ; le nombre de 1 est le rang de $P$ (la dimension du sous-espace).</li>
+</ol></div>
+
+<details class="fold proof"><summary>Preuves</summary><div class="fold-body">
+<ol class="steps">
+<li>$$P^2=X(X\T X)^{-1}\underbrace{X\T X(X\T X)^{-1}}_{=I_p}X\T=X(X\T X)^{-1}X\T=P$$<span class="why">on regroupe le milieu ; même calcul pour $P\T$ en utilisant $(X\T X)^{-1}$ symétrique</span></li>
+<li>$$(PY)\T(I-P)Y=Y\T P(I-P)Y=Y\T(P-P^2)Y=0$$<span class="why">$P\T=P$ puis $P^2=P$ : le projeté et le résidu sont orthogonaux</span></li>
+<li>$$\norm Y^2=\norm{PY+(I-P)Y}^2=\norm{PY}^2+2\underbrace{(PY)\T(I-P)Y}_{0}+\norm{(I-P)Y}^2$$<span class="why">on développe le carré : c'est Pythagore</span></li>
+<li>Pour $u\in\Ima X$ : $\norm{Y-u}^2=\norm{(Y-PY)+(PY-u)}^2=\norm{Y-PY}^2+\norm{PY-u}^2\ge\norm{Y-PY}^2$.<span class="why">$w=PY-u\in\Ima X$, donc $Pw=w$ (car $PX\beta=X(X\T X)^{-1}X\T X\beta=X\beta$) ; alors $w\T(I-P)Y=w\T P(I-P)Y=0$ comme à l'étape 2 : le double produit est nul</span></li>
+<li>Si $Pv=\mu v$ ($v\neq0$) : $\mu v=Pv=P^2v=\mu^2v$, donc $\mu^2=\mu$, soit $\mu\in\{0,1\}$. Comme $P$ est symétrique, $P=VDV\T$ (théorème spectral) et $\rg P=\rg D$ = nombre de valeurs propres non nulles, c'est-à-dire de 1.<span class="why">$P^2=P$ ; puis $V$ est inversible, donc multiplier par $V$ et $V\T$ ne change pas le rang</span></li>
+</ol></div></details>
+
+<div class="box exemple"><div class="box-h">Exemple chiffré : projeter sur les constantes</div>
+<p>Prenons $X=\mathbf 1=(1,1,1)\T$ ($n=3$, $p=1$). Alors $X\T X=3$ et $P=\frac13\mathbf 1\mathbf 1\T$ : $PY$ remplace chaque coordonnée par la <strong>moyenne</strong>. Pour $Y=(1,2,6)$ : $\bar Y=3$, $PY=(3,3,3)$, résidu $(-2,-1,3)$ (de somme nulle : orthogonal à $\mathbf 1$). Pythagore : $\norm Y^2=1+4+36=41$ et $\norm{PY}^2+\norm{Y-PY}^2=27+14=41$. ✓</p></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>Moindres carrés = projection. Quand vous voyez $\norm{Y-X\hb}^2$ ou $X\hb$, pensez « $PY$ et $(I-P)Y$, orthogonaux, Pythagore ». Et pour une quantité du type $\norm{P\eps}^2$, pensez « trace de $P$ = rang » (rappel suivant).</p></div>
+
+<div class="quiz"><p>Mini-exercice : vérifiez que $P=\frac1n\mathbf 1\mathbf 1\T$ (où $\mathbf 1\in\R^n$) est un projecteur. Quel est son rang ?</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$P\T=P$ car $(\mathbf 1\mathbf 1\T)\T=(\mathbf 1\T)\T\mathbf 1\T=\mathbf 1\mathbf 1\T$. $P^2=\frac1{n^2}\mathbf 1(\mathbf 1\T\mathbf 1)\mathbf 1\T=\frac{n}{n^2}\mathbf 1\mathbf 1\T=P$ car $\mathbf 1\T\mathbf 1=n$. Son image est la droite des vecteurs constants : rang 1.</p></div></details></div>
+
+<h3 id="trace">Trace : définition, cyclicité, trace d'un projecteur</h3>
+<p class="tldr">La trace (somme de la diagonale) transforme des calculs d'espérance compliqués en un simple comptage de dimensions.</p>
+<p><strong>Où ça sert :</strong> Cours 1 (diapo 7 : $\E\norm{X\hb\MC-X\bstar}_n^2=\sigma^2\rg(X)/n$ ; diapo 17 : $\mathrm{Tr}(P_{\langle X\rangle})$ dans Cp/AIC ; diapo 22 : oracle).</p>
+
+<div class="box def"><div class="box-h">Définition et propriétés</div>
+<p>Pour $A$ carrée, $\tr A=\sum_iA_{ii}$. Elle est linéaire : $\tr(A+B)=\tr A+\tr B$, $\tr(cA)=c\tr A$. Et :</p>
+<ol>
+<li><strong>Cyclicité</strong> : $\tr(AB)=\tr(BA)$, même si $A$ est $n\times p$ et $B$ est $p\times n$ ;</li>
+<li>$\tr A=\sum_j\mu_j$ (somme des valeurs propres) pour $A$ symétrique ;</li>
+<li>pour un projecteur orthogonal, $\tr P=\rg P$ ;</li>
+<li>un nombre est sa propre trace : pour un vecteur $\eps$, $\eps\T M\eps=\tr(\eps\T M\eps)=\tr(M\eps\eps\T)$.</li>
+</ol></div>
+
+<details class="fold proof"><summary>Preuves</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\tr(AB)=\sum_{i=1}^n(AB)_{ii}=\sum_{i=1}^n\sum_{k=1}^pA_{ik}B_{ki}=\sum_{k=1}^p\sum_{i=1}^nB_{ki}A_{ik}=\sum_{k=1}^p(BA)_{kk}=\tr(BA)$$<span class="why">on écrit le produit matriciel, puis on échange l'ordre des deux sommes</span></li>
+<li>$$\tr A=\tr(VDV\T)=\tr(DV\T V)=\tr D=\sum_j\mu_j$$<span class="why">théorème spectral, cyclicité avec $A\to V$ et $B\to DV\T$, puis $V\T V=I$</span></li>
+<li>Un projecteur a des valeurs propres 0 ou 1, et autant de 1 que son rang : $\tr P=\rg P$.<span class="why">propriété 2 et rappel <a href="#projection">projection</a></span></li>
+<li>$$\eps\T M\eps=\tr(\underbrace{\eps\T}_{1\times n}\underbrace{M\eps}_{n\times1})=\tr(M\eps\,\eps\T)$$<span class="why">un nombre ($1\times1$) est égal à sa trace, puis cyclicité</span></li>
+</ol>
+<p>Vérification directe pour la matrice chapeau : $\tr\big(X(X\T X)^{-1}X\T\big)=\tr\big((X\T X)^{-1}X\T X\big)=\tr(I_p)=p$.</p>
+</div></details>
+
+<div class="box exemple"><div class="box-h">Exemple chiffré</div>
+<p>$A=\begin{pmatrix}1&2\\3&4\end{pmatrix}$, $B=\begin{pmatrix}0&1\\1&0\end{pmatrix}$ : $AB=\begin{pmatrix}2&1\\4&3\end{pmatrix}$ (trace 5) et $BA=\begin{pmatrix}3&4\\1&2\end{pmatrix}$ (trace 5). Les matrices $AB$ et $BA$ sont différentes, leurs traces sont égales.</p></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>Quand vous devez calculer l'espérance d'une quantité <strong>quadratique</strong> en un vecteur aléatoire ($\eps\T M\eps$, $\norm{P\eps}^2$…) → « un nombre est sa propre trace », faites passer le vecteur à droite, sortez l'espérance. Voir <a href="#forme-quadratique">forme quadratique</a>.</p></div>
+
+<div class="quiz"><p>Mini-exercice : sans calcul matriciel, que vaut $\tr\big(X(X\T X+\lambda I)^{-1}X\T\big)$ quand $X\T X=\diag(\mu_1,\dots,\mu_p)$ ? Que devient-il quand $\lambda=0$ ?</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>Cyclicité : $\tr\big((X\T X+\lambda I)^{-1}X\T X\big)=\sum_j\frac{\mu_j}{\mu_j+\lambda}$. Pour $\lambda=0$ (et tous les $\mu_j>0$), on retrouve $p$. Pour $\lambda>0$ chaque terme est $<1$ : le Ridge « utilise » moins de $p$ degrés de liberté. (Hors programme des diapos, mais c'est la notion de « nombre effectif de paramètres » du Ridge.)</p></div></details></div>
+
+<h2 id="optimisation">Calcul différentiel et optimisation</h2>
+<p class="lead">Tous les estimateurs du cours sont définis comme des minimiseurs (« $\hb\in\argmin\dots$ »). Il faut donc savoir dériver un critère, reconnaître qu'il est convexe, et passer d'une contrainte à une pénalité.</p>
+
+<h3 id="gradient">Gradient et hessienne : les formules à connaître</h3>
+<p class="tldr">Trois formules de dérivation suffisent pour tout le cours ; la plus importante est $\nabla_\beta\norm{Y-X\beta}^2=-2X\T(Y-X\beta)$.</p>
+<p><strong>Où ça sert :</strong> Cours 1 (diapos 6 et 11 : formules des moindres carrés et du Ridge), Cours 2 (diapo 27 : conditions KKT), Cours 5 (diapos 68–71 : équations de vraisemblance, Newton).</p>
+
+<div class="box def"><div class="box-h">Définition</div>
+<p>Pour $f:\R^p\to\R$, le <strong>gradient</strong> $\nabla f(\beta)\in\R^p$ est le vecteur des dérivées partielles $\big(\frac{\partial f}{\partial\beta_1},\dots,\frac{\partial f}{\partial\beta_p}\big)$ ; la <strong>hessienne</strong> $\nabla^2f(\beta)$ est la matrice $p\times p$ des dérivées secondes $\frac{\partial^2f}{\partial\beta_j\partial\beta_k}$. Le gradient pointe dans la direction où $f$ augmente le plus vite ; en un minimum (intérieur, $f$ dérivable), il est nul.</p></div>
+
+<div class="box thm"><div class="box-h">Les trois formules</div>
+$$\nabla_\beta(a\T\beta)=a,\qquad \nabla_\beta(\beta\T A\beta)=(A+A\T)\beta,$$<p>qui vaut $2A\beta$ quand $A$ est symétrique, et</p>
+$$\nabla_\beta\norm{Y-X\beta}^2=-2X\T(Y-X\beta),\qquad \nabla^2_\beta\norm{Y-X\beta}^2=2X\T X.$$</div>
+
+<details class="fold proof"><summary>Preuves (en coordonnées)</summary><div class="fold-body">
+<ol class="steps">
+<li>$$a\T\beta=\sum_ja_j\beta_j\ \Rightarrow\ \frac{\partial}{\partial\beta_l}(a\T\beta)=a_l$$<span class="why">seul le terme $j=l$ dépend de $\beta_l$</span></li>
+<li>$$\beta\T A\beta=\sum_j\sum_kA_{jk}\beta_j\beta_k\ \Rightarrow\ \frac{\partial}{\partial\beta_l}=\sum_kA_{lk}\beta_k+\sum_jA_{jl}\beta_j=(A\beta)_l+(A\T\beta)_l$$<span class="why">$\beta_l$ apparaît quand $j=l$ (premier terme) et quand $k=l$ (second terme)</span></li>
+<li>$$\norm{Y-X\beta}^2=Y\T Y-2\beta\T X\T Y+\beta\T X\T X\beta$$<span class="why">on développe $(Y-X\beta)\T(Y-X\beta)$ ; $Y\T X\beta$ est un nombre, égal à sa transposée $\beta\T X\T Y$</span></li>
+<li>$$\nabla=0-2X\T Y+2X\T X\beta=-2X\T(Y-X\beta)$$<span class="why">formule 1 avec $a=X\T Y$, formule 2 avec $A=X\T X$ symétrique</span></li>
+<li>$$\nabla^2=\nabla\big(-2X\T Y+2X\T X\beta\big)=2X\T X$$<span class="why">on dérive encore une fois : la partie constante disparaît</span></li>
+</ol>
+<p>Vérification en dimension 1 ($p=1$) : $\frac{d}{d\beta}\sum_i(y_i-x_i\beta)^2=\sum_i2(y_i-x_i\beta)(-x_i)=-2\sum_ix_i(y_i-x_i\beta)$. C'est bien $-2X\T(Y-X\beta)$.</p>
+</div></details>
+
+<div class="box exemple"><div class="box-h">Exemple : retrouver les moindres carrés en une ligne</div>
+<p>$\nabla\norm{Y-X\beta}^2=0\iff X\T X\beta=X\T Y$ (les <strong>équations normales</strong>). Si $X\T X$ est inversible : $\hb\MC=(X\T X)^{-1}X\T Y$. Avec l'exemple du <a href="#gram">rappel Gram</a> et $Y=(1,2,3,4)$ : $X\T Y=(10,\ 1+0-3+8)=(10,6)$, et $\begin{pmatrix}4&2\\2&6\end{pmatrix}\beta=\begin{pmatrix}10\\6\end{pmatrix}$ donne $\beta=(2{,}4;\ 0{,}2)$.</p></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>Devant un critère quadratique en $\beta$ : développez-le, appliquez les formules 1 et 2, annulez le gradient. Interprétation à garder : $X\T(Y-X\beta)$ est le vecteur des <strong>produits scalaires entre chaque variable et le résidu</strong> ; il s'annule aux moindres carrés.</p></div>
+
+<div class="quiz"><p>Mini-exercice : calculez le gradient de $f(\beta)=\norm{Y-X\beta}^2+\lambda\norm\beta_2^2$ et déduisez-en la formule du Ridge.</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$\nabla f=-2X\T(Y-X\beta)+2\lambda\beta$ (formule 2 avec $A=\lambda I$). Il s'annule ssi $(X\T X+\lambda I)\beta=X\T Y$, soit $\hb^R=(X\T X+\lambda I)^{-1}X\T Y$ : c'est la diapo 11 du Cours 1 (critère non normalisé).</p></div></details></div>
+
+<h3 id="convexite">Convexité : fonctions, ensembles, minimum global, unicité</h3>
+<p class="tldr">Pour une fonction convexe, « gradient nul » (ou plus généralement « pas de direction de descente ») suffit à garantir un minimum global : c'est pour ça que le cours tient tant à la convexité.</p>
+<p><strong>Où ça sert :</strong> Cours 1 (diapo 23 : le Lasso est convexe, pas $\ell_0$), Cours 4 (diapos 49–53 : sous-différentiel), Cours 6 (diapos 74–76 : bridge convexe ssi $\gamma\ge1$ ; diapo 85 : elastic net strictement convexe).</p>
+
+<div class="box def"><div class="box-h">Définitions</div>
+<ul>
+<li>Un ensemble $C$ est <strong>convexe</strong> si le segment entre deux de ses points reste dedans : $u,v\in C,\ t\in[0,1]\Rightarrow tu+(1-t)v\in C$.</li>
+<li>Une fonction $f$ est <strong>convexe</strong> si la corde est au-dessus du graphe : $f(tu+(1-t)v)\le tf(u)+(1-t)f(v)$.</li>
+<li>Elle est <strong>strictement convexe</strong> si l'inégalité est stricte pour $u\neq v$ et $t\in(0,1)$.</li>
+</ul></div>
+
+<figure class="fig">
+<svg viewBox="0 0 480 250" aria-label="Fonction convexe et corde">
+  <line class="ax" x1="30" y1="230" x2="460" y2="230"/>
+  <path class="ln c1" d="M40.0 157.1 L50.0 165.1 L60.0 172.5 L70.0 179.4 L80.0 185.7 L90.0 191.5 L100.0 196.7 L110.0 201.4 L120.0 205.5 L130.0 209.1 L140.0 212.1 L150.0 214.6 L160.0 216.5 L170.0 217.9 L180.0 218.7 L190.0 219.0 L200.0 218.7 L210.0 217.9 L220.0 216.5 L230.0 214.6 L240.0 212.1 L250.0 209.1 L260.0 205.5 L270.0 201.4 L280.0 196.7 L290.0 191.5 L300.0 185.7 L310.0 179.4 L320.0 172.5 L330.0 165.1 L340.0 157.1 L350.0 148.6 L360.0 139.5 L370.0 129.9 L380.0 119.7 L390.0 109.0 L400.0 97.7 L410.0 85.9 L420.0 73.5 L430.0 60.6 L440.0 47.1"/>
+  <line class="ln c2" x1="90" y1="191.5" x2="390" y2="109"/>
+  <circle class="fk" cx="90" cy="191.5" r="4"/><circle class="fk" cx="390" cy="109" r="4"/>
+  <line class="ln cm thin dash" x1="270" y1="230" x2="270" y2="142"/>
+  <circle class="f1" cx="270" cy="201.4" r="4"/><circle class="f2" cx="270" cy="142" r="4"/>
+  <text class="tx" x="80" y="245">u</text><text class="tx" x="385" y="245">v</text><text class="tx" x="250" y="245">tu + (1−t)v</text>
+  <text class="tx" x="262" y="136" text-anchor="end">t f(u) + (1−t) f(v)</text>
+  <text class="tx" x="278" y="215">f(tu + (1−t)v)</text>
+</svg>
+<figcaption>Une fonction convexe : entre $u$ et $v$, le graphe (bleu) reste sous la corde (orange).</figcaption>
+</figure>
+
+<div class="box thm"><div class="box-h">Ce qu'il faut savoir</div>
+<ol>
+<li><strong>Critère pratique</strong> : $f$ deux fois dérivable est convexe ssi sa hessienne est semi-définie positive partout (en dimension 1 : $f''\ge0$).</li>
+<li><strong>Stabilité</strong> : une somme de fonctions convexes est convexe ; $c\,f$ est convexe si $c\ge0$ ; toute norme est convexe.</li>
+<li><strong>Minimum local = minimum global</strong> pour $f$ convexe.</li>
+<li><strong>Unicité</strong> : une fonction strictement convexe a <em>au plus un</em> minimiseur.</li>
+<li><strong>Condition d'ordre 1</strong> : si $f$ est convexe et dérivable, $f(v)\ge f(u)+\nabla f(u)\T(v-u)$ pour tous $u,v$ (la tangente est sous le graphe). Donc $\nabla f(u)=0\Rightarrow u$ est un minimum global.</li>
+</ol></div>
+
+<details class="fold proof"><summary>Preuves de 2, 3 et 4</summary><div class="fold-body">
+<p><strong>Toute norme est convexe :</strong> $\norm{tu+(1-t)v}\le\norm{tu}+\norm{(1-t)v}=t\norm u+(1-t)\norm v$ (inégalité triangulaire puis homogénéité).</p>
+<p><strong>Local = global :</strong> supposons $u$ minimum local et $v$ avec $f(v)<f(u)$. Pour $t$ proche de 1, le point $w=tu+(1-t)v$ est proche de $u$, et $f(w)\le tf(u)+(1-t)f(v)<f(u)$ : contradiction avec « $u$ minimum local ».</p>
+<p><strong>Unicité :</strong> si $u\neq v$ sont deux minimiseurs (valeur $m$), alors $f\big(\frac{u+v}2\big)<\frac12f(u)+\frac12f(v)=m$ : le milieu fait mieux que le minimum, impossible.</p>
+</div></details>
+
+<div class="box exemple"><div class="box-h">Exemples du cours</div>
+<ul>
+<li>$\beta\mapsto\norm{Y-X\beta}^2$ : hessienne $2X\T X$, semi-définie positive → convexe ; <strong>strictement</strong> convexe si $X\T X$ est définie positive (rang $p$). Si $p>n$, elle ne l'est pas : il y a même une infinité de minimiseurs (ajouter à un minimiseur un vecteur du noyau de $X$ ne change pas $X\beta$, voir <a href="#rang-noyau">rang et noyau</a>).</li>
+<li>$\norm\beta_1$, $\norm\beta_2^2$ : convexes ; donc Ridge et Lasso sont des problèmes convexes. Ridge ($\lambda>0$) est même strictement convexe (hessienne $2X\T X+2\lambda I$ définie positive) : solution unique.</li>
+<li>$\norm\beta_0$ n'est <strong>pas</strong> convexe. En dimension 1, $g(x)=\ind\{x\neq0\}$ : avec $u=0$, $v=1$, $t=\frac12$ : $g(\frac12)=1>\frac12g(0)+\frac12g(1)=\frac12$.</li>
+</ul></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>Devant un nouvel estimateur « argmin » : (1) le critère est-il convexe ? (somme de convexes) → on sait le calculer et un point critique suffit ; (2) est-il strictement convexe ? → la solution est unique. Si l'un des termes est $\norm\cdot_0$ ou $\abs{\cdot}^\gamma$ avec $\gamma<1$ → pas convexe → difficile.</p></div>
+
+<div class="quiz"><p>Mini-exercice : montrez que $x\mapsto\abs x$ est convexe mais pas strictement convexe.</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>C'est une norme sur $\R$, donc convexe. Pas strictement : pour $u=1$, $v=2$, $t=\frac12$, $\abs{1{,}5}=1{,}5=\frac12\abs1+\frac12\abs2$ ; l'inégalité est une égalité (le graphe est une droite sur $[0,\infty)$).</p></div></details></div>
+
+<h3 id="lagrange">Contrainte ou pénalité : l'idée du multiplicateur de Lagrange</h3>
+<p class="tldr">Minimiser $f$ sous la contrainte $g\le t$ ou minimiser $f+\lambda g$ donne les mêmes solutions, pour des valeurs de $t$ et $\lambda$ qui se correspondent ; c'est pourquoi le Lasso a deux définitions.</p>
+<p><strong>Où ça sert :</strong> Cours 1 (diapo 23 : $\tilde\beta^L(t)$ et $\hb^L(\lambda)$ « équivalents point par point »), Cours 6 (diapos 75 et 77 : bridge contraint, illustration en dimension 2).</p>
+
+<div class="cols">
+<div class="box def"><div class="box-h">Forme contrainte</div><p>$\min f(\beta)$ sous la contrainte $g(\beta)\le t$ : « le meilleur ajustement avec un budget $t$ ».</p></div>
+<div class="box def"><div class="box-h">Forme pénalisée</div><p>$\min f(\beta)+\lambda g(\beta)$, $\lambda\ge0$ : « l'ajustement, moins un prix $\lambda$ par unité de $g$ ».</p></div>
+</div>
+
+<div class="box thm"><div class="box-h">Le sens facile de l'équivalence</div>
+<p>Si $\hb(\lambda)$ minimise $f+\lambda g$, alors $\hb(\lambda)$ minimise $f$ sous la contrainte $g(\beta)\le t$, avec $t=g(\hb(\lambda))$.</p></div>
+<details class="fold proof"><summary>Preuve</summary><div class="fold-body">
+<p>Soit $\beta$ avec $g(\beta)\le t=g(\hb)$. Par définition de $\hb$ : $f(\hb)+\lambda g(\hb)\le f(\beta)+\lambda g(\beta)\le f(\beta)+\lambda g(\hb)$ (car $\lambda\ge0$). On simplifie par $\lambda g(\hb)$ : $f(\hb)\le f(\beta)$. Donc aucun $\beta$ admissible ne fait mieux.</p>
+<p>Le sens inverse (pour tout $t$, il existe un $\lambda$) demande la convexité de $f$ et $g$ ; on l'admet (c'est la dualité de Lagrange).</p></div></details>
+
+<div class="box intu"><div class="box-h">Image géométrique</div>
+<p>À la solution du problème contraint, une ligne de niveau de $f$ <strong>touche</strong> le bord de l'ensemble $\{g\le t\}$ sans le traverser : les deux courbes sont tangentes, donc leurs gradients sont parallèles et de sens opposés : $\nabla f=-\lambda\nabla g$. Ce $\lambda\ge0$ est le multiplicateur de Lagrange — c'est exactement la condition « gradient de $f+\lambda g$ nul ». Dans la figure ci-dessous, $f$ est le critère des moindres carrés (ellipses) et $g$ la norme $\ell_1$ (losange) ou $\ell_2$ au carré (disque).</p></div>
+
+<div class="widget" data-widget="l1l2"></div>
+<p class="small muted">Déplacez $t$ : la solution est toujours le point où une ellipse touche le bord de la contrainte. Avec le losange, ce point tombe souvent sur un coin (une coordonnée nulle).</p>
+
+<div class="box exemple"><div class="box-h">Exemple 1D : la correspondance $t\leftrightarrow\lambda$ dépend des données</div>
+<p>Avec un seul paramètre $a$ et une donnée $b=3$ : $f(a)=(b-a)^2$, $g(a)=\abs a$.</p>
+<ul>
+<li>Contraint : $\min(3-a)^2$ sous $\abs a\le t$. Pour $t<3$, on va le plus près possible de 3 : $a=t$.</li>
+<li>Pénalisé : $\min(3-a)^2+\lambda\abs a$. Pour $a>0$, la dérivée $-2(3-a)+\lambda$ s'annule en $a=3-\lambda/2$ (valable si $\lambda<6$).</li>
+<li>Même solution ssi $t=3-\lambda/2$, soit $\lambda=2(3-t)$. Avec une autre donnée $b$, la relation devient $\lambda=2(b-t)$ : <strong>le $\lambda$ qui correspond à un $t$ donné dépend des données</strong>. C'est la phrase « on peut trouver un $\lambda$ (qui dépend des données) » de la diapo 23.</li>
+</ul></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>Pour <strong>voir</strong> un estimateur pénalisé, passez à la forme contrainte et faites le dessin en dimension 2 : lignes de niveau du critère + boule de la pénalité. Pour le <strong>calculer</strong> ou l'analyser, restez en forme pénalisée.</p></div>
+
+<div class="quiz"><p>Mini-exercice : refaites l'exemple avec $b=-2$ et $t=1$. Quel $\lambda$ correspond ?</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>Contraint : $a=-1$ (le point de $[-1,1]$ le plus proche de $-2$). Pénalisé, pour $a<0$ : dérivée $-2(-2-a)-\lambda=0\Rightarrow a=-2+\lambda/2$. Égal à $-1$ ssi $\lambda=2$.</p></div></details></div>
+
+<h3 id="newton">Taylor à l'ordre 2 et méthode de Newton</h3>
+<p class="tldr">Pour minimiser une fonction qu'on ne sait pas minimiser à la main, on la remplace par une parabole qui la colle, on minimise la parabole, et on recommence.</p>
+<p><strong>Où ça sert :</strong> Cours 5 (diapo 71 : algorithme IRLS = Newton–Raphson pour la vraisemblance d'un modèle linéaire généralisé).</p>
+
+<div class="box def"><div class="box-h">Taylor à l'ordre 2</div>
+<p>En dimension 1 : $f(x+h)\approx f(x)+f'(x)h+\frac12f''(x)h^2$. En dimension $p$ :
+$$f(\beta+h)\approx f(\beta)+\nabla f(\beta)\T h+\tfrac12h\T\nabla^2f(\beta)h .$$</p></div>
+
+<div class="box methode"><div class="box-h">Méthode de Newton</div>
+<ol>
+<li>Partir d'un point $\beta_0$.</li>
+<li>Minimiser l'approximation quadratique en $h$ : gradient nul ⇔ $\nabla f(\beta_k)+\nabla^2f(\beta_k)h=0$, d'où $h^*=-[\nabla^2f(\beta_k)]^{-1}\nabla f(\beta_k)$ (en dimension 1 : $h^*=-f'(x_k)/f''(x_k)$).</li>
+<li>Poser $\beta_{k+1}=\beta_k+h^*$ et recommencer jusqu'à ce que le pas soit minuscule.</li>
+</ol>
+<p>Pour <strong>maximiser</strong> une fonction concave (une log-vraisemblance), la formule est la même : on cherche toujours le point où le gradient de la parabole s'annule.</p></div>
+
+<div class="box exemple"><div class="box-h">Exemple chiffré</div>
+<p>$f(x)=x-\log x$ sur $x>0$ : $f'(x)=1-\frac1x$, $f''(x)=\frac1{x^2}$, minimum en $x=1$. Le pas de Newton donne $x_{k+1}=x_k-\frac{1-1/x_k}{1/x_k^2}=2x_k-x_k^2$. En partant de $x_0=0{,}5$ :</p>
+<div class="table-wrap"><table>
+<tr><th>$k$</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th></tr>
+<tr><td>$x_k$</td><td>0,5</td><td>0,75</td><td>0,9375</td><td>0,99609</td><td>0,9999847</td></tr>
+<tr><td>erreur $1-x_k$</td><td>0,5</td><td>0,25</td><td>0,0625</td><td>0,0039</td><td>0,000015</td></tr>
+</table></div>
+<p>L'erreur est <strong>mise au carré</strong> à chaque pas ($1-x_{k+1}=(1-x_k)^2$) : le nombre de décimales justes double à chaque itération. C'est la « convergence quadratique » de Newton.</p></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>« Équations non linéaires à résoudre » (comme les équations de vraisemblance d'un GLM) → Newton : gradient et hessienne, puis $\beta\leftarrow\beta-[\nabla^2]^{-1}\nabla$. Sur une fonction quadratique, Newton converge en <strong>un seul</strong> pas.</p></div>
+
+<div class="quiz"><p>Mini-exercice : appliquez un pas de Newton à $f(\beta)=\norm{Y-X\beta}^2$ depuis un $\beta_0$ quelconque ($X\T X$ inversible). Qu'obtenez-vous ?</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$\nabla f(\beta_0)=-2X\T(Y-X\beta_0)$ et $\nabla^2f=2X\T X$. Donc $\beta_1=\beta_0+(X\T X)^{-1}X\T(Y-X\beta_0)=\beta_0+(X\T X)^{-1}X\T Y-\beta_0=(X\T X)^{-1}X\T Y=\hb\MC$ : la solution exacte en un pas, car l'approximation quadratique d'une fonction quadratique est la fonction elle-même.</p></div></details></div>
+
+<h3 id="young">Petites inégalités qui débloquent les preuves</h3>
+<p class="tldr">Quatre astuces élémentaires reviennent dans toutes les preuves des séances 3 et 4 ; les connaître évite de rester bloqué sur une ligne.</p>
+<p><strong>Où ça sert :</strong> Cours 3 (diapos 36–38 : cône et théorème BRT), Cours 4 (diapos 55 et 58 : inégalités oracle).</p>
+
+<div class="box thm"><div class="box-h">La boîte à astuces</div>
+<ol>
+<li><strong>Triangulaire et triangulaire inversée</strong> : $\norm{a+b}\le\norm a+\norm b$ et $\norm a-\norm b\le\norm{a-b}$.</li>
+<li><strong>« $2ab\le a^2+b^2$ »</strong>, et sa version réglable (Young) : pour tout $\eta>0$, $ab\le\eta a^2+\frac{b^2}{4\eta}$.</li>
+<li><strong>« $u^2\le cu$ »</strong> avec $u,c\ge0$ entraîne $u\le c$.</li>
+<li><strong>« $u^2\le cu+d$ »</strong> avec $u,c,d\ge0$ entraîne $u\le c+\sqrt d$.</li>
+</ol></div>
+
+<details class="fold proof"><summary>Preuves</summary><div class="fold-body">
+<ol class="steps">
+<li>$\norm a=\norm{(a-b)+b}\le\norm{a-b}+\norm b$, d'où $\norm a-\norm b\le\norm{a-b}$.<span class="why">triangulaire appliquée à $a=(a-b)+b$</span></li>
+<li>$0\le(a-b)^2=a^2-2ab+b^2$ ; et $0\le\big(\sqrt\eta\,a-\frac{b}{2\sqrt\eta}\big)^2=\eta a^2-ab+\frac{b^2}{4\eta}$.<span class="why">un carré est positif ; on développe</span></li>
+<li>Si $u>0$, on divise $u^2\le cu$ par $u$ ; si $u=0$, la conclusion $0\le c$ est l'hypothèse $c\ge0$ (sans elle, $u=0$ et $c<0$ serait un contre-exemple).<span class="why">attention : on ne divise jamais par une quantité qui pourrait être nulle sans le dire</span></li>
+<li>$u$ est entre les racines de $u^2-cu-d$, donc $u\le\frac{c+\sqrt{c^2+4d}}2\le\frac{c+c+2\sqrt d}2=c+\sqrt d$.<span class="why">$\sqrt{c^2+4d}\le c+2\sqrt d$ car $(c+2\sqrt d)^2=c^2+4c\sqrt d+4d$</span></li>
+</ol></div></details>
+
+<div class="box exemple"><div class="box-h">Comment elles apparaissent dans le cours</div>
+<p>(Notations des séances 3–4 : $s$ = nombre maximal de coefficients non nuls de $\bstar$ ; $r$ et $\lambda$ = niveaux de pénalité ; $\kappa>0$ = constante de la condition RE.)</p>
+<ul>
+<li><strong>Triangulaire inversée</strong> (Cours 3) : avec $\delta=\hb-\bstar$ et $J_0$ le support de $\bstar$, $\norm{\bstar_{J_0}}_1-\norm{\hb_{J_0}}_1\le\norm{\delta_{J_0}}_1$.</li>
+<li><strong>« $u^2\le cu$ »</strong> (Cours 3) : on arrive à $u^2\le\frac{4r\sqrt s}{\kappa}u$ avec $u=\norm{X\delta}/\sqrt n$, d'où $u\le\frac{4r\sqrt s}{\kappa}$.</li>
+<li><strong>Young</strong> (Cours 4, inégalité rapide) : $\frac{3\lambda\sqrt s}{2\kappa}\,u\le u^2+\frac{9\lambda^2s}{16\kappa^2}$ (Young avec $\eta=1$, $a=u$, $b=\frac{3\lambda\sqrt s}{2\kappa}$) — c'est ce qui fait apparaître le $18$ de la diapo 58, avec le $\lambda$ doublé de la preuve rapide, $\lambda=4\sigma\sqrt{2(x+\log M)/n}$ : $\frac{9\lambda^2s}{16\kappa^2}=\frac{18\sigma^2s(x+\log M)}{\kappa^2n}$.</li>
+</ul></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>Dans une preuve, quand une même quantité inconnue $u$ apparaît <strong>au carré à gauche et à la puissance 1 à droite</strong>, c'est gagné : divisez (astuce 3) ou absorbez le terme linéaire avec Young (astuce 2).</p></div>
+
+<div class="quiz"><p>Mini-exercice 1 : déduisez de $u^2\le3u+4$ (avec $u\ge0$) que $u\le4$, puis comparez avec l'astuce 4.</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$u^2-3u-4=(u-4)(u+1)\le0$ et $u+1>0$, donc $u\le4$. L'astuce 4 donne $u\le3+\sqrt4=5$ : moins précis mais immédiat.</p></div></details></div>
+<div class="quiz"><p>Mini-exercice 2 : montrez que pour des vecteurs $a,b$ et un ensemble d'indices $J$, $\norm{a_J}_1-\norm{b_J}_1\le\norm{(a-b)_J}_1$, où $a_J$ garde les coordonnées de $a$ dans $J$ et met les autres à 0.</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>C'est la triangulaire inversée pour la norme $\ell_1$ appliquée aux vecteurs $a_J$ et $b_J$, en remarquant que $a_J-b_J=(a-b)_J$.</p></div></details></div>
+
+<h2 id="probabilites">Probabilités</h2>
+<p class="lead">Le bruit $\eps$ est aléatoire, donc les estimateurs aussi. Pour dire « l'estimateur est proche de la vérité », il faut savoir calculer des espérances de vecteurs, manipuler des gaussiennes et contrôler la probabilité qu'un bruit soit exceptionnellement grand.</p>
+
+<h3 id="esperance">Espérance, variance, covariance d'un vecteur aléatoire</h3>
+<p class="tldr">L'espérance passe à travers les applications linéaires ($\E[AZ]=A\E Z$) et la covariance se transforme en « sandwich » ($\Cov(AZ)=A\Cov(Z)A\T$).</p>
+<p><strong>Où ça sert :</strong> Cours 1 (diapos 7, 13, 17, 22 : erreurs de prédiction, biais du Ridge), Cours 5 (diapo 67 : moments de la famille exponentielle).</p>
+
+<div class="box def"><div class="box-h">Définitions</div>
+<ul>
+<li>Variable aléatoire réelle $Z$ : $\Var(Z)=\E[(Z-\E Z)^2]=\E[Z^2]-(\E Z)^2$ ; $\Cov(Z,W)=\E[(Z-\E Z)(W-\E W)]$.</li>
+<li>Vecteur aléatoire $Z\in\R^n$ : $\E Z$ est le vecteur des espérances des coordonnées ; la <strong>matrice de covariance</strong> est
+$\Cov(Z)=\E\big[(Z-\E Z)(Z-\E Z)\T\big]$, de case $(i,k)$ égale à $\Cov(Z_i,Z_k)$ ; sa diagonale contient les variances.</li>
+<li>« $\eps$ de covariance $\sigma^2I_n$ » signifie : coordonnées de variance $\sigma^2$ et non corrélées deux à deux.</li>
+</ul></div>
+
+<div class="box thm"><div class="box-h">Les trois règles de calcul</div>
+<p>Pour $A$ une matrice et $b$ un vecteur <strong>non aléatoires</strong> :</p>
+$$\begin{gathered}\E[AZ+b]=A\,\E Z+b,\qquad \Cov(AZ+b)=A\,\Cov(Z)\,A\T,\\ \E\norm Z^2=\norm{\E Z}^2+\tr\Cov(Z).\end{gathered}$$</div>
+
+<details class="fold proof"><summary>Preuves</summary><div class="fold-body">
+<ol class="steps">
+<li>La coordonnée $i$ de $AZ+b$ est $\sum_kA_{ik}Z_k+b_i$ ; son espérance est $\sum_kA_{ik}\E Z_k+b_i$.<span class="why">linéarité de l'espérance pour des variables réelles</span></li>
+<li>$$\begin{aligned}AZ+b-\E[AZ+b]&=A(Z-\E Z)\\ \Rightarrow\ \Cov(AZ+b)&=\E\big[A(Z-\E Z)(Z-\E Z)\T A\T\big]=A\Cov(Z)A\T\end{aligned}$$<span class="why">$(Au)\T=u\T A\T$, puis on sort $A$ et $A\T$ de l'espérance (règle 1)</span></li>
+<li>Écrivons $Z=m+W$ avec $m=\E Z$ et $W$ centré : $\norm Z^2=\norm m^2+2m\T W+\norm W^2$, et $\E[m\T W]=0$, $\E\norm W^2=\sum_i\Var(Z_i)=\tr\Cov(Z)$.<span class="why">on développe, puis la diagonale de $\Cov(Z)$ contient les variances</span></li>
+</ol></div></details>
+
+<div class="box exemple"><div class="box-h">Exemple 1 : la somme de deux variables</div>
+<p>$Z=(Z_1,Z_2)$ indépendantes de variances 1 et 4 : $\Cov(Z)=\diag(1,4)$. Pour $S=Z_1+Z_2=(1\ \ 1)Z$ : $\Var(S)=(1\ \ 1)\diag(1,4)(1\ \ 1)\T=1+4=5$.</p></div>
+<div class="box exemple"><div class="box-h">Exemple 2 : l'estimateur des moindres carrés</div>
+<p>$\hb\MC=(X\T X)^{-1}X\T Y=(X\T X)^{-1}X\T(X\bstar+\eps)=\bstar+(X\T X)^{-1}X\T\eps$. Avec $A=(X\T X)^{-1}X\T$ :</p>
+<ul><li>$\E\hb\MC=\bstar+A\,\E\eps=\bstar$ : <strong>sans biais</strong> ;</li>
+<li>$\Cov(\hb\MC)=A(\sigma^2I_n)A\T=\sigma^2(X\T X)^{-1}X\T X(X\T X)^{-1}=\sigma^2(X\T X)^{-1}$ : la variance explose quand $X\T X$ a une petite valeur propre (voir <a href="#spectral">valeurs propres</a>).</li></ul></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>Pour l'espérance ou la covariance d'un estimateur <strong>linéaire en $Y$</strong> (moindres carrés, Ridge) : écrivez-le sous la forme « constante + $A\eps$ », puis appliquez $\E[A\eps]=0$ et $\Cov(A\eps)=\sigma^2AA\T$.</p></div>
+
+<div class="quiz"><p>Mini-exercice : $\Cov(Z)=\begin{pmatrix}1&0{,}5\\0{,}5&2\end{pmatrix}$. Que vaut $\Var(Z_1-Z_2)$ ?</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>Avec $a=(1,-1)$ : $a\T\Cov(Z)a=1+2-2\times0{,}5=2$.</p></div></details></div>
+
+<h3 id="gaussien">Lois gaussiennes et vecteurs gaussiens</h3>
+<p class="tldr">Toute combinaison linéaire d'un vecteur gaussien est gaussienne, et sa variance se calcule avec la règle du sandwich ; en particulier $X_j\T\eps\sim\N(0,\sigma^2\norm{X_j}^2)$.</p>
+<p><strong>Où ça sert :</strong> Cours 1 (diapo 3 : $\eps_i\sim\N(0,\sigma^2)$), Cours 3 (diapo 38) et Cours 4 (diapos 54–58) : la loi de $X_j\T\eps$ est le point de départ du choix de $\lambda$.</p>
+
+<div class="box def"><div class="box-h">Définitions</div>
+<ul>
+<li>$Z\sim\N(0,1)$ a pour densité $\varphi(z)=\frac1{\sqrt{2\pi}}e^{-z^2/2}$. $W\sim\N(m,\sigma^2)$ ssi $(W-m)/\sigma\sim\N(0,1)$ (on « standardise »).</li>
+<li>Repères : $\P(\abs Z\le1)\approx68\,\%$, $\P(\abs Z\le2)\approx95\,\%$, $\P(\abs Z\le3)\approx99{,}7\,\%$.</li>
+<li>Un vecteur $Z\in\R^n$ est <strong>gaussien</strong>, noté $\N(m,\Sigma)$, si toute combinaison linéaire $a\T Z$ de ses coordonnées est une gaussienne réelle. Alors $a\T Z\sim\N(a\T m,\ a\T\Sigma a)$.</li>
+<li>Si $\eps_1,\dots,\eps_n$ sont indépendantes $\N(0,\sigma^2)$, alors $\eps\sim\N(0,\sigma^2I_n)$.</li>
+</ul></div>
+
+<div class="box thm"><div class="box-h">Le fait central pour le cours</div>
+<p>Si $\eps\sim\N(0,\sigma^2I_n)$ et $a\in\R^n$ est fixé : $\quad a\T\eps\sim\N(0,\ \sigma^2\norm a^2)$.</p>
+<p>En particulier, pour la colonne $X_j$ : $X_j\T\eps\sim\N(0,\sigma^2\norm{X_j}^2)$, et si les colonnes sont normalisées ($\norm{X_j}^2=n$) :
+$$X_j\T\eps\sim\N(0,\,n\sigma^2),\qquad \frac{X_j\T\eps}{\sigma\sqrt n}\sim\N(0,1).$$</p></div>
+<p>Preuve : $a\T\eps$ est une combinaison linéaire des $\eps_i$, donc gaussienne ; espérance $a\T\E\eps=0$ ; variance $a\T(\sigma^2I_n)a=\sigma^2\norm a^2$ (règle du sandwich du rappel précédent).</p>
+
+<div class="box exemple"><div class="box-h">Exemple chiffré</div>
+<p>$n=100$, colonnes normalisées, $\sigma=2$ : $X_j\T\eps\sim\N(0,400)$ (écart-type 20) et $\frac1nX_j\T\eps\sim\N(0,\sigma^2/n)=\N(0,0{,}04)$ (écart-type 0,2). C'est ce second nombre — la « corrélation entre la variable $j$ et le bruit » — que $\lambda$ devra dominer pour toutes les variables à la fois.</p></div>
+
+<div class="box remarque"><div class="box-h">Pour aller un peu plus loin : khi-deux</div>
+<p>Si $Z_1,\dots,Z_k$ sont indépendantes $\N(0,1)$, $\sum_iZ_i^2$ suit une loi du khi-deux à $k$ degrés de liberté, d'espérance $k$. Par exemple $\norm{P\eps}^2/\sigma^2\sim\chi^2(\rg P)$ pour un projecteur $P$ : c'est la version « en loi » du rappel suivant.</p></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>Quand vous voyez $X_j\T\eps$ (ou $X\T\eps$) : c'est une gaussienne centrée de variance $\sigma^2\norm{X_j}^2$. Standardisez-la pour vous ramener à $\N(0,1)$, puis utilisez les <a href="#queues">queues gaussiennes</a>.</p></div>
+
+<div class="quiz"><p>Mini-exercice : $a=(1,2,2)$, $\eps\sim\N(0,9I_3)$. Loi de $a\T\eps$ ? Probabilité que $\abs{a\T\eps}>18$ ?</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$\norm a^2=1+4+4=9$, donc $a\T\eps\sim\N(0,81)$, écart-type 9. $\P(\abs{a\T\eps}>18)=\P(\abs Z>2)\approx0{,}0455$.</p></div></details></div>
+
+<h3 id="forme-quadratique">Espérance d'une forme quadratique : $\E[\eps\T M\eps]=\sigma^2\tr M$</h3>
+<p class="tldr">L'espérance d'une forme quadratique du bruit se réduit à une trace ; pour un projecteur, la trace est la dimension.</p>
+<p><strong>Où ça sert :</strong> Cours 1 (diapo 7 : erreur $\sigma^2\rg(X)/n$ ; diapo 17 : Cp/AIC ; diapo 22 : oracle $\sigma^2\abs{\Astar}/n$).</p>
+
+<div class="box thm"><div class="box-h">Énoncé</div>
+<p>Si $\E\eps=0$ et $\Cov(\eps)=\sigma^2I_n$ (pas besoin de gaussianité), alors pour toute matrice $M\in\R^{n\times n}$ fixe :
+$$\E[\eps\T M\eps]=\sigma^2\tr M .$$
+<strong>Corollaire</strong> : pour un projecteur orthogonal $P$, $\E\norm{P\eps}^2=\sigma^2\tr P=\sigma^2\rg P$.</p></div>
+
+<div class="box idee"><div class="box-h">Idée</div><p>Dans $\eps\T M\eps=\sum_{i,k}M_{ik}\eps_i\eps_k$, les termes croisés ($i\neq k$) ont une espérance nulle (bruits non corrélés) ; seuls les termes diagonaux $M_{ii}\eps_i^2$ survivent, chacun d'espérance $\sigma^2M_{ii}$.</p></div>
+
+<details class="fold proof"><summary>Deux preuves</summary><div class="fold-body">
+<p><strong>Avec les indices.</strong></p>
+<ol class="steps">
+<li>$$\E[\eps\T M\eps]=\E\Big[\sum_{i=1}^n\sum_{k=1}^nM_{ik}\eps_i\eps_k\Big]=\sum_{i,k}M_{ik}\E[\eps_i\eps_k]$$<span class="why">on écrit le produit et on utilise la linéarité</span></li>
+<li>$$\E[\eps_i\eps_k]=\Cov(\eps_i,\eps_k)=\sigma^2\ind\{i=k\}$$<span class="why">bruit centré, de covariance $\sigma^2I_n$</span></li>
+<li>$$\E[\eps\T M\eps]=\sigma^2\sum_iM_{ii}=\sigma^2\tr M$$<span class="why">seuls les termes $i=k$ restent</span></li>
+</ol>
+<p><strong>Avec l'astuce de la trace.</strong> $\eps\T M\eps=\tr(M\eps\eps\T)$ (rappel <a href="#trace">trace</a>), et la trace est linéaire donc commute avec l'espérance : $\E[\eps\T M\eps]=\tr(M\,\E[\eps\eps\T])=\tr(M\sigma^2I_n)=\sigma^2\tr M$.</p>
+<p><strong>Corollaire.</strong> $\norm{P\eps}^2=\eps\T P\T P\eps=\eps\T P\eps$ (car $P\T P=P^2=P$), donc $\E\norm{P\eps}^2=\sigma^2\tr P=\sigma^2\rg P$.</p>
+</div></details>
+
+<div class="box exemple"><div class="box-h">Exemple : pourquoi on divise par $n-1$</div>
+<p>Avec $P=\frac1n\mathbf1\mathbf1\T$ (projection sur les constantes, rang 1) : $P\eps=(\bar\eps,\dots,\bar\eps)$ et $(I-P)\eps=(\eps_i-\bar\eps)_i$. Le corollaire appliqué à $I-P$ (rang $n-1$) donne $\E\sum_i(\eps_i-\bar\eps)^2=\sigma^2(n-1)$. C'est la raison du $n-1$ dans la variance empirique : on « perd » une dimension en estimant la moyenne.</p></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>« Espérance d'un carré de norme d'un bruit transformé » → $\E\norm{A\eps}^2=\sigma^2\tr(A\T A)$ ; si $A$ est un projecteur → $\sigma^2\times$ (dimension). Traduction statistique : <strong>chaque dimension sur laquelle on projette coûte $\sigma^2$</strong>.</p></div>
+
+<div class="quiz"><p>Mini-exercice 1 : que vaut $\E\norm\eps^2$ ?</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$M=I_n$ : $\sigma^2\tr I_n=n\sigma^2$.</p></div></details></div>
+<div class="quiz"><p>Mini-exercice 2 : $n=2$, $\sigma^2=4$, $M=\begin{pmatrix}2&1\\1&3\end{pmatrix}$. Calculez $\E[\eps\T M\eps]$.</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$\sigma^2\tr M=4\times(2+3)=20$. Les termes hors diagonale (les 1) ne comptent pas.</p></div></details></div>
+
+<h3 id="queues">Queues gaussiennes, borne de l'union, maximum de $p$ gaussiennes</h3>
+<p class="tldr">Une gaussienne dépasse $t$ avec une probabilité inférieure à $e^{-t^2/2}$ ; en additionnant ces probabilités sur $p$ variables, on obtient que leur maximum reste de l'ordre de $\sqrt{2\log p}$. C'est l'origine du $\log p$ dans tout le cours.</p>
+<p><strong>Où ça sert :</strong> Cours 3 (diapo 38 : probabilité $1-p^{1-A^2/8}$ et $r=A\sigma\sqrt{\log p/n}$), Cours 4 (diapos 54–58 : probabilité $1-2e^{-x}$ et $\lambda=2\sigma\sqrt{2(x+\log M)/n}$, où $x>0$ règle la confiance et $M$ est le nombre de variables, le « $p$ » de la séance 4).</p>
+
+<figure class="fig">
+<svg viewBox="0 0 520 215" aria-label="Densité gaussienne et queues au-delà de plus ou moins 2">
+  <path class="a2" d="M376.0 190.0 L376.0 169.5 L378.9 171.5 L381.8 173.3 L384.7 175.0 L387.6 176.5 L390.5 177.9 L393.4 179.2 L396.3 180.4 L399.2 181.5 L402.1 182.5 L405.0 183.3 L407.9 184.1 L410.8 184.8 L413.7 185.5 L416.6 186.0 L419.5 186.5 L422.4 187.0 L425.3 187.4 L428.2 187.7 L431.1 188.0 L434.0 188.3 L436.9 188.6 L439.8 188.8 L442.7 188.9 L445.6 189.1 L448.5 189.2 L451.4 189.3 L454.3 189.4 L457.2 189.5 L460.1 189.6 L463.0 189.7 L465.9 189.7 L468.8 189.8 L471.7 189.8 L474.6 189.8 L477.5 189.9 L492.0 189.9 L492.0 190.0 Z"/>
+  <path class="a2" d="M28.0 190.0 L28.0 189.9 L42.5 189.9 L45.4 189.8 L51.2 189.8 L54.1 189.7 L57.0 189.7 L59.9 189.6 L62.8 189.5 L65.7 189.4 L68.6 189.3 L71.5 189.2 L74.4 189.1 L77.3 188.9 L80.2 188.8 L83.1 188.6 L86.0 188.3 L88.9 188.0 L91.8 187.7 L94.7 187.4 L97.6 187.0 L100.5 186.5 L103.4 186.0 L106.3 185.5 L109.2 184.8 L112.1 184.1 L115.0 183.3 L117.9 182.5 L120.8 181.5 L123.7 180.4 L126.6 179.2 L129.5 177.9 L132.4 176.5 L135.3 175.0 L138.2 173.3 L141.1 171.5 L144.0 169.5 L144.0 190.0 Z"/>
+  <line class="ax" x1="20" y1="190" x2="500" y2="190"/>
+  <path class="ln c1" d="M28.0 189.9 L45.4 189.8 L57.0 189.7 L65.7 189.4 L74.4 189.1 L80.2 188.8 L86.0 188.3 L91.8 187.7 L97.6 187.0 L103.4 186.0 L109.2 184.8 L115.0 183.3 L120.8 181.5 L126.6 179.2 L132.4 176.5 L138.2 173.3 L144.0 169.5 L149.8 165.1 L155.6 160.0 L161.4 154.3 L167.2 147.9 L173.0 140.8 L178.8 133.1 L184.6 124.9 L190.4 116.2 L196.2 107.2 L202.0 98.1 L207.8 88.9 L213.6 79.9 L219.4 71.3 L225.2 63.4 L231.0 56.2 L236.8 50.1 L242.6 45.1 L248.4 41.4 L254.2 39.2 L260.0 38.4 L265.8 39.2 L271.6 41.4 L277.4 45.1 L283.2 50.1 L289.0 56.2 L294.8 63.4 L300.6 71.3 L306.4 79.9 L312.2 88.9 L318.0 98.1 L323.8 107.2 L329.6 116.2 L335.4 124.9 L341.2 133.1 L347.0 140.8 L352.8 147.9 L358.6 154.3 L364.4 160.0 L370.2 165.1 L376.0 169.5 L381.8 173.3 L387.6 176.5 L393.4 179.2 L399.2 181.5 L405.0 183.3 L410.8 184.8 L416.6 186.0 L422.4 187.0 L428.2 187.7 L434.0 188.3 L439.8 188.8 L445.6 189.1 L451.4 189.3 L457.2 189.5 L463.0 189.7 L474.6 189.8 L492.0 189.9"/>
+  <line class="ln cm thin dash" x1="376" y1="190" x2="376" y2="120"/><line class="ln cm thin dash" x1="144" y1="190" x2="144" y2="120"/>
+  <text class="tx" x="376" y="207" text-anchor="middle">t = 2</text><text class="tx" x="144" y="207" text-anchor="middle">−2</text><text class="tx" x="260" y="207" text-anchor="middle">0</text>
+  <text class="tx" x="400" y="150">aire orange totale</text><text class="tx" x="400" y="166">P(|Z| > 2) ≈ 0,046</text>
+</svg>
+<figcaption>La densité de $\N(0,1)$ ; les queues (en orange) décroissent comme $e^{-t^2/2}$ : extrêmement vite.</figcaption>
+</figure>
+
+<div class="box thm"><div class="box-h">Les trois outils</div>
+<ol>
+<li><strong>Markov</strong> : pour $W\ge0$ et $a>0$, $\P(W\ge a)\le\E W/a$.</li>
+<li><strong>Queue gaussienne</strong> : pour $Z\sim\N(0,1)$ et $t\ge0$,
+$$\begin{gathered}\P(Z\ge t)\le e^{-t^2/2},\qquad \P(\abs Z\ge t)\le2e^{-t^2/2},\\ \text{et même}\qquad \P(\abs Z\ge t)\le e^{-t^2/2}.\end{gathered}$$</li>
+<li><strong>Borne de l'union</strong> : $\P(A_1\cup\dots\cup A_p)\le\P(A_1)+\dots+\P(A_p)$, <em>sans aucune hypothèse d'indépendance</em>.</li>
+</ol></div>
+
+<details class="fold proof"><summary>Preuves (Markov, Chernoff, version fine)</summary><div class="fold-body">
+<p><strong>Markov.</strong> $a\,\ind\{W\ge a\}\le W$ (si $W\ge a$, c'est $a\le W$ ; sinon $0\le W$). On prend l'espérance : $a\P(W\ge a)\le\E W$.</p>
+<p><strong>Chernoff : $\P(Z\ge t)\le e^{-t^2/2}$.</strong></p>
+<ol class="steps">
+<li>$$\E[e^{\theta Z}]=\int\frac{e^{\theta z-z^2/2}}{\sqrt{2\pi}}dz=e^{\theta^2/2}\int\frac{e^{-(z-\theta)^2/2}}{\sqrt{2\pi}}dz=e^{\theta^2/2}$$<span class="why">on complète le carré : $\theta z-\frac{z^2}2=\frac{\theta^2}2-\frac{(z-\theta)^2}2$ ; la dernière intégrale est celle d'une densité, elle vaut 1</span></li>
+<li>$$\P(Z\ge t)=\P(e^{\theta Z}\ge e^{\theta t})\le e^{-\theta t}\E[e^{\theta Z}]=e^{\theta^2/2-\theta t}\quad(\theta>0)$$<span class="why">$x\mapsto e^{\theta x}$ est croissante, puis Markov avec $W=e^{\theta Z}$</span></li>
+<li>$$\theta=t\ \Rightarrow\ \P(Z\ge t)\le e^{-t^2/2}$$<span class="why">on choisit le meilleur $\theta$ : $\theta^2/2-\theta t$ est minimal en $\theta=t$</span></li>
+<li>$$\P(\abs Z\ge t)=\P(Z\ge t)+\P(Z\le-t)\le2e^{-t^2/2}$$<span class="why">symétrie de la gaussienne</span></li>
+</ol>
+<p><strong>Version fine : $\P(\abs Z\ge t)\le e^{-t^2/2}$ pour tout $t\ge0$.</strong></p>
+<ul>
+<li>Si $t\ge\sqrt{2/\pi}$ : comme $\varphi'(u)=-u\varphi(u)$, on a $\int_t^\infty\varphi(u)du\le\int_t^\infty\frac ut\varphi(u)du=\frac{\varphi(t)}t$ (« rapport de Mills »). Donc $\P(\abs Z\ge t)\le\frac{2\varphi(t)}t=\frac{\sqrt{2/\pi}}{t}e^{-t^2/2}\le e^{-t^2/2}$.</li>
+<li>Si $0\le t\le\sqrt{2/\pi}$ : la fonction $g(t)=e^{-t^2/2}-\P(\abs Z\ge t)$ vérifie $g(0)=1-1=0$ et $g'(t)=-te^{-t^2/2}+2\varphi(t)=e^{-t^2/2}\big(\sqrt{2/\pi}-t\big)\ge0$, donc $g\ge0$.</li>
+</ul>
+<p>Le Cours 3 utilise cette version fine (d'où $p\cdot p^{-A^2/8}$ sans facteur 2) ; le Cours 4 utilise la version $2e^{-t^2/2}$ (d'où le $2e^{-x}$).</p>
+</div></details>
+
+<div class="box exemple"><div class="box-h">Les bornes sont-elles bonnes ?</div>
+<div class="table-wrap"><table>
+<tr><th>$t$</th><th>vraie valeur $\P(\abs Z>t)$</th><th>$e^{-t^2/2}$</th><th>$2e^{-t^2/2}$</th></tr>
+<tr><td>1</td><td>0,3173</td><td>0,6065</td><td>1,2131 (inutile)</td></tr>
+<tr><td>2</td><td>0,0455</td><td>0,1353</td><td>0,2707</td></tr>
+<tr><td>3</td><td>0,0027</td><td>0,0111</td><td>0,0222</td></tr>
+</table></div>
+<p>Les bornes sont trop grandes d'un facteur modeste, mais elles décroissent à la bonne vitesse $e^{-t^2/2}$ : c'est tout ce qui compte pour les théorèmes.</p></div>
+
+<div class="box thm"><div class="box-h">Conséquence : le maximum de $p$ gaussiennes</div>
+<p>Soient $Z_1,\dots,Z_p\sim\N(0,1)$ (indépendantes ou non). Pour tout $x>0$ :
+$$\P\Big(\max_{1\le j\le p}\abs{Z_j}>\sqrt{2(\log p+x)}\Big)\le2e^{-x}.$$</p></div>
+<ol class="steps">
+<li>$$\P\Big(\max_j\abs{Z_j}>t\Big)=\P\Big(\bigcup_j\{\abs{Z_j}>t\}\Big)\le\sum_{j=1}^p\P(\abs{Z_j}>t)\le p\cdot2e^{-t^2/2}$$<span class="why">le max dépasse $t$ ssi l'un des $\abs{Z_j}$ dépasse $t$ ; borne de l'union ; queue gaussienne</span></li>
+<li>$$t^2=2(\log p+x)\ \Rightarrow\ p\cdot2e^{-t^2/2}=2p\,e^{-\log p-x}=2e^{-x}$$<span class="why">on choisit $t$ pour que le facteur $p$ soit exactement compensé</span></li>
+</ol>
+
+<div class="box exemple"><div class="box-h">Exemple chiffré</div>
+<p>$p=10\,000$ variables, $x=3$ : avec probabilité au moins $1-2e^{-3}\approx0{,}90$, toutes les $\abs{Z_j}$ sont sous $\sqrt{2(\log10\,000+3)}=\sqrt{2(9{,}21+3)}\approx4{,}94$. Passer de $p=1$ à $p=10\,000$ variables fait seulement passer ce seuil de $\sqrt6\approx2{,}45$ à $4{,}94$ : le maximum grandit <strong>très lentement</strong>.</p></div>
+
+<div class="widget" data-widget="maxgauss"></div>
+<p class="small muted">Chaque point est le maximum de $p$ gaussiennes simulées. Le nuage suit la courbe $\sqrt{2\log p}$ : il monte, mais à peine, quand $p$ est multiplié par 10.</p>
+
+<div class="box intu"><div class="box-h">Pourquoi c'est la clé du cours</div>
+<p>Avec des colonnes normalisées, les $Z_j=\frac{X_j\T\eps}{\sigma\sqrt n}$ sont des $\N(0,1)$ (rappel <a href="#gaussien">gaussien</a>). Donc, avec grande probabilité,
+$$\max_j\frac{\abs{X_j\T\eps}}{n}\le\sigma\sqrt{\frac{2(\log p+x)}{n}} .$$
+La plus forte « corrélation apparente » entre une variable et le bruit pur est de l'ordre de $\sigma\sqrt{\log p/n}$. Pour qu'une méthode ne prenne pas du bruit pour un signal, son seuil $\lambda$ doit dépasser ce niveau : c'est pourquoi $\lambda\asymp\sigma\sqrt{\log p/n}$ dans les théorèmes, et pourquoi les vitesses du Lasso contiennent un $\log p$.</p></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>« Je dois contrôler <strong>simultanément</strong> $p$ quantités gaussiennes » → borne de l'union + queue gaussienne → seuil en $\sqrt{2\log p}$ (en unités d'écart-type). Le prix de la grande dimension est logarithmique.</p></div>
+
+<div class="quiz"><p>Mini-exercice 1 : majorez $\P(\abs Z>3)$ avec les deux bornes, et comparez à la vraie valeur 0,0027.</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$e^{-4{,}5}\approx0{,}011$ et $2e^{-4{,}5}\approx0{,}022$ : respectivement 4 et 8 fois la vraie valeur, mais le bon ordre de grandeur (le centième).</p></div></details></div>
+<div class="quiz"><p>Mini-exercice 2 : avec la borne de l'union et $\P(\abs Z>t)\le2e^{-t^2/2}$, trouvez un seuil $t$ tel que $\P(\max_{j\le1000}\abs{Z_j}>t)\le0{,}05$.</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>Il suffit que $1000\times2e^{-t^2/2}\le0{,}05$, soit $e^{-t^2/2}\le2{,}5\times10^{-5}$, soit $t^2\ge2\log(40\,000)\approx21{,}2$ : $t\approx4{,}60$. (Avec la version fine $e^{-t^2/2}$ : $t^2\ge2\log(20\,000)$, $t\approx4{,}45$.)</p></div></details></div>
+
+<h3 id="convergences">Convergences, « $o(1)$ », asymptotique et non asymptotique</h3>
+<p class="tldr">Un résultat asymptotique dit ce qui se passe quand $n\to\infty$ ; un résultat non asymptotique donne une borne valable pour chaque $n$, avec une probabilité explicite. Le cours privilégie le second.</p>
+<p><strong>Où ça sert :</strong> Cours 1 (diapo 7 : « consistant »), Cours 2 (diapo 31 : optimalité asymptotique vs non asymptotique), Cours 3 (diapo 39), Cours 5 (diapo 72 : convergence en probabilité et en loi).</p>
+
+<div class="box def"><div class="box-h">Définitions</div>
+<ul>
+<li>$Z_n\to c$ <strong>en probabilité</strong> ($Z_n\xrightarrow{\P}c$) : pour tout $\eta>0$, $\P(\abs{Z_n-c}>\eta)\to0$.</li>
+<li>$Z_n\to Z$ <strong>en loi</strong> ($Z_n\xrightarrow{\mathcal L}Z$) : la loi de $Z_n$ ressemble de plus en plus à celle de $Z$ (les probabilités $\P(Z_n\le z)$ convergent).</li>
+<li>Un estimateur $\hat\theta_n$ est <strong>consistant</strong> si $\hat\theta_n\to\theta$ en probabilité (ou si son erreur quadratique moyenne tend vers 0).</li>
+<li><strong>Loi des grands nombres</strong> : $\bar Y_n\to\E Y$. <strong>Théorème central limite</strong> : $\sqrt n(\bar Y_n-\E Y)\to\N(0,\Var Y)$ en loi.</li>
+</ul></div>
+
+<div class="cols">
+<div class="box intu"><div class="box-h">Asymptotique</div><p>« Quand $n\to\infty$, l'erreur tend vers 0. » Ne dit rien pour $n=200$. Exemple : Cours 5 diapo 72, $\sqrt n(\hb-\beta)\to\N(0,I(\beta)^{-1})$.</p></div>
+<div class="box intu"><div class="box-h">Non asymptotique</div><p>« Pour tout $n$, avec probabilité au moins $1-\delta$, l'erreur est au plus $C\,s\log p/n$. » Utilisable à $n$ fixé, et même quand $p$ dépend de $n$. Exemple : Cours 3 diapo 38.</p></div>
+</div>
+
+<div class="box exemple"><div class="box-h">Exemple : quand $\sigma^2\rg(X)/n$ tend-il vers 0 ?</div>
+<p>Si $p$ est fixe, $\rg X\le p$ et $\sigma^2\rg(X)/n\le\sigma^2p/n\to0$ : consistant. Si $p=n/2$ (et $\rg X=p$), l'erreur vaut $\sigma^2/2$ pour tout $n$ : <strong>pas</strong> consistant. Si $p=\sqrt n$, $\sigma^2/\sqrt n\to0$ : consistant. C'est le sens de « $\rg(X)/n=o(1)$ » (Cours 1, diapo 7).</p></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>Devant une borne $C\,\frac{s\log p}{n}$ : demandez-vous comment $s$ et $p$ varient avec $n$. La borne tend vers 0 ssi $s\log p=o(n)$ : beaucoup de variables sont permises ($p$ peut être énorme), mais pas trop de variables <em>utiles</em>.</p></div>
+
+<div class="quiz"><p>Mini-exercice 1 : montrez que si $\E[(Z_n-c)^2]\to0$, alors $Z_n\to c$ en probabilité.</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>Markov avec $W=(Z_n-c)^2$ et $a=\eta^2$ : $\P(\abs{Z_n-c}>\eta)=\P((Z_n-c)^2>\eta^2)\le\E[(Z_n-c)^2]/\eta^2\to0$.</p></div></details></div>
+<div class="quiz"><p>Mini-exercice 2 : avec $s=10$, la quantité $s\log p/n$ tend-elle vers 0 si $p=n^2$ ? si $p=e^n$ ?</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$p=n^2$ : $10\times2\log n/n\to0$, oui. $p=e^n$ : $10\times n/n=10$, non : avec exponentiellement plus de variables que d'observations, même le Lasso ne peut plus garantir une petite erreur.</p></div></details></div>
+
+<h2 id="statistique">Statistique</h2>
+<p class="lead">Les questions du cours sont statistiques : un estimateur est-il proche de la vérité ? Comment le choisir ? Que vaut-il face à de nouvelles données ? Voici le vocabulaire et les quelques résultats classiques qu'il suppose.</p>
+
+<h3 id="estimateur">Estimateur, biais, variance, risque quadratique</h3>
+<p class="tldr">L'erreur moyenne d'un estimateur se décompose en biais² + variance ; accepter un peu de biais peut réduire beaucoup la variance. C'est toute l'idée du Ridge et du Lasso.</p>
+<p><strong>Où ça sert :</strong> Cours 1 (diapo 13 : « le Ridge est biaisé » ; diapo 12 : « contrôler la variance »), Cours 6 (diapo 88 : « some bias, but a reduction of the variance »).</p>
+
+<div class="box def"><div class="box-h">Définitions</div>
+<ul>
+<li>Un <strong>modèle</strong> est une famille de lois possibles pour les données, indexée par un paramètre $\theta$ inconnu (ici $\bstar$).</li>
+<li>Un <strong>estimateur</strong> $\hat\theta$ est une fonction des données. Comme les données sont aléatoires, $\hat\theta$ est <strong>une variable aléatoire</strong> : refaire l'expérience donnerait une autre valeur.</li>
+<li><strong>Biais</strong> : $\E\hat\theta-\theta$ (l'erreur « systématique ») ; <strong>variance</strong> : $\E\norm{\hat\theta-\E\hat\theta}^2$ (la dispersion d'une expérience à l'autre) ; <strong>risque quadratique</strong> : $\E\norm{\hat\theta-\theta}^2$.</li>
+</ul></div>
+
+<div class="box thm"><div class="box-h">Décomposition biais–variance</div>
+$$\underbrace{\E\norm{\hat\theta-\theta}^2}_{\text{risque}}=\underbrace{\norm{\E\hat\theta-\theta}^2}_{\text{biais}^2}+\underbrace{\E\norm{\hat\theta-\E\hat\theta}^2}_{\text{variance}} .$$</div>
+<details class="fold proof"><summary>Preuve</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\hat\theta-\theta=(\hat\theta-\E\hat\theta)+(\E\hat\theta-\theta)$$<span class="why">on ajoute et retranche $\E\hat\theta$</span></li>
+<li>$$\norm{\hat\theta-\theta}^2=\norm{\hat\theta-\E\hat\theta}^2+2(\hat\theta-\E\hat\theta)\T(\E\hat\theta-\theta)+\norm{\E\hat\theta-\theta}^2$$<span class="why">on développe le carré</span></li>
+<li>$$\E\big[(\hat\theta-\E\hat\theta)\T(\E\hat\theta-\theta)\big]=\big(\E\hat\theta-\E\hat\theta\big)\T(\E\hat\theta-\theta)=0$$<span class="why">$\E\hat\theta-\theta$ n'est pas aléatoire, on le sort de l'espérance</span></li>
+</ol></div></details>
+
+<div class="box exemple"><div class="box-h">Exemple : rétrécir la moyenne peut payer</div>
+<p>$Y_1,\dots,Y_n$ indépendantes d'espérance $\mu$ et de variance $\sigma^2$. Comparons $\bar Y$ et $c\bar Y$ avec $0\le c\le1$ (« on rétrécit vers 0 »).</p>
+<ul>
+<li>$\bar Y$ : biais 0, variance $\sigma^2/n$, risque $\sigma^2/n$.</li>
+<li>$c\bar Y$ : biais $(c-1)\mu$, variance $c^2\sigma^2/n$, risque $R(c)=(1-c)^2\mu^2+c^2\sigma^2/n$.</li>
+<li>$R'(c)=-2(1-c)\mu^2+2c\sigma^2/n=0$ donne $c^*=\frac{\mu^2}{\mu^2+\sigma^2/n}<1$.</li>
+</ul>
+<p>Avec $\mu=1$, $\sigma^2=4$, $n=4$ : $\sigma^2/n=1$, $c^*=\frac12$, $R(c^*)=\frac14+\frac14=\frac12$, contre $R(1)=1$ : <strong>le risque est divisé par deux</strong> en acceptant un biais. Mais $c^*$ dépend de $\mu$, inconnu : en pratique on règle le rétrécissement sur les données (validation croisée). C'est exactement le rôle du $\lambda$ du Ridge.</p></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>Quand on vous dit qu'une méthode est « biaisée », ne concluez pas qu'elle est mauvaise : demandez ce qu'elle gagne en variance. Un estimateur sans biais mais très variable (les moindres carrés quand $X\T X$ est mal conditionnée) peut être bien pire qu'un estimateur légèrement biaisé.</p></div>
+
+<div class="quiz"><p>Mini-exercice : dans l'exemple ($\mu=1$, $\sigma^2/n=1$), calculez le risque de $0{,}8\,\bar Y$.</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$(1-0{,}8)^2\times1+0{,}8^2\times1=0{,}04+0{,}64=0{,}68$ : mieux que $\bar Y$ (risque 1), moins bien que $c^*=0{,}5$.</p></div></details></div>
+
+<h3 id="vraisemblance">Vraisemblance et estimateur du maximum de vraisemblance</h3>
+<p class="tldr">On choisit le paramètre qui rend les données observées les plus probables ; pour des erreurs gaussiennes, c'est exactement les moindres carrés.</p>
+<p><strong>Où ça sert :</strong> Cours 2 (diapo 25 : interprétation bayésienne du Lasso), Cours 5 (diapos 68–72 : estimation dans les modèles linéaires généralisés).</p>
+
+<div class="box def"><div class="box-h">Définition</div>
+<p>Si $y_1,\dots,y_n$ sont indépendantes de densité (ou de probabilité) $f_\theta$, la <strong>vraisemblance</strong> est $L(\theta)=\prod_{i=1}^nf_\theta(y_i)$ et la <strong>log-vraisemblance</strong> $\ell(\theta)=\sum_{i=1}^n\log f_\theta(y_i)$ (le log transforme le produit en somme et ne change pas l'argmax). L'<strong>EMV</strong> (estimateur du maximum de vraisemblance) est $\hat\theta\in\argmax_\theta\ell(\theta)$.</p></div>
+
+<div class="box methode"><div class="box-h">Méthode</div>
+<ol><li>écrire $\log f_\theta(y_i)$ ;</li><li>sommer sur $i$ ;</li><li>dériver par rapport à $\theta$ ;</li><li>annuler la dérivée ;</li><li>vérifier que c'est un maximum (dérivée seconde négative).</li></ol></div>
+
+<div class="box exemple"><div class="box-h">Trois exemples complets</div>
+<ul>
+<li><strong>Bernoulli</strong> ($y_i\in\{0,1\}$, $f_p(y)=p^y(1-p)^{1-y}$) : $\ell(p)=\sum_i[y_i\log p+(1-y_i)\log(1-p)]=S\log p+(n-S)\log(1-p)$ avec $S=\sum y_i$. $\ell'(p)=\frac Sp-\frac{n-S}{1-p}=0\iff\hat p=\frac Sn=\bar y$. Données $(1,0,1,1,0)$ : $\hat p=0{,}6$.</li>
+<li><strong>Poisson</strong> ($f_\lambda(y)=e^{-\lambda}\lambda^y/y!$) : $\ell(\lambda)=\sum_i[y_i\log\lambda-\lambda-\log y_i!]$, $\ell'(\lambda)=\frac{\sum y_i}\lambda-n=0\iff\hat\lambda=\bar y$. Données $(2,0,3,1)$ : $\hat\lambda=1{,}5$.</li>
+<li><strong>Régression gaussienne</strong> ($y_i\sim\N(x_i\beta,\sigma^2)$, $\sigma$ connu) :
+$$\ell(\beta)=-\frac n2\log(2\pi\sigma^2)-\frac1{2\sigma^2}\sum_i(y_i-x_i\beta)^2=\text{cte}-\frac{\norm{Y-X\beta}^2}{2\sigma^2}.$$
+Maximiser $\ell$ revient à <strong>minimiser $\norm{Y-X\beta}^2$</strong> : l'EMV est l'estimateur des moindres carrés.</li>
+</ul></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>« Moindres carrés » = « maximum de vraisemblance avec bruit gaussien ». Et réciproquement, quand le bruit n'est pas gaussien (données 0/1, comptages), on remplace $\norm{Y-X\beta}^2$ par $-\ell(\beta)$ : c'est le programme de la séance 5. Ajouter une pénalité à $-\ell$ revient à ajouter un a priori (séance 2).</p></div>
+
+<div class="quiz"><p>Mini-exercice : EMV de $\theta$ pour la loi exponentielle $f_\theta(y)=\theta e^{-\theta y}$ ($y>0$) ?</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$\ell(\theta)=n\log\theta-\theta\sum y_i$, $\ell'(\theta)=\frac n\theta-\sum y_i=0\iff\hat\theta=1/\bar y$ ; $\ell''=-n/\theta^2<0$ : c'est bien un maximum.</p></div></details></div>
+
+<h3 id="fisher">Score, information de Fisher, normalité asymptotique</h3>
+<p class="tldr">La courbure de la log-vraisemblance (l'information de Fisher) mesure combien les données renseignent sur le paramètre ; l'EMV a une variance asymptotique égale à son inverse.</p>
+<p><strong>Où ça sert :</strong> Cours 5 (diapo 67 : $\E[\partial\ell/\partial\theta]=0$ et $-\E[\partial^2\ell/\partial\theta^2]=\E[(\partial\ell/\partial\theta)^2]$ ; diapo 72 : $\sqrt n(\hb-\beta)\to\N(0,I(\beta)^{-1})$).</p>
+
+<div class="box def"><div class="box-h">Définitions (un paramètre réel, une observation)</div>
+<ul>
+<li><strong>Score</strong> : $s_\theta(y)=\frac{\partial}{\partial\theta}\log f_\theta(y)$.</li>
+<li><strong>Information de Fisher</strong> : $I(\theta)=\E[s_\theta(Y)^2]=-\E\Big[\frac{\partial^2}{\partial\theta^2}\log f_\theta(Y)\Big]$.</li>
+<li>Pour $n$ observations indépendantes, l'information est $I_n(\theta)=nI(\theta)$. Pour un paramètre vectoriel, $I(\theta)$ est une matrice : $-\E[\nabla^2\log f_\theta(Y)]$.</li>
+</ul></div>
+
+<div class="box thm"><div class="box-h">Deux identités (sous conditions de régularité)</div>
+<p>(a) $\E_\theta[s_\theta(Y)]=0$ ; (b) $\E[s_\theta^2]=-\E[\partial^2_\theta\log f_\theta]$.</p></div>
+<details class="fold proof"><summary>Preuve</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\int f_\theta(y)\,dy=1\ \Rightarrow\ \int\partial_\theta f_\theta(y)\,dy=0$$<span class="why">on dérive par rapport à $\theta$ sous l'intégrale (c'est la « condition de régularité »)</span></li>
+<li>$$\partial_\theta f_\theta=(\partial_\theta\log f_\theta)\,f_\theta=s_\theta f_\theta\ \Rightarrow\ \int s_\theta f_\theta=\E[s_\theta]=0$$<span class="why">dérivée du log : $(\log f)'=f'/f$. C'est (a).</span></li>
+<li>$$\int\big(\partial_\theta s_\theta\big)f_\theta+\int s_\theta\,\partial_\theta f_\theta=0\ \Rightarrow\ \E[\partial_\theta s_\theta]+\E[s_\theta^2]=0$$<span class="why">on dérive encore $\int s_\theta f_\theta=0$ (produit), puis $\partial_\theta f_\theta=s_\theta f_\theta$. C'est (b), car $\partial_\theta s_\theta=\partial^2_\theta\log f_\theta$.</span></li>
+</ol></div></details>
+
+<div class="box thm"><div class="box-h">Normalité asymptotique de l'EMV</div>
+<p>Sous des conditions de régularité, $\sqrt n(\hat\theta_n-\theta)\xrightarrow{\mathcal L}\N\big(0,I(\theta)^{-1}\big)$. Autrement dit, pour $n$ grand, $\hat\theta_n\approx\N\big(\theta,\frac1{nI(\theta)}\big)$, d'où l'<strong>intervalle de confiance de Wald</strong> à 95 % : $\hat\theta\pm1{,}96/\sqrt{nI(\hat\theta)}$.</p></div>
+
+<div class="box exemple"><div class="box-h">Exemple : Bernoulli</div>
+<p>$\log f_p(y)=y\log p+(1-y)\log(1-p)$ ; $\partial^2_p\log f_p=-\frac y{p^2}-\frac{1-y}{(1-p)^2}$ ; donc $I(p)=\frac{p}{p^2}+\frac{1-p}{(1-p)^2}=\frac1p+\frac1{1-p}=\frac1{p(1-p)}$. La variance asymptotique de $\hat p$ est $\frac{p(1-p)}n$ (c'est d'ailleurs la variance exacte de $\bar y$). Avec $n=100$ et $\hat p=0{,}3$ : écart-type $\sqrt{0{,}21/100}\approx0{,}046$, intervalle $0{,}3\pm0{,}09=[0{,}21;\,0{,}39]$.</p></div>
+
+<div class="box intu"><div class="box-h">Intuition</div>
+<p>Une log-vraisemblance très « pointue » autour de son maximum (forte courbure, grande information) désigne précisément le paramètre : petite variance. Une log-vraisemblance plate (faible information) laisse beaucoup de paramètres presque aussi plausibles : grande variance. Dans le modèle linéaire, la courbure est $X\T X/\sigma^2$, et on retrouve $\Cov(\hb\MC)=\sigma^2(X\T X)^{-1}$.</p></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>« Variance d'un EMV » → inverse de l'information de Fisher, c'est-à-dire de <strong>moins la hessienne</strong> de la log-vraisemblance. Pour un GLM à lien canonique, cette hessienne est $-X\T WX$ (séance 5).</p></div>
+
+<div class="quiz"><p>Mini-exercice : information de Fisher d'une observation de Poisson $\mathcal P(\lambda)$ ?</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$\log f=y\log\lambda-\lambda-\log y!$ ; $\partial^2_\lambda\log f=-y/\lambda^2$ ; $I(\lambda)=\E[Y]/\lambda^2=1/\lambda$. Variance asymptotique de $\hat\lambda=\bar y$ : $\lambda/n$, qui est bien $\Var(\bar y)$.</p></div></details></div>
+
+<h3 id="erreur-test">Erreur d'apprentissage, erreur de test, validation croisée</h3>
+<p class="tldr">L'erreur mesurée sur les données qui ont servi à ajuster le modèle est trop optimiste ; pour juger un modèle ou choisir $\lambda$, il faut des données « neuves », ou les simuler par validation croisée.</p>
+<p><strong>Où ça sert :</strong> Cours 1 (diapos 17–19 : Cp, AIC, BIC corrigent l'optimisme), Cours 6 (diapo 80 : « la validation croisée doit porter sur toute la procédure » ; diapo 89 : calibration de $\lambda$).</p>
+
+<div class="box def"><div class="box-h">Définitions</div>
+<ul>
+<li><strong>Erreur d'apprentissage</strong> : $\frac1n\norm{Y-X\hb}^2$, calculée sur les données qui ont servi à construire $\hb$.</li>
+<li><strong>Erreur de test</strong> (ou de généralisation) : l'erreur sur de <em>nouvelles</em> données $Y'$, indépendantes, de même loi.</li>
+<li><strong>Surapprentissage</strong> : le modèle s'ajuste au bruit particulier de l'échantillon ; l'erreur d'apprentissage est petite, l'erreur de test grande.</li>
+</ul></div>
+
+<div class="box intu"><div class="box-h">Pourquoi l'erreur d'apprentissage ment</div>
+<p>$\hb$ a été choisi pour coller aux $Y$ observés, bruit compris. Cas extrême : si $\rg X=n$ (possible dès que $p\ge n$), les moindres carrés interpolent : $X\hb=Y$ et l'erreur d'apprentissage vaut <strong>0</strong>, alors que sur de nouvelles données l'erreur est au moins $\sigma^2$. Dans le modèle linéaire correct avec $d$ paramètres, on montre (séance 1) :
+$$\begin{gathered}\E[\text{apprentissage}]=\sigma^2\Big(1-\frac dn\Big),\\ \E[\text{nouvelles données, même }X]=\sigma^2\Big(1+\frac dn\Big).\end{gathered}$$
+Avec $n=20$ et $d=10$ : $0{,}5\,\sigma^2$ contre $1{,}5\,\sigma^2$. L'écart $2\sigma^2d/n$ est l'« optimisme » que corrigent Cp et AIC.</p></div>
+
+<div class="box methode"><div class="box-h">Validation croisée à $K$ blocs</div>
+<ol>
+<li>Couper les $n$ observations en $K$ blocs (souvent $K=5$ ou $10$).</li>
+<li>Pour chaque bloc $k$ : ajuster la méthode (avec un $\lambda$ donné) sur les $K-1$ autres blocs, mesurer l'erreur sur le bloc $k$.</li>
+<li>Moyenner les $K$ erreurs : c'est une estimation de l'erreur de test pour ce $\lambda$.</li>
+<li>Recommencer pour une grille de $\lambda$ ; garder le $\lambda$ d'erreur minimale ; réajuster sur toutes les données.</li>
+</ol></div>
+
+<figure class="fig">
+<svg viewBox="0 0 520 190" aria-label="Validation croisée à 5 blocs">
+  <g>
+    <text class="tx" x="10" y="31">tour 1</text><text class="tx" x="10" y="63">tour 2</text><text class="tx" x="10" y="95">tour 3</text><text class="tx" x="10" y="127">tour 4</text><text class="tx" x="10" y="159">tour 5</text>
+    <rect class="a2 ln c2 thin" x="70" y="15" width="78" height="22"/><rect class="am ln cm thin" x="152" y="15" width="78" height="22"/><rect class="am ln cm thin" x="234" y="15" width="78" height="22"/><rect class="am ln cm thin" x="316" y="15" width="78" height="22"/><rect class="am ln cm thin" x="398" y="15" width="78" height="22"/>
+    <rect class="am ln cm thin" x="70" y="47" width="78" height="22"/><rect class="a2 ln c2 thin" x="152" y="47" width="78" height="22"/><rect class="am ln cm thin" x="234" y="47" width="78" height="22"/><rect class="am ln cm thin" x="316" y="47" width="78" height="22"/><rect class="am ln cm thin" x="398" y="47" width="78" height="22"/>
+    <rect class="am ln cm thin" x="70" y="79" width="78" height="22"/><rect class="am ln cm thin" x="152" y="79" width="78" height="22"/><rect class="a2 ln c2 thin" x="234" y="79" width="78" height="22"/><rect class="am ln cm thin" x="316" y="79" width="78" height="22"/><rect class="am ln cm thin" x="398" y="79" width="78" height="22"/>
+    <rect class="am ln cm thin" x="70" y="111" width="78" height="22"/><rect class="am ln cm thin" x="152" y="111" width="78" height="22"/><rect class="am ln cm thin" x="234" y="111" width="78" height="22"/><rect class="a2 ln c2 thin" x="316" y="111" width="78" height="22"/><rect class="am ln cm thin" x="398" y="111" width="78" height="22"/>
+    <rect class="am ln cm thin" x="70" y="143" width="78" height="22"/><rect class="am ln cm thin" x="152" y="143" width="78" height="22"/><rect class="am ln cm thin" x="234" y="143" width="78" height="22"/><rect class="am ln cm thin" x="316" y="143" width="78" height="22"/><rect class="a2 ln c2 thin" x="398" y="143" width="78" height="22"/>
+    <text class="tx" x="273" y="185" text-anchor="middle">gris : apprentissage · orange : validation (jamais vu à l'ajustement)</text>
+  </g>
+</svg>
+<figcaption>Validation croisée à $K=5$ blocs : chaque observation sert une fois à valider et quatre fois à apprendre.</figcaption>
+</figure>
+
+<div class="box piege"><div class="box-h">Piège</div>
+<p>Toute étape qui regarde les données (sélection de variables, réajustement…) doit être <strong>refaite à l'intérieur de chaque tour</strong> de validation croisée. Sinon le bloc de validation a déjà « servi » et l'erreur estimée est encore optimiste (Cours 6, diapo 80).</p></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>Pour régler un hyperparamètre ($\lambda$, la taille du modèle…) : jamais sur l'erreur d'apprentissage (elle choisit toujours le modèle le plus complexe) ; toujours sur une erreur de test estimée : validation croisée, ou critère corrigé (Cp, AIC, BIC).</p></div>
+
+<div class="quiz"><p>Mini-exercice : combien d'ajustements demande une validation croisée à 5 blocs sur une grille de 50 valeurs de $\lambda$ (réajustement final compris) ?</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$5\times50=250$ ajustements, plus 1 réajustement final sur toutes les données avec le $\lambda$ retenu : 251.</p></div></details></div>
+
+<h3 id="tests">Tests d'hypothèses en deux minutes (Student, Fisher)</h3>
+<p class="tldr">Un test décide si un coefficient est « significativement » non nul ; en grande dimension, il ne marche plus, et faire beaucoup de tests produit mécaniquement des faux positifs.</p>
+<p><strong>Où ça sert :</strong> Cours 1 (diapo 14 : sélection de variables par tests $(H_0)\ \beta_j=0$ contre $(H_1)\ \beta_j\neq0$).</p>
+
+<div class="box def"><div class="box-h">Vocabulaire</div>
+<ul>
+<li><strong>Hypothèses</strong> : $H_0$ (« la variable $j$ ne sert à rien », $\bstar_j=0$) contre $H_1$ ($\bstar_j\neq0$).</li>
+<li><strong>Statistique de test</strong> : un nombre calculé sur les données, dont on connaît la loi sous $H_0$.</li>
+<li><strong>Niveau</strong> $\alpha$ (souvent 5 %) : la probabilité qu'on accepte de rejeter $H_0$ à tort (faux positif).</li>
+<li><strong>p-valeur</strong> : la probabilité, sous $H_0$, d'observer une statistique au moins aussi extrême ; on rejette $H_0$ si $p$-valeur $<\alpha$.</li>
+</ul></div>
+
+<div class="box exemple"><div class="box-h">Le test de Student dans le modèle linéaire ($p<n$)</div>
+<p>$\hb\MC_j\sim\N\big(\bstar_j,\sigma^2[(X\T X)^{-1}]_{jj}\big)$ (rappel <a href="#esperance">covariance</a>). On estime $\sigma^2$ par $\hat\sigma^2=\norm{Y-X\hb}^2/(n-p)$ (voir l'exemple du $n-1$ dans <a href="#forme-quadratique">forme quadratique</a>), et sous $H_0$ :
+$$T_j=\frac{\hb\MC_j}{\hat\sigma\sqrt{[(X\T X)^{-1}]_{jj}}}\sim\text{Student}(n-p).$$
+On rejette $H_0$ si $\abs{T_j}$ dépasse environ 2 (pour $n-p$ grand et $\alpha=5\,\%$). Le test de Fisher fait la même chose pour plusieurs coefficients à la fois.</p></div>
+
+<div class="box piege"><div class="box-h">Pourquoi ça casse en grande dimension</div>
+<ol>
+<li>Si $p\ge n$, $(X\T X)^{-1}$ n'existe pas et $n-p\le0$ : ni $\hb\MC$, ni $\hat\sigma^2$, ni $T_j$ ne sont définis.</li>
+<li><strong>Tests multiples</strong> : avec $p=1000$ variables toutes inutiles, chaque test au niveau 5 % se trompe avec probabilité 0,05 : on attend environ <strong>50 faux positifs</strong>, et la probabilité d'au moins un faux positif vaut $1-0{,}95^{1000}\approx1$ (si les tests sont indépendants). La correction de Bonferroni teste chaque variable au niveau $\alpha/p$ (borne de l'union !), au prix d'une perte de puissance.</li>
+</ol></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>« Beaucoup de tests » ou « beaucoup de variables » → pensez « maximum de beaucoup de bruits » → seuil en $\sqrt{2\log p}$ (rappel <a href="#queues">queues</a>). Les méthodes pénalisées du cours sont une manière de faire de la sélection de variables qui intègre ce seuil.</p></div>
+
+<div class="quiz"><p>Mini-exercice : avec $p=1000$ et $\alpha=5\,\%$, quel est le niveau de chaque test pour Bonferroni ? Pour une statistique $\N(0,1)$ sous $H_0$, cela correspond au seuil $\abs Z>4{,}06$. Comparez avec $\sqrt{2\log p}$.</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$0{,}05/1000=5\times10^{-5}$ par test. $\sqrt{2\log1000}\approx3{,}72$ : le seuil de Bonferroni (4,06) est du même ordre, un peu plus grand. Les deux viennent du même raisonnement : contrôler le maximum de $p$ gaussiennes par la borne de l'union.</p></div></details></div>
+
+<h2 id="carte">Quel rappel pour quelle séance</h2>
+<p class="tldr">Avant chaque séance, relisez les rappels de sa ligne (les plus importants sont en gras).</p>
+<div class="table-wrap"><table>
+<tr><th>Séance</th><th>Rappels utiles</th></tr>
+<tr><td><a href="01_seance1.html">S1</a> — moindres carrés, Ridge, $\ell_0$, Lasso</td><td><a href="#notations">notations</a>, <a href="#vecteurs-normes">normes</a>, <strong><a href="#rang-noyau">rang et noyau</a></strong>, <strong><a href="#gram">Gram</a></strong>, <strong><a href="#spectral">valeurs propres</a></strong>, <strong><a href="#projection">projection</a></strong>, <strong><a href="#trace">trace</a></strong>, <a href="#gradient">gradient</a>, <a href="#convexite">convexité</a>, <a href="#lagrange">Lagrange</a>, <a href="#esperance">covariance</a>, <strong><a href="#forme-quadratique">forme quadratique</a></strong>, <a href="#estimateur">biais–variance</a>, <a href="#erreur-test">erreur de test</a>, <a href="#tests">tests</a></td></tr>
+<tr><td><a href="02_seance2.html">S2</a> — seuillage doux, KKT, LARS</td><td><strong><a href="#convexite">convexité</a></strong>, <a href="#gradient">gradient</a>, <a href="#lagrange">Lagrange</a>, <a href="#vecteurs-normes">normes</a>, <a href="#vraisemblance">vraisemblance</a> (lecture bayésienne), <a href="#gram">Gram</a>, <a href="#convergences">asymptotique / non asymptotique</a></td></tr>
+<tr><td><a href="03_seance3.html">S3</a> — condition RE, théorème BRT</td><td><strong><a href="#inegalites-normes">Hölder et $\sqrt s$</a></strong>, <strong><a href="#young">petites inégalités</a></strong>, <strong><a href="#gaussien">gaussiennes</a></strong>, <strong><a href="#queues">queues et union</a></strong>, <a href="#spectral">valeurs propres</a>, <a href="#convergences">convergences</a></td></tr>
+<tr><td><a href="04_seance4.html">S4</a> — sous-différentiel, inégalités oracle</td><td><strong><a href="#convexite">convexité</a></strong>, <a href="#inegalites-normes">Hölder</a>, <strong><a href="#young">Young</a></strong>, <strong><a href="#queues">queues et union</a></strong>, <a href="#gaussien">gaussiennes</a></td></tr>
+<tr><td><a href="05_seance5.html">S5</a> — modèles linéaires généralisés</td><td><strong><a href="#vraisemblance">vraisemblance</a></strong>, <strong><a href="#fisher">Fisher</a></strong>, <strong><a href="#newton">Newton</a></strong>, <a href="#esperance">espérance et variance</a>, <a href="#convergences">convergences</a>, <a href="#convexite">convexité</a>, <a href="#gradient">gradient</a></td></tr>
+<tr><td><a href="06_seance6.html">S6</a> — variantes du Lasso</td><td><strong><a href="#convexite">convexité</a></strong>, <a href="#vecteurs-normes">normes</a>, <a href="#projection">projection</a>, <a href="#lagrange">Lagrange</a>, <a href="#erreur-test">validation croisée</a></td></tr>
+</table></div>
