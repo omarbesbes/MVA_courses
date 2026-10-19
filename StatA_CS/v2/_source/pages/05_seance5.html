@@ -1,0 +1,688 @@
+<!--
+title: Séance 5 — Modèles linéaires généralisés
+short: S5 · GLM
+description: Famille exponentielle, fonction de lien, équations de vraisemblance, algorithme IRLS, normalité asymptotique, et le Lasso d'un modèle linéaire généralisé — expliqués pas à pas.
+subtitle: Quand $Y$ vaut 0 ou 1, ou compte quelque chose : famille exponentielle, lien, vraisemblance, IRLS, théorie asymptotique, Lasso logistique (Cours5, diapos 61–72 ; variantes Cours6, diapos 62 et 64).
+-->
+
+<div class="box objectifs"><div class="box-h">À la fin de cette page, vous saurez</div>
+<ul class="checklist">
+<li>dire pourquoi la régression linéaire ne convient pas à une réponse binaire ou à un comptage ;</li>
+<li>écrire une loi (gaussienne, Bernoulli, Poisson, exponentielle) sous forme de famille exponentielle et y lire le paramètre naturel $\theta$ et la fonction $A$ ;</li>
+<li>obtenir la moyenne et la variance d'une loi en dérivant $A$ une ou deux fois ;</li>
+<li>définir un modèle linéaire généralisé (GLM) par ses trois ingrédients et trouver son lien canonique ;</li>
+<li>dériver les équations de vraisemblance par la règle de la chaîne, et les simplifier en $X\T y=X\T\mu$ avec le lien canonique ;</li>
+<li>faire un pas de Newton à la main et reconnaître qu'il s'agit d'un problème de moindres carrés pondérés (IRLS) ;</li>
+<li>lire le théorème de normalité asymptotique et en tirer un intervalle de confiance ;</li>
+<li>écrire le Lasso d'un GLM et ses conditions d'optimalité.</li>
+</ul></div>
+
+<h2 id="avant">Avant de commencer</h2>
+
+<h3 id="fil">Le fil de l'histoire</h3>
+<p>Depuis la séance 1, tout se passe dans le <strong>modèle linéaire gaussien</strong> $Y=X\bstar+\eps$ : la réponse $Y_i$ est un nombre réel quelconque, égal à une combinaison linéaire des variables plus un bruit gaussien. Beaucoup de problèmes réels ne ressemblent pas à ça :</p>
+<ul>
+<li>un patient est malade ou non ($Y_i\in\{0,1\}$) ;</li>
+<li>un client clique ou non sur une publicité ($Y_i\in\{0,1\}$) ;</li>
+<li>on compte des sinistres, des appels, des mutations ($Y_i\in\{0,1,2,\dots\}$).</li>
+</ul>
+<p>Les <em class="new">modèles linéaires généralisés</em> (<em>generalized linear models</em>, GLM, Nelder et Wedderburn, 1972) gardent ce qui marche bien dans le modèle linéaire — une combinaison linéaire $x_i\T\beta$ des variables — et changent deux choses : la <strong>loi</strong> de $Y_i$ (plus forcément gaussienne) et la façon dont $x_i\T\beta$ est relié à la <strong>moyenne</strong> de $Y_i$ (plus forcément égale). Cette séance construit ces modèles, montre comment les estimer (maximum de vraisemblance, calculé par un algorithme de Newton), ce qu'on sait de l'estimateur, puis comment on y ajoute une pénalité $\ell_1$ — ce qui ramène au Lasso, le sujet du cours.</p>
+
+<h3 id="prerequis">Ce qu'il faut avoir en tête</h3>
+<p>Trois outils reviennent sans cesse. Ils sont rappelés en bref ici, et en détail dans la page Rappels.</p>
+
+<div class="box rappel"><div class="box-h">Rappel — Vraisemblance et maximum de vraisemblance</div>
+<p>On observe $y_1,\dots,y_n$ indépendants, de densité (ou de probabilité, pour une loi discrète) $f_\theta$. La <em class="new">vraisemblance</em> est la probabilité des données vue comme une fonction du paramètre :
+$$L(\theta)=\prod_{i=1}^n f_\theta(y_i),$$ $$\ell(\theta)=\log L(\theta)=\sum_{i=1}^n\log f_\theta(y_i).$$
+L'<em class="new">estimateur du maximum de vraisemblance</em> (EMV) est le $\theta$ qui rend les données observées les plus probables : $\hat\theta\in\argmax_\theta \ell(\theta)$. On travaille avec le logarithme $\ell$ car il transforme le produit en somme (plus facile à dériver) sans changer l'argmax ($\log$ est croissante).</p>
+<p><strong>Exemple.</strong> Pièce de monnaie : $y_i\in\{0,1\}$, $f_p(y)=p^y(1-p)^{1-y}$. Alors $\ell(p)=\sum_i[y_i\log p+(1-y_i)\log(1-p)]$, $\ell'(p)=\frac{\sum y_i}{p}-\frac{n-\sum y_i}{1-p}=0$ donne $\hat p=\bar y$ : la proportion de « pile ».
+<a href="00_rappels.html#vraisemblance">Rappel détaillé</a>.</p></div>
+
+<div class="box rappel"><div class="box-h">Rappel — Score et information de Fisher</div>
+<p>Le <em class="new">score</em> est la dérivée de la log-vraisemblance d'une observation, $\frac{\partial}{\partial\theta}\log f_\theta(Y)$. Deux faits, démontrés plus bas dans le cas qui nous intéresse :</p>
+<ol>
+<li>le score est d'espérance nulle : $\E\big[\frac{\partial}{\partial\theta}\log f_\theta(Y)\big]=0$ ;</li>
+<li>sa variance s'appelle l'<em class="new">information de Fisher</em> et vaut aussi $-\E\big[\frac{\partial^2}{\partial\theta^2}\log f_\theta(Y)\big]$.</li>
+</ol>
+<p>L'information mesure la « courbure » de la log-vraisemblance autour du vrai paramètre : plus elle est grande, plus le maximum est pointu, donc plus le paramètre est bien déterminé par les données. L'EMV a une variance approximativement égale à l'<strong>inverse</strong> de l'information totale. <a href="00_rappels.html#fisher">Rappel détaillé</a>.</p></div>
+
+<div class="box rappel"><div class="box-h">Rappel — Méthode de Newton</div>
+<p>Pour trouver le maximum d'une fonction $\ell$ régulière, on part d'un point $\beta_k$, on remplace $\ell$ par son développement de Taylor à l'ordre 2 autour de $\beta_k$,
+$$\ell(\beta_k+h)\approx \ell(\beta_k)+\nabla\ell(\beta_k)\T h+\tfrac12\,h\T\nabla^2\ell(\beta_k)\,h,$$
+on maximise cette parabole (en annulant son gradient en $h$ : $\nabla\ell(\beta_k)+\nabla^2\ell(\beta_k)h=0$), et on recommence depuis $\beta_{k+1}=\beta_k+h^*$ avec $h^*=-[\nabla^2\ell(\beta_k)]^{-1}\nabla\ell(\beta_k)$. Près de la solution, le nombre de décimales justes double à chaque itération. <a href="00_rappels.html#newton">Rappel détaillé</a>.</p></div>
+
+<div class="box rappel"><div class="box-h">Rappel — La fonction logistique (sigmoïde)</div>
+<p>$\sigma(t)=\dfrac{1}{1+e^{-t}}=\dfrac{e^t}{1+e^t}$ envoie $\R$ sur $]0,1[$, vaut $\frac12$ en 0, tend vers 0 en $-\infty$ et vers 1 en $+\infty$. Sa dérivée a une forme très pratique :
+$$\begin{aligned}\sigma'(t)&=\frac{e^{-t}}{(1+e^{-t})^2}=\underbrace{\frac{1}{1+e^{-t}}}_{\sigma(t)}\cdot\underbrace{\frac{e^{-t}}{1+e^{-t}}}_{1-\sigma(t)}\\&=\sigma(t)\big(1-\sigma(t)\big).\end{aligned}$$
+Sa réciproque est la fonction <em class="new">logit</em> : si $p=\sigma(t)$ alors $t=\log\frac{p}{1-p}$ (le log de la « cote » $\frac{p}{1-p}$).</p></div>
+
+<h3 id="notations">Notations de la page</h3>
+<ul>
+<li>Données : $(x_1,Y_1),\dots,(x_n,Y_n)$, où $x_i\in\R^p$ est le vecteur des variables de l'individu $i$ (déterministe, comme dans tout le cours) et $Y_i$ la réponse. Les $Y_i$ sont <strong>indépendantes</strong> mais pas de même loi (leur loi dépend de $x_i$).</li>
+<li>$X\in\R^{n\times p}$ : la matrice dont la ligne $i$ est $x_i\T$ ; $x_{ij}$ son coefficient $(i,j)$ ; $y=(y_1,\dots,y_n)\T$ les valeurs observées.</li>
+<li>$\eta_i=x_i\T\beta$ : le <em class="new">prédicteur linéaire</em> ; $\mu_i=\E(Y_i)$ : la moyenne de $Y_i$ ; $\theta_i$ : le paramètre de la loi de $Y_i$ ; $\mu=(\mu_1,\dots,\mu_n)\T$.</li>
+<li>$\ell_i=\log f_{\theta_i}(y_i)$ : contribution de l'observation $i$ à la log-vraisemblance, $\ell=\sum_i\ell_i$.</li>
+<li>Les diapos écrivent $x_i^T\beta$ (vecteur colonne $x_i$) là où les séances 1–4 écrivaient $x_i\beta$ (vecteur ligne) : c'est le même nombre $\sum_j x_{ij}\beta_j$.</li>
+</ul>
+
+<h2 id="pourquoi">1. Pourquoi généraliser le modèle linéaire ?</h2>
+<p class="tldr">Pour une réponse binaire ou de comptage, une droite prédit des valeurs impossibles et suppose à tort une variance constante ; on garde la combinaison linéaire $x_i\T\beta$ mais on la fait passer par une fonction.</p>
+
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours5 · diapo 61</span></div>
+<p>Les modèles linéaires généralisés (Nelder et Wedderburn, 1972) incluent les modèles linéaire gaussien, logit et log-linéaire ; ils expriment l'espérance de la variable d'intérêt $Y$ comme une fonction d'une combinaison linéaire des covariables.</p></div>
+
+<h3 id="echec-lineaire">Ce qui ne va pas avec une droite quand $Y\in\{0,1\}$</h3>
+<p>Supposons $Y_i\in\{0,1\}$ (malade / pas malade) et appliquons naïvement le modèle linéaire $Y_i=x_i\T\beta+\eps_i$. Trois problèmes apparaissent.</p>
+<ol>
+<li><strong>Des prédictions impossibles.</strong> Pour une variable 0/1, $\E(Y_i)=\P(Y_i=1)$ est une probabilité, donc dans $[0,1]$. Mais $x_i\T\beta$ est une fonction affine de $x_i$ : elle finit toujours par sortir de $[0,1]$ quand $x_i$ devient grand. Prédire « une probabilité de 1,3 » n'a pas de sens.</li>
+<li><strong>Une variance qui n'est pas constante.</strong> Si $\P(Y_i=1)=\pi_i$, alors $\Var(Y_i)=\pi_i(1-\pi_i)$ : la variance dépend de la moyenne (maximale à $\pi_i=\frac12$, nulle aux extrémités). Le modèle linéaire suppose au contraire $\Var(Y_i)=\sigma^2$ pour tout $i$.</li>
+<li><strong>Un bruit qui n'est pas gaussien.</strong> $\eps_i=Y_i-x_i\T\beta$ ne prend que deux valeurs : il ne peut pas suivre une loi normale.</li>
+</ol>
+<p>Pour un comptage ($Y_i\in\{0,1,2,\dots\}$) c'est pareil : la moyenne doit être positive, et pour une loi de Poisson la variance est égale à la moyenne.</p>
+
+<h3 id="trois-ingredients">L'idée : trois ingrédients</h3>
+<p>Un GLM garde le prédicteur linéaire mais sépare clairement trois choses :</p>
+<div class="cols">
+<div class="card"><h4>① Une loi pour $Y_i$</h4><p>Gaussienne, Bernoulli, Poisson… prise dans une grande famille commode : la <strong>famille exponentielle</strong> (§2).</p></div>
+<div class="card"><h4>② Un prédicteur linéaire</h4><p>$\eta_i=x_i\T\beta$, exactement comme avant : c'est là que vivent les paramètres $\beta$.</p></div>
+<div class="card"><h4>③ Une fonction de lien</h4><p>$g(\mu_i)=\eta_i$ : elle relie la moyenne $\mu_i=\E(Y_i)$ (contrainte : dans $]0,1[$, ou $>0$…) au prédicteur linéaire (libre dans $\R$).</p></div>
+</div>
+<p>Pour une réponse binaire, le choix classique est $\mu_i=\sigma(x_i\T\beta)$ : la droite $x_i\T\beta$ est « écrasée » dans $]0,1[$ par la sigmoïde. Manipulez la figure : la courbe bleue reste toujours entre 0 et 1, alors que la droite (pointillés) en sort.</p>
+<div class="widget" data-widget="logistique"></div>
+<p class="small muted">Les 14 points noirs sont des observations 0/1. Le nombre affiché est la log-vraisemblance $\ell(\beta_0,\beta_1)$ des 14 points : essayez de la rendre la plus grande possible avec les curseurs — vous faites « à la main » ce que fera l'algorithme IRLS au §9 (la réponse exacte y est calculée).</p>
+
+<h2 id="famille-exponentielle">2. La famille exponentielle</h2>
+<p class="tldr">Une loi est dans la famille exponentielle si sa log-densité s'écrit « (fonction du paramètre) × (fonction de $y$) − (fonction du paramètre seul) + (fonction de $y$ seul) » : le paramètre et les données ne se rencontrent que dans un produit.</p>
+
+<h3 id="def-famille">La définition</h3>
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours5 · diapo 62</span></div>
+<p>On dit que la variable aléatoire $Y$ appartient à la famille exponentielle si sa densité peut s'écrire
+$$f_\theta(y)=\exp\big(\eta(\theta)\,T(y)-A(\theta)+B(y)\big),$$
+où $\eta,T,A,B$ sont des fonctions déterministes et $\theta$ le paramètre inconnu.</p></div>
+
+<p>Décodons chaque morceau. On regarde le <strong>logarithme</strong> de la densité, c'est plus lisible :
+$$\log f_\theta(y)=\underbrace{\eta(\theta)\,T(y)}_{\text{seul terme mixte}}\;-\;\underbrace{A(\theta)}_{\text{paramètre seul}}\;+\;\underbrace{B(y)}_{y\text{ seul}}.$$</p>
+<ul>
+<li>$T(y)$ : la <strong>statistique</strong>, c'est-à-dire « ce qu'on regarde dans $y$ ». Dans tous les exemples du cours, $T(y)=y$.</li>
+<li>$\eta(\theta)$ : la façon dont le paramètre multiplie $T(y)$. Quand $\eta(\theta)=\theta$, on dit que $\theta$ est le <em class="new">paramètre naturel</em> (on peut toujours s'y ramener en prenant $\eta(\theta)$ comme nouveau paramètre).</li>
+<li>$A(\theta)$ : un terme qui ne dépend que du paramètre. Il n'est <strong>pas libre</strong> : il est fixé par la condition « une densité intègre à 1 ». En effet $1=\int f_\theta(y)\,\dd y=e^{-A(\theta)}\int e^{\eta(\theta)T(y)+B(y)}\dd y$, donc
+$$A(\theta)=\log\int e^{\eta(\theta)T(y)+B(y)}\,\dd y$$ (une somme sur $y$ pour une loi discrète).
+On l'appelle la <em class="new">fonction de log-partition</em> ; nous verrons au §6 qu'elle contient la moyenne et la variance de $T(Y)$.</li>
+<li>$B(y)$ : un terme qui ne dépend que de $y$ ; il ne joue aucun rôle dans l'estimation (sa dérivée en $\theta$ est nulle).</li>
+</ul>
+<div class="box intu"><div class="box-h">Intuition</div>
+<p>Le point essentiel est structurel : <strong>$\theta$ et $y$ n'interagissent que par le produit $\eta(\theta)T(y)$</strong>. C'est ce qui rendra tous les calculs simples : la dérivée de la log-vraisemblance en $\theta$ sera « $T(y)$ moins quelque chose qui ne dépend que de $\theta$ ». Une loi dont le support dépend du paramètre (par exemple la loi uniforme sur $[0,\theta]$) n'est pas dans la famille : l'indicatrice $\ind\{0\le y\le\theta\}$ mélange $y$ et $\theta$ autrement que par un produit dans l'exponentielle.</p></div>
+
+<div class="box methode"><div class="box-h">Méthode — Mettre une loi sous forme exponentielle</div>
+<ol>
+<li>Écrire $\log f_\theta(y)$.</li>
+<li>Développer, puis ranger les termes en trois tas : ceux qui contiennent <strong>à la fois</strong> $y$ et $\theta$ (ils doivent former un produit $\eta(\theta)T(y)$), ceux qui ne contiennent que $\theta$ (ils forment $-A(\theta)$), ceux qui ne contiennent que $y$ (ils forment $B(y)$).</li>
+<li>Lire $T$, $\eta$, $A$, $B$. Le paramètre naturel est $\eta(\theta)$ ; réécrire $A$ en fonction de lui.</li>
+</ol></div>
+
+<h3 id="exemples-famille">Trois exemples, ligne par ligne</h3>
+
+<h4>Loi normale $\N(\mu,1)$</h4>
+<ol class="steps">
+<li>$$f_\mu(y)=\frac{1}{\sqrt{2\pi}}\exp\Big(-\frac{(y-\mu)^2}{2}\Big)$$<span class="why">densité de la loi normale de moyenne $\mu$ et de variance 1.</span></li>
+<li>$$\log f_\mu(y)=-\frac{(y-\mu)^2}{2}-\log\sqrt{2\pi}$$<span class="why">le log d'un produit est la somme des logs ; $\log e^u=u$.</span></li>
+<li>$$=-\frac{y^2}{2}+y\mu-\frac{\mu^2}{2}-\log\sqrt{2\pi}$$<span class="why">on développe $(y-\mu)^2=y^2-2y\mu+\mu^2$.</span></li>
+<li>$$=\underbrace{\mu}_{\eta(\mu)}\cdot\underbrace{y}_{T(y)}-\underbrace{\frac{\mu^2}{2}}_{A(\mu)}+\underbrace{\Big(-\frac{y^2}{2}-\log\sqrt{2\pi}\Big)}_{B(y)}$$<span class="why">on range : le seul terme mixte est $y\mu$.</span></li>
+</ol>
+<p>Donc $T(y)=y$, $\theta=\mu$ est déjà le paramètre naturel, et $A(\theta)=\theta^2/2$. C'est exactement la ligne de la diapo : $f_\mu(y)=\exp\big(y\mu-\frac12\mu^2-\frac12y^2-\log\sqrt{2\pi}\big)$.</p>
+
+<h4>Loi de Bernoulli $\mathcal B(p)$</h4>
+<ol class="steps">
+<li>$$f_p(y)=p^y(1-p)^{1-y},\qquad y\in\{0,1\}$$<span class="why">vaut $p$ si $y=1$ et $1-p$ si $y=0$.</span></li>
+<li>$$\log f_p(y)=y\log p+(1-y)\log(1-p)$$<span class="why">$\log(a^y)=y\log a$.</span></li>
+<li>$$\begin{aligned}&=y\big(\log p-\log(1-p)\big)+\log(1-p)\\&=y\log\frac{p}{1-p}+\log(1-p)\end{aligned}$$<span class="why">on regroupe les termes en $y$.</span></li>
+<li>$$=\underbrace{\log\frac{p}{1-p}}_{\eta(p)}\cdot\underbrace{y}_{T(y)}-\underbrace{\big(-\log(1-p)\big)}_{A(p)}+\underbrace{0}_{B(y)}$$<span class="why">c'est la forme de la diapo : $f_p(y)=(1-p)\exp\big(y\log\frac p{1-p}\big)$.</span></li>
+</ol>
+<p>Le paramètre naturel est $\theta=\log\frac{p}{1-p}=\operatorname{logit}(p)$. Exprimons $A$ en fonction de $\theta$ : de $\theta=\log\frac p{1-p}$ on tire $p=\frac{e^\theta}{1+e^\theta}=\sigma(\theta)$, donc $1-p=\frac{1}{1+e^\theta}$ et
+$$A(\theta)=-\log(1-p)=\log(1+e^\theta).$$</p>
+
+<h4>Loi de Poisson $\mathcal P(\lambda)$</h4>
+<ol class="steps">
+<li>$$f_\lambda(y)=\frac{\lambda^y e^{-\lambda}}{y!},\qquad y\in\{0,1,2,\dots\}$$<span class="why">loi des comptages ; moyenne et variance valent $\lambda$.</span></li>
+<li>$$\log f_\lambda(y)=y\log\lambda-\lambda-\log(y!)$$<span class="why">log d'un produit/quotient.</span></li>
+<li>$$=\underbrace{\log\lambda}_{\theta}\cdot y-\underbrace{\lambda}_{A}+\underbrace{(-\log y!)}_{B(y)}$$<span class="why">un seul terme mixte : $y\log\lambda$.</span></li>
+</ol>
+<p>Paramètre naturel $\theta=\log\lambda$, donc $\lambda=e^\theta$ et $A(\theta)=e^\theta$.</p>
+
+<div class="table-wrap"><table>
+<thead><tr><th>Loi</th><th>$T(y)$</th><th>paramètre naturel $\theta$</th><th>$A(\theta)$</th><th>$B(y)$</th></tr></thead>
+<tbody>
+<tr><td>$\N(\mu,1)$</td><td>$y$</td><td>$\mu$</td><td>$\theta^2/2$</td><td>$-y^2/2-\log\sqrt{2\pi}$</td></tr>
+<tr><td>$\mathcal B(p)$</td><td>$y$</td><td>$\log\frac p{1-p}$</td><td>$\log(1+e^\theta)$</td><td>$0$</td></tr>
+<tr><td>$\mathcal P(\lambda)$</td><td>$y$</td><td>$\log\lambda$</td><td>$e^\theta$</td><td>$-\log y!$</td></tr>
+</tbody></table></div>
+
+<h3 id="forme-dispersion">La forme avec paramètre de dispersion (version Cours6)</h3>
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours6 · diapo 62</span></div>
+<p>$Y$ appartient à la famille exponentielle si sa densité s'écrit
+$$f_\theta(y)=\exp\Big(\frac{y\theta-b(\theta)}{a(\phi)}+c(y,\phi)\Big),$$
+où $a,b,c$ sont déterministes, $c$ dérivable, $b$ trois fois dérivable de dérivée première inversible ; $\theta$ est le paramètre naturel et $\phi$ le paramètre de dispersion, tous deux inconnus. Exemples : $\N(\mu,1)$ : $f_\mu(y)=$ « à compléter » ; $\mathcal B(p)$ : $f_p(y)=$ « à compléter ».</p></div>
+<p>C'est la même idée avec $T(y)=y$ et un paramètre supplémentaire $\phi$, la <em class="new">dispersion</em>, qui intervient par le diviseur $a(\phi)$ du terme $y\theta-b(\theta)$ : $b$ joue le rôle de $A$, $c$ celui de $B$. Elle sert surtout pour la loi normale de variance $\sigma^2$, où $\phi=\sigma^2$. Complétons la diapo.</p>
+<div class="cols">
+<div class="box exemple"><div class="box-h">$\N(\mu,1)$ — complété</div>
+<p>$$f_\mu(y)=\exp\Big(\frac{y\mu-\mu^2/2}{1}+\Big(-\frac{y^2}{2}-\frac12\log(2\pi)\Big)\Big)$$
+$\theta=\mu$, $b(\theta)=\theta^2/2$, $a(\phi)=1$, $c(y,\phi)=-\frac{y^2}2-\frac12\log(2\pi)$.</p></div>
+<div class="box exemple"><div class="box-h">$\mathcal B(p)$ — complété</div>
+<p>$$f_p(y)=\exp\Big(\frac{y\theta-\log(1+e^\theta)}{1}+0\Big)$$
+$\theta=\log\frac p{1-p}$, $b(\theta)=\log(1+e^\theta)$, $a(\phi)=1$, $c=0$.</p></div>
+</div>
+<div class="box exemple"><div class="box-h">$\N(\mu,\sigma^2)$ — là où la dispersion sert</div>
+<p>$\log f(y)=-\frac{(y-\mu)^2}{2\sigma^2}-\frac12\log(2\pi\sigma^2)=\dfrac{y\mu-\mu^2/2}{\sigma^2}-\dfrac{y^2}{2\sigma^2}-\frac12\log(2\pi\sigma^2)$ : donc $\theta=\mu$, $b(\theta)=\theta^2/2$, $a(\phi)=\phi=\sigma^2$, $c(y,\phi)=-\frac{y^2}{2\phi}-\frac12\log(2\pi\phi)$. C'est l'écriture de la <span class="ref">Cours5 · diapo 65</span>, qui factorise en $\exp\{-\frac{\mu_i^2}{2\sigma^2}\}\exp\{-\frac{y_i^2}{2\sigma^2}-\frac12\ln(2\pi\sigma^2)\}\exp\{y_i\frac{\mu_i}{\sigma^2}\}$.</p></div>
+<p>Avec cette forme, les formules du §6 deviennent $\E(Y)=b'(\theta)$ et $\Var(Y)=a(\phi)\,b''(\theta)$ (même preuve). Pour Bernoulli et Poisson $a(\phi)=1$ et on retombe sur la forme de Cours5.</p>
+
+<div class="quiz"><p>La loi exponentielle $f_\lambda(y)=\lambda e^{-\lambda y}$ ($y>0$) est-elle dans la famille exponentielle ? Si oui, quel est son paramètre naturel ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body"><p>Oui : $\log f_\lambda(y)=-\lambda y+\log\lambda$. Le seul terme mixte est $(-\lambda)\cdot y$, donc $T(y)=y$, $\theta=-\lambda$ (négatif), et $A(\theta)=-\log\lambda=-\log(-\theta)$, $B=0$. (Exercice 1 en fin de page pour la suite.)</p></div></details></div>
+<div class="quiz"><p>Et la loi uniforme sur $[0,\theta]$ ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body"><p>Non : $f_\theta(y)=\frac1\theta\ind\{0\le y\le\theta\}$. Le support dépend de $\theta$ : l'indicatrice vaut 0 pour $y>\theta$, ce qu'aucune expression $\exp(\eta(\theta)T(y)-A(\theta)+B(y))$ (toujours strictement positive) ne peut reproduire.</p></div></details></div>
+
+<h2 id="definition-glm">3. Définition d'un modèle linéaire généralisé</h2>
+<p class="tldr">Chaque $Y_i$ suit une loi de la famille exponentielle dont la moyenne $\mu_i$ est reliée au prédicteur linéaire par $g(\mu_i)=x_i\T\beta$.</p>
+
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours5 · diapo 63</span></div>
+<p>Un modèle linéaire généralisé pour les données $(x_1,Y_1),\dots,(x_n,Y_n)$ consiste en</p>
+<ol><li>un modèle exponentiel pour $Y\in\R$ ;</li><li>un prédicteur linéaire $\eta_i=x_i^T\beta$ (avec $\beta\in\R^p$) ;</li><li>une fonction de lien telle que $g(\E(Y_i))=x_i^T\beta$.</li></ol>
+<p>Remarque : on suppose donc $\mu_i=\E(Y_i)=g^{-1}(\eta_i)=g^{-1}(x_i^T\beta)$. Le lien entre prédicteur linéaire et modèle exponentiel passe par l'espérance de $Y$ et la fonction $g$. Beaucoup de choix de $g$ sont possibles, mais $g$ doit prendre toutes les valeurs que $\E(Y)$ peut prendre ; il y a un choix particulier : le lien canonique. La fonction de lien $g$ est supposée monotone et dérivable.</p></div>
+
+<p>Lisons-la comme une chaîne qui part des paramètres $\beta$ et arrive à la loi de $Y_i$ :</p>
+<figure class="fig">
+<svg viewBox="0 0 640 150" role="img" aria-label="Chaîne beta vers eta vers mu vers theta vers loi de Y">
+  <rect x="8" y="40" width="96" height="56" rx="10" class="am ln thin cm"/>
+  <text x="56" y="66" text-anchor="middle" class="tx-b">β</text>
+  <text x="56" y="86" text-anchor="middle" class="tx">paramètres</text>
+  <rect x="156" y="40" width="132" height="56" rx="10" class="a1 ln thin c1"/>
+  <text x="222" y="66" text-anchor="middle" class="tx-b">ηᵢ = xᵢᵀβ</text>
+  <text x="222" y="86" text-anchor="middle" class="tx">prédicteur linéaire</text>
+  <rect x="338" y="40" width="112" height="56" rx="10" class="a2 ln thin c2"/>
+  <text x="394" y="66" text-anchor="middle" class="tx-b">μᵢ = E(Yᵢ)</text>
+  <text x="394" y="86" text-anchor="middle" class="tx">moyenne</text>
+  <rect x="500" y="40" width="134" height="56" rx="10" class="a3 ln thin c3"/>
+  <text x="567" y="66" text-anchor="middle" class="tx-b">θᵢ → loi de Yᵢ</text>
+  <text x="567" y="86" text-anchor="middle" class="tx">paramètre naturel</text>
+  <path d="M106 68 L152 68" class="ln thin ck"/><path d="M146 63 L153 68 L146 73" class="ln thin ck"/>
+  <path d="M290 68 L334 68" class="ln thin ck"/><path d="M328 63 L335 68 L328 73" class="ln thin ck"/>
+  <path d="M452 68 L496 68" class="ln thin ck"/><path d="M490 63 L497 68 L490 73" class="ln thin ck"/>
+  <text x="129" y="30" text-anchor="middle" class="tx">× xᵢ</text>
+  <text x="312" y="30" text-anchor="middle" class="tx">g⁻¹ (lien ③)</text>
+  <text x="474" y="30" text-anchor="middle" class="tx">(A′)⁻¹</text>
+  <text x="222" y="122" text-anchor="middle" class="tx">ingrédient ②</text>
+  <text x="567" y="122" text-anchor="middle" class="tx">ingrédient ① : la loi</text>
+</svg>
+<figcaption>Un GLM est une chaîne : $\beta$ donne le prédicteur linéaire $\eta_i$, le lien inverse $g^{-1}$ donne la moyenne $\mu_i$, et la moyenne détermine le paramètre naturel $\theta_i$ de la loi (au §6 on verra que $\mu=A'(\theta)$, d'où la flèche $(A')^{-1}$). Les dérivées du §7 suivent cette chaîne maillon par maillon.</figcaption>
+</figure>
+
+<p>Les deux conditions sur $g$ ont un sens précis :</p>
+<ul>
+<li><strong>monotone (strictement) et dérivable</strong> : $g$ est alors inversible, donc $\mu_i=g^{-1}(\eta_i)$ est bien défini, et on pourra dériver $\mu_i$ par rapport à $\eta_i$ (règle de la chaîne du §7) ;</li>
+<li><strong>« prendre toutes les valeurs que $\E(Y)$ peut prendre »</strong> : $g$ doit être définie sur l'ensemble des moyennes possibles et l'envoyer sur tout $\R$, pour que, quel que soit $\eta_i\in\R$, $g^{-1}(\eta_i)$ soit une moyenne admissible. Pour Bernoulli, $\mu\in\,]0,1[$ : $g=\operatorname{logit}$ envoie $]0,1[$ sur $\R$ ✓ ; l'identité ne convient pas (elle autoriserait $\mu=1{,}3$) ✗. Pour Poisson, $\mu>0$ : $g=\log$ ✓.</li>
+</ul>
+
+<div class="box exemple"><div class="box-h">Exemple — la régression logistique écrite en entier</div>
+<p>① $Y_i\sim\mathcal B(\pi_i)$, indépendantes ; ② $\eta_i=x_i\T\beta$ ; ③ $g=\operatorname{logit}$, c'est-à-dire $\log\frac{\pi_i}{1-\pi_i}=x_i\T\beta$, ou encore
+$$\P(Y_i=1)=\pi_i=\sigma(x_i\T\beta)=\frac{e^{x_i\T\beta}}{1+e^{x_i\T\beta}}.$$
+D'autres liens sont possibles pour une réponse binaire (probit $g=\Phi^{-1}$, où $\Phi$ est la fonction de répartition de $\N(0,1)$ ; log-log complémentaire $g(\mu)=\log(-\log(1-\mu))$) : ils respectent aussi les deux conditions, mais ne sont pas canoniques.</p></div>
+
+<h2 id="lien-canonique">4. Le lien canonique</h2>
+<p class="tldr">Le lien canonique est celui qui rend le paramètre naturel égal au prédicteur linéaire : $\theta_i=x_i\T\beta$. On l'obtient en « exprimant $\theta$ en fonction de $\mu$ ».</p>
+
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours5 · diapo 64</span></div>
+<p>Soit $Y$ de densité $f_\theta(y)=\exp(\theta T(y)-A(\theta)+B(y))$ ; la fonction de lien canonique est la fonction $g$ telle que $\theta=g(\mu)$, c'est-à-dire $\theta=g(\E(Y))$. Remarque : avec le lien canonique, $\theta=g(\mu)=x^T\beta$, i.e. $\theta_i=g(\mu_i)=x_i^T\beta$.</p></div>
+<p>Pourquoi cette définition a-t-elle un sens ? Dans une loi de la famille (sous forme naturelle), le paramètre $\theta$ et la moyenne $\mu$ se déterminent l'un l'autre : on montrera au §6 que $\mu=A'(\theta)$ quand $T(y)=y$, et que $A'$ est strictement croissante. La relation « $\theta$ en fonction de $\mu$ » est donc une fonction bien définie, $\theta=(A')^{-1}(\mu)$ : <strong>c'est elle, le lien canonique</strong>. En la choisissant comme lien, la condition $g(\mu_i)=x_i\T\beta$ devient $\theta_i=x_i\T\beta$ : le prédicteur linéaire est directement le paramètre naturel.</p>
+
+<div class="box methode"><div class="box-h">Méthode — Trouver le lien canonique</div>
+<p>Écrire la loi sous forme naturelle (méthode du §2), puis exprimer le paramètre naturel $\theta$ en fonction de la moyenne $\mu$. La fonction obtenue est $g$.</p></div>
+<ul>
+<li>Gaussienne : $\theta=\mu$ ⇒ $g(\mu)=\mu$ (identité).</li>
+<li>Bernoulli : $\theta=\log\frac{\mu}{1-\mu}$ (car $\mu=p$) ⇒ $g=\operatorname{logit}$.</li>
+<li>Poisson : $\theta=\log\mu$ (car $\mu=\lambda$) ⇒ $g=\log$.</li>
+</ul>
+<p>Pourquoi ce choix est-il « le bon » ? Il n'est pas obligatoire, mais il simplifie tout : les équations de vraisemblance deviennent $X\T y=X\T\mu$ (§8) et la log-vraisemblance devient concave (§9), donc facile à maximiser.</p>
+
+<div class="box remarque"><div class="box-h">Note sur la diapo <span class="ref">Cours6 · diapo 64</span></div>
+<p>La version Cours6 écrit la densité $f_\theta(y)=\exp(Q(\theta)y-A(\theta))h(y)$ : le paramètre naturel y est $Q(\theta)$, pas $\theta$. Le lien canonique est alors celui qui donne $Q(\theta_i)=x_i\T\beta$. Quand on paramètre directement par le paramètre naturel ($Q(\theta)=\theta$), on retrouve « $\theta=g(\mu)$ » comme écrit sur la diapo. Pour Bernoulli paramétrée par $p$ : $Q(p)=\operatorname{logit}(p)$, et le lien canonique est bien le logit.</p></div>
+
+<h2 id="exemples-glm">5. Les trois GLM classiques</h2>
+<p class="tldr">Gaussien + identité = régression linéaire ; Bernoulli + logit = régression logistique ; Poisson + log = régression de Poisson.</p>
+
+<div class="box diapo"><div class="box-h">Ce que disent les diapos <span class="ref">Cours5 · diapos 65–66</span></div>
+<p>$Y_1,\dots,Y_n$ indépendantes de lois $f_{\theta_i}$ dans la famille exponentielle.
+1) $\N(\mu_i,\sigma^2)$ : $\theta_i=\E(Y_i)=\mu_i$ et $g(x)=x$.
+2) $\mathcal B(\pi_i)$ : $f_{\pi_i}(y_i)=(1-\pi_i)\exp\{y_i\ln\frac{\pi_i}{1-\pi_i}\}$, $\theta_i=\ln\frac{\pi_i}{1-\pi_i}$, $g(x)=\ln\frac{x}{1-x}$ (fonction logit).
+3) $\mathcal P(\lambda_i)$ : $f_{\lambda_i}(y_i)=\exp(-\lambda_i)\frac1{y_i!}\exp(y_i\ln\lambda_i)$, $\theta_i=\ln\lambda_i$ et $g(x)=\ln(x)$.</p></div>
+
+<div class="table-wrap"><table>
+<thead><tr><th>Modèle</th><th>valeurs de $Y$</th><th>lien canonique $g(\mu)$</th><th>$\mu=g^{-1}(\eta)$</th><th>$A(\theta)$</th><th>$\Var(Y)$ en fonction de $\mu$</th></tr></thead>
+<tbody>
+<tr><td>linéaire gaussien</td><td>$\R$</td><td>$\mu$</td><td>$\eta$</td><td>$\theta^2/2$</td><td>$\sigma^2$ (constante)</td></tr>
+<tr><td>logistique</td><td>$\{0,1\}$</td><td>$\log\frac{\mu}{1-\mu}$</td><td>$\sigma(\eta)=\frac{e^\eta}{1+e^\eta}$</td><td>$\log(1+e^\theta)$</td><td>$\mu(1-\mu)$</td></tr>
+<tr><td>Poisson (log-linéaire)</td><td>$\{0,1,2,\dots\}$</td><td>$\log\mu$</td><td>$e^\eta$</td><td>$e^\theta$</td><td>$\mu$</td></tr>
+</tbody></table></div>
+<p class="small muted">La dernière colonne est démontrée au §6. Elle montre bien ce que le modèle linéaire rate : la variance dépend de la moyenne.</p>
+
+<h3 id="interpretation-coefficients">Comment lire les coefficients</h3>
+<ul>
+<li><strong>Linéaire</strong> : $\mu_i=x_i\T\beta$ ; augmenter $x_{ij}$ de 1 (les autres variables fixées) ajoute $\beta_j$ à la moyenne.</li>
+<li><strong>Logistique</strong> : la <em class="new">cote</em> (<em>odds</em>) est $\frac{\pi_i}{1-\pi_i}=e^{x_i\T\beta}$. Augmenter $x_{ij}$ de 1 ajoute $\beta_j$ à $x_i\T\beta$, donc <strong>multiplie la cote par $e^{\beta_j}$</strong>, appelé <em class="new">rapport de cotes</em> (<em>odds ratio</em>). Exemple : $\beta_j=0{,}7$ ⇒ $e^{0{,}7}\approx2{,}01$ : la cote double.</li>
+<li><strong>Poisson</strong> : $\mu_i=e^{x_i\T\beta}$ ; augmenter $x_{ij}$ de 1 multiplie le nombre moyen attendu par $e^{\beta_j}$. Exemple : $\beta_j=-0{,}2$ ⇒ $e^{-0{,}2}\approx0{,}82$, soit 18 % de moins.</li>
+</ul>
+<div class="box piege"><div class="box-h">Piège</div>
+<p>En régression logistique, $\beta_j$ n'est <strong>pas</strong> l'effet de $x_j$ sur la probabilité : l'effet sur $\pi_i=\sigma(x_i\T\beta)$ dépend du point où l'on se trouve (la sigmoïde est raide au milieu, plate aux bords). Ce qui est constant, c'est l'effet sur le logit, ou de façon équivalente le rapport de cotes $e^{\beta_j}$.</p></div>
+
+<h2 id="moments">6. Moyenne et variance se lisent sur $A$</h2>
+<p class="tldr">Dans la famille exponentielle sous forme naturelle, la moyenne de $T(Y)$ est $A'(\theta)$ et sa variance est $A''(\theta)$ : pas besoin de calculer d'intégrale, il suffit de dériver $A$.</p>
+
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours5 · diapo 67</span></div>
+<p>$\ell(\theta_i;y_i)=\ln f_{\theta_i}(y_i)$ est la contribution de la $i$-ème observation à la log-vraisemblance : $\ell(\theta_i,y_i)=\theta_iT(y_i)-A(\theta_i)+B(y_i)$. On a
+$$\frac{\partial\ell}{\partial\theta_i}=T(y_i)-A'(\theta_i)\quad\text{et}\quad\frac{\partial^2\ell}{\partial\theta_i^2}=-A''(\theta_i).$$
+Sous des hypothèses de régularité (dérivation sous l'intégrale), $\E\big(\frac{\partial\ell}{\partial\theta}\big)=0$ et $-\E\big(\frac{\partial^2\ell}{\partial\theta^2}\big)=\E\big[\big(\frac{\partial\ell}{\partial\theta}\big)^2\big]$. Donc
+$$\E[T(Y_i)]=A'(\theta_i)\qquad\text{et}\qquad\Var[T(Y_i)]=A''(\theta_i).$$</p></div>
+
+<div class="box idee"><div class="box-h">Idée de la preuve</div>
+<ol>
+<li>Le score $\partial\ell/\partial\theta$ vaut $T(y)-A'(\theta)$ : « $T(y)$ moins une constante ».</li>
+<li>Un score est toujours d'espérance nulle (on dérive $\int f_\theta=1$). Donc la constante $A'(\theta)$ est la moyenne de $T(Y)$.</li>
+<li>La variance du score égale moins l'espérance de sa dérivée (on dérive une deuxième fois). Or la variance du score est celle de $T(Y)$, et sa dérivée vaut $-A''(\theta)$.</li>
+</ol></div>
+
+<details class="fold proof"><summary>Preuve détaillée (par le score)</summary><div class="fold-body">
+<p>On fixe une observation et on note $f_\theta$ sa densité, $\ell(\theta)=\log f_\theta(y)$. Toutes les intégrales portent sur $y$ (des sommes pour une loi discrète).</p>
+<p><strong>Étape 1 — le score est d'espérance nulle.</strong></p>
+<ol class="steps">
+<li>$$\int f_\theta(y)\,\dd y=1\quad\text{pour tout }\theta$$<span class="why">$f_\theta$ est une densité.</span></li>
+<li>$$\int\frac{\partial f_\theta(y)}{\partial\theta}\,\dd y=0$$<span class="why">on dérive en $\theta$ des deux côtés (la dérivée d'une constante est nulle) et on échange dérivée et intégrale — c'est l'« hypothèse de régularité » de la diapo.</span></li>
+<li>$$\frac{\partial f_\theta}{\partial\theta}=f_\theta\cdot\frac{\partial\log f_\theta}{\partial\theta}=f_\theta\cdot\frac{\partial\ell}{\partial\theta}$$<span class="why">dérivée du logarithme : $(\log f)'=f'/f$.</span></li>
+<li>$$\int\frac{\partial\ell}{\partial\theta}\,f_\theta\,\dd y=0,\quad\text{c'est-à-dire}\quad\E\Big[\frac{\partial\ell}{\partial\theta}\Big]=0$$<span class="why">on remplace dans la ligne 2 ; une intégrale contre $f_\theta$ est une espérance.</span></li>
+</ol>
+<p><strong>Étape 2 — la moyenne.</strong> Ici $\frac{\partial\ell}{\partial\theta}=T(y)-A'(\theta)$, donc $\E[T(Y)]-A'(\theta)=0$, soit $\E[T(Y)]=A'(\theta)$.</p>
+<p><strong>Étape 3 — l'identité de l'information.</strong></p>
+<ol class="steps">
+<li>$$\int\frac{\partial\ell}{\partial\theta}\,f_\theta\,\dd y=0\quad\text{pour tout }\theta$$<span class="why">c'est l'étape 1.</span></li>
+<li>$$\int\frac{\partial^2\ell}{\partial\theta^2}\,f_\theta\,\dd y+\int\frac{\partial\ell}{\partial\theta}\,\frac{\partial f_\theta}{\partial\theta}\,\dd y=0$$<span class="why">on dérive à nouveau en $\theta$ ; dérivée d'un produit.</span></li>
+<li>$$\E\Big[\frac{\partial^2\ell}{\partial\theta^2}\Big]+\E\Big[\Big(\frac{\partial\ell}{\partial\theta}\Big)^2\Big]=0$$<span class="why">dans la 2e intégrale, $\frac{\partial f_\theta}{\partial\theta}=f_\theta\frac{\partial\ell}{\partial\theta}$ (étape 1, ligne 3).</span></li>
+</ol>
+<p><strong>Étape 4 — la variance.</strong> Ici $\frac{\partial^2\ell}{\partial\theta^2}=-A''(\theta)$ (une constante) et $\frac{\partial\ell}{\partial\theta}=T(y)-A'(\theta)=T(y)-\E[T(Y)]$. L'étape 3 donne $-A''(\theta)+\E\big[(T(Y)-\E T(Y))^2\big]=0$, c'est-à-dire $\Var[T(Y)]=A''(\theta)$. <span class="qed">□</span></p>
+</div></details>
+
+<details class="fold proof"><summary>Autre preuve (directe, en dérivant $A$)</summary><div class="fold-body">
+<p>On a vu au §2 que $A(\theta)=\log\int e^{\theta T(y)+B(y)}\dd y$. Notons $Z(\theta)=\int e^{\theta T(y)+B(y)}\dd y$, de sorte que $A=\log Z$ et $f_\theta(y)=e^{\theta T(y)+B(y)}/Z(\theta)$.</p>
+<ol class="steps">
+<li>$$\begin{aligned}A'(\theta)&=\frac{Z'(\theta)}{Z(\theta)}=\frac{\int T(y)\,e^{\theta T(y)+B(y)}\dd y}{Z(\theta)}\\&=\int T(y)\,f_\theta(y)\,\dd y=\E[T(Y)]\end{aligned}$$<span class="why">dérivée de $\log Z$ ; on dérive sous l'intégrale ($\partial_\theta e^{\theta T}=Te^{\theta T}$).</span></li>
+<li>$$\begin{aligned}A''(\theta)&=\frac{Z''}{Z}-\Big(\frac{Z'}{Z}\Big)^2\\&=\E[T(Y)^2]-\big(\E[T(Y)]\big)^2=\Var[T(Y)]\end{aligned}$$<span class="why">dérivée du quotient $Z'/Z$ ; même calcul pour $Z''/Z=\int T^2f_\theta$.</span></li>
+</ol>
+<p><span class="qed">□</span></p></div></details>
+
+<h3 id="verifications-moments">Vérifions sur les exemples</h3>
+<ol class="steps">
+<li><strong>Bernoulli</strong>, $A(\theta)=\log(1+e^\theta)$ : $$A'(\theta)=\frac{e^\theta}{1+e^\theta}=\sigma(\theta)=p\ \checkmark$$<span class="why">la moyenne d'une Bernoulli est $p$.</span></li>
+<li>$$A''(\theta)=\sigma'(\theta)=\sigma(\theta)(1-\sigma(\theta))=p(1-p)\ \checkmark$$<span class="why">dérivée de la sigmoïde (rappel en haut de page) ; c'est bien la variance d'une Bernoulli.</span></li>
+<li><strong>Poisson</strong>, $A(\theta)=e^\theta$ : $$A'(\theta)=A''(\theta)=e^\theta=\lambda\ \checkmark$$<span class="why">moyenne et variance d'une Poisson valent toutes deux $\lambda$.</span></li>
+<li><strong>Normale</strong> $\N(\mu,1)$, $A(\theta)=\frac{\theta^2}{2}$ : $$A'(\theta)=\theta=\mu,\qquad A''(\theta)=1\ \checkmark$$<span class="why">moyenne $\mu$, variance 1.</span></li>
+</ol>
+
+<h3 id="consequences-moments">Deux conséquences qui servent tout de suite</h3>
+<ol>
+<li><strong>$A$ est convexe</strong>, car $A''=\Var[T(Y)]\ge0$ ; strictement dès que $T(Y)$ n'est pas constante. Donc <strong>$A'$ est strictement croissante, donc inversible</strong> : la relation $\mu=A'(\theta)$ (quand $T(y)=y$) se renverse en $\theta=(A')^{-1}(\mu)$. C'est ce qui garantit que le lien canonique du §4 existe.</li>
+<li><strong>La variance est une fonction de la moyenne</strong> : $\Var(Y)=A''(\theta)=A''\big((A')^{-1}(\mu)\big)=:V(\mu)$, la <em class="new">fonction variance</em>. Bernoulli : $V(\mu)=\mu(1-\mu)$ ; Poisson : $V(\mu)=\mu$ ; normale : $V(\mu)=1$ (ou $\sigma^2$). C'est la dernière colonne du tableau du §5.</li>
+</ol>
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>Quand vous voyez une loi de la famille exponentielle et qu'on vous demande sa moyenne ou sa variance → <strong>ne calculez pas d'intégrale : écrivez-la sous forme naturelle et dérivez $A$</strong> une fois (moyenne) ou deux fois (variance).</p></div>
+
+<h2 id="equations-vraisemblance">7. Les équations de vraisemblance</h2>
+<p class="tldr">Pour maximiser la log-vraisemblance en $\beta$, on la dérive en suivant la chaîne $\beta\to\eta_i\to\mu_i\to\theta_i\to\ell_i$ ; on obtient $p$ équations, non linéaires en $\beta$.</p>
+
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours5 · diapo 68</span></div>
+<p>Rappel : $\eta_i=x_i^T\beta=g(\mu_i)$ où $\mu_i=\E(Y_i)$. Les estimateurs des $\beta_j$ sont calculés en maximisant la log-vraisemblance
+$$\mathcal L(\beta)=\sum_{i=1}^n\ln f_{\theta_i}(y_i)=\sum_{i=1}^n\ell_i(\theta_i;y_i),$$ et $$\frac{\partial\ell_i}{\partial\beta_j}=\frac{\partial\ell_i}{\partial\theta_i}\,\frac{\partial\theta_i}{\partial\mu_i}\,\frac{\partial\mu_i}{\partial\eta_i}\,\frac{\partial\eta_i}{\partial\beta_j}.$$</p></div>
+
+<p>Pourquoi ce produit de quatre dérivées ? Parce que $\ell_i$ ne dépend de $\beta$ qu'à travers une chaîne de quantités (la figure du §3) :
+$$\begin{aligned}\eta_i&=x_i\T\beta&&\text{(dépend de }\beta\text{)}\\ \mu_i&=g^{-1}(\eta_i)&&\text{(dépend de }\eta_i\text{)}\\ \theta_i&=(A')^{-1}(\mu_i)&&\text{(dépend de }\mu_i\text{)}\\ \ell_i&=\theta_iy_i-A(\theta_i)+B(y_i)&&\text{(dépend de }\theta_i\text{)}\end{aligned}$$
+Chaque maillon est une fonction d'une seule variable réelle (sauf le premier, où l'on dérive par rapport à une coordonnée $\beta_j$) : la dérivée de la composée est le produit des dérivées des maillons. Calculons-les une par une, dans le cas $T(y)=y$ (celui de tous nos exemples).</p>
+
+<ol class="steps">
+<li>$$\frac{\partial\ell_i}{\partial\theta_i}=y_i-A'(\theta_i)=y_i-\mu_i$$<span class="why">on dérive $\theta_iy_i-A(\theta_i)+B(y_i)$ en $\theta_i$ ; puis $A'(\theta_i)=\E(Y_i)=\mu_i$ (§6).</span></li>
+<li>$$\frac{\partial\theta_i}{\partial\mu_i}=\frac{1}{\partial\mu_i/\partial\theta_i}=\frac{1}{A''(\theta_i)}=\frac{1}{\Var(Y_i)}$$<span class="why">dérivée d'une fonction réciproque : si $\mu=A'(\theta)$ alors $\frac{\dd\theta}{\dd\mu}=1/\frac{\dd\mu}{\dd\theta}$ ; puis $A''(\theta_i)=\Var(Y_i)$ (§6).</span></li>
+<li>$$\frac{\partial\mu_i}{\partial\eta_i}=\frac{1}{g'(\mu_i)}$$<span class="why">même règle : $\eta_i=g(\mu_i)$ donc $\frac{\dd\mu_i}{\dd\eta_i}=1/g'(\mu_i)$. Ce facteur dépend du lien choisi : c'est ce que la diapo 69 appelle « dépend de la fonction de lien ».</span></li>
+<li>$$\frac{\partial\eta_i}{\partial\beta_j}=x_{ij}$$<span class="why">$\eta_i=\sum_kx_{ik}\beta_k$ ; seul le terme $k=j$ dépend de $\beta_j$.</span></li>
+<li>$$\frac{\partial\ell_i}{\partial\beta_j}=\frac{(y_i-\mu_i)\,x_{ij}}{\Var(Y_i)}\,\frac{\partial\mu_i}{\partial\eta_i}$$<span class="why">produit des quatre lignes précédentes.</span></li>
+</ol>
+<p>En sommant sur $i$ et en annulant la dérivée (condition d'ordre 1 pour un maximum) :</p>
+<div class="box diapo"><div class="box-h">Ce que dit la diapo — équations de vraisemblance <span class="ref">Cours5 · diapo 69</span></div>
+<p>$$\sum_{i=1}^n\frac{(y_i-\mu_i)\,x_{ij}}{\Var(Y_i)}\,\frac{\partial\mu_i}{\partial\eta_i}=0,\qquad j=1,\dots,p.$$
+Équations non linéaires en $\beta$, qui demandent des méthodes itératives.</p></div>
+
+<p><strong>Lecture.</strong> Chaque équation est une somme de <strong>résidus</strong> $y_i-\mu_i$, pondérés : divisés par la variance (une observation très bruitée compte moins), multipliés par $\partial\mu_i/\partial\eta_i$ et par la valeur $x_{ij}$ de la variable $j$.</p>
+<p><strong>Pourquoi « non linéaires » ?</strong> Parce que $\mu_i=g^{-1}(x_i\T\beta)$ — et $\Var(Y_i)$, qui dépend de $\mu_i$ — sont des fonctions non linéaires de $\beta$. En régression logistique, $\mu_i=\sigma(x_i\T\beta)$ : on ne sait pas isoler $\beta$. Il n'y a pas de formule fermée comme $(X\T X)^{-1}X\T Y$ ; il faudra un algorithme (§9).</p>
+
+<div class="box exemple"><div class="box-h">Vérification — le cas gaussien redonne les moindres carrés</div>
+<p>Lien identité : $\mu_i=\eta_i=x_i\T\beta$, donc $\partial\mu_i/\partial\eta_i=1$ ; $\Var(Y_i)=\sigma^2$. Les équations deviennent $\sum_i(y_i-x_i\T\beta)x_{ij}/\sigma^2=0$ pour tout $j$, soit $X\T(y-X\beta)=0$ : les équations normales de la séance 1. Ici elles sont linéaires, d'où la formule fermée.</p></div>
+
+<div class="box remarque"><div class="box-h">Avec un paramètre de dispersion</div>
+<p>Dans la forme de Cours6, $\frac{\partial\ell_i}{\partial\theta_i}=\frac{y_i-b'(\theta_i)}{a(\phi)}$ et $\Var(Y_i)=a(\phi)b''(\theta_i)$, donc $\frac{\partial\theta_i}{\partial\mu_i}=\frac1{b''(\theta_i)}=\frac{a(\phi)}{\Var(Y_i)}$. Le produit des deux premiers maillons vaut encore $\frac{y_i-\mu_i}{\Var(Y_i)}$ : les équations de la diapo 69 sont inchangées.</p></div>
+
+<h2 id="cas-canonique">8. Avec le lien canonique : $X\T y=X\T\mu$</h2>
+<p class="tldr">Avec le lien canonique, deux facteurs se simplifient et les équations de vraisemblance disent simplement : les résidus $y-\mu$ sont orthogonaux à chaque colonne de $X$, comme pour les moindres carrés.</p>
+
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours5 · diapo 70</span></div>
+<p>Dans ce cas $\eta_i=\theta_i=x_i^T\beta$ et $\frac{\partial\mu_i}{\partial\eta_i}=\frac{\partial\mu_i}{\partial\theta_i}=\frac{\partial A'(\theta_i)}{\partial\theta_i}=A''(\theta_i)$. Donc
+$$\frac{\partial\ell_i}{\partial\beta_j}=\frac{y_i-\mu_i}{\Var(Y_i)}A''(\theta_i)\,x_{ij}=(y_i-\mu_i)\,x_{ij}.$$
+Les équations deviennent $X^Ty=X^T\mu$. Dans le cas gaussien avec $\mu=X\beta$ (lien identité), on obtient la solution $\hb=(X^TX)^{-1}X^Ty$, qui est l'estimateur des moindres carrés ordinaires.</p></div>
+
+<ol class="steps">
+<li>$$\theta_i=\eta_i\quad\Longrightarrow\quad\frac{\partial\mu_i}{\partial\eta_i}=\frac{\partial\mu_i}{\partial\theta_i}=A''(\theta_i)=\Var(Y_i)$$<span class="why">lien canonique : le paramètre naturel <em>est</em> le prédicteur linéaire ; puis $\mu_i=A'(\theta_i)$ et §6.</span></li>
+<li>$$\frac{\partial\ell_i}{\partial\beta_j}=\frac{(y_i-\mu_i)\,x_{ij}}{\Var(Y_i)}\cdot\Var(Y_i)=(y_i-\mu_i)\,x_{ij}$$<span class="why">la variance au dénominateur se simplifie avec $\partial\mu_i/\partial\eta_i$.</span></li>
+<li>$$\begin{aligned}&\sum_{i=1}^n(y_i-\mu_i)\,x_{ij}=0\ \ \forall j\\ \Longleftrightarrow\ &X\T(y-\mu)=0\ \Longleftrightarrow\ X\T y=X\T\mu(\beta)\end{aligned}$$<span class="why">la $j$-ème coordonnée de $X\T v$ est $\sum_ix_{ij}v_i$.</span></li>
+</ol>
+
+<div class="box intu"><div class="box-h">Un calcul encore plus court (à retenir)</div>
+<p>Avec le lien canonique, $\theta_i=x_i\T\beta$, donc la log-vraisemblance s'écrit directement
+$$\begin{aligned}\ell(\beta)&=\sum_{i=1}^n\big[y_i\,x_i\T\beta-A(x_i\T\beta)+B(y_i)\big]\\&=y\T X\beta-\sum_{i=1}^nA(x_i\T\beta)+\text{cte}.\end{aligned}$$
+Le gradient se lit à vue : $\nabla(y\T X\beta)=X\T y$ et $\nabla A(x_i\T\beta)=A'(x_i\T\beta)\,x_i=\mu_i\,x_i$. D'où
+$$\nabla\ell(\beta)=X\T y-\sum_i\mu_i x_i=X\T(y-\mu).$$</p></div>
+
+<p><strong>Lecture géométrique.</strong> $X\T(y-\hat\mu)=0$ dit que le vecteur des résidus $y-\hat\mu$ est orthogonal à chaque colonne de $X$ — exactement la propriété des moindres carrés ($X\T(Y-X\hb)=0$, séance 1). Si $X$ contient une colonne de 1 (une constante), la ligne correspondante dit $\sum_iy_i=\sum_i\hat\mu_i$ : en régression logistique, <strong>la somme des probabilités prédites égale le nombre de 1 observés</strong>.</p>
+
+<div class="cols">
+<div class="box exemple"><div class="box-h">Logistique</div>
+<p>$\mu_i=\sigma(x_i\T\beta)$ : $$\sum_{i=1}^n\big(y_i-\sigma(x_i\T\beta)\big)x_i=0.$$</p></div>
+<div class="box exemple"><div class="box-h">Poisson</div>
+<p>$\mu_i=e^{x_i\T\beta}$ : $$\sum_{i=1}^n\big(y_i-e^{x_i\T\beta}\big)x_i=0.$$</p></div>
+</div>
+
+<div class="box exemple"><div class="box-h">Exemple — régression logistique avec la constante seule</div>
+<p>Si $x_i=1$ pour tout $i$ (un seul paramètre $\beta$, pas de variable), l'équation est $\sum_i(y_i-\sigma(\beta))=0$, soit $\sigma(\hb)=\bar y$, donc $\hb=\operatorname{logit}(\bar y)=\log\frac{\bar y}{1-\bar y}$ : on retrouve la proportion observée de 1, comme pour la pièce de monnaie du rappel. Avec les 14 points de la figure du §1, $\bar y=\frac{7}{14}=\frac12$ et $\hb=0$.</p></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>GLM avec lien canonique → <strong>gradient de la log-vraisemblance $=X\T(y-\mu)$</strong>. Écrivez-le sans recalculer la chaîne : c'est « les moindres carrés avec $X\beta$ remplacé par $\mu(\beta)$ ».</p></div>
+
+<h2 id="irls">9. Résoudre les équations : Newton–Raphson = moindres carrés pondérés itérés (IRLS)</h2>
+<p class="tldr">Un pas de Newton sur la log-vraisemblance d'un GLM canonique est exactement une régression par moindres carrés pondérés sur une « réponse de travail » $z$ ; on la répète en mettant à jour les poids : c'est l'algorithme IRLS.</p>
+
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours5 · diapo 71</span></div>
+<p>Moindres carrés pondérés itérés (<em>Iterated Reweighted Least Squares</em>, IRLS). Pour calculer (approcher) l'estimateur du maximum de vraisemblance, on utilise un algorithme de type Newton–Raphson. À l'itération $k$, on note $\hb_k$ la solution courante. On approche $\ell_n=\frac1n\ell$ par une fonction quadratique :
+$$\begin{aligned}\ell_n(\hb_k+h)={}&\ell_n(\hb_k)+\nabla\ell_n(\hb_k)^Th\\&+\tfrac12h^T\nabla^2\ell_n(\hb_k)h,\end{aligned}$$
+on minimise cette approximation pour obtenir $h^*$, on pose $\hb_{k+1}=\hb_k+h^*$ et on itère.</p></div>
+
+<div class="box remarque"><div class="box-h">Note sur la diapo</div>
+<p>On <strong>maximise</strong> la log-vraisemblance, donc on <strong>maximise</strong> son approximation quadratique (elle est concave, on le montre ci-dessous) ; « minimiser » est correct si on raisonne sur $-\ell_n$. Le facteur $\frac1n$ ne change pas $h^*$ : il multiplie gradient et hessienne par la même constante. On travaille ci-dessous avec $\ell$ et le lien canonique.</p></div>
+
+<h3 id="hessienne">Le gradient et la hessienne</h3>
+<ol class="steps">
+<li>$$\nabla\ell(\beta)=X\T(y-\mu),$$ $$\text{soit}\quad\frac{\partial\ell}{\partial\beta_j}=\sum_{i=1}^n(y_i-\mu_i)\,x_{ij}$$<span class="why">§8.</span></li>
+<li>$$\frac{\partial^2\ell}{\partial\beta_k\,\partial\beta_j}=-\sum_{i=1}^nx_{ij}\,\frac{\partial\mu_i}{\partial\beta_k}$$<span class="why">on dérive la ligne 1 par rapport à $\beta_k$ ; seul $\mu_i$ dépend de $\beta$ ($y_i$ et $x_{ij}$ sont fixes).</span></li>
+<li>$$\frac{\partial\mu_i}{\partial\beta_k}=\frac{\partial\mu_i}{\partial\eta_i}\,\frac{\partial\eta_i}{\partial\beta_k}=A''(\theta_i)\,x_{ik}$$<span class="why">règle de la chaîne ; avec le lien canonique $\partial\mu_i/\partial\eta_i=A''(\theta_i)$ (§8).</span></li>
+<li>$$\frac{\partial^2\ell}{\partial\beta_k\,\partial\beta_j}=-\sum_{i=1}^nx_{ij}\,A''(\theta_i)\,x_{ik},$$ $$\text{c'est-à-dire}\quad\nabla^2\ell(\beta)=-X\T WX$$<span class="why">avec $W=\diag(w_1,\dots,w_n)$, $w_i=A''(\theta_i)=\Var(Y_i)$ : le coefficient $(j,k)$ de $X\T WX$ est $\sum_ix_{ij}w_ix_{ik}$.</span></li>
+</ol>
+<p>En régression logistique, $w_i=\mu_i(1-\mu_i)$ ; en Poisson, $w_i=\mu_i$ ; en gaussien $\N(\mu_i,1)$, $w_i=1$. (Pour $\N(\mu_i,\sigma^2)$, la forme avec dispersion du §2 donne $\nabla^2\ell=-X\T X/\sigma^2$ : tout se passe comme si $w_i=1/\sigma^2$ — et non $\Var(Y_i)=\sigma^2$ ; l'égalité $w_i=\Var(Y_i)$ suppose $a(\phi)=1$.)</p>
+
+<div class="box thm"><div class="box-h">Conséquence — la log-vraisemblance d'un GLM canonique est concave</div>
+<p>Pour tout $v\in\R^p$ : $v\T\nabla^2\ell(\beta)\,v=-v\T X\T WXv=-\sum_{i=1}^nw_i\,(x_i\T v)^2\le0$, car $w_i=\Var(Y_i)\ge0$. La hessienne est semi-définie négative en tout point : $\ell$ est <strong>concave</strong>. Donc tout point où le gradient s'annule est un <strong>maximum global</strong>, et si $X$ est de rang $p$ (et les $w_i>0$), $\ell$ est strictement concave : le maximum, s'il existe, est unique. (Attention : il peut ne pas exister, voir l'exercice 8 sur la séparation.)</p></div>
+
+<h3 id="pas-newton">Le pas de Newton, ligne par ligne</h3>
+<p>Notons $\beta_k$ le point courant, $\mu$ et $W$ calculés en $\beta_k$, $s=X\T(y-\mu)$ le gradient (on évite la lettre $g$, déjà prise par le lien).</p>
+<ol class="steps">
+<li>$$q(h)=\ell(\beta_k)+s\T h-\tfrac12\,h\T X\T WX\,h$$<span class="why">approximation de Taylor à l'ordre 2 de $\ell(\beta_k+h)$, avec la hessienne $-X\T WX$.</span></li>
+<li>$$\nabla_hq(h)=s-X\T WX\,h=0$$<span class="why">$q$ est une parabole concave en $h$ : son maximum annule le gradient (formules $\nabla(a\T h)=a$ et $\nabla(h\T Mh)=2Mh$ pour $M$ symétrique).</span></li>
+<li>$$h^*=(X\T WX)^{-1}X\T(y-\mu)$$<span class="why">on suppose $X\T WX$ inversible ($X$ de rang $p$, poids $>0$).</span></li>
+<li>$$\begin{aligned}\beta_{k+1}&=\beta_k+(X\T WX)^{-1}X\T(y-\mu)\\&=(X\T WX)^{-1}\big[X\T WX\beta_k+X\T(y-\mu)\big]\end{aligned}$$<span class="why">on met $(X\T WX)^{-1}$ en facteur : $\beta_k=(X\T WX)^{-1}X\T WX\beta_k$.</span></li>
+<li>$$\beta_{k+1}=(X\T WX)^{-1}X\T W\big[\underbrace{X\beta_k+W^{-1}(y-\mu)}_{=:\,z}\big]$$<span class="why">on écrit $X\T(y-\mu)=X\T W\,W^{-1}(y-\mu)$ ($W$ diagonale à coefficients $>0$, donc inversible).</span></li>
+<li>$$\beta_{k+1}=\argmin_{\beta\in\R^p}\ \sum_{i=1}^nw_i\,(z_i-x_i\T\beta)^2$$<span class="why">le gradient de $\sum_iw_i(z_i-x_i\T\beta)^2=(z-X\beta)\T W(z-X\beta)$ est $-2X\T W(z-X\beta)$ ; il s'annule en $\beta=(X\T WX)^{-1}X\T Wz$ — les moindres carrés de la séance 1, avec des poids.</span></li>
+</ol>
+
+<div class="box methode"><div class="box-h">Algorithme IRLS (lien canonique)</div>
+<p>Partir de $\beta_0$ (par exemple $0$). À chaque itération :</p>
+<ol>
+<li>calculer $\eta_i=x_i\T\beta_k$, $\mu_i=g^{-1}(\eta_i)$, et les poids $w_i=\Var(Y_i)=A''(\theta_i)$ ;</li>
+<li>former la <em class="new">réponse de travail</em> $z_i=\eta_i+\dfrac{y_i-\mu_i}{w_i}$ ;</li>
+<li>faire une régression par moindres carrés pondérés de $z$ sur $X$ avec les poids $w_i$ : $\beta_{k+1}=(X\T WX)^{-1}X\T Wz$ ;</li>
+<li>recommencer jusqu'à ce que $\beta$ ne bouge plus (ou que le gradient soit quasi nul).</li>
+</ol>
+<p>« Itérés » et « re-pondérés » : les poids $w_i$ changent à chaque itération puisqu'ils dépendent de $\mu$.</p></div>
+
+<div class="box intu"><div class="box-h">Intuition — d'où viennent $z$ et $W$</div>
+<p>On aimerait faire une régression linéaire de $g(y_i)$ sur $x_i$ (puisque $g(\mu_i)=x_i\T\beta$), mais $g(y_i)$ n'a pas de sens ($\operatorname{logit}(0)=-\infty$). On <strong>linéarise</strong> $g$ autour de la moyenne courante : $g(y_i)\approx g(\mu_i)+g'(\mu_i)(y_i-\mu_i)$. Avec le lien canonique, $g'(\mu_i)=1/A''(\theta_i)=1/w_i$, donc $g(y_i)\approx\eta_i+(y_i-\mu_i)/w_i=z_i$ : <strong>$z_i$ est une version linéarisée de $g(y_i)$</strong>. Sa variance vaut environ $\Var(Y_i)/w_i^2=1/w_i$ : les moindres carrés pondérés par $w_i$ donnent naturellement moins de poids aux $z_i$ les plus bruités.</p></div>
+
+<h3 id="irls-main">Un exemple à la main (un seul paramètre)</h3>
+<p>Quatre observations, $x=(-2,-1,1,2)$ et $y=(0,1,0,1)$, modèle logistique sans constante $\P(Y_i=1)=\sigma(\beta x_i)$. Ici $X$ est la colonne $x$, $X\T WX=\sum_iw_ix_i^2$ et $X\T(y-\mu)=\sum_i(y_i-\mu_i)x_i$ sont des nombres.</p>
+<p><strong>Itération 0</strong>, $\beta_0=0$ :</p>
+<ol class="steps">
+<li>$$\mu_i=\sigma(0)=\tfrac12\ \ \text{pour tout }i,\qquad w_i=\tfrac12\cdot\tfrac12=\tfrac14$$<span class="why">$\sigma(0)=\frac12$ ; logistique : $w_i=\mu_i(1-\mu_i)$.</span></li>
+<li>$$\begin{aligned}X\T(y-\mu)&=(-\tfrac12)(-2)+(\tfrac12)(-1)\\&\quad+(-\tfrac12)(1)+(\tfrac12)(2)\\&=1-\tfrac12-\tfrac12+1=1\end{aligned}$$<span class="why">résidus $y_i-\mu_i=(-\frac12,\frac12,-\frac12,\frac12)$.</span></li>
+<li>$$X\T WX=\tfrac14\,(4+1+1+4)=2{,}5$$<span class="why">$\sum_iw_ix_i^2$.</span></li>
+<li>$$\beta_1=0+\frac{1}{2{,}5}=0{,}4$$<span class="why">pas de Newton $h^*=(X\T WX)^{-1}X\T(y-\mu)$.</span></li>
+<li>Même résultat par la régression pondérée (IRLS) : $$z_i=0+\frac{y_i-\frac12}{1/4}\ \Rightarrow\ z=(-2,\,2,\,-2,\,2),$$ $$\beta_1=\frac{\sum_iw_ix_iz_i}{\sum_iw_ix_i^2}=\frac{\frac14\cdot4}{2{,}5}=0{,}4$$<span class="why">$\sum_ix_iz_i=4-2-2+4=4$ : régression pondérée de $z$ sur $x$ sans constante.</span></li>
+</ol>
+<p>On recommence en $\beta_1=0{,}4$ ($\mu=(0{,}310\,;0{,}401\,;0{,}599\,;0{,}690)$), etc. Résultats (calculés) :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>$k$</th><th>$\beta_k$</th><th>gradient $X\T(y-\mu)$</th><th>$X\T WX$</th><th>$\ell(\beta_k)$</th><th>erreur $\abs{\beta_k-\hb}$</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>0</td><td>1</td><td>2,5</td><td>−2,7726</td><td>$4{,}2\cdot10^{-1}$</td></tr>
+<tr><td>1</td><td>0,4</td><td>0,0427</td><td>2,1918</td><td>−2,5682</td><td>$2{,}0\cdot10^{-2}$</td></tr>
+<tr><td>2</td><td>0,419494</td><td>0,000268</td><td>2,1642</td><td>−2,567814</td><td>$1{,}2\cdot10^{-4}$</td></tr>
+<tr><td>3</td><td>0,4196176</td><td>$1{,}1\cdot10^{-8}$</td><td>2,1640</td><td>−2,567814</td><td>$5{,}1\cdot10^{-9}$</td></tr>
+</tbody></table></div>
+<p>L'erreur passe de $10^{-2}$ à $10^{-4}$ puis à $10^{-8}$ : <strong>le nombre de décimales justes double à chaque itération</strong> (convergence quadratique de Newton). Trois pas de Newton suffisent pour huit décimales justes.</p>
+
+<h3 id="irls-figure">Le même calcul sur les 14 points de la figure (deux paramètres)</h3>
+<p>Modèle $\P(Y_i=1)=\sigma(\beta_0+\beta_1x_i)$ : $X$ a deux colonnes, une de 1 et la colonne des $x_i$. Premier pas depuis $\beta=(0,0)$ : tous les $\mu_i=\frac12$, $w_i=\frac14$, $z_i=\pm2$, et</p>
+$$\begin{aligned}X\T WX&=\frac14\begin{pmatrix}n&\sum x_i\\\sum x_i&\sum x_i^2\end{pmatrix}=\frac14\begin{pmatrix}14&1\\1&51{,}44\end{pmatrix}\\&=\begin{pmatrix}3{,}5&0{,}25\\0{,}25&12{,}86\end{pmatrix},\end{aligned}$$
+$$X\T(y-\mu)=\begin{pmatrix}\sum_i(y_i-\frac12)\\\sum_i(y_i-\frac12)x_i\end{pmatrix}=\begin{pmatrix}0\\9{,}8\end{pmatrix},$$
+<p>d'où $h^*=(X\T WX)^{-1}X\T(y-\mu)=(-0{,}0545\,;\ 0{,}7631)$. Les itérations suivantes (calculées) :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>$k$</th><th>$\beta_0$</th><th>$\beta_1$</th><th>$\ell(\beta_k)$</th><th>$\norm{\nabla\ell(\beta_k)}$</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>0</td><td>0</td><td>−9,7041</td><td>9,8</td></tr>
+<tr><td>1</td><td>−0,0545</td><td>0,7631</td><td>−5,4609</td><td>2,34</td></tr>
+<tr><td>2</td><td>−0,0780</td><td>1,1802</td><td>−4,8735</td><td>0,680</td></tr>
+<tr><td>3</td><td>−0,0903</td><td>1,4317</td><td>−4,7771</td><td>0,126</td></tr>
+<tr><td>4</td><td>−0,09356</td><td>1,50249</td><td>−4,77248</td><td>$6{,}8\cdot10^{-3}$</td></tr>
+<tr><td>5</td><td>−0,093747</td><td>1,506779</td><td>−4,772466</td><td>$2{,}3\cdot10^{-5}$</td></tr>
+<tr><td>6</td><td>−0,093748</td><td>1,506794</td><td>−4,772466</td><td>$2{,}6\cdot10^{-10}$</td></tr>
+</tbody></table></div>
+<p>L'EMV est $\hb\approx(-0{,}094\,;\ 1{,}507)$, avec $\ell(\hb)\approx-4{,}7725$. Remontez à la figure du §1 et réglez $\beta_0=-0{,}1$, $\beta_1=1{,}5$ : la log-vraisemblance affichée vaut $-4{,}77$, et toute autre position des curseurs donne une valeur plus petite.</p>
+
+<details class="fold more"><summary>Pour aller plus loin — et si le lien n'est pas canonique ?</summary><div class="fold-body">
+<p>La hessienne n'a plus la forme simple $-X\T WX$ : elle dépend aussi des $y_i$. On la remplace par son <strong>espérance</strong> (c'est moins l'information de Fisher), ce qui donne l'algorithme du <em>Fisher scoring</em> : même structure IRLS avec $w_i=\big(\frac{\partial\mu_i}{\partial\eta_i}\big)^2/\Var(Y_i)$ et $z_i=\eta_i+(y_i-\mu_i)\frac{\partial\eta_i}{\partial\mu_i}$. Avec le lien canonique, $\frac{\partial\mu_i}{\partial\eta_i}=\Var(Y_i)$ et on retrouve exactement les formules ci-dessus (Newton et Fisher scoring coïncident).</p></div></details>
+
+<h2 id="theorie">10. Ce que l'on sait de l'estimateur : consistance et normalité asymptotique</h2>
+<p class="tldr">Quand $n$ grandit (à $p$ fixé), $\hb$ converge vers le vrai $\beta$ et fluctue autour de lui selon une loi normale de covariance $(X\T WX)^{-1}$ ; c'est ce qui donne les intervalles de confiance des logiciels.</p>
+
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours5 · diapo 72</span></div>
+<p>On introduit $I_n(\gamma)=-\E(\nabla^2\ell_n(\gamma))=nI(\gamma)$ pour tout $\gamma$, où $I(\gamma)=-\E[\nabla^2\log f_\gamma(y_1)]$ (information de Fisher d'une observation).<br>
+<strong>Consistance et normalité asymptotique.</strong> Sous certaines conditions (Fahrmeir et Kaufmann, 1985), pour tout vrai paramètre $\beta$ : $\hb\xrightarrow{\P}\beta$, et $\hb$ est asymptotiquement gaussien :
+$$\sqrt n\,(\hb-\beta)\xrightarrow{\mathcal L}\N\big(0,I(\beta)^{-1}\big).$$
+Ces résultats sont vrais pour les modèles considérés (lien canonique) quand les covariables sont bornées et si $\lambda_{\min}(X^TX)\to+\infty$.</p></div>
+
+<h3 id="lecture-theorie">Décodage</h3>
+<ul>
+<li><strong>L'information de Fisher d'un GLM canonique</strong> se calcule sans effort : la hessienne $\nabla^2\ell(\beta)=-X\T WX$ ne dépend pas des $y_i$ (seulement de $\beta$, à travers $W$), donc son espérance est elle-même :
+$$I_n(\beta)=-\E[\nabla^2\ell(\beta)]=X\T WX=\sum_{i=1}^nw_i\,x_ix_i\T.$$
+C'est une somme de $n$ termes : l'information grandit avec $n$, comme « $nI(\beta)$ ».</li>
+<li><strong>$\hb\xrightarrow{\P}\beta$</strong> (consistance) : avec beaucoup de données, $\hb$ est proche du vrai paramètre avec grande probabilité.</li>
+<li><strong>$\sqrt n(\hb-\beta)\to\N(0,I(\beta)^{-1})$</strong> : l'erreur $\hb-\beta$ est de taille $1/\sqrt n$, et à $n$ grand elle est approximativement gaussienne. En pratique on lit : $$\hb\ \approx\ \N\big(\beta,\ (X\T WX)^{-1}\big).$$ Pour le modèle linéaire gaussien ($W=I/\sigma^2$), c'est $\N(\beta,\sigma^2(X\T X)^{-1})$, la loi exacte de la séance 1.</li>
+<li><strong>Les conditions.</strong> Covariables bornées : pas de point extrême qui domine tout. $\lambda_{\min}(X\T X)\to+\infty$ : l'information grandit <strong>dans toutes les directions</strong> de $\R^p$. C'est la même idée qu'en séance 1, où la variance des moindres carrés dans la direction d'un vecteur propre de $X\T X$ valait $\sigma^2$ divisé par la valeur propre associée (notée $\mu_j$ en séance 1 — rien à voir avec les moyennes $\mu_i$ de cette page) : pour que toutes les directions soient bien estimées, il faut que la plus petite valeur propre explose. Deux variables colinéaires ⇒ une direction sans information ⇒ pas de consistance pour cette combinaison.</li>
+</ul>
+<div class="box remarque"><div class="box-h">Note sur la diapo</div>
+<p>Pour que $I_n=nI$, il faut lire ici $\ell_n$ comme la log-vraisemblance <strong>totale</strong> (et non divisée par $n$ comme à la diapo 71). De plus, les $Y_i$ n'ont pas tous la même loi (elle dépend de $x_i$) : « $I(\beta)$ » doit se comprendre comme l'information <strong>moyenne</strong> par observation, $\frac1nX\T WX$ (ou sa limite). Retenez la version pratique : $\hb\approx\N(\beta,(X\T WX)^{-1})$.</p></div>
+
+<div class="box idee"><div class="box-h">Idée de la preuve de la normalité asymptotique</div>
+<ol>
+<li>En $\hb$ le gradient est nul. Développement de Taylor du gradient autour du vrai $\beta$ : $0=\nabla\ell(\hb)\approx\nabla\ell(\beta)+\nabla^2\ell(\beta)(\hb-\beta)=\nabla\ell(\beta)-X\T WX(\hb-\beta)$.</li>
+<li>Donc $\hb-\beta\approx(X\T WX)^{-1}\nabla\ell(\beta)$.</li>
+<li>$\nabla\ell(\beta)=X\T(y-\mu)=\sum_i(y_i-\mu_i)x_i$ est une somme de $n$ vecteurs indépendants, centrés ($\E y_i=\mu_i$), de covariance totale $\sum_i\Var(Y_i)x_ix_i\T=X\T WX$. Par le théorème central limite, $\nabla\ell(\beta)\approx\N(0,X\T WX)$.</li>
+<li>Une transformation linéaire d'une gaussienne est gaussienne : $$\begin{aligned}\hb-\beta&\approx\N\big(0,(X\T WX)^{-1}X\T WX(X\T WX)^{-1}\big)\\&=\N\big(0,(X\T WX)^{-1}\big).\end{aligned}$$</li>
+</ol>
+<p>Le travail rigoureux (Fahrmeir–Kaufmann) consiste à contrôler le reste de Taylor : c'est là que servent les conditions.</p></div>
+
+<h3 id="wald">Application : intervalle de confiance de Wald</h3>
+<div class="box methode"><div class="box-h">Méthode</div>
+<ol>
+<li>Calculer $\hb$ (IRLS) et la matrice $\hat W$ en $\hb$ (on ne connaît pas le vrai $\beta$ : on le remplace par $\hb$).</li>
+<li>Écart-type estimé de $\hb_j$ : $\widehat{\mathrm{se}}_j=\sqrt{\big[(X\T\hat WX)^{-1}\big]_{jj}}$.</li>
+<li>Intervalle de confiance à 95 % : $\hb_j\pm1{,}96\,\widehat{\mathrm{se}}_j$. Test de $\beta_j=0$ : rejeter au niveau 5 % si $\abs{\hb_j}/\widehat{\mathrm{se}}_j>1{,}96$.</li>
+</ol></div>
+<div class="box exemple"><div class="box-h">Exemple — les 14 points</div>
+<p>En $\hb=(-0{,}094\,;1{,}507)$, $(X\T\hat WX)^{-1}=\begin{pmatrix}0{,}665&-0{,}034\\-0{,}034&0{,}634\end{pmatrix}$, donc $\widehat{\mathrm{se}}_1=\sqrt{0{,}634}\approx0{,}796$. Intervalle pour la pente : $1{,}507\pm1{,}96\times0{,}796=[-0{,}054\,;\ 3{,}067]$. Il contient (de justesse) 0 : avec 14 observations, on ne peut pas affirmer au niveau 5 % que $x$ a un effet ($z=1{,}507/0{,}796\approx1{,}89<1{,}96$). En rapport de cotes : $e^{1{,}507}\approx4{,}5$, intervalle $[e^{-0{,}054};e^{3{,}067}]\approx[0{,}95\,;\ 21{,}5]$ — très large.</p></div>
+
+<div class="box piege"><div class="box-h">Piège — tout ceci est à $p$ fixé</div>
+<p>Le théorème suppose $p$ fixé et $n\to\infty$. Quand $p$ est du même ordre que $n$, l'EMV d'un GLM peut être fortement biaisé, ses intervalles de confiance faux, et il peut même <strong>ne pas exister</strong>. En régression logistique, dès que $X$ est de rang $n$ (ce qui arrive typiquement si $p\ge n$), on peut trouver $\beta$ avec $x_i\T\beta>0$ exactement quand $y_i=1$ : les données sont parfaitement séparées et la log-vraisemblance n'a pas de maximum (exercice 8). C'est la raison d'être du paragraphe suivant.</p></div>
+
+<h2 id="lasso-glm">11. Le Lasso d'un modèle linéaire généralisé</h2>
+<p class="tldr">On remplace « moindres carrés » par « moins la log-vraisemblance » : $\hb\in\argmin\{-\frac1n\ell(\beta)+\lambda\norm\beta_1\}$. Tout ce qu'on sait du Lasso se transpose, avec le résidu $y-X\beta$ remplacé par $y-\mu(\beta)$.</p>
+<p class="small muted">Ce paragraphe est hors diapos : il est annoncé par le titre de la partie 5 (« Generalized Linear Model and the Lasso ») et par la conclusion du cours (Cours6, diapo 89), qui dit que les estimateurs de type Lasso « s'appliquent aux modèles linéaires généralisés ».</p>
+
+<h3 id="lasso-glm-def">Définition</h3>
+<p>Dans le modèle linéaire gaussien de variance 1, $-\ell(\beta)=\frac12\norm{y-X\beta}^2+\text{cte}$ : les moindres carrés <strong>sont</strong> « moins la log-vraisemblance ». La généralisation naturelle du Lasso est donc
+$$\hb^{L}(\lambda)\in\argmin_{\beta\in\R^p}\Big\{-\frac1n\,\ell(\beta)+\lambda\norm\beta_1\Big\}.$$
+Pour la régression logistique, $\ell_i=y_i\theta_i-\log(1+e^{\theta_i})$ avec $\theta_i=x_i\T\beta$, donc
+$$-\frac1n\ell(\beta)=\frac1n\sum_{i=1}^n\Big[\log\big(1+e^{x_i\T\beta}\big)-y_i\,x_i\T\beta\Big].$$
+En pratique on ne pénalise pas la constante $\beta_0$ (elle fixe juste le niveau moyen).</p>
+<ul>
+<li><strong>Convexe</strong> : $-\ell$ est convexe (sa hessienne $X\T WX$ est semi-définie positive, §9) et la norme $\ell_1$ aussi ; le problème est convexe, comme le Lasso linéaire.</li>
+<li><strong>Existe toujours</strong> pour $\lambda>0$, même en cas de séparation : la pénalité empêche $\norm\beta_1$ de partir à l'infini. (Si la constante n'est pas pénalisée, il faut en plus $0<\bar y<1$, sinon $\beta_0$ part à l'infini comme dans l'exercice 5.)</li>
+</ul>
+
+<h3 id="lasso-glm-kkt">Conditions d'optimalité</h3>
+<ol class="steps">
+<li>$$0\in-\frac1nX\T\big(y-\mu(\hb)\big)+\lambda\,\partial\norm{\hb}_1$$<span class="why">condition d'optimalité d'un problème convexe (« 0 est un sous-gradient », séances 2 et 4) ; le gradient de $-\frac1n\ell$ est $-\frac1nX\T(y-\mu)$ (§8).</span></li>
+<li>$$\begin{cases}\frac1nX_j\T(y-\hat\mu)=\lambda\,\sgn(\hb_j)&\text{si }\hb_j\neq0,\\[4pt]\Big|\frac1nX_j\T(y-\hat\mu)\Big|\le\lambda&\text{si }\hb_j=0.\end{cases}$$<span class="why">sous-différentiel de $\abs{\cdot}$ coordonnée par coordonnée : $\{\sgn(\beta_j)\}$ si $\beta_j\neq0$, $[-1,1]$ sinon.</span></li>
+</ol>
+<p>C'est exactement la forme des conditions KKT de la séance 2, avec deux différences : le résidu est $y-\hat\mu$ au lieu de $Y-X\hb$, et le critère étant ici normalisé par $\frac1n$ sans facteur $2$, le seuil est $\lambda$ (et non $\lambda/2$). Lecture identique : les variables actives sont celles dont la corrélation avec le résidu atteint le seuil.</p>
+
+<h3 id="lasso-glm-algo">Comment on le calcule</h3>
+<p>On combine les deux algorithmes : à chaque itération IRLS, on remplace $-\frac1n\ell$ par son approximation quadratique, qui est un problème de moindres carrés pondérés (§9), et on y ajoute la pénalité :
+$$\beta_{k+1}=\argmin_\beta\Big\{\frac1{2n}\sum_{i=1}^nw_i\,(z_i-x_i\T\beta)^2+\lambda\norm\beta_1\Big\},$$
+un Lasso pondéré, résolu par exemple par descente par coordonnées. C'est ainsi que fonctionne <code>glmnet</code> (<code>family = "binomial"</code> pour la logistique, <code>"poisson"</code> pour Poisson). $\lambda$ se choisit par validation croisée.</p>
+<details class="fold proof"><summary>Le calcul : Taylor de $-\ell$ = moindres carrés pondérés</summary><div class="fold-body">
+<p>Posons $h=\beta-\beta_k$ et $r=y-\mu$ (en $\beta_k$). Taylor : $-\ell(\beta)\approx-\ell(\beta_k)-r\T Xh+\frac12h\T X\T WXh$. D'autre part $z-X\beta=X\beta_k+W^{-1}r-X\beta=W^{-1}r-Xh$, donc
+$$\begin{aligned}\tfrac12(z-X\beta)\T W(z-X\beta)={}&\tfrac12r\T W^{-1}r-r\T Xh\\&+\tfrac12h\T X\T WXh.\end{aligned}$$
+Les deux expressions ne diffèrent que par des termes indépendants de $\beta$. □</p></div></details>
+
+<p><strong>Et la théorie ?</strong> Des inégalités du même type que celles des séances 3 et 4 existent pour le Lasso logistique (vitesse $s\log p/n$ sous une condition de valeurs propres restreintes portant sur $X\T WX$, avec $\lambda$ de l'ordre de $\sqrt{\log p/n}$), mais leurs preuves sont plus techniques car la hessienne dépend de $\beta$. Elles ne sont pas au programme des diapositives.</p>
+
+<h2 id="resume">Résumé de la séance</h2>
+<div class="box resume">
+<ol>
+<li><strong>Pourquoi</strong> : pour $Y$ binaire ou de comptage, la régression linéaire prédit des valeurs impossibles et suppose une variance constante. Un GLM garde $\eta_i=x_i\T\beta$ et change la loi et le lien.</li>
+<li><strong>Famille exponentielle</strong> : $\log f_\theta(y)=\theta\,T(y)-A(\theta)+B(y)$ ; $\theta$ et $y$ n'interagissent que par un produit. Gaussienne ($A=\theta^2/2$), Bernoulli ($A=\log(1+e^\theta)$, $\theta=\operatorname{logit}p$), Poisson ($A=e^\theta$, $\theta=\log\lambda$).</li>
+<li><strong>Moments</strong> : $\E T(Y)=A'(\theta)$, $\Var T(Y)=A''(\theta)$ (score d'espérance nulle + identité de l'information). Donc $A$ convexe, $A'$ inversible, variance = fonction de la moyenne.</li>
+<li><strong>GLM</strong> = loi de la famille + prédicteur linéaire + lien $g(\mu_i)=x_i\T\beta$ ($g$ monotone, dérivable, envoie les moyennes possibles sur $\R$).</li>
+<li><strong>Lien canonique</strong> : $\theta_i=x_i\T\beta$, i.e. $g=(A')^{-1}$ : identité, logit, log.</li>
+<li><strong>Équations de vraisemblance</strong> (règle de la chaîne $\beta\to\eta\to\mu\to\theta\to\ell$) : $\sum_i\frac{(y_i-\mu_i)x_{ij}}{\Var(Y_i)}\frac{\partial\mu_i}{\partial\eta_i}=0$ ; avec le lien canonique, $X\T(y-\mu)=0$ (résidus orthogonaux aux colonnes).</li>
+<li><strong>IRLS</strong> : hessienne $-X\T WX$ ($W=\diag\Var(Y_i)$) ⇒ log-vraisemblance concave ; un pas de Newton = moindres carrés pondérés de $z=X\beta_k+W^{-1}(y-\mu)$ sur $X$ ; convergence quadratique.</li>
+<li><strong>Théorie</strong> (à $p$ fixé) : $\hb\to\beta$ et $\hb\approx\N(\beta,(X\T WX)^{-1})$ ⇒ intervalles de Wald $\hb_j\pm1{,}96\,\widehat{\mathrm{se}}_j$. Faux quand $p$ est comparable à $n$ (l'EMV peut ne pas exister).</li>
+<li><strong>Lasso d'un GLM</strong> : $\argmin\{-\frac1n\ell(\beta)+\lambda\norm\beta_1\}$ ; KKT avec le résidu $y-\hat\mu$ ; calcul par IRLS + Lasso pondéré.</li>
+</ol></div>
+
+<h2 id="reflexes">Les réflexes à acquérir</h2>
+<div class="box reflexe"><div class="box-h">Réflexes de la séance 5</div>
+<ul>
+<li><strong>Quand vous voyez une loi</strong> → prenez son log et rangez les termes en trois tas (mixte / paramètre seul / $y$ seul) : vous lisez $T$, $\theta$, $A$, $B$.</li>
+<li><strong>Pour une moyenne ou une variance</strong> d'une loi de la famille exponentielle → dérivez $A$ (une fois, deux fois), pas d'intégrale.</li>
+<li><strong>Pour le lien canonique</strong> → exprimez le paramètre naturel en fonction de la moyenne.</li>
+<li><strong>Pour dériver une log-vraisemblance de GLM</strong> → suivez la chaîne $\beta\to\eta_i\to\mu_i\to\theta_i\to\ell_i$ ; chaque maillon est une dérivée en une variable (et $\frac{\dd\theta}{\dd\mu}=1/\frac{\dd\mu}{\dd\theta}$).</li>
+<li><strong>Lien canonique</strong> → gradient $X\T(y-\mu)$, hessienne $-X\T WX$ : écrivez-les directement.</li>
+<li><strong>« Newton sur un GLM »</strong> → pensez « moindres carrés pondérés de la réponse de travail $z$ », poids $=$ variances.</li>
+<li><strong>Incertitude sur $\hb$</strong> → $(X\T\hat WX)^{-1}$ et intervalle de Wald.</li>
+<li><strong>Coefficients qui explosent, IRLS qui ne converge pas</strong> → pensez séparation parfaite (et à $p\ge n$) ; remède : pénaliser.</li>
+<li><strong>Lasso d'un GLM</strong> → reprenez les KKT de la séance 2 en remplaçant $Y-X\hb$ par $y-\hat\mu$.</li>
+</ul></div>
+
+<h2 id="exercices">Exercices</h2>
+
+<div class="exo"><div class="exo-h">Exercice 1 — La loi exponentielle <span class="lvl">★☆☆</span></div>
+<p>Soit $Y$ de densité $f_\lambda(y)=\lambda e^{-\lambda y}$ sur $]0,+\infty[$, $\lambda>0$.</p>
+<ol class="enonce-q"><li>Mettez-la sous la forme $\exp(\theta y-A(\theta)+B(y))$. Quel est le paramètre naturel, et dans quel ensemble vit-il ?</li>
+<li>Retrouvez $\E Y=1/\lambda$ et $\Var Y=1/\lambda^2$ en dérivant $A$.</li>
+<li>Quel est le lien canonique ? Respecte-t-il la condition « prendre toutes les valeurs » du §3 ?</li></ol>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>$\log f_\lambda(y)=-\lambda y+\log\lambda$. Exprimez $\log\lambda$ en fonction de $\theta=-\lambda$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>1. $\log f_\lambda(y)=(-\lambda)\,y-(-\log\lambda)$ : $T(y)=y$, $\theta=-\lambda\in\,]-\infty,0[$, $A(\theta)=-\log\lambda=-\log(-\theta)$, $B=0$.</p>
+<p>2. $\frac{\dd}{\dd\theta}\log(-\theta)=\frac{-1}{-\theta}=\frac1\theta$, donc $A'(\theta)=-\frac1\theta=\frac1\lambda$ ✓ et $A''(\theta)=\frac1{\theta^2}=\frac1{\lambda^2}$ ✓.</p>
+<p>3. $\mu=-1/\theta$ donc $\theta=-1/\mu$ : $g(\mu)=-1/\mu$ (« inverse négatif »). Il envoie $\mu\in\,]0,\infty[$ sur $]-\infty,0[$, pas sur tout $\R$ : avec ce lien, il faudrait $x_i\T\beta<0$ pour tout $i$, une contrainte gênante. C'est pourquoi, pour des réponses positives continues, on utilise souvent le lien $\log$ (non canonique) à la place.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 2 — Régression de Poisson <span class="lvl">★☆☆</span></div>
+<p>$Y_i\sim\mathcal P(\mu_i)$ indépendantes, lien canonique $\log\mu_i=x_i\T\beta$.</p>
+<ol class="enonce-q"><li>Écrivez $\ell(\beta)$.</li><li>Calculez son gradient et sa hessienne.</li><li>Écrivez les poids $w_i$ et la réponse de travail $z_i$ de l'IRLS.</li></ol>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>$\log f(y_i)=y_i\theta_i-e^{\theta_i}-\log y_i!$ avec $\theta_i=x_i\T\beta$ ; $A=\exp$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>1. $\ell(\beta)=\sum_i\big[y_i\,x_i\T\beta-e^{x_i\T\beta}-\log(y_i!)\big]$.</p>
+<p>2. $\nabla\ell=\sum_i\big(y_i-e^{x_i\T\beta}\big)x_i=X\T(y-\mu)$ ; $\nabla^2\ell=-\sum_ie^{x_i\T\beta}x_ix_i\T=-X\T WX$ avec $W=\diag(\mu_i)$.</p>
+<p>3. $w_i=A''(\theta_i)=\mu_i$ (la variance d'une Poisson) ; $z_i=x_i\T\beta+\frac{y_i-\mu_i}{\mu_i}$.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 3 — Les moments dans la forme avec dispersion <span class="lvl">★★☆</span></div>
+<p>On suppose $f_\theta(y)=\exp\big(\frac{y\theta-b(\theta)}{a(\phi)}+c(y,\phi)\big)$ (Cours6). Montrez que $\E Y=b'(\theta)$ et $\Var Y=a(\phi)\,b''(\theta)$. Vérifiez sur $\N(\mu,\sigma^2)$.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Reprenez la preuve « par le score » du §6 avec $\frac{\partial\ell}{\partial\theta}=\frac{y-b'(\theta)}{a(\phi)}$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>$\ell=\frac{y\theta-b(\theta)}{a(\phi)}+c(y,\phi)$, donc $\frac{\partial\ell}{\partial\theta}=\frac{y-b'(\theta)}{a(\phi)}$ et $\frac{\partial^2\ell}{\partial\theta^2}=-\frac{b''(\theta)}{a(\phi)}$.</p>
+<p>Score d'espérance nulle : $\E[Y-b'(\theta)]=0$, soit $\E Y=b'(\theta)$.</p>
+<p>Identité de l'information : $\frac{b''(\theta)}{a(\phi)}=\E\Big[\frac{(Y-b'(\theta))^2}{a(\phi)^2}\Big]=\frac{\Var Y}{a(\phi)^2}$, donc $\Var Y=a(\phi)b''(\theta)$.</p>
+<p>Gaussienne : $b(\theta)=\theta^2/2$, $a(\phi)=\sigma^2$ : $\E Y=\theta=\mu$ et $\Var Y=\sigma^2\cdot1=\sigma^2$ ✓.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 4 — Les équations de la régression logistique, sans la théorie générale <span class="lvl">★★☆</span></div>
+<p>Avec $\mu_i=\sigma(x_i\T\beta)$, $\ell(\beta)=\sum_i\big[y_i\log\mu_i+(1-y_i)\log(1-\mu_i)\big]$. Montrez directement que $\nabla\ell(\beta)=X\T(y-\mu)$ et $\nabla^2\ell(\beta)=-X\T WX$ avec $w_i=\mu_i(1-\mu_i)$.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>$\sigma'=\sigma(1-\sigma)$ donne $\frac{\partial\log\mu_i}{\partial\beta_j}=(1-\mu_i)x_{ij}$ et $\frac{\partial\log(1-\mu_i)}{\partial\beta_j}=-\mu_ix_{ij}$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>$\frac{\partial\mu_i}{\partial\beta_j}=\sigma'(x_i\T\beta)x_{ij}=\mu_i(1-\mu_i)x_{ij}$. Donc $\frac{\partial\log\mu_i}{\partial\beta_j}=\frac{\mu_i(1-\mu_i)x_{ij}}{\mu_i}=(1-\mu_i)x_{ij}$ et $\frac{\partial\log(1-\mu_i)}{\partial\beta_j}=\frac{-\mu_i(1-\mu_i)x_{ij}}{1-\mu_i}=-\mu_ix_{ij}$.</p>
+<p>$\frac{\partial\ell}{\partial\beta_j}=\sum_i\big[y_i(1-\mu_i)-(1-y_i)\mu_i\big]x_{ij}=\sum_i(y_i-\mu_i)x_{ij}$ (les termes $y_i\mu_i$ se compensent). D'où $\nabla\ell=X\T(y-\mu)$.</p>
+<p>En redérivant : $\frac{\partial^2\ell}{\partial\beta_k\partial\beta_j}=-\sum_ix_{ij}\frac{\partial\mu_i}{\partial\beta_k}=-\sum_ix_{ij}\mu_i(1-\mu_i)x_{ik}$, c'est-à-dire $-X\T WX$.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 5 — La constante seule <span class="lvl">★★☆</span></div>
+<p>Régression logistique avec la constante seule : $\P(Y_i=1)=\sigma(\beta)$ pour tout $i$.</p>
+<ol class="enonce-q"><li>Montrez que l'EMV est $\hb=\operatorname{logit}(\bar y)$ (si $0<\bar y<1$).</li>
+<li>Calculez le premier pas de Newton depuis $\beta_0=0$. Comparez à $\hb$ pour $\bar y=0{,}6$ puis $\bar y=0{,}9$.</li>
+<li>Que se passe-t-il si $\bar y=1$ ?</li></ol>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>$X$ est une colonne de 1 : $X\T(y-\mu)=\sum_i(y_i-\sigma(\beta))$ et $X\T WX=n\,\sigma(\beta)(1-\sigma(\beta))$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>1. Équation : $\sum_i(y_i-\sigma(\beta))=0\iff\sigma(\beta)=\bar y\iff\beta=\log\frac{\bar y}{1-\bar y}$. La log-vraisemblance est concave, c'est donc le maximum.</p>
+<p>2. En $\beta_0=0$ : gradient $n(\bar y-\frac12)$, information $n/4$, donc $\beta_1=4(\bar y-\frac12)$. Pour $\bar y=0{,}6$ : $\beta_1=0{,}4$ contre $\hb=\log1{,}5\approx0{,}405$ — déjà très proche. Pour $\bar y=0{,}9$ : $\beta_1=1{,}6$ contre $\hb=\log9\approx2{,}197$ — il faudra quelques itérations de plus (on part plus loin de la solution).</p>
+<p>3. Si $\bar y=1$, l'équation $\sigma(\beta)=1$ n'a pas de solution : $\ell(\beta)=n\log\sigma(\beta)$ croît vers 0 sans l'atteindre, l'EMV n'existe pas (cas extrême de séparation, voir exercice 8).</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 6 — Un pas de Newton à la main, de deux façons <span class="lvl">★☆☆</span></div>
+<p>Données $x=(1,2,3)$, $y=(0,1,1)$, modèle $\P(Y_i=1)=\sigma(\beta x_i)$. Faites le premier pas de Newton depuis $\beta_0=0$, de deux façons : par la formule $\beta_0+(X\T WX)^{-1}X\T(y-\mu)$, puis par la régression pondérée de la réponse de travail $z$.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>En $\beta=0$ : $\mu_i=\frac12$, $w_i=\frac14$, $z_i=\pm2$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>Gradient : $\sum_i(y_i-\frac12)x_i=-\frac12+1+\frac32=2$. Information : $\frac14(1+4+9)=3{,}5$. Donc $\beta_1=2/3{,}5=4/7\approx0{,}571$.</p>
+<p>Réponse de travail : $z=(-2,2,2)$ ; régression pondérée sans constante : $\beta_1=\frac{\sum w_ix_iz_i}{\sum w_ix_i^2}=\frac{\frac14(-2+4+6)}{\frac14\cdot14}=\frac{8}{14}=\frac47$ ✓.</p>
+<p>Les itérations suivantes (calculées) donnent $0{,}7135$, $0{,}7322$, $0{,}73249$, puis plus rien ne bouge : $\hb\approx0{,}7325$.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 7 — Concavité et unicité <span class="lvl">★★☆</span></div>
+<p>Montrez que la log-vraisemblance logistique est concave, et strictement concave si $X$ est de rang $p$. En déduire qu'elle a au plus un maximiseur.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Calculez $v\T\nabla^2\ell\,v$ et utilisez $w_i=\mu_i(1-\mu_i)>0$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>$v\T\nabla^2\ell(\beta)\,v=-\sum_iw_i(x_i\T v)^2\le0$ : concave. Si $v\neq0$ et $X$ est de rang $p$, alors $Xv\neq0$, donc au moins un $x_i\T v\neq0$ ; comme tous les $w_i=\mu_i(1-\mu_i)$ sont strictement positifs ($0<\mu_i<1$), la somme est $<0$ : strictement concave. Une fonction strictement concave a au plus un maximiseur (si $\beta\neq\beta'$ étaient deux maximiseurs, le milieu ferait strictement mieux). Attention : « au plus un », pas « exactement un » (exercice 8).</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 8 — Séparation parfaite : l'EMV n'existe pas <span class="lvl">★★★</span></div>
+<ol class="enonce-q"><li>Données $x=(-2,-1,1,2)$, $y=(0,0,1,1)$, modèle $\sigma(\beta x_i)$. Montrez que $\ell(\beta)=2\log\sigma(\beta)+2\log\sigma(2\beta)$, et qu'elle n'a pas de maximum. Que fait l'IRLS ?</li>
+<li>Cas général : s'il existe $b$ tel que $x_i\T b>0$ quand $y_i=1$ et $x_i\T b<0$ quand $y_i=0$, montrez que l'EMV n'existe pas.</li>
+<li>Montrez que si $X$ est de rang $n$ (ce qui arrive typiquement quand $p\ge n$), un tel $b$ existe toujours.</li>
+<li>Pourquoi le Lasso logistique ($\lambda>0$) a-t-il, lui, toujours une solution ?</li></ol>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Regardez $\ell(tb)$ quand $t\to+\infty$, et remarquez que $\ell(\beta)<0$ pour tout $\beta$ (somme de logs de nombres de $]0,1[$). Pour 3 : l'image de $X$ est $\R^n$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>1. Pour $y_i=0$ le terme est $\log(1-\sigma(\beta x_i))=\log\sigma(-\beta x_i)$ (car $1-\sigma(t)=\sigma(-t)$) : en $x=-2$ et $-1$ cela donne $\log\sigma(2\beta)$ et $\log\sigma(\beta)$. Pour $y_i=1$, en $x=1,2$ : $\log\sigma(\beta)$ et $\log\sigma(2\beta)$. D'où la formule. Elle est strictement croissante en $\beta$ (car $\sigma$ l'est), tend vers 0 quand $\beta\to+\infty$ et reste $<0$ : le supremum 0 n'est pas atteint. Le gradient $\sum(y_i-\mu_i)x_i$ est toujours $>0$. L'IRLS fait grandir $\beta$ sans fin, et les poids $\mu_i(1-\mu_i)$ tendent vers 0.</p>
+<p>2. Pour $t>0$ : $\ell(tb)=\sum_{y_i=1}\log\sigma(t\,x_i\T b)+\sum_{y_i=0}\log\sigma(-t\,x_i\T b)$. Chaque argument tend vers $+\infty$, donc chaque terme tend vers $\log1=0$ : $\sup\ell=0$. Mais $\ell(\beta)<0$ pour tout $\beta$ : le sup n'est pas atteint.</p>
+<p>3. Si $\rg X=n$, l'image de $X$ est tout $\R^n$. Prenez $t_i=+1$ si $y_i=1$ et $t_i=-1$ sinon : il existe $b$ avec $Xb=t$, donc $x_i\T b$ a le bon signe pour tout $i$.</p>
+<p>4. Le critère $-\frac1n\ell(\beta)+\lambda\norm\beta_1$ est continu et tend vers $+\infty$ quand $\norm\beta\to\infty$ (car $-\ell\ge0$ et $\lambda\norm\beta_1\to\infty$) : il atteint son minimum. La pénalité empêche les coefficients de partir à l'infini.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 9 — Lire une sortie de logiciel <span class="lvl">★★☆</span></div>
+<p>Une régression logistique donne $\hb=(\hb_0,\hb_1)=(0{,}3\,;-1{,}2)$ et $(X\T\hat WX)^{-1}=\begin{pmatrix}0{,}04&0{,}01\\0{,}01&0{,}09\end{pmatrix}$. Donnez un intervalle de confiance à 95 % pour $\beta_1$, testez $\beta_1=0$, et interprétez en rapport de cotes.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>$\widehat{\mathrm{se}}_1=\sqrt{0{,}09}$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>$\widehat{\mathrm{se}}_1=0{,}3$. Intervalle : $-1{,}2\pm1{,}96\times0{,}3=[-1{,}788\,;-0{,}612]$. Il ne contient pas 0 ; $z=-1{,}2/0{,}3=-4$, $\abs z>1{,}96$ : on rejette $\beta_1=0$ au niveau 5 %. Rapport de cotes $e^{-1{,}2}\approx0{,}30$ : chaque unité de $x$ divise la cote par environ $3{,}3$ ; intervalle $[e^{-1{,}788};e^{-0{,}612}]\approx[0{,}17\,;0{,}54]$.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 10 — Le $\lambda_{\max}$ du Lasso logistique <span class="lvl">★★★</span></div>
+<p>On considère le Lasso logistique avec une constante $\beta_0$ non pénalisée : $\min_{\beta_0,\beta}\ -\frac1n\ell(\beta_0,\beta)+\lambda\norm\beta_1$, avec $0<\bar y<1$. Montrez que la solution a tous ses coefficients $\beta_j$ nuls si et seulement si $\lambda\ge\lambda_{\max}=\frac1n\max_j\abs{X_j\T(y-\bar y\ind)}$, où $\ind$ est le vecteur de 1.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Si $\beta=0$, la condition d'optimalité en $\beta_0$ (non pénalisée : gradient nul) est celle de l'exercice 5. Écrivez ensuite les KKT des $\beta_j$ en $\beta=0$ ; le problème étant convexe, elles sont suffisantes.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>Si $\beta=0$ est optimal, la dérivée en $\beta_0$ est nulle : $\sum_i(y_i-\sigma(\beta_0))=0$, donc $\hat\mu_i=\sigma(\hb_0)=\bar y$ pour tout $i$. Les KKT des coordonnées nulles exigent alors $\abs{\frac1nX_j\T(y-\bar y\ind)}\le\lambda$ pour tout $j$, i.e. $\lambda\ge\lambda_{\max}$. Réciproquement, si $\lambda\ge\lambda_{\max}$, le point $(\operatorname{logit}\bar y,0)$ vérifie toutes les conditions d'optimalité ; le problème étant convexe, il est optimal. C'est l'analogue du $\lambda_{\max}=2\norm{X\T Y}_\infty$ de la séance 2, au facteur de normalisation près et avec $y$ centré (le centrage vient de la constante non pénalisée).</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 11 — Choisir le modèle <span class="lvl">★☆☆</span></div>
+<p>Pour chaque réponse, proposez une loi et un lien : (a) le nombre de passages aux urgences d'un hôpital par jour ; (b) le défaut de remboursement (oui/non) d'un emprunteur ; (c) la taille d'un adulte en cm ; (d) le nombre de mutations dans un gène.</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) et (d) : comptages → Poisson, lien log. (b) binaire → Bernoulli, lien logit (régression logistique). (c) réel, symétrique autour d'une moyenne → gaussienne, lien identité (régression linéaire).</p></div></details></div>
+
+<h2 id="suite">Et après ?</h2>
+<p>La séance 6 revient au modèle linéaire pour étudier les <strong>variantes du Lasso</strong> (bridge, Lasso adaptatif et relaxé, elastic net, group-Lasso, Lasso fusionné), chacune corrigeant un défaut précis du Lasso. Toutes se transposent aux GLM de la même façon qu'ici — on remplace les moindres carrés par $-\frac1n\ell(\beta)$ ; plusieurs (Lasso adaptatif par des poids de pénalité, Lasso relaxé, elastic net) sont disponibles dans <code>glmnet</code> pour les familles gaussienne, binomiale et Poisson. Le réflexe de cette séance reste valable : quand un résultat du cours parle de $Y-X\beta$, sa version GLM parle de $y-\mu(\beta)$.</p>

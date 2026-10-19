@@ -1,0 +1,808 @@
+<!--
+title: Séance 4 — Dictionnaires, outils convexes et inégalités oracle
+short: S4 · Inégalités oracle
+description: Le Lasso quand la vraie fonction n'est pas linéaire : dictionnaires, seuillage doux, sous-différentiel, relaxation convexe, et les inégalités oracle lente et rapide démontrées pas à pas.
+subtitle: Cours4, diapos 41–58, et la relaxation convexe de Cours5 (diapos 46–47). On quitte l'hypothèse « la vérité est $X\bstar$ » : le Lasso fait presque aussi bien que la meilleure combinaison parcimonieuse d'un dictionnaire, et on le démontre ligne à ligne.
+-->
+
+<div class="box objectifs"><div class="box-h">À la fin de cette séance, vous saurez</div>
+<ul class="checklist">
+<li>transformer un problème de régression non linéaire en régression linéaire grâce à un <strong>dictionnaire</strong> de fonctions ;</li>
+<li>lire une <strong>inégalité oracle</strong> : « l'estimateur fait presque aussi bien que le meilleur concurrent, plus un prix » ;</li>
+<li>calculer le <strong>seuillage doux</strong> à la main, et expliquer pourquoi la norme $\ell_1$ crée des zéros alors que Ridge n'en crée pas ;</li>
+<li>expliquer pourquoi $\ell_1$ est « la bonne version convexe » de $\ell_0$ (relaxation convexe) ;</li>
+<li>manipuler le <strong>sous-différentiel</strong> : $\partial\abs u$, $\partial\norm u_1$, la règle $0\in\partial\varphi(u^*)$, le cône normal, la monotonie ;</li>
+<li>refaire seul les preuves de l'<strong>inégalité oracle lente</strong> (aucune hypothèse sur $X$) et de l'<strong>inégalité oracle rapide</strong> (sous la condition RE).</li>
+</ul></div>
+
+<h2 id="avant">Avant de commencer</h2>
+
+<h3 id="avant-outils">Ce qu'il faut avoir sous la main</h3>
+<p>Cette séance est la plus « mathématique » du cours, mais elle n'utilise qu'une petite boîte à outils. Si l'un de ces points ne vous dit plus rien, ouvrez le rappel correspondant avant de continuer :</p>
+<ul>
+<li>les normes $\norm{\cdot}_1$, $\norm{\cdot}_2$, $\norm{\cdot}_\infty$ et l'inégalité de Hölder $\abs{a\T b}\le\norm a_1\norm b_\infty$ — <a href="00_rappels.html#vecteurs-normes">normes</a>, <a href="00_rappels.html#inegalites-normes">inégalités entre normes</a> ;</li>
+<li>la convexité (une fonction convexe est au-dessus de ses tangentes ; un minimum local est global) — <a href="00_rappels.html#convexite">convexité</a> ;</li>
+<li>le gradient de $\beta\mapsto\norm{y-X\beta}^2$, qui vaut $-2X\T(y-X\beta)$ — <a href="00_rappels.html#gradient">gradient</a> ;</li>
+<li>une combinaison linéaire de gaussiennes est gaussienne, et $\P(\abs Z>t)\le 2e^{-t^2/2}$ pour $Z\sim\N(0,1)$, plus la borne de l'union — <a href="00_rappels.html#gaussien">vecteurs gaussiens</a>, <a href="00_rappels.html#queues">queues gaussiennes</a> ;</li>
+<li>deux petites inégalités : $ab\le a^2+\frac{b^2}{4}$ et l'inégalité triangulaire — <a href="00_rappels.html#young">inégalités-outils</a>.</li>
+</ul>
+
+<h3 id="avant-s1-s3">Ce que les séances 1 à 3 ont établi (en clair)</h3>
+<p>Vous n'avez pas besoin d'avoir tout retenu ; voici les quatre faits qui servent ici.</p>
+<ol>
+<li><strong>Le Lasso</strong> (séance 1) estime les coefficients d'une régression en minimisant « erreur d'ajustement + $\lambda\times$ somme des valeurs absolues des coefficients ». Plus $\lambda$ est grand, plus il y a de coefficients exactement nuls.</li>
+<li><strong>En design orthogonal</strong> (séance 2), le Lasso se calcule coordonnée par coordonnée : chaque coefficient des moindres carrés est rapproché de 0 d'une quantité fixe, et mis à 0 s'il est trop petit. C'est le <em>seuillage doux</em>, que nous allons redémontrer proprement.</li>
+<li><strong>Les conditions KKT</strong> (séance 2) caractérisent la solution : pour une variable active, la corrélation avec le résidu vaut exactement $\pm\lambda/2$ ; pour une variable inactive, elle vaut au plus $\lambda/2$ en valeur absolue. Nous allons voir d'où elles viennent : du <em>sous-différentiel</em>.</li>
+<li><strong>Le théorème de Bickel–Ritov–Tsybakov</strong> (séance 3) : si la vérité est $Y=X\bstar+\eps$ avec $\bstar$ parcimonieux, le Lasso a une erreur de prédiction de l'ordre de $\sigma^2 s\log p/n$. Sa preuve avait quatre temps, qui vont revenir tels quels :
+<ol type="a">
+<li>l'<strong>inégalité de base</strong> : $\hb$ minimise le critère, donc son critère est plus petit que celui de $\bstar$ ;</li>
+<li>le <strong>terme croisé</strong> $\eps\T X\delta$ (bruit × erreur) contrôlé par Hölder sur un événement de grande probabilité ;</li>
+<li>le <strong>découpage selon le support</strong>, qui donne un <em>cône</em> ;</li>
+<li>la <strong>condition RE</strong> sur ce cône, puis la résolution d'une inégalité du type $u^2\le cu$.</li>
+</ol></li>
+</ol>
+
+<h3 id="avant-fil">Le fil de cette séance</h3>
+<p>Jusqu'ici, on a toujours supposé que la vérité était <em>exactement</em> linéaire : $Y=X\bstar+\eps$. C'est rarement le cas. Cette séance pose la question honnête :</p>
+<p class="lead">Si la vraie fonction $f$ est quelconque, que garantit le Lasso ?</p>
+<p>La réponse tient en une phrase, qu'on va démontrer deux fois : <strong>le Lasso fait presque aussi bien que la meilleure approximation parcimonieuse de $f$ qu'on aurait choisie en connaissant $f$</strong>. C'est une <em>inégalité oracle</em>. Pour la démontrer finement, il faut des outils d'optimisation convexe pour les fonctions non dérivables (la valeur absolue !) : c'est le sous-différentiel, qui explique au passage le seuillage doux et les KKT.</p>
+<ol class="chain">
+<li>Dictionnaires : une fonction non linéaire devient une régression linéaire à $M$ variables (diapos 41–43).</li>
+<li>Inégalités oracle : ce qu'on veut démontrer (diapos 44–45).</li>
+<li>Seuillage doux et rétrécissement : pourquoi $\ell_1$ fait des zéros (diapos 46–48).</li>
+<li>Relaxation convexe : pourquoi $\ell_1$ plutôt qu'autre chose (Cours5, diapos 46–47).</li>
+<li>Outils convexes : sous-différentiel, cône normal, monotonie (diapos 49–53).</li>
+<li>Inégalité oracle lente : sans hypothèse sur $X$ (diapos 54–55).</li>
+<li>Inégalité oracle rapide : sous la condition RE (diapos 56–58).</li>
+</ol>
+
+<div class="box methode"><div class="box-h">Conventions de cette page</div>
+<ul>
+<li>Le dictionnaire a $M$ fonctions (le $M$ joue le rôle du $p$ des séances précédentes) ; $n$ est le nombre d'observations.</li>
+<li>Le critère du Lasso est <strong>normalisé</strong> : $F(\beta)=\frac1n\norm{y-X\beta}^2+\lambda\norm\beta_1$ (diapos 45 et 54). Avec cette convention, les conditions KKT s'écrivent $\frac2nX_j\T(y-X\hb)=\lambda\sgn(\hb_j)$ ; avec le critère non normalisé de la séance 2, c'était $2X_j\T(y-X\hb)=\lambda\sgn(\hb_j)$. Même idée, facteur $n$ près.</li>
+<li>Pour le seuillage doux (diapo 46), la convention est $\frac12(a-b)^2+\lambda\abs a$, ce qui donne un seuil $\lambda$ (et non $\lambda/2$ comme en séance 2, où le critère était $(a-b)^2+\lambda\abs a$).</li>
+<li>Vecteurs de $\R^n$ : $f=(f(Z_1),\dots,f(Z_n))\T$ (la vraie fonction aux points observés), $f_\beta=X\beta$, $\eps=(\eps_1,\dots,\eps_n)\T$.</li>
+</ul></div>
+
+<h2 id="dictionnaires">1. Régression non linéaire et dictionnaires</h2>
+
+<h3 id="modele-non-lineaire">Le modèle <span class="ref">Cours4 · diapo 41</span></h3>
+<p class="tldr">On observe $Y_i=f(Z_i)+\eps_i$ et on veut retrouver la fonction $f$, qui n'a aucune raison d'être linéaire.</p>
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours4 · diapo 41</span></div>
+$$Y_i=f(Z_i)+\eps_i,\qquad i=1,\dots,n,$$
+<p>avec $Z_i\in\R^p$ des covariables déterministes, $\eps_1,\dots,\eps_n$ i.i.d. $\N(0,\sigma^2)$, et $f:\R^p\to\R$ la fonction de régression à estimer.</p>
+</div>
+<p>Décodons :</p>
+<ul>
+<li>$Z_i$ : ce qu'on mesure sur l'individu $i$ (une ou plusieurs variables). On le traite comme fixé, exactement comme $X$ dans les séances précédentes.</li>
+<li>$f(Z_i)$ : la « vraie » valeur moyenne de la réponse pour cet individu. $f$ est <strong>inconnue</strong> et peut être n'importe quoi : une sinusoïde, une fonction en escalier, une courbe dose-réponse…</li>
+<li>$\eps_i$ : le bruit de mesure, gaussien, centré, de variance $\sigma^2$.</li>
+</ul>
+<div class="box exemple"><div class="box-h">Exemple</div>
+<p>$Z_i\in[0,1]$ est l'heure de la journée (ramenée à $[0,1]$) et $Y_i$ la consommation électrique mesurée. La vraie courbe $f$ a deux bosses (matin et soir) : aucune droite $a+bZ$ ne la décrit. Le modèle linéaire $Y=X\bstar+\eps$ des séances 1–3 est donc faux ici, et on veut quand même une méthode qui marche.</p>
+</div>
+
+<h3 id="dictionnaire">Un dictionnaire : approcher $f$ par des fonctions connues <span class="ref">Cours4 · diapo 42</span></h3>
+<p class="tldr">On se donne beaucoup de fonctions « briques » $f_1,\dots,f_M$ et on cherche $f$ sous la forme $\sum_j\beta_jf_j$ en n'utilisant que quelques briques.</p>
+<p>L'idée est la même que pour décomposer un son en notes : on choisit à l'avance une grande famille de fonctions simples, le <em class="new">dictionnaire</em> $\cF=\{f_1,\dots,f_M\}$, et on approche $f$ par une combinaison linéaire</p>
+$$f_\beta(z)=\sum_{j=1}^M\beta_jf_j(z),\qquad\beta\in\R^M.$$
+<p>Exemples de dictionnaires usuels (pour $z\in[0,1]$) :</p>
+<div class="table-wrap"><table>
+<tr><th>Dictionnaire</th><th>Briques $f_j$</th><th>Bon pour</th></tr>
+<tr><td>Polynômes</td><td>$1,z,z^2,\dots,z^{M-1}$</td><td>fonctions lisses</td></tr>
+<tr><td>Fourier</td><td>$1,\cos(2\pi kz),\sin(2\pi kz)$</td><td>phénomènes périodiques</td></tr>
+<tr><td>Marches</td><td>$\ind\{z\ge t_j\}$ pour une grille de seuils $t_j$</td><td>fonctions constantes par morceaux, ruptures</td></tr>
+<tr><td>Ondelettes</td><td>petites oscillations localisées à différentes échelles</td><td>fonctions avec des zones lisses et des pics</td></tr>
+<tr><td>Union de plusieurs</td><td>tout ce qui précède à la fois</td><td>quand on ne sait pas ce qui convient : $M$ devient énorme</td></tr>
+</table></div>
+<p>La diapo fixe deux exigences pour un bon $\beta$ :</p>
+<ol>
+<li>l'<strong>erreur empirique</strong> $\frac1n\sum_{i=1}^n\big(f_\beta(Z_i)-f(Z_i)\big)^2$ est petite : $f_\beta$ colle à $f$ aux points observés ;</li>
+<li>la <strong>parcimonie</strong> $\norm\beta_0=\abs{J(\beta)}=\#\{j:\beta_j\neq0\}$ est petite devant $M$ : on utilise peu de briques.</li>
+</ol>
+<p>Si les deux sont vraies, on a trouvé une <strong>représentation parcimonieuse</strong> de $f$ dans le dictionnaire : c'est l'« estimation parcimonieuse » (<em>sparse estimation</em>) de la diapo.</p>
+<div class="box intu"><div class="box-h">Intuition — pourquoi un dictionnaire énorme n'est pas un problème</div>
+<p>On a intérêt à prendre $M$ très grand (plusieurs familles, beaucoup de fréquences, beaucoup de seuils) : plus le dictionnaire est riche, plus il a de chances de contenir quelques briques qui décrivent bien $f$. Le risque, c'est le surapprentissage — avec $M\ge n$ briques on peut interpoler n'importe quel bruit. C'est exactement la situation « grande dimension » des séances précédentes, et la parade est la même : la parcimonie, via le Lasso.</p>
+</div>
+
+<h3 id="matrice-dictionnaire">Tout redevient un modèle linéaire <span class="ref">Cours4 · diapo 43</span></h3>
+<p class="tldr">En évaluant chaque brique aux points $Z_i$, on fabrique une matrice $X$ de taille $n\times M$ et on retombe sur « $y\approx X\beta$ ».</p>
+<p>Posons $X_{ij}=f_j(Z_i)$ : la ligne $i$ contient les valeurs de toutes les briques au point $Z_i$, la colonne $j$ contient les valeurs de la brique $f_j$ en tous les points. Alors</p>
+$$X=\begin{pmatrix}f_1(Z_1)&\cdots&f_M(Z_1)\\\vdots&&\vdots\\f_1(Z_n)&\cdots&f_M(Z_n)\end{pmatrix},\qquad X\beta=\begin{pmatrix}\sum_j\beta_jf_j(Z_1)\\\vdots\\\sum_j\beta_jf_j(Z_n)\end{pmatrix}=\begin{pmatrix}f_\beta(Z_1)\\\vdots\\f_\beta(Z_n)\end{pmatrix}=f_\beta.$$
+<p>Avec $y=(Y_1,\dots,Y_n)\T$, $f=(f(Z_1),\dots,f(Z_n))\T$ et $\eps=(\eps_1,\dots,\eps_n)\T$, le modèle s'écrit</p>
+$$y=f+\eps,\qquad\text{et l'on cherche }\beta\text{ tel que }f\approx X\beta=f_\beta.$$
+<p>Cas particulier rassurant (remarque de la diapo) : si $M=p$ et $f_j(z)=z_j$ (la $j$-ième coordonnée), alors $f_\beta(z)=z\T\beta$ et on retrouve exactement la régression linéaire des séances précédentes.</p>
+
+<div class="box exemple"><div class="box-h">Exemple chiffré — un dictionnaire plus grand que l'échantillon</div>
+<p>Trois observations en $Z=(0;\ 0{,}5;\ 1)$ et le dictionnaire des polynômes $1,z,z^2,z^3,z^4$ ($M=5>n=3$) :</p>
+$$X=\begin{pmatrix}1&0&0&0&0\\1&0{,}5&0{,}25&0{,}125&0{,}0625\\1&1&1&1&1\end{pmatrix}.$$
+<p>Le polynôme $z(z-\tfrac12)(z-1)=z^3-1{,}5z^2+0{,}5z$ s'annule aux trois points observés. Donc le vecteur $v=(0;\ 0{,}5;\ -1{,}5;\ 1;\ 0)$ vérifie $Xv=0$ (vérifiez la deuxième ligne : $0{,}25-0{,}375+0{,}125=0$). Conséquence : $f_\beta$ et $f_{\beta+tv}$ coïncident aux points observés pour tout $t$ ; <strong>les données ne peuvent pas les distinguer</strong>. C'est le même phénomène que « $p>n$ ⇒ noyau non trivial » de la séance 1.</p>
+</div>
+
+<div class="box remarque"><div class="box-h">Note sur la diapo 43</div>
+<p>La diapo écrit « $M\gg n$ ⇒ $X$ can be overdetermined: it is not full-rank ». Le bon mot est plutôt <em>sous-déterminé</em> : il y a plus d'inconnues ($M$) que d'équations ($n$), donc $X$ (vue comme application de $\R^M$ dans $\R^n$) a un noyau non nul et n'est pas injective. Le message — « $X$ n'est pas de rang plein en colonnes » — est le bon. La même diapo écrit aussi « Gaussian linear model: $y=X\beta+\eps$ » : c'est un raccourci ; le modèle exact est $y=f+\eps$, et l'on n'a $f=X\beta$ que si, aux points observés, $f$ coïncide avec une combinaison des briques (voir le piège ci-dessous).</p>
+</div>
+
+<div class="box piege"><div class="box-h">Piège — $f$ n'est pas forcément dans le dictionnaire</div>
+<p>Contrairement aux séances 1–3, il n'existe peut-être <strong>aucun</strong> $\beta$ tel que $X\beta=f$. Le meilleur qu'on puisse espérer est d'approcher $f$ : il y aura toujours une <em>erreur d'approximation</em> $\frac1n\norm{f_\beta-f}^2$, en plus de l'erreur due au bruit. Les résultats de cette séance gèrent explicitement ces deux erreurs.</p>
+</div>
+
+<h2 id="oracle">2. Inégalités oracle : ce qu'on veut démontrer</h2>
+
+<h3 id="oracle-def">Décoder une inégalité oracle <span class="ref">Cours4 · diapo 44</span></h3>
+<p class="tldr">Une inégalité oracle dit : l'erreur de l'estimateur est au plus celle du meilleur concurrent, plus un prix à payer pour ne pas connaître $f$.</p>
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours4 · diapo 44</span></div>
+<p>On cherche un estimateur $\hb_n$ avec $\norm{\hb_n}_0\ll M$ et</p>
+$$\frac1n\norm{f_{\hb_n}-f}^2\le\inf_{\beta\in\R^M}\Big\{\frac1n\norm{f_\beta-f}^2+\text{reste}(\beta)\Big\}\qquad\text{(inégalité oracle)}$$
+<p>avec idéalement un reste petit, qui dépend de $\beta$ et éventuellement de $n$, $\cF$, $\sigma^2$.</p>
+</div>
+<p>Lisons-la de gauche à droite.</p>
+<ul>
+<li>À gauche : $\frac1n\norm{f_{\hb_n}-f}^2=\frac1n\sum_i\big(f_{\hb_n}(Z_i)-f(Z_i)\big)^2$, l'erreur quadratique moyenne de notre estimateur aux points observés. C'est ce qu'on veut petit.</li>
+<li>À droite, pour <em>chaque</em> concurrent $\beta$ : son erreur d'approximation $\frac1n\norm{f_\beta-f}^2$ (à quel point la combinaison $f_\beta$ est loin de la vérité) plus un reste (un « prix »), qui grandit avec la complexité de $\beta$ (nombre de coefficients non nuls, ou taille de $\norm\beta_1$).</li>
+<li>Le $\inf$ : l'inégalité vaut pour tous les concurrents à la fois, donc en particulier pour le meilleur compromis.</li>
+</ul>
+<div class="box intu"><div class="box-h">Intuition — pourquoi « oracle »</div>
+<p>Imaginez un devin (l'<em>oracle</em>) qui connaît $f$. Il peut choisir le meilleur $\beta$ en mettant en balance approximation et complexité. Nous, nous ne connaissons pas $f$ ; nous n'avons que des données bruitées. L'inégalité oracle dit que notre estimateur, calculé sans connaître $f$, fait <strong>presque aussi bien que le devin</strong> — « presque » étant mesuré par le reste. La diapo appelle $f^*=f_{\bstar}$ avec $\bstar\in\argmin_\beta\norm{f_\beta-f}^2$ la meilleure combinaison : c'est un oracle parce qu'il dépend de $f$, inconnue.</p>
+</div>
+<div class="box remarque"><div class="box-h">Attention à la notation $\bstar$</div>
+<p>Ici $\bstar$ ne désigne plus « le vrai paramètre » (il n'y en a pas forcément) mais la <strong>meilleure approximation</strong> de $f$ dans le dictionnaire. Si $f=X\bstar$ exactement, les deux sens coïncident.</p>
+</div>
+
+<h3 id="oracle-lecture">Approximation contre complexité</h3>
+<p>Fixons un niveau de parcimonie $s$ et regardons le meilleur concurrent qui utilise au plus $s$ briques. Plus $s$ grandit, plus il approche bien $f$ (le premier terme diminue), mais plus le prix grandit (le reste augmente, typiquement proportionnellement à $s$). L'inégalité oracle garantit que l'estimateur atteint (à peu près) le minimum de la somme :</p>
+<figure class="fig">
+<svg viewBox="0 0 560 300" role="img" aria-label="Compromis approximation complexité">
+<line class="gr" x1="44.0" x2="544.0" y1="260.0" y2="260.0"/>
+<line class="gr" x1="44.0" x2="544.0" y1="213.1" y2="213.1"/>
+<line class="gr" x1="44.0" x2="544.0" y1="166.2" y2="166.2"/>
+<line class="gr" x1="44.0" x2="544.0" y1="119.2" y2="119.2"/>
+<line class="gr" x1="44.0" x2="544.0" y1="72.3" y2="72.3"/>
+<line class="gr" x1="44.0" x2="544.0" y1="25.4" y2="25.4"/>
+<text class="tx" x="44.0" y="276.0" text-anchor="middle">0</text>
+<text class="tx" x="169.0" y="276.0" text-anchor="middle">5</text>
+<text class="tx" x="294.0" y="276.0" text-anchor="middle">10</text>
+<text class="tx" x="419.0" y="276.0" text-anchor="middle">15</text>
+<text class="tx" x="544.0" y="276.0" text-anchor="middle">20</text>
+<line class="ax" x1="44.0" x2="544.0" y1="260.0" y2="260.0"/>
+<line class="ax" x1="44.0" x2="44.0" y1="260.0" y2="16.0"/>
+<path class="ln c1" d="M44.0 34.8L46.5 41.4L49.0 47.9L51.5 54.2L54.0 60.3L56.5 66.2L59.0 72.0L61.5 77.6L64.0 83.0L66.5 88.2L69.0 93.3L71.5 98.3L74.0 103.1L76.5 107.7L79.0 112.2L81.5 116.6L84.0 120.9L86.5 125.0L89.0 129.0L91.5 132.9L94.0 136.7L96.5 140.3L99.0 143.9L101.5 147.3L104.0 150.7L106.5 153.9L109.0 157.0L111.5 160.1L114.0 163.1L116.5 165.9L119.0 168.7L121.5 171.4L124.0 174.1L126.5 176.6L129.0 179.1L131.5 181.5L134.0 183.8L136.5 186.1L139.0 188.3L141.5 190.4L144.0 192.5L146.5 194.5L149.0 196.4L151.5 198.3L154.0 200.1L156.5 201.9L159.0 203.6L161.5 205.3L164.0 206.9L166.5 208.5L169.0 210.0L171.5 211.5L174.0 212.9L176.5 214.3L179.0 215.7L181.5 217.0L184.0 218.3L186.5 219.5L189.0 220.7L191.5 221.9L194.0 223.0L196.5 224.1L199.0 225.2L201.5 226.2L204.0 227.2L206.5 228.2L209.0 229.1L211.5 230.0L214.0 230.9L216.5 231.8L219.0 232.6L221.5 233.4L224.0 234.2L226.5 235.0L229.0 235.7L231.5 236.5L234.0 237.2L236.5 237.8L239.0 238.5L241.5 239.1L244.0 239.7L246.5 240.3L249.0 240.9L251.5 241.5L254.0 242.0L256.5 242.6L259.0 243.1L261.5 243.6L264.0 244.1L266.5 244.6L269.0 245.0L271.5 245.5L274.0 245.9L276.5 246.3L279.0 246.7L281.5 247.1L284.0 247.5L286.5 247.9L289.0 248.2L291.5 248.6L294.0 248.9L296.5 249.2L299.0 249.6L301.5 249.9L304.0 250.2L306.5 250.5L309.0 250.7L311.5 251.0L314.0 251.3L316.5 251.5L319.0 251.8L321.5 252.0L324.0 252.3L326.5 252.5L329.0 252.7L331.5 252.9L334.0 253.1L336.5 253.4L339.0 253.5L341.5 253.7L344.0 253.9L346.5 254.1L349.0 254.3L351.5 254.5L354.0 254.6L356.5 254.8L359.0 254.9L361.5 255.1L364.0 255.2L366.5 255.4L369.0 255.5L371.5 255.6L374.0 255.8L376.5 255.9L379.0 256.0L381.5 256.1L384.0 256.2L386.5 256.4L389.0 256.5L391.5 256.6L394.0 256.7L396.5 256.8L399.0 256.9L401.5 257.0L404.0 257.1L406.5 257.1L409.0 257.2L411.5 257.3L414.0 257.4L416.5 257.5L419.0 257.5L421.5 257.6L424.0 257.7L426.5 257.8L429.0 257.8L431.5 257.9L434.0 257.9L436.5 258.0L439.0 258.1L441.5 258.1L444.0 258.2L446.5 258.2L449.0 258.3L451.5 258.3L454.0 258.4L456.5 258.4L459.0 258.5L461.5 258.5L464.0 258.6L466.5 258.6L469.0 258.7L471.5 258.7L474.0 258.7L476.5 258.8L479.0 258.8L481.5 258.8L484.0 258.9L486.5 258.9L489.0 258.9L491.5 259.0L494.0 259.0L496.5 259.0L499.0 259.1L501.5 259.1L504.0 259.1L506.5 259.1L509.0 259.2L511.5 259.2L514.0 259.2L516.5 259.2L519.0 259.3L521.5 259.3L524.0 259.3L526.5 259.3L529.0 259.3L531.5 259.4L534.0 259.4L536.5 259.4L539.0 259.4L541.5 259.4L544.0 259.5"/>
+<path class="ln c2" d="M44.0 260.0L46.5 259.3L49.0 258.6L51.5 257.9L54.0 257.2L56.5 256.5L59.0 255.8L61.5 255.1L64.0 254.4L66.5 253.7L69.0 253.0L71.5 252.3L74.0 251.6L76.5 250.8L79.0 250.1L81.5 249.4L84.0 248.7L86.5 248.0L89.0 247.3L91.5 246.6L94.0 245.9L96.5 245.2L99.0 244.5L101.5 243.8L104.0 243.1L106.5 242.4L109.0 241.7L111.5 241.0L114.0 240.3L116.5 239.6L119.0 238.9L121.5 238.2L124.0 237.5L126.5 236.8L129.0 236.1L131.5 235.4L134.0 234.7L136.5 234.0L139.0 233.3L141.5 232.6L144.0 231.8L146.5 231.1L149.0 230.4L151.5 229.7L154.0 229.0L156.5 228.3L159.0 227.6L161.5 226.9L164.0 226.2L166.5 225.5L169.0 224.8L171.5 224.1L174.0 223.4L176.5 222.7L179.0 222.0L181.5 221.3L184.0 220.6L186.5 219.9L189.0 219.2L191.5 218.5L194.0 217.8L196.5 217.1L199.0 216.4L201.5 215.7L204.0 215.0L206.5 214.2L209.0 213.5L211.5 212.8L214.0 212.1L216.5 211.4L219.0 210.7L221.5 210.0L224.0 209.3L226.5 208.6L229.0 207.9L231.5 207.2L234.0 206.5L236.5 205.8L239.0 205.1L241.5 204.4L244.0 203.7L246.5 203.0L249.0 202.3L251.5 201.6L254.0 200.9L256.5 200.2L259.0 199.5L261.5 198.8L264.0 198.1L266.5 197.4L269.0 196.7L271.5 195.9L274.0 195.2L276.5 194.5L279.0 193.8L281.5 193.1L284.0 192.4L286.5 191.7L289.0 191.0L291.5 190.3L294.0 189.6L296.5 188.9L299.0 188.2L301.5 187.5L304.0 186.8L306.5 186.1L309.0 185.4L311.5 184.7L314.0 184.0L316.5 183.3L319.0 182.6L321.5 181.9L324.0 181.2L326.5 180.5L329.0 179.8L331.5 179.1L334.0 178.4L336.5 177.7L339.0 176.9L341.5 176.2L344.0 175.5L346.5 174.8L349.0 174.1L351.5 173.4L354.0 172.7L356.5 172.0L359.0 171.3L361.5 170.6L364.0 169.9L366.5 169.2L369.0 168.5L371.5 167.8L374.0 167.1L376.5 166.4L379.0 165.7L381.5 165.0L384.0 164.3L386.5 163.6L389.0 162.9L391.5 162.2L394.0 161.5L396.5 160.8L399.0 160.1L401.5 159.4L404.0 158.6L406.5 157.9L409.0 157.2L411.5 156.5L414.0 155.8L416.5 155.1L419.0 154.4L421.5 153.7L424.0 153.0L426.5 152.3L429.0 151.6L431.5 150.9L434.0 150.2L436.5 149.5L439.0 148.8L441.5 148.1L444.0 147.4L446.5 146.7L449.0 146.0L451.5 145.3L454.0 144.6L456.5 143.9L459.0 143.2L461.5 142.5L464.0 141.8L466.5 141.1L469.0 140.3L471.5 139.6L474.0 138.9L476.5 138.2L479.0 137.5L481.5 136.8L484.0 136.1L486.5 135.4L489.0 134.7L491.5 134.0L494.0 133.3L496.5 132.6L499.0 131.9L501.5 131.2L504.0 130.5L506.5 129.8L509.0 129.1L511.5 128.4L514.0 127.7L516.5 127.0L519.0 126.3L521.5 125.6L524.0 124.9L526.5 124.2L529.0 123.5L531.5 122.8L534.0 122.0L536.5 121.3L539.0 120.6L541.5 119.9L544.0 119.2"/>
+<path class="ln ck" d="M44.0 34.8L46.5 40.7L49.0 46.5L51.5 52.1L54.0 57.5L56.5 62.7L59.0 67.8L61.5 72.6L64.0 77.4L66.5 81.9L69.0 86.3L71.5 90.5L74.0 94.6L76.5 98.6L79.0 102.4L81.5 106.1L84.0 109.6L86.5 113.0L89.0 116.3L91.5 119.5L94.0 122.6L96.5 125.5L99.0 128.4L101.5 131.1L104.0 133.8L106.5 136.3L109.0 138.7L111.5 141.1L114.0 143.4L116.5 145.5L119.0 147.6L121.5 149.6L124.0 151.5L126.5 153.4L129.0 155.2L131.5 156.9L134.0 158.5L136.5 160.0L139.0 161.5L141.5 162.9L144.0 164.3L146.5 165.6L149.0 166.8L151.5 168.0L154.0 169.2L156.5 170.2L159.0 171.2L161.5 172.2L164.0 173.1L166.5 174.0L169.0 174.8L171.5 175.6L174.0 176.3L176.5 177.0L179.0 177.7L181.5 178.3L184.0 178.9L186.5 179.4L189.0 179.9L191.5 180.4L194.0 180.8L196.5 181.2L199.0 181.5L201.5 181.9L204.0 182.2L206.5 182.4L209.0 182.7L211.5 182.9L214.0 183.1L216.5 183.2L219.0 183.4L221.5 183.5L224.0 183.6L226.5 183.6L229.0 183.7L231.5 183.7L234.0 183.7L236.5 183.6L239.0 183.6L241.5 183.5L244.0 183.4L246.5 183.3L249.0 183.2L251.5 183.1L254.0 182.9L256.5 182.8L259.0 182.6L261.5 182.4L264.0 182.1L266.5 181.9L269.0 181.7L271.5 181.4L274.0 181.1L276.5 180.8L279.0 180.6L281.5 180.2L284.0 179.9L286.5 179.6L289.0 179.2L291.5 178.9L294.0 178.5L296.5 178.2L299.0 177.8L301.5 177.4L304.0 177.0L306.5 176.6L309.0 176.1L311.5 175.7L314.0 175.3L316.5 174.8L319.0 174.4L321.5 173.9L324.0 173.4L326.5 173.0L329.0 172.5L331.5 172.0L334.0 171.5L336.5 171.0L339.0 170.5L341.5 170.0L344.0 169.5L346.5 168.9L349.0 168.4L351.5 167.9L354.0 167.3L356.5 166.8L359.0 166.2L361.5 165.7L364.0 165.1L366.5 164.6L369.0 164.0L371.5 163.4L374.0 162.9L376.5 162.3L379.0 161.7L381.5 161.1L384.0 160.5L386.5 159.9L389.0 159.3L391.5 158.7L394.0 158.1L396.5 157.5L399.0 156.9L401.5 156.3L404.0 155.7L406.5 155.1L409.0 154.5L411.5 153.8L414.0 153.2L416.5 152.6L419.0 152.0L421.5 151.3L424.0 150.7L426.5 150.1L429.0 149.4L431.5 148.8L434.0 148.1L436.5 147.5L439.0 146.9L441.5 146.2L444.0 145.6L446.5 144.9L449.0 144.3L451.5 143.6L454.0 143.0L456.5 142.3L459.0 141.6L461.5 141.0L464.0 140.3L466.5 139.7L469.0 139.0L471.5 138.3L474.0 137.7L476.5 137.0L479.0 136.3L481.5 135.7L484.0 135.0L486.5 134.3L489.0 133.7L491.5 133.0L494.0 132.3L496.5 131.6L499.0 131.0L501.5 130.3L504.0 129.6L506.5 128.9L509.0 128.3L511.5 127.6L514.0 126.9L516.5 126.2L519.0 125.5L521.5 124.8L524.0 124.2L526.5 123.5L529.0 122.8L531.5 122.1L534.0 121.4L536.5 120.7L539.0 120.1L541.5 119.4L544.0 118.7"/>
+<line class="ln cm thin dash" x1="231.5" x2="231.5" y1="260.0" y2="183.7"/>
+<circle class="fk" cx="231.5" cy="183.7" r="4.5"/>
+<text class="tx" x="539.0" y="294" text-anchor="end">s = nombre de fonctions utilisées (parcimonie du concurrent β)</text>
+<text class="tx-b f1" x="79.0" y="44.2">approximation ‖f_β − f‖²/n</text>
+<text class="tx-b f2" x="444.0" y="169.4" text-anchor="middle">prix (reste)</text>
+<text class="tx-b" x="481.5" y="121.7" text-anchor="middle">somme</text>
+<line class="ln cm thin" x1="231.5" y1="177.7" x2="269.0" y2="81.0"/>
+<text class="tx-b" x="269.0" y="77.0">meilleur compromis : ce que vise l'oracle</text>
+</svg>
+<figcaption>Allure typique des deux termes d'une inégalité oracle en fonction de la parcimonie $s$ du concurrent (courbes illustratives). Le terme d'approximation décroît, le prix croît ; l'inégalité dit que l'estimateur fait au moins aussi bien que le minimum de la somme, sans savoir où il est.</figcaption>
+</figure>
+<div class="box reflexe"><div class="box-h">Réflexe — lire une inégalité oracle</div>
+<p>Quand vous voyez « $\le\inf_\beta\{\ldots+\ldots\}$ » → lisez « pour <strong>tout</strong> concurrent $\beta$, mon erreur est au plus [erreur d'approximation de $\beta$] + [prix de $\beta$] ». Pour l'utiliser, <strong>choisissez</strong> un $\beta$ concret (par exemple le vrai paramètre s'il existe) et lisez la borne obtenue.</p>
+</div>
+<div class="box exemple"><div class="box-h">Exemple — retrouver la séance 3</div>
+<p>Supposons qu'en fait $f=X\beta^\circ$ avec $\beta^\circ$ ayant $s$ coefficients non nuls (le modèle linéaire parcimonieux des séances 1–3). Choisissons le concurrent $\beta=\beta^\circ$ : son erreur d'approximation est nulle. L'inégalité oracle donne alors $\frac1n\norm{X\hb_n-X\beta^\circ}^2\le\text{reste}(\beta^\circ)$ — exactement une borne d'erreur de prédiction du type Bickel–Ritov–Tsybakov. Les inégalités oracle <strong>généralisent</strong> donc la séance 3 au cas où le modèle est faux.</p>
+</div>
+
+<h3 id="lasso-theta">Le Lasso sur un ensemble convexe <span class="ref">Cours4 · diapo 45</span></h3>
+<p>Deux questions : comment construire un $\hb_n$ parcimonieux, et que vaut le reste ? Réponse à la première : le Lasso, éventuellement restreint à un ensemble convexe $\Theta\subset\R^M$ (par exemple $\Theta=\R^M$, ou des coefficients positifs, ou bornés) :</p>
+$$\hb_n^{\text{lasso}}=\argmin_{\beta\in\Theta}\Big\{\frac1n\sum_{i=1}^n\big(Y_i-f_\beta(Z_i)\big)^2+\lambda\norm\beta_1\Big\}=\argmin_{\beta\in\Theta}\Big\{\frac1n\norm{y-X\beta}^2+\lambda\norm\beta_1\Big\}.$$
+<p>Pourquoi un convexe $\Theta$ ? Parce qu'on reste alors dans le monde de l'optimisation convexe, où les outils de la section 5 s'appliquent (et parce que cela permet d'imposer des contraintes naturelles, comme la positivité). Si vous voulez, prenez $\Theta=\R^M$ partout.</p>
+<div class="box remarque"><div class="box-h">Note sur la diapo 45</div>
+<p>La diapo écrit $f_\beta(X_i)$ dans la somme ; il faut lire $f_\beta(Z_i)$ (les points d'observation).</p>
+</div>
+
+<h2 id="seuillage">3. Seuillage doux et rétrécissement</h2>
+
+<h3 id="seuillage-doux">Le seuillage doux <span class="ref">Cours4 · diapo 46</span></h3>
+<p class="tldr">Le problème « rester proche de $b$ tout en payant $\lambda\abs a$ » a une solution explicite : on rapproche $b$ de 0 de $\lambda$, et on met 0 si $\abs b\le\lambda$.</p>
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours4 · diapo 46</span></div>
+$$\argmin_{a\in\R}\Big\{\frac12(a-b)^2+\lambda\abs a\Big\}=\sgn(b)\big(\abs b-\lambda\big)_+\quad\text{pour tout }b\in\R,$$
+$$\Rightarrow\ \argmin_{a\in\R^M}\Big\{\frac12\norm{a-b}_2^2+\lambda\norm a_1\Big\}=T_\lambda(b),\qquad\big(T_\lambda(b)\big)_j=\sgn(b_j)\big(\abs{b_j}-\lambda\big)_+.$$
+</div>
+<p>Pourquoi ce petit problème est-il important ? Parce que c'est <strong>le Lasso dans le cas le plus simple</strong> : un seul coefficient (ou des colonnes orthogonales, séance 2). $b$ joue le rôle du coefficient des moindres carrés (ce qu'on ferait sans pénalité), $a$ le coefficient pénalisé. Comprendre ce cas, c'est comprendre comment le Lasso traite chaque coefficient.</p>
+<p>Rappel des notations : $\sgn(b)$ vaut $1$, $0$ ou $-1$ selon le signe de $b$ ; $(x)_+=\max(x,0)$.</p>
+
+<h4>Dérivation en dimension 1, par cas</h4>
+<p>Posons $h(a)=\frac12(a-b)^2+\lambda\abs a$ avec $\lambda>0$. C'est une somme de deux fonctions convexes, et le premier terme est strictement convexe : $h$ a <strong>un unique</strong> minimiseur. La seule difficulté est que $\abs a$ n'est pas dérivable en $0$ ; on sépare donc les cas $a>0$, $a<0$, $a=0$.</p>
+<ol class="steps">
+<li>$$\text{Sur }]0,+\infty[:\quad h(a)=\tfrac12(a-b)^2+\lambda a,\qquad h'(a)=a-b+\lambda.$$<span class="why">Pour $a>0$, $\abs a=a$ : $h$ y est dérivable.</span></li>
+<li>$$h'(a)=0\iff a=b-\lambda,\quad\text{admissible si }b-\lambda>0,\text{ c.-à-d. }b>\lambda.$$<span class="why">Un point où la dérivée s'annule, pour une fonction convexe, est un minimum global — à condition qu'il soit bien dans la zone $a>0$ où l'on a calculé.</span></li>
+<li>$$\text{Sur }]-\infty,0[:\quad h'(a)=a-b-\lambda=0\iff a=b+\lambda,\quad\text{admissible si }b<-\lambda.$$<span class="why">Même calcul avec $\abs a=-a$.</span></li>
+<li>$$\text{Si }\abs b\le\lambda:\quad h'(a)=a+(\lambda-b)>0\ \text{pour }a>0,\qquad h'(a)=a-(b+\lambda)<0\ \text{pour }a<0.$$<span class="why">Car $\lambda-b\ge0$ et $b+\lambda\ge0$. Donc $h$ décroît sur $]-\infty,0[$ et croît sur $]0,\infty[$ : le minimum est en $a=0$.</span></li>
+<li>$$\hat a=\begin{cases}b-\lambda&\text{si }b>\lambda\\0&\text{si }\abs b\le\lambda\\b+\lambda&\text{si }b<-\lambda\end{cases}\;=\;\sgn(b)\big(\abs b-\lambda\big)_+.$$<span class="why">Les trois cas se résument en une formule : on retire $\lambda$ à $\abs b$, on tronque à 0, et on remet le signe.</span></li>
+</ol>
+
+<h4>Passage à la dimension $M$ : tout se découple</h4>
+$$\frac12\norm{a-b}_2^2+\lambda\norm a_1=\sum_{j=1}^M\Big[\frac12(a_j-b_j)^2+\lambda\abs{a_j}\Big].$$
+<p>Chaque terme de la somme ne dépend que d'une coordonnée $a_j$. Minimiser la somme revient donc à minimiser chaque terme séparément, et chaque terme est le problème 1D ci-dessus : $\hat a_j=\sgn(b_j)(\abs{b_j}-\lambda)_+$. D'où l'opérateur $T_\lambda$, appliqué coordonnée par coordonnée.</p>
+
+<div class="box exemple"><div class="box-h">Exemple chiffré</div>
+<p>$b=(3;\ -0{,}5;\ 1{,}2;\ -2)$ et $\lambda=1$ : $T_1(b)=(2;\ 0;\ 0{,}2;\ -1)$. Les deux « gros » coefficients perdent 1 en valeur absolue, $1{,}2$ devient $0{,}2$, et $-0{,}5$ (plus petit que le seuil) est mis exactement à zéro.</p>
+</div>
+
+<div class="box piege"><div class="box-h">Piège — le seuil dépend de la convention</div>
+<p>Avec $\frac12(a-b)^2+\lambda\abs a$, le seuil est $\lambda$. Avec $(a-b)^2+\lambda\abs a$ (sans le $\frac12$, convention de la séance 2), le seuil est $\lambda/2$ : la dérivée devient $2(a-b)\pm\lambda$. En cas de doute, refaites le calcul par cas en 3 lignes, c'est le plus sûr.</p>
+</div>
+
+<h3 id="retrecissement">Seuillage doux contre rétrécissement <span class="ref">Cours4 · diapo 47</span></h3>
+<p class="tldr">Ridge divise tout par $1+\lambda$ (aucun zéro) ; le Lasso soustrait $\lambda$ et coupe à zéro (des zéros exacts).</p>
+<p>Le pendant « Ridge » du problème 1D est $\argmin_a\{\frac12(a-b)^2+\frac\lambda2a^2\}$. Ici tout est dérivable : $a-b+\lambda a=0$, d'où</p>
+$$\hat a_{\text{ridge}}=\frac{b}{1+\lambda}.$$
+<p>C'est un <em class="new">rétrécissement</em> (<em>shrinkage</em>) : tout coefficient est multiplié par le même facteur $\frac1{1+\lambda}<1$. Il est rapproché de 0, mais <strong>jamais exactement nul</strong> (sauf si $b=0$). La diapo 47 trace les deux opérations pour $\lambda=1$ : l'identité (pente 1), le rétrécissement $b/2$ (pente $\frac12$) et le seuillage doux (plat entre $-1$ et $1$, puis pente 1 décalée). Manipulez :</p>
+<div class="widget" data-widget="seuillage" data-hard="1"></div>
+<p>À observer : (1) pour $\abs b\le\lambda$, la courbe orange est collée à 0 — c'est la <strong>sélection</strong> ; (2) pour les grands $\abs b$, l'orange est parallèle à l'identité, décalée de $\lambda$ — c'est le <strong>biais</strong> du Lasso sur les gros coefficients (il sera corrigé par les variantes de la séance 6) ; (3) la courbe bleue (Ridge) ne touche jamais 0, mais elle biaise de plus en plus les gros coefficients ; (4) la courbe verte (seuillage <em>dur</em>, qu'on obtiendrait avec une pénalité $\ell_0$) garde les gros coefficients intacts mais saute brutalement en $\pm\lambda$.</p>
+
+<h3 id="pourquoi-zeros">Pourquoi la norme $\ell_1$ crée-t-elle des zéros ? <span class="ref">Cours4 · diapo 48</span></h3>
+<p class="tldr">Parce que $\abs a$ a un « coin » en 0 : sa pente y saute de $-\lambda$ à $+\lambda$, ce qui peut retenir le coefficient en 0 ; une pénalité lisse a une pente nulle en 0 et ne retient rien.</p>
+<p>La diapo donne deux explications ; détaillons-les.</p>
+<h4>1. L'explication par les pentes (analytique)</h4>
+<p>Placez-vous en $a=0$ et demandez-vous : ai-je intérêt à bouger un peu ?</p>
+<ul>
+<li>Le terme d'ajustement $\frac12(a-b)^2$ a en 0 une pente $-b$ : il « tire » $a$ vers $b$ avec une force $\abs b$.</li>
+<li>Avec la pénalité $\lambda\abs a$ : bouger vers la droite coûte une pente $+\lambda$, bouger vers la gauche aussi (la pente à gauche est $-\lambda$, donc la fonction monte quand on va vers la gauche). Bilan : à droite, pente totale $-b+\lambda$ ; à gauche, pente totale $-b-\lambda$. Si $\abs b<\lambda$, la fonction monte des deux côtés : <strong>0 est le minimum</strong>. La pénalité « résiste » tant que la force $\abs b$ ne dépasse pas $\lambda$.</li>
+<li>Avec la pénalité Ridge $\frac\lambda2a^2$ : sa pente en 0 est $\lambda a=0$. Elle n'oppose <strong>aucune</strong> résistance au départ : dès que $b\neq0$, la pente totale $-b$ est non nulle et on a intérêt à quitter 0.</li>
+</ul>
+<div class="box intu"><div class="box-h">Image mentale</div>
+<p>Une bille posée au fond d'un « V » (la valeur absolue) reste coincée dans la pointe tant qu'on ne la pousse pas assez fort ; une bille au fond d'une cuvette arrondie (le carré) bouge à la moindre poussée. La pointe du V, c'est la non-dérivabilité de $\abs a$ en 0 — c'est elle, et elle seule, qui produit les zéros exacts.</p>
+</div>
+<h4>2. L'explication géométrique</h4>
+<p>Sous forme contrainte, le Lasso cherche le point de la boule $\{\norm\beta_1\le t\}$ le plus proche (pour le critère des moindres carrés) de $\hb\MC$. La boule $\ell_1$ est un losange (en dimension 2), un octaèdre (en dimension 3)… dont les <strong>coins</strong> sont les points $\pm t\,e_j$ : des vecteurs qui n'ont qu'une coordonnée non nulle. Les arêtes et faces de petite dimension contiennent aussi des vecteurs avec beaucoup de zéros. Quand on « gonfle » les ellipses de niveau des moindres carrés jusqu'à toucher la boule, le premier contact se fait très souvent en un coin ou sur une arête : la solution est parcimonieuse. La boule $\ell_2$ (Ridge), ronde, n'a pas de coin : le contact se fait en un point générique, sans zéro.</p>
+<div class="widget" data-widget="l1l2"></div>
+<p>Déplacez le point noir : très souvent, le point orange (Lasso) est sur un coin du losange (une coordonnée exactement nulle), alors que le point bleu (Ridge) n'a presque jamais de coordonnée nulle.</p>
+
+<div class="quiz"><p>Avec $\lambda=2$, que donne le seuillage doux $\argmin_a\{\frac12(a-b)^2+\lambda\abs a\}$ pour $b=1{,}5$ ? pour $b=-5$ ? Et le rétrécissement $b/(1+\lambda)$ ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body"><p>Seuillage doux : $b=1{,}5$ donne $0$ (car $1{,}5\le2$) ; $b=-5$ donne $-3$. Rétrécissement : $0{,}5$ et $-5/3\approx-1{,}67$. Le Lasso tue le petit coefficient et décale le gros de 2 ; Ridge garde les deux et les divise par 3.</p></div></details></div>
+
+<h2 id="relaxation">4. Relaxation convexe : pourquoi $\ell_1$ et pas autre chose</h2>
+<p class="tldr">Parmi toutes les fonctions convexes qui restent sous « compter les non-zéros » sur $[-1,1]$, la plus grande est la valeur absolue : $\ell_1$ est la meilleure approximation convexe de $\ell_0$.</p>
+<p>La séance 1 a montré que la pénalité idéale pour la sélection est $\norm\beta_0$ (le nombre de coefficients non nuls), mais qu'elle mène à un problème combinatoire ($2^M$ sous-ensembles à essayer). La séance 1 a aussi annoncé que $\ell_1$ était « la version convexe » de $\ell_0$. Les diapos 46–47 de Cours5 rendent cette phrase précise.</p>
+
+<h3 id="enveloppe">L'enveloppe convexe <span class="ref">Cours5 · diapo 46</span></h3>
+<div class="box def"><div class="box-h">Définition — Enveloppe convexe</div>
+<p>L'enveloppe convexe d'une fonction $g:[a,b]\to\R$ est, en chaque point $x$,</p>
+$$g^{\text{env}}(x)=\sup\big\{h(x)\ :\ h\text{ convexe et }h\le g\text{ sur }[a,b]\big\}.$$
+<p>C'est la plus grande fonction convexe qui reste sous $g$ : on « tend un élastique » sous le graphe de $g$.</p>
+</div>
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours5 · diapo 46</span></div>
+<p>L'enveloppe convexe de $g_0(x)=\ind\{x\neq0\}$ sur $[-1,1]$ est $g_1(x)=\abs x$. Par conséquent l'enveloppe convexe de $x\mapsto\norm x_0$ sur $[-1,1]^M$ est $x\mapsto\norm x_1$.</p>
+</div>
+<figure class="fig">
+<svg viewBox="0 0 600 300" role="img" aria-label="Enveloppe convexe de l indicatrice">
+<line class="gr" x1="40.0" x2="423.7" y1="243.5" y2="243.5"/>
+<text class="tx" x="34.0" y="247.5" text-anchor="end">0</text>
+<line class="gr" x1="40.0" x2="423.7" y1="155.2" y2="155.2"/>
+<text class="tx" x="34.0" y="159.2" text-anchor="end">0,5</text>
+<line class="gr" x1="40.0" x2="423.7" y1="67.0" y2="67.0"/>
+<text class="tx" x="34.0" y="71.0" text-anchor="end">1</text>
+<text class="tx" x="84.3" y="286.0" text-anchor="middle">−1</text>
+<text class="tx" x="231.8" y="286.0" text-anchor="middle">0</text>
+<text class="tx" x="379.4" y="286.0" text-anchor="middle">1</text>
+<line class="ax" x1="40.0" x2="423.7" y1="243.5" y2="243.5"/>
+<line class="ax" x1="231.8" x2="231.8" y1="270.0" y2="14.0"/>
+<line class="ln cm thin dash" x1="84.3" x2="84.3" y1="270.0" y2="14.0"/>
+<line class="ln cm thin dash" x1="379.4" x2="379.4" y1="270.0" y2="14.0"/>
+<path class="ln c3 thin dash" d="M84.3 93.4L87.2 99.4L90.2 105.2L93.1 110.9L96.1 116.5L99.0 122.0L102.0 127.3L104.9 132.5L107.9 137.6L110.8 142.6L113.8 147.5L116.7 152.2L119.7 156.8L122.6 161.3L125.6 165.7L128.5 170.0L131.5 174.1L134.4 178.1L137.4 182.0L140.3 185.8L143.3 189.5L146.2 193.0L149.2 196.5L152.2 199.8L155.1 202.9L158.1 206.0L161.0 208.9L164.0 211.8L166.9 214.5L169.9 217.0L172.8 219.5L175.8 221.8L178.7 224.1L181.7 226.2L184.6 228.2L187.6 230.0L190.5 231.8L193.5 233.4L196.4 234.9L199.4 236.3L202.3 237.5L205.3 238.7L208.2 239.7L211.2 240.6L214.1 241.4L217.1 242.0L220.0 242.6L223.0 243.0L225.9 243.3L228.9 243.5L231.8 243.5L234.8 243.5L237.7 243.3L240.7 243.0L243.6 242.6L246.6 242.0L249.5 241.4L252.5 240.6L255.4 239.7L258.4 238.7L261.4 237.5L264.3 236.3L267.3 234.9L270.2 233.4L273.2 231.8L276.1 230.0L279.1 228.2L282.0 226.2L285.0 224.1L287.9 221.8L290.9 219.5L293.8 217.0L296.8 214.5L299.7 211.8L302.7 208.9L305.6 206.0L308.6 202.9L311.5 199.8L314.5 196.5L317.4 193.0L320.4 189.5L323.3 185.8L326.3 182.0L329.2 178.1L332.2 174.1L335.1 170.0L338.1 165.7L341.0 161.3L344.0 156.8L346.9 152.2L349.9 147.5L352.8 142.6L355.8 137.6L358.7 132.5L361.7 127.3L364.6 122.0L367.6 116.5L370.6 110.9L373.5 105.2L376.5 99.4L379.4 93.4"/>
+<path class="ln c2" d="M84.3 67.0L231.8 243.5L379.4 67.0"/>
+<path class="ln c1" d="M84.3 67.0L228.9 67.0"/>
+<path class="ln c1" d="M234.8 67.0L379.4 67.0"/>
+<circle cx="231.8" cy="67.0" r="4.5" fill="none" stroke="var(--s1)" stroke-width="2"/>
+<circle class="f1" cx="231.8" cy="243.5" r="4.5"/>
+<text class="tx-b f1" x="394.2" y="45.8">g(x) = 𝟙{x ≠ 0}</text>
+<text class="tx-b f2" x="394.2" y="98.7">|x| : l'enveloppe convexe</text>
+<text class="tx-b f3" x="394.2" y="155.2">0,85 x² : convexe, sous g,</text>
+<text class="tx-b f3" x="394.2" y="172.2">et aussi sous |x|</text>
+</svg>
+<figcaption>En bleu, $g(x)=\ind\{x\neq0\}$ : 0 en $x=0$, 1 ailleurs. En orange, $\abs x$ : convexe, sous $g$ sur $[-1,1]$, et c'est la plus grande. En vert pointillé, une autre fonction convexe sous $g$ ($0{,}85x^2$) : elle est aussi sous $\abs x$, comme toutes les autres.</figcaption>
+</figure>
+<details class="fold proof"><summary>Preuve : l'enveloppe de $\ind\{x\neq0\}$ sur $[-1,1]$ est $\abs x$</summary><div class="fold-body">
+<p>Il faut montrer deux inégalités.</p>
+<ol class="steps">
+<li>$$g^{\text{env}}(x)\ge\abs x.$$<span class="why">$\abs x$ est convexe et $\abs x\le\ind\{x\neq0\}$ sur $[-1,1]$ (en $0$ : $0\le0$ ; ailleurs : $\abs x\le1$). C'est donc un des candidats $h$ du sup, et le sup est au moins aussi grand.</span></li>
+<li>$$h\text{ convexe},\ h\le g\ \Rightarrow\ h(0)\le0,\quad h(1)\le1,\quad h(-1)\le1.$$<span class="why">On évalue $h\le g$ en $0$ (où $g=0$) et en $\pm1$ (où $g=1$).</span></li>
+<li>$$x\in[0,1]:\quad h(x)=h\big((1-x)\cdot0+x\cdot1\big)\le(1-x)h(0)+xh(1)\le0+x=\abs x.$$<span class="why">On écrit $x$ comme moyenne pondérée de $0$ et $1$ et on applique la définition de la convexité (la corde est au-dessus du graphe).</span></li>
+<li>$$x\in[-1,0]:\quad h(x)\le(1+x)h(0)+(-x)h(-1)\le-x=\abs x.$$<span class="why">Même argument avec $x=(1+x)\cdot0+(-x)\cdot(-1)$.</span></li>
+<li>$$\text{Donc }h\le\abs{\cdot}\text{ pour tout candidat }h,\ \text{d'où }g^{\text{env}}\le\abs{\cdot}.$$<span class="why">Le sup d'une famille de fonctions toutes $\le\abs x$ est $\le\abs x$. Avec l'étape 1 : égalité.</span></li>
+</ol>
+</div></details>
+<details class="fold more"><summary>Pour aller plus loin : la version en dimension $M$</summary><div class="fold-body">
+<p>Même schéma. (i) $\norm x_1$ est convexe et $\norm x_1\le\norm x_0$ sur $[-1,1]^M$ (chaque $\abs{x_j}\le\ind\{x_j\neq0\}$). (ii) Soit $h$ convexe avec $h\le\norm\cdot_0$ sur la boîte. Prenons $x$ à coordonnées positives (les signes se traitent de même) et rangeons-les : $x_{(1)}\ge x_{(2)}\ge\dots\ge x_{(M)}\ge0$, avec $x_{(M+1)}=0$. Notons $v_k$ le vecteur qui vaut 1 sur les $k$ plus grandes coordonnées et 0 ailleurs. Alors (décomposition « en escalier »)</p>
+$$x=\sum_{k=1}^M\big(x_{(k)}-x_{(k+1)}\big)v_k+\big(1-x_{(1)}\big)\cdot0,$$
+<p>une combinaison convexe (poids positifs de somme 1). Par convexité, $h(x)\le\sum_k(x_{(k)}-x_{(k+1)})h(v_k)+(1-x_{(1)})h(0)\le\sum_k(x_{(k)}-x_{(k+1)})\,k=\sum_kx_{(k)}=\norm x_1$, car $h(v_k)\le\norm{v_k}_0=k$ et $h(0)\le0$ (la dernière égalité est une sommation par paquets : chaque $x_{(k)}$ apparaît avec le coefficient $k-(k-1)=1$).</p>
+</div></details>
+
+<h3 id="relaxation-probleme">Relaxer le problème $\ell_0$ <span class="ref">Cours5 · diapos 46–47</span></h3>
+<p>La diapo applique cette idée au problème « trouver le vecteur le plus parcimonieux dans un convexe $C$ » :</p>
+$$\min\ \norm x_0\quad\text{sous}\quad x\in C,\ \norm x_\infty\le R.$$
+<ol class="steps">
+<li>$$\iff\ \min_{x,\,u}\ \sum_{i=1}^Mu_i\quad\text{sous}\quad u\in\{0,1\}^M,\ \abs{x_i}\le Ru_i\ \forall i,\ x\in C.$$<span class="why">On introduit un interrupteur $u_i\in\{0,1\}$ par coordonnée : $u_i=0$ force $x_i=0$, $u_i=1$ autorise $\abs{x_i}\le R$. Minimiser le nombre d'interrupteurs allumés = minimiser $\norm x_0$.</span></li>
+<li>$$\text{Difficile : il faut essayer les }2^M\text{ vecteurs }u\in\{0,1\}^M.$$<span class="why">C'est un problème en nombres entiers ; c'est la même explosion combinatoire que la sélection de sous-ensembles (séance 1).</span></li>
+<li>$$\text{Relaxation : }u\in[0,1]^M\ \text{au lieu de }\{0,1\}^M.$$<span class="why">On autorise les interrupteurs « à moitié allumés ». Le problème devient convexe (objectif linéaire ; contraintes $-Ru_i\le x_i\le Ru_i$ linéaires et $x\in C$ convexe).</span></li>
+<li>$$\text{À }x\text{ fixé, le meilleur }u\text{ est }u_i=\frac{\abs{x_i}}R\ \Rightarrow\ \min_u\sum_iu_i=\frac1R\norm x_1.$$<span class="why">On veut chaque $u_i$ le plus petit possible sous la contrainte $u_i\ge\abs{x_i}/R$ ; cette valeur est bien dans $[0,1]$ puisque $\abs{x_i}\le R$.</span></li>
+<li>$$\text{Problème relaxé :}\quad\min\ \frac1R\norm x_1\quad\text{sous}\quad x\in C,\ \norm x_\infty\le R.$$<span class="why">La relaxation convexe naturelle de « compter les non-zéros » est donc « sommer les valeurs absolues » — exactement le passage $\ell_0\to\ell_1$.</span></li>
+</ol>
+<div class="box remarque"><div class="box-h">Note sur la diapo 47 (Cours5)</div>
+<p>Dans le problème relaxé, la diapo réécrit $u\in\{0,1\}^M$ : il faut lire $u\in[0,1]^M$ (c'est tout l'objet de la relaxation). C'est avec $[0,1]^M$ que l'équivalence avec $\min\frac1R\norm x_1$ écrite sur la diapo est vraie (étape 4 ci-dessus).</p>
+</div>
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>Quand un problème contient $\norm x_0$ (ou des choix tout-ou-rien) → pensez « relaxation convexe » : remplacez $\norm x_0$ par $\norm x_1$. On perd l'équivalence exacte, mais on gagne un problème qu'on sait résoudre ; les séances 3 et 4 montrent ensuite que la perte est petite sous de bonnes hypothèses.</p>
+</div>
+
+<h2 id="convexe">5. Outils d'optimisation convexe</h2>
+<p class="lead">Le Lasso minimise une fonction convexe mais <strong>non dérivable</strong> (à cause de $\abs{\beta_j}$). La règle « gradient nul au minimum » ne s'applique donc pas telle quelle. Le sous-différentiel la remplace. Les diapos 49–53 introduisent cinq outils ; la preuve de l'inégalité oracle rapide (section 7) les utilisera <strong>tous</strong> : gardez cette liste en tête.</p>
+<div class="table-wrap"><table>
+<tr><th>Outil</th><th>Diapo</th><th>Rôle dans la preuve rapide</th></tr>
+<tr><td>Sous-gradient, sous-différentiel</td><td>49</td><td>le langage de base</td></tr>
+<tr><td>Règle de la somme</td><td>50</td><td>sous-différentiel du critère du Lasso = gradient de l'ajustement + $\lambda\,\partial\norm\cdot_1$</td></tr>
+<tr><td>Critère d'optimalité sur un convexe $\Theta$</td><td>51–52</td><td>point de départ de la preuve (plus fin que « $F(\hb)\le F(\beta)$ »)</td></tr>
+<tr><td>Monotonie du sous-différentiel</td><td>52</td><td>remplacer le sous-gradient inconnu en $\hb$ par un sous-gradient choisi en $\beta$</td></tr>
+<tr><td>Sous-différentiel de $\norm\cdot_1$</td><td>53</td><td>savoir quels sous-gradients on a le droit de choisir</td></tr>
+</table></div>
+
+<h3 id="sous-gradient">Sous-gradient et sous-différentiel <span class="ref">Cours4 · diapo 49</span></h3>
+<p class="tldr">Un sous-gradient en $u$ est la pente d'une droite (d'un plan) qui touche le graphe en $u$ et reste partout en dessous.</p>
+<p><strong>Point de départ.</strong> Pour une fonction convexe <em>dérivable</em> $\varphi$, la tangente est sous le graphe : $\varphi(v)\ge\varphi(u)+\nabla\varphi(u)\T(v-u)$ pour tout $v$ (<a href="00_rappels.html#convexite">rappel</a>). En un point anguleux, il n'y a plus <em>une</em> tangente, mais il peut y avoir <em>plusieurs</em> droites qui touchent le graphe et restent en dessous. On les garde toutes.</p>
+<div class="box def"><div class="box-h">Définition — Sous-gradient, sous-différentiel <span class="ref">Cours4 · diapo 49</span></div>
+<p>Soit $\varphi:\R^p\to\R$ convexe. Un vecteur $g\in\R^p$ est un <em class="new">sous-gradient</em> de $\varphi$ en $u$ si</p>
+$$\varphi(v)-\varphi(u)\ge g\T(v-u)\qquad\text{pour tout }v\in\R^p.$$
+<p>Le <em class="new">sous-différentiel</em> $\partial\varphi(u)$ est l'ensemble de tous les sous-gradients en $u$.</p>
+</div>
+<p>Lecture : la fonction affine $v\mapsto\varphi(u)+g\T(v-u)$ passe par le point $(u,\varphi(u))$ et reste sous le graphe de $\varphi$. Là où $\varphi$ est dérivable, il n'y a qu'un seul choix : $\partial\varphi(u)=\{\nabla\varphi(u)\}$. Le sous-différentiel <em>généralise</em> donc le gradient.</p>
+<div class="widget" data-widget="sousgradient"></div>
+<p>Essayez : avec $u_0=0$, toute pente $g\in[-1,1]$ donne une droite verte (valide) ; dès que $\abs g>1$, la droite passe au-dessus du graphe d'un côté. Avec $u_0\neq0$, une seule pente marche : la dérivée $\pm1$.</p>
+
+<div class="box exemple"><div class="box-h">Calcul de $\partial\abs u$ (l'exemple de la diapo)</div>
+<ol class="steps">
+<li>$$u>0:\ \text{pour }v\text{ proche de }u,\ \abs v-\abs u=v-u,\ \text{donc il faut }v-u\ge g(v-u).$$<span class="why">Pour $v>u$ cela impose $g\le1$ ; pour $v<u$ (division par un nombre négatif) $g\ge1$. Donc $g=1$.</span></li>
+<li>$$g=1\text{ convient bien pour tout }v:\quad\abs v-u\ge v-u\iff\abs v\ge v.\ \checkmark$$<span class="why">On vérifie l'inégalité pour tous les $v$, pas seulement les proches.</span></li>
+<li>$$u<0:\ \partial\abs u=\{-1\}\quad(\text{même raisonnement}).$$<span class="why">Là où $\abs\cdot$ est dérivable, le sous-différentiel est la dérivée.</span></li>
+<li>$$u=0:\ g\in\partial\abs0\iff\abs v\ge gv\ \ \forall v\iff\abs g\le1.$$<span class="why">Si $\abs g\le1$, $gv\le\abs g\abs v\le\abs v$. Si $\abs g>1$, prendre $v=\sgn(g)$ donne $1\ge\abs g$, faux.</span></li>
+</ol>
+$$\boxed{\partial\abs u=\{1\}\ (u>0),\qquad\partial\abs u=\{-1\}\ (u<0),\qquad\partial\abs u=[-1,1]\ (u=0).}$$
+</div>
+<div class="box remarque"><div class="box-h">Note sur la diapo 49</div>
+<p>La dernière ligne de la diapo 49 (Cours4) écrit « if i = 0 » : lire « si $u=0$ » (c'est corrigé dans Cours5).</p>
+</div>
+
+<h3 id="proprietes-sd">Trois règles de calcul <span class="ref">Cours4 · diapo 50</span></h3>
+<div class="box thm"><div class="box-h">Propriété 1 — Règle de Fermat convexe</div>
+$$u^*\in\argmin_{u\in\R^p}\varphi(u)\iff0\in\partial\varphi(u^*).$$
+</div>
+<p><strong>Preuve (une ligne).</strong> Par définition, $0\in\partial\varphi(u^*)$ signifie $\varphi(v)-\varphi(u^*)\ge0\T(v-u^*)=0$ pour tout $v$, c'est-à-dire exactement « $u^*$ est un minimum global ». <span class="qed">□</span></p>
+<p>C'est la généralisation de « gradient nul au minimum », et pour une fonction convexe c'est une <strong>équivalence</strong> : pas besoin de vérifier de condition d'ordre 2.</p>
+
+<div class="box thm"><div class="box-h">Propriété 2 — Règle de la somme</div>
+<p>Si $\varphi_1,\dots,\varphi_K$ sont convexes et $\alpha_k\ge0$ :</p>
+$$\partial\Big(\sum_{k=1}^K\alpha_k\varphi_k\Big)(u)=\sum_{k=1}^K\alpha_k\,\partial\varphi_k(u)\qquad\text{(somme d'ensembles : }\{\textstyle\sum\alpha_kg_k:\ g_k\in\partial\varphi_k(u)\}\text{)}.$$
+</div>
+<p>L'inclusion « $\supset$ » est facile : si $g_k\in\partial\varphi_k(u)$, on multiplie chaque inégalité $\varphi_k(v)-\varphi_k(u)\ge g_k\T(v-u)$ par $\alpha_k\ge0$ et on additionne. L'autre inclusion est un théorème d'analyse convexe qu'on admet. <strong>Usage typique</strong> : pour le critère du Lasso $F(\beta)=\frac1n\norm{y-X\beta}^2+\lambda\norm\beta_1$, la première partie est dérivable, donc</p>
+$$\partial F(\beta)=\Big\{-\frac2nX\T(y-X\beta)+\lambda g\ :\ g\in\partial\norm\beta_1\Big\}.$$
+
+<div class="box thm"><div class="box-h">Propriété 3 — Règle du maximum</div>
+<p>Si $\varphi(u)=\max_{k=1,\dots,K}\varphi_k(u)$ avec des $\varphi_k$ convexes,</p>
+$$\partial\varphi(u)=\operatorname{conv}\Big(\bigcup\big\{\partial\varphi_k(u)\ :\ \varphi_k(u)=\varphi(u)\big\}\Big),$$
+<p>où $\operatorname{conv}(A)$ (enveloppe convexe d'un ensemble) est l'ensemble des combinaisons $\sum_m\theta_ma_m$ avec $a_m\in A$, $\theta_m\ge0$, $\sum_m\theta_m=1$.</p>
+</div>
+<p>En mots : on ne regarde que les fonctions <em>actives</em> (celles qui atteignent le max en $u$), on collecte leurs sous-gradients, et on prend tous les « mélanges ». <strong>Vérification sur $\abs u=\max(u,-u)$</strong> : en $u>0$, seule $u$ est active, $\partial=\{1\}$ ; en $u=0$, les deux sont actives, de gradients $1$ et $-1$, et leurs mélanges forment $[-1,1]$. On retrouve le calcul précédent.</p>
+
+<h3 id="cone-normal">Minimiser sur un convexe : indicatrice et cône normal <span class="ref">Cours4 · diapo 51</span></h3>
+<p class="tldr">Minimiser sur un convexe $C$, c'est minimiser sur tout l'espace en ajoutant une pénalité $+\infty$ hors de $C$ ; son sous-différentiel est le cône des directions « qui sortent » de $C$.</p>
+<p>Le Lasso de la diapo 45 est défini sur un convexe $\Theta$. Astuce : on encode la contrainte dans une fonction, l'<em class="new">indicatrice convexe</em></p>
+$$\delta_C(u)=\begin{cases}0&\text{si }u\in C,\\+\infty&\text{si }u\notin C.\end{cases}$$
+<p>Minimiser $\varphi$ sur $C$ revient à minimiser $\varphi+\delta_C$ sur $\R^p$ (hors de $C$ la valeur est infinie, donc jamais optimale). Par la règle de Fermat puis la règle de la somme (étendue aux fonctions à valeurs $+\infty$, qu'on admet) :</p>
+$$u^*\in\argmin_{u\in C}\varphi(u)\iff0\in\partial\varphi(u^*)+\partial\delta_C(u^*)\iff\exists g^*\in\partial\varphi(u^*):\ -g^*\in\partial\delta_C(u^*).$$
+<p>Calculons $\partial\delta_C(u)$ pour $u\in C$ : $g$ en est un sous-gradient si $\delta_C(v)-\delta_C(u)\ge g\T(v-u)$ pour tout $v$. Pour $v\notin C$, le membre de gauche vaut $+\infty$ : rien à vérifier. Pour $v\in C$, il vaut $0-0=0$. Donc</p>
+$$\partial\delta_C(u)=\big\{g\in\R^p\ :\ g\T(v-u)\le0\ \ \text{pour tout }v\in C\big\}=:N_C(u),$$
+<p>le <em class="new">cône normal</em> à $C$ en $u$ : les vecteurs qui font un angle obtus (≥ 90°) avec toutes les directions qui partent de $u$ vers l'intérieur de $C$. Autrement dit, les directions qui « sortent » de $C$.</p>
+<figure class="fig">
+<svg viewBox="0 0 440 420" role="img" aria-label="Cônes normaux de la boule l1">
+<line class="ax" x1="14.0" x2="426.0" y1="215.0" y2="215.0"/>
+<line class="ax" x1="168.5" x2="168.5" y1="330.6" y2="14.0"/>
+<path class="ln c3 a3 thin" d="M271.5 215.0L415.7 74.3L415.7 355.7L271.5 215.0"/>
+<path class="ln c2 a2" d="M271.5 215.0L168.5 114.5L65.5 215.0L168.5 315.5L271.5 215.0"/>
+<path class="ln c5" d="M220.0 164.8L297.2 89.4"/>
+<path class="ln c5" d="M284.9 89.4L297.2 89.4L297.2 101.4"/>
+<circle class="fk" cx="271.5" cy="215.0" r="4.5"/>
+<text class="tx-b" x="265.5" y="237.0">A</text>
+<circle class="fk" cx="220.0" cy="164.8" r="4.5"/>
+<text class="tx-b" x="200.0" y="158.8">B</text>
+<circle class="fk" cx="142.8" cy="199.9" r="4.5"/>
+<text class="tx-b" x="152.8" y="204.9">C</text>
+<text class="tx-b f3" x="348.8" y="250.2" text-anchor="middle">N(A)</text>
+<text class="tx-b f5" x="302.4" y="88.4">N(B)</text>
+<text class="tx" x="19.2" y="34.1">boule ℓ1 : |u₁| + |u₂| ≤ 1</text>
+<text class="tx" x="19.2" y="355.7">A : coin → N(A) = {g : g₁ ≥ |g₂|}</text>
+<text class="tx" x="19.2" y="373.7">B : arête → N(B) = demi-droite (1, 1)</text>
+<text class="tx" x="19.2" y="391.7">C : intérieur → N(C) = {0}</text>
+</svg>
+<figcaption>Cônes normaux de la boule $\ell_1$ du plan. En un point intérieur C, aucune direction ne sort : $N=\{0\}$. Sur une arête B, une seule direction sort : la normale extérieure (demi-droite). En un coin A, toutes les directions comprises entre les normales des deux arêtes sortent : un vrai cône (en vert). Ces gros cônes aux coins expliquent, encore une fois, pourquoi les solutions du Lasso tombent souvent sur les coins.</figcaption>
+</figure>
+<details class="fold more"><summary>Vérifier le cône normal au coin A = (1, 0)</summary><div class="fold-body">
+<p>$g\in N(A)$ ssi $g\T v\le g\T A=g_1$ pour tout $v$ de la boule $\ell_1$. Le maximum de $g\T v$ sur la boule $\ell_1$ vaut $\norm g_\infty=\max(\abs{g_1},\abs{g_2})$ (il est atteint en un coin, cf. Hölder). Donc $N(A)=\{g:\max(\abs{g_1},\abs{g_2})\le g_1\}=\{g:\ g_1\ge\abs{g_2}\}$ : le cône entre les directions $(1,1)$ et $(1,-1)$.</p>
+</div></details>
+
+<h3 id="critere-optimalite">Le critère d'optimalité sur un convexe <span class="ref">Cours4 · diapo 52</span></h3>
+<div class="box thm"><div class="box-h">Proposition — Critère d'optimalité <span class="ref">Cours4 · diapo 52</span></div>
+<p>Soit $\varphi:\R^p\to\R$ convexe et $C\subset\R^p$ convexe. Alors $u^*\in\argmin_{u\in C}\varphi(u)$ si et seulement si</p>
+$$\exists\,g^*\in\partial\varphi(u^*)\quad\text{tel que}\quad(g^*)\T(u-u^*)\ge0\quad\text{pour tout }u\in C.$$
+</div>
+<p><strong>D'où ça vient.</strong> C'est la ligne précédente réécrite : $-g^*\in N_C(u^*)$ signifie $(-g^*)\T(u-u^*)\le0$ pour tout $u\in C$, c'est-à-dire $(g^*)\T(u-u^*)\ge0$.</p>
+<p><strong>Le sens « si » en une ligne</strong> (c'est celui qu'on utilise pour vérifier une solution) : pour tout $u\in C$, $\varphi(u)-\varphi(u^*)\ge(g^*)\T(u-u^*)\ge0$ (première inégalité : définition du sous-gradient ; seconde : l'hypothèse).</p>
+<div class="box intu"><div class="box-h">Intuition</div>
+<p>Si $\varphi$ est dérivable, $g^*=\nabla\varphi(u^*)$ et $(g^*)\T(u-u^*)$ est (au premier ordre) la variation de $\varphi$ quand on fait un petit pas de $u^*$ vers $u$. Le critère dit : <strong>aucune direction qui reste dans $C$ ne fait descendre $\varphi$</strong>. Si $u^*$ est à l'intérieur de $C$, toutes les directions sont permises et on retrouve $g^*=0$.</p>
+</div>
+<div class="box exemple"><div class="box-h">Exemple</div>
+<p>Minimiser $\varphi(u)=(u-3)^2$ sur $C=[0,1]$. Le minimum sans contrainte serait $3$, hors de $C$ ; on devine $u^*=1$. Vérification : $g^*=\varphi'(1)=2(1-3)=-4$ et pour tout $u\in[0,1]$, $g^*(u-u^*)=-4(u-1)\ge0$ car $u\le1$. ✓ La pente est négative (on voudrait aller à droite), mais aller à droite sort de $C$.</p>
+</div>
+
+<h3 id="monotonie">La monotonie du sous-différentiel <span class="ref">Cours4 · diapo 52</span></h3>
+<div class="box thm"><div class="box-h">Proposition — Monotonie <span class="ref">Cours4 · diapo 52</span></div>
+<p>Soit $\varphi$ convexe, $u_1,u_2\in\R^p$, $g_1\in\partial\varphi(u_1)$ et $g_2\in\partial\varphi(u_2)$. Alors</p>
+$$(u_1-u_2)\T(g_1-g_2)\ge0.$$
+</div>
+<ol class="steps">
+<li>$$\varphi(u_2)-\varphi(u_1)\ge g_1\T(u_2-u_1).$$<span class="why">Définition de « $g_1$ sous-gradient en $u_1$ », appliquée au point $v=u_2$.</span></li>
+<li>$$\varphi(u_1)-\varphi(u_2)\ge g_2\T(u_1-u_2).$$<span class="why">Même chose en échangeant les rôles.</span></li>
+<li>$$0\ge g_1\T(u_2-u_1)+g_2\T(u_1-u_2)=-(g_1-g_2)\T(u_1-u_2).$$<span class="why">On additionne : les $\varphi$ s'annulent à gauche ; à droite on factorise par $u_1-u_2$.</span></li>
+<li>$$(u_1-u_2)\T(g_1-g_2)\ge0.\qquad\square$$<span class="why">On change de signe.</span></li>
+</ol>
+<div class="box intu"><div class="box-h">Intuition</div>
+<p>En dimension 1 : si $u_1>u_2$ alors $g_1\ge g_2$. Les « pentes » d'une fonction convexe <strong>croissent</strong> quand on avance — c'est la définition même de « tourner vers le haut ». Pour $\abs u$ : pente $-1$ à gauche, n'importe quoi entre $-1$ et $1$ en $0$, $+1$ à droite. <strong>À quoi ça sert :</strong> dans une preuve, on connaît mal le sous-gradient $\hat g$ au point inconnu $\hb$ ; la monotonie permet de le remplacer par un sous-gradient $g$ en un point $\beta$ <em>qu'on choisit</em>, au prix d'une inégalité dans le bon sens.</p>
+</div>
+
+<h3 id="sd-l1">Le sous-différentiel de la norme $\ell_1$ <span class="ref">Cours4 · diapo 53</span></h3>
+<p class="tldr">Coordonnée par coordonnée : là où $u_j\neq0$, le sous-gradient vaut $\sgn(u_j)$ ; là où $u_j=0$, il peut valoir n'importe quoi dans $[-1,1]$.</p>
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours4 · diapo 53</span></div>
+$$\norm u_1=\max\{e\T u:\ e\in\{-1,1\}^p\}=\max_{i=1,\dots,2^p}\varphi_i(u),\qquad\varphi_i(u)=e_i\T u,$$
+$$\partial\norm u_1=\operatorname{conv}\Big(\bigcup_{i\in I(u)}\{e_i\}\Big)=\big\{\sgn(u)+h:\ h\in\R^p,\ \norm h_\infty\le1,\ h\odot u=0\big\},$$
+<p>où $I(u)=\{i:\ e_i\T u=\norm u_1\}$ et $(h\odot u)_j=h_ju_j$ (produit coordonnée par coordonnée).</p>
+</div>
+<p>Décodons, étape par étape.</p>
+<ol class="steps">
+<li>$$\norm u_1=\sum_j\abs{u_j}=\max_{e\in\{-1,1\}^p}\sum_je_ju_j.$$<span class="why">Pour maximiser $\sum_je_ju_j$ en choisissant chaque signe $e_j=\pm1$, on prend $e_j=\sgn(u_j)$ (n'importe lequel si $u_j=0$) et on obtient $\sum_j\abs{u_j}$. La norme $\ell_1$ est un maximum de $2^p$ fonctions linéaires.</span></li>
+<li>$$I(u)=\{\text{vecteurs de signes }e\text{ avec }e_j=\sgn(u_j)\text{ dès que }u_j\neq0\}.$$<span class="why">Ce sont les fonctions actives : celles qui atteignent le max. Sur les coordonnées nulles de $u$, le signe $e_j$ est libre.</span></li>
+<li>$$\partial\norm u_1=\operatorname{conv}\{e_i:\ i\in I(u)\}.$$<span class="why">Règle du maximum : chaque $\varphi_i$ est linéaire, son gradient est $e_i$.</span></li>
+<li>$$g\in\partial\norm u_1\iff g_j=\sgn(u_j)\text{ si }u_j\neq0,\quad g_j\in[-1,1]\text{ si }u_j=0.$$<span class="why">Mélanger des vecteurs de signes qui sont tous égaux à $\sgn(u_j)$ sur le support et libres ailleurs donne exactement ça. C'est la formule $\sgn(u)+h$ avec $h$ nul sur le support ($h\odot u=0$) et $\abs{h_j}\le1$.</span></li>
+</ol>
+<p>Plus simplement : $\norm u_1=\sum_j\abs{u_j}$ est une somme de fonctions d'une seule coordonnée, donc $\partial\norm u_1=\partial\abs{u_1}\times\dots\times\partial\abs{u_p}$ — le produit des sous-différentiels 1D calculés plus haut.</p>
+<div class="box exemple"><div class="box-h">L'exemple de la diapo</div>
+<p>$p=4$, $u=(17,\,-42,\,0,\,3)\T$ : $\partial\norm u_1=\{1\}\times\{-1\}\times[-1,1]\times\{1\}$. Par exemple $(1,-1,0{,}3,1)$ en est un sous-gradient, $(1,-1,1{,}2,1)$ n'en est pas un.</p>
+</div>
+
+<h3 id="boucler">Boucler la boucle : seuillage doux et KKT en deux lignes</h3>
+<p>Avec ces outils, les résultats des séances 2 et 4 tombent immédiatement.</p>
+<p><strong>Seuillage doux.</strong> $\varphi(a)=\frac12\norm{a-b}^2+\lambda\norm a_1$. Règle de Fermat + règle de la somme : $0\in a-b+\lambda\,\partial\norm a_1$. Coordonnée par coordonnée :</p>
+<ul>
+<li>si $\hat a_j\neq0$ : $\hat a_j=b_j-\lambda\sgn(\hat a_j)$, ce qui exige $\abs{b_j}>\lambda$ et donne $\hat a_j=b_j\mp\lambda$ ;</li>
+<li>si $\hat a_j=0$ : $b_j\in\lambda[-1,1]$, c'est-à-dire $\abs{b_j}\le\lambda$.</li>
+</ul>
+<p>C'est $T_\lambda(b)$, sans distinguer de cas « à la main ».</p>
+<p><strong>Conditions KKT.</strong> $F(\beta)=\frac1n\norm{y-X\beta}^2+\lambda\norm\beta_1$ : $0\in-\frac2nX\T(y-X\hb)+\lambda\,\partial\norm{\hb}_1$, donc</p>
+$$\frac2nX_j\T(y-X\hb)=\lambda\sgn(\hb_j)\ \text{ si }\hb_j\neq0,\qquad\Big|\frac2nX_j\T(y-X\hb)\Big|\le\lambda\ \text{ si }\hb_j=0.$$
+<p>Ce sont les conditions (2) de la diapo 27 (séance 2), au facteur $n$ près dû à la normalisation du critère.</p>
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>Pour caractériser le minimiseur d'un critère convexe non dérivable → écrivez $0\in\partial(\text{critère})$, développez avec la règle de la somme, puis lisez coordonnée par coordonnée en distinguant « coefficient non nul » (égalité) et « coefficient nul » (inégalité).</p>
+</div>
+
+<h2 id="oracle-lente">6. L'inégalité oracle lente</h2>
+
+<h3 id="lente-hyp">Hypothèse et choix de $\lambda$ <span class="ref">Cours4 · diapo 54</span></h3>
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours4 · diapo 54</span></div>
+<p><strong>Hypothèse :</strong> les colonnes de $X$ sont normalisées, $\norm{X_j}_2=\sqrt n$. (Hypothèse peu restrictive, qui suit les bonnes pratiques.)</p>
+$$\hb_n=\argmin_{\beta\in\Theta}\Big\{\frac1n\norm{y-f_\beta}^2+\lambda\norm\beta_1\Big\},\qquad\lambda=2\sigma\sqrt{\frac{2(x+\log M)}n},$$
+<p>où $x>0$ est un niveau de confiance et $\sigma$ l'écart-type du bruit.</p>
+</div>
+<ul>
+<li><strong>Normalisation</strong> : $\norm{X_j}^2=\sum_iX_{ij}^2=n$, autrement dit la brique $f_j$ a une « taille moyenne » $\frac1n\sum_if_j(Z_i)^2=1$. Sans cela, une même pénalité $\lambda\abs{\beta_j}$ toucherait très différemment des briques d'échelles différentes. En pratique : on divise chaque colonne par sa norme et on multiplie par $\sqrt n$.</li>
+<li><strong>Le $\lambda$</strong> : il est proportionnel à $\sigma$ (plus de bruit ⇒ pénaliser plus), à $\sqrt{\log M}$ (plus de briques ⇒ plus de risque de « fausses corrélations » avec le bruit) et à $1/\sqrt n$ (plus de données ⇒ le bruit se moyenne). Le paramètre $x$ règle la probabilité de succès : plus $x$ est grand, plus la garantie est sûre, mais plus $\lambda$ est grand.</li>
+</ul>
+
+<h3 id="lente-enonce">L'énoncé <span class="ref">Cours4 · diapo 55</span></h3>
+<div class="box thm"><div class="box-h">Théorème — Inégalité oracle lente <span class="ref">Cours4 · diapo 55</span></div>
+<p>Sous l'hypothèse précédente, avec ce choix de $\lambda$, avec probabilité au moins $1-2e^{-x}$,</p>
+$$\frac1n\norm{f_{\hb_n}-f}^2\le\inf_{\beta\in\Theta}\Big\{\frac1n\norm{f_\beta-f}^2+2\lambda\norm\beta_1\Big\}.$$
+</div>
+<p>Lecture : pour tout concurrent $\beta$, l'erreur du Lasso est au plus l'erreur d'approximation de $\beta$ plus un prix $2\lambda\norm\beta_1$, proportionnel à la taille $\ell_1$ du concurrent. Aucune hypothèse sur les corrélations entre briques ! Par exemple, avec $x=3$ la garantie tient avec probabilité $\ge1-2e^{-3}\approx0{,}90$.</p>
+
+<h3 id="lente-preuve">La preuve, pas à pas</h3>
+<div class="box idee"><div class="box-h">Idée de la preuve</div>
+<ol>
+<li><strong>Comparer à un concurrent</strong> : $\hb_n$ minimise le critère, donc son critère est plus petit que celui de n'importe quel $\beta\in\Theta$.</li>
+<li><strong>Développer</strong> $y=f+\eps$ : il reste un terme croisé bruit × écart, $\frac2n\eps\T X(\hb_n-\beta)$.</li>
+<li><strong>Contrôler le terme croisé</strong> par Hölder : il est au plus $\frac2n\norm{X\T\eps}_\infty\norm{\hb_n-\beta}_1$, et sur un bon événement $\frac2n\norm{X\T\eps}_\infty\le\lambda$.</li>
+<li><strong>Inégalité triangulaire</strong> : les $\norm{\hb_n}_1$ s'éliminent, il reste $2\lambda\norm\beta_1$.</li>
+<li><strong>Probabilité du bon événement</strong> : chaque $X_j\T\eps$ est gaussien, queue gaussienne + borne de l'union.</li>
+</ol>
+</div>
+<p>Notons $F(\beta)=\frac1n\norm{y-X\beta}^2+\lambda\norm\beta_1$, écrivons $\hb$ pour $\hb_n$, et fixons un concurrent quelconque $\beta\in\Theta$. Rappel : $f_\beta=X\beta$.</p>
+<ol class="steps">
+<li>$$\frac1n\norm{y-f_{\hb}}^2+\lambda\norm{\hb}_1\le\frac1n\norm{y-f_\beta}^2+\lambda\norm\beta_1.$$<span class="why">$F(\hb)\le F(\beta)$ : $\hb$ minimise $F$ sur $\Theta$ et $\beta\in\Theta$. C'est l'« inégalité de base » de la séance 3, avec un concurrent quelconque au lieu du vrai paramètre.</span></li>
+<li>$$\norm{y-f_\beta}^2=\norm{(f-f_\beta)+\eps}^2=\norm{f-f_\beta}^2+2\eps\T(f-f_\beta)+\norm\eps^2.$$<span class="why">$y=f+\eps$, puis $\norm{a+b}^2=\norm a^2+2a\T b+\norm b^2$. Même chose avec $\hb$ à la place de $\beta$.</span></li>
+<li>$$\frac1n\norm{f-f_{\hb}}^2+\frac2n\eps\T(f-f_{\hb})+\lambda\norm{\hb}_1\le\frac1n\norm{f-f_\beta}^2+\frac2n\eps\T(f-f_\beta)+\lambda\norm\beta_1.$$<span class="why">On remplace dans l'étape 1 ; le terme $\frac1n\norm\eps^2$ apparaît des deux côtés et s'élimine.</span></li>
+<li>$$\frac1n\norm{f-f_{\hb}}^2\le\frac1n\norm{f-f_\beta}^2+\frac2n\eps\T X(\hb-\beta)+\lambda\norm\beta_1-\lambda\norm{\hb}_1.$$<span class="why">On regroupe les termes en $\eps$ à droite : $\frac2n\eps\T(f-f_\beta)-\frac2n\eps\T(f-f_{\hb})=\frac2n\eps\T(f_{\hb}-f_\beta)$, et $f_{\hb}-f_\beta=X(\hb-\beta)$.</span></li>
+<li>$$\frac2n\eps\T X(\hb-\beta)=\frac2n(X\T\eps)\T(\hb-\beta)\le\frac2n\norm{X\T\eps}_\infty\norm{\hb-\beta}_1.$$<span class="why">Hölder : $\abs{a\T b}\le\norm a_\infty\norm b_1$. Le bruit n'intervient plus qu'à travers un seul nombre, $\norm{X\T\eps}_\infty=\max_j\abs{X_j\T\eps}$ : la plus forte corrélation entre le bruit et une brique.</span></li>
+<li>$$\text{Sur }\mathcal B=\Big\{\frac2n\norm{X\T\eps}_\infty\le\lambda\Big\}:\quad\frac2n\eps\T X(\hb-\beta)\le\lambda\norm{\hb-\beta}_1\le\lambda\norm{\hb}_1+\lambda\norm\beta_1.$$<span class="why">Définition de l'événement, puis inégalité triangulaire $\norm{\hb-\beta}_1\le\norm{\hb}_1+\norm\beta_1$.</span></li>
+<li>$$\frac1n\norm{f-f_{\hb}}^2\le\frac1n\norm{f-f_\beta}^2+\lambda\norm{\hb}_1+\lambda\norm\beta_1+\lambda\norm\beta_1-\lambda\norm{\hb}_1=\frac1n\norm{f-f_\beta}^2+2\lambda\norm\beta_1.$$<span class="why">On reporte dans l'étape 4 : les $\lambda\norm{\hb}_1$ se compensent exactement. C'est tout l'intérêt d'avoir choisi $\lambda$ au moins aussi grand que le bruit $\frac2n\norm{X\T\eps}_\infty$.</span></li>
+<li>$$\text{Sur }\mathcal B:\quad\frac1n\norm{f_{\hb}-f}^2\le\inf_{\beta\in\Theta}\Big\{\frac1n\norm{f_\beta-f}^2+2\lambda\norm\beta_1\Big\}.$$<span class="why">L'événement $\mathcal B$ ne dépend pas de $\beta$ : sur $\mathcal B$, l'inégalité de l'étape 7 vaut pour tous les $\beta\in\Theta$ simultanément, donc pour leur inf.</span></li>
+</ol>
+<p><strong>Il reste à montrer que $\P(\mathcal B)\ge1-2e^{-x}$.</strong></p>
+<ol class="steps">
+<li>$$X_j\T\eps=\sum_{i=1}^nX_{ij}\eps_i\sim\N\big(0,\sigma^2\norm{X_j}^2\big)=\N(0,n\sigma^2).$$<span class="why">Combinaison linéaire de gaussiennes indépendantes centrées : gaussienne centrée de variance $\sum_iX_{ij}^2\sigma^2$ (<a href="00_rappels.html#gaussien">rappel</a>), et $\norm{X_j}^2=n$ par l'hypothèse de normalisation.</span></li>
+<li>$$Z_j:=\frac{X_j\T\eps}{\sigma\sqrt n}\sim\N(0,1),\qquad\frac2n\abs{X_j\T\eps}>\lambda\iff\abs{Z_j}>\frac{\lambda\sqrt n}{2\sigma}=\sqrt{2(x+\log M)}.$$<span class="why">On standardise ; puis $\frac{\lambda\sqrt n}{2\sigma}=\frac{\sqrt n}{2\sigma}\cdot2\sigma\sqrt{\frac{2(x+\log M)}n}=\sqrt{2(x+\log M)}$. C'est pour obtenir ce seuil « rond » que $\lambda$ a cette forme.</span></li>
+<li>$$\P\Big(\abs{Z_j}>\sqrt{2(x+\log M)}\Big)\le2e^{-(x+\log M)}=\frac{2e^{-x}}M.$$<span class="why">Queue gaussienne $\P(\abs Z>t)\le2e^{-t^2/2}$ (<a href="00_rappels.html#queues">rappel</a>) avec $t^2/2=x+\log M$, puis $e^{-\log M}=1/M$.</span></li>
+<li>$$\P(\mathcal B^c)=\P\Big(\exists j:\ \frac2n\abs{X_j\T\eps}>\lambda\Big)\le\sum_{j=1}^M\frac{2e^{-x}}M=2e^{-x}.\qquad\square$$<span class="why">Borne de l'union : la probabilité qu'au moins un des $M$ événements se produise est au plus la somme des probabilités. Aucune indépendance entre les $Z_j$ n'est nécessaire (les briques peuvent être très corrélées).</span></li>
+</ol>
+<div class="box intu"><div class="box-h">Intuition — d'où vient le $\log M$</div>
+<p>$\frac1n\abs{X_j\T\eps}$ mesure à quel point le bruit « ressemble » à la brique $f_j$. Pour une brique fixée, c'est de l'ordre de $\sigma/\sqrt n$. Mais avec $M$ briques, la plus ressemblante l'est davantage : le maximum de $M$ gaussiennes standard est de l'ordre de $\sqrt{2\log M}$ (<a href="00_rappels.html#queues">rappel et simulation</a>). Le $\lambda$ doit dépasser ce maximum, sinon le Lasso prendrait des briques pour expliquer du bruit. D'où $\lambda\asymp\sigma\sqrt{\log M/n}$ : on ne paie que <strong>logarithmiquement</strong> la taille du dictionnaire.</p>
+</div>
+
+<h3 id="lente-lecture">Pourquoi « lente » ?</h3>
+<p>Le prix vaut $2\lambda\norm\beta_1=4\sigma\norm\beta_1\sqrt{\frac{2(x+\log M)}n}$ : il décroît comme $1/\sqrt n$. Doubler la taille de l'échantillon ne divise le prix que par $\sqrt2\approx1{,}41$. Pour comparaison, l'erreur de l'oracle des séances 1–3 (moindres carrés sur le bon support) est $\sigma^2s/n$, en $1/n$. D'où le nom : <strong>vitesse lente</strong> $O(1/\sqrt n)$.</p>
+<div class="cols">
+<div class="box reflexe"><div class="box-h">Ce qu'elle a pour elle</div>
+<p>Aucune hypothèse sur $X$ (seulement la normalisation), $f$ quelconque, preuve de 8 lignes. C'est la garantie « tout terrain ».</p></div>
+<div class="box piege"><div class="box-h">Ce qui lui manque</div>
+<p>La vitesse $1/\sqrt n$ et un prix en $\norm\beta_1$ (et non en nombre de coefficients) : elle ne voit pas vraiment la parcimonie. Pour gagner, il faudra une hypothèse sur $X$.</p></div>
+</div>
+
+<h2 id="oracle-rapide">7. L'inégalité oracle rapide</h2>
+
+<h3 id="rapide-pourquoi">Pourquoi il faut une hypothèse sur $X$ <span class="ref">Cours4 · diapo 56</span></h3>
+<p class="tldr">Pour passer de $1/\sqrt n$ à $1/n$, il faut pouvoir dire « si $X\delta$ est petit, alors $\delta$ est petit » ; c'est faux en général quand $M>n$, mais cela peut rester vrai pour les $\delta$ d'une forme particulière.</p>
+<p>La matrice de Gram du dictionnaire est</p>
+$$G=\frac1nX\T X=\Big(\frac1n\ps{f_j}{f_{j'}}\Big)_{1\le j,j'\le M},\qquad f_j=\big(f_j(Z_1),\dots,f_j(Z_n)\big)\in\R^n.$$
+<p>Son coefficient $(j,j')$ mesure à quel point les briques $f_j$ et $f_{j'}$ se ressemblent aux points observés (avec la normalisation, la diagonale vaut 1). Si $M>n$ :</p>
+$$\min_{t\in\R^M\setminus\{0\}}\frac{\sqrt{t\T Gt}}{\norm t}=\min_{t\neq0}\frac{\norm{Xt}}{\sqrt n\,\norm t}=0,$$
+<p>car $X:\R^M\to\R^n$ a un noyau non nul (théorème du rang : $\dim\Ker X\ge M-n>0$) ; il suffit de prendre $t$ dans le noyau. La plus petite valeur propre de $G$ est 0. Conséquence : on ne peut <em>pas</em> déduire « $t$ petit » de « $Xt$ petit » pour tous les $t$. La condition RE le demande seulement pour des $t$ particuliers.</p>
+
+<h3 id="rapide-re">La condition de valeurs propres restreintes RE$(s,c_0)$ <span class="ref">Cours4 · diapo 57</span></h3>
+<div class="box def"><div class="box-h">Hypothèse — Valeurs propres restreintes <span class="ref">Cours4 · diapo 57</span></div>
+<p>$X$ vérifie RE$(s,c_0)$, pour un $c_0>0$ et un $s\in\{1,\dots,M\}$, si</p>
+$$\kappa(s,c_0)=\min_{\substack{J\subset\{1,\dots,M\}\\\abs J\le s}}\ \min_{\substack{t\neq0\\\norm{t_{J^c}}_1\le c_0\norm{t_J}_1}}\frac{\norm{Xt}}{\sqrt n\,\norm{t_J}}>0.$$
+</div>
+<p>C'est la même condition qu'en séance 3 (où $c_0=3$). Décodage :</p>
+<ul>
+<li>$t_J$ : le vecteur $t$ où l'on a mis à zéro les coordonnées hors de $J$ ; $t_{J^c}$ : celui où l'on a mis à zéro les coordonnées de $J$.</li>
+<li>$\norm{t_{J^c}}_1\le c_0\norm{t_J}_1$ : le « cône » des vecteurs dont la masse est concentrée sur un petit ensemble $J$ (au plus $s$ coordonnées) — ce qui est hors de $J$ pèse au plus $c_0$ fois ce qui est dans $J$.</li>
+<li>$\kappa>0$ : sur ce cône, $\norm{Xt}\ge\kappa\sqrt n\norm{t_J}$ ; un vecteur « presque parcimonieux » ne peut pas être (presque) dans le noyau de $X$.</li>
+</ul>
+<p>Plus $c_0$ est grand, plus le cône est gros, donc plus la condition est exigeante : $\kappa(s,3)\le\kappa(s,1)$, et RE$(s,3)$ entraîne RE$(s,1)$.</p>
+
+<div class="box thm"><div class="box-h">Proposition <span class="ref">Cours4 · diapo 57</span></div>
+<p>Si $X$ vérifie RE$(s,1)$, toute sous-matrice de $X$ formée de $2s$ colonnes (ou moins) est de rang plein.</p>
+</div>
+<div class="box idee"><div class="box-h">Idée de la preuve</div>
+<p>Un vecteur non nul ayant au plus $2s$ coordonnées non nulles est automatiquement dans le cône $c_0=1$ si l'on prend pour $J$ ses $s$ plus grandes coordonnées. Donc il ne peut pas être dans le noyau.</p>
+</div>
+<details class="fold proof"><summary>Preuve détaillée</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\text{Soit }S\text{ avec }\abs S\le2s\text{ et }t\in\R^M\text{ nul hors de }S,\ \text{tel que }Xt=0.\ \text{Montrons }t=0.$$<span class="why">« La sous-matrice $X_S$ est de rang plein » signifie exactement : la seule combinaison nulle de ses colonnes est la combinaison triviale.</span></li>
+<li>$$J=\text{les indices des }s\text{ plus grandes valeurs de }\abs{t_j}\ (\text{ou tout le support s'il a moins de }s\text{ éléments}).$$<span class="why">On choisit le $J$ le plus favorable pour entrer dans le cône.</span></li>
+<li>$$\norm{t_{J^c}}_1\le s\cdot\min_{k\in J}\abs{t_k}\le\norm{t_J}_1.$$<span class="why">Hors de $J$, il reste au plus $2s-s=s$ coordonnées non nulles, chacune plus petite que toutes celles de $J$ ; et $J$ contient $s$ coordonnées, chacune $\ge\min_J\abs{t_k}$.</span></li>
+<li>$$\text{RE}(s,1):\quad0=\norm{Xt}\ge\kappa(s,1)\sqrt n\norm{t_J}\ \Rightarrow\ t_J=0\ \Rightarrow\ t=0.$$<span class="why">$t$ est dans le cône $c_0=1$ avec $\abs J\le s$. Si $t\neq0$, la définition de $\kappa$ donnerait $\norm{Xt}>0$. Donc $t_J=0$ ; or $J$ contient les plus grandes coordonnées, donc toutes sont nulles. <span class="qed">□</span></span></li>
+</ol>
+</div></details>
+<p>Interprétation : RE interdit en particulier que deux briques soient identiques aux points observés (deux colonnes égales forment une sous-matrice de rang 1), ou qu'une brique soit combinaison de quelques autres. C'est une hypothèse de « faible corrélation entre petits groupes de briques ».</p>
+
+<h3 id="rapide-enonce">L'énoncé <span class="ref">Cours4 · diapo 58</span></h3>
+<div class="box thm"><div class="box-h">Théorème — Inégalité oracle rapide <span class="ref">Cours4 · diapo 58</span></div>
+<p>Sous RE$(s,3)$ (et la normalisation $\norm{X_j}=\sqrt n$), avec probabilité au moins $1-2e^{-x}$,</p>
+$$\frac1n\norm{f_{\hb_n}-f}^2\le\inf_{\substack{\beta\in\Theta\\\norm\beta_0\le s}}\Big\{\frac1n\norm{f_\beta-f}^2+\frac{18\,\sigma^2\,s\,(x+\log M)}{\kappa(s,3)^2\,n}\Big\}.$$
+</div>
+<div class="box remarque"><div class="box-h">Note sur la diapo 58 : quel $\lambda$ ?</div>
+<p>La diapo ne redit pas le $\lambda$ utilisé. Avec la preuve présentée ci-dessous, la constante 18 sort exactement en prenant $\lambda=4\sigma\sqrt{2(x+\log M)/n}$, c'est-à-dire <strong>deux fois</strong> le $\lambda$ de l'inégalité lente. On va voir pourquoi il faut doubler : le bruit ne doit consommer que la moitié de la pénalité.</p>
+</div>
+<p>Comparez avec l'inégalité lente : le prix ne dépend plus de $\norm\beta_1$ mais du <strong>nombre</strong> $s$ de briques utilisées, et il décroît en $1/n$. C'est le prix de l'oracle des séances 1–3 ($\sigma^2s/n$) multiplié seulement par $\frac{18(x+\log M)}{\kappa^2}$ : un facteur logarithmique en $M$, et $1/\kappa^2$ qui mesure la difficulté du dictionnaire.</p>
+
+<h3 id="rapide-preuve">La preuve, pas à pas</h3>
+<div class="box idee"><div class="box-h">Idée de la preuve</div>
+<ol>
+<li><strong>Critère d'optimalité</strong> (diapo 52) au lieu de « $F(\hb)\le F(\beta)$ » : il fournit un terme bonus $\frac1n\norm{X(\hb-\beta)}^2$ à gauche, qui servira à tout absorber à la fin.</li>
+<li><strong>Monotonie</strong> (diapo 52) : remplacer le sous-gradient inconnu en $\hb$ par un sous-gradient bien choisi en $\beta$ (diapo 53), ce qui fait apparaître $\norm{\delta_J}_1-\norm{\delta_{J^c}}_1$.</li>
+<li><strong>Terme croisé</strong> : Hölder, sur l'événement où le bruit vaut au plus <em>la moitié</em> de $\lambda$.</li>
+<li><strong>Deux cas</strong> : ou bien la pénalité gagne et c'est fini ; ou bien $\delta=\hb-\beta$ est dans le cône $c_0=3$, et on applique RE.</li>
+<li><strong>Young</strong> $ab\le a^2+b^2/4$ : le terme bonus absorbe ce qui reste.</li>
+</ol>
+</div>
+<p>Notations : $\lambda=4\sigma\sqrt{2(x+\log M)/n}$ ; $\beta\in\Theta$ un concurrent avec $\norm\beta_0\le s$ ; $J=J(\beta)=\{j:\beta_j\neq0\}$ (donc $\abs J\le s$) ; $\delta=\hb-\beta$.</p>
+
+<h4>Étape A — Le critère d'optimalité</h4>
+<ol class="steps">
+<li>$$\exists\,\hat g\in\partial\norm{\hb}_1:\quad\Big(-\frac2nX\T(y-X\hb)+\lambda\hat g\Big)\T(\beta-\hb)\ge0\quad\forall\beta\in\Theta.$$<span class="why">Critère d'optimalité (diapo 52) pour $F$ sur le convexe $\Theta$ ; par la règle de la somme, tout sous-gradient de $F$ en $\hb$ s'écrit $-\frac2nX\T(y-X\hb)+\lambda\hat g$ avec $\hat g\in\partial\norm{\hb}_1$.</span></li>
+<li>$$\frac2n(X\hb-y)\T X\delta+\lambda\hat g\T\delta\le0.$$<span class="why">On multiplie par $-1$ (le $\ge$ devient $\le$) et on utilise $\beta-\hb=-\delta$ ; de plus $\big(-X\T(y-X\hb)\big)\T\delta=(X\hb-y)\T X\delta$.</span></li>
+<li>$$X\hb-y=(f_{\hb}-f)-\eps\quad\Rightarrow\quad\frac2n(f_{\hb}-f)\T X\delta\le\frac2n\eps\T X\delta-\lambda\hat g\T\delta.$$<span class="why">$y=f+\eps$ et $X\hb=f_{\hb}$ ; on passe les termes en $\eps$ et en $\hat g$ à droite.</span></li>
+<li>$$2a\T(a-c)=\norm a^2+\norm{a-c}^2-\norm c^2\quad\text{avec }a=f_{\hb}-f,\ c=f_\beta-f,\ a-c=X\delta.$$<span class="why">Identité de polarisation : développez $\norm{a-c}^2=\norm a^2-2a\T c+\norm c^2$ et comparez. Elle transforme un produit scalaire en carrés de normes.</span></li>
+<li>$$\frac1n\norm{f_{\hb}-f}^2+\frac1n\norm{X\delta}^2\le\frac1n\norm{f_\beta-f}^2+\frac2n\eps\T X\delta-\lambda\hat g\T\delta.\qquad(\text{A})$$<span class="why">On remplace dans l'étape 3. Le terme $\frac1n\norm{X\delta}^2$ à gauche est le « bonus » : la simple comparaison $F(\hb)\le F(\beta)$ de la preuve lente ne le donnait pas.</span></li>
+</ol>
+
+<h4>Étape B — La monotonie, avec un sous-gradient bien choisi</h4>
+<ol class="steps">
+<li>$$g\in\partial\norm\beta_1\ \Rightarrow\ (\hb-\beta)\T(\hat g-g)\ge0\ \Rightarrow\ -\hat g\T\delta\le-g\T\delta.$$<span class="why">Monotonie du sous-différentiel de $\norm\cdot_1$ (diapo 52) entre les points $\hb$ et $\beta$.</span></li>
+<li>$$g_j=\sgn(\beta_j)\ \ (j\in J),\qquad g_j=\sgn(\delta_j)\ \ (j\notin J).$$<span class="why">Diapo 53 : sur le support de $\beta$ le sous-gradient est imposé ($\sgn(\beta_j)$) ; hors du support ($\beta_j=0$) on a le droit de choisir n'importe quelle valeur de $[-1,1]$, et on choisit la plus utile.</span></li>
+<li>$$-g\T\delta=-\sum_{j\in J}\sgn(\beta_j)\delta_j-\sum_{j\notin J}\abs{\delta_j}\le\norm{\delta_J}_1-\norm{\delta_{J^c}}_1.$$<span class="why">$\sgn(\delta_j)\delta_j=\abs{\delta_j}$ ; et $-\sgn(\beta_j)\delta_j\le\abs{\delta_j}$.</span></li>
+<li>$$-\lambda\hat g\T\delta\le\lambda\norm{\delta_J}_1-\lambda\norm{\delta_{J^c}}_1.$$<span class="why">On combine les étapes 1 et 3 et on multiplie par $\lambda>0$. C'est le même découpage selon le support qu'en séance 3, obtenu ici par le sous-différentiel.</span></li>
+</ol>
+
+<h4>Étape C — Le terme croisé, sur le bon événement</h4>
+<ol class="steps">
+<li>$$\mathcal B'=\Big\{\frac2n\norm{X\T\eps}_\infty\le\frac\lambda2\Big\}:\qquad\frac2n\eps\T X\delta\le\frac2n\norm{X\T\eps}_\infty\norm\delta_1\le\frac\lambda2\big(\norm{\delta_J}_1+\norm{\delta_{J^c}}_1\big).$$<span class="why">Hölder, puis $\norm\delta_1=\norm{\delta_J}_1+\norm{\delta_{J^c}}_1$.</span></li>
+<li>$$\frac1n\norm{f_{\hb}-f}^2+\frac1n\norm{X\delta}^2\le\frac1n\norm{f_\beta-f}^2+\frac{3\lambda}2\norm{\delta_J}_1-\frac\lambda2\norm{\delta_{J^c}}_1.\qquad(\star)$$<span class="why">On reporte B4 et C1 dans (A) : $\frac\lambda2+\lambda=\frac{3\lambda}2$ devant $\norm{\delta_J}_1$, et $\frac\lambda2-\lambda=-\frac\lambda2$ devant $\norm{\delta_{J^c}}_1$. Le coefficient devant $\norm{\delta_{J^c}}_1$ est <strong>négatif</strong> parce que le bruit n'a mangé que la moitié de la pénalité.</span></li>
+</ol>
+
+<h4>Étape D — Deux cas</h4>
+<p><strong>Cas 1 : $\frac{3\lambda}2\norm{\delta_J}_1\le\frac\lambda2\norm{\delta_{J^c}}_1$.</strong> Le dernier terme de $(\star)$ est $\le0$, et $\frac1n\norm{X\delta}^2\ge0$, donc $\frac1n\norm{f_{\hb}-f}^2\le\frac1n\norm{f_\beta-f}^2$ : c'est encore mieux que l'inégalité voulue.</p>
+<p><strong>Cas 2 : sinon</strong>, $\norm{\delta_{J^c}}_1<3\norm{\delta_J}_1$ : $\delta$ est dans le cône de RE$(s,3)$ avec $\abs J\le s$ (et $\delta\neq0$).</p>
+<ol class="steps">
+<li>$$\norm{\delta_J}_2\le\frac{\norm{X\delta}}{\kappa\sqrt n},\qquad\kappa=\kappa(s,3).$$<span class="why">Définition de $\kappa(s,3)$ : sur le cône, $\frac{\norm{X\delta}}{\sqrt n\norm{\delta_J}}\ge\kappa$.</span></li>
+<li>$$\frac{3\lambda}2\norm{\delta_J}_1\le\frac{3\lambda}2\sqrt s\,\norm{\delta_J}_2\le\frac{3\lambda\sqrt s}{2\kappa}\cdot\frac{\norm{X\delta}}{\sqrt n}.$$<span class="why">$\delta_J$ a au plus $s$ coordonnées non nulles, donc $\norm{\delta_J}_1\le\sqrt s\norm{\delta_J}_2$ (Cauchy–Schwarz, <a href="00_rappels.html#inegalites-normes">rappel</a>), puis l'étape 1.</span></li>
+<li>$$\frac{3\lambda\sqrt s}{2\kappa}\cdot\frac{\norm{X\delta}}{\sqrt n}\le\frac1n\norm{X\delta}^2+\frac{9\lambda^2s}{16\kappa^2}.$$<span class="why">Young : $ab\le a^2+\frac{b^2}4$ (car $(a-\frac b2)^2\ge0$), avec $a=\frac{\norm{X\delta}}{\sqrt n}$ et $b=\frac{3\lambda\sqrt s}{2\kappa}$, d'où $\frac{b^2}4=\frac{9\lambda^2s}{16\kappa^2}$.</span></li>
+<li>$$\frac1n\norm{f_{\hb}-f}^2+\frac1n\norm{X\delta}^2\le\frac1n\norm{f_\beta-f}^2+\frac1n\norm{X\delta}^2+\frac{9\lambda^2s}{16\kappa^2}.$$<span class="why">On reporte dans $(\star)$ en oubliant $-\frac\lambda2\norm{\delta_{J^c}}_1\le0$.</span></li>
+<li>$$\frac1n\norm{f_{\hb}-f}^2\le\frac1n\norm{f_\beta-f}^2+\frac{9\lambda^2s}{16\kappa^2}=\frac1n\norm{f_\beta-f}^2+\frac{18\sigma^2s(x+\log M)}{\kappa^2n}.$$<span class="why">Le bonus $\frac1n\norm{X\delta}^2$ se simplifie des deux côtés. Puis $\lambda^2=16\sigma^2\cdot\frac{2(x+\log M)}n$, donc $\frac{9\lambda^2}{16}=\frac{18\sigma^2(x+\log M)}n$.</span></li>
+</ol>
+
+<h4>Étape E — Probabilité et conclusion</h4>
+<ol class="steps">
+<li>$$\frac\lambda2=2\sigma\sqrt{\frac{2(x+\log M)}n}\ \Rightarrow\ \mathcal B'=\Big\{\frac2n\norm{X\T\eps}_\infty\le2\sigma\sqrt{\tfrac{2(x+\log M)}n}\Big\}=\mathcal B.$$<span class="why">Avec ce $\lambda$ doublé, l'événement de la preuve rapide est <em>exactement</em> celui de la preuve lente.</span></li>
+<li>$$\P(\mathcal B')\ge1-2e^{-x}.$$<span class="why">Calcul déjà fait pour l'inégalité lente (gaussiennes + union).</span></li>
+<li>$$\text{Sur }\mathcal B',\ \forall\beta\in\Theta\text{ avec }\norm\beta_0\le s:\ \frac1n\norm{f_{\hb}-f}^2\le\frac1n\norm{f_\beta-f}^2+\frac{18\sigma^2s(x+\log M)}{\kappa^2n}\ \Rightarrow\ \text{inf}.\qquad\square$$<span class="why">Les cas 1 et 2 donnent la même borne (le cas 1 donne mieux), pour tout concurrent, sur un même événement indépendant de $\beta$ : on peut passer à l'inf.</span></li>
+</ol>
+
+<div class="box reflexe"><div class="box-h">Réflexe — pourquoi doubler $\lambda$</div>
+<p>Dans la preuve lente, le bruit pouvait consommer <em>toute</em> la pénalité ($\frac2n\norm{X\T\eps}_\infty\le\lambda$) : il ne restait rien pour contrôler $\delta$ hors du support. Dans la preuve rapide, on veut que la pénalité <strong>gagne</strong> hors du support pour forcer $\delta$ dans un cône : il faut que le bruit n'en consomme qu'une fraction ($\le\lambda/2$ donne le cône $c_0=3$). Retenez : <em>vitesse rapide = $\lambda$ au moins deux fois le niveau du bruit + cône + RE + Young</em>.</p>
+</div>
+<div class="box piege"><div class="box-h">Piège — confondre les deux sortes d'inégalités</div>
+<p>« Lente » ne veut pas dire « fausse » ni « inutile » : elle est vraie sans aucune hypothèse de corrélation. « Rapide » demande RE, une hypothèse qu'on ne peut pas vérifier en pratique (calculer $\kappa$ est un problème combinatoire). Les deux sont des garanties <em>non asymptotiques</em> : elles valent pour tout $n$, avec une probabilité explicite.</p>
+</div>
+
+<h3 id="rapide-lecture">Ce que dit le théorème</h3>
+<ul>
+<li><strong>Compromis approximation / complexité</strong> : pour chaque $s$, le meilleur concurrent $s$-parcimonieux paie $\frac1n\norm{f_\beta-f}^2$ (approximation) + $\frac{18\sigma^2s(x+\log M)}{\kappa^2n}$ (complexité). Le Lasso, solution d'un problème convexe simple, réalise ce compromis sans connaître $f$ (diapo 58).</li>
+<li><strong>Vitesse</strong> $\frac{s\log M}n$ : si $f$ est bien approchée avec $s$ briques, l'erreur décroît en $1/n$, et la taille du dictionnaire ne coûte que $\log M$.</li>
+<li><strong>Cas bien spécifié</strong> : si $f=X\beta^\circ$ avec $\norm{\beta^\circ}_0\le s$ et $\beta^\circ\in\Theta$, prendre $\beta=\beta^\circ$ donne $\frac1n\norm{X\hb-X\beta^\circ}^2\le\frac{18\sigma^2s(x+\log M)}{\kappa^2n}$ : une borne du type Bickel–Ritov–Tsybakov (séance 3), avec en prime une bonne constante (exercice 10).</li>
+</ul>
+
+<div class="box exemple"><div class="box-h">Application numérique : lente contre rapide</div>
+<p>$\sigma=1$, $M=10^4$ briques, $x=3$ (probabilité $\ge0{,}90$), un concurrent avec $s=5$ coefficients non nuls et $\norm\beta_1=5$, et dans le meilleur cas $\kappa=1$. Alors $x+\log M\approx12{,}21$ et :</p>
+<div class="table-wrap"><table>
+<tr><th></th><th class="num">$n=1\,000$</th><th class="num">$n=100\,000$</th></tr>
+<tr><td>$\lambda$ lent $=2\sigma\sqrt{2(x+\log M)/n}$</td><td class="num">0,313</td><td class="num">0,031</td></tr>
+<tr><td>Prix lent $2\lambda\norm\beta_1$</td><td class="num">3,13</td><td class="num">0,31</td></tr>
+<tr><td>Prix rapide $18\sigma^2s(x+\log M)/(\kappa^2n)$</td><td class="num">1,10</td><td class="num">0,011</td></tr>
+</table></div>
+<p>Multiplier $n$ par 100 divise le prix lent par 10 et le prix rapide par 100.</p>
+</div>
+
+<h2 id="bilan">8. Bilan : séance 3 contre séance 4</h2>
+<div class="table-wrap"><table>
+<tr><th></th><th>Séance 3 (BRT)</th><th>S4 : oracle lente</th><th>S4 : oracle rapide</th></tr>
+<tr><td>Modèle</td><td>$Y=X\bstar+\eps$, $\bstar$ $s$-parcimonieux</td><td>$Y=f(Z)+\eps$, $f$ quelconque</td><td>$Y=f(Z)+\eps$, $f$ quelconque</td></tr>
+<tr><td>Hypothèse sur $X$</td><td>normalisation + RE$(s,3)$</td><td>normalisation seulement</td><td>normalisation + RE$(s,3)$</td></tr>
+<tr><td>Pénalité</td><td>$2r\norm\beta_1$, $r=A\sigma\sqrt{\log p/n}$, $A>2\sqrt2$</td><td>$\lambda=2\sigma\sqrt{2(x+\log M)/n}$</td><td>$\lambda=4\sigma\sqrt{2(x+\log M)/n}$</td></tr>
+<tr><td>Probabilité</td><td>$1-p^{1-A^2/8}$</td><td>$1-2e^{-x}$</td><td>$1-2e^{-x}$</td></tr>
+<tr><td>Résultat</td><td>$\frac1n\norm{X(\hb-\bstar)}^2\le\frac{16A^2\sigma^2s\log p}{\kappa^2n}$</td><td>$\le\inf_\beta\{\text{approx}+2\lambda\norm\beta_1\}$</td><td>$\le\inf_{\norm\beta_0\le s}\{\text{approx}+\frac{18\sigma^2s(x+\log M)}{\kappa^2n}\}$</td></tr>
+<tr><td>Vitesse</td><td>$s\log p/n$</td><td>$\norm\beta_1\sqrt{\log M/n}$</td><td>$s\log M/n$</td></tr>
+<tr><td>Point de départ</td><td>inégalité de base</td><td>inégalité de base</td><td>critère d'optimalité + monotonie</td></tr>
+</table></div>
+
+<h2 id="resume">Résumé de la séance</h2>
+<div class="box resume">
+<ol>
+<li><strong>Dictionnaire</strong> : pour estimer une fonction $f$ quelconque, on l'approche par $f_\beta=\sum_j\beta_jf_j$ ; avec $X_{ij}=f_j(Z_i)$ on retombe sur une régression linéaire à $M$ variables, souvent $M\gg n$.</li>
+<li><strong>Inégalité oracle</strong> : $\frac1n\norm{f_{\hb}-f}^2\le\inf_\beta\{\text{approximation}(\beta)+\text{prix}(\beta)\}$ — l'estimateur fait presque aussi bien que le meilleur concurrent choisi en connaissant $f$.</li>
+<li><strong>Seuillage doux</strong> : $\argmin_a\{\frac12(a-b)^2+\lambda\abs a\}=\sgn(b)(\abs b-\lambda)_+$ ; Ridge donne $b/(1+\lambda)$. Le coin de $\abs a$ en 0 crée les zéros.</li>
+<li><strong>Relaxation convexe</strong> : $\abs x$ est l'enveloppe convexe de $\ind\{x\neq0\}$ sur $[-1,1]$ ; $\norm x_1$ est la relaxation convexe naturelle de $\norm x_0$.</li>
+<li><strong>Sous-différentiel</strong> : $g\in\partial\varphi(u)\iff\varphi(v)\ge\varphi(u)+g\T(v-u)\ \forall v$ ; $\partial\abs0=[-1,1]$ ; $(\partial\norm u_1)_j=\sgn(u_j)$ si $u_j\neq0$, $[-1,1]$ sinon.</li>
+<li><strong>Règles</strong> : minimum $\iff0\in\partial\varphi$ ; somme ; maximum ; sur un convexe : $\exists g^*\in\partial\varphi(u^*)$, $(g^*)\T(u-u^*)\ge0$ ; monotonie $(u_1-u_2)\T(g_1-g_2)\ge0$.</li>
+<li><strong>Oracle lente</strong> (aucune hypothèse sur $X$ hors normalisation, $\lambda=2\sigma\sqrt{2(x+\log M)/n}$) : prix $2\lambda\norm\beta_1$, vitesse $1/\sqrt n$, probabilité $\ge1-2e^{-x}$.</li>
+<li><strong>Oracle rapide</strong> (RE$(s,3)$, $\lambda$ doublé) : prix $\frac{18\sigma^2s(x+\log M)}{\kappa^2n}$, vitesse $s\log M/n$.</li>
+<li>Les deux preuves : comparer à un concurrent (ou critère d'optimalité), terme croisé par Hölder sur l'événement $\{\frac2n\norm{X\T\eps}_\infty\le\ldots\}$, probabilité par queue gaussienne + union. La rapide ajoute monotonie, cône, RE et Young.</li>
+</ol>
+</div>
+
+<h2 id="reflexes">Les réflexes à acquérir</h2>
+<div class="box reflexe"><div class="box-h">Réflexes de la séance 4</div>
+<ul>
+<li><strong>Quand vous voyez</strong> $\frac12(a-b)^2+\lambda\abs a$ → seuillage doux au seuil $\lambda$ ; avec $(a-b)^2+\lambda\abs a$ → seuil $\lambda/2$. En cas de doute : calcul par cas en 3 lignes.</li>
+<li><strong>Pour minimiser</strong> une fonction convexe non dérivable → $0\in\partial\varphi(u^*)$, règle de la somme, puis lecture coordonnée par coordonnée (non nul : égalité ; nul : inégalité).</li>
+<li><strong>Quand une contrainte convexe</strong> apparaît → indicatrice $\delta_C$ et cône normal ; au minimum, « aucune direction admissible ne fait descendre ».</li>
+<li><strong>Pour analyser un estimateur défini par un argmin</strong> → comparez-le à un concurrent quelconque ($F(\hb)\le F(\beta)$) ; si vous avez besoin d'un terme en plus à gauche, utilisez le critère d'optimalité.</li>
+<li><strong>Terme croisé</strong> $\eps\T X\delta$ → Hölder $\le\norm{X\T\eps}_\infty\norm\delta_1$, puis $X_j\T\eps\sim\N(0,n\sigma^2)$, queue gaussienne et borne de l'union ⇒ $\lambda\asymp\sigma\sqrt{\log M/n}$.</li>
+<li><strong>Sous-gradient inconnu</strong> au point inconnu $\hb$ → monotonie pour le remplacer par un sous-gradient choisi au point connu $\beta$.</li>
+<li><strong>Pour une vitesse rapide</strong> → $\lambda\ge2\times$ bruit, ce qui force un cône ; RE sur le cône ; $\norm{\delta_J}_1\le\sqrt s\norm{\delta_J}_2$ ; Young $ab\le a^2+b^2/4$ pour absorber.</li>
+<li><strong>Pour lire une inégalité oracle</strong> → choisissez un concurrent concret (le vrai paramètre s'il existe) et lisez « approximation + prix ».</li>
+<li><strong>Quand un problème compte des non-zéros</strong> ($\norm\cdot_0$) → relaxation convexe par $\norm\cdot_1$.</li>
+</ul>
+</div>
+
+<h2 id="exercices">Exercices</h2>
+
+<div class="exo"><div class="exo-h">Exercice 1 — Seuillage doux et rétrécissement à la main <span class="lvl">★☆☆</span></div>
+<p>Soit $b=(3;\ -0{,}5;\ 1{,}2;\ -2)$ et $\lambda=1$. Calculez $T_\lambda(b)=\argmin_a\{\frac12\norm{a-b}^2+\lambda\norm a_1\}$ et $\argmin_a\{\frac12\norm{a-b}^2+\frac\lambda2\norm a_2^2\}$. Combien de coordonnées nulles dans chaque cas ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Tout se découple coordonnée par coordonnée : seuillage doux d'un côté, division par $1+\lambda$ de l'autre.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>$T_1(b)=(2;\ 0;\ 0{,}2;\ -1)$ : une coordonnée nulle (celle de valeur absolue $0{,}5\le1$). Ridge : $b/2=(1{,}5;\ -0{,}25;\ 0{,}6;\ -1)$ : aucune coordonnée nulle. Remarquez aussi que Ridge biaise davantage le gros coefficient ($3\to1{,}5$) que le Lasso ($3\to2$), mais moins le petit.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 2 — Sous-différentiel d'une somme et minimiseurs multiples <span class="lvl">★☆☆</span></div>
+<p>Soit $\varphi(u)=\abs u+\abs{u-1}$ sur $\R$. Calculez $\partial\varphi(u)$ pour $u<0$, $u=0$, $0<u<1$, $u=1$, $u>1$. En déduire l'ensemble des minimiseurs de $\varphi$.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Règle de la somme, avec $\partial\abs{u-1}=\{1\}$, $\{-1\}$ ou $[-1,1]$ selon le signe de $u-1$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>$u<0$ : $\{-1\}+\{-1\}=\{-2\}$. $u=0$ : $[-1,1]+\{-1\}=[-2,0]$. $0<u<1$ : $\{1\}+\{-1\}=\{0\}$. $u=1$ : $\{1\}+[-1,1]=[0,2]$. $u>1$ : $\{2\}$.</p>
+<p>$0\in\partial\varphi(u)$ exactement pour $u\in[0,1]$ : tout le segment est minimiseur (et $\varphi=1$ dessus). Une fonction convexe peut avoir une infinité de minimiseurs — exactement comme le Lasso quand deux colonnes sont identiques.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 3 — Retrouver le seuil de la séance 2 <span class="lvl">★☆☆</span></div>
+<p>Avec la règle $0\in\partial h(\hat a)$, résolvez $\argmin_a\{(a-b)^2+\lambda\abs a\}$ (sans le $\frac12$). Quel est le seuil ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>$\partial h(a)=2(a-b)+\lambda\,\partial\abs a$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>Si $\hat a\neq0$ : $2(\hat a-b)+\lambda\sgn(\hat a)=0$, d'où $\hat a=b-\frac\lambda2\sgn(\hat a)$, possible si $\abs b>\lambda/2$. Si $\hat a=0$ : $0\in-2b+\lambda[-1,1]$, c'est-à-dire $\abs b\le\lambda/2$. Donc $\hat a=\sgn(b)(\abs b-\lambda/2)_+$ : seuil $\lambda/2$, comme en design orthogonal à la séance 2 (diapo 26).</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 4 — Sous-différentiel de la norme euclidienne <span class="lvl">★★☆</span></div>
+<p>Soit $\varphi(u)=\norm u_2$ sur $\R^p$. Montrez que $\partial\varphi(0)=\{g:\norm g_2\le1\}$ (la boule unité) et que $\partial\varphi(u)=\{u/\norm u_2\}$ si $u\neq0$. (Ce résultat servira pour le group-Lasso en séance 6.)</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>En 0 : il faut $\norm v\ge g\T v$ pour tout $v$. Cauchy–Schwarz dans un sens, et $v=g$ dans l'autre. Hors de 0 : $\varphi$ est dérivable.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>En $u=0$ : $g\in\partial\varphi(0)\iff\norm v\ge g\T v$ pour tout $v$. Si $\norm g\le1$, Cauchy–Schwarz donne $g\T v\le\norm g\norm v\le\norm v$. Si $\norm g>1$, $v=g$ donne $\norm g\ge\norm g^2$, faux. Donc $\partial\varphi(0)$ est la boule unité.</p>
+<p>En $u\neq0$ : $\varphi(u)=\sqrt{\sum_ju_j^2}$ est dérivable, de dérivée partielle $\frac{u_j}{\norm u}$, donc $\partial\varphi(u)=\{u/\norm u\}$. Même structure que $\partial\abs u$ : un seul vecteur hors de 0, toute une boule en 0 — c'est ce qui permet d'annuler <em>tout un groupe</em> de coefficients d'un coup.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 5 — Cône normal d'un carré et minimisation sous contrainte <span class="lvl">★★☆</span></div>
+<p>Soit $C=[0,1]^2$. (a) Déterminez $N_C(u)$ en $u=(0{,}5;0{,}5)$, $u=(1;0{,}5)$ et $u=(1;1)$. (b) Montrez que le minimiseur de $\varphi(u)=(u_1-2)^2+(u_2-0{,}3)^2$ sur $C$ est $u^*=(1;0{,}3)$ en vérifiant le critère d'optimalité.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>$N_C(u)=\{g:\ g\T(v-u)\le0\ \forall v\in C\}$ : regardez quelles directions $v-u$ sont possibles depuis chaque point.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) Intérieur : toutes les directions sont possibles, donc $N=\{0\}$. En $(1;0{,}5)$ (milieu du côté droit) : $v-u=(v_1-1,\ v_2-0{,}5)$ avec $v_1-1\le0$ et $v_2-0{,}5$ de signe quelconque ⇒ $g_2=0$ et $g_1\ge0$ : $N=\{(g_1,0):g_1\ge0\}$, la normale sortante. En $(1;1)$ : $v-u\le0$ coordonnée par coordonnée ⇒ $N=\{g:\ g_1\ge0,\ g_2\ge0\}$, un quart de plan.</p>
+<p>(b) $\nabla\varphi(u^*)=(2(1-2),\ 2(0{,}3-0{,}3))=(-2;0)$. Pour $u\in C$ : $\nabla\varphi(u^*)\T(u-u^*)=-2(u_1-1)\ge0$ car $u_1\le1$. Le critère est vérifié : $u^*$ est le minimiseur (équivalent : $-\nabla\varphi(u^*)=(2;0)\in N_C(u^*)$).</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 6 — La monotonie en dimension 1 <span class="lvl">★☆☆</span></div>
+<p>Soit $\varphi$ convexe sur $\R$, $u_1<u_2$, $g_1\in\partial\varphi(u_1)$, $g_2\in\partial\varphi(u_2)$. Montrez que $g_1\le g_2$. Vérifiez sur $\varphi(u)=u^2$ et sur $\varphi(u)=\abs u$ (avec $u_1=-1$, $u_2=0$).</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>La monotonie donne $(u_1-u_2)(g_1-g_2)\ge0$ ; quel est le signe de $u_1-u_2$ ?</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>$(u_1-u_2)(g_1-g_2)\ge0$ et $u_1-u_2<0$, donc $g_1-g_2\le0$. Pour $u^2$ : $g=2u$ est croissant. Pour $\abs u$ : $g_1=-1$ et $g_2\in[-1,1]$, on a bien $-1\le g_2$. Les pentes d'une fonction convexe croissent.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 7 — Un dictionnaire plus grand que l'échantillon <span class="lvl">★★☆</span></div>
+<p>Trois observations en $Z=(0;\ 0{,}5;\ 1)$, dictionnaire $1,z,z^2,z^3$ ($M=4$). (a) Écrivez $X$. (b) Trouvez un vecteur non nul $v$ avec $Xv=0$. (c) Montrez que deux fonctions $f_\beta$ et $f_{\beta+tv}$ ne peuvent pas être distinguées par les données. (d) Que vaut le rang de $X$ ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Cherchez un polynôme de degré 3 qui s'annule en $0$, $0{,}5$ et $1$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) $X=\begin{pmatrix}1&0&0&0\\1&0{,}5&0{,}25&0{,}125\\1&1&1&1\end{pmatrix}$. (b) $z(z-0{,}5)(z-1)=z^3-1{,}5z^2+0{,}5z$ donne $v=(0;\ 0{,}5;\ -1{,}5;\ 1)$ ; vérification ligne 2 : $0{,}25-0{,}375+0{,}125=0$. (c) $X(\beta+tv)=X\beta$ : mêmes valeurs aux trois points, donc même vraisemblance, même critère des moindres carrés. (d) Les trois premières colonnes ($1,z,z^2$) forment une matrice de Vandermonde inversible (points distincts), donc $\rg X=3$ : le noyau est de dimension $4-3=1$, engendré par $v$.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 8 — Enveloppe convexe sur $[-R,R]$ <span class="lvl">★★☆</span></div>
+<p>Montrez que l'enveloppe convexe de $\ind\{x\neq0\}$ sur $[-R,R]$ est $\abs x/R$. Faites le lien avec le facteur $\frac1R$ de la relaxation (Cours5, diapo 47).</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Reprenez la preuve sur $[-1,1]$ en écrivant $x=(1-\frac xR)\cdot0+\frac xR\cdot R$ pour $x\in[0,R]$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>$\abs x/R$ est convexe et $\le\ind\{x\neq0\}$ sur $[-R,R]$ (car $\abs x\le R$). Si $h$ est convexe et $\le\ind\{x\neq0\}$, alors $h(0)\le0$, $h(\pm R)\le1$, et pour $x\in[0,R]$ : $h(x)\le(1-\frac xR)h(0)+\frac xRh(R)\le\frac xR$ ; idem à gauche. Donc l'enveloppe est $\abs x/R$. Plus la boîte est grande, plus la relaxation est « plate » : c'est le facteur $\frac1R\norm x_1$ de la diapo 47.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 9 — Lente contre rapide : combien d'observations ? <span class="lvl">★★☆</span></div>
+<p>$\sigma=1$, $M=10^4$, $x=3$, concurrent avec $s=5$ et $\norm\beta_1=5$, $\kappa=1$. Quel $n$ faut-il pour que le prix de l'inégalité rapide soit $\le0{,}1$ ? Et pour le prix de l'inégalité lente ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>$x+\log M\approx12{,}21$. Prix lent : $2\lambda\norm\beta_1=4\sigma\norm\beta_1\sqrt{2(x+\log M)/n}$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>Rapide : $\frac{18\cdot5\cdot12{,}21}n\le0{,}1\iff n\ge10\,990$ (avec la valeur exacte $x+\log M=12{,}2103\ldots$), soit environ $11\,000$ observations.</p>
+<p>Lente : $20\sqrt{24{,}42/n}\le0{,}1\iff\sqrt{24{,}42/n}\le0{,}005\iff n\ge\frac{24{,}42}{2{,}5\cdot10^{-5}}\approx977\,000$.</p>
+<p>Près de 90 fois plus d'observations pour la même garantie : c'est concrètement ce que signifie « vitesse $1/\sqrt n$ contre $1/n$ » (au prix de l'hypothèse RE).</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 10 — Retrouver (et améliorer) la séance 3 <span class="lvl">★★★</span></div>
+<p>On suppose $f=X\bstar$ avec $\norm{\bstar}_0\le s$, $\Theta=\R^M$, $M=p$. (a) Déduisez de l'inégalité oracle rapide une borne sur $\frac1n\norm{X(\hb-\bstar)}^2$. (b) Choisissez $x=(\frac{A^2}8-1)\log p$ avec $A>2\sqrt2$ : quelle borne et quelle probabilité obtenez-vous ? Comparez avec le théorème BRT (borne $\frac{16A^2\sigma^2s\log p}{\kappa^2n}$, probabilité $1-p^{1-A^2/8}$).</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Prenez le concurrent $\beta=\bstar$ : son erreur d'approximation est nulle. Puis calculez $x+\log p$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) Avec $\beta=\bstar$ : $\frac1n\norm{X\hb-X\bstar}^2\le\frac{18\sigma^2s(x+\log p)}{\kappa^2n}$, avec probabilité $\ge1-2e^{-x}$.</p>
+<p>(b) $x+\log p=\frac{A^2}8\log p$, d'où la borne $\frac{18}{8}A^2\frac{\sigma^2s\log p}{\kappa^2n}=\frac94A^2\frac{\sigma^2s\log p}{\kappa^2n}$, et $2e^{-x}=2p^{1-A^2/8}$. Même vitesse que BRT, constante $\frac94A^2$ au lieu de $16A^2$ (environ 7 fois meilleure), probabilité d'échec doublée (à cause de la borne gaussienne plus grossière $2e^{-t^2/2}$). Le gain vient de la preuve « fine » par le critère d'optimalité et la monotonie.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 11 — Pourquoi « deux fois » ? Le rôle de la constante <span class="lvl">★★★</span></div>
+<p>Refaites la preuve rapide sur l'événement $\{\frac2n\norm{X\T\eps}_\infty\le\lambda/c\}$ avec $c>1$, et $\lambda=2c\sigma\sqrt{2(x+\log M)/n}$. (a) Quel cône obtenez-vous ? (b) Quelle constante remplace 18 ? (c) Que se passe-t-il quand $c\to1$ ? quand $c\to\infty$ ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Dans $(\star)$, les coefficients deviennent $\lambda(1+\frac1c)$ devant $\norm{\delta_J}_1$ et $-\lambda(1-\frac1c)$ devant $\norm{\delta_{J^c}}_1$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) Cas 2 : $\norm{\delta_{J^c}}_1<\frac{1+1/c}{1-1/c}\norm{\delta_J}_1=\frac{c+1}{c-1}\norm{\delta_J}_1$ : cône $c_0=\frac{c+1}{c-1}$ (pour $c=2$ : $c_0=3$).</p>
+<p>(b) Young donne un reste $\frac{\lambda^2(1+1/c)^2s}{4\kappa^2}$ ; avec $\lambda^2=8c^2\sigma^2(x+\log M)/n$ cela fait $\frac{2(c+1)^2\sigma^2s(x+\log M)}{\kappa(s,c_0)^2n}$. Pour $c=2$ : $2\cdot9=18$. ✓ L'événement est toujours le même ($\lambda/c=2\sigma\sqrt{2(x+\log M)/n}$), de probabilité $\ge1-2e^{-x}$.</p>
+<p>(c) $c\to1$ : $c_0\to\infty$, le cône devient tout l'espace et RE devient impossible quand $M>n$ (c'est la situation de la preuve lente). $c\to\infty$ : le cône se resserre ($c_0\to1$, hypothèse plus faible) mais $\lambda$ et la constante $2(c+1)^2$ explosent : on sur-pénalise. $c=2$ est un compromis raisonnable.</p>
+</div></details></div>
+
+<h2 id="suite">Et après ?</h2>
+<p>La séance 5 quitte le bruit gaussien : quand la réponse est binaire (malade / sain) ou un comptage, on utilise des <strong>modèles linéaires généralisés</strong> (régression logistique, de Poisson), estimés par maximum de vraisemblance. Le Lasso s'y transpose en pénalisant la log-vraisemblance par $\lambda\norm\beta_1$, et les outils de cette séance (sous-différentiel, KKT) s'appliquent tels quels. La séance 6 utilisera le sous-différentiel de $\norm\cdot_2$ (exercice 4) pour le group-Lasso et les règles de seuillage en design orthonormé pour comparer les variantes du Lasso.</p>
