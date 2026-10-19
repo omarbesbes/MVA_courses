@@ -1,0 +1,841 @@
+<!--
+title: Séance 6 — Les variantes du Lasso
+short: S6 · variantes du Lasso
+description: Bridge, LSLasso, Dantzig, Lasso adaptatif et relaxé, elastic net, Lasso fusionné, group-Lasso : chaque variante corrige un défaut précis du Lasso, et en design orthonormé chacune devient une règle qu'on peut dessiner.
+subtitle: Cours6, diapos 74–89 · chaque variante répond à un défaut précis du Lasso ; en design orthonormé, chacune devient une règle « $b \mapsto \hb$ » que l'on peut dessiner.
+-->
+
+<div class="box objectifs"><div class="box-h">Ce que vous saurez faire à la fin de cette séance</div>
+<ul class="checklist">
+<li>Citer les quatre défauts du Lasso et, pour chacun, la variante qui le corrige.</li>
+<li>Écrire le critère de chaque variante (bridge, LSLasso, Dantzig, adaptatif, relaxé, elastic net, fusionné, group-Lasso) et dire s'il est convexe.</li>
+<li>Calculer, en design orthonormé, la solution de chaque variante coordonnée par coordonnée (ou groupe par groupe), et la dessiner.</li>
+<li>Démontrer les petits résultats clés : $\norm{Y-X\beta}^2 = (\beta-\hb\MC)\T X\T X(\beta-\hb\MC) + \norm{Y-X\hb\MC}^2$, $\norm{\hb^D}_1 \le \norm{\hb^L}_1$, l'infinité de solutions du Lasso avec une colonne dupliquée, le partage égal de l'elastic net.</li>
+<li>Choisir une variante adaptée à une situation appliquée (gènes corrélés, ruptures dans un signal, variables catégorielles…).</li>
+</ul></div>
+
+<h2 id="avant">Avant de commencer</h2>
+
+<p class="lead">Cette dernière séance ne contient pas de nouveau théorème difficile. Elle fait le tour des <strong>améliorations du Lasso</strong> qu'on utilise en pratique. Pour la suivre sans peine, il suffit d'avoir en tête quatre choses des séances précédentes, que l'on rappelle ici.</p>
+
+<h3 id="avant-lasso">Ce qu'il faut avoir en tête des séances 1 à 4</h3>
+
+<p>Le cadre est toujours celui de la séance 1 : on observe $Y \in \R^n$ et une matrice $X \in \R^{n\times p}$ ($n$ observations, $p$ variables, colonne $j$ notée $X_j$), avec
+$$Y = X\bstar + \eps, \qquad \eps \sim \N(0, \sigma^2 I_n).$$
+Le vecteur $\bstar \in \R^p$ est inconnu ; on le suppose <em class="new">parcimonieux</em> (<em>sparse</em>) : peu de ses coordonnées sont non nulles.</p>
+
+<div class="box rappel"><div class="box-h">Rappel 1 — Le Lasso <span class="ref">Cours1 · diapo 23, Cours2 · diapo 27</span></div>
+<p>Avec la convention des diapos de cette séance (critère <strong>non normalisé</strong>) :
+$$\hb^L(\lambda) \in \argmin_{\beta \in \R^p} \Big\{ \norm{Y - X\beta}^2 + \lambda \norm{\beta}_1 \Big\}, \qquad \norm{\beta}_1 = \sum_{j=1}^p \abs{\beta_j}.$$
+Le premier terme mesure l'ajustement aux données ; le second pénalise la taille des coefficients. Plus $\lambda$ est grand, plus on force de coefficients à valoir exactement 0.</p></div>
+
+<div class="box rappel"><div class="box-h">Rappel 2 — Les conditions KKT du Lasso <span class="ref">Cours2 · diapo 27</span></div>
+<p>$\hb = \hb^L(\lambda)$ est solution si et seulement si, pour chaque variable $j$ :
+$$\begin{cases} 2X_j\T(Y - X\hb) = \lambda\,\sgn(\hb_j) & \text{si } \hb_j \neq 0,\\[2pt] \abs{2X_j\T(Y - X\hb)} \le \lambda & \text{si } \hb_j = 0. \end{cases}$$
+Lecture : $X_j\T(Y - X\hb)$ est la « corrélation » de la variable $j$ avec le résidu. Les variables actives ont une corrélation (au facteur 2 près) <strong>exactement</strong> égale à $\lambda$ en valeur absolue ; les autres ont une corrélation plus petite. En particulier, <strong>toutes</strong> les variables vérifient $\abs{2X_j\T(Y-X\hb)} \le \lambda$ — on s'en resservira pour le sélecteur de Dantzig.</p>
+<p>Ces conditions viennent de la règle « $0$ appartient au sous-différentiel du critère au minimum » (séance 4), avec $\nabla \norm{Y-X\beta}^2 = -2X\T(Y-X\beta)$ (<a href="00_rappels.html#gradient">rappel sur les gradients</a>) et le sous-différentiel de la valeur absolue :
+$$\partial\abs{\cdot}(u) = \{\sgn(u)\} \text{ si } u \ne 0, \qquad \partial\abs{\cdot}(0) = [-1, 1].$$</p></div>
+
+<div class="box rappel"><div class="box-h">Rappel 3 — Le sous-différentiel de la norme euclidienne (séance 4)</div>
+<p>Pour $u \in \R^d$, la norme $\norm{u}_2 = \sqrt{u_1^2 + \dots + u_d^2}$ (sans carré !) est dérivable partout sauf en $0$ :
+$$\partial\norm{\cdot}_2(u) = \Big\{ \tfrac{u}{\norm{u}_2} \Big\} \text{ si } u \ne 0, \qquad \partial\norm{\cdot}_2(0) = \{h \in \R^d : \norm{h}_2 \le 1\}.$$
+C'est la version « vectorielle » de la valeur absolue : en dimension $d = 1$, on retrouve exactement $\partial\abs{\cdot}$. Elle servira pour le group-Lasso (section 9).</p></div>
+
+<div class="box rappel"><div class="box-h">Rappel 4 — Le design orthonormé et le seuillage doux <span class="ref">Cours2 · diapo 26</span></div>
+<p>On dit que le design est <em class="new">orthonormé</em> si $X\T X = I_p$ : les colonnes sont de norme 1 et deux à deux orthogonales (cela impose $p \le n$). Posons
+$$b = X\T Y \in \R^p.$$
+Comme $(X\T X)^{-1} X\T Y = X\T Y$, le vecteur $b$ est <strong>exactement l'estimateur des moindres carrés</strong> $\hb\MC$. Alors le critère se découple coordonnée par coordonnée :</p>
+<ol class="steps">
+<li>$$\norm{Y - X\beta}^2 = \norm{Y}^2 - 2\beta\T X\T Y + \beta\T X\T X \beta$$<span class="why">on développe $(Y - X\beta)\T(Y - X\beta)$ ; le terme croisé $Y\T X\beta$ est un nombre, égal à sa transposée $\beta\T X\T Y$.</span></li>
+<li>$$= \norm{Y}^2 - 2\beta\T b + \norm{\beta}^2$$<span class="why">$X\T Y = b$ et $X\T X = I_p$.</span></li>
+<li>$$= \norm{\beta - b}^2 + \underbrace{\norm{Y}^2 - \norm{b}^2}_{\text{ne dépend pas de }\beta} = \sum_{j=1}^p (\beta_j - b_j)^2 + \text{cte}$$<span class="why">on complète le carré : $\norm{\beta - b}^2 = \norm\beta^2 - 2\beta\T b + \norm b^2$.</span></li>
+</ol>
+<p>Donc, dès que la pénalité est une somme sur les coordonnées, minimiser le critère revient à résoudre $p$ problèmes en dimension 1 <strong>indépendants</strong>. Pour le Lasso, le problème 1D est $\min_{\beta_j} (\beta_j - b_j)^2 + \lambda\abs{\beta_j}$, dont la solution est le <em class="new">seuillage doux</em> au seuil $\lambda/2$ :
+$$\hb^L_j = \sgn(b_j)\big(\abs{b_j} - \tfrac{\lambda}{2}\big)_+ .$$</p></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe — le « laboratoire orthonormé »</div>
+<p>Quand vous rencontrez une nouvelle pénalité, <strong>regardez d'abord ce qu'elle fait en design orthonormé</strong>. Le problème se découple, chaque coordonnée devient un problème 1D qu'on résout à la main, et on obtient une règle $b_j \mapsto \hb_j$ qu'on peut dessiner. C'est exactement ce que fait la diapo 83 pour le Lasso relaxé, et c'est le fil de toute cette page.</p></div>
+
+<h3 id="avant-defauts">Les quatre défauts du Lasso, et qui les corrige</h3>
+
+<p>Le Lasso est convexe, rapide, et il sélectionne des variables. Mais il a quatre défauts bien identifiés. Chaque variante de cette séance en corrige un (ou deux).</p>
+
+<div class="table-wrap"><table>
+<thead><tr><th>Défaut du Lasso</th><th>Ce qu'on observe</th><th>Variante(s) qui corrige(nt)</th></tr></thead>
+<tbody>
+<tr><td><strong>1. Biais sur les gros coefficients</strong></td><td>Le seuillage doux retire $\lambda/2$ à <em>tous</em> les coefficients conservés, même aux très grands, qui sont pourtant clairement non nuls.</td><td>LSLasso (§3), Lasso adaptatif (§5), Lasso relaxé (§6)</td></tr>
+<tr><td><strong>2. Au plus $n$ variables</strong></td><td>Quand $p > n$, le Lasso ne peut garder qu'au plus $n$ variables, même si davantage sont pertinentes.</td><td>Elastic net (§7)</td></tr>
+<tr><td><strong>3. Variables corrélées</strong></td><td>Dans un groupe de variables très corrélées, le Lasso en garde une « au hasard » ; avec deux colonnes identiques, il y a une infinité de solutions.</td><td>Elastic net (§7)</td></tr>
+<tr><td><strong>4. Ignore la structure</strong></td><td>Il traite chaque coefficient séparément, alors qu'on sait parfois que des coefficients vont par groupes, ou que des voisins doivent être égaux.</td><td>Group-Lasso (§9), Lasso fusionné (§8)</td></tr>
+</tbody></table></div>
+
+<p>Deux autres constructions complètent le panorama : le <strong>bridge</strong> (§1), qui range Lasso, Ridge et pénalité $\ell_0$ dans une même famille, et le <strong>sélecteur de Dantzig</strong> (§4), une autre façon d'écrire « un estimateur parcimonieux compatible avec les données ».</p>
+
+<h3 id="avant-conventions">Conventions de la page</h3>
+<div class="box remarque"><div class="box-h">Conventions</div>
+<ul>
+<li>Comme les diapos 74–87, les critères sont <strong>non normalisés</strong> : $\norm{Y - X\beta}^2$ et non $\frac1n\norm{Y-X\beta}^2$. Avec la normalisation $\frac1n$, il faudrait remplacer $\lambda$ par $n\lambda$ dans les formules ; rien d'autre ne change.</li>
+<li>« Design orthonormé » signifie $X\T X = I_p$ et l'on note toujours $b = X\T Y = \hb\MC$.</li>
+<li>$(x)_+ = \max(x, 0)$ ; $\sgn$ est le signe ; $\ind\{\cdot\}$ l'indicatrice ; $J(\beta) = \{j : \beta_j \neq 0\}$ le support de $\beta$.</li>
+</ul></div>
+
+<h2 id="bridge">1. L'estimateur bridge : ℓ0, Lasso et Ridge dans une même famille</h2>
+
+<p class="tldr">En remplaçant $\abs{\beta_j}$ par $\abs{\beta_j}^\gamma$, on obtient une famille de pénalités qui va de la sélection de modèle ($\gamma = 0$) au Ridge ($\gamma = 2$) en passant par le Lasso ($\gamma = 1$) ; seul $\gamma = 1$ est à la fois convexe et créateur de zéros.</p>
+
+<h3 id="bridge-def">Définition <span class="ref">Cours6 · diapo 74</span></h3>
+
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours6 · diapo 74</span></div>
+<p>Pour $\lambda \ge 0$ et $\gamma \ge 0$, on pose
+$$C_{\lambda,\gamma}(\beta) := \norm{Y - X\beta}^2 + \lambda\norm{\beta}_\gamma^\gamma, \qquad \norm{\beta}_\gamma^\gamma = \begin{cases}\sum_{j=1}^p \abs{\beta_j}^\gamma & \text{si } \gamma > 0,\\ \sum_{j=1}^p \ind\{\beta_j \neq 0\} & \text{si } \gamma = 0,\end{cases}$$
+et $\hb^{\mathrm{Bridge}}(\lambda,\gamma) = \argmin_{\beta\in\R^p} C_{\lambda,\gamma}(\beta)$. Trois cas intéressants ($\lambda > 0$) : $\gamma = 0$ sélection de modèle, $\gamma = 2$ Ridge, $\gamma = 1$ Lasso.</p></div>
+
+<p><strong>Décodage.</strong> On pénalise chaque coefficient par $\abs{\beta_j}^\gamma$ :</p>
+<ul>
+<li>$\gamma = 2$ : $\sum\beta_j^2 = \norm\beta_2^2$, c'est la pénalité <strong>Ridge</strong> de la séance 1 ;</li>
+<li>$\gamma = 1$ : $\sum\abs{\beta_j} = \norm\beta_1$, c'est le <strong>Lasso</strong> ;</li>
+<li>$\gamma = 0$ : on compte les coefficients non nuls, $\norm\beta_0$ ; c'est la pénalité des critères <strong>Cp/AIC/BIC</strong> de la séance 1 (sélection de modèle). La convention « $\gamma = 0$ » est naturelle : pour $u \neq 0$ fixé, $\abs{u}^\gamma \to 1$ quand $\gamma \to 0$, alors que $\abs{0}^\gamma = 0$.</li>
+</ul>
+
+<p>Ce qui distingue ces pénalités, c'est leur <strong>forme près de 0</strong>. Regardons la pénalité d'une seule coordonnée, $u \mapsto \abs u^\gamma$ :</p>
+
+<figure class="fig">
+<svg viewBox="0 0 560 280" role="img" aria-label="Pénalités |u| puissance gamma">
+<line class="gr" x1="36" x2="548" y1="142.7" y2="142.7"/><text class="tx" x="30" y="146.7" text-anchor="end">1</text>
+<line class="gr" x1="36" x2="548" y1="35.5" y2="35.5"/><text class="tx" x="30" y="39.5" text-anchor="end">2</text>
+<text class="tx" x="36.0" y="266" text-anchor="middle">−2</text>
+<text class="tx" x="164.0" y="266" text-anchor="middle">−1</text>
+<text class="tx" x="292.0" y="266" text-anchor="middle">0</text>
+<text class="tx" x="420.0" y="266" text-anchor="middle">1</text>
+<text class="tx" x="548.0" y="266" text-anchor="middle">2</text>
+<line class="ax" x1="36" x2="548" y1="250.0" y2="250.0"/><line class="ax" x1="292.0" x2="292.0" y1="14" y2="250"/>
+<text class="tx" x="548" y="276" text-anchor="end">u (une coordonnée βⱼ)</text>
+<path class="ln c3" d="M36.0 142.7L292.0 142.7"/><path class="ln c3" d="M292.0 142.7L548.0 142.7"/>
+<circle class="f3" cx="292.0" cy="250.0" r="4"/>
+<circle cx="292.0" cy="142.7" r="4" fill="none" class="ln c3 thin"/>
+<path class="ln c5" d="M36.0 98.3L36.6 98.5L37.3 98.7L37.9 98.9L38.6 99.1L39.2 99.2L39.8 99.4L40.5 99.6L41.1 99.8L41.8 100.0L42.4 100.2L43.1 100.4L43.7 100.6L44.3 100.8L45.0 101.0L45.6 101.2L46.3 101.4L46.9 101.6L47.5 101.8L48.2 101.9L48.8 102.1L49.5 102.3L50.1 102.5L50.8 102.7L51.4 102.9L52.0 103.1L52.7 103.3L53.3 103.5L54.0 103.7L54.6 103.9L55.2 104.1L55.9 104.3L56.5 104.5L57.2 104.7L57.8 104.9L58.5 105.1L59.1 105.3L59.7 105.5L60.4 105.7L61.0 105.9L61.7 106.1L62.3 106.3L62.9 106.5L63.6 106.7L64.2 106.9L64.9 107.1L65.5 107.3L66.2 107.5L66.8 107.7L67.4 107.9L68.1 108.1L68.7 108.3L69.4 108.5L70.0 108.7L70.6 108.9L71.3 109.1L71.9 109.3L72.6 109.5L73.2 109.8L73.9 110.0L74.5 110.2L75.1 110.4L75.8 110.6L76.4 110.8L77.1 111.0L77.7 111.2L78.3 111.4L79.0 111.6L79.6 111.8L80.3 112.0L80.9 112.2L81.6 112.5L82.2 112.7L82.8 112.9L83.5 113.1L84.1 113.3L84.8 113.5L85.4 113.7L86.0 113.9L86.7 114.1L87.3 114.4L88.0 114.6L88.6 114.8L89.3 115.0L89.9 115.2L90.5 115.4L91.2 115.6L91.8 115.8L92.5 116.1L93.1 116.3L93.7 116.5L94.4 116.7L95.0 116.9L95.7 117.1L96.3 117.4L97.0 117.6L97.6 117.8L98.2 118.0L98.9 118.2L99.5 118.5L100.2 118.7L100.8 118.9L101.4 119.1L102.1 119.3L102.7 119.6L103.4 119.8L104.0 120.0L104.7 120.2L105.3 120.4L105.9 120.7L106.6 120.9L107.2 121.1L107.9 121.3L108.5 121.6L109.1 121.8L109.8 122.0L110.4 122.2L111.1 122.5L111.7 122.7L112.4 122.9L113.0 123.1L113.6 123.4L114.3 123.6L114.9 123.8L115.6 124.1L116.2 124.3L116.8 124.5L117.5 124.7L118.1 125.0L118.8 125.2L119.4 125.4L120.1 125.7L120.7 125.9L121.3 126.1L122.0 126.4L122.6 126.6L123.3 126.8L123.9 127.1L124.5 127.3L125.2 127.5L125.8 127.8L126.5 128.0L127.1 128.2L127.7 128.5L128.4 128.7L129.0 129.0L129.7 129.2L130.3 129.4L131.0 129.7L131.6 129.9L132.2 130.2L132.9 130.4L133.5 130.6L134.2 130.9L134.8 131.1L135.4 131.4L136.1 131.6L136.7 131.9L137.4 132.1L138.0 132.3L138.7 132.6L139.3 132.8L139.9 133.1L140.6 133.3L141.2 133.6L141.9 133.8L142.5 134.1L143.1 134.3L143.8 134.6L144.4 134.8L145.1 135.1L145.7 135.3L146.4 135.6L147.0 135.8L147.6 136.1L148.3 136.3L148.9 136.6L149.6 136.8L150.2 137.1L150.8 137.4L151.5 137.6L152.1 137.9L152.8 138.1L153.4 138.4L154.1 138.6L154.7 138.9L155.3 139.2L156.0 139.4L156.6 139.7L157.3 139.9L157.9 140.2L158.5 140.5L159.2 140.7L159.8 141.0L160.5 141.3L161.1 141.5L161.8 141.8L162.4 142.1L163.0 142.3L163.7 142.6L164.3 142.9L165.0 143.1L165.6 143.4L166.2 143.7L166.9 143.9L167.5 144.2L168.2 144.5L168.8 144.8L169.5 145.0L170.1 145.3L170.7 145.6L171.4 145.9L172.0 146.1L172.7 146.4L173.3 146.7L173.9 147.0L174.6 147.3L175.2 147.5L175.9 147.8L176.5 148.1L177.2 148.4L177.8 148.7L178.4 149.0L179.1 149.2L179.7 149.5L180.4 149.8L181.0 150.1L181.6 150.4L182.3 150.7L182.9 151.0L183.6 151.3L184.2 151.6L184.9 151.9L185.5 152.1L186.1 152.4L186.8 152.7L187.4 153.0L188.1 153.3L188.7 153.6L189.3 153.9L190.0 154.2L190.6 154.5L191.3 154.8L191.9 155.1L192.6 155.4L193.2 155.8L193.8 156.1L194.5 156.4L195.1 156.7L195.8 157.0L196.4 157.3L197.0 157.6L197.7 157.9L198.3 158.2L199.0 158.5L199.6 158.9L200.3 159.2L200.9 159.5L201.5 159.8L202.2 160.1L202.8 160.5L203.5 160.8L204.1 161.1L204.7 161.4L205.4 161.8L206.0 162.1L206.7 162.4L207.3 162.7L207.9 163.1L208.6 163.4L209.2 163.7L209.9 164.1L210.5 164.4L211.2 164.7L211.8 165.1L212.4 165.4L213.1 165.8L213.7 166.1L214.4 166.5L215.0 166.8L215.6 167.2L216.3 167.5L216.9 167.8L217.6 168.2L218.2 168.6L218.9 168.9L219.5 169.3L220.1 169.6L220.8 170.0L221.4 170.3L222.1 170.7L222.7 171.1L223.3 171.4L224.0 171.8L224.6 172.2L225.3 172.5L225.9 172.9L226.6 173.3L227.2 173.7L227.8 174.1L228.5 174.4L229.1 174.8L229.8 175.2L230.4 175.6L231.0 176.0L231.7 176.4L232.3 176.8L233.0 177.2L233.6 177.5L234.3 177.9L234.9 178.4L235.5 178.8L236.2 179.2L236.8 179.6L237.5 180.0L238.1 180.4L238.7 180.8L239.4 181.2L240.0 181.6L240.7 182.1L241.3 182.5L242.0 182.9L242.6 183.4L243.2 183.8L243.9 184.2L244.5 184.7L245.2 185.1L245.8 185.6L246.4 186.0L247.1 186.5L247.7 186.9L248.4 187.4L249.0 187.8L249.7 188.3L250.3 188.8L250.9 189.2L251.6 189.7L252.2 190.2L252.9 190.7L253.5 191.2L254.1 191.7L254.8 192.2L255.4 192.7L256.1 193.2L256.7 193.7L257.4 194.2L258.0 194.7L258.6 195.2L259.3 195.8L259.9 196.3L260.6 196.8L261.2 197.4L261.8 197.9L262.5 198.5L263.1 199.1L263.8 199.6L264.4 200.2L265.1 200.8L265.7 201.4L266.3 202.0L267.0 202.6L267.6 203.2L268.3 203.8L268.9 204.4L269.5 205.1L270.2 205.7L270.8 206.4L271.5 207.0L272.1 207.7L272.8 208.4L273.4 209.1L274.0 209.8L274.7 210.5L275.3 211.3L276.0 212.0L276.6 212.8L277.2 213.6L277.9 214.4L278.5 215.2L279.2 216.0L279.8 216.9L280.5 217.8L281.1 218.7L281.7 219.6L282.4 220.6L283.0 221.6L283.7 222.6L284.3 223.7L284.9 224.8L285.6 226.0L286.2 227.2L286.9 228.5L287.5 229.9L288.2 231.4L288.8 233.0L289.4 234.8L290.1 236.8L290.7 239.3L291.4 242.4L292.0 250.0L292.0 250.0L292.6 242.4L293.3 239.3L293.9 236.8L294.6 234.8L295.2 233.0L295.8 231.4L296.5 229.9L297.1 228.5L297.8 227.2L298.4 226.0L299.1 224.8L299.7 223.7L300.3 222.6L301.0 221.6L301.6 220.6L302.3 219.6L302.9 218.7L303.5 217.8L304.2 216.9L304.8 216.0L305.5 215.2L306.1 214.4L306.8 213.6L307.4 212.8L308.0 212.0L308.7 211.3L309.3 210.5L310.0 209.8L310.6 209.1L311.2 208.4L311.9 207.7L312.5 207.0L313.2 206.4L313.8 205.7L314.5 205.1L315.1 204.4L315.7 203.8L316.4 203.2L317.0 202.6L317.7 202.0L318.3 201.4L318.9 200.8L319.6 200.2L320.2 199.6L320.9 199.1L321.5 198.5L322.2 197.9L322.8 197.4L323.4 196.8L324.1 196.3L324.7 195.8L325.4 195.2L326.0 194.7L326.6 194.2L327.3 193.7L327.9 193.2L328.6 192.7L329.2 192.2L329.9 191.7L330.5 191.2L331.1 190.7L331.8 190.2L332.4 189.7L333.1 189.2L333.7 188.8L334.3 188.3L335.0 187.8L335.6 187.4L336.3 186.9L336.9 186.5L337.6 186.0L338.2 185.6L338.8 185.1L339.5 184.7L340.1 184.2L340.8 183.8L341.4 183.4L342.0 182.9L342.7 182.5L343.3 182.1L344.0 181.6L344.6 181.2L345.3 180.8L345.9 180.4L346.5 180.0L347.2 179.6L347.8 179.2L348.5 178.8L349.1 178.4L349.7 177.9L350.4 177.5L351.0 177.2L351.7 176.8L352.3 176.4L353.0 176.0L353.6 175.6L354.2 175.2L354.9 174.8L355.5 174.4L356.2 174.1L356.8 173.7L357.4 173.3L358.1 172.9L358.7 172.5L359.4 172.2L360.0 171.8L360.7 171.4L361.3 171.1L361.9 170.7L362.6 170.3L363.2 170.0L363.9 169.6L364.5 169.3L365.1 168.9L365.8 168.6L366.4 168.2L367.1 167.8L367.7 167.5L368.4 167.2L369.0 166.8L369.6 166.5L370.3 166.1L370.9 165.8L371.6 165.4L372.2 165.1L372.8 164.7L373.5 164.4L374.1 164.1L374.8 163.7L375.4 163.4L376.1 163.1L376.7 162.7L377.3 162.4L378.0 162.1L378.6 161.8L379.3 161.4L379.9 161.1L380.5 160.8L381.2 160.5L381.8 160.1L382.5 159.8L383.1 159.5L383.7 159.2L384.4 158.9L385.0 158.5L385.7 158.2L386.3 157.9L387.0 157.6L387.6 157.3L388.2 157.0L388.9 156.7L389.5 156.4L390.2 156.1L390.8 155.8L391.4 155.4L392.1 155.1L392.7 154.8L393.4 154.5L394.0 154.2L394.7 153.9L395.3 153.6L395.9 153.3L396.6 153.0L397.2 152.7L397.9 152.4L398.5 152.1L399.1 151.9L399.8 151.6L400.4 151.3L401.1 151.0L401.7 150.7L402.4 150.4L403.0 150.1L403.6 149.8L404.3 149.5L404.9 149.2L405.6 149.0L406.2 148.7L406.8 148.4L407.5 148.1L408.1 147.8L408.8 147.5L409.4 147.3L410.1 147.0L410.7 146.7L411.3 146.4L412.0 146.1L412.6 145.9L413.3 145.6L413.9 145.3L414.5 145.0L415.2 144.8L415.8 144.5L416.5 144.2L417.1 143.9L417.8 143.7L418.4 143.4L419.0 143.1L419.7 142.9L420.3 142.6L421.0 142.3L421.6 142.1L422.2 141.8L422.9 141.5L423.5 141.3L424.2 141.0L424.8 140.7L425.5 140.5L426.1 140.2L426.7 139.9L427.4 139.7L428.0 139.4L428.7 139.2L429.3 138.9L429.9 138.6L430.6 138.4L431.2 138.1L431.9 137.9L432.5 137.6L433.2 137.4L433.8 137.1L434.4 136.8L435.1 136.6L435.7 136.3L436.4 136.1L437.0 135.8L437.6 135.6L438.3 135.3L438.9 135.1L439.6 134.8L440.2 134.6L440.9 134.3L441.5 134.1L442.1 133.8L442.8 133.6L443.4 133.3L444.1 133.1L444.7 132.8L445.3 132.6L446.0 132.3L446.6 132.1L447.3 131.9L447.9 131.6L448.6 131.4L449.2 131.1L449.8 130.9L450.5 130.6L451.1 130.4L451.8 130.2L452.4 129.9L453.0 129.7L453.7 129.4L454.3 129.2L455.0 129.0L455.6 128.7L456.3 128.5L456.9 128.2L457.5 128.0L458.2 127.8L458.8 127.5L459.5 127.3L460.1 127.1L460.7 126.8L461.4 126.6L462.0 126.4L462.7 126.1L463.3 125.9L463.9 125.7L464.6 125.4L465.2 125.2L465.9 125.0L466.5 124.7L467.2 124.5L467.8 124.3L468.4 124.1L469.1 123.8L469.7 123.6L470.4 123.4L471.0 123.1L471.6 122.9L472.3 122.7L472.9 122.5L473.6 122.2L474.2 122.0L474.9 121.8L475.5 121.6L476.1 121.3L476.8 121.1L477.4 120.9L478.1 120.7L478.7 120.4L479.3 120.2L480.0 120.0L480.6 119.8L481.3 119.6L481.9 119.3L482.6 119.1L483.2 118.9L483.8 118.7L484.5 118.5L485.1 118.2L485.8 118.0L486.4 117.8L487.0 117.6L487.7 117.4L488.3 117.1L489.0 116.9L489.6 116.7L490.3 116.5L490.9 116.3L491.5 116.1L492.2 115.8L492.8 115.6L493.5 115.4L494.1 115.2L494.7 115.0L495.4 114.8L496.0 114.6L496.7 114.4L497.3 114.1L498.0 113.9L498.6 113.7L499.2 113.5L499.9 113.3L500.5 113.1L501.2 112.9L501.8 112.7L502.4 112.5L503.1 112.2L503.7 112.0L504.4 111.8L505.0 111.6L505.7 111.4L506.3 111.2L506.9 111.0L507.6 110.8L508.2 110.6L508.9 110.4L509.5 110.2L510.1 110.0L510.8 109.8L511.4 109.5L512.1 109.3L512.7 109.1L513.4 108.9L514.0 108.7L514.6 108.5L515.3 108.3L515.9 108.1L516.6 107.9L517.2 107.7L517.8 107.5L518.5 107.3L519.1 107.1L519.8 106.9L520.4 106.7L521.1 106.5L521.7 106.3L522.3 106.1L523.0 105.9L523.6 105.7L524.3 105.5L524.9 105.3L525.5 105.1L526.2 104.9L526.8 104.7L527.5 104.5L528.1 104.3L528.8 104.1L529.4 103.9L530.0 103.7L530.7 103.5L531.3 103.3L532.0 103.1L532.6 102.9L533.2 102.7L533.9 102.5L534.5 102.3L535.2 102.1L535.8 101.9L536.5 101.8L537.1 101.6L537.7 101.4L538.4 101.2L539.0 101.0L539.7 100.8L540.3 100.6L540.9 100.4L541.6 100.2L542.2 100.0L542.9 99.8L543.5 99.6L544.2 99.4L544.8 99.2L545.4 99.1L546.1 98.9L546.7 98.7L547.4 98.5L548.0 98.3"/>
+<path class="ln c2" d="M36.0 35.5L36.6 36.0L37.3 36.5L37.9 37.1L38.6 37.6L39.2 38.1L39.8 38.7L40.5 39.2L41.1 39.7L41.8 40.3L42.4 40.8L43.0 41.4L43.7 41.9L44.3 42.4L45.0 43.0L45.6 43.5L46.2 44.0L46.9 44.6L47.5 45.1L48.2 45.6L48.8 46.2L49.4 46.7L50.1 47.3L50.7 47.8L51.4 48.3L52.0 48.9L52.6 49.4L53.3 49.9L53.9 50.5L54.6 51.0L55.2 51.5L55.8 52.1L56.5 52.6L57.1 53.2L57.8 53.7L58.4 54.2L59.0 54.8L59.7 55.3L60.3 55.8L61.0 56.4L61.6 56.9L62.2 57.4L62.9 58.0L63.5 58.5L64.2 59.1L64.8 59.6L65.4 60.1L66.1 60.7L66.7 61.2L67.4 61.7L68.0 62.3L68.6 62.8L69.3 63.3L69.9 63.9L70.6 64.4L71.2 65.0L71.8 65.5L72.5 66.0L73.1 66.6L73.8 67.1L74.4 67.6L75.0 68.2L75.7 68.7L76.3 69.2L77.0 69.8L77.6 70.3L78.2 70.9L78.9 71.4L79.5 71.9L80.2 72.5L80.8 73.0L81.4 73.5L82.1 74.1L82.7 74.6L83.4 75.1L84.0 75.7L84.6 76.2L85.3 76.8L85.9 77.3L86.6 77.8L87.2 78.4L87.8 78.9L88.5 79.4L89.1 80.0L89.8 80.5L90.4 81.0L91.0 81.6L91.7 82.1L92.3 82.7L93.0 83.2L93.6 83.7L94.2 84.3L94.9 84.8L95.5 85.3L96.2 85.9L96.8 86.4L97.4 86.9L98.1 87.5L98.7 88.0L99.4 88.6L100.0 89.1L100.6 89.6L101.3 90.2L101.9 90.7L102.6 91.2L103.2 91.8L103.8 92.3L104.5 92.8L105.1 93.4L105.8 93.9L106.4 94.5L107.0 95.0L107.7 95.5L108.3 96.1L109.0 96.6L109.6 97.1L110.2 97.7L110.9 98.2L111.5 98.7L112.2 99.3L112.8 99.8L113.4 100.4L114.1 100.9L114.7 101.4L115.4 102.0L116.0 102.5L116.6 103.0L117.3 103.6L117.9 104.1L118.6 104.6L119.2 105.2L119.8 105.7L120.5 106.3L121.1 106.8L121.8 107.3L122.4 107.9L123.0 108.4L123.7 108.9L124.3 109.5L125.0 110.0L125.6 110.5L126.2 111.1L126.9 111.6L127.5 112.2L128.2 112.7L128.8 113.2L129.4 113.8L130.1 114.3L130.7 114.8L131.4 115.4L132.0 115.9L132.6 116.4L133.3 117.0L133.9 117.5L134.6 118.1L135.2 118.6L135.8 119.1L136.5 119.7L137.1 120.2L137.8 120.7L138.4 121.3L139.0 121.8L139.7 122.3L140.3 122.9L141.0 123.4L141.6 124.0L142.2 124.5L142.9 125.0L143.5 125.6L144.2 126.1L144.8 126.6L145.4 127.2L146.1 127.7L146.7 128.2L147.4 128.8L148.0 129.3L148.6 129.9L149.3 130.4L149.9 130.9L150.6 131.5L151.2 132.0L151.8 132.5L152.5 133.1L153.1 133.6L153.8 134.1L154.4 134.7L155.0 135.2L155.7 135.8L156.3 136.3L157.0 136.8L157.6 137.4L158.2 137.9L158.9 138.4L159.5 139.0L160.2 139.5L160.8 140.0L161.4 140.6L162.1 141.1L162.7 141.7L163.4 142.2L164.0 142.7L164.6 143.3L165.3 143.8L165.9 144.3L166.6 144.9L167.2 145.4L167.8 145.9L168.5 146.5L169.1 147.0L169.8 147.6L170.4 148.1L171.0 148.6L171.7 149.2L172.3 149.7L173.0 150.2L173.6 150.8L174.2 151.3L174.9 151.8L175.5 152.4L176.2 152.9L176.8 153.5L177.4 154.0L178.1 154.5L178.7 155.1L179.4 155.6L180.0 156.1L180.6 156.7L181.3 157.2L181.9 157.7L182.6 158.3L183.2 158.8L183.8 159.4L184.5 159.9L185.1 160.4L185.8 161.0L186.4 161.5L187.0 162.0L187.7 162.6L188.3 163.1L189.0 163.6L189.6 164.2L190.2 164.7L190.9 165.3L191.5 165.8L192.2 166.3L192.8 166.9L193.4 167.4L194.1 167.9L194.7 168.5L195.4 169.0L196.0 169.5L196.6 170.1L197.3 170.6L197.9 171.2L198.6 171.7L199.2 172.2L199.8 172.8L200.5 173.3L201.1 173.8L201.8 174.4L202.4 174.9L203.0 175.4L203.7 176.0L204.3 176.5L205.0 177.1L205.6 177.6L206.2 178.1L206.9 178.7L207.5 179.2L208.2 179.7L208.8 180.3L209.4 180.8L210.1 181.3L210.7 181.9L211.4 182.4L212.0 183.0L212.6 183.5L213.3 184.0L213.9 184.6L214.6 185.1L215.2 185.6L215.8 186.2L216.5 186.7L217.1 187.2L217.8 187.8L218.4 188.3L219.0 188.9L219.7 189.4L220.3 189.9L221.0 190.5L221.6 191.0L222.2 191.5L222.9 192.1L223.5 192.6L224.2 193.1L224.8 193.7L225.4 194.2L226.1 194.8L226.7 195.3L227.4 195.8L228.0 196.4L228.6 196.9L229.3 197.4L229.9 198.0L230.6 198.5L231.2 199.0L231.8 199.6L232.5 200.1L233.1 200.7L233.8 201.2L234.4 201.7L235.0 202.3L235.7 202.8L236.3 203.3L237.0 203.9L237.6 204.4L238.2 204.9L238.9 205.5L239.5 206.0L240.2 206.6L240.8 207.1L241.4 207.6L242.1 208.2L242.7 208.7L243.4 209.2L244.0 209.8L244.6 210.3L245.3 210.8L245.9 211.4L246.6 211.9L247.2 212.5L247.8 213.0L248.5 213.5L249.1 214.1L249.8 214.6L250.4 215.1L251.0 215.7L251.7 216.2L252.3 216.7L253.0 217.3L253.6 217.8L254.2 218.4L254.9 218.9L255.5 219.4L256.2 220.0L256.8 220.5L257.4 221.0L258.1 221.6L258.7 222.1L259.4 222.6L260.0 223.2L260.6 223.7L261.3 224.3L261.9 224.8L262.6 225.3L263.2 225.9L263.8 226.4L264.5 226.9L265.1 227.5L265.8 228.0L266.4 228.5L267.0 229.1L267.7 229.6L268.3 230.2L269.0 230.7L269.6 231.2L270.2 231.8L270.9 232.3L271.5 232.8L272.2 233.4L272.8 233.9L273.4 234.4L274.1 235.0L274.7 235.5L275.4 236.1L276.0 236.6L276.6 237.1L277.3 237.7L277.9 238.2L278.6 238.7L279.2 239.3L279.8 239.8L280.5 240.3L281.1 240.9L281.8 241.4L282.4 242.0L283.0 242.5L283.7 243.0L284.3 243.6L285.0 244.1L285.6 244.6L286.2 245.2L286.9 245.7L287.5 246.2L288.2 246.8L288.8 247.3L289.4 247.9L290.1 248.4L290.7 248.9L291.4 249.5L292.0 250.0L292.6 249.5L293.3 248.9L293.9 248.4L294.6 247.9L295.2 247.3L295.8 246.8L296.5 246.2L297.1 245.7L297.8 245.2L298.4 244.6L299.0 244.1L299.7 243.6L300.3 243.0L301.0 242.5L301.6 242.0L302.2 241.4L302.9 240.9L303.5 240.3L304.2 239.8L304.8 239.3L305.4 238.7L306.1 238.2L306.7 237.7L307.4 237.1L308.0 236.6L308.6 236.1L309.3 235.5L309.9 235.0L310.6 234.4L311.2 233.9L311.8 233.4L312.5 232.8L313.1 232.3L313.8 231.8L314.4 231.2L315.0 230.7L315.7 230.2L316.3 229.6L317.0 229.1L317.6 228.5L318.2 228.0L318.9 227.5L319.5 226.9L320.2 226.4L320.8 225.9L321.4 225.3L322.1 224.8L322.7 224.3L323.4 223.7L324.0 223.2L324.6 222.6L325.3 222.1L325.9 221.6L326.6 221.0L327.2 220.5L327.8 220.0L328.5 219.4L329.1 218.9L329.8 218.4L330.4 217.8L331.0 217.3L331.7 216.7L332.3 216.2L333.0 215.7L333.6 215.1L334.2 214.6L334.9 214.1L335.5 213.5L336.2 213.0L336.8 212.5L337.4 211.9L338.1 211.4L338.7 210.8L339.4 210.3L340.0 209.8L340.6 209.2L341.3 208.7L341.9 208.2L342.6 207.6L343.2 207.1L343.8 206.6L344.5 206.0L345.1 205.5L345.8 204.9L346.4 204.4L347.0 203.9L347.7 203.3L348.3 202.8L349.0 202.3L349.6 201.7L350.2 201.2L350.9 200.7L351.5 200.1L352.2 199.6L352.8 199.0L353.4 198.5L354.1 198.0L354.7 197.4L355.4 196.9L356.0 196.4L356.6 195.8L357.3 195.3L357.9 194.8L358.6 194.2L359.2 193.7L359.8 193.1L360.5 192.6L361.1 192.1L361.8 191.5L362.4 191.0L363.0 190.5L363.7 189.9L364.3 189.4L365.0 188.9L365.6 188.3L366.2 187.8L366.9 187.2L367.5 186.7L368.2 186.2L368.8 185.6L369.4 185.1L370.1 184.6L370.7 184.0L371.4 183.5L372.0 183.0L372.6 182.4L373.3 181.9L373.9 181.3L374.6 180.8L375.2 180.3L375.8 179.7L376.5 179.2L377.1 178.7L377.8 178.1L378.4 177.6L379.0 177.1L379.7 176.5L380.3 176.0L381.0 175.4L381.6 174.9L382.2 174.4L382.9 173.8L383.5 173.3L384.2 172.8L384.8 172.2L385.4 171.7L386.1 171.2L386.7 170.6L387.4 170.1L388.0 169.5L388.6 169.0L389.3 168.5L389.9 167.9L390.6 167.4L391.2 166.9L391.8 166.3L392.5 165.8L393.1 165.3L393.8 164.7L394.4 164.2L395.0 163.6L395.7 163.1L396.3 162.6L397.0 162.0L397.6 161.5L398.2 161.0L398.9 160.4L399.5 159.9L400.2 159.4L400.8 158.8L401.4 158.3L402.1 157.7L402.7 157.2L403.4 156.7L404.0 156.1L404.6 155.6L405.3 155.1L405.9 154.5L406.6 154.0L407.2 153.5L407.8 152.9L408.5 152.4L409.1 151.8L409.8 151.3L410.4 150.8L411.0 150.2L411.7 149.7L412.3 149.2L413.0 148.6L413.6 148.1L414.2 147.6L414.9 147.0L415.5 146.5L416.2 145.9L416.8 145.4L417.4 144.9L418.1 144.3L418.7 143.8L419.4 143.3L420.0 142.7L420.6 142.2L421.3 141.7L421.9 141.1L422.6 140.6L423.2 140.0L423.8 139.5L424.5 139.0L425.1 138.4L425.8 137.9L426.4 137.4L427.0 136.8L427.7 136.3L428.3 135.8L429.0 135.2L429.6 134.7L430.2 134.1L430.9 133.6L431.5 133.1L432.2 132.5L432.8 132.0L433.4 131.5L434.1 130.9L434.7 130.4L435.4 129.9L436.0 129.3L436.6 128.8L437.3 128.2L437.9 127.7L438.6 127.2L439.2 126.6L439.8 126.1L440.5 125.6L441.1 125.0L441.8 124.5L442.4 124.0L443.0 123.4L443.7 122.9L444.3 122.3L445.0 121.8L445.6 121.3L446.2 120.7L446.9 120.2L447.5 119.7L448.2 119.1L448.8 118.6L449.4 118.1L450.1 117.5L450.7 117.0L451.4 116.4L452.0 115.9L452.6 115.4L453.3 114.8L453.9 114.3L454.6 113.8L455.2 113.2L455.8 112.7L456.5 112.2L457.1 111.6L457.8 111.1L458.4 110.5L459.0 110.0L459.7 109.5L460.3 108.9L461.0 108.4L461.6 107.9L462.2 107.3L462.9 106.8L463.5 106.3L464.2 105.7L464.8 105.2L465.4 104.6L466.1 104.1L466.7 103.6L467.4 103.0L468.0 102.5L468.6 102.0L469.3 101.4L469.9 100.9L470.6 100.4L471.2 99.8L471.8 99.3L472.5 98.7L473.1 98.2L473.8 97.7L474.4 97.1L475.0 96.6L475.7 96.1L476.3 95.5L477.0 95.0L477.6 94.5L478.2 93.9L478.9 93.4L479.5 92.8L480.2 92.3L480.8 91.8L481.4 91.2L482.1 90.7L482.7 90.2L483.4 89.6L484.0 89.1L484.6 88.6L485.3 88.0L485.9 87.5L486.6 86.9L487.2 86.4L487.8 85.9L488.5 85.3L489.1 84.8L489.8 84.3L490.4 83.7L491.0 83.2L491.7 82.7L492.3 82.1L493.0 81.6L493.6 81.0L494.2 80.5L494.9 80.0L495.5 79.4L496.2 78.9L496.8 78.4L497.4 77.8L498.1 77.3L498.7 76.8L499.4 76.2L500.0 75.7L500.6 75.1L501.3 74.6L501.9 74.1L502.6 73.5L503.2 73.0L503.8 72.5L504.5 71.9L505.1 71.4L505.8 70.9L506.4 70.3L507.0 69.8L507.7 69.2L508.3 68.7L509.0 68.2L509.6 67.6L510.2 67.1L510.9 66.6L511.5 66.0L512.2 65.5L512.8 65.0L513.4 64.4L514.1 63.9L514.7 63.3L515.4 62.8L516.0 62.3L516.6 61.7L517.3 61.2L517.9 60.7L518.6 60.1L519.2 59.6L519.8 59.1L520.5 58.5L521.1 58.0L521.8 57.4L522.4 56.9L523.0 56.4L523.7 55.8L524.3 55.3L525.0 54.8L525.6 54.2L526.2 53.7L526.9 53.2L527.5 52.6L528.2 52.1L528.8 51.5L529.4 51.0L530.1 50.5L530.7 49.9L531.4 49.4L532.0 48.9L532.6 48.3L533.3 47.8L533.9 47.3L534.6 46.7L535.2 46.2L535.8 45.6L536.5 45.1L537.1 44.6L537.8 44.0L538.4 43.5L539.0 43.0L539.7 42.4L540.3 41.9L541.0 41.4L541.6 40.8L542.2 40.3L542.9 39.7L543.5 39.2L544.2 38.7L544.8 38.1L545.4 37.6L546.1 37.1L546.7 36.5L547.4 36.0L548.0 35.5"/>
+<path class="ln c1" d="M102.6 15.0L103.5 17.4L104.5 19.7L105.4 22.0L106.3 24.3L107.3 26.6L108.2 28.9L109.2 31.2L110.1 33.5L111.1 35.7L112.0 37.9L113.0 40.2L113.9 42.4L114.9 44.6L115.8 46.8L116.8 49.0L117.7 51.1L118.7 53.3L119.6 55.4L120.6 57.6L121.5 59.7L122.5 61.8L123.4 63.9L124.3 66.0L125.3 68.0L126.2 70.1L127.2 72.2L128.1 74.2L129.1 76.2L130.0 78.2L131.0 80.2L131.9 82.2L132.9 84.2L133.8 86.2L134.8 88.1L135.7 90.1L136.7 92.0L137.6 93.9L138.6 95.8L139.5 97.7L140.4 99.6L141.4 101.5L142.3 103.4L143.3 105.2L144.2 107.0L145.2 108.9L146.1 110.7L147.1 112.5L148.0 114.3L149.0 116.1L149.9 117.8L150.9 119.6L151.8 121.3L152.8 123.1L153.7 124.8L154.7 126.5L155.6 128.2L156.6 129.9L157.5 131.6L158.4 133.2L159.4 134.9L160.3 136.5L161.3 138.1L162.2 139.7L163.2 141.3L164.1 142.9L165.1 144.5L166.0 146.1L167.0 147.6L167.9 149.2L168.9 150.7L169.8 152.2L170.8 153.8L171.7 155.3L172.7 156.7L173.6 158.2L174.5 159.7L175.5 161.1L176.4 162.6L177.4 164.0L178.3 165.4L179.3 166.8L180.2 168.2L181.2 169.6L182.1 171.0L183.1 172.3L184.0 173.7L185.0 175.0L185.9 176.3L186.9 177.6L187.8 178.9L188.8 180.2L189.7 181.5L190.6 182.7L191.6 184.0L192.5 185.2L193.5 186.5L194.4 187.7L195.4 188.9L196.3 190.1L197.3 191.3L198.2 192.4L199.2 193.6L200.1 194.7L201.1 195.9L202.0 197.0L203.0 198.1L203.9 199.2L204.9 200.3L205.8 201.4L206.8 202.4L207.7 203.5L208.6 204.5L209.6 205.5L210.5 206.6L211.5 207.6L212.4 208.6L213.4 209.5L214.3 210.5L215.3 211.5L216.2 212.4L217.2 213.3L218.1 214.3L219.1 215.2L220.0 216.1L221.0 217.0L221.9 217.8L222.9 218.7L223.8 219.5L224.7 220.4L225.7 221.2L226.6 222.0L227.6 222.8L228.5 223.6L229.5 224.4L230.4 225.2L231.4 225.9L232.3 226.7L233.3 227.4L234.2 228.1L235.2 228.9L236.1 229.6L237.1 230.2L238.0 230.9L239.0 231.6L239.9 232.2L240.9 232.9L241.8 233.5L242.7 234.1L243.7 234.7L244.6 235.3L245.6 235.9L246.5 236.5L247.5 237.0L248.4 237.6L249.4 238.1L250.3 238.6L251.3 239.1L252.2 239.6L253.2 240.1L254.1 240.6L255.1 241.1L256.0 241.5L257.0 242.0L257.9 242.4L258.8 242.8L259.8 243.2L260.7 243.6L261.7 244.0L262.6 244.4L263.6 244.7L264.5 245.1L265.5 245.4L266.4 245.7L267.4 246.0L268.3 246.3L269.3 246.6L270.2 246.9L271.2 247.2L272.1 247.4L273.1 247.7L274.0 247.9L275.0 248.1L275.9 248.3L276.8 248.5L277.8 248.7L278.7 248.8L279.7 249.0L280.6 249.2L281.6 249.3L282.5 249.4L283.5 249.5L284.4 249.6L285.4 249.7L286.3 249.8L287.3 249.9L288.2 249.9L289.2 249.9L290.1 250.0L291.1 250.0L292.0 250.0L292.9 250.0L293.9 250.0L294.8 249.9L295.8 249.9L296.7 249.9L297.7 249.8L298.6 249.7L299.6 249.6L300.5 249.5L301.5 249.4L302.4 249.3L303.4 249.2L304.3 249.0L305.3 248.8L306.2 248.7L307.2 248.5L308.1 248.3L309.0 248.1L310.0 247.9L310.9 247.7L311.9 247.4L312.8 247.2L313.8 246.9L314.7 246.6L315.7 246.3L316.6 246.0L317.6 245.7L318.5 245.4L319.5 245.1L320.4 244.7L321.4 244.4L322.3 244.0L323.3 243.6L324.2 243.2L325.2 242.8L326.1 242.4L327.0 242.0L328.0 241.5L328.9 241.1L329.9 240.6L330.8 240.1L331.8 239.6L332.7 239.1L333.7 238.6L334.6 238.1L335.6 237.6L336.5 237.0L337.5 236.5L338.4 235.9L339.4 235.3L340.3 234.7L341.3 234.1L342.2 233.5L343.1 232.9L344.1 232.2L345.0 231.6L346.0 230.9L346.9 230.2L347.9 229.6L348.8 228.9L349.8 228.1L350.7 227.4L351.7 226.7L352.6 225.9L353.6 225.2L354.5 224.4L355.5 223.6L356.4 222.8L357.4 222.0L358.3 221.2L359.3 220.4L360.2 219.5L361.1 218.7L362.1 217.8L363.0 217.0L364.0 216.1L364.9 215.2L365.9 214.3L366.8 213.3L367.8 212.4L368.7 211.5L369.7 210.5L370.6 209.5L371.6 208.6L372.5 207.6L373.5 206.6L374.4 205.5L375.4 204.5L376.3 203.5L377.2 202.4L378.2 201.4L379.1 200.3L380.1 199.2L381.0 198.1L382.0 197.0L382.9 195.9L383.9 194.7L384.8 193.6L385.8 192.4L386.7 191.3L387.7 190.1L388.6 188.9L389.6 187.7L390.5 186.5L391.5 185.2L392.4 184.0L393.4 182.7L394.3 181.5L395.2 180.2L396.2 178.9L397.1 177.6L398.1 176.3L399.0 175.0L400.0 173.7L400.9 172.3L401.9 171.0L402.8 169.6L403.8 168.2L404.7 166.8L405.7 165.4L406.6 164.0L407.6 162.6L408.5 161.1L409.5 159.7L410.4 158.2L411.3 156.7L412.3 155.3L413.2 153.8L414.2 152.2L415.1 150.7L416.1 149.2L417.0 147.6L418.0 146.1L418.9 144.5L419.9 142.9L420.8 141.3L421.8 139.7L422.7 138.1L423.7 136.5L424.6 134.9L425.6 133.2L426.5 131.6L427.4 129.9L428.4 128.2L429.3 126.5L430.3 124.8L431.2 123.1L432.2 121.3L433.1 119.6L434.1 117.8L435.0 116.1L436.0 114.3L436.9 112.5L437.9 110.7L438.8 108.9L439.8 107.0L440.7 105.2L441.7 103.4L442.6 101.5L443.6 99.6L444.5 97.7L445.4 95.8L446.4 93.9L447.3 92.0L448.3 90.1L449.2 88.1L450.2 86.2L451.1 84.2L452.1 82.2L453.0 80.2L454.0 78.2L454.9 76.2L455.9 74.2L456.8 72.2L457.8 70.1L458.7 68.0L459.7 66.0L460.6 63.9L461.5 61.8L462.5 59.7L463.4 57.6L464.4 55.4L465.3 53.3L466.3 51.1L467.2 49.0L468.2 46.8L469.1 44.6L470.1 42.4L471.0 40.2L472.0 37.9L472.9 35.7L473.9 33.5L474.8 31.2L475.8 28.9L476.7 26.6L477.7 24.3L478.6 22.0L479.5 19.7L480.5 17.4L481.4 15.0"/>
+</svg><div class="legend"><span style="--lc:var(--s3)">γ = 0 : 1{u ≠ 0} (vaut 0 en 0)</span><span style="--lc:var(--s5)">γ = 0,5 : √|u|</span><span style="--lc:var(--s2)">γ = 1 : |u|</span><span style="--lc:var(--s1)">γ = 2 : u²</span></div>
+<figcaption>La pénalité d'une coordonnée, $u \mapsto \abs u^\gamma$. Pour $\gamma \le 1$, la courbe a une <strong>pointe</strong> en 0 (pente infinie pour $\gamma < 1$, pente $\pm1$ pour $\gamma = 1$, saut pour $\gamma = 0$) : c'est elle qui « retient » les coefficients exactement à 0. Pour $\gamma = 2$, la courbe est plate en 0 : rien ne retient un coefficient en 0.</figcaption>
+</figure>
+
+<div class="box intu"><div class="box-h">Intuition — pourquoi la pointe crée des zéros</div>
+<p>Imaginez un coefficient $\beta_j$ posé en 0, et demandez-vous s'il a intérêt à bouger un peu. L'ajustement $\norm{Y-X\beta}^2$ y gagne <em>au premier ordre</em> une quantité proportionnelle au déplacement $\abs{\beta_j}$. La pénalité, elle, coûte $\lambda\abs{\beta_j}^\gamma$ :</p>
+<ul>
+<li>si $\gamma \le 1$, ce coût est <em>au moins</em> du même ordre que le gain ($\abs{\beta_j}^\gamma \ge \abs{\beta_j}$ quand $\abs{\beta_j} \le 1$) : si le gain est faible, rester à 0 est optimal — on obtient des zéros exacts ;</li>
+<li>si $\gamma > 1$, le coût $\abs{\beta_j}^\gamma$ est négligeable devant $\abs{\beta_j}$ près de 0 : dès que le gain n'est pas exactement nul, bouger un peu est rentable — pas de zéro exact.</li>
+</ul></div>
+
+<h3 id="bridge-ortho">Le laboratoire orthonormé pour $\gamma = 0, 1, 2$</h3>
+
+<p>En design orthonormé, chaque coordonnée résout $\min_{\beta_j}\,(\beta_j - b_j)^2 + \lambda\abs{\beta_j}^\gamma$ (rappel 4). Les trois cas classiques :</p>
+<ul>
+<li><strong>$\gamma = 2$ (Ridge).</strong> Dérivée nulle : $2(\beta_j - b_j) + 2\lambda\beta_j = 0$, donc $\hb_j = \dfrac{b_j}{1+\lambda}$. Tout est rétréci, rien n'est mis à 0.</li>
+<li><strong>$\gamma = 1$ (Lasso).</strong> Seuillage doux : $\hb_j = \sgn(b_j)(\abs{b_j} - \lambda/2)_+$.</li>
+<li><strong>$\gamma = 0$ (sélection).</strong> Deux candidats seulement : ou bien $\beta_j \neq 0$, et alors le meilleur choix est $\beta_j = b_j$, pour un coût $0 + \lambda = \lambda$ ; ou bien $\beta_j = 0$, pour un coût $b_j^2$. On garde la coordonnée si et seulement si $b_j^2 > \lambda$ :
+$$\hb_j = b_j\,\ind\{\abs{b_j} > \sqrt\lambda\}.$$
+C'est le <em class="new">seuillage dur</em> (<em>hard thresholding</em>) : on garde tel quel ou on tue, sans rétrécir.</li>
+</ul>
+
+<div class="widget" data-widget="seuillage" data-seuil="demi" data-hard="1" data-title="Une coordonnée, design orthonormé : Ridge, Lasso (seuil λ/2) et seuillage dur (ici au même seuil λ/2, pour comparer les formes)"></div>
+<p class="small muted">Dans la figure, le seuillage dur est tracé au même seuil $\lambda/2$ que le Lasso pour comparer les formes : le Lasso <em>et</em> le seuillage dur mettent à 0 les petits $b$ ; seul le seuillage dur laisse les grands $b$ intacts (il colle à la diagonale). C'est exactement la règle du LSLasso (§3).</p>
+
+<h3 id="bridge-convexite">Convexe si et seulement si $\gamma \ge 1$ <span class="ref">Cours6 · diapos 75–76</span></h3>
+
+<div class="widget" data-widget="bridge"></div>
+<p>Faites varier $\gamma$ : pour $\gamma < 1$, la « boule » $\{\abs{\beta_1}^\gamma + \abs{\beta_2}^\gamma \le 1\}$ est une étoile aux bras creusés, <strong>non convexe</strong> ; pour $\gamma = 1$ c'est le losange ; pour $\gamma > 1$ elle s'arrondit (cercle pour $\gamma = 2$). C'est la figure de la diapo 76.</p>
+
+<div class="box thm"><div class="box-h">Proposition — Convexité du critère bridge</div>
+<p>Pour $\gamma \ge 1$, $\beta \mapsto \norm{\beta}_\gamma^\gamma$ est convexe (strictement si $\gamma > 1$), donc $C_{\lambda,\gamma}$ est convexe. Pour $0 \le \gamma < 1$ (et $p \ge 2$), la boule $\{\norm\beta_\gamma^\gamma \le 1\}$ n'est pas convexe ; et pour $\lambda > 0$, le critère $C_{\lambda,\gamma}$ n'est pas convexe non plus (quel que soit $p$).</p></div>
+
+<div class="box idee"><div class="box-h">Idée de la preuve</div>
+<ol><li>Pour $\gamma \ge 1$ : $u \mapsto \abs u^\gamma$ est convexe en dimension 1, et une somme de fonctions convexes est convexe.</li>
+<li>Pour $\gamma < 1$ : exhiber deux points de la boule dont le milieu sort de la boule.</li>
+<li>Pour le critère : regarder une seule coordonnée qui quitte 0 ; près de 0, la pointe de $\abs u^\gamma$ l'emporte sur la courbure de l'ajustement.</li></ol></div>
+
+<details class="fold proof"><summary>Preuve détaillée</summary><div class="fold-body">
+<p><strong>Cas $\gamma \ge 1$.</strong> Sur $[0, +\infty)$, $t \mapsto t^\gamma$ est convexe (dérivée seconde $\gamma(\gamma-1)t^{\gamma-2} \ge 0$) et croissante. La valeur absolue est convexe. Pour $u, v \in \R$ et $\theta \in [0,1]$ :</p>
+<ol class="steps">
+<li>$$\abs{\theta u + (1-\theta)v} \le \theta\abs u + (1-\theta)\abs v$$<span class="why">inégalité triangulaire (convexité de $\abs\cdot$).</span></li>
+<li>$$\abs{\theta u + (1-\theta)v}^\gamma \le \big(\theta\abs u + (1-\theta)\abs v\big)^\gamma$$<span class="why">$t \mapsto t^\gamma$ est croissante sur $[0,\infty)$.</span></li>
+<li>$$\le \theta\abs u^\gamma + (1-\theta)\abs v^\gamma$$<span class="why">$t \mapsto t^\gamma$ est convexe sur $[0,\infty)$.</span></li>
+</ol>
+<p>Donc $u \mapsto \abs u^\gamma$ est convexe, et $\norm\beta_\gamma^\gamma = \sum_j \abs{\beta_j}^\gamma$ aussi (somme de convexes, <a href="00_rappels.html#convexite">rappel</a>). Le critère $C_{\lambda,\gamma}$ est la somme de $\norm{Y-X\beta}^2$ (convexe) et de $\lambda\norm\beta_\gamma^\gamma$ (convexe) : il est convexe. Si $\gamma > 1$, $t^\gamma$ est strictement convexe et l'on obtient la stricte convexité.</p>
+<p><strong>Cas $0 < \gamma < 1$.</strong> Les points $e_1 = (1, 0, \dots, 0)$ et $e_2 = (0, 1, 0, \dots, 0)$ sont dans la boule ($\norm{e_1}_\gamma^\gamma = 1$). Leur milieu $m = (\tfrac12, \tfrac12, 0, \dots)$ vérifie
+$$\norm{m}_\gamma^\gamma = 2\cdot\big(\tfrac12\big)^\gamma = 2^{1-\gamma} > 1 \quad\text{car } 1 - \gamma > 0.$$
+Le milieu de deux points de la boule n'y est pas : la boule n'est pas convexe. Exemple : $\gamma = 0{,}5$ donne $2^{0{,}5} \approx 1{,}41$.</p>
+<p><strong>Cas $\gamma = 0$.</strong> Même exemple : $\norm{e_1}_0 = \norm{e_2}_0 = 1$ mais $\norm{m}_0 = 2$.</p>
+<p><strong>Le critère lui-même ($0 \le \gamma < 1$, $\lambda > 0$).</strong> Partons d'un $\beta$ tel que $\beta_1 = 0$ et posons $\varphi(t) = C_{\lambda,\gamma}(\beta + te_1)$. En développant, $\norm{Y - X\beta - tX_1}^2 = q(t)$ est un polynôme de degré 2 en $t$, avec $q'' = 2\norm{X_1}^2$. Les autres termes de la pénalité ne bougent pas.</p>
+<ul>
+<li>Si $0 < \gamma < 1$ : pour $t > 0$, $\varphi(t) = q(t) + \lambda t^\gamma + \text{cte}$, donc $\varphi''(t) = 2\norm{X_1}^2 + \lambda\gamma(\gamma - 1)t^{\gamma-2} \to -\infty$ quand $t \to 0^+$ (car $\gamma - 1 < 0$ et $t^{\gamma-2} \to +\infty$). $\varphi$ est concave près de $0^+$, donc pas convexe.</li>
+<li>Si $\gamma = 0$ : $\varphi(0) = q(0) + \text{cte}$ et $\varphi(t) = q(t) + \lambda + \text{cte}$ pour $t \ne 0$. Un calcul direct donne $\varphi(s) - \frac12\big(\varphi(0) + \varphi(2s)\big) = \frac\lambda2 - \norm{X_1}^2 s^2 > 0$ pour $s$ petit : le milieu est au-dessus de la corde.</li>
+</ul>
+<p>Une fonction convexe sur $\R^p$ reste convexe sur chaque droite ; $C_{\lambda,\gamma}$ n'est donc pas convexe, sans aucune hypothèse sur $X$.<span class="qed">∎</span></p>
+</div></details>
+
+<h3 id="bridge-existence">Les énoncés de la diapo 75, un par un</h3>
+
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours6 · diapo 75</span></div>
+<ul>
+<li>Si $\gamma = 0$, l'estimateur bridge existe si $X$ est injective (<em>one-to-one</em>).</li>
+<li>Si $\gamma > 0$, l'estimateur bridge existe.</li>
+<li>Si $0 \le \gamma < 1$, $C_{\lambda,\gamma}$ n'est pas convexe et peut être très difficile à minimiser en grande dimension.</li>
+<li>Si $\gamma = 1$, $C_{\lambda,1}$ est convexe et a un unique minimiseur si $X$ est injective.</li>
+<li>Si $\gamma > 1$, $C_{\lambda,\gamma}$ est strictement convexe et a un unique minimiseur. Presque sûrement, toutes les coordonnées de l'estimateur sont non nulles.</li>
+<li>Équivalence avec le problème contraint : $\hb^{\mathrm{Bridge}}(\lambda,\gamma) = \argmin_{\{\beta : \norm\beta_\gamma^\gamma \le t\}} \norm{Y - X\beta}^2$.</li>
+</ul></div>
+
+<p>Décodons chaque point avec ce qu'on sait.</p>
+<ul>
+<li><strong>« $X$ injective »</strong> veut dire $X\beta = X\beta' \Rightarrow \beta = \beta'$, c'est-à-dire $\Ker X = \{0\}$, c'est-à-dire $\rg X = p$ (<a href="00_rappels.html#rang-noyau">rappel</a>). C'est impossible si $p > n$.</li>
+<li><strong>$\gamma > 0$ : existence.</strong> Le critère est continu et tend vers $+\infty$ quand $\norm\beta \to \infty$ (la pénalité $\lambda\sum\abs{\beta_j}^\gamma$ explose). Une fonction continue qui explose à l'infini atteint son minimum (on se ramène à un compact). Aucune hypothèse sur $X$ n'est nécessaire.</li>
+<li><strong>$\gamma = 0$.</strong> Le critère ne prend qu'un nombre fini de « formes » : pour chaque support $S \subset \{1,\dots,p\}$, on résout des moindres carrés sur les colonnes de $S$ (séance 1), puis on compare les $2^p$ candidats. Si $X$ est injective, chacun de ces problèmes de moindres carrés a une solution unique.</li>
+<li><strong>$\gamma = 1$ : unicité si $X$ injective.</strong> Si $\Ker X = \{0\}$, $\beta \mapsto \norm{Y - X\beta}^2$ est strictement convexe (sa hessienne $2X\T X$ est définie positive), donc le critère aussi, et il a au plus un minimiseur. Sans injectivité, le Lasso peut avoir plusieurs solutions (exemple de la colonne dupliquée, §7).</li>
+<li><strong>$\gamma > 1$ : pas de zéro exact.</strong> La pénalité est dérivable, de dérivée $\lambda\gamma\abs{\beta_j}^{\gamma-1}\sgn(\beta_j)$, qui <strong>vaut 0 en $\beta_j = 0$</strong>. La condition d'optimalité en une coordonnée nulle devient $2X_j\T(Y - X\hb) = 0$ : il faudrait que le résidu soit exactement orthogonal à $X_j$, un événement de probabilité nulle quand le bruit a une densité. D'où « presque sûrement, toutes les coordonnées sont non nulles ».</li>
+<li><strong>Équivalence pénalité / contrainte</strong> (<a href="00_rappels.html#lagrange">rappel Lagrange</a>) : à chaque $\lambda$ correspond un $t$ (et réciproquement) donnant le même estimateur. C'est garanti pour $\gamma \ge 1$, par convexité.</li>
+</ul>
+
+<div class="box remarque"><div class="box-h">Note sur la diapo 75</div>
+<p>Deux précisions, sans conséquence pour la suite. (1) Pour $\gamma = 0$, un minimiseur existe en fait toujours (chaque problème de moindres carrés restreint a une solution, et il y en a un nombre fini) ; l'injectivité sert à l'<em>unicité</em> de ces solutions. (2) L'équivalence avec le problème contraint est sans réserve pour $\gamma \ge 1$ (cas convexe) ; pour $\gamma < 1$, certains estimateurs contraints ne s'obtiennent par aucun $\lambda$.</p></div>
+
+<div class="box piege"><div class="box-h">Piège</div>
+<p>Pour $\gamma < 1$, $\norm\beta_\gamma = (\sum\abs{\beta_j}^\gamma)^{1/\gamma}$ <strong>n'est pas une norme</strong> (l'inégalité triangulaire échoue, c'est la non-convexité qu'on vient de voir), et $\norm\beta_0$ non plus. Le mot « norme » est un abus de langage commode.</p></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>Pénalité <strong>pointue en 0</strong> ⇒ zéros exacts. Pénalité <strong>convexe</strong> ⇒ calculable (pas de minimum local piège). $\gamma = 1$ est le seul exposant qui a les deux. C'est la vraie raison du succès du Lasso.</p></div>
+
+<div class="quiz"><p>Pour $\gamma = 1{,}5$ et un design orthonormé, $\hb_j$ peut-il être exactement nul quand $b_j = 0{,}01$ ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body"><p>Non. La coordonnée minimise $(\beta - 0{,}01)^2 + \lambda\abs\beta^{1{,}5}$, dont la dérivée en $\beta = 0$ vaut $-0{,}02 < 0$ (la pénalité a une dérivée nulle en 0). En avançant un peu vers $0{,}01$, on diminue le critère : l'optimum est strictement positif (petit, mais non nul).</p></div></details></div>
+
+<h2 id="illustration">2. Ce qui se passe en dimension 2 <span class="ref">Cours6 · diapos 77–79</span></h2>
+
+<p class="tldr">Les lignes de niveau de $\norm{Y - X\beta}^2$ sont des ellipses centrées en $\hb\MC$ ; l'estimateur contraint est le premier point où une ellipse touche la région $\norm\beta_\gamma^\gamma \le t$ — et pour le losange $\ell_1$, ce premier contact est souvent un coin, donc une coordonnée nulle.</p>
+
+<h3 id="illustration-decomposition">La décomposition qui fait apparaître les ellipses</h3>
+
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours6 · diapo 77</span></div>
+<p>On prend $X\T X = \begin{pmatrix} 4 & 1{,}4\\ 1{,}4 & 1\end{pmatrix}$ et $t = 1$. On remarque que
+$$\norm{Y - X\beta}^2 = (\beta - \hb^{\mathrm{ols}})\T X\T X(\beta - \hb^{\mathrm{ols}}) + \norm{Y - X\hb^{\mathrm{ols}}}^2,$$
+et le problème contraint devient $\argmin_{\{\beta : \norm\beta_\gamma^\gamma \le t\}} (\beta - \hb^{\mathrm{ols}})\T X\T X(\beta - \hb^{\mathrm{ols}})$. On compare l'estimateur Ridge (contrainte $\norm\beta_2^2 \le t$) et l'estimateur Lasso (contrainte $\norm\beta_1 \le t$).</p></div>
+
+<p>« ols » (<em>ordinary least squares</em>) désigne les moindres carrés : $\hb^{\mathrm{ols}} = \hb\MC = (X\T X)^{-1}X\T Y$ (ici $X\T X$ est inversible, son déterminant vaut $4 - 1{,}96 = 2{,}04 \neq 0$).</p>
+
+<div class="box idee"><div class="box-h">Idée de la preuve</div>
+<p>Écrire $Y - X\beta = (Y - X\hb\MC) + X(\hb\MC - \beta)$ et développer le carré : le terme croisé est nul grâce aux équations normales. C'est le théorème de Pythagore.</p></div>
+
+<details class="fold proof"><summary>Preuve détaillée</summary><div class="fold-body">
+<p>Notons $\hat r = Y - X\hb\MC$ le résidu des moindres carrés. Les <strong>équations normales</strong> (séance 1) disent $X\T X\hb\MC = X\T Y$, c'est-à-dire $X\T \hat r = 0$ : le résidu est orthogonal à toutes les colonnes de $X$.</p>
+<ol class="steps">
+<li>$$Y - X\beta = \hat r + X(\hb\MC - \beta)$$<span class="why">on ajoute et retranche $X\hb\MC$.</span></li>
+<li>$$\norm{Y - X\beta}^2 = \norm{\hat r}^2 + 2\,\hat r\T X(\hb\MC - \beta) + \norm{X(\hb\MC - \beta)}^2$$<span class="why">$\norm{u + v}^2 = \norm u^2 + 2u\T v + \norm v^2$.</span></li>
+<li>$$\hat r\T X(\hb\MC - \beta) = (X\T\hat r)\T(\hb\MC - \beta) = 0$$<span class="why">$u\T X v = (X\T u)\T v$, et $X\T\hat r = 0$.</span></li>
+<li>$$\norm{X(\hb\MC - \beta)}^2 = (\beta - \hb\MC)\T X\T X(\beta - \hb\MC)$$<span class="why">$\norm{Xv}^2 = v\T X\T X v$, et changer $v$ en $-v$ ne change rien.</span></li>
+</ol>
+<p>On obtient la formule de la diapo. Le terme $\norm{\hat r}^2$ ne dépend pas de $\beta$ : minimiser $\norm{Y - X\beta}^2$ sous contrainte revient à minimiser la forme quadratique $(\beta - \hb\MC)\T X\T X(\beta - \hb\MC)$.<span class="qed">∎</span></p>
+</div></details>
+
+<p><strong>Pourquoi des ellipses ?</strong> L'ensemble $\{\beta : (\beta - \hb\MC)\T X\T X(\beta - \hb\MC) = c\}$ est une ellipse centrée en $\hb\MC$. Ses axes sont dirigés par les vecteurs propres de $X\T X$, et ses demi-axes valent $\sqrt{c/\mu_1}$ et $\sqrt{c/\mu_2}$, où $\mu_1, \mu_2$ sont les valeurs propres (<a href="00_rappels.html#spectral">rappel</a>). Ici $\mu_1 \approx 4{,}55$ et $\mu_2 \approx 0{,}45$ : l'ellipse est environ $\sqrt{4{,}55/0{,}45} \approx 3{,}2$ fois plus longue dans la direction du vecteur propre de la <em>petite</em> valeur propre, $\approx(0{,}37;\,-0{,}93)$. Les deux variables sont positivement corrélées ($1{,}4 > 0$), ce qui rend leurs coefficients estimés négativement liés : le grand axe a une pente négative.</p>
+
+<h3 id="illustration-figure">Le premier contact</h3>
+
+<p>Pour résoudre $\min (\beta - \hb\MC)\T X\T X(\beta - \hb\MC)$ sous la contrainte, imaginez qu'on <strong>gonfle</strong> une ellipse centrée en $\hb\MC$ jusqu'à ce qu'elle touche la région permise. Le point de contact est l'estimateur.</p>
+
+<div class="widget" data-widget="l1l2" data-gram="[[4,1.4],[1.4,1]]" data-b="[2,3]" data-t="1"></div>
+<p>Avec la matrice et le $t = 1$ de la diapo, et $\hb\MC = (2, 3)$ (au centre des ellipses de la diapo 78), l'ellipse touche le losange en son <strong>coin</strong> $(1, 0)$ : le Lasso met $\beta_2$ exactement à 0. Le disque, lui, est touché en $(0{,}89;\ 0{,}46)$ : le Ridge garde les deux coordonnées. Déplacez $\hb\MC$ : le contact avec le losange se fait très souvent en un coin, presque jamais pour le disque (il faudrait que $\hb\MC$ tombe exactement sur l'une de quatre demi-droites bien précises, une par point du cercle situé sur un axe — les demi-axes eux-mêmes si $X\T X = I$ ; ici, par exemple, $\hb\MC = (2;\ -1{,}4)$ donne le Ridge $(1, 0)$).</p>
+
+<div class="box intu"><div class="box-h">Intuition — un coin « attrape » beaucoup de directions</div>
+<p>En un coin du losange, l'ensemble des directions « sortantes » (le cône normal de la séance 4) est un secteur d'angle 90°. L'ellipse touche le coin dès que la direction de plus forte descente de l'ajustement (vers le centre des ellipses) tombe dans ce secteur, ce qui arrive pour toute une plage de positions de $\hb\MC$. Sur le cercle, chaque point n'a qu'une seule direction normale : toucher exactement l'axe est un accident.</p></div>
+
+<details class="fold more"><summary>Vérifier que $(1,0)$ est bien la solution Lasso</summary><div class="fold-body">
+<p>Notons $q(\beta) = (\beta - b)\T G(\beta - b)$ avec $G = X\T X$, $b = (2,3)$. En $\beta = (1, 0)$ : $\beta - b = (-1, -3)$ et $\nabla q = 2G(\beta - b) = 2\,(4\cdot(-1) + 1{,}4\cdot(-3);\ 1{,}4\cdot(-1) + 1\cdot(-3)) = (-16{,}4;\ -8{,}8)$.</p>
+<p>Critère d'optimalité sur un convexe (séance 4) : $-\nabla q$ doit appartenir au cône normal de la boule $\ell_1$ au point $(1,0)$, qui est $\{(a, c) : a \ge \abs c\}$ (les directions qui « sortent » par le coin). Ici $-\nabla q = (16{,}4;\ 8{,}8)$ et $16{,}4 \ge 8{,}8$ : la condition est vérifiée, $(1, 0)$ est optimal. Remarquez que $\hb\MC_2 = 3 > \hb\MC_1 = 2$ : c'est pourtant $\beta_2$ que le Lasso met à zéro, à cause de la corrélation entre les deux variables. Le Lasso ne se contente pas de garder les plus gros coefficients des moindres carrés !</p>
+</div></details>
+
+<div class="box remarque"><div class="box-h">Notes sur les diapos 77–78</div>
+<ul>
+<li>Diapo 77 : la deuxième formule s'appelle « $\hb^{\mathrm{ridge}}(\lambda)$ » mais c'est l'estimateur <strong>Lasso</strong> (contrainte $\norm\beta_1 \le t$) — simple copier-coller.</li>
+<li>Diapo 78 : les ellipses y montent vers la droite (grand axe de pente positive), ce qui correspondrait plutôt à un terme hors diagonale <em>négatif</em> ; avec la matrice de la diapo 77, le grand axe a une pente négative, comme dans la figure interactive ci-dessus. Le message (coin pour le Lasso, pas de zéro pour le Ridge) est le même.</li>
+<li>« Bien sûr, les deux estimateurs sont proches (pour le même $t$) mais, selon $\hb^{\mathrm{ols}}$, le Lasso peut avoir des coordonnées nulles » : c'est exactement ce que montre la figure.</li>
+</ul></div>
+
+<h2 id="lslasso">3. Corriger le biais : Lasso puis moindres carrés (LSLasso) <span class="ref">Cours6 · diapo 80</span></h2>
+
+<p class="tldr">Le Lasso fait deux choses à la fois — choisir les variables et rétrécir leurs coefficients ; le LSLasso garde le choix et annule le rétrécissement en refaisant des moindres carrés sur les variables choisies.</p>
+
+<h3 id="lslasso-biais">Le problème : le Lasso rétrécit même les gros coefficients</h3>
+
+<p>En design orthonormé, $b_j = X_j\T Y = X_j\T(X\bstar + \eps) = \bstar_j + X_j\T\eps$, car $X_j\T X = e_j\T$ (la $j$-ième ligne de $I_p$). Et $X_j\T\eps \sim \N(0, \sigma^2\norm{X_j}^2) = \N(0, \sigma^2)$ (<a href="00_rappels.html#gaussien">rappel</a>). Donc $b_j \sim \N(\bstar_j, \sigma^2)$ : $b_j$ est un estimateur sans biais de $\bstar_j$.</p>
+
+<p>Supposons $\bstar_j$ grand, disons $\bstar_j = 10\sigma$ avec $\lambda/2 = 2\sigma$. Alors $b_j$ est au-dessus du seuil avec une probabilité écrasante (il faudrait un écart de $8\sigma$ pour passer dessous), et le Lasso renvoie $\hb^L_j = b_j - \lambda/2$, d'espérance $\bstar_j - \lambda/2 = 8\sigma$. On commet un <strong>biais systématique de $\lambda/2$</strong> sur un coefficient dont la non-nullité ne faisait aucun doute. C'est le défaut 1 : le même $\lambda$ sert à <em>sélectionner</em> (il faut qu'il soit assez grand pour tuer le bruit) et à <em>estimer</em> (il faudrait qu'il soit petit pour ne pas biaiser).</p>
+
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours6 · diapo 80</span></div>
+<p>Problème : le Lasso est biaisé (les grands coefficients sont rétrécis vers zéro). Procédure en deux étapes, <strong>Least Squares Lasso</strong> (LSLasso) :</p>
+<ol><li>Lasso : on obtient $\hb^L(\lambda)$.</li>
+<li>Moindres carrés sur les covariables actives :
+$$\hb^{\mathrm{LSLasso}}(\lambda) = \argmin_{\beta\in\R^p :\ \supp(\beta) = \supp(\hb^L(\lambda))} \tfrac12\norm{Y - X\beta}_2^2.$$</li></ol>
+<p>La validation croisée doit être faite sur toute la procédure. Implémenté dans <code>glmnet</code> (argument <code>relax=TRUE</code>).</p></div>
+
+<p><strong>Décodage.</strong> $\supp(\beta) = \{j : \beta_j \ne 0\}$ est le support. L'étape 2 est une régression ordinaire en n'utilisant que les colonnes choisies à l'étape 1 (c'est l'« estimateur des moindres carrés restreint » de la séance 1, avec le support estimé à la place du vrai support $\Astar$). Le facteur $\frac12$ ne change pas l'argmin.</p>
+
+<h3 id="lslasso-ortho">En design orthonormé : le seuillage dur</h3>
+
+<ol class="steps">
+<li>$$\text{Étape 1 : } \hb^L_j = \sgn(b_j)(\abs{b_j} - \lambda/2)_+ \quad\Rightarrow\quad \hat S := \supp(\hb^L) = \{j : \abs{b_j} > \lambda/2\}$$<span class="why">seuillage doux (rappel 4) : la coordonnée est non nulle exactement quand $\abs{b_j}$ dépasse le seuil.</span></li>
+<li>$$\text{Étape 2 : } \min_{\beta :\ \beta_j = 0\ \forall j\notin\hat S}\ \norm{Y - X\beta}^2 = \min \sum_{j\in\hat S}(\beta_j - b_j)^2 + \text{cte}$$<span class="why">découplage orthonormé (rappel 4), en imposant $\beta_j = 0$ hors de $\hat S$.</span></li>
+<li>$$\hb^{\mathrm{LSLasso}}_j = b_j\,\ind\{\abs{b_j} > \lambda/2\}$$<span class="why">chaque terme $(\beta_j - b_j)^2$ est minimal en $\beta_j = b_j$.</span></li>
+</ol>
+<p>On reconnaît le <strong>seuillage dur</strong> au seuil $\lambda/2$ : les coordonnées gardées ne sont plus rétrécies. Le biais sur les gros coefficients disparaît.</p>
+
+<h3 id="lslasso-cv">Pourquoi valider sur toute la procédure</h3>
+
+<div class="box piege"><div class="box-h">Piège — régler $\lambda$ pour le Lasso, puis réajuster</div>
+<p>Si l'on choisit $\lambda$ par validation croisée <em>pour le Lasso seul</em>, la validation croisée a tendance à prendre un $\lambda$ assez <strong>petit</strong> : un petit $\lambda$ rétrécit moins les bons coefficients, quitte à laisser entrer quelques variables de bruit dont le Lasso garde des coefficients minuscules. Si l'on réajuste ensuite par moindres carrés avec ce $\lambda$, ces variables de bruit reçoivent leur coefficient <strong>plein</strong> : on surapprend. Le bon protocole : pour chaque $\lambda$ candidat, calculer <strong>tout</strong> l'estimateur en deux étapes sur les plis d'apprentissage, mesurer son erreur sur le pli de validation, et choisir le $\lambda$ qui minimise cette erreur (<a href="00_rappels.html#erreur-test">rappel validation croisée</a>).</p></div>
+
+<div class="box remarque"><div class="box-h">Limites</div>
+<p>Le LSLasso hérite de toutes les erreurs de sélection de l'étape 1 : une variable oubliée reste oubliée. Et sans rétrécissement, l'étape 2 a la variance des moindres carrés sur $\abs{\hat S}$ variables, ce qui est raisonnable seulement si $\abs{\hat S}$ est petit devant $n$.</p></div>
+
+<h2 id="dantzig">4. Le sélecteur de Dantzig <span class="ref">Cours6 · diapo 81</span></h2>
+
+<p class="tldr">Au lieu de pénaliser, on cherche le vecteur de plus petite norme $\ell_1$ parmi ceux qui sont « compatibles avec les données » au sens des conditions KKT du Lasso ; c'est un programme linéaire, et ses performances sont très proches de celles du Lasso.</p>
+
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours6 · diapo 81</span></div>
+<ul>
+<li>L'estimateur Lasso satisfait la contrainte $\norm{2X\T(Y - X\hb^L(\lambda))}_\infty \le \lambda$. On introduit l'ensemble convexe
+$$D_\lambda = \big\{\beta \in \R^p : \norm{2X\T(Y - X\beta)}_\infty \le \lambda\big\},$$
+appelé contrainte de Dantzig.</li>
+<li>On s'intéresse à des vecteurs parcimonieux, la parcimonie étant mesurée par la norme $\ell_1$. Candès et Tao (2007) proposent le <strong>sélecteur de Dantzig</strong>
+$$\hb^D(\lambda) := \argmin_{\beta\in D_\lambda}\norm{\beta}_1.$$</li>
+<li>On a $\norm{\hb^D(\lambda)}_1 \le \norm{\hb^L(\lambda)}_1$. Les performances numériques et théoriques des deux estimateurs sont très proches ; dans certains cas, ils coïncident.</li>
+</ul></div>
+
+<p><strong>Décodage.</strong> $\norm{v}_\infty = \max_j\abs{v_j}$. La contrainte $\norm{2X\T(Y - X\beta)}_\infty \le \lambda$ s'écrit coordonnée par coordonnée :
+$$\abs{2X_j\T(Y - X\beta)} \le \lambda \quad \text{pour tout } j = 1, \dots, p.$$
+En mots : <strong>aucune variable n'est fortement corrélée avec le résidu</strong> $Y - X\beta$. Si une variable l'était, c'est qu'il reste dans le résidu un signal que cette variable pourrait expliquer : $\beta$ n'aurait pas « tout pris ». $D_\lambda$ est donc l'ensemble des $\beta$ <em>compatibles avec les données</em> au niveau $\lambda$. Parmi eux, Dantzig choisit le plus parcimonieux, au sens $\ell_1$.</p>
+
+<div class="box intu"><div class="box-h">Deux façons de dire la même chose</div>
+<div class="cols">
+<div class="card"><p><strong>Lasso</strong> : « bien ajuster, en payant la taille ». On minimise <em>ajustement + $\lambda\times$taille</em>.</p></div>
+<div class="card"><p><strong>Dantzig</strong> : « être le plus petit possible, tant qu'on ajuste assez bien ». On minimise <em>la taille</em> sous une contrainte d'ajustement.</p></div>
+</div></div>
+
+<h3 id="dantzig-comparaison">Pourquoi $\norm{\hb^D}_1 \le \norm{\hb^L}_1$</h3>
+
+<div class="box idee"><div class="box-h">Idée de la preuve</div>
+<p>Les conditions KKT disent que le Lasso est dans $D_\lambda$. Or $\hb^D$ est le point de $D_\lambda$ de plus petite norme $\ell_1$ ; il fait donc au moins aussi bien que n'importe quel autre point de $D_\lambda$, en particulier que $\hb^L$.</p></div>
+
+<details class="fold proof"><summary>Preuve détaillée</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\abs{2X_j\T(Y - X\hb^L)} = \lambda \ \text{ si } \hb^L_j \ne 0, \qquad \abs{2X_j\T(Y - X\hb^L)} \le \lambda \ \text{ si } \hb^L_j = 0$$<span class="why">conditions KKT du Lasso (rappel 2) ; pour la première ligne, on prend la valeur absolue de $\lambda\,\sgn(\hb_j)$.</span></li>
+<li>$$\norm{2X\T(Y - X\hb^L)}_\infty = \max_j \abs{2X_j\T(Y - X\hb^L)} \le \lambda$$<span class="why">dans les deux cas, chaque coordonnée est $\le\lambda$.</span></li>
+<li>$$\hb^L \in D_\lambda$$<span class="why">c'est la définition de $D_\lambda$.</span></li>
+<li>$$\norm{\hb^D}_1 = \min_{\beta\in D_\lambda}\norm\beta_1 \le \norm{\hb^L}_1$$<span class="why">un minimum sur un ensemble est inférieur à la valeur en n'importe quel point de cet ensemble.</span></li>
+</ol>
+<span class="qed">∎</span></div></details>
+
+<div class="box remarque"><div class="box-h">Note sur la diapo 81</div>
+<p>Il manque une parenthèse fermante dans « $\norm{2X\T(Y - X\hb^L(\lambda)}_\infty$ » : lire $\norm{2X\T(Y - X\hb^L(\lambda))}_\infty$.</p></div>
+
+<h3 id="dantzig-lp">Un programme linéaire</h3>
+
+<p>Le nom vient de George Dantzig, l'inventeur de l'algorithme du simplexe pour la <strong>programmation linéaire</strong> (minimiser une fonction linéaire sous des contraintes linéaires). Le sélecteur de Dantzig en est une :</p>
+<ol class="steps">
+<li>$$\beta = \beta^+ - \beta^-, \qquad \beta^+ = (\beta)_+ \ge 0,\ \ \beta^- = (-\beta)_+ \ge 0$$<span class="why">on sépare parties positive et négative ; alors $\abs{\beta_j} = \beta^+_j + \beta^-_j$ à l'optimum.</span></li>
+<li>$$\min_{\beta^+,\beta^- \ge 0}\ \sum_{j}(\beta^+_j + \beta^-_j) \quad\text{s.c.}\quad -\lambda \le 2X_j\T\big(Y - X\beta^+ + X\beta^-\big) \le \lambda,\ \ j = 1,\dots,p$$<span class="why">objectif linéaire en $(\beta^+, \beta^-)$ ; chaque contrainte $\abs{\cdot} \le \lambda$ devient deux inégalités linéaires.</span></li>
+</ol>
+<p>On a $2p$ inconnues positives et $2p$ contraintes linéaires : un solveur de programmation linéaire le résout. (Le Lasso, lui, est un programme <em>quadratique</em>.)</p>
+
+<h3 id="dantzig-ortho">En design orthonormé : Dantzig = Lasso</h3>
+
+<ol class="steps">
+<li>$$2X\T(Y - X\beta) = 2(X\T Y - X\T X\beta) = 2(b - \beta)$$<span class="why">$X\T Y = b$ et $X\T X = I_p$.</span></li>
+<li>$$D_\lambda = \{\beta : \abs{b_j - \beta_j} \le \lambda/2 \ \text{ pour tout } j\}$$<span class="why">la contrainte devient une « boîte » : chaque $\beta_j$ dans l'intervalle $[b_j - \lambda/2,\ b_j + \lambda/2]$.</span></li>
+<li>$$\min_{\beta\in D_\lambda}\sum_j\abs{\beta_j} = \sum_j\ \min_{\abs{\beta_j - b_j}\le\lambda/2}\abs{\beta_j}$$<span class="why">l'objectif et la contrainte se découplent : on minimise chaque $\abs{\beta_j}$ séparément.</span></li>
+<li>$$\hb^D_j = \begin{cases} 0 & \text{si } 0 \in [b_j - \lambda/2,\, b_j + \lambda/2], \text{ i.e. } \abs{b_j} \le \lambda/2\\ b_j - \sgn(b_j)\lambda/2 & \text{sinon (le point de l'intervalle le plus proche de 0)}\end{cases}$$<span class="why">pour minimiser $\abs{\beta_j}$ sur un intervalle, on prend 0 s'il y est, sinon l'extrémité la plus proche de 0.</span></li>
+</ol>
+<p>C'est exactement $\sgn(b_j)(\abs{b_j} - \lambda/2)_+$ : <strong>en design orthonormé, le sélecteur de Dantzig et le Lasso coïncident</strong> — c'est un des « certains cas » de la diapo. Plus généralement, Bickel, Ritov et Tsybakov (l'article de la séance 3 s'intitule justement <em>Simultaneous analysis of Lasso and Dantzig selector</em>) démontrent pour les deux estimateurs des garanties du même type, sous la même condition RE.</p>
+
+<h2 id="adaptatif">5. Le Lasso adaptatif <span class="ref">Cours6 · diapo 82</span></h2>
+
+<p class="tldr">On pénalise chaque coefficient avec un poids $\omega_j = 1/\abs{\tilde\beta_j}$ : un coefficient qui semble grand est peu pénalisé (donc peu biaisé), un coefficient qui semble petit est fortement pénalisé (donc tué).</p>
+
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours6 · diapo 82</span></div>
+<p>À cause de sa nature de seuillage doux, l'estimation des grands coefficients par le Lasso peut souffrir d'un grand biais. On peut y remédier avec des poids dépendant des données. Zou (2006) propose
+$$\hb^{\mathrm{AdapL}}(\lambda) := \argmin_{\beta\in\R^p}\Big\{\norm{Y - X\beta}^2 + \lambda\sum_{j=1}^p\omega_j\abs{\beta_j}\Big\}, \qquad \omega_j = \frac{1}{\abs{\tilde\beta_j}},$$
+où $\tilde\beta$ est un estimateur préliminaire ; choix usuel si $p$ n'est pas trop grand : $\omega_j = 1/\abs{\hb^{\mathrm{ols}}_j}$. Plus $\abs{\tilde\beta_j}$ est grand, plus $\omega_j$ est petit, ce qui favorise les grandes valeurs de $\hb^{\mathrm{AdapL}}_j$.</p></div>
+
+<p><strong>Décodage.</strong> Chaque coordonnée a son propre niveau de pénalité $\lambda\omega_j$. On fait d'abord une estimation « grossière » $\tilde\beta$ (moindres carrés si $p < n$ ; sinon, en pratique, un Ridge ou un Lasso — hors diapos). Si $\tilde\beta_j$ est grand, on fait confiance : faible pénalité. Si $\tilde\beta_j$ est petit, on soupçonne du bruit : forte pénalité.</p>
+
+<h3 id="adaptatif-ortho">En design orthonormé</h3>
+<p>Avec $\tilde\beta = \hb\MC = b$, chaque coordonnée résout $\min_{\beta_j}(\beta_j - b_j)^2 + \lambda\omega_j\abs{\beta_j}$ : c'est un problème de Lasso 1D avec $\lambda$ remplacé par $\lambda\omega_j$.</p>
+<ol class="steps">
+<li>$$\hb^{\mathrm{AdapL}}_j = \sgn(b_j)\Big(\abs{b_j} - \frac{\lambda\omega_j}{2}\Big)_+$$<span class="why">seuillage doux au seuil $\lambda\omega_j/2$ (rappel 4 avec $\lambda\omega_j$ à la place de $\lambda$).</span></li>
+<li>$$= \sgn(b_j)\Big(\abs{b_j} - \frac{\lambda}{2\abs{b_j}}\Big)_+$$<span class="why">$\omega_j = 1/\abs{b_j}$.</span></li>
+<li>$$\hb^{\mathrm{AdapL}}_j \ne 0 \iff \abs{b_j} > \frac{\lambda}{2\abs{b_j}} \iff \abs{b_j} > \sqrt{\lambda/2}$$<span class="why">on multiplie par $\abs{b_j} > 0$.</span></li>
+</ol>
+<p>Pour un coefficient conservé, le biais vaut $\frac{\lambda}{2\abs{b_j}}$ : il <strong>tend vers 0 quand $\abs{b_j}$ grandit</strong>, alors que celui du Lasso reste $\lambda/2$. La règle se situe entre le seuillage doux (pour les $b_j$ proches du seuil) et le seuillage dur (pour les grands $b_j$).</p>
+
+<div class="box exemple"><div class="box-h">Exemple chiffré</div>
+<p>$\lambda = 2$. Si $b_j = 3$ : Lasso $3 - 1 = 2$ ; adaptatif $3 - \frac{2}{2\cdot 3} = 3 - \frac13 \approx 2{,}67$. Si $b_j = 0{,}8$ : Lasso $0$ (car $0{,}8 < 1$) ; adaptatif : seuil $\frac{2}{2\cdot0{,}8} = 1{,}25 > 0{,}8$, donc $0$ aussi. Le gros coefficient est beaucoup moins biaisé ($0{,}33$ au lieu de $1$).</p></div>
+
+<h3 id="adaptatif-calcul">Comment le calculer : un simple changement d'échelle</h3>
+<p>Le Lasso adaptatif <strong>est</strong> un Lasso ordinaire, après avoir divisé chaque colonne par son poids. Posons $\gamma_j = \omega_j\beta_j$ et $\tilde X_j = X_j/\omega_j$ :</p>
+<ol class="steps">
+<li>$$X\beta = \sum_j\beta_jX_j = \sum_j(\omega_j\beta_j)\frac{X_j}{\omega_j} = \tilde X\gamma$$<span class="why">on multiplie et divise chaque terme par $\omega_j > 0$.</span></li>
+<li>$$\sum_j\omega_j\abs{\beta_j} = \sum_j\abs{\omega_j\beta_j} = \norm\gamma_1$$<span class="why">$\omega_j > 0$.</span></li>
+<li>$$\norm{Y - X\beta}^2 + \lambda\sum_j\omega_j\abs{\beta_j} = \norm{Y - \tilde X\gamma}^2 + \lambda\norm\gamma_1$$<span class="why">on remplace.</span></li>
+</ol>
+<p>On résout donc un Lasso standard en $\gamma$ avec la matrice $\tilde X$, puis on revient à $\hb_j = \hat\gamma_j/\omega_j$. N'importe quel logiciel de Lasso fait l'affaire. Si $\tilde\beta_j = 0$, le poids est infini : la colonne $\tilde X_j$ est nulle et la variable est exclue d'office.</p>
+
+<div class="box remarque"><div class="box-h">Pour aller plus loin — la propriété oracle (hors diapos)</div>
+<p>Zou (2006) montre que, sous des conditions convenables et pour un bon choix de $\lambda$, le Lasso adaptatif retrouve le vrai support avec une probabilité qui tend vers 1 et estime les coefficients non nuls aussi bien (asymptotiquement) que les moindres carrés qui connaîtraient le support — l'« oracle » de la séance 1. Le Lasso ordinaire n'a pas cette propriété en général, précisément à cause de son biais.</p></div>
+
+<h2 id="relaxe">6. Le Lasso relaxé <span class="ref">Cours6 · diapo 83</span></h2>
+
+<p class="tldr">Deux paramètres pour deux rôles : $\lambda$ choisit les variables, puis $\delta\lambda$ (avec $\delta\in[0,1]$) règle combien on les rétrécit.</p>
+
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours6 · diapo 83</span></div>
+<p>Au lieu d'introduire des poids, Meinshausen (2007) propose une procédure en deux étapes :</p>
+<ol><li>Calculer $\hb^L(\lambda) = \argmin_\beta\{\norm{Y - X\beta}^2 + \lambda\norm\beta_1\}$ et poser $\hat S_\lambda := \{j : \hb^L_j(\lambda) \ne 0\}$.</li>
+<li>Pour $\delta\in[0,1]$ : $\hb^{\mathrm{relaxedL}}(\lambda,\delta) := \argmin_{\beta\in\R^p,\ J(\beta)\subset\hat S_\lambda}\{\norm{Y - X\beta}^2 + \delta\lambda\norm\beta_1\}$.</li></ol>
+<p>Si $X$ est orthogonale :
+$$\hb^{\mathrm{relaxedL}}_j(\lambda,\delta) = \begin{cases} X_j\T Y - \frac{\delta\lambda}{2} & \text{si } X_j\T Y \ge \frac\lambda2,\\ 0 & \text{si } -\frac\lambda2 \le X_j\T Y \le \frac\lambda2,\\ X_j\T Y + \frac{\delta\lambda}2 & \text{si } X_j\T Y \le -\frac\lambda2.\end{cases}$$
+La valeur $\delta = 0$ est couramment utilisée.</p></div>
+
+<p><strong>Décodage.</strong> L'étape 2 est un nouveau Lasso, mais (a) seules les variables choisies à l'étape 1 ont le droit d'être non nulles ($J(\beta) \subset \hat S_\lambda$), et (b) la pénalité est plus faible, $\delta\lambda \le \lambda$. Les cas extrêmes : $\delta = 1$ redonne le Lasso ; $\delta = 0$ redonne le LSLasso (moindres carrés sur $\hat S_\lambda$).</p>
+
+<h3 id="relaxe-ortho">Retrouver la formule de la diapo</h3>
+<ol class="steps">
+<li>$$\hat S_\lambda = \{j : \abs{b_j} > \lambda/2\}, \qquad b_j = X_j\T Y$$<span class="why">étape 1 = seuillage doux au seuil $\lambda/2$.</span></li>
+<li>$$\text{pour } j\notin\hat S_\lambda :\ \hb_j = 0$$<span class="why">c'est la contrainte $J(\beta)\subset\hat S_\lambda$.</span></li>
+<li>$$\text{pour } j\in\hat S_\lambda :\ \hb_j = \argmin_{\beta_j}\ (\beta_j - b_j)^2 + \delta\lambda\abs{\beta_j} = \sgn(b_j)\Big(\abs{b_j} - \frac{\delta\lambda}2\Big)_+$$<span class="why">découplage orthonormé, puis seuillage doux au seuil $\delta\lambda/2$.</span></li>
+<li>$$= b_j - \sgn(b_j)\frac{\delta\lambda}{2}$$<span class="why">$\abs{b_j} > \lambda/2 \ge \delta\lambda/2$ car $\delta \le 1$ : la partie positive est inutile.</span></li>
+</ol>
+<p>Pour $b_j > \lambda/2$ on obtient $b_j - \delta\lambda/2$, pour $b_j < -\lambda/2$ on obtient $b_j + \delta\lambda/2$, et 0 entre les deux : c'est la formule de la diapo (aux points frontières $\abs{b_j} = \lambda/2$ près, sans importance). La règle est un seuillage au seuil $\lambda/2$ suivi d'un rétrécissement réduit, $\delta\lambda/2$ au lieu de $\lambda/2$.</p>
+
+<div class="widget" data-widget="variantes"></div>
+<p>Cochez « Lasso », « LSLasso » et « Lasso relaxé (δ) », puis faites varier $\delta$ : la courbe du relaxé glisse de celle du Lasso ($\delta = 1$) à celle du seuillage dur ($\delta = 0$). Toutes trois valent 0 sur le même intervalle $[-\lambda/2, \lambda/2]$ : <strong>elles sélectionnent les mêmes variables</strong>, seule l'amplitude des coefficients gardés change. Cochez aussi « Lasso adaptatif » : il tue les $b$ tels que $\abs{b} \le \sqrt{\lambda/2}$ (un intervalle différent dès que $\lambda \ne 2$ — essayez $\lambda = 1$ puis $\lambda = 3$) et rejoint la diagonale pour les grands $b$.</p>
+
+<div class="box reflexe"><div class="box-h">Réflexe — débiaiser</div>
+<p>Quand le biais du Lasso gêne (on veut interpréter la <em>taille</em> des effets), deux familles de remèdes : <strong>réajuster</strong> sur le support choisi (LSLasso, relaxé) ou <strong>pondérer</strong> la pénalité (adaptatif). Dans les deux cas, réglez les paramètres par validation croisée sur la procédure complète.</p></div>
+
+<h2 id="elasticnet">7. L'elastic net <span class="ref">Cours6 · diapos 84–85</span></h2>
+
+<p class="tldr">On ajoute au Lasso un peu de pénalité Ridge : le critère devient strictement convexe (solution unique), les variables corrélées sont gardées ensemble au lieu d'être tirées au sort, et l'on peut sélectionner plus de $n$ variables.</p>
+
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours6 · diapo 84</span></div>
+<p>Deux inconvénients du Lasso :</p>
+<ul><li>dans le cas $p > n$, le Lasso sélectionne au plus $n$ variables avant de saturer ;</li>
+<li>dans le modèle $Y = X\beta + \eps$, si l'on considère $\tilde X = [X, X_p]$ (on recopie la dernière colonne) et si $\hb^L_p(\lambda) \ne 0$, alors tout vecteur $\tilde\beta(\lambda)$ tel que
+$$\tilde\beta_j(\lambda) := \begin{cases}\hb^L_j(\lambda) & \text{si } j\in\{1,\dots,p-1\},\\ \alpha\,\hb^L_p(\lambda) & \text{si } j = p,\\ (1-\alpha)\,\hb^L_p(\lambda) & \text{si } j = p+1,\end{cases}$$
+avec $\alpha\in[0,1]$, est solution de $\argmin_{\beta\in\R^{p+1}}\{\norm{Y - \tilde X\beta}^2 + \lambda\norm\beta_1\}$ : il y a une infinité de solutions.</li></ul></div>
+
+<div class="box remarque"><div class="box-h">Note sur la diapo 84</div>
+<p>La matrice $\tilde X = [X, X_p]$ a $p+1$ colonnes : lire $\tilde X\in\R^{n\times(p+1)}$ (la diapo écrit $\R^{n\times p}$).</p></div>
+
+<h3 id="enet-n">Premier défaut : au plus $n$ variables</h3>
+
+<p>Quand $p > n$, le Lasso ne peut pas « utiliser » plus de $n$ variables. Énoncé précis : <strong>il existe toujours une solution du Lasso dont les colonnes actives sont linéairement indépendantes</strong> — donc avec au plus $\rg X \le n$ coefficients non nuls. En génomique, avec $n = 30$ patients, le Lasso gardera au plus 30 gènes, même si 50 gènes agissent.</p>
+
+<div class="box idee"><div class="box-h">Idée de la preuve</div>
+<ol><li>Si les colonnes actives sont liées, il existe une direction $v$, supportée par les variables actives, avec $Xv = 0$ : bouger dans cette direction ne change pas l'ajustement.</li>
+<li>Le long de $v$, la pénalité $\ell_1$ varie linéairement ; comme on est au minimum, elle doit être constante.</li>
+<li>On avance donc « gratuitement » jusqu'à ce qu'une coordonnée active touche 0 : on a une nouvelle solution avec une variable active de moins. On recommence.</li></ol></div>
+
+<details class="fold proof"><summary>Preuve détaillée</summary><div class="fold-body">
+<p>Soit $\hb$ une solution du Lasso, $A = J(\hb)$ son support et $s_j = \sgn(\hb_j)$ pour $j\in A$. Notons $C(\beta) = \norm{Y - X\beta}^2 + \lambda\norm\beta_1$.</p>
+<p>Supposons les colonnes $(X_j)_{j\in A}$ liées : il existe $v \ne 0$, nul hors de $A$, avec $Xv = \sum_{j\in A}v_jX_j = 0$.</p>
+<ol class="steps">
+<li>$$\text{pour } \abs t \text{ petit : } \sgn(\hb_j + tv_j) = s_j\ \ (j\in A), \qquad \hb_j + tv_j = 0\ \ (j\notin A)$$<span class="why">les $\hb_j$, $j\in A$, sont non nuls : une petite perturbation ne change pas leur signe ; hors de $A$, $\hb_j = v_j = 0$.</span></li>
+<li>$$C(\hb + tv) = \norm{Y - X\hb - tXv}^2 + \lambda\sum_{j\in A}s_j(\hb_j + tv_j) = C(\hb) + t\,\lambda\sum_{j\in A}s_jv_j$$<span class="why">$Xv = 0$, et $\abs{\hb_j + tv_j} = s_j(\hb_j + tv_j)$ tant que le signe ne change pas.</span></li>
+<li>$$\sum_{j\in A}s_jv_j = 0$$<span class="why">sinon, en prenant $t$ petit du bon signe, $C(\hb + tv) < C(\hb)$ : contradiction avec la minimalité de $\hb$.</span></li>
+<li>$$C(\hb + tv) = C(\hb) \quad\text{pour } 0 \le t \le t_0 := \min_{j\in A,\ v_j\ne0,\ \hb_j/v_j<0}\ \abs{\hb_j/v_j}$$<span class="why">quitte à remplacer $v$ par $-v$, une coordonnée au moins a $\hb_j/v_j < 0$ ; entre 0 et $t_0$ aucun signe ne change, et en $t_0$ on conclut par continuité de $C$.</span></li>
+<li>$$\hb' = \hb + t_0v \ \text{ est solution, et } \abs{J(\hb')} \le \abs A - 1$$<span class="why">en $t_0$, la coordonnée qui réalise le minimum vaut exactement 0.</span></li>
+</ol>
+<p>On recommence tant que les colonnes actives sont liées. Le support diminue strictement à chaque étape, donc le procédé s'arrête, sur une solution dont les colonnes actives sont libres. Des colonnes libres de $\R^n$ sont au plus $\rg X \le n$.<span class="qed">∎</span></p>
+<p class="small muted">(Résultat classique, voir par exemple Rosset, Zhu et Hastie (2004) ; hors diapos.)</p>
+</div></details>
+
+<h3 id="enet-duplique">Second défaut : une colonne dupliquée, une infinité de solutions</h3>
+
+<p>C'est le cas extrême de deux variables parfaitement corrélées. Pourquoi tous les $\tilde\beta(\alpha)$ de la diapo sont-ils solutions ?</p>
+
+<div class="box idee"><div class="box-h">Idée de la preuve</div>
+<p>Répartir le coefficient $\hb_p$ entre les deux copies de la colonne ne change ni l'ajustement ($X_p$ et sa copie sont la même colonne), ni la norme $\ell_1$ (tant que les deux morceaux ont le même signe : $\abs{\alpha c} + \abs{(1-\alpha)c} = \abs c$). Il reste à vérifier qu'on ne peut pas faire mieux avec $\tilde X$ qu'avec $X$.</p></div>
+
+<details class="fold proof"><summary>Preuve détaillée</summary><div class="fold-body">
+<p>Notons $C(\beta) = \norm{Y - X\beta}^2 + \lambda\norm\beta_1$ pour $\beta\in\R^p$, et $\tilde C(\gamma) = \norm{Y - \tilde X\gamma}^2 + \lambda\norm\gamma_1$ pour $\gamma\in\R^{p+1}$. À $\gamma$, associons $m(\gamma) = (\gamma_1, \dots, \gamma_{p-1}, \gamma_p + \gamma_{p+1}) \in \R^p$ (on « fusionne » les deux copies).</p>
+<ol class="steps">
+<li>$$\tilde X\gamma = \sum_{j<p}\gamma_jX_j + \gamma_pX_p + \gamma_{p+1}X_p = X\,m(\gamma)$$<span class="why">les colonnes $p$ et $p+1$ de $\tilde X$ sont toutes deux égales à $X_p$.</span></li>
+<li>$$\norm\gamma_1 = \sum_{j<p}\abs{\gamma_j} + \abs{\gamma_p} + \abs{\gamma_{p+1}} \ \ge\ \sum_{j<p}\abs{\gamma_j} + \abs{\gamma_p + \gamma_{p+1}} = \norm{m(\gamma)}_1$$<span class="why">inégalité triangulaire.</span></li>
+<li>$$\tilde C(\gamma) \ge C(m(\gamma)) \ge \min_{\beta\in\R^p} C(\beta) = C(\hb^L)$$<span class="why">lignes 1 et 2.</span></li>
+<li>$$m(\tilde\beta(\alpha)) = \hb^L \quad\text{et}\quad \norm{\tilde\beta(\alpha)}_1 = \sum_{j<p}\abs{\hb^L_j} + \alpha\abs{\hb^L_p} + (1-\alpha)\abs{\hb^L_p} = \norm{\hb^L}_1$$<span class="why">$\alpha\in[0,1]$ : les deux morceaux $\alpha\hb^L_p$ et $(1-\alpha)\hb^L_p$ ont le même signe, l'inégalité triangulaire est une égalité.</span></li>
+<li>$$\tilde C(\tilde\beta(\alpha)) = C(\hb^L) = \min\tilde C$$<span class="why">lignes 1, 4 et 3.</span></li>
+</ol>
+<p>Chaque $\tilde\beta(\alpha)$, $\alpha\in[0,1]$, atteint le minimum : une infinité de solutions (distinctes dès que $\hb^L_p \ne 0$).<span class="qed">∎</span></p></div></details>
+
+<div class="box intu"><div class="box-h">Ce que ça dit des variables très corrélées</div>
+<p>Avec des copies exactes, le Lasso ne sait pas comment répartir ; avec des variables très corrélées mais pas identiques, il tranche — mais <strong>arbitrairement</strong> : il garde typiquement l'une des deux et met l'autre à zéro (c'est l'échec du LARS sur les groupes corrélés, séance 2). Une petite perturbation des données peut lui faire changer de choix. Pour l'interprétation, c'est gênant : la variable écartée n'est pas « inutile », elle est juste redondante avec sa voisine.</p></div>
+
+<h3 id="enet-def">Le critère de l'elastic net</h3>
+
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours6 · diapo 85</span></div>
+<ul><li>S'il existe un groupe de variables très corrélées deux à deux, le Lasso tend à n'en sélectionner qu'une, sans se soucier de laquelle.</li>
+<li>En pratique, des prédicteurs différents peuvent être fortement corrélés ; le Lasso peut alors masquer la pertinence de l'un d'eux. Les coefficients de deux prédicteurs corrélés devraient être proches.</li>
+<li>L'elastic net de Zou et Hastie (2005) fait un compromis entre les pénalités Ridge et Lasso : pour $\lambda_1 > 0$ et $\lambda_2 > 0$,
+$$\hb^{e.n}(\lambda_1,\lambda_2) := \argmin_{\beta\in\R^p}\big\{\norm{Y - X\beta}^2 + \lambda_1\norm\beta_1 + \lambda_2\norm\beta^2\big\}.$$
+Le critère est strictement convexe : il y a un unique minimiseur.</li>
+<li>On peut améliorer $\hb^{e.n}$ en considérant $(1+\lambda_2)\,\hb^{e.n}(\lambda_1,\lambda_2)$.</li></ul></div>
+
+<div class="box remarque"><div class="box-h">Attention au carré</div>
+<p>La pénalité Ridge de la diapo est bien <strong>au carré</strong> : $\lambda_2\norm\beta^2 = \lambda_2\norm\beta_2^2 = \lambda_2\sum_j\beta_j^2$ (comme dans l'article de Zou et Hastie). C'est le carré qui rend le critère strictement convexe ; sans carré, $\norm\beta_2$ serait la pénalité du group-Lasso (§9) avec un seul groupe.</p></div>
+
+<p><strong>Pourquoi l'unicité, sans aucune hypothèse sur $X$ ?</strong> La fonction $\beta\mapsto\lambda_2\norm\beta^2$ est strictement convexe (hessienne $2\lambda_2I_p$, définie positive) ; $\norm{Y - X\beta}^2$ et $\lambda_1\norm\beta_1$ sont convexes. Une somme convexe + strictement convexe est strictement convexe, et une fonction strictement convexe a au plus un minimiseur (<a href="00_rappels.html#convexite">rappel</a>). L'existence vient de ce que le critère est continu et tend vers $+\infty$ à l'infini. Comparez avec le Lasso : l'injectivité de $X$ garantit son unicité (§1), mais sans elle il peut avoir une infinité de solutions (colonne dupliquée, ci-dessus).</p>
+
+<h3 id="enet-ortho">En design orthonormé : un double rétrécissement</h3>
+<p>Chaque coordonnée résout $\min_{\beta}\,(\beta - b)^2 + \lambda_1\abs\beta + \lambda_2\beta^2$ (on omet l'indice $j$).</p>
+<ol class="steps">
+<li>$$(\beta - b)^2 + \lambda_2\beta^2 + \lambda_1\abs\beta = (1+\lambda_2)\beta^2 - 2b\beta + \lambda_1\abs\beta + b^2$$<span class="why">on développe $(\beta - b)^2 = \beta^2 - 2b\beta + b^2$ et on regroupe les $\beta^2$.</span></li>
+<li>$$= (1+\lambda_2)\Big[\Big(\beta - \frac{b}{1+\lambda_2}\Big)^2 + \frac{\lambda_1}{1+\lambda_2}\abs\beta\Big] + \text{cte}$$<span class="why">on factorise par $1+\lambda_2 > 0$ et on complète le carré.</span></li>
+<li>$$\hb^{e.n} = \sgn(b)\Big(\frac{\abs b}{1+\lambda_2} - \frac{\lambda_1}{2(1+\lambda_2)}\Big)_+$$<span class="why">le crochet est un problème de Lasso 1D de « cible » $b/(1+\lambda_2)$ et de paramètre $\lambda_1/(1+\lambda_2)$ : seuillage doux au seuil $\frac{\lambda_1}{2(1+\lambda_2)}$ ; multiplier par une constante positive ne change pas l'argmin.</span></li>
+<li>$$= \frac{\sgn(b)\,(\abs b - \lambda_1/2)_+}{1+\lambda_2} = \frac{\hb^L(\lambda_1)}{1+\lambda_2}$$<span class="why">on met $\frac{1}{1+\lambda_2}$ en facteur.</span></li>
+</ol>
+
+<p>Lecture : l'elastic net fait <strong>d'abord un seuillage doux (Lasso), puis divise par $1+\lambda_2$ (Ridge)</strong>. Les coefficients sont rétrécis deux fois : c'est le « double rétrécissement » que Zou et Hastie corrigent en multipliant par $(1+\lambda_2)$ — d'où la dernière ligne de la diapo 85. Après correction, en design orthonormé, on retrouve exactement le Lasso : <strong>l'elastic net ne change rien quand les variables ne sont pas corrélées</strong> ; tout son intérêt est dans le cas corrélé.</p>
+
+<h3 id="enet-groupe">Avec une colonne dupliquée : un partage égal</h3>
+
+<div class="box thm"><div class="box-h">Proposition — partage égal</div>
+<p>Si les colonnes $X_p$ et $X_{p+1}$ sont identiques, la solution (unique) de l'elastic net vérifie $\hb^{e.n}_p = \hb^{e.n}_{p+1}$.</p></div>
+
+<details class="fold proof"><summary>Preuve détaillée</summary><div class="fold-body">
+<p>Soit $\hb$ la solution et $c = \hb_p + \hb_{p+1}$. Remplaçons le couple $(\hb_p, \hb_{p+1})$ par $(c/2, c/2)$ en gardant les autres coordonnées.</p>
+<ol class="steps">
+<li>$$\text{l'ajustement ne change pas : } \hb_pX_p + \hb_{p+1}X_p = cX_p = \tfrac c2X_p + \tfrac c2X_p$$<span class="why">les deux colonnes sont égales.</span></li>
+<li>$$\abs{c/2} + \abs{c/2} = \abs c \le \abs{\hb_p} + \abs{\hb_{p+1}}$$<span class="why">inégalité triangulaire : la partie $\ell_1$ ne peut que diminuer.</span></li>
+<li>$$(c/2)^2 + (c/2)^2 = \tfrac{c^2}2 \le \hb_p^2 + \hb_{p+1}^2, \text{ avec égalité ssi } \hb_p = \hb_{p+1}$$<span class="why">$a^2 + (c-a)^2 = 2(a - c/2)^2 + c^2/2$ (développer), minimal uniquement en $a = c/2$.</span></li>
+</ol>
+<p>Si $\hb_p \ne \hb_{p+1}$, le vecteur modifié aurait un critère strictement plus petit (ligne 3 stricte, lignes 1–2 au moins aussi bonnes) : impossible pour un minimiseur. Donc $\hb_p = \hb_{p+1}$.<span class="qed">∎</span></p></div></details>
+
+<p>Là où le Lasso hésitait entre une infinité de répartitions, l'elastic net choisit la plus « équitable ». Plus généralement (Zou et Hastie, « effet de groupe ») : pour des colonnes standardisées ($\norm{X_j} = 1$) de corrélation $\rho$ et des coefficients de même signe, $\abs{\hb_i - \hb_j} \le \frac{\norm{Y}_1}{\lambda_2}\sqrt{2(1-\rho)}$ : quand $\rho$ est proche de 1, les deux coefficients sont presque égaux. Les variables corrélées entrent et sortent <strong>ensemble</strong>. Et l'elastic net peut sélectionner plus de $n$ variables : il s'écrit comme un Lasso sur des données augmentées de $n + p$ lignes (exercice 8).</p>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>Variables corrélées, ou $p \gg n$ avec beaucoup de signaux faibles → ajoutez un peu de $\ell_2$ : <strong>stricte convexité ⇒ unicité et stabilité</strong>. Un critère strictement convexe, c'est un problème qui a une réponse et une seule.</p></div>
+
+<h2 id="fused">8. Le Lasso fusionné <span class="ref">Cours6 · diapo 86</span></h2>
+
+<p class="tldr">Quand les variables sont ordonnées (temps, position), on pénalise aussi les différences entre voisins : beaucoup de différences deviennent exactement nulles, et l'estimation est constante par morceaux.</p>
+
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours6 · diapo 86</span></div>
+<ul><li>Pour la détection de ruptures, par exemple, où les coefficients restent constants sur de grands segments, Tibshirani, Saunders, Rosset, Zhu et Knight (2005) introduisent le Lasso fusionné : pour $\lambda_1 > 0$, $\lambda_2 > 0$,
+$$\hb^{\mathrm{fused}}(\lambda_1,\lambda_2) := \argmin_{\beta\in\R^p}\Big\{\norm{Y - X\beta}^2 + \lambda_1\sum_{j=1}^p\abs{\beta_j} + \lambda_2\sum_{j=2}^p\abs{\beta_j - \beta_{j-1}}\Big\}.$$</li>
+<li>La première pénalité est celle du Lasso. La seconde encourage des coefficients voisins identiques.</li>
+<li>On peut généraliser la notion de voisins (pixels adjacents d'une image) : pénalité $\lambda_2\sum_{j\sim j'}\abs{\beta_j - \beta_{j'}}$.</li>
+<li>Les paramètres $\lambda_1$ et $\lambda_2$ sont difficiles à régler.</li></ul></div>
+
+<p><strong>Décodage.</strong> La pénalité $\sum_{j\ge2}\abs{\beta_j - \beta_{j-1}}$ est une norme $\ell_1$, mais appliquée au vecteur des <strong>différences</strong> $(\beta_2 - \beta_1, \dots, \beta_p - \beta_{p-1})$. Or on sait (bridge, §1) que $\ell_1$ fabrique des zéros exacts. Ici, ce sont donc des <em>différences</em> qui deviennent exactement nulles : $\hb_j = \hb_{j-1}$ pour la plupart des $j$, d'où une suite de paliers. On ne suppose plus « peu de coefficients non nuls », mais « <strong>peu de sauts</strong> ». La notation $j\sim j'$ signifie « $j$ et $j'$ sont voisins » (par exemple deux pixels qui se touchent). Le critère est convexe : chaque terme est la valeur absolue d'une fonction linéaire de $\beta$.</p>
+
+<h3 id="fused-exemple">Exemple : débruiter un signal constant par morceaux</h3>
+<p>Le cas le plus parlant est $X = I_n$ ($p = n$) : on observe $Y_j = \bstar_j + \eps_j$, un signal bruité, et on cherche le signal $\bstar$. Avec $\lambda_1 = 0$, le critère $\norm{Y - \beta}^2 + \lambda_2\sum_j\abs{\beta_j - \beta_{j-1}}$ s'appelle le débruitage par <em>variation totale</em>.</p>
+
+<figure class="fig">
+<svg viewBox="0 0 640 300" role="img" aria-label="Débruitage par variation totale">
+<line class="gr" x1="40" x2="628" y1="246.8" y2="246.8"/><text class="tx" x="34" y="250.8" text-anchor="end">−2</text>
+<line class="gr" x1="40" x2="628" y1="204.5" y2="204.5"/><text class="tx" x="34" y="208.5" text-anchor="end">−1</text>
+<line class="gr" x1="40" x2="628" y1="162.2" y2="162.2"/><text class="tx" x="34" y="166.2" text-anchor="end">0</text>
+<line class="gr" x1="40" x2="628" y1="119.8" y2="119.8"/><text class="tx" x="34" y="123.8" text-anchor="end">1</text>
+<line class="gr" x1="40" x2="628" y1="77.5" y2="77.5"/><text class="tx" x="34" y="81.5" text-anchor="end">2</text>
+<line class="gr" x1="40" x2="628" y1="35.2" y2="35.2"/><text class="tx" x="34" y="39.2" text-anchor="end">3</text>
+<text class="tx" x="43.7" y="284" text-anchor="middle">1</text>
+<text class="tx" x="183.3" y="284" text-anchor="middle">20</text>
+<text class="tx" x="330.3" y="284" text-anchor="middle">40</text>
+<text class="tx" x="477.3" y="284" text-anchor="middle">60</text>
+<text class="tx" x="624.3" y="284" text-anchor="middle">80</text>
+<line class="ax" x1="40" x2="628" y1="162.2" y2="162.2"/>
+<line class="ax" x1="40" x2="40" y1="14" y2="268"/>
+<text class="tx" x="628" y="296" text-anchor="end">indice j (position dans le signal)</text>
+<circle class="fm" cx="43.7" cy="162.1" r="2.6"/>
+<circle class="fm" cx="51.0" cy="154.6" r="2.6"/>
+<circle class="fm" cx="58.4" cy="169.1" r="2.6"/>
+<circle class="fm" cx="65.7" cy="184.8" r="2.6"/>
+<circle class="fm" cx="73.1" cy="173.7" r="2.6"/>
+<circle class="fm" cx="80.4" cy="187.4" r="2.6"/>
+<circle class="fm" cx="87.8" cy="160.6" r="2.6"/>
+<circle class="fm" cx="95.1" cy="128.1" r="2.6"/>
+<circle class="fm" cx="102.5" cy="174.7" r="2.6"/>
+<circle class="fm" cx="109.8" cy="177.9" r="2.6"/>
+<circle class="fm" cx="117.2" cy="149.7" r="2.6"/>
+<circle class="fm" cx="124.5" cy="153.1" r="2.6"/>
+<circle class="fm" cx="131.9" cy="159.5" r="2.6"/>
+<circle class="fm" cx="139.2" cy="185.8" r="2.6"/>
+<circle class="fm" cx="146.6" cy="162.9" r="2.6"/>
+<circle class="fm" cx="153.9" cy="144.5" r="2.6"/>
+<circle class="fm" cx="161.3" cy="196.3" r="2.6"/>
+<circle class="fm" cx="168.6" cy="173.8" r="2.6"/>
+<circle class="fm" cx="176.0" cy="210.5" r="2.6"/>
+<circle class="fm" cx="183.3" cy="194.9" r="2.6"/>
+<circle class="fm" cx="190.7" cy="124.3" r="2.6"/>
+<circle class="fm" cx="198.0" cy="83.5" r="2.6"/>
+<circle class="fm" cx="205.4" cy="109.7" r="2.6"/>
+<circle class="fm" cx="212.7" cy="70.6" r="2.6"/>
+<circle class="fm" cx="220.1" cy="73.5" r="2.6"/>
+<circle class="fm" cx="227.4" cy="82.2" r="2.6"/>
+<circle class="fm" cx="234.8" cy="141.4" r="2.6"/>
+<circle class="fm" cx="242.1" cy="91.2" r="2.6"/>
+<circle class="fm" cx="249.5" cy="78.7" r="2.6"/>
+<circle class="fm" cx="256.8" cy="74.6" r="2.6"/>
+<circle class="fm" cx="264.2" cy="116.4" r="2.6"/>
+<circle class="fm" cx="271.5" cy="89.6" r="2.6"/>
+<circle class="fm" cx="278.9" cy="102.4" r="2.6"/>
+<circle class="fm" cx="286.2" cy="98.0" r="2.6"/>
+<circle class="fm" cx="293.6" cy="50.6" r="2.6"/>
+<circle class="fm" cx="300.9" cy="225.0" r="2.6"/>
+<circle class="fm" cx="308.3" cy="205.3" r="2.6"/>
+<circle class="fm" cx="315.6" cy="182.0" r="2.6"/>
+<circle class="fm" cx="323.0" cy="219.3" r="2.6"/>
+<circle class="fm" cx="330.3" cy="207.3" r="2.6"/>
+<circle class="fm" cx="337.7" cy="201.7" r="2.6"/>
+<circle class="fm" cx="345.0" cy="202.9" r="2.6"/>
+<circle class="fm" cx="352.4" cy="235.6" r="2.6"/>
+<circle class="fm" cx="359.7" cy="202.6" r="2.6"/>
+<circle class="fm" cx="367.1" cy="170.0" r="2.6"/>
+<circle class="fm" cx="374.4" cy="243.8" r="2.6"/>
+<circle class="fm" cx="381.8" cy="182.7" r="2.6"/>
+<circle class="fm" cx="389.1" cy="201.5" r="2.6"/>
+<circle class="fm" cx="396.5" cy="220.8" r="2.6"/>
+<circle class="fm" cx="403.8" cy="153.7" r="2.6"/>
+<circle class="fm" cx="411.2" cy="185.1" r="2.6"/>
+<circle class="fm" cx="418.5" cy="235.0" r="2.6"/>
+<circle class="fm" cx="425.9" cy="202.6" r="2.6"/>
+<circle class="fm" cx="433.2" cy="189.9" r="2.6"/>
+<circle class="fm" cx="440.6" cy="209.3" r="2.6"/>
+<circle class="fm" cx="447.9" cy="102.5" r="2.6"/>
+<circle class="fm" cx="455.3" cy="121.5" r="2.6"/>
+<circle class="fm" cx="462.6" cy="102.9" r="2.6"/>
+<circle class="fm" cx="470.0" cy="83.3" r="2.6"/>
+<circle class="fm" cx="477.3" cy="137.0" r="2.6"/>
+<circle class="fm" cx="484.7" cy="114.7" r="2.6"/>
+<circle class="fm" cx="492.0" cy="131.6" r="2.6"/>
+<circle class="fm" cx="499.4" cy="116.6" r="2.6"/>
+<circle class="fm" cx="506.7" cy="150.0" r="2.6"/>
+<circle class="fm" cx="514.1" cy="134.5" r="2.6"/>
+<circle class="fm" cx="521.4" cy="124.8" r="2.6"/>
+<circle class="fm" cx="528.8" cy="97.0" r="2.6"/>
+<circle class="fm" cx="536.1" cy="90.7" r="2.6"/>
+<circle class="fm" cx="543.5" cy="153.5" r="2.6"/>
+<circle class="fm" cx="550.8" cy="140.0" r="2.6"/>
+<circle class="fm" cx="558.2" cy="103.4" r="2.6"/>
+<circle class="fm" cx="565.5" cy="170.4" r="2.6"/>
+<circle class="fm" cx="572.9" cy="131.6" r="2.6"/>
+<circle class="fm" cx="580.2" cy="122.3" r="2.6"/>
+<circle class="fm" cx="587.6" cy="87.9" r="2.6"/>
+<circle class="fm" cx="594.9" cy="102.3" r="2.6"/>
+<circle class="fm" cx="602.3" cy="128.1" r="2.6"/>
+<circle class="fm" cx="609.6" cy="129.2" r="2.6"/>
+<circle class="fm" cx="617.0" cy="126.2" r="2.6"/>
+<circle class="fm" cx="624.3" cy="81.1" r="2.6"/>
+<path class="ln c3 thin dash" d="M40.0 162.2L47.4 162.2L47.4 162.2L54.7 162.2L54.7 162.2L62.0 162.2L62.0 162.2L69.4 162.2L69.4 162.2L76.8 162.2L76.8 162.2L84.1 162.2L84.1 162.2L91.4 162.2L91.4 162.2L98.8 162.2L98.8 162.2L106.2 162.2L106.2 162.2L113.5 162.2L113.5 162.2L120.9 162.2L120.9 162.2L128.2 162.2L128.2 162.2L135.6 162.2L135.6 162.2L142.9 162.2L142.9 162.2L150.2 162.2L150.2 162.2L157.6 162.2L157.6 162.2L164.9 162.2L164.9 162.2L172.3 162.2L172.3 162.2L179.7 162.2L179.7 162.2L187.0 162.2L187.0 77.5L194.3 77.5L194.3 77.5L201.7 77.5L201.7 77.5L209.0 77.5L209.0 77.5L216.4 77.5L216.4 77.5L223.8 77.5L223.8 77.5L231.1 77.5L231.1 77.5L238.5 77.5L238.5 77.5L245.8 77.5L245.8 77.5L253.2 77.5L253.2 77.5L260.5 77.5L260.5 77.5L267.9 77.5L267.9 77.5L275.2 77.5L275.2 77.5L282.5 77.5L282.5 77.5L289.9 77.5L289.9 77.5L297.2 77.5L297.2 204.5L304.6 204.5L304.6 204.5L311.9 204.5L311.9 204.5L319.3 204.5L319.3 204.5L326.6 204.5L326.6 204.5L334.0 204.5L334.0 204.5L341.3 204.5L341.3 204.5L348.7 204.5L348.7 204.5L356.1 204.5L356.1 204.5L363.4 204.5L363.4 204.5L370.8 204.5L370.8 204.5L378.1 204.5L378.1 204.5L385.4 204.5L385.4 204.5L392.8 204.5L392.8 204.5L400.2 204.5L400.2 204.5L407.5 204.5L407.5 204.5L414.8 204.5L414.8 204.5L422.2 204.5L422.2 204.5L429.6 204.5L429.6 204.5L436.9 204.5L436.9 204.5L444.2 204.5L444.2 119.8L451.6 119.8L451.6 119.8L458.9 119.8L458.9 119.8L466.3 119.8L466.3 119.8L473.7 119.8L473.7 119.8L481.0 119.8L481.0 119.8L488.3 119.8L488.3 119.8L495.7 119.8L495.7 119.8L503.1 119.8L503.1 119.8L510.4 119.8L510.4 119.8L517.8 119.8L517.8 119.8L525.1 119.8L525.1 119.8L532.5 119.8L532.5 119.8L539.8 119.8L539.8 119.8L547.2 119.8L547.2 119.8L554.5 119.8L554.5 119.8L561.9 119.8L561.9 119.8L569.2 119.8L569.2 119.8L576.5 119.8L576.5 119.8L583.9 119.8L583.9 119.8L591.2 119.8L591.2 119.8L598.6 119.8L598.6 119.8L606.0 119.8L606.0 119.8L613.3 119.8L613.3 119.8L620.6 119.8L620.6 119.8L628.0 119.8"/>
+<path class="ln c2" d="M40.0 164.9L47.4 164.9L47.4 164.9L54.7 164.9L54.7 164.9L62.0 164.9L62.0 164.9L69.4 164.9L69.4 164.9L76.8 164.9L76.8 164.9L84.1 164.9L84.1 164.9L91.4 164.9L91.4 164.9L98.8 164.9L98.8 164.9L106.2 164.9L106.2 164.9L113.5 164.9L113.5 164.9L120.9 164.9L120.9 164.9L128.2 164.9L128.2 164.9L135.6 164.9L135.6 164.9L142.9 164.9L142.9 164.9L150.2 164.9L150.2 164.9L157.6 164.9L157.6 164.9L164.9 164.9L164.9 164.9L172.3 164.9L172.3 164.9L179.7 164.9L179.7 164.9L187.0 164.9L187.0 124.3L194.3 124.3L194.3 105.3L201.7 105.3L201.7 105.3L209.0 105.3L209.0 105.3L216.4 105.3L216.4 105.3L223.8 105.3L223.8 105.3L231.1 105.3L231.1 105.3L238.5 105.3L238.5 105.3L245.8 105.3L245.8 105.3L253.2 105.3L253.2 105.3L260.5 105.3L260.5 105.3L267.9 105.3L267.9 105.3L275.2 105.3L275.2 105.3L282.5 105.3L282.5 105.3L289.9 105.3L289.9 105.3L297.2 105.3L297.2 193.2L304.6 193.2L304.6 193.2L311.9 193.2L311.9 193.2L319.3 193.2L319.3 193.2L326.6 193.2L326.6 193.2L334.0 193.2L334.0 193.2L341.3 193.2L341.3 193.2L348.7 193.2L348.7 193.2L356.1 193.2L356.1 193.2L363.4 193.2L363.4 193.2L370.8 193.2L370.8 193.2L378.1 193.2L378.1 193.2L385.4 193.2L385.4 193.2L392.8 193.2L392.8 193.2L400.2 193.2L400.2 193.2L407.5 193.2L407.5 193.2L414.8 193.2L414.8 193.2L422.2 193.2L422.2 193.2L429.6 193.2L429.6 193.2L436.9 193.2L436.9 193.2L444.2 193.2L444.2 123.6L451.6 123.6L451.6 123.6L458.9 123.6L458.9 123.6L466.3 123.6L466.3 123.6L473.7 123.6L473.7 123.6L481.0 123.6L481.0 123.6L488.3 123.6L488.3 123.6L495.7 123.6L495.7 123.6L503.1 123.6L503.1 123.6L510.4 123.6L510.4 123.6L517.8 123.6L517.8 123.6L525.1 123.6L525.1 123.6L532.5 123.6L532.5 123.6L539.8 123.6L539.8 123.6L547.2 123.6L547.2 123.6L554.5 123.6L554.5 123.6L561.9 123.6L561.9 123.6L569.2 123.6L569.2 123.6L576.5 123.6L576.5 123.6L583.9 123.6L583.9 123.6L591.2 123.6L591.2 123.6L598.6 123.6L598.6 123.6L606.0 123.6L606.0 123.6L613.3 123.6L613.3 123.6L620.6 123.6L620.6 123.6L628.0 123.6"/>
+</svg><div class="legend"><span style="--lc:var(--muted)">observations Yⱼ (points)</span><span style="--lc:var(--s3)">vrai signal β*</span><span style="--lc:var(--s2)">Lasso fusionné, λ₁ = 0, λ₂ = 5</span></div>
+<figcaption>Signal constant par morceaux (paliers 0, 2, −1, 1) observé avec un bruit gaussien d'écart-type 0,6 sur $n = 80$ points. L'estimation (calculée exactement, par un algorithme dual dont on a vérifié l'écart de dualité nul) retrouve les ruptures aux bons endroits et divise l'erreur quadratique moyenne par plus de 2,5 (0,29 → 0,11). Remarquez que les paliers estimés sont <strong>rétrécis</strong> vers leurs voisins : 1,34 alors que la moyenne des observations sur ce palier (vraie valeur 2) vaut 1,65, et −0,73 alors qu'elle vaut −0,98 (vraie valeur −1). Ce décalage d'environ $\lambda_2/(\text{longueur du palier})$ vient de la pénalité $\ell_1$ sur les sauts, qui biaise leur hauteur exactement comme le Lasso biaise les gros coefficients.</figcaption>
+</figure>
+
+<div class="box intu"><div class="box-h">Pourquoi le design orthonormé ne suffit plus</div>
+<p>Même avec $X\T X = I$, la pénalité $\abs{\beta_j - \beta_{j-1}}$ <strong>couple</strong> chaque coordonnée à ses voisines : le problème ne se découple plus en problèmes 1D, il n'y a pas de formule « coordonnée par coordonnée ». On utilise des algorithmes dédiés. Une propriété utile (Friedman, Hastie, Höfling et Tibshirani, 2007, hors diapos) : pour $X = I$, la solution avec $\lambda_1 > 0$ s'obtient en appliquant un seuillage doux (au seuil $\lambda_1/2$ dans notre convention) à la solution obtenue avec $\lambda_1 = 0$.</p></div>
+
+<div class="box piege"><div class="box-h">Piège</div>
+<p>Le Lasso fusionné n'a de sens que si l'<strong>ordre</strong> des variables a un sens (temps, position sur un chromosome, pixels). Permutez les colonnes, et la pénalité change complètement. Et deux paramètres à régler conjointement, c'est une grille de validation croisée en deux dimensions — d'où la dernière ligne de la diapo.</p></div>
+
+<h2 id="group">9. Le group-Lasso <span class="ref">Cours6 · diapo 87</span></h2>
+
+<p class="tldr">Quand les variables vont par groupes connus, on pénalise la norme euclidienne (non carrée) de chaque bloc : un bloc est gardé en entier ou mis à zéro en entier.</p>
+
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours6 · diapo 87</span></div>
+<ul><li>Pour sélectionner simultanément un groupe de variables, Yuan et Lin (2006) proposent le group-Lasso : on se donne $K$ groupes connus, non vides et disjoints, $G_1, \dots, G_K$ ; pour $\lambda > 0$,
+$$\hb^{\mathrm{group}}(\lambda) := \argmin_{\beta\in\R^p}\Big\{\norm{Y - X\beta}^2 + \lambda\sum_{k=1}^K\norm{\beta_{(k)}}\Big\},$$
+où $\beta_{(k)j} = \beta_j$ si $j\in G_k$, et 0 sinon.</li>
+<li>Si $K = p$, $\norm{\beta_{(k)}} = \abs{\beta_k}$ et le group-Lasso est le Lasso standard.</li>
+<li>Caractérisation : pour tout $k$,
+$$\begin{cases} 2X_{(k)}\T(Y - X\hb^{\mathrm{group}}) = \lambda\dfrac{\hb^{\mathrm{group}}_{(k)}}{\norm{\hb^{\mathrm{group}}_{(k)}}_2} & \text{si } \hb^{\mathrm{group}}_{(k)} \ne 0,\\[6pt] \norm{2X_{(k)}\T(Y - X\hb^{\mathrm{group}})}_2 \le \lambda & \text{si } \hb^{\mathrm{group}}_{(k)} = 0.\end{cases}$$</li>
+<li>La procédure garde ou écarte tous les coefficients d'un bloc, et peut améliorer l'estimation en utilisant l'information sur les coefficients d'un même bloc.</li></ul></div>
+
+<p><strong>Décodage.</strong> $\beta_{(k)}$ est le « morceau » de $\beta$ correspondant au groupe $k$ ; $X_{(k)}$ désigne la sous-matrice formée des colonnes du groupe $k$. La norme $\norm{\beta_{(k)}} = \sqrt{\sum_{j\in G_k}\beta_j^2}$ est la norme euclidienne <strong>non élevée au carré</strong>. Exemple typique : une variable catégorielle « couleur » à trois modalités est codée par trois colonnes indicatrices ; garder « rouge » mais pas « bleu » n'a pas de sens, on veut garder ou retirer la variable « couleur » entière.</p>
+
+<div class="box intu"><div class="box-h">Pourquoi la norme, et pas son carré ?</div>
+<p>Avec le carré, $\sum_k\norm{\beta_{(k)}}^2 = \norm\beta^2$ : c'est le Ridge, aucun zéro. La norme non carrée, elle, est <strong>pointue en 0</strong> (comme $\abs u$ en dimension 1 ; voir le rappel 3 : en $0$, son sous-différentiel est toute la boule unité). Cette pointe retient le bloc entier en 0. À l'intérieur d'un bloc gardé, en revanche, la norme est lisse : les coordonnées du bloc ne sont pas mises à zéro individuellement.</p></div>
+
+<h3 id="group-kkt">D'où viennent les conditions de la diapo</h3>
+<ol class="steps">
+<li>$$0 \in -2X\T(Y - X\hb) + \lambda\,\partial\Big(\sum_k\norm{\hb_{(k)}}\Big)$$<span class="why">règle « 0 appartient au sous-différentiel au minimum » (séance 4), avec le gradient de $\norm{Y - X\beta}^2$.</span></li>
+<li>$$0 \in -2X_{(k)}\T(Y - X\hb) + \lambda\,\partial\norm{\cdot}_2\big(\hb_{(k)}\big) \quad\text{pour chaque groupe } k$$<span class="why">la pénalité est une somme de fonctions de blocs disjoints : on lit la condition bloc par bloc (lignes du groupe $k$).</span></li>
+<li>$$\hb_{(k)} \ne 0 :\ 2X_{(k)}\T(Y - X\hb) = \lambda\frac{\hb_{(k)}}{\norm{\hb_{(k)}}} \qquad \hb_{(k)} = 0 :\ 2X_{(k)}\T(Y - X\hb) \in \{\lambda h : \norm h_2 \le 1\}$$<span class="why">sous-différentiel de la norme euclidienne (rappel 3).</span></li>
+</ol>
+<p>La seconde condition s'écrit $\norm{2X_{(k)}\T(Y - X\hb)}_2 \le \lambda$ : c'est celle de la diapo. Comparez avec les KKT du Lasso : la valeur absolue de la corrélation d'une variable avec le résidu est remplacée par la <strong>norme du vecteur des corrélations</strong> d'un groupe avec le résidu. Un groupe reste à 0 tant que, collectivement, il n'est pas assez corrélé au résidu.</p>
+
+<h3 id="group-ortho">En design orthonormé : le seuillage doux par groupe</h3>
+<p>Avec $X\T X = I$, le critère vaut $\sum_k\big[\norm{\beta_{(k)} - b_{(k)}}^2 + \lambda\norm{\beta_{(k)}}\big] + \text{cte}$ : il se découple <strong>groupe par groupe</strong>. Pour un groupe, notons $u = \beta_{(k)}$, $c = b_{(k)}$ et minimisons $\norm{u - c}^2 + \lambda\norm u$.</p>
+<ol class="steps">
+<li>$$u = 0 \text{ est solution} \iff 0\in -2c + \lambda\{h : \norm h\le1\} \iff \norm c \le \lambda/2$$<span class="why">condition d'optimalité en $u = 0$ : $2c$ doit être de la forme $\lambda h$ avec $\norm h \le 1$.</span></li>
+<li>$$u \ne 0 :\ 2(u - c) + \lambda\frac{u}{\norm u} = 0 \iff u\Big(1 + \frac{\lambda}{2\norm u}\Big) = c$$<span class="why">la fonction est dérivable en $u \ne 0$, on annule le gradient.</span></li>
+<li>$$u \text{ est un multiple positif de } c, \quad \norm u + \frac\lambda2 = \norm c$$<span class="why">le facteur $1 + \frac{\lambda}{2\norm u}$ est positif ; on prend la norme des deux membres. Possible seulement si $\norm c > \lambda/2$.</span></li>
+<li>$$\hb_{(k)} = \Big(1 - \frac{\lambda}{2\norm{b_{(k)}}}\Big)_+ b_{(k)}$$<span class="why">$u = \frac{\norm c - \lambda/2}{\norm c}\,c$, et la partie positive regroupe les deux cas.</span></li>
+</ol>
+<p>Le bloc entier est mis à zéro si sa norme est sous le seuil ; sinon il est rétréci <strong>dans sa direction</strong> (toutes ses coordonnées sont multipliées par le même facteur). Pour des groupes de taille 1 ($K = p$, comme annoncé par la diapo), on retrouve le seuillage doux :
+$$\Big(1 - \frac{\lambda}{2\abs{b_j}}\Big)_+b_j = \sgn(b_j)\big(\abs{b_j} - \tfrac\lambda2\big)_+ .$$</p>
+
+<div class="box exemple"><div class="box-h">Exemple chiffré</div>
+<p>$\lambda = 2$ (seuil $\lambda/2 = 1$), deux groupes de deux variables : $b_{(1)} = (3, 4)$, de norme 5, et $b_{(2)} = (0{,}3;\ 0{,}4)$, de norme 0,5. Groupe 1 : facteur $1 - \frac{2}{2\cdot5} = 0{,}8$, donc $\hb_{(1)} = (2{,}4;\ 3{,}2)$. Groupe 2 : norme $0{,}5 \le 1$, donc $\hb_{(2)} = (0, 0)$. Le Lasso ordinaire aurait donné $(2, 3)$ et $(0, 0)$ : même sélection ici, mais pour d'autres raisons (le groupe est jugé globalement).</p></div>
+
+<div class="box remarque"><div class="box-h">Pour aller plus loin (hors diapos)</div>
+<p>Quand les groupes sont de tailles différentes, Yuan et Lin pondèrent chaque terme par $\sqrt{\abs{G_k}}$ : $\lambda\sum_k\sqrt{\abs{G_k}}\,\norm{\beta_{(k)}}$, pour ne pas désavantager les grands groupes (dont la norme est naturellement plus grande).</p></div>
+
+<h2 id="conclusion">10. Bilan : quel outil pour quel défaut ? <span class="ref">Cours6 · diapos 88–89</span></h2>
+
+<div class="box diapo"><div class="box-h">Ce que disent les diapos <span class="ref">Cours6 · diapos 88–89</span></div>
+<ul>
+<li>Pour contourner la complexité de calcul de la sélection de modèle, on peut utiliser des critères convexes, menant en particulier aux estimateurs de type Lasso.</li>
+<li>Cela introduit un biais, mais réduit la variance des valeurs prédites. De plus, cela identifie un petit ensemble de prédicteurs aux effets les plus importants, ce qui simplifie l'interprétation.</li>
+<li>En modifiant la pénalité $\ell_1$ de base, on peut réduire les problèmes du Lasso standard ou incorporer une connaissance a priori sur le modèle.</li>
+<li>En régression linéaire, ces estimateurs faciles à calculer sont très populaires en grande dimension et ont de bonnes propriétés théoriques et numériques.</li>
+<li>Malgré les techniques standard de réglage du Lasso, sa calibration (le choix de $\lambda$) reste un défi important.</li>
+<li>Les estimateurs de type Lasso ont été détaillés en régression linéaire et s'appliquent aux modèles linéaires généralisés ; ils s'étendent à d'autres cadres : modèles à variables latentes, estimation de densité, processus de comptage, etc.</li>
+</ul></div>
+
+<p>Relisez ces six phrases avec ce que vous savez maintenant : chacune résume une séance. « Complexité de la sélection de modèle » : les $2^p$ modèles de Cp/AIC/BIC (séance 1). « Critères convexes » : la relaxation $\ell_0 \to \ell_1$ (séances 1 et 4). « Biais mais moins de variance » : le seuillage doux (séances 2 et 4). « Bonnes propriétés théoriques » : les inégalités de la séance 3 et les inégalités oracle de la séance 4. « Modèles linéaires généralisés » : la séance 5. « Modifier la pénalité » : cette séance.</p>
+
+<div class="table-wrap"><table>
+<thead><tr><th>Méthode</th><th>Corrige</th><th>Critère / définition</th><th>Règle en design orthonormé ($b = X\T Y$)</th><th>Convexe ?</th></tr></thead>
+<tbody>
+<tr><td>Lasso</td><td>(référence)</td><td>$\norm{Y-X\beta}^2 + \lambda\norm\beta_1$</td><td>$\sgn(b)(\abs b - \lambda/2)_+$</td><td>oui</td></tr>
+<tr><td>Ridge (bridge $\gamma = 2$)</td><td>instabilité de $(X\T X)^{-1}$</td><td>$\norm{Y-X\beta}^2 + \lambda\norm\beta^2$</td><td>$b/(1+\lambda)$</td><td>oui, strictement</td></tr>
+<tr><td>Sélection $\ell_0$ (bridge $\gamma = 0$)</td><td>—</td><td>$\norm{Y-X\beta}^2 + \lambda\norm\beta_0$</td><td>$b\,\ind\{\abs b > \sqrt\lambda\}$</td><td>non</td></tr>
+<tr><td>LSLasso</td><td>biais</td><td>Lasso, puis moindres carrés sur le support</td><td>$b\,\ind\{\abs b > \lambda/2\}$</td><td>chaque étape</td></tr>
+<tr><td>Lasso relaxé</td><td>biais</td><td>Lasso, puis Lasso de paramètre $\delta\lambda$ sur le support</td><td>$\ind\{\abs b > \lambda/2\}\,(b - \sgn(b)\,\delta\lambda/2)$</td><td>chaque étape</td></tr>
+<tr><td>Lasso adaptatif</td><td>biais</td><td>$\norm{Y-X\beta}^2 + \lambda\sum_j\abs{\beta_j}/\abs{\tilde\beta_j}$</td><td>$\sgn(b)\big(\abs b - \frac{\lambda}{2\abs b}\big)_+$</td><td>oui</td></tr>
+<tr><td>Dantzig</td><td>(autre formulation)</td><td>$\min\norm\beta_1$ s.c. $\norm{2X\T(Y-X\beta)}_\infty \le \lambda$</td><td>$\sgn(b)(\abs b - \lambda/2)_+$ (= Lasso)</td><td>oui (programme linéaire)</td></tr>
+<tr><td>Elastic net</td><td>$\le n$ variables ; corrélations</td><td>$\norm{Y-X\beta}^2 + \lambda_1\norm\beta_1 + \lambda_2\norm\beta^2$</td><td>$\sgn(b)(\abs b - \lambda_1/2)_+/(1+\lambda_2)$</td><td>oui, strictement</td></tr>
+<tr><td>Lasso fusionné</td><td>structure ordonnée</td><td>$\ldots + \lambda_1\norm\beta_1 + \lambda_2\sum_j\abs{\beta_j - \beta_{j-1}}$</td><td>pas de découplage</td><td>oui</td></tr>
+<tr><td>Group-Lasso</td><td>structure en groupes</td><td>$\norm{Y-X\beta}^2 + \lambda\sum_k\norm{\beta_{(k)}}$</td><td>$\big(1 - \frac{\lambda}{2\norm{b_{(k)}}}\big)_+ b_{(k)}$ (par groupe)</td><td>oui</td></tr>
+</tbody></table></div>
+
+<div class="widget" data-widget="variantes" data-title="Toutes les règles sur un même dessin (design orthonormé)"></div>
+<p>Cochez toutes les cases et comparez. <strong>Trois questions à se poser devant chaque courbe</strong> : (1) vaut-elle exactement 0 sur un intervalle autour de 0 ? (sélection) ; (2) colle-t-elle à la diagonale pour les grands $\abs b$ ? (pas de biais sur les gros effets) ; (3) est-elle continue ? (stabilité : une règle qui saute, comme le seuillage dur, réagit brutalement à une petite variation des données). La courbe « Elastic net » de la figure est la version <em>naïve</em>, sans la correction $(1+\lambda_2)$ : c'est pour cela qu'elle est plus aplatie que le Lasso.</p>
+
+<div class="box intu"><div class="box-h">Le compromis caché : continuité contre biais</div>
+<p>Le seuillage doux (Lasso) est continu mais biaisé ; le seuillage dur (LSLasso, $\ell_0$) est sans biais pour les grands coefficients mais discontinu au seuil — une petite variation de $b$ autour de $\lambda/2$ fait passer le coefficient de 0 à $\lambda/2$ d'un coup, d'où une plus grande variance. Le Lasso adaptatif et le relaxé sont des intermédiaires. Aucune règle ne gagne partout : c'est encore le compromis biais–variance de la séance 1.</p></div>
+
+<h2 id="resume">Résumé de la séance</h2>
+<div class="box resume">
+<ul>
+<li><strong>Bridge</strong> $\norm{Y-X\beta}^2 + \lambda\sum\abs{\beta_j}^\gamma$ : $\gamma = 0$ sélection (seuillage dur, combinatoire), $\gamma = 1$ Lasso, $\gamma = 2$ Ridge. Convexe ⇔ $\gamma \ge 1$ ; zéros exacts ⇔ $\gamma \le 1$. Seul $\gamma = 1$ a les deux.</li>
+<li><strong>Géométrie</strong> : $\norm{Y - X\beta}^2 = (\beta - \hb\MC)\T X\T X(\beta - \hb\MC) + \text{cte}$, donc l'estimateur contraint est le premier contact entre une ellipse centrée en $\hb\MC$ et la boule de contrainte ; les coins du losange $\ell_1$ donnent des zéros.</li>
+<li><strong>Biais du Lasso</strong> ($\lambda/2$ sur chaque coefficient gardé) : LSLasso (seuillage dur), Lasso relaxé (rétrécissement réduit à $\delta\lambda/2$), Lasso adaptatif (seuil $\lambda/(2\abs{b_j})$, biais qui s'évanouit pour les gros coefficients). Validation croisée sur la procédure entière.</li>
+<li><strong>Dantzig</strong> : $\min\norm\beta_1$ sur $D_\lambda = \{\norm{2X\T(Y-X\beta)}_\infty \le\lambda\}$ ; $\hb^L\in D_\lambda$ donc $\norm{\hb^D}_1 \le \norm{\hb^L}_1$ ; programme linéaire ; identique au Lasso en design orthonormé.</li>
+<li><strong>Elastic net</strong> : $+\lambda_2\norm\beta^2$ rend le critère strictement convexe (solution unique), partage les coefficients entre variables corrélées, permet plus de $n$ variables ; en orthonormé, Lasso divisé par $1+\lambda_2$, d'où la correction $(1+\lambda_2)$.</li>
+<li><strong>Structure</strong> : Lasso fusionné ($\ell_1$ sur les différences ⇒ paliers) ; group-Lasso (norme $\ell_2$ non carrée par bloc ⇒ blocs gardés ou tués en entier ; seuillage doux par groupe).</li>
+</ul></div>
+
+<h2 id="reflexes">Les réflexes à acquérir</h2>
+<div class="box reflexe"><div class="box-h">Réflexes</div>
+<ul>
+<li><strong>Nouvelle pénalité ?</strong> → Passez en design orthonormé : le critère devient $\sum_j(\beta_j - b_j)^2 + \text{pénalité}$, résolvez le problème 1D, dessinez $b\mapsto\hb$.</li>
+<li><strong>La pénalité a-t-elle une pointe en 0 ?</strong> → Oui : zéros exacts (sélection). Non (dérivable, de dérivée nulle en 0) : aucun zéro exact.</li>
+<li><strong>Est-elle convexe ?</strong> → Oui : on sait la calculer et la caractériser par « $0 \in$ sous-différentiel ». Non : minimums locaux, calcul difficile.</li>
+<li><strong>Pour caractériser un minimiseur</strong> → écrivez $0 \in \nabla(\text{ajustement}) + \partial(\text{pénalité})$ ; utilisez $\partial\abs{\cdot}(0) = [-1,1]$ et $\partial\norm\cdot_2(0) = $ boule unité.</li>
+<li><strong>Les gros coefficients sont biaisés ?</strong> → Réajustez sur le support (LSLasso, relaxé) ou pondérez (adaptatif).</li>
+<li><strong>Variables corrélées / solution instable ?</strong> → Un peu de $\ell_2$ (elastic net) : stricte convexité ⇒ unicité.</li>
+<li><strong>Vous connaissez une structure</strong> (groupes, ordre, voisinage) → mettez-la dans la pénalité (group-Lasso, Lasso fusionné).</li>
+<li><strong>Pour comparer deux estimateurs définis par un minimum</strong> → montrez que l'un est admissible pour le problème de l'autre (comme $\hb^L\in D_\lambda$).</li>
+<li><strong>Procédure en plusieurs étapes</strong> → la validation croisée porte sur la procédure complète, jamais sur la première étape seule.</li>
+</ul></div>
+
+<h2 id="exercices">Exercices</h2>
+
+<div class="exo"><div class="exo-h">Exercice 1 — La boule bridge n'est pas convexe <span class="lvl">★☆☆</span></div>
+<p>Soit $\gamma = 0{,}5$ et $B = \{\beta\in\R^2 : \sqrt{\abs{\beta_1}} + \sqrt{\abs{\beta_2}} \le 1\}$. (a) Vérifiez que $(1, 0)$ et $(0, 1)$ sont dans $B$ mais pas leur milieu. (b) Le point $(0{,}25;\ 0{,}25)$ est-il dans $B$ ? Et $(0{,}3;\ 0{,}3)$ ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Calculez $\sqrt{\abs{\beta_1}} + \sqrt{\abs{\beta_2}}$ pour chaque point.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) $\sqrt1 + \sqrt0 = 1 \le 1$ pour les deux points. Milieu $(\frac12, \frac12)$ : $2\sqrt{0{,}5} = \sqrt2 \approx 1{,}41 > 1$, hors de $B$. Donc $B$ n'est pas convexe.</p>
+<p>(b) $(0{,}25;\ 0{,}25)$ : $2\times0{,}5 = 1$, sur le bord de $B$. $(0{,}3;\ 0{,}3)$ : $2\sqrt{0{,}3} \approx 1{,}10 > 1$, dehors. Sur la diagonale, $B$ s'arrête en $0{,}25$, alors que le losange $\ell_1$ va jusqu'à $0{,}5$ : la boule est « creusée » vers l'origine, d'où sa forme d'étoile.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 2 — Toutes les règles sur un exemple <span class="lvl">★☆☆</span></div>
+<p>Design orthonormé, $b = X\T Y = (3;\ 1{,}2;\ -0{,}4;\ 0{,}8)$, $\lambda = 2$. Calculez $\hb$ pour : le Lasso, le LSLasso, le Lasso relaxé avec $\delta = 0{,}5$, le Lasso adaptatif avec $\tilde\beta = b$, le sélecteur de Dantzig, l'elastic net avec $\lambda_1 = 2$, $\lambda_2 = 0{,}5$ (sans puis avec la correction $(1+\lambda_2)$), et le Ridge.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Utilisez le tableau de la section 10. Le seuil du Lasso est $\lambda/2 = 1$ ; celui de l'adaptatif pour la coordonnée $j$ est $\lambda/(2\abs{b_j}) = 1/\abs{b_j}$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<div class="table-wrap"><table>
+<thead><tr><th>Méthode</th><th>$b_1 = 3$</th><th>$b_2 = 1{,}2$</th><th>$b_3 = -0{,}4$</th><th>$b_4 = 0{,}8$</th></tr></thead>
+<tbody>
+<tr><td>Lasso</td><td>2</td><td>0,2</td><td>0</td><td>0</td></tr>
+<tr><td>LSLasso</td><td>3</td><td>1,2</td><td>0</td><td>0</td></tr>
+<tr><td>Relaxé, $\delta = 0{,}5$ (rétrécissement $0{,}5$)</td><td>2,5</td><td>0,7</td><td>0</td><td>0</td></tr>
+<tr><td>Adaptatif (seuils $\frac13$ ; $\frac1{1{,}2}\approx0{,}83$ ; $2{,}5$ ; $1{,}25$)</td><td>$\approx 2{,}67$</td><td>$\approx 0{,}37$</td><td>0</td><td>0</td></tr>
+<tr><td>Dantzig</td><td>2</td><td>0,2</td><td>0</td><td>0</td></tr>
+<tr><td>Elastic net naïf ($\div 1{,}5$)</td><td>$\approx 1{,}33$</td><td>$\approx 0{,}13$</td><td>0</td><td>0</td></tr>
+<tr><td>Elastic net corrigé ($\times1{,}5$)</td><td>2</td><td>0,2</td><td>0</td><td>0</td></tr>
+<tr><td>Ridge ($\div 3$)</td><td>1</td><td>0,4</td><td>$\approx -0{,}13$</td><td>$\approx 0{,}27$</td></tr>
+</tbody></table></div>
+<p>Observations : toutes les méthodes « Lasso » sélectionnent les variables 1 et 2 ; elles diffèrent par l'amplitude. Le Ridge ne sélectionne rien. Dantzig et elastic net corrigé coïncident avec le Lasso (design orthonormé). Le biais sur $b_1 = 3$ vaut 1 (Lasso), 0 (LSLasso), 0,5 (relaxé), 0,33 (adaptatif).</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 3 — Les cas extrêmes du Lasso relaxé <span class="lvl">★☆☆</span></div>
+<p>Montrez, <strong>sans</strong> supposer le design orthonormé, que le Lasso relaxé avec $\delta = 0$ est le LSLasso, et que, si le Lasso est unique, le Lasso relaxé avec $\delta = 1$ est le Lasso.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Pour $\delta = 1$ : $\hb^L$ est admissible pour le problème restreint (son support est $\hat S_\lambda$) et il minimise le même critère sur un ensemble plus grand.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>$\delta = 0$ : le critère de l'étape 2 devient $\norm{Y - X\beta}^2$ minimisé sur les $\beta$ de support inclus dans $\hat S_\lambda$ : ce sont les moindres carrés sur les variables actives, l'étape 2 du LSLasso.</p>
+<p>$\delta = 1$ : l'étape 2 minimise $C(\beta) = \norm{Y-X\beta}^2 + \lambda\norm\beta_1$ sur l'ensemble $E = \{\beta : J(\beta)\subset\hat S_\lambda\}$. Or $\hb^L\in E$ et $C(\hb^L) = \min_{\R^p}C \le \min_E C$ ; donc $\hb^L$ est un minimiseur sur $E$. Tout autre minimiseur $\beta'$ sur $E$ vérifierait $C(\beta') = C(\hb^L) = \min_{\R^p}C$, donc serait une solution du Lasso, donc égal à $\hb^L$ par unicité.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 4 — Dantzig contre Lasso <span class="lvl">★★☆</span></div>
+<p>(a) Montrez que $\norm{\hb^D(\lambda)}_1 \le \norm{\hb^L(\lambda)}_1$. (b) En design orthonormé, montrez que $\hb^D(\lambda) = \hb^L(\lambda)$. (c) Écrivez le sélecteur de Dantzig comme un programme linéaire.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>(a) KKT ⇒ $\hb^L\in D_\lambda$. (b) $2X\T(Y - X\beta) = 2(b - \beta)$. (c) $\beta = \beta^+ - \beta^-$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>Voir la section 4 : (a) <a href="#dantzig-comparaison">preuve détaillée</a> ; (b) <a href="#dantzig-ortho">la contrainte devient la boîte</a> $\abs{\beta_j - b_j} \le \lambda/2$, et minimiser $\abs{\beta_j}$ sur $[b_j - \lambda/2, b_j + \lambda/2]$ donne le seuillage doux ; (c) <a href="#dantzig-lp">reformulation</a> avec $2p$ variables positives et $2p$ contraintes linéaires.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 5 — Le Lasso adaptatif <span class="lvl">★★☆</span></div>
+<p>(a) Montrez que le Lasso adaptatif de poids $\omega_j > 0$ s'obtient par un Lasso standard sur les colonnes $X_j/\omega_j$. (b) En design orthonormé avec $\tilde\beta = b$, montrez que la coordonnée $j$ est gardée ssi $\abs{b_j} > \sqrt{\lambda/2}$, et calculez son biais $b_j - \hb_j$. (c) Avec $\lambda = 2$, comparez le biais du Lasso et de l'adaptatif pour $b_j = 10$.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>(a) Changement de variable $\gamma_j = \omega_j\beta_j$. (b) Seuillage doux au seuil $\lambda\omega_j/2$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) Voir <a href="#adaptatif-calcul">la section 5</a> : $X\beta = \tilde X\gamma$ et $\sum\omega_j\abs{\beta_j} = \norm\gamma_1$.</p>
+<p>(b) $\hb_j = \sgn(b_j)(\abs{b_j} - \frac{\lambda}{2\abs{b_j}})_+$, non nul ssi $\abs{b_j}^2 > \lambda/2$. Biais (pour une coordonnée gardée) : $b_j - \hb_j = \sgn(b_j)\frac{\lambda}{2\abs{b_j}}$, de valeur absolue $\abs{b_j} - \abs{\hb_j} = \frac{\lambda}{2\abs{b_j}}$.</p>
+<p>(c) Lasso : biais $\lambda/2 = 1$. Adaptatif : $\frac{2}{2\times10} = 0{,}1$, dix fois moins.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 6 — Une colonne dupliquée : Lasso contre elastic net <span class="lvl">★★☆</span></div>
+<p>Soit $x\in\R^n$ avec $\norm x = 1$, $\tilde X = [x, x]$ (deux fois la même colonne), et $x\T Y = 3$. (a) Trouvez toutes les solutions du Lasso $\min_{\beta\in\R^2}\norm{Y - \tilde X\beta}^2 + 2(\abs{\beta_1} + \abs{\beta_2})$. (b) Trouvez la solution de l'elastic net avec $\lambda_1 = 2$, $\lambda_2 = 1$.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Seule la somme $c = \beta_1 + \beta_2$ intervient dans l'ajustement : $\tilde X\beta = cx$ et $\norm{Y - cx}^2 = \norm Y^2 - 6c + c^2$. Pour (b), utilisez le partage égal.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) $\abs{\beta_1} + \abs{\beta_2} \ge \abs c$, avec égalité ssi $\beta_1, \beta_2$ sont de même signe (ou nuls). Le critère est donc $\ge \norm Y^2 - 6c + c^2 + 2\abs c$, minimal pour $c = \sgn(3)(3 - 1)_+ = 2$ (seuillage doux, $\lambda/2 = 1$). Les solutions sont tous les $(\beta_1, \beta_2)$ de même signe avec $\beta_1 + \beta_2 = 2$ : le segment $\{(2\alpha, 2(1-\alpha)) : \alpha\in[0,1]\}$. Une infinité.</p>
+<p>(b) Partage égal : $\beta_1 = \beta_2 = c/2$, et la pénalité devient $2\abs c + 1\cdot(c^2/4 + c^2/4) = 2\abs c + c^2/2$. On minimise $(1 + \tfrac12)c^2 - 6c + 2\abs c$ : pour $c > 0$, la dérivée $3c - 6 + 2 = 0$ donne $c = 4/3$. Solution unique : $\hb = (2/3, 2/3)$. (Corrigée par $1 + \lambda_2 = 2$ : $(4/3, 4/3)$.)</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 7 — Seuillage doux par groupe <span class="lvl">★★☆</span></div>
+<p>(a) Redémontrez que $\argmin_{u\in\R^d}\{\norm{u - c}^2 + \lambda\norm u_2\} = (1 - \frac{\lambda}{2\norm c})_+c$. (b) Application : $c = (1, 2, 2)$, avec $\lambda = 4$, puis $\lambda = 6$. (c) Que donne la formule pour $d = 1$ ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Traitez séparément $u = 0$ (sous-différentiel de $\norm\cdot_2$ en 0 : la boule unité) et $u \ne 0$ (gradient).</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) Voir <a href="#group-ortho">la section 9</a>. (b) $\norm c = 3$. Pour $\lambda = 4$ : facteur $1 - \frac{4}{6} = \frac13$, donc $\hat u = (\frac13, \frac23, \frac23)$. Pour $\lambda = 6$ : $\frac\lambda2 = 3 \ge \norm c$, donc $\hat u = 0$ : le bloc entier disparaît. (c) $d = 1$ : $(1 - \frac{\lambda}{2\abs c})_+c = \sgn(c)(\abs c - \lambda/2)_+$, le seuillage doux du Lasso.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 8 — L'elastic net est un Lasso déguisé <span class="lvl">★★★</span></div>
+<p>On pose $X^* = (1+\lambda_2)^{-1/2}\begin{pmatrix}X\\ \sqrt{\lambda_2}\,I_p\end{pmatrix}\in\R^{(n+p)\times p}$, $Y^* = \begin{pmatrix}Y\\ 0_p\end{pmatrix}$, $\mu = \lambda_1/\sqrt{1+\lambda_2}$ et $\beta^\sharp = \sqrt{1+\lambda_2}\,\beta$. (a) Montrez que $\norm{Y^* - X^*\beta^\sharp}^2 + \mu\norm{\beta^\sharp}_1 = \norm{Y - X\beta}^2 + \lambda_2\norm\beta^2 + \lambda_1\norm\beta_1$. (b) En déduire que l'elastic net se calcule avec un logiciel de Lasso. (c) Pourquoi l'elastic net peut-il sélectionner plus de $n$ variables ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Calculez d'abord $X^*\beta^\sharp$ : les facteurs $\sqrt{1+\lambda_2}$ se simplifient. Pour (c), quel est le rang de $X^*$ ?</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<ol class="steps">
+<li>$$X^*\beta^\sharp = \frac{\sqrt{1+\lambda_2}}{\sqrt{1+\lambda_2}}\begin{pmatrix}X\beta\\ \sqrt{\lambda_2}\,\beta\end{pmatrix} = \begin{pmatrix}X\beta\\ \sqrt{\lambda_2}\,\beta\end{pmatrix}$$<span class="why">produit par blocs.</span></li>
+<li>$$\norm{Y^* - X^*\beta^\sharp}^2 = \norm{Y - X\beta}^2 + \norm{0 - \sqrt{\lambda_2}\beta}^2 = \norm{Y - X\beta}^2 + \lambda_2\norm\beta^2$$<span class="why">la norme au carré d'un vecteur par blocs est la somme des normes au carré des blocs.</span></li>
+<li>$$\mu\norm{\beta^\sharp}_1 = \frac{\lambda_1}{\sqrt{1+\lambda_2}}\sqrt{1+\lambda_2}\,\norm\beta_1 = \lambda_1\norm\beta_1$$<span class="why">homogénéité de la norme.</span></li>
+</ol>
+<p>(b) Minimiser l'elastic net en $\beta$ équivaut à minimiser un Lasso en $\beta^\sharp$ sur les données $(Y^*, X^*)$, puis à revenir à $\hb^{e.n} = \hat\beta^\sharp/\sqrt{1+\lambda_2}$. (c) Le bloc $\sqrt{\lambda_2}I_p$ rend les $p$ colonnes de $X^*$ linéairement indépendantes : $\rg X^* = p$. La limite « au plus $\rg$ variables » du Lasso (section 7) devient « au plus $p$ » : plus de plafond à $n$.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 9 — Le Lasso fusionné à deux points <span class="lvl">★★☆</span></div>
+<p>Avec $X = I_2$, $\lambda_1 = 0$, on résout $\min_{\beta\in\R^2}(\beta_1 - y_1)^2 + (\beta_2 - y_2)^2 + \lambda_2\abs{\beta_1 - \beta_2}$. Montrez que les deux estimations sont fusionnées ($\hb_1 = \hb_2 = \frac{y_1 + y_2}{2}$) si $\abs{y_1 - y_2} \le \lambda_2$, et que sinon chacune se rapproche de l'autre de $\lambda_2/2$.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Changez de variables : $m = \frac{\beta_1 + \beta_2}2$, $d = \beta_1 - \beta_2$, et de même $\bar y$, $\Delta = y_1 - y_2$. Montrez que le critère vaut $2(m - \bar y)^2 + \frac12(d - \Delta)^2 + \lambda_2\abs d$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>Avec $\beta_1 = m + d/2$, $\beta_2 = m - d/2$, $y_1 = \bar y + \Delta/2$, $y_2 = \bar y - \Delta/2$ : $\beta_1 - y_1 = (m - \bar y) + \frac{d - \Delta}2$ et $\beta_2 - y_2 = (m - \bar y) - \frac{d - \Delta}2$. La somme des carrés vaut $2(m - \bar y)^2 + \frac{(d-\Delta)^2}{2}$ (les doubles produits s'annulent). Le critère se découple : $\hat m = \bar y$, et $d$ minimise $\frac12(d - \Delta)^2 + \lambda_2\abs d$, d'où le seuillage doux $\hat d = \sgn(\Delta)(\abs\Delta - \lambda_2)_+$ (convention $\frac12$). Si $\abs\Delta \le \lambda_2$ : $\hat d = 0$, les deux valent $\bar y$. Sinon l'écart passe de $\abs\Delta$ à $\abs\Delta - \lambda_2$, chaque estimation s'étant rapprochée de l'autre de $\lambda_2/2$. C'est le mécanisme qui crée les paliers de la figure de la section 8.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 10 — Sélection $\ell_0$ et LSLasso <span class="lvl">★★☆</span></div>
+<p>En design orthonormé, montrez que le bridge avec $\gamma = 0$ et le paramètre $\lambda'$ donne le seuillage dur au seuil $\sqrt{\lambda'}$, puis que le LSLasso de paramètre $\lambda$ coïncide avec la sélection $\ell_0$ de paramètre $\lambda' = \lambda^2/4$.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Pour une coordonnée, comparez le coût de $\beta_j = b_j$ (soit $\lambda'$) et celui de $\beta_j = 0$ (soit $b_j^2$).</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>Voir <a href="#bridge-ortho">la section 1</a> : on garde $b_j$ ssi $b_j^2 > \lambda'$, soit $\abs{b_j} > \sqrt{\lambda'}$. Le LSLasso est le seuillage dur au seuil $\lambda/2$ (section 3). Les deux règles coïncident ssi $\sqrt{\lambda'} = \lambda/2$, c'est-à-dire $\lambda' = \lambda^2/4$. En design orthonormé, le LSLasso calcule donc exactement la solution du problème combinatoire $\ell_0$ — sans explorer les $2^p$ modèles.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 11 — Quelle variante choisir ? <span class="lvl">★☆☆</span></div>
+<p>Pour chaque situation, proposez une méthode et justifiez en une phrase. (a) $n = 80$ patients, $p = 20\,000$ gènes ; les gènes d'une même voie biologique sont très corrélés, mais on ne connaît pas les voies. (b) Même cadre, mais les voies sont connues et l'on veut savoir quelles voies jouent un rôle. (c) Le nombre de copies de l'ADN mesuré le long d'un chromosome, que l'on sait constant par segments. (d) Un modèle à 15 variables dont on veut interpréter l'<em>amplitude</em> des effets après sélection. (e) Une régression avec plusieurs variables catégorielles codées par indicatrices.</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) Elastic net : variables corrélées (garde les groupes ensemble au lieu d'en tirer un au sort) et $p \gg n$ (pas de plafond à $n$ variables). (b) Group-Lasso avec un groupe par voie : sélection de voies entières. (c) Lasso fusionné (pénalité sur les différences entre positions voisines) : estimation constante par morceaux, ruptures exactes. (d) Lasso relaxé, LSLasso ou Lasso adaptatif : réduire le biais des coefficients gardés (avec validation croisée sur la procédure complète). (e) Group-Lasso avec un groupe par variable catégorielle : on garde ou on retire toute la variable.</p></div></details></div>
+
+<h2 id="suite">Et après ?</h2>
+<p>C'était la dernière séance. Le fil complet du cours tient en une phrase : <strong>quand $p \ge n$, les moindres carrés ne suffisent plus ; on régularise, et la pénalité $\ell_1$ est le bon compromis entre sélection (comme $\ell_0$) et calculabilité (comme $\ell_2$) ; sous une hypothèse de type RE, elle atteint presque la précision de l'oracle, et on peut la modifier pour corriger ses défauts ou y injecter de la structure.</strong></p>
+<p>Pour réviser : relisez les encadrés « Réflexe » de chaque séance, puis la <a href="07_fiche.html">fiche réflexes</a> ; si un outil vous manque (sous-différentiel, queues gaussiennes, convexité…), retournez aux <a href="00_rappels.html">rappels</a>.</p>
