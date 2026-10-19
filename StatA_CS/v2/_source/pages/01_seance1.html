@@ -1,0 +1,762 @@
+<!--
+title: Séance 1 — Quand les moindres carrés ne suffisent plus
+short: S1 · MCO, Ridge, ℓ0, Lasso
+description: Les moindres carrés et leurs limites quand p ≥ n, l'estimateur Ridge, les critères ℓ0 (Cp, AIC, BIC), la parcimonie, l'oracle et la définition du Lasso, expliqués pas à pas.
+subtitle: Moindres carrés et leurs limites en grande dimension, Ridge, critères ℓ0 (Cp, AIC, BIC), parcimonie, oracle, définition du Lasso — Cours1, diapos 3 à 23.
+-->
+
+<div class="box objectifs"><div class="box-h">À la fin de cette page, vous saurez</div>
+<ul class="checklist">
+<li>écrire le modèle linéaire sous forme matricielle et dire ce que représente chaque objet ($Y$, $X$, $\bstar$, $\eps$, $X\bstar$) ;</li>
+<li>retrouver seul les <strong>équations normales</strong> $X\T X\beta = X\T Y$ et la formule des moindres carrés ;</li>
+<li>démontrer que l'erreur de prédiction des moindres carrés vaut $\sigma^2\rg(X)/n$ (avec « l'astuce de la trace ») ;</li>
+<li>expliquer précisément <strong>pourquoi</strong> les moindres carrés échouent quand $p \ge n$ ou quand les variables sont corrélées ;</li>
+<li>dériver la formule du <strong>Ridge</strong>, dire ce qu'il fait direction par direction, et pourquoi il est biaisé mais stable ;</li>
+<li>démontrer l'identité d'optimisme qui fonde <strong>Cp / AIC</strong>, et expliquer pourquoi <strong>BIC</strong> choisit des modèles plus petits ;</li>
+<li>énoncer l'hypothèse de <strong>parcimonie</strong>, la performance de l'<strong>oracle</strong> $\sigma^2\abs{\Astar}/n$, et la définition du <strong>Lasso</strong> sous ses deux formes.</li>
+</ul>
+</div>
+
+<h2 id="avant">Avant de commencer</h2>
+
+<h3 id="prerequis">Ce qu'il faut avoir en tête</h3>
+<p>Cette séance est une remise en route : elle reprend la régression linéaire « classique », puis montre où elle casse. Voici les outils qui servent, avec le lien vers le rappel correspondant. Pas besoin de tout relire maintenant : chaque fois qu'un outil est utilisé dans la page, il est rappelé sur place en deux lignes.</p>
+<div class="table-wrap"><table>
+<tr><th>Outil</th><th>Où il sert ici</th><th>Rappel</th></tr>
+<tr><td>Produit matrice × vecteur, transposée, rang, noyau</td><td>tout le modèle ; §4 (non-identifiabilité)</td><td><a href="00_rappels.html#rang-noyau">rang et noyau</a></td></tr>
+<tr><td>La matrice $X\T X$</td><td>§2 (équations normales), §6 (Ridge)</td><td><a href="00_rappels.html#gram">matrice de Gram</a></td></tr>
+<tr><td>Valeurs propres d'une matrice symétrique</td><td>§4 (conditionnement), §6 (Ridge)</td><td><a href="00_rappels.html#spectral">théorème spectral</a></td></tr>
+<tr><td>Projection orthogonale</td><td>§2, §3, §8</td><td><a href="00_rappels.html#projection">projection</a></td></tr>
+<tr><td>Trace d'une matrice</td><td>§3 et §8 (les deux preuves clés)</td><td><a href="00_rappels.html#trace">trace</a></td></tr>
+<tr><td>Gradient d'une forme quadratique</td><td>§2 et §6 (calcul des estimateurs)</td><td><a href="00_rappels.html#gradient">gradient</a></td></tr>
+<tr><td>Espérance et covariance d'un vecteur aléatoire</td><td>§3, §4, §6</td><td><a href="00_rappels.html#esperance">espérance</a>, <a href="00_rappels.html#forme-quadratique">forme quadratique</a></td></tr>
+<tr><td>Biais, variance, risque quadratique</td><td>§6 (Ridge)</td><td><a href="00_rappels.html#estimateur">estimateur</a></td></tr>
+<tr><td>Erreur d'apprentissage / erreur de test</td><td>§8 (Cp, AIC, BIC)</td><td><a href="00_rappels.html#erreur-test">erreur de test</a></td></tr>
+<tr><td>Contrainte ou pénalité (Lagrange)</td><td>§10 (Lasso)</td><td><a href="00_rappels.html#lagrange">Lagrange</a></td></tr>
+</table></div>
+
+<h3 id="fil">Le fil de l'histoire</h3>
+<p>Toute la séance répond à une seule question : <strong>comment prédire une quantité $Y$ à partir de $p$ variables quand on a peu d'observations ?</strong></p>
+<ol class="chain">
+<li><strong>La méthode classique</strong> : les moindres carrés (MCO). Elle marche très bien quand on a beaucoup plus d'observations que de variables ($n \gg p$). Son erreur vaut $\sigma^2 p/n$ : chaque variable « coûte » $\sigma^2/n$.</li>
+<li><strong>Le problème</strong> : quand $p \ge n$ (génomique, textes, images…), les MCO n'apprennent plus rien de fiable (et, dès que $p>n$, n'ont même plus de solution unique), et même pour $p$ un peu plus petit que $n$ ils deviennent instables.</li>
+<li><strong>Remède 1 — stabiliser</strong> : ajouter une pénalité $\lambda\norm\beta_2^2$ qui empêche les coefficients d'exploser. C'est le <strong>Ridge</strong>. Stable, mais il garde toutes les variables.</li>
+<li><strong>Remède 2 — choisir peu de variables</strong> : pénaliser le <em>nombre</em> de variables, $\norm\beta_0$. Ce sont les critères <strong>Cp, AIC, BIC</strong>. Très bien en théorie, mais il faut essayer les $2^p$ sous-ensembles : impossible dès que $p$ dépasse quelques dizaines.</li>
+<li><strong>Le pari de la parcimonie</strong> : on suppose que seules $s \ll n$ variables comptent. Si un « oracle » nous les donnait, l'erreur serait $\sigma^2 s/n$, quel que soit $p$.</li>
+<li><strong>Remède 3 — le Lasso</strong> : pénaliser $\norm\beta_1 = \sum_j\abs{\beta_j}$. Comme le Ridge, c'est un problème convexe (donc calculable) ; comme $\ell_0$, il met des coefficients <em>exactement</em> à zéro (donc il sélectionne). Le reste du cours étudie cet estimateur.</li>
+</ol>
+
+<h3 id="conventions">Conventions de notation</h3>
+<div class="box methode"><div class="box-h">Conventions utilisées dans cette page</div>
+<ul>
+<li>$n$ = nombre d'observations (d'individus), $p$ = nombre de variables explicatives.</li>
+<li>Tous les vecteurs sont des <strong>colonnes</strong>, sauf $x_i$ (la ligne $i$ de $X$), qui est un vecteur <strong>ligne</strong> comme dans les diapos. La colonne $j$ de $X$ est notée $X_j\in\R^n$ (les diapos écrivent $X^j$ en Cours1 et $X_j$ ensuite : c'est la même chose).</li>
+<li>$\norm{u}$ est la norme euclidienne : $\norm u^2 = \sum_i u_i^2 = u\T u$. Les diapos utilisent aussi la norme « moyenne » $\norm{u}_n^2 = \frac1n\norm u^2 = \frac1n\sum_{i=1}^n u_i^2$.</li>
+<li>$\E$ désigne l'espérance par rapport au bruit $\eps$ seulement : $X$ est fixée (voir §1).</li>
+</ul>
+<p><strong>Attention aux facteurs.</strong> Multiplier un critère par une constante positive (par exemple $\frac1n$) ne change pas l'endroit où il est minimal. Mais dès qu'il y a une pénalité, le facteur se reporte sur $\lambda$ : minimiser $\frac1n\norm{Y-X\beta}^2 + \lambda\norm\beta^2$ revient à minimiser $\norm{Y-X\beta}^2 + (n\lambda)\norm\beta^2$. Les diapos passent d'une convention à l'autre ; à chaque fois que cela change une formule, c'est signalé.</p>
+</div>
+
+<h2 id="modele">1. Le modèle linéaire <span class="ref">Cours1 · diapos 3–5</span></h2>
+<p class="tldr">On suppose que chaque réponse $y_i$ est une combinaison linéaire inconnue des $p$ variables mesurées sur l'individu $i$, plus un bruit gaussien.</p>
+
+<h3 id="modele-symboles">Décoder chaque symbole</h3>
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours1 · diapo 3</span></div>
+<p>On dispose d'un $n$-échantillon $(x_1,y_1),\dots,(x_n,y_n)$ tel que
+$$y_i = x_i\bstar + \eps_i,\qquad i=1,\dots,n,$$
+où les $\eps_i$ sont des variables aléatoires mutuellement indépendantes de loi normale $\N(0,\sigma^2)$, avec $\sigma$ connu ; $x_i = (x_{i,1},\dots,x_{i,p})$ est un vecteur de covariables $p$-dimensionnel, supposé déterministe ; $\bstar\in\R^p$ est le vecteur inconnu des paramètres de régression.</p>
+</div>
+<p>Lisons cette phrase lentement, objet par objet.</p>
+<div class="table-wrap"><table>
+<tr><th>Symbole</th><th>Ce que c'est</th><th>Taille</th><th>Connu ?</th></tr>
+<tr><td>$y_i$</td><td>la réponse mesurée sur l'individu $i$ (ex. : les ventes de la semaine $i$)</td><td>un nombre</td><td>observé</td></tr>
+<tr><td>$x_i = (x_{i,1},\dots,x_{i,p})$</td><td>les $p$ variables explicatives (« covariables ») mesurées sur l'individu $i$</td><td>vecteur ligne $1\times p$</td><td>observé</td></tr>
+<tr><td>$\bstar = (\bstar_1,\dots,\bstar_p)\T$</td><td>les « vrais » coefficients : $\bstar_j$ dit de combien $y$ bouge quand la variable $j$ augmente de 1</td><td>vecteur colonne $p\times1$</td><td><strong>inconnu</strong> : c'est ce qu'on cherche</td></tr>
+<tr><td>$x_i\bstar$</td><td>produit ligne × colonne : $x_i\bstar=\sum_{j=1}^p x_{i,j}\bstar_j$, la partie « expliquée » de $y_i$</td><td>un nombre</td><td>inconnu</td></tr>
+<tr><td>$\eps_i$</td><td>le bruit : tout ce que les variables n'expliquent pas (erreurs de mesure, facteurs oubliés)</td><td>un nombre aléatoire</td><td>inconnu</td></tr>
+<tr><td>$\sigma^2$</td><td>la variance du bruit : la taille typique de $\eps_i$ est $\sigma$</td><td>un nombre $>0$</td><td>supposé connu</td></tr>
+</table></div>
+
+<div class="box intu"><div class="box-h">Pourquoi ces hypothèses ?</div>
+<ul>
+<li><strong>Bruit gaussien et indépendant</strong> : cela permet de calculer exactement les lois de toutes les quantités (une combinaison linéaire de gaussiennes indépendantes est gaussienne). Beaucoup de résultats restent vrais avec un bruit seulement « pas trop lourd ».</li>
+<li><strong>$\sigma$ connu</strong> : irréaliste, mais cela simplifie les énoncés (par exemple, les pénalités de Cp et BIC contiennent $\sigma^2$). En pratique on l'estime.</li>
+<li><strong>$X$ déterministe</strong> : on raisonne « à design fixé » ; tout l'aléa vient du bruit. Donc dans toute la page, <strong>$\E$ porte sur $\eps$ seulement</strong>, et $X$ se comporte comme une constante dans les calculs d'espérance.</li>
+</ul>
+</div>
+
+<h3 id="modele-matrice">La forme matricielle</h3>
+<p>Écrire $n$ équations à la main est pénible ; on les empile. On range les $n$ réponses dans un vecteur $Y\in\R^n$, les $n$ bruits dans $\eps\in\R^n$, et les $n$ lignes $x_i$ les unes sous les autres dans une matrice $X$ à $n$ lignes et $p$ colonnes :</p>
+$$X=\begin{pmatrix}x_{1,1}&\cdots&x_{1,p}\\ \vdots&\ddots&\vdots\\ x_{n,1}&\cdots&x_{n,p}\end{pmatrix}=\begin{pmatrix}x_1\\ \vdots\\ x_n\end{pmatrix}=\begin{pmatrix}X_1&\cdots&X_p\end{pmatrix},\qquad Y=\begin{pmatrix}y_1\\ \vdots\\ y_n\end{pmatrix},\quad \eps=\begin{pmatrix}\eps_1\\ \vdots\\ \eps_n\end{pmatrix}.$$
+<p>La même matrice se lit de deux façons : <strong>par lignes</strong> (une ligne = un individu) ou <strong>par colonnes</strong> (une colonne $X_j\in\R^n$ = une variable, mesurée sur les $n$ individus). Les $n$ équations deviennent une seule :</p>
+$$Y = X\bstar+\eps = \sum_{j=1}^p \bstar_j X_j + \eps .$$
+<p>On appelle $X$ la <em class="new">matrice de design</em> (ou matrice des données), les $X_j$ les <em class="new">variables explicatives</em>, $Y$ la <em class="new">réponse</em>.</p>
+
+<div class="box reflexe"><div class="box-h">Réflexe — $X\beta$ est une combinaison des colonnes</div>
+<p>Quand vous voyez $X\beta$, lisez « $\beta_1$ fois la colonne 1, plus $\beta_2$ fois la colonne 2, … » : $X\beta=\sum_j\beta_jX_j$. Donc l'ensemble de tout ce que le modèle peut produire, $\{X\beta:\beta\in\R^p\}$, est le sous-espace de $\R^n$ engendré par les colonnes : l'<strong>image</strong> de $X$, notée $\Ima(X)$. Sa dimension est le <strong>rang</strong> de $X$ (<a href="00_rappels.html#rang-noyau">rappel</a>). Cette lecture géométrique sert dans toute la séance.</p>
+</div>
+
+<div class="box exemple"><div class="box-h">Exemple chiffré (il resservira)</div>
+<p>Un magasin observe ses ventes $y_i$ (en k€) pendant $n=4$ semaines, avec un budget publicitaire $a_i\in\{0,1,2,3\}$ (en k€). On modélise $y_i=\bstar_1+\bstar_2a_i+\eps_i$ : une vente « de base » plus un effet de la publicité. C'est un modèle linéaire avec $p=2$, en prenant comme première variable la constante 1 :</p>
+$$X=\begin{pmatrix}1&0\\1&1\\1&2\\1&3\end{pmatrix},\qquad Y=\begin{pmatrix}1\\3\\4\\6\end{pmatrix},\qquad X\beta=\beta_1\begin{pmatrix}1\\1\\1\\1\end{pmatrix}+\beta_2\begin{pmatrix}0\\1\\2\\3\end{pmatrix}.$$
+<p>Ici $\bstar_1$ = ventes sans publicité, $\bstar_2$ = gain de ventes par k€ de publicité.</p>
+</div>
+
+<h3 id="grande-dimension">« Grande dimension » : $p \ge n$</h3>
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours1 · diapo 5</span></div>
+<p>$\bstar_j$ traduit l'influence de la variable $X^j$ sur $Y$. La grande dimension : $p=p(n)\ge n$. Objectifs : estimation de $\bstar$, estimation de $X\bstar$.</p>
+</div>
+<p>« Grande dimension » veut dire : <strong>au moins autant de variables que d'observations</strong>. Ce n'est pas exotique :</p>
+<ul>
+<li>génomique : $n=100$ patients, $p=20\,000$ gènes mesurés par patient ;</li>
+<li>texte : $n=5\,000$ documents, $p=50\,000$ mots du vocabulaire ;</li>
+<li>marketing : quelques centaines de clients, des milliers d'indicateurs de comportement.</li>
+</ul>
+<p>L'écriture $p=p(n)$ signale que, dans les théorèmes asymptotiques, $p$ a le droit de grandir avec $n$ (par exemple $p=n^2$).</p>
+
+<h3 id="objectifs-estimation">Deux objectifs : estimer $\bstar$ ou estimer $X\bstar$</h3>
+<p>Ces deux objectifs se ressemblent mais <strong>ne sont pas les mêmes</strong> :</p>
+<ul>
+<li><strong>Estimer $\bstar$</strong> (« estimation ») : savoir combien pèse chaque variable. Utile pour <em>comprendre</em>.</li>
+<li><strong>Estimer $X\bstar$</strong> (« prédiction ») : connaître la réponse moyenne sans bruit aux points observés, $X\bstar = \E[Y]$. Utile pour <em>prédire</em>.</li>
+</ul>
+<div class="box exemple"><div class="box-h">Exemple : on peut réussir la prédiction et rater l'estimation</div>
+<p>Supposez que l'on ait mesuré deux fois la même variable : $X_2=X_1$. Alors $\bstar=(1,0)$ et $\bstar=(0,1)$ donnent exactement le même $X\bstar=X_1$. Aucune donnée ne peut dire lequel est le vrai : $\bstar$ est impossible à estimer, mais $X\bstar$ l'est parfaitement bien. On verra au §4 que c'est exactement ce qui se passe, en pire, quand $p>n$.</p>
+</div>
+<p>Un troisième objectif apparaîtra aux §7 et §9 : retrouver <em>quelles</em> variables comptent (la « sélection »).</p>
+
+<h2 id="mco">2. Les moindres carrés <span class="ref">Cours1 · diapo 6</span></h2>
+<p class="tldr">Les moindres carrés choisissent le $\beta$ dont les prédictions $X\beta$ sont les plus proches des observations $Y$ ; géométriquement, $X\hb$ est la projection orthogonale de $Y$ sur l'espace engendré par les colonnes de $X$.</p>
+
+<h3 id="mco-critere">Le critère</h3>
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours1 · diapo 6</span></div>
+<p>Estimateur des moindres carrés (EMC) :
+$$\hb\MC\in\argmin_{\beta\in\R^p}\frac1n\sum_{i=1}^n(y_i-x_i\beta)^2=\argmin_{\beta\in\R^p}\norm{Y-X\beta}_n^2 .$$
+<strong>Théorème.</strong> Si $X\T X$ est inversible, l'EMC est unique et s'écrit $\hb\MC=(X\T X)^{-1}X\T Y$.</p>
+</div>
+<p>Pour un $\beta$ candidat, $y_i - x_i\beta$ est le <em class="new">résidu</em> de l'individu $i$ : l'écart entre ce qu'on a observé et ce que $\beta$ prédit. On additionne les carrés des résidus et on cherche le $\beta$ qui rend cette somme la plus petite.</p>
+<ul>
+<li><strong>Pourquoi des carrés ?</strong> Ils rendent tous les écarts positifs, pénalisent fortement les gros écarts, et surtout donnent une fonction dérivable dont le minimum se calcule par une équation <em>linéaire</em>. De plus, sous bruit gaussien, c'est exactement l'estimateur du maximum de vraisemblance (<a href="00_rappels.html#vraisemblance">rappel</a>).</li>
+<li><strong>Pourquoi « $\in\argmin$ » et pas « $=$ » ?</strong> L'$\argmin$ est l'<em>ensemble</em> des points où le minimum est atteint. Il peut contenir plusieurs points (on verra quand) ; « $\hb\in\argmin$ » veut dire « $\hb$ est l'un d'eux ».</li>
+<li><strong>Le facteur $\frac1n$</strong> ne change rien à l'$\argmin$ (diviser une fonction par $n$ ne déplace pas son minimum) ; il sert seulement à avoir une erreur « moyenne par individu ».</li>
+</ul>
+
+<h3 id="mco-geometrie">Lecture géométrique : une projection</h3>
+<p>Quand $\beta$ parcourt $\R^p$, le vecteur $X\beta$ parcourt $\Ima(X)$, le sous-espace engendré par les colonnes (réflexe du §1). Minimiser $\norm{Y-X\beta}$, c'est donc chercher <strong>le point de $\Ima(X)$ le plus proche de $Y$</strong>. Ce point est la <strong>projection orthogonale</strong> de $Y$ sur $\Ima(X)$ (<a href="00_rappels.html#projection">rappel</a>) : le résidu $Y-X\hb$ est perpendiculaire au sous-espace.</p>
+<figure class="fig">
+<svg viewBox="0 0 560 300" role="img" aria-label="Projection de Y sur l'image de X">
+  <path d="M40 240 L380 240 L520 150 L180 150 Z" class="ln cm thin am"/>
+  <text x="350" y="172" class="tx">Im(X) = { Xβ : β ∈ ℝᵖ }</text>
+  <line x1="150" y1="205" x2="330" y2="40" class="ln ck"/>
+  <circle cx="150" cy="205" r="3" class="fk"/>
+  <text x="128" y="222" class="tx">0</text>
+  <circle cx="330" cy="40" r="5" class="fk"/>
+  <text x="340" y="38" class="tx-b">Y (observé)</text>
+  <line x1="150" y1="205" x2="330" y2="190" class="ln c1"/>
+  <circle cx="330" cy="190" r="5" class="f1"/>
+  <text x="338" y="208" class="tx-b">Xβ<tspan dx="-7" dy="-2">ˆ</tspan><tspan dx="1" dy="2"> = projection de Y</tspan></text>
+  <line x1="330" y1="40" x2="330" y2="190" class="ln c2 dash"/>
+  <text x="340" y="120" class="tx">résidu Y − Xβ<tspan dx="-7" dy="-2">ˆ</tspan></text>
+  <path d="M330 178 L342 177 L342 189" class="ln cm thin"/>
+  <circle cx="230" cy="215" r="4" class="fm"/>
+  <text x="200" y="232" class="tx">un autre Xβ</text>
+  <line x1="330" y1="40" x2="230" y2="215" class="ln cm thin dash"/>
+</svg>
+<figcaption>Le meilleur ajustement $X\hb$ est le pied de la perpendiculaire abaissée de $Y$ sur le plan $\Ima(X)$. Tout autre point $X\beta$ du plan est plus loin de $Y$ (Pythagore). Le résidu $Y-X\hb$ est orthogonal à tout le plan, donc à chaque colonne $X_j$.</figcaption>
+</figure>
+<p>La condition « le résidu est orthogonal à chaque colonne » s'écrit $X_j\T(Y-X\hb)=0$ pour tout $j$, c'est-à-dire, en empilant les $p$ conditions, $X\T(Y-X\hb)=0$. C'est exactement l'équation qu'on va retrouver par le calcul.</p>
+
+<h3 id="equations-normales">Les équations normales, pas à pas</h3>
+<p>Travaillons sans le facteur $\frac1n$ (il ne change pas l'$\argmin$). On veut minimiser $C(\beta)=\norm{Y-X\beta}^2$.</p>
+<ol class="steps">
+<li>$$C(\beta)=(Y-X\beta)\T(Y-X\beta)$$<span class="why">la norme au carré d'un vecteur $u$ est $u\T u$.</span></li>
+<li>$$=Y\T Y-Y\T X\beta-\beta\T X\T Y+\beta\T X\T X\beta$$<span class="why">on développe comme $(a-b)(a-b)$, en utilisant $(X\beta)\T=\beta\T X\T$ (la transposée d'un produit inverse l'ordre).</span></li>
+<li>$$=Y\T Y-2\beta\T X\T Y+\beta\T (X\T X)\beta$$<span class="why">$Y\T X\beta$ est un nombre ($1\times1$), donc égal à sa transposée $\beta\T X\T Y$ : les deux termes du milieu sont égaux.</span></li>
+<li>$$\nabla C(\beta)=-2X\T Y+2X\T X\beta=-2X\T(Y-X\beta)$$<span class="why">formules de gradient (<a href="00_rappels.html#gradient">rappel</a>) : $\nabla(a\T\beta)=a$ avec $a=X\T Y$, et $\nabla(\beta\T A\beta)=2A\beta$ pour $A=X\T X$ symétrique ; $Y\T Y$ ne dépend pas de $\beta$.</span></li>
+<li>$$\nabla C(\hb)=0\iff \boxed{X\T X\,\hb=X\T Y}$$<span class="why">en un minimum d'une fonction dérivable, le gradient s'annule. Ce système de $p$ équations à $p$ inconnues s'appelle les <strong>équations normales</strong> (« normales » = orthogonales : c'est la condition géométrique ci-dessus).</span></li>
+<li>$$\text{tout } \hb \text{ solution est un minimum global}$$<span class="why">$C$ est convexe : sa hessienne $2X\T X$ vérifie $v\T(2X\T X)v=2\norm{Xv}^2\ge0$ pour tout $v$. Pour une fonction convexe, gradient nul ⇔ minimum global (<a href="00_rappels.html#convexite">rappel</a>).</span></li>
+<li>$$\text{si } X\T X \text{ est inversible : } \hb\MC=(X\T X)^{-1}X\T Y$$<span class="why">on multiplie les équations normales à gauche par $(X\T X)^{-1}$.</span></li>
+</ol>
+<div class="box exemple"><div class="box-h">Vérification en dimension 1</div>
+<p>Avec une seule variable ($p=1$), $C(\beta)=\sum_i(y_i-x_i\beta)^2$ est un polynôme de degré 2 en $\beta$. Sa dérivée $-2\sum_ix_i(y_i-x_i\beta)$ s'annule pour $\hb=\dfrac{\sum_ix_iy_i}{\sum_ix_i^2}$ : c'est bien $(X\T X)^{-1}X\T Y$ avec $X\T X=\sum x_i^2$ et $X\T Y=\sum x_iy_i$.</p>
+</div>
+
+<h3 id="mco-unicite">Quand la solution est-elle unique ?</h3>
+<p>Les équations normales ont une solution unique exactement quand la matrice carrée $X\T X$ ($p\times p$) est inversible. Quand est-ce le cas ?</p>
+<div class="box thm"><div class="box-h">Proposition — inversibilité de $X\T X$</div>
+<p>$\Ker(X\T X)=\Ker(X)$, où $\Ker A=\{v:Av=0\}$ désigne le noyau d'une matrice $A$. Par conséquent : $X\T X$ inversible $\iff$ $\Ker X=\{0\}$ $\iff$ les colonnes $X_1,\dots,X_p$ sont linéairement indépendantes $\iff$ $\rg X=p$. En particulier, c'est <strong>impossible si $p>n$</strong> (car $\rg X\le n$).</p>
+</div>
+<details class="fold proof"><summary>Preuve détaillée</summary><div class="fold-body">
+<ol class="steps">
+<li>$$Xv=0\ \Rightarrow\ X\T Xv=X\T 0=0$$<span class="why">donc $\Ker X\subset\Ker(X\T X)$.</span></li>
+<li>$$X\T Xv=0\ \Rightarrow\ v\T X\T Xv=0\ \Rightarrow\ \norm{Xv}^2=0\ \Rightarrow\ Xv=0$$<span class="why">on multiplie à gauche par $v\T$ ; $v\T X\T Xv=(Xv)\T(Xv)=\norm{Xv}^2$ ; un vecteur de norme nulle est nul. Donc $\Ker(X\T X)\subset\Ker X$.</span></li>
+<li>$$X\T X \text{ inversible}\iff \Ker(X\T X)=\{0\}\iff\Ker X=\{0\}$$<span class="why">une matrice carrée est inversible si et seulement si son noyau est réduit à 0.</span></li>
+<li>$$\Ker X=\{0\}\iff \Big(\textstyle\sum_j v_jX_j=0\Rightarrow v=0\Big)\iff \rg X=p$$<span class="why">$Xv=\sum_jv_jX_j$ : noyau trivial = colonnes indépendantes ; et par le théorème du rang, $\rg X=p-\dim\Ker X$.</span></li>
+<li>$$\rg X\le\min(n,p)$$<span class="why">les $p$ colonnes vivent dans $\R^n$, on ne peut pas en avoir plus de $n$ indépendantes. Si $p>n$, $\rg X\le n<p$.</span></li>
+</ol>
+</div></details>
+<p>Et si $X\T X$ n'est pas inversible ? Les équations normales ont alors une <strong>infinité</strong> de solutions : si $\hb$ en est une et $v\in\Ker X$, alors $\hb+v$ aussi (car $X(\hb+v)=X\hb$). Mais toutes ces solutions donnent <strong>le même vecteur de prédictions $X\hb$</strong> : la projection de $Y$ sur $\Ima(X)$, qui, elle, est unique. C'est pour cela que la diapo écrit « $\hb\MC\in\argmin$ ».</p>
+
+<h3 id="mco-exemple">Un exemple à la main</h3>
+<div class="box exemple"><div class="box-h">Exemple chiffré — le magasin (suite)</div>
+<p>Avec $X$ et $Y$ du §1 :</p>
+$$X\T X=\begin{pmatrix}1&1&1&1\\0&1&2&3\end{pmatrix}\begin{pmatrix}1&0\\1&1\\1&2\\1&3\end{pmatrix}=\begin{pmatrix}4&6\\6&14\end{pmatrix},\qquad X\T Y=\begin{pmatrix}1+3+4+6\\0+3+8+18\end{pmatrix}=\begin{pmatrix}14\\29\end{pmatrix}.$$
+<p>Le déterminant vaut $4\cdot14-6\cdot6=20\ne0$, donc $X\T X$ est inversible et (inverse d'une matrice $2\times2$ : on échange la diagonale, on change le signe du reste, on divise par le déterminant)</p>
+$$\hb\MC=\frac1{20}\begin{pmatrix}14&-6\\-6&4\end{pmatrix}\begin{pmatrix}14\\29\end{pmatrix}=\frac1{20}\begin{pmatrix}196-174\\-84+116\end{pmatrix}=\begin{pmatrix}1{,}1\\1{,}6\end{pmatrix}.$$
+<p>Prédictions $X\hb=(1{,}1;\ 2{,}7;\ 4{,}3;\ 5{,}9)$, résidus $Y-X\hb=(-0{,}1;\ 0{,}3;\ -0{,}3;\ 0{,}1)$. <strong>Vérifions l'orthogonalité</strong> : avec la colonne de 1, $-0{,}1+0{,}3-0{,}3+0{,}1=0$ ✓ ; avec la colonne $(0,1,2,3)$, $0+0{,}3-0{,}6+0{,}3=0$ ✓. Interprétation : sans publicité on vend environ 1,1 k€, et chaque k€ de publicité rapporte environ 1,6 k€.</p>
+</div>
+<div class="quiz"><p>Si l'on multiplie toutes les réponses $y_i$ par 2, que devient $\hb\MC$ ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body"><p>Il est multiplié par 2 : $\hb\MC=(X\T X)^{-1}X\T Y$ est <strong>linéaire</strong> en $Y$. C'est une propriété très utile : $\hb\MC$ est une matrice fixe appliquée à $Y$, donc ses moyenne et covariance se calculent directement (§4).</p></div></details></div>
+<div class="quiz"><p>Pourquoi $X\T X$ est-elle de taille $p\times p$ et pas $n\times n$ ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body"><p>$X\T$ est $p\times n$ et $X$ est $n\times p$ : le produit est $p\times p$. Son coefficient $(j,k)$ est $X_j\T X_k$, le produit scalaire de la colonne $j$ et de la colonne $k$ : $X\T X$ résume comment les <em>variables</em> se ressemblent entre elles (<a href="00_rappels.html#gram">matrice de Gram</a>).</p></div></details></div>
+
+<h2 id="erreur-prediction">3. L'erreur de prédiction des moindres carrés <span class="ref">Cours1 · diapo 7</span></h2>
+<p class="tldr">En moyenne, l'erreur de prédiction des MCO vaut $\sigma^2\times(\text{nombre de paramètres libres})/n$ : chaque paramètre « absorbe » une part $\sigma^2/n$ de bruit.</p>
+
+<h3 id="erreur-quoi">Ce que l'on mesure</h3>
+<p>L'<em class="new">erreur de prédiction</em> est
+$$\norm{X\hb\MC-X\bstar}_n^2=\frac1n\sum_{i=1}^n\big(x_i\hb\MC-x_i\bstar\big)^2 :$$
+la moyenne, sur les $n$ individus observés, de l'écart au carré entre la prédiction $x_i\hb$ et la vraie réponse moyenne $x_i\bstar$ (sans bruit). C'est un nombre <strong>aléatoire</strong> (il dépend de $\eps$ à travers $\hb$) ; on regarde sa moyenne $\E[\cdot]$ sur le bruit.</p>
+<div class="box piege"><div class="box-h">Piège</div>
+<p>Ce n'est pas l'erreur sur de nouveaux individus (de nouveaux $x$) : on prédit aux <em>mêmes</em> points $x_1,\dots,x_n$. Et on compare à $X\bstar$, pas à $Y$ : on ne demande pas de prédire le bruit, qui est imprévisible par nature.</p>
+</div>
+
+<h3 id="erreur-theoreme">Le théorème et sa preuve</h3>
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours1 · diapo 7</span></div>
+<p><strong>Théorème.</strong> Pour tout $(p,n)$, l'erreur de prédiction de l'EMC vaut
+$$\E\big[\norm{X\hb\MC-X\bstar}_n^2\big]=\sigma^2\frac{\rg(X)}{n}.$$
+L'estimateur $X\hb\MC$ de $X\bstar$ est consistant au sens $\ell_2$ quand $n\to\infty$ dès que $\rg(X)/n=o(1)$ : par exemple pour $p(n)=o(n)$, ou $p$ fixe (on a toujours $\rg X\le\min\{p,n\}$).</p>
+</div>
+<div class="box idee"><div class="box-h">Idée de la preuve</div>
+<ol>
+<li>$X\hb$ est la projection $PY$ de $Y$ sur $\Ima(X)$ ($P$ = matrice de projection).</li>
+<li>Comme $X\bstar$ est déjà dans $\Ima(X)$, la projection le laisse en place : $PY=X\bstar+P\eps$. Donc l'erreur est $X\hb-X\bstar=P\eps$ : <strong>la part du bruit qui « tient » dans $\Ima(X)$</strong>.</li>
+<li>$\E\norm{P\eps}^2=\sigma^2\tr(P)$ (astuce de la trace), et la trace d'un projecteur est la dimension de l'espace sur lequel il projette : $\rg X$.</li>
+</ol>
+</div>
+<div class="box rappel"><div class="box-h">Rappel — trace et matrice de projection</div>
+<p>La <strong>trace</strong> d'une matrice carrée est la somme de ses coefficients diagonaux. Deux propriétés suffisent ici : elle est linéaire, et $\tr(AB)=\tr(BA)$ dès que les deux produits ont un sens (<a href="00_rappels.html#trace">détails</a>). Un nombre est sa propre trace (une matrice $1\times1$).</p>
+<p>Si $X\T X$ est inversible, la matrice $P=X(X\T X)^{-1}X\T$ ($n\times n$) est la <strong>projection orthogonale</strong> sur $\Ima(X)$ : $P\T=P$, $P^2=P$, $PX=X$ (<a href="00_rappels.html#projection">détails</a>).</p>
+</div>
+<details class="fold proof"><summary>Preuve détaillée (cas $X\T X$ inversible)</summary><div class="fold-body">
+<ol class="steps">
+<li>$$X\hb\MC=X(X\T X)^{-1}X\T Y=PY$$<span class="why">formule du §2, et définition $P=X(X\T X)^{-1}X\T$.</span></li>
+<li>$$P\T=P,\qquad P^2=X(X\T X)^{-1}\underbrace{X\T X(X\T X)^{-1}}_{=I_p}X\T=P,\qquad PX=X\underbrace{(X\T X)^{-1}X\T X}_{=I_p}=X$$<span class="why">calcul direct ; pour $P\T$, on transpose en inversant l'ordre et on utilise que $(X\T X)^{-1}$ est symétrique.</span></li>
+<li>$$X\hb\MC-X\bstar=P(X\bstar+\eps)-X\bstar=PX\bstar+P\eps-X\bstar=P\eps$$<span class="why">on remplace $Y=X\bstar+\eps$, puis $PX\bstar=X\bstar$ (étape 2).</span></li>
+<li>$$\norm{P\eps}^2=\eps\T P\T P\eps=\eps\T P\eps$$<span class="why">$\norm u^2=u\T u$ avec $u=P\eps$, puis $P\T P=PP=P$.</span></li>
+<li>$$\eps\T P\eps=\tr(\eps\T P\eps)=\tr(P\eps\eps\T)$$<span class="why">un nombre est égal à sa trace ; puis $\tr(AB)=\tr(BA)$ avec $A=\eps\T$ ($1\times n$) et $B=P\eps$ ($n\times 1$).</span></li>
+<li>$$\E[\eps\T P\eps]=\tr\big(P\,\E[\eps\eps\T]\big)=\tr(P\,\sigma^2I_n)=\sigma^2\tr(P)$$<span class="why">l'espérance passe à l'intérieur de la trace et des produits par la matrice fixe $P$ (linéarité). $\E[\eps\eps\T]$ a pour coefficient $(i,k)$ $\E[\eps_i\eps_k]$, qui vaut $\sigma^2$ si $i=k$ et $0$ sinon (indépendance, moyenne nulle).</span></li>
+<li>$$\tr(P)=\tr\big(X(X\T X)^{-1}X\T\big)=\tr\big((X\T X)^{-1}X\T X\big)=\tr(I_p)=p=\rg X$$<span class="why">cyclicité de la trace (on fait passer $X$ de devant à derrière) ; ici $\rg X=p$ puisque $X\T X$ est inversible.</span></li>
+<li>$$\E\big[\norm{X\hb\MC-X\bstar}_n^2\big]=\frac1n\E\norm{P\eps}^2=\sigma^2\frac{\rg X}{n}$$<span class="why">on regroupe les étapes 3 à 7 et on divise par $n$.</span></li>
+</ol>
+<p><strong>Cas général</strong> ($X\T X$ non inversible). Soit $P$ la projection orthogonale sur $\Ima(X)$ (elle existe toujours). On a vu au §2 que $X\hb=PY$ pour n'importe quelle solution $\hb$ des équations normales, et $PX\bstar=X\bstar$ car $X\bstar\in\Ima X$. Les étapes 3 à 6 restent identiques. Pour l'étape 7 : un projecteur a des valeurs propres égales à 0 ou 1, et autant de valeurs propres 1 que la dimension de l'espace sur lequel il projette (son image), donc $\tr P=\dim\Ima(X)=\rg X$ (<a href="00_rappels.html#trace">rappel</a>).<span class="qed">∎</span></p>
+</div></details>
+
+<div class="box reflexe"><div class="box-h">Réflexe — l'astuce de la trace</div>
+<p>Quand vous voyez l'espérance d'une quantité quadratique en bruit, $\E\norm{A\eps}^2$ ou $\E[\eps\T M\eps]$, écrivez-la comme une trace : $\E[\eps\T M\eps]=\tr(M\,\E[\eps\eps\T])=\sigma^2\tr(M)$ (<a href="00_rappels.html#forme-quadratique">rappel</a>). Avec $M=A\T A$ : $\E\norm{A\eps}^2=\sigma^2\tr(A\T A)$. Cette astuce resservira au §8 et dans tout le cours.</p>
+</div>
+
+<h3 id="erreur-lecture">Lecture : chaque paramètre coûte $\sigma^2/n$</h3>
+<ul>
+<li><strong>La formule ne dépend pas de $\bstar$</strong> : les MCO sont sans biais ($\E[X\hb]=X\bstar$, car $\E[P\eps]=0$) ; toute l'erreur est de la variance.</li>
+<li><strong>$\rg X$ = nombre de directions libres.</strong> Le bruit $\eps$ est éparpillé uniformément sur les $n$ directions de $\R^n$ ; la projection en garde $\rg X$. Chaque direction gardée apporte en moyenne $\sigma^2$, d'où $\sigma^2\rg X$, puis $/n$.</li>
+<li><strong>Consistance</strong> : l'erreur tend vers 0 si et seulement si $\rg(X)/n\to0$. C'est le cas si $p$ est fixe ($\sigma^2p/n\to0$) ou si $p$ grandit moins vite que $n$.</li>
+</ul>
+<div class="box exemple"><div class="box-h">Ordres de grandeur</div>
+<p>Avec $\sigma=1$ et $n=100$ observations (et $X$ de rang plein) : $p=5$ donne une erreur moyenne $0{,}05$ ; $p=50$ donne $0{,}5$ ; $p=100$ donne $1=\sigma^2$.</p>
+<p>Le dernier cas est parlant : si $\rg X=n$, alors $\Ima(X)=\R^n$ tout entier, la projection ne fait rien, $X\hb=Y$. Le modèle <strong>passe exactement par tous les points</strong> (résidus nuls), et l'erreur de prédiction vaut $\norm{\eps}_n^2\approx\sigma^2$ : on a appris le bruit par cœur. C'est le surapprentissage à l'état pur.</p>
+</div>
+<div class="quiz"><p>$n=200$, $p=20$ (rang plein), $\sigma^2=4$. Quelle est l'erreur de prédiction moyenne des MCO ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body"><p>$\sigma^2\rg(X)/n=4\times20/200=0{,}4$.</p></div></details></div>
+
+<h2 id="limites">4. Les limites des moindres carrés <span class="ref">Cours1 · diapo 8</span></h2>
+<p class="tldr">Quand $p>n$, les données ne peuvent pas distinguer certains $\beta$ ; et même quand $p\le n$, des variables corrélées rendent $X\T X$ presque non inversible, ce qui fait exploser la variance des MCO.</p>
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours1 · diapo 8</span></div>
+<p>$\bstar$ n'est pas identifiable si $X\T X$ n'est pas inversible : lorsque les colonnes de $X$ sont liées ; pour $p>n$, $X\T X$ étant au plus de rang $n$. Conséquences : EMC pas défini de manière unique, résultats non interprétables ; estimateur en général pas consistant pour $X\bstar$ (sauf si $\rg X$ est négligeable devant $n$) ; $p$ proche de $n$ ou variables corrélées ⇒ valeurs propres de $X\T X$ proches de zéro ⇒ $X\T X$ mal conditionnée, inversion numérique instable ⇒ EMC inexploitable.</p>
+</div>
+
+<h3 id="identifiabilite">$p>n$ : $\bstar$ n'est plus identifiable</h3>
+<p>Un paramètre est <em class="new">identifiable</em> si deux valeurs différentes du paramètre donnent deux lois différentes des données. Sinon, aucune quantité de données ne pourra les départager.</p>
+<ol class="steps">
+<li>$$Y\sim\N(X\bstar,\sigma^2I_n)$$<span class="why">$Y$ est $X\bstar$ (fixe) plus un bruit gaussien : la loi de $Y$ ne dépend de $\bstar$ qu'<strong>à travers $X\bstar$</strong>.</span></li>
+<li>$$\dim\Ker X=p-\rg X\ge p-n>0\quad\text{si }p>n$$<span class="why">théorème du rang, et $\rg X\le n$.</span></li>
+<li>$$v\in\Ker X,\ v\ne0\ \Rightarrow\ X(\bstar+v)=X\bstar$$<span class="why">donc $\bstar$ et $\bstar+v$ donnent exactement la même loi des données : $\bstar$ n'est pas identifiable.</span></li>
+</ol>
+<div class="box exemple"><div class="box-h">Exemple — une variable mesurée deux fois</div>
+<p>Si la colonne 2 est une copie de la colonne 1 ($X_2=X_1$), alors $v=(1,-1,0,\dots,0)$ est dans le noyau : $Xv=X_1-X_2=0$. Les vecteurs $(3,0,\dots)$, $(0,3,\dots)$, $(1000,-997,\dots)$ prédisent tous la même chose. Un logiciel de MCO renvoie l'un d'eux (lequel dépend de sa méthode de calcul) ou un message d'erreur : impossible d'interpréter « l'effet de la variable 1 ». C'est la situation <strong>générale</strong> quand $p>n$ : il y a toujours au moins $p-n$ directions « invisibles ».</p>
+</div>
+<p>Côté calcul : $\rg(X\T X)=\rg(X)\le n<p$ (§2), donc la matrice $p\times p$ $X\T X$ n'est pas inversible, la formule $(X\T X)^{-1}X\T Y$ n'a pas de sens.</p>
+
+<h3 id="borne-inutile">La borne $\sigma^2\rg(X)/n$ devient inutile</h3>
+<p>Quand $p\ge n$, typiquement $\rg X=n$ et le théorème du §3 donne une erreur de prédiction $\sigma^2$ : elle <strong>ne diminue pas</strong> quand $n$ grandit. Les MCO interpolent les données (bruit compris) et ne sont pas consistants. Seule exception : si les colonnes sont tellement liées que $\rg X$ reste négligeable devant $n$.</p>
+
+<h3 id="conditionnement">$p$ proche de $n$ ou variables corrélées : le mauvais conditionnement</h3>
+<p>Même quand $X\T X$ est inversible, les MCO peuvent être inutilisables. Pour le voir, calculons la covariance de $\hb\MC$.</p>
+<ol class="steps">
+<li>$$\hb\MC=AY,\qquad A=(X\T X)^{-1}X\T$$<span class="why">$\hb\MC$ est une matrice fixe appliquée au vecteur aléatoire $Y$.</span></li>
+<li>$$\E[\hb\MC]=AX\bstar=(X\T X)^{-1}X\T X\bstar=\bstar$$<span class="why">$\E[Y]=X\bstar$ ; les MCO sont <strong>sans biais</strong>.</span></li>
+<li>$$\Cov(\hb\MC)=A\,\Cov(Y)\,A\T=\sigma^2AA\T=\sigma^2(X\T X)^{-1}X\T X(X\T X)^{-1}=\sigma^2(X\T X)^{-1}$$<span class="why">$\Cov(AY)=A\Cov(Y)A\T$ (<a href="00_rappels.html#esperance">rappel</a>) et $\Cov(Y)=\Cov(\eps)=\sigma^2I_n$.</span></li>
+</ol>
+<p>Diagonalisons $X\T X=\sum_{j=1}^p\mu_jv_jv_j\T$ dans une base orthonormée de vecteurs propres $v_1,\dots,v_p$, avec des valeurs propres $\mu_j>0$ (<a href="00_rappels.html#spectral">théorème spectral</a> ; elles sont toujours $\ge0$, voir §6, et ici non nulles car $X\T X$ est inversible). Alors $(X\T X)^{-1}=\sum_j\frac1{\mu_j}v_jv_j\T$, et :</p>
+$$\Var\big(v_j\T\hb\MC\big)=v_j\T\Cov(\hb\MC)v_j=\frac{\sigma^2}{\mu_j},\qquad \E\norm{\hb\MC-\bstar}^2=\tr\Cov(\hb\MC)=\sigma^2\sum_{j=1}^p\frac1{\mu_j}.$$
+<div class="box intu"><div class="box-h">Intuition — petites valeurs propres = directions mal mesurées</div>
+<p>$\mu_j=v_j\T X\T Xv_j=\norm{Xv_j}^2$ mesure « combien les données bougent » quand $\beta$ bouge dans la direction $v_j$. Si $\mu_j$ est minuscule, bouger $\beta$ dans cette direction ne change presque pas les prédictions : les données ne contiennent presque aucune information sur cette direction, et l'estimateur y est livré au bruit — variance $\sigma^2/\mu_j$, énorme.</p>
+<p><strong>Pourquoi des variables corrélées donnent une petite valeur propre</strong> : si $X_1\approx X_2$, alors avec $v=(1,-1,0,\dots)/\sqrt2$, $Xv=(X_1-X_2)/\sqrt2\approx0$, donc $\norm{Xv}^2\approx0$ : il y a une direction presque invisible. Quand $p$ se rapproche de $n$, de telles directions presque invisibles apparaissent même sans corrélation particulière.</p>
+</div>
+<div class="box exemple"><div class="box-h">Exemple chiffré — deux variables corrélées à 0,99</div>
+<p>Deux colonnes centrées et normalisées ($\norm{X_1}^2=\norm{X_2}^2=n$) de corrélation empirique $\rho$ : $X\T X=n\begin{pmatrix}1&\rho\\\rho&1\end{pmatrix}$, de valeurs propres $n(1+\rho)$ et $n(1-\rho)$ (vecteurs propres $(1,1)/\sqrt2$ et $(1,-1)/\sqrt2$). L'inverse vaut $\frac{1}{n(1-\rho^2)}\begin{pmatrix}1&-\rho\\-\rho&1\end{pmatrix}$, donc</p>
+$$\Var(\hb\MC_1)=\frac{\sigma^2}{n(1-\rho^2)}.$$
+<p>Sans corrélation ($\rho=0$) : $\sigma^2/n$. Avec $\rho=0{,}99$ : $1/(1-0{,}9801)\approx50$ fois plus. Pour $n=100$, $\sigma=1$, l'écart-type de $\hb_1$ passe de $0{,}1$ à environ $0{,}71$. Le rapport des valeurs propres (le <em class="new">conditionnement</em>) vaut $(1+\rho)/(1-\rho)=199$ : l'inversion numérique amplifie les erreurs d'arrondi d'autant.</p>
+</div>
+<div class="box piege"><div class="box-h">Piège</div>
+<p>« $X\T X$ inversible » ne suffit pas pour que les MCO soient bons. Ce qui compte, c'est la <strong>plus petite valeur propre</strong> de $X\T X$ : si elle est proche de 0, la variance explose. Toute la suite du cours tourne autour de cette question (la « condition RE » de la séance 3 est une version raffinée de « la plus petite valeur propre n'est pas trop petite »).</p>
+</div>
+
+<h2 id="penalisation">5. L'idée des méthodes pénalisées <span class="ref">Cours1 · diapo 10</span></h2>
+<p class="tldr">Pour départager les nombreux $\beta$ qui ajustent presque aussi bien les données, on ajoute au critère une pénalité qui favorise les $\beta$ « simples ».</p>
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours1 · diapo 10</span></div>
+<p>$$\hb=\argmin_{\beta\in\R^p}\big\{\norm{Y-X\beta}_n^2+\mathrm{pen}(\beta,n)\big\},$$
+où l'application $\mathrm{pen}:\R^p\to\R_+$ est appelée pénalité. Le choix de la pénalité dépend de l'objectif ; bien choisie, elle permet d'éviter l'inversion de $X\T X$.</p>
+</div>
+<p>Deux forces s'opposent dans ce critère :</p>
+<ul>
+<li>l'<strong>ajustement</strong> $\norm{Y-X\beta}_n^2$ veut coller aux données (il pousse vers les MCO) ;</li>
+<li>la <strong>pénalité</strong> veut un $\beta$ « simple » : petit (Ridge), ou avec peu de coordonnées non nulles ($\ell_0$, Lasso).</li>
+</ul>
+<p>La pénalité contient un paramètre $\lambda\ge0$ qui règle la balance : $\lambda=0$ redonne les MCO ; $\lambda$ très grand écrase tout vers la solution la plus simple ($\beta=0$). Entre les deux, on échange un peu d'ajustement contre beaucoup de stabilité ou de lisibilité. « Éviter l'inversion de $X\T X$ » veut dire : le problème pénalisé reste bien posé et calculable même quand $X\T X$ n'est pas inversible (pour le Ridge, on verra que sa solution est même unique et explicite).</p>
+<div class="box intu"><div class="box-h">Intuition</div>
+<p>Quand $p>n$, il y a une infinité de $\beta$ qui passent exactement par les données. Les MCO ne savent pas lesquels choisir. La pénalité est un <strong>critère de départage</strong> : « parmi ceux qui expliquent bien les données, prends le plus petit » (Ridge) ou « celui qui utilise le moins de variables » ($\ell_0$, Lasso). C'est une forme du rasoir d'Occam.</p>
+</div>
+
+<h2 id="ridge">6. L'estimateur Ridge <span class="ref">Cours1 · diapos 11–13</span></h2>
+<p class="tldr">Le Ridge ajoute $\lambda\norm\beta^2$ au critère : cela décale toutes les valeurs propres de $X\T X$ de $\lambda$, ce qui rend le problème toujours soluble et stable, au prix d'un biais vers 0.</p>
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours1 · diapo 11</span></div>
+<p>Pénalité Ridge (Hoerl et Kennard) : $\mathrm{pen}(\beta,n)=\lambda\sum_{j=1}^p\beta_j^2$, où $\lambda\ge0$ est un paramètre de lissage (qui dépend éventuellement de $n$) ; l'estimateur Ridge est
+$$\hb^R(\lambda)=\argmin_{\beta\in\R^p}\big\{\norm{Y-X\beta}_n^2+\lambda\norm\beta^2\big\}.$$
+<strong>Estimateur Ridge.</strong> $\hb^R$ est défini de manière unique, même en grande dimension $p\ge n$, lorsque $\lambda>0$. Il s'écrit $\hb^R(\lambda)=(X\T X+\lambda I_p)^{-1}X\T Y$.</p>
+</div>
+<div class="box remarque"><div class="box-h">Note sur la diapo — un facteur $n$</div>
+<p>Avec le critère écrit sur la diapo (avec $\norm\cdot_n^2=\frac1n\norm\cdot^2$), le calcul donne $(X\T X+n\lambda I_p)^{-1}X\T Y$. La formule $(X\T X+\lambda I_p)^{-1}X\T Y$ de la diapo correspond au critère <strong>non normalisé</strong> $\norm{Y-X\beta}^2+\lambda\norm\beta^2$. Ce n'est qu'un changement de nom du paramètre ($\lambda\leftrightarrow n\lambda$) ; dans cette section, on utilise le critère non normalisé pour coller à la formule de la diapo.</p>
+</div>
+
+<h3 id="ridge-formule">La formule, pas à pas</h3>
+<p>On minimise $C_\lambda(\beta)=\norm{Y-X\beta}^2+\lambda\norm\beta^2$, avec $\lambda>0$.</p>
+<ol class="steps">
+<li>$$C_\lambda(\beta)=Y\T Y-2\beta\T X\T Y+\beta\T X\T X\beta+\lambda\beta\T\beta$$<span class="why">même développement qu'au §2, plus $\norm\beta^2=\beta\T\beta$.</span></li>
+<li>$$\nabla C_\lambda(\beta)=-2X\T Y+2X\T X\beta+2\lambda\beta=-2X\T(Y-X\beta)+2\lambda\beta$$<span class="why">$\nabla(\beta\T\beta)=2\beta$.</span></li>
+<li>$$\nabla C_\lambda(\hb)=0\iff(X\T X+\lambda I_p)\,\hb=X\T Y$$<span class="why">on regroupe $X\T X\hb+\lambda\hb=(X\T X+\lambda I_p)\hb$ : des « équations normales » où $X\T X$ est remplacée par $X\T X+\lambda I_p$.</span></li>
+<li>$$\hb^R(\lambda)=(X\T X+\lambda I_p)^{-1}X\T Y$$<span class="why">la matrice $X\T X+\lambda I_p$ est inversible (prouvé juste après).</span></li>
+<li>$$\text{c'est l'unique minimiseur}$$<span class="why">la hessienne $2(X\T X+\lambda I_p)$ vérifie $v\T(\cdot)v=2\norm{Xv}^2+2\lambda\norm v^2>0$ pour $v\ne0$ : $C_\lambda$ est strictement convexe, donc a au plus un minimiseur (<a href="00_rappels.html#convexite">rappel</a>).</span></li>
+</ol>
+<p>Avec la convention de la diapo ($\frac1n$ devant l'ajustement), l'étape 2 devient $-\frac2nX\T(Y-X\beta)+2\lambda\beta$, et l'on obtient $(X\T X+n\lambda I_p)^{-1}X\T Y$.</p>
+
+<h3 id="ridge-inversible">Pourquoi ça marche toujours quand $\lambda>0$</h3>
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours1 · diapo 12</span></div>
+<p>Si les $\beta_j$ ne sont pas contraints, ils peuvent prendre de très grandes valeurs et donc avoir une grande variance. Idée : pour contrôler la variance, il faut contrôler la taille des $\beta_j$. $X\T X$ et $X\T X+\lambda I_p$ ont les mêmes vecteurs propres, mais des valeurs propres différentes : si $v_j$ est vecteur propre de $X\T X$ pour la valeur propre $\mu_j$, alors $(X\T X+\lambda I_p)v_j=X\T Xv_j+\lambda v_j=(\mu_j+\lambda)v_j$.</p>
+</div>
+<ol class="steps">
+<li>$$\mu_j=v_j\T X\T Xv_j=\norm{Xv_j}^2\ge0$$<span class="why">on prend $v_j$ vecteur propre de norme 1 : $v_j\T(X\T Xv_j)=v_j\T(\mu_jv_j)=\mu_j$. Les valeurs propres de $X\T X$ sont donc toutes positives ou nulles (et nulles exactement dans les directions de $\Ker X$).</span></li>
+<li>$$(X\T X+\lambda I_p)v_j=(\mu_j+\lambda)v_j$$<span class="why">calcul de la diapo : ajouter $\lambda I_p$ ajoute $\lambda$ à chaque valeur propre sans changer les vecteurs propres.</span></li>
+<li>$$\mu_j+\lambda\ge\lambda>0\ \Rightarrow\ X\T X+\lambda I_p\text{ inversible}$$<span class="why">une matrice symétrique est inversible si et seulement si aucune valeur propre n'est nulle. Ceci vaut <strong>même si $p>n$</strong> (où plusieurs $\mu_j$ sont nulles).</span></li>
+</ol>
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours1 · diapo 13</span></div>
+<p>Point de vue numérique : $\hb^R$ est plus stable que $\hb\MC$ ; un $\lambda$ suffisamment grand rend les valeurs propres de $X\T X+\lambda I_p$ assez grandes pour que l'inverse soit bien conditionnée. Point de vue statistique : l'estimateur Ridge est biaisé.</p>
+</div>
+<p>Le <strong>conditionnement</strong> (rapport plus grande / plus petite valeur propre) passe de $\mu_{\max}/\mu_{\min}$ à $(\mu_{\max}+\lambda)/(\mu_{\min}+\lambda)$. Exemple : $\mu_{\max}=10$, $\mu_{\min}=0{,}01$ donne $1000$ ; avec $\lambda=1$, on tombe à $11/1{,}01\approx10{,}9$.</p>
+
+<h3 id="ridge-spectral">Ce que fait Ridge, direction par direction</h3>
+<p>Voici la lecture la plus éclairante du Ridge. Plaçons-nous dans la base orthonormée des vecteurs propres $v_1,\dots,v_p$ de $X\T X$ et notons $z=X\T Y$.</p>
+<ol class="steps">
+<li>$$(X\T X+\lambda I_p)^{-1}=\sum_{j=1}^p\frac{1}{\mu_j+\lambda}\,v_jv_j\T$$<span class="why">une matrice symétrique $\sum_j a_jv_jv_j\T$ (avec $a_j\ne0$) a pour inverse $\sum_j a_j^{-1}v_jv_j\T$ : on inverse les valeurs propres.</span></li>
+<li>$$v_j\T\hb^R(\lambda)=\frac{v_j\T z}{\mu_j+\lambda}$$<span class="why">on applique l'étape 1 à $z$ et on lit la coordonnée sur $v_j$ (les $v_k$ sont orthonormés : $v_j\T v_k=0$ si $k\neq j$).</span></li>
+<li>$$v_j\T\hb\MC=\frac{v_j\T z}{\mu_j}\quad(\text{si }\mu_j>0)$$<span class="why">même calcul avec $\lambda=0$.</span></li>
+<li>$$\boxed{\,v_j\T\hb^R(\lambda)=\frac{\mu_j}{\mu_j+\lambda}\;v_j\T\hb\MC\,}$$<span class="why">on compare les étapes 2 et 3.</span></li>
+</ol>
+<div class="box intu"><div class="box-h">Intuition — un rétrécissement intelligent</div>
+<p>Le facteur $\frac{\mu_j}{\mu_j+\lambda}\in(0,1)$ dépend de la direction :</p>
+<ul>
+<li>direction <strong>bien mesurée</strong> ($\mu_j\gg\lambda$) : facteur $\approx1$, le Ridge garde le MCO ;</li>
+<li>direction <strong>mal mesurée</strong> ($\mu_j\ll\lambda$) : facteur $\approx0$, le Ridge l'écrase.</li>
+</ul>
+<p>Or ce sont précisément les directions où la variance des MCO, $\sigma^2/\mu_j$, explosait (§4). Le Ridge coupe donc le bruit là où il est le plus fort. Et dans les directions de $\Ker X$ ($\mu_j=0$), on a $v_j\T z=(Xv_j)\T Y=0$ : le Ridge met une composante nulle, au lieu de la valeur arbitraire des MCO.</p>
+</div>
+
+<h3 id="ridge-biais-variance">Biais et variance : le compromis</h3>
+<p>Rappel : pour un estimateur $\hat\theta$ de $\theta$, $\E\norm{\hat\theta-\theta}^2=\underbrace{\norm{\E\hat\theta-\theta}^2}_{\text{biais}^2}+\underbrace{\E\norm{\hat\theta-\E\hat\theta}^2}_{\text{variance}}$ (<a href="00_rappels.html#estimateur">rappel</a>). Calculons les deux termes pour le Ridge.</p>
+<ol class="steps">
+<li>$$\E\,\hb^R=(X\T X+\lambda I_p)^{-1}X\T X\bstar$$<span class="why">$\hb^R$ est linéaire en $Y$ et $\E Y=X\bstar$.</span></li>
+<li>$$\E\,\hb^R-\bstar=(X\T X+\lambda I_p)^{-1}\big(X\T X-(X\T X+\lambda I_p)\big)\bstar=-\lambda(X\T X+\lambda I_p)^{-1}\bstar$$<span class="why">on écrit $\bstar=(X\T X+\lambda I_p)^{-1}(X\T X+\lambda I_p)\bstar$ pour mettre en facteur. Ce biais est non nul dès que $\bstar\ne0$ : le Ridge est <strong>biaisé</strong> (diapo 13), il tire vers 0.</span></li>
+<li>$$\text{direction } j:\quad \text{biais}_j=-\frac{\lambda}{\mu_j+\lambda}\,\theta_j,\qquad \text{variance}_j=\sigma^2\frac{\mu_j}{(\mu_j+\lambda)^2},\qquad\theta_j=v_j\T\bstar$$<span class="why">biais : étape 2 lue sur $v_j$ (car $v_j\T(X\T X+\lambda I_p)^{-1}=\frac{1}{\mu_j+\lambda}v_j\T$). Variance : $v_j\T\hb^R=\frac{v_j\T X\T Y}{\mu_j+\lambda}=\frac{(Xv_j)\T Y}{\mu_j+\lambda}$ ; or $\Var\big((Xv_j)\T Y\big)=\sigma^2\norm{Xv_j}^2=\sigma^2\mu_j$ (variance de $a\T Y$ : $\sigma^2\norm a^2$), et une constante $c$ devant multiplie la variance par $c^2$.</span></li>
+<li>$$\E\norm{\hb^R(\lambda)-\bstar}^2=\sum_{j=1}^p\frac{\lambda^2\theta_j^2+\sigma^2\mu_j}{(\mu_j+\lambda)^2}$$<span class="why">dans une base orthonormée, le carré de la norme est la somme des carrés des coordonnées : on additionne biais$_j^2$ + variance$_j$.</span></li>
+</ol>
+<p>Quand $\lambda$ augmente, le biais grandit et la variance diminue. À $\lambda=0$ (si tous les $\mu_j>0$), on retrouve $\sigma^2\sum_j1/\mu_j$, le risque des MCO. Manipulez la figure : les directions de petite valeur propre ($\mu=0{,}1$ et $\mu=0{,}01$) font exploser la variance des MCO, et un $\lambda$ modéré divise le risque par 40.</p>
+<div class="widget" data-widget="biaisvariance"></div>
+<p class="small muted">Réglages de la figure : cinq directions de valeurs propres $\mu=(10;\,3;\,1;\,0{,}1;\,0{,}01)$, $\theta_j=1$ pour tout $j$, $\sigma^2=1$. Le point vert marque le meilleur $\lambda$.</p>
+<div class="box thm"><div class="box-h">À retenir — il existe toujours un $\lambda>0$ meilleur que les MCO</div>
+<p>La dérivée du terme $j$ par rapport à $\lambda$ vaut $\dfrac{2\mu_j(\lambda\theta_j^2-\sigma^2)}{(\mu_j+\lambda)^3}$ (exercice 10). En $\lambda=0$ elle vaut $-2\sigma^2/\mu_j^2<0$ : le risque commence par <strong>décroître</strong>. Un peu de Ridge fait donc toujours mieux que les MCO (théorème de Hoerl et Kennard, 1970 — résultat hors diapos, démontré à l'exercice 10). Le meilleur $\lambda$ dépend de $\bstar$ inconnu : en pratique, on le choisit par validation croisée (<a href="00_rappels.html#erreur-test">rappel</a>).</p>
+</div>
+<div class="box exemple"><div class="box-h">Exemple chiffré — le magasin avec $\lambda=1$</div>
+<p>$X\T X+I_2=\begin{pmatrix}5&6\\6&15\end{pmatrix}$, déterminant $75-36=39$, donc
+$$\hb^R(1)=\frac1{39}\begin{pmatrix}15&-6\\-6&5\end{pmatrix}\begin{pmatrix}14\\29\end{pmatrix}=\frac1{39}\begin{pmatrix}36\\61\end{pmatrix}\approx\begin{pmatrix}0{,}92\\1{,}56\end{pmatrix}.$$
+Comparé aux MCO $(1{,}1;\,1{,}6)$ : les deux coefficients ont diminué, la norme passe de $1{,}94$ à $1{,}82$. Aucun n'est devenu nul.</p>
+</div>
+
+<h3 id="ridge-zero">Ridge ne sélectionne pas</h3>
+<p>Dans le cas le plus simple, le <em class="new">design orthogonal</em> $X\T X=I_p$ (colonnes orthonormées, ce qui exige $p\le n$), toutes les valeurs propres valent 1 et la formule devient
+$$\hb^R(\lambda)=\frac{1}{1+\lambda}\,\hb\MC .$$
+Chaque coefficient est divisé par le même facteur : il <strong>rapetisse mais ne devient jamais exactement nul</strong> (sauf si le coefficient MCO l'était déjà, ce qui arrive avec probabilité 0). Le Ridge stabilise, mais garde toutes les variables : il ne répond pas à la question « quelles variables comptent ? ». C'est la motivation de la suite.</p>
+<div class="box reflexe"><div class="box-h">Réflexe — inverser une matrice, c'est inverser ses valeurs propres</div>
+<p>Dès qu'une formule contient $(X\T X)^{-1}$ ou $(X\T X+\lambda I)^{-1}$, passez dans la base propre : chaque direction $v_j$ est traitée séparément, avec le facteur $1/\mu_j$ ou $1/(\mu_j+\lambda)$. Petites valeurs propres = variance qui explose ; $+\lambda I$ = garde-fou.</p>
+</div>
+
+<h2 id="selection">7. Vers la sélection de variables <span class="ref">Cours1 · diapo 14</span></h2>
+<p class="tldr">Pour interpréter un modèle, on veut savoir quelles variables comptent vraiment ; trois approches classiques existent, toutes limitées quand $p$ est grand.</p>
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours1 · diapo 14</span></div>
+<p>$\bstar$ traduit le poids des variables explicatives sur la réponse. Objectif : évaluer la contribution de chaque variable et éliminer les variables non pertinentes. Méthodes : sélection de sous-ensembles (trouver le meilleur sous-ensemble $B_k$ de taille $k$ qui réduit au maximum la somme des carrés des résidus) ; seuillage (à partir d'un estimateur préliminaire, par ex. l'EMC si $p\le n$, ne garder que les variables dont le coefficient estimé dépasse un seuil) ; tests de $H_0:\beta_j=0$ contre $H_1:\beta_j\ne0$ (Student ou Fisher si le bruit est gaussien).</p>
+</div>
+<ul>
+<li><strong>Sélection de sous-ensembles</strong> (<em>subset selection</em>) : pour chaque taille $k$, on essaie tous les ensembles de $k$ variables, on fait les MCO sur chacun, on garde celui de plus petite somme des carrés des résidus. Il y a $\binom pk$ ensembles de taille $k$, et $2^p$ en tout : c'est l'approche « exhaustive ».</li>
+<li><strong>Seuillage</strong> : on calcule un premier estimateur (les MCO si $p\le n$), puis on met à zéro les coefficients plus petits qu'un seuil $\tau$ en valeur absolue. Exemple : $\hb\MC=(2{,}3;\,0{,}04;\,-1{,}1;\,0{,}2)$ avec $\tau=0{,}5$ donne $(2{,}3;\,0;\,-1{,}1;\,0)$. Simple, mais il faut un bon estimateur de départ… que l'on n'a plus quand $p>n$.</li>
+<li><strong>Tests</strong> : pour chaque $j$, on teste si $\beta_j=0$ (test de Student, <a href="00_rappels.html#tests">rappel</a>). Deux problèmes : il faut $p<n$ pour estimer la variance des coefficients ; et avec $p$ tests au niveau 5 %, on s'attend à environ $5\,\%$ de faux positifs parmi les variables inutiles (50 sur 1000 !) : c'est le problème des <em>tests multiples</em>.</li>
+</ul>
+<p>Les critères des sections suivantes formalisent la première approche : comment comparer des sous-ensembles de tailles différentes ?</p>
+
+<h2 id="l0">8. Pénalisation $\ell_0$ : Cp, AIC, BIC <span class="ref">Cours1 · diapos 15–20</span></h2>
+<p class="tldr">On ajuste chaque sous-ensemble de variables par MCO, puis on choisit celui qui minimise « erreur d'apprentissage + prix par variable » ; le bon prix se déduit de l'optimisme de l'erreur d'apprentissage.</p>
+
+<h3 id="l0-definition">Compter les variables : $\norm\beta_0$ et le support</h3>
+<div class="box def"><div class="box-h">Définition — support, indice de sparsité, « norme » $\ell_0$ <span class="ref">Cours1 · diapos 15–16</span></div>
+<p>L'<em class="new">ensemble de sparsité</em> (ou support) de $\bstar$ est $\Astar=\{j:\bstar_j\ne0\}$ : les variables qui comptent vraiment. Son cardinal $\abs{\Astar}$ (nombre d'éléments) est l'<em class="new">indice de sparsité</em>. Pour un vecteur quelconque,
+$$\norm\beta_0=\sum_{j=1}^p\ind\{\beta_j\ne0\}=\text{nombre de coordonnées non nulles de }\beta .$$</p>
+</div>
+<p>Exemple : $\beta=(0;\,3;\,0;\,-1;\,0)$ a pour support $\{2,4\}$ et $\norm\beta_0=2$. Attention, malgré la notation, $\norm\cdot_0$ n'est <strong>pas une norme</strong> : $\norm{2\beta}_0=\norm\beta_0$ au lieu de $2\norm\beta_0$.</p>
+<p>« Parcimonieux » (<em>sparse</em>) veut dire « avec beaucoup de zéros ». Objectif des critères $\ell_0$ : construire des estimateurs <strong>interprétables</strong>, qui disent clairement quelles variables sont utilisées.</p>
+
+<h3 id="l0-critere">Le critère $\ell_0$ en pratique</h3>
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours1 · diapo 16</span></div>
+<p>Soit $\hat F=\{\hb_1,\dots,\hb_D\}$ une collection d'estimateurs de taille $D$. On sélectionne dans cette collection l'estimateur qui remplit au mieux le double objectif : bonne estimation de $X\bstar$, bonne estimation des variables pertinentes $\Astar$. Pénalité de ces critères : $\mathrm{pen}(\beta,n)=\lambda_n\norm\beta_0$.</p>
+</div>
+<p>Concrètement, le critère $\norm{Y-X\beta}_n^2+\lambda_n\norm\beta_0$ se minimise en deux temps :</p>
+<ol>
+<li>pour chaque sous-ensemble $m\subset\{1,\dots,p\}$ de variables (un « modèle »), on calcule $\hb_m$ = MCO en n'utilisant que les colonnes de $m$, c'est-à-dire la sous-matrice $X_m$ (les autres coefficients valent 0) ; c'est la collection $\hat F$ ;</li>
+<li>on choisit le modèle qui minimise $\norm{Y-X\hb_m}_n^2+\lambda_n\abs m$ : erreur d'apprentissage + $\lambda_n$ par variable utilisée.</li>
+</ol>
+<p><strong>Pourquoi faut-il pénaliser ?</strong> Si $m\subset m'$, alors $\Ima(X_m)\subset\Ima(X_{m'})$ et la projection sur le plus grand espace est plus proche de $Y$ : l'erreur d'apprentissage <em>diminue toujours</em> quand on ajoute des variables. Sans pénalité, on choisirait toujours le modèle complet — le surapprentissage du §3. Toute la question est : <strong>quel prix $\lambda_n$ par variable ?</strong></p>
+
+<h3 id="cp-aic">Cp de Mallows et AIC : corriger l'optimisme</h3>
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours1 · diapos 17–18</span></div>
+<p>Sous l'hypothèse du bruit gaussien,
+$$\E\big[\norm{X\hb-X\bstar}_n^2\big]+\sigma^2=\E\big[\norm{Y-X\hb}_n^2\big]+\frac{2\sigma^2}{n}\tr(P_{\langle X\rangle}),$$
+où $P_{\langle X\rangle}$ est la projection sur $\langle X\rangle$. Minimiser l'erreur de prédiction équivaut à minimiser le membre de droite ; $\norm\beta_0$ est un estimateur de $\tr(P_{\langle X\rangle})$. L'estimateur Cp/AIC $\tilde\beta$ est tel que $\norm{Y-X\tilde\beta}_n^2+\frac{2\sigma^2\norm{\tilde\beta}_0}{n}$ approche bien l'erreur de prédiction. Dans le modèle linéaire gaussien : $\mathrm{pen}_{AIC}(\beta,n)=\mathrm{pen}_{Cp}(\beta,n)=\dfrac{2\sigma^2\norm\beta_0}{n}$.</p>
+</div>
+<div class="box remarque"><div class="box-h">Note sur la diapo</div>
+<p>Dans la version Cours2 de cette diapo, « $\E$ désigne la covariance » est une coquille : $\E$ est l'<strong>espérance</strong> sous la loi de $\eps$ (comme en Cours1). Ici $\langle X\rangle$ désigne l'espace engendré par les colonnes <em>du modèle considéré</em>, et $\hb$ les MCO sur ce modèle.</p>
+</div>
+<p>Décodons les deux membres, pour un modèle <strong>fixé</strong> $m$ ; notons $P$ la projection sur $\Ima(X_m)$, $d=\rg(X_m)=\tr(P)$ sa dimension, et $X\hb_m=PY$ ses prédictions.</p>
+<ul>
+<li><strong>À gauche</strong> : l'erreur de prédiction, plus $\sigma^2$. Pourquoi « $+\sigma^2$ » ? Si l'on observait de nouvelles réponses $Y'=X\bstar+\eps'$ aux mêmes points (bruit $\eps'$ neuf, indépendant), l'erreur moyenne commise en les prédisant par $X\hb$ serait $\E\norm{Y'-X\hb}_n^2=\E\norm{X\bstar-X\hb}_n^2+\sigma^2$. Le membre de gauche est donc la vraie <strong>erreur de test</strong>.</li>
+<li><strong>À droite</strong> : l'erreur d'apprentissage $\norm{Y-X\hb}_n^2$ (calculable !) plus une correction $2\sigma^2d/n$.</li>
+</ul>
+<div class="box thm"><div class="box-h">Identité d'optimisme (modèle fixé de dimension $d$)</div>
+$$\E\norm{X\hb_m-X\bstar}_n^2+\sigma^2=\E\norm{Y-X\hb_m}_n^2+\frac{2\sigma^2d}{n}.$$
+<p>Autrement dit, <strong>l'erreur d'apprentissage sous-estime l'erreur de test de $2\sigma^2d/n$ en moyenne</strong> : elle est « optimiste », et d'autant plus que le modèle est gros.</p>
+</div>
+<div class="box idee"><div class="box-h">Idée de la preuve</div>
+<ol>
+<li>Écrire $\mu=X\bstar$ ; les deux erreurs se décomposent en « ce que le modèle ne sait pas représenter », $\norm{(I-P)\mu}^2$ (le même des deux côtés), plus un terme de bruit.</li>
+<li>Erreur d'apprentissage : le bruit restant est $(I-P)\eps$, de taille moyenne $\sigma^2(n-d)$ (le modèle a « mangé » $d$ directions de bruit).</li>
+<li>Erreur de prédiction : le bruit est $P\eps$, de taille moyenne $\sigma^2d$ (§3).</li>
+<li>La différence vaut $\sigma^2d-\sigma^2(n-d)=2\sigma^2d-n\sigma^2$ ; on divise par $n$.</li>
+</ol>
+</div>
+<details class="fold proof"><summary>Preuve détaillée</summary><div class="fold-body">
+<p>Notations : $\mu=X\bstar$, $P$ projection orthogonale de rang $d$, donc $I-P$ projection orthogonale de rang $n-d$ ; $P(I-P)=P-P^2=0$.</p>
+<ol class="steps">
+<li>$$Y-PY=(I-P)Y=(I-P)\mu+(I-P)\eps$$<span class="why">on remplace $Y=\mu+\eps$.</span></li>
+<li>$$\norm{Y-PY}^2=\norm{(I-P)\mu}^2+2\mu\T(I-P)\eps+\norm{(I-P)\eps}^2$$<span class="why">$\norm{a+b}^2=\norm a^2+2a\T b+\norm b^2$, avec $(I-P)\T(I-P)=I-P$.</span></li>
+<li>$$\E\norm{Y-PY}^2=\norm{(I-P)\mu}^2+\sigma^2(n-d)$$<span class="why">le terme croisé est d'espérance nulle ($\E\eps=0$, et $\mu$, $P$ sont fixes) ; astuce de la trace : $\E\norm{(I-P)\eps}^2=\sigma^2\tr(I-P)=\sigma^2(n-d)$.</span></li>
+<li>$$PY-\mu=-(I-P)\mu+P\eps$$<span class="why">$PY=P\mu+P\eps$ et $P\mu-\mu=-(I-P)\mu$.</span></li>
+<li>$$\E\norm{PY-\mu}^2=\norm{(I-P)\mu}^2+\sigma^2d$$<span class="why">même développement ; le terme croisé $-2\mu\T(I-P)P\eps$ est nul (car $(I-P)P=0$) ; $\E\norm{P\eps}^2=\sigma^2\tr P=\sigma^2d$.</span></li>
+<li>$$\E\norm{PY-\mu}^2-\E\norm{Y-PY}^2=\sigma^2d-\sigma^2(n-d)=2\sigma^2d-n\sigma^2$$<span class="why">on soustrait 5 et 3 : le terme $\norm{(I-P)\mu}^2$ disparaît.</span></li>
+<li>$$\E\norm{X\hb_m-X\bstar}_n^2+\sigma^2=\E\norm{Y-X\hb_m}_n^2+\frac{2\sigma^2d}{n}$$<span class="why">on divise par $n$ (avec $PY=X\hb_m$, $\mu=X\bstar$) et on fait passer $-\sigma^2$ à gauche.</span><span class="qed">∎</span></li>
+</ol>
+</div></details>
+<p><strong>D'où le critère.</strong> On ne connaît pas l'erreur de test, mais on connaît $\norm{Y-X\hb_m}_n^2+2\sigma^2d/n$, qui en est un estimateur <strong>sans biais</strong>. Le Cp de Mallows choisit le modèle qui le minimise. Et pour des MCO sur $d$ colonnes indépendantes, les $d$ coefficients sont non nuls (avec probabilité 1), donc $d=\norm{\hb_m}_0$ : c'est le sens de « $\norm\beta_0$ estime $\tr(P)$ ». Le prix par variable est donc $\lambda_n=2\sigma^2/n$.</p>
+<p><strong>Et AIC ?</strong> Le critère d'Akaike est $-2\times\text{log-vraisemblance}+2d$. Dans le modèle gaussien à $\sigma$ connu, la log-vraisemblance vaut $-\frac n2\log(2\pi\sigma^2)-\frac{\norm{Y-X\beta}^2}{2\sigma^2}$, donc AIC $=\frac{n}{\sigma^2}\big(\norm{Y-X\hb_m}_n^2+\frac{2\sigma^2d}{n}\big)+\text{constante}$ : même minimiseur que Cp.</p>
+<div class="widget" data-widget="optimisme"></div>
+<p class="small muted">Figure : modèles emboîtés de dimension $d=0,\dots,30$ (le terme « ce que le modèle ne sait pas représenter » décroît avec $d$). L'erreur d'apprentissage (bleu) décroît toujours ; l'erreur de test (orange) a une forme en U ; Cp/AIC (vert) la recouvre exactement <em>en moyenne</em>, c'est le contenu de l'identité. Changez $n$ : plus $n$ est grand, plus le prix $2\sigma^2/n$ d'une variable est faible et plus le modèle choisi est gros.</p>
+<div class="box piege"><div class="box-h">Piège — modèle fixé contre modèle choisi</div>
+<p>L'identité vaut pour un modèle $m$ <strong>choisi avant de voir les données</strong>. Quand on choisit $m$ parmi beaucoup de candidats en regardant les données, le modèle retenu est justement celui qui a eu « de la chance » avec le bruit, et son erreur d'apprentissage est encore plus optimiste. C'est une des raisons pour lesquelles les critères $\ell_0$ se comportent mal quand le nombre de modèles comparés est énorme.</p>
+</div>
+
+<h3 id="bic">BIC : une pénalité plus forte</h3>
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours1 · diapo 19</span></div>
+<p>Plus approprié pour l'estimation de $\Astar$ car il surpénalise les gros modèles :
+$$\mathrm{pen}_{BIC}(\beta,n)=\sigma^2\log(n)\frac{\norm\beta_0}{n}.$$
+Tend à sélectionner des estimateurs plus parcimonieux que Cp et AIC (dès que $n>7$).</p>
+</div>
+<p>Comparons les prix par variable : AIC $2\sigma^2/n$, BIC $\sigma^2\log(n)/n$. BIC est plus sévère exactement quand $\log n>2$, soit $n>e^2\approx7{,}39$, c'est-à-dire $n\ge8$ : d'où « dès que $n>7$ ». Pour $n=100$, $\log n\approx4{,}6$ : une variable doit faire baisser $\norm{Y-X\hb}^2$ d'au moins $4{,}6\,\sigma^2$ (au lieu de $2\sigma^2$) pour être acceptée. (Le nom vient d'une approximation bayésienne due à Schwarz ; on n'en a pas besoin ici.)</p>
+<div class="box intu"><div class="box-h">Intuition — pourquoi AIC pour prédire et BIC pour sélectionner</div>
+<p>Supposons que le modèle courant contienne déjà toutes les vraies variables, et qu'on envisage d'ajouter une variable <strong>inutile</strong>. La baisse de $\norm{Y-X\hb}^2$ est alors la part du bruit qui tombe dans la nouvelle direction : $\sigma^2Z^2$ avec $Z\sim\N(0,1)$.</p>
+<ul>
+<li>AIC l'accepte si $\sigma^2Z^2>2\sigma^2$, i.e. $\abs Z>\sqrt2$ : probabilité $\approx0{,}157$, <strong>quel que soit $n$</strong>. AIC garde donc régulièrement des variables inutiles : il ne retrouve pas $\Astar$, même avec beaucoup de données.</li>
+<li>BIC l'accepte si $Z^2>\log n$ : probabilité $\approx0{,}048$ pour $n=50$, $0{,}032$ pour $n=100$, $0{,}0024$ pour $n=10\,000$ — elle tend vers 0. BIC finit par retrouver le bon support.</li>
+</ul>
+<p>Mais pour <em>prédire</em>, garder une variable inutile ne coûte que $\sigma^2/n$ environ (§3), alors qu'oublier une variable utile peut coûter cher. AIC, qui estime sans biais l'erreur de test, est le bon choix pour prédire ; BIC, plus prudent, pour sélectionner.</p>
+</div>
+<p>Cochez « afficher BIC » dans la figure ci-dessus : BIC choisit un modèle plus petit qu'AIC.</p>
+
+<h3 id="l0-bilan">Bilan, et talon d'Achille : $2^p$ modèles</h3>
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours1 · diapo 20</span></div>
+<p>BIC a de meilleures performances théoriques pour l'estimation du support $\Astar$ (sélection) ; Cp et AIC donnent de meilleurs résultats pour l'estimation de $X\bstar$ (prédiction). Inconvénient : complexité algorithmique trop grande dès que $D$ ou $p$ est grand. Exemples d'hypothèses sur le modèle : supposer les variables ordonnées ; considérer une famille $\hat F$ d'estimateurs sparses. Ces méthodes ont été introduites dans un cadre classique où $p\le n$.</p>
+</div>
+<p>Minimiser exactement un critère $\ell_0$, c'est comparer les $2^p$ sous-ensembles de variables :</p>
+<div class="table-wrap"><table>
+<tr><th>$p$</th><th>nombre de modèles $2^p$</th><th>temps à $10^9$ modèles par seconde</th></tr>
+<tr><td>10</td><td>$1\,024$</td><td>instantané</td></tr>
+<tr><td>30</td><td>$\approx1{,}07\times10^{9}$</td><td>1 seconde</td></tr>
+<tr><td>50</td><td>$\approx1{,}1\times10^{15}$</td><td>13 jours</td></tr>
+<tr><td>100</td><td>$\approx1{,}3\times10^{30}$</td><td>$4\times10^{13}$ années</td></tr>
+</table></div>
+<p>(Et $10^9$ ajustements par seconde est très optimiste.) Remèdes proposés par la diapo : si les variables sont <strong>ordonnées</strong> (par importance supposée), on ne compare que les $p+1$ modèles emboîtés $\varnothing,\{1\},\{1,2\},\dots$ ; ou bien on se restreint à une petite famille $\hat F$ d'estimateurs parcimonieux, calculée par une autre méthode — c'est exactement ce que fournira le chemin du Lasso.</p>
+<div class="box reflexe"><div class="box-h">Réflexe — ne jamais choisir un modèle sur l'erreur d'apprentissage seule</div>
+<p>Quand vous comparez des modèles de tailles différentes, l'erreur d'apprentissage favorise toujours le plus gros. Corrigez-la : par une pénalité (Cp/AIC : $+2\sigma^2d/n$ ; BIC : $+\sigma^2d\log(n)/n$) ou par validation croisée.</p>
+</div>
+
+<h2 id="parcimonie">9. Parcimonie et oracle <span class="ref">Cours1 · diapos 21–22</span></h2>
+<p class="tldr">On parie que seules $s\ll n$ variables comptent ; si un oracle nous les donnait, les MCO sur ces variables auraient une erreur $\sigma^2s/n$, indépendante de $p$ — c'est la cible à atteindre.</p>
+
+<h3 id="hypothese-s">L'hypothèse de parcimonie (S)</h3>
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours1 · diapo 21</span></div>
+<p>On se place en grande dimension $p>n$. Objectifs : estimation de $\bstar$ ; estimation de $X\bstar$ ; estimation du support $\Astar$ de $\bstar$. <strong>Hypothèse (S) de sparsité</strong> : il existe un entier $s$ tel que $\abs{\Astar}\le s$, et on suppose $s=o(n)$. On contrôle ainsi la sparsité du modèle : on part du principe qu'il y a peu de variables explicatives pertinentes.</p>
+</div>
+<p>Trois objectifs maintenant : <strong>prédiction</strong> ($X\bstar$), <strong>estimation</strong> ($\bstar$) et <strong>sélection</strong> ($\Astar$, les variables qui comptent). L'hypothèse (S) dit : parmi les $p$ variables (peut-être $20\,000$), seules au plus $s$ ont un effet, et $s$ est petit devant le nombre d'observations ($s/n\to0$). Par exemple, 10 gènes sur $20\,000$ influencent réellement une maladie. Notez que $p$ peut être bien plus grand que $n$ : ce qui doit être petit, c'est $s$.</p>
+
+<h3 id="oracle">L'oracle : les moindres carrés restreints</h3>
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours1 · diapo 22</span></div>
+<p>Cadre idéal : on connaît $\Astar$. L'estimateur des moindres carrés restreint aux variables de $\Astar$ est $\hb^{MCR}=(X_{\Astar}\T X_{\Astar})^{-1}X_{\Astar}\T Y$, où $X_{\Astar}$ est la restriction de $X$ aux colonnes $X_j$, $j\in\Astar$. Erreur de prédiction :
+$$\E\big[\norm{X\hb^{MCR}-X\bstar}_n^2\big]=\sigma^2\frac{\abs{\Astar}}{n}.$$
+Si (S) est satisfaite, $\hb^{MCR}$ est consistant ; son erreur ne dépend pas de la dimension $p$ mais de la dimension réelle $\abs{\Astar}$. En pratique, $\Astar$ est rarement connu : $\hb^{MCR}$ n'est pas exploitable.</p>
+</div>
+<p><strong>Preuve en une ligne.</strong> Comme $\bstar_j=0$ hors de $\Astar$, $X\bstar=X_{\Astar}\bstar_{\Astar}$ : le modèle réduit aux colonnes de $\Astar$ est exact. On applique le théorème du §3 à la matrice $X_{\Astar}$ (supposée de rang plein $\abs{\Astar}$, ce qui demande $\abs{\Astar}\le n$) : l'erreur vaut $\sigma^2\rg(X_{\Astar})/n=\sigma^2\abs{\Astar}/n\le\sigma^2s/n\to0$ sous (S).</p>
+<div class="box intu"><div class="box-h">Pourquoi « oracle »</div>
+<p>Un oracle est un personnage qui connaît ce qu'on ignore. $\hb^{MCR}$ utilise $\Astar$, inconnu : ce n'est pas un vrai estimateur, mais une <strong>référence</strong>. Il fait $\sigma^2s/n$ au lieu de $\sigma^2p/n$ pour les MCO (ou $\sigma^2$ quand $p\ge n$). La question de tout le cours devient :</p>
+<p style="text-align:center"><strong>Peut-on, sans connaître $\Astar$, faire presque aussi bien que l'oracle ?</strong></p>
+<p>On verra (séance 3) que, sous une condition sur $X$ et avec grande probabilité, le Lasso atteint $\sigma^2\,s\log(p)/n$ à une constante près : le prix de l'ignorance n'est qu'un facteur $\log p$.</p>
+</div>
+
+<h2 id="lasso">10. Le Lasso <span class="ref">Cours1 · diapo 23</span></h2>
+<p class="tldr">Le Lasso remplace le nombre de variables $\norm\beta_0$ par la somme des valeurs absolues $\norm\beta_1$ : le problème devient convexe (calculable) tout en produisant des coefficients exactement nuls (sélection).</p>
+
+<h3 id="lasso-definition">Deux définitions</h3>
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours1 · diapo 23</span></div>
+<p>LASSO (<em>Least Absolute Shrinkage and Selection Operator</em>, Tibshirani 1996) : estimateur des moindres carrés sous une contrainte de type $\ell_1$,
+$$\tilde\beta^L(t)=\argmin_{\beta\in\R^p}\norm{Y-X\beta}_n^2\quad\text{sous la contrainte}\quad\norm\beta_1\le t,\qquad t\ge0,$$
+$$\hb^L(\lambda)\in\argmin_{\beta\in\R^p}\big\{\norm{Y-X\beta}_n^2+\lambda\norm\beta_1\big\}.\qquad(1)$$
+Les estimateurs $\tilde\beta^L$ et $\hb^L$ sont équivalents point par point : pour un $t$ fixé, on peut trouver un $\lambda$ (qui dépend des données) tel que $\tilde\beta^L=\hb^L$ ; pour un $\lambda$ fixé, il existe un $t$ tel que $\tilde\beta^L=\hb^L$, à savoir $t=\sum_{j=1}^p\abs{\hb^L_j(\lambda)}$.</p>
+</div>
+<p>Avec $\norm\beta_1=\sum_{j=1}^p\abs{\beta_j}$ (par exemple $\norm{(0;\,3;\,0;\,-1)}_1=4$). Le nom dit tout : <em>shrinkage</em> (il rétrécit les coefficients, comme le Ridge) et <em>selection</em> (il en met certains exactement à 0, comme $\ell_0$).</p>
+
+<h3 id="lasso-pourquoi">Pourquoi $\ell_1$ : le meilleur des deux mondes</h3>
+<p>Comparons les trois pénalités sur une seule coordonnée : $\beta_j^2$ (Ridge), $\abs{\beta_j}$ (Lasso), $\ind\{\beta_j\ne0\}$ ($\ell_0$).</p>
+<figure class="fig">
+<svg viewBox="0 0 520 260" role="img" aria-label="Pénalités l0, l1 et l2 sur une coordonnée">
+  <line x1="50" y1="230" x2="490" y2="230" class="ax"/>
+  <line x1="270" y1="20" x2="270" y2="240" class="ax"/>
+  <line x1="160" y1="230" x2="160" y2="235" class="ax"/><text x="160" y="250" text-anchor="middle" class="tx">−1</text>
+  <line x1="380" y1="230" x2="380" y2="235" class="ax"/><text x="380" y="250" text-anchor="middle" class="tx">1</text>
+  <text x="485" y="250" text-anchor="end" class="tx">βⱼ</text>
+  <text x="258" y="126" text-anchor="end" class="tx">1</text>
+  <path d="M107.2 20.9 L112.7 34.9 L118.2 48.3 L123.8 61.3 L129.3 73.8 L134.8 85.8 L140.3 97.3 L145.8 108.4 L151.3 118.9 L156.9 129.0 L162.4 138.6 L167.9 147.8 L173.4 156.4 L178.9 164.6 L184.5 172.3 L190.0 179.5 L195.5 186.2 L201.0 192.5 L206.5 198.2 L212.1 203.5 L217.6 208.3 L223.1 212.6 L228.6 216.5 L234.1 219.8 L239.6 222.7 L245.2 225.1 L250.7 227.1 L256.2 228.5 L261.7 229.5 L267.2 229.9 L272.8 229.9 L278.3 229.5 L283.8 228.5 L289.3 227.1 L294.8 225.1 L300.4 222.7 L305.9 219.8 L311.4 216.5 L316.9 212.6 L322.4 208.3 L327.9 203.5 L333.5 198.2 L339.0 192.5 L344.5 186.2 L350.0 179.5 L355.5 172.3 L361.1 164.6 L366.6 156.4 L372.1 147.8 L377.6 138.6 L383.1 129.0 L388.7 118.9 L394.2 108.4 L399.7 97.3 L405.2 85.8 L410.7 73.8 L416.2 61.3 L421.8 48.3 L427.3 34.9 L432.8 20.9" class="ln c1"/>
+  <path d="M50 39.1 L270 230 L490 39.1" class="ln c2"/>
+  <path d="M50 134.5 L265 134.5 M275 134.5 L490 134.5" class="ln c3"/>
+  <circle cx="270" cy="134.5" r="4.5" class="ln c3" style="fill:var(--surface)"/>
+  <circle cx="270" cy="230" r="4.5" class="f3"/>
+  <text x="440" y="30" class="tx-b" style="fill:var(--s1)">βⱼ² (Ridge)</text>
+  <text x="150" y="60" class="tx-b" style="fill:var(--s2)">|βⱼ| (Lasso)</text>
+  <text x="300" y="125" class="tx-b" style="fill:var(--s3)">𝟙{βⱼ ≠ 0} (ℓ0)</text>
+</svg>
+<figcaption>Trois pénalités sur une coordonnée. $\ell_0$ (vert) a un saut en 0 : non convexe, d'où la recherche combinatoire. $\beta_j^2$ (bleu) est plate en 0 : pénaliser un petit coefficient ne coûte presque rien, donc le Ridge n'a aucune raison de le mettre exactement à 0. $\abs{\beta_j}$ (orange) est convexe <strong>et</strong> a une pointe en 0 : la pénalité garde une pente $\pm1$ jusqu'à 0, ce qui pousse les petits coefficients jusqu'à exactement 0.</figcaption>
+</figure>
+<div class="table-wrap"><table>
+<tr><th>Pénalité</th><th>Convexe (donc calculable) ?</th><th>Crée des zéros exacts (sélectionne) ?</th></tr>
+<tr><td>$\ell_0$ : $\norm\beta_0$ (Cp, AIC, BIC)</td><td>non — $2^p$ modèles</td><td>oui</td></tr>
+<tr><td>$\ell_2$ : $\norm\beta_2^2$ (Ridge)</td><td>oui</td><td>non</td></tr>
+<tr><td>$\ell_1$ : $\norm\beta_1$ (Lasso)</td><td><strong>oui</strong></td><td><strong>oui</strong></td></tr>
+</table></div>
+<p>(On verra en séance 4 que $\abs x$ est, en un sens précis, la meilleure approximation convexe de $\ind\{x\ne0\}$ sur $[-1,1]$.)</p>
+
+<h3 id="lasso-geometrie">La géométrie : pourquoi des zéros exacts</h3>
+<p>Regardons la forme contrainte avec $p=2$. Les lignes de niveau de l'ajustement $\norm{Y-X\beta}^2$ sont des ellipses centrées sur $\hb\MC$ (preuve repliée ci-dessous). Minimiser sous la contrainte $\norm\beta_1\le t$, c'est gonfler l'ellipse depuis $\hb\MC$ jusqu'à ce qu'elle touche le losange $\{\abs{\beta_1}+\abs{\beta_2}\le t\}$. Le losange a des <strong>coins sur les axes</strong> ; l'ellipse touche souvent en un coin, où une coordonnée est exactement nulle. Le disque du Ridge, lui, n'a pas de coin : le point de contact a en général deux coordonnées non nulles.</p>
+<div class="widget" data-widget="l1l2" data-gram="[[1,0],[0,1]]" data-b="[2,0.6]" data-title="Cas le plus simple (XᵀX = I) : les lignes de niveau sont des cercles"></div>
+<p class="small muted">Avec $X\T X=I_2$ et $\hb\MC=(2;\,0{,}6)$, $t=1$ : le Lasso donne $(1;\,0)$ — la deuxième coordonnée est exactement nulle — tandis que le Ridge donne environ $(0{,}96;\,0{,}29)$. Déplacez le point noir : le Lasso ne quitte le coin que lorsque $\hb\MC$ est « en face » d'un côté du losange.</p>
+<div class="widget" data-widget="l1l2"></div>
+<p class="small muted">Avec la matrice $X\T X=\begin{pmatrix}4&1{,}4\\1{,}4&1\end{pmatrix}$ (celle de la séance 6) les variables sont corrélées et les ellipses allongées. Avec $\hb\MC=(2;\,3)$, le Lasso annule $\beta_2$ alors que c'est la plus grande coordonnée MCO : avec des variables corrélées, le Lasso peut faire des choix surprenants (on y reviendra).</p>
+<details class="fold proof"><summary>Pourquoi les lignes de niveau sont des ellipses centrées en $\hb\MC$</summary><div class="fold-body">
+<p>Supposons $X\T X$ inversible et notons $\hb=\hb\MC$.</p>
+<ol class="steps">
+<li>$$Y-X\beta=(Y-X\hb)+X(\hb-\beta)$$<span class="why">on ajoute et retranche $X\hb$.</span></li>
+<li>$$\norm{Y-X\beta}^2=\norm{Y-X\hb}^2+2(Y-X\hb)\T X(\hb-\beta)+\norm{X(\hb-\beta)}^2$$<span class="why">développement du carré.</span></li>
+<li>$$(Y-X\hb)\T X=\big(X\T(Y-X\hb)\big)\T=0$$<span class="why">équations normales : le résidu est orthogonal aux colonnes.</span></li>
+<li>$$\norm{Y-X\beta}^2=\norm{Y-X\hb}^2+(\beta-\hb)\T X\T X(\beta-\hb)$$<span class="why">le terme croisé disparaît (Pythagore). Le premier terme ne dépend pas de $\beta$ ; le second est une forme quadratique définie positive centrée en $\hb$ : ses lignes de niveau sont des ellipses, d'axes les vecteurs propres de $X\T X$.</span></li>
+</ol>
+</div></details>
+
+<h3 id="lasso-equivalence">Contrainte ou pénalité : la même famille</h3>
+<p>Les deux formes (contrainte $\norm\beta_1\le t$, pénalité $\lambda\norm\beta_1$) produisent la même famille d'estimateurs, simplement paramétrée différemment (<a href="00_rappels.html#lagrange">rappel sur Lagrange</a>). Un sens se démontre en trois lignes.</p>
+<div class="box thm"><div class="box-h">Proposition — de la pénalité à la contrainte</div>
+<p>Soit $\lambda\ge0$, $\hb=\hb^L(\lambda)$ et $t=\norm{\hb}_1$. Alors $\hb$ minimise $\norm{Y-X\beta}_n^2$ sur la boule $\{\norm\beta_1\le t\}$.</p>
+</div>
+<details class="fold proof"><summary>Preuve détaillée</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\norm{Y-X\beta}_n^2+\lambda\norm\beta_1\ \ge\ \norm{Y-X\hb}_n^2+\lambda\norm{\hb}_1\quad\text{pour tout }\beta$$<span class="why">$\hb$ minimise le critère pénalisé.</span></li>
+<li>$$\norm{Y-X\beta}_n^2\ \ge\ \norm{Y-X\hb}_n^2+\lambda\big(\norm{\hb}_1-\norm\beta_1\big)$$<span class="why">on fait passer $\lambda\norm\beta_1$ à droite.</span></li>
+<li>$$\norm\beta_1\le t=\norm{\hb}_1\ \Rightarrow\ \norm{Y-X\beta}_n^2\ge\norm{Y-X\hb}_n^2$$<span class="why">si $\beta$ est dans la boule, $\norm{\hb}_1-\norm\beta_1\ge0$ et $\lambda\ge0$ : le terme ajouté est positif. Et $\hb$ est lui-même dans la boule.</span><span class="qed">∎</span></li>
+</ol>
+<p>L'autre sens (à $t$ donné, trouver $\lambda$) utilise la dualité convexe ; on l'admet. Le point important est dans la diapo : <strong>la correspondance $t\leftrightarrow\lambda$ dépend des données $Y$</strong>. On ne peut pas convertir un $\lambda$ en $t$ une fois pour toutes.</p>
+</div></details>
+<p>Deux cas extrêmes, à retenir (ils seront démontrés en séance 2) : $\lambda=0$ redonne les MCO ; $\lambda$ très grand donne $\hb^L=0$. Entre les deux, plus $\lambda$ est grand, moins il y a de variables sélectionnées en général.</p>
+<div class="box reflexe"><div class="box-h">Réflexe — choisir sa pénalité</div>
+<p>$\ell_2$ : rétrécit tout, stabilise, ne sélectionne pas. $\ell_0$ : sélectionne, mais combinatoire. $\ell_1$ : sélectionne <em>et</em> reste convexe. Quand on veut un modèle interprétable en grande dimension, on pense d'abord au Lasso.</p>
+</div>
+
+<h2 id="resume">Résumé de la séance</h2>
+<div class="box resume">
+<ol>
+<li><strong>Modèle</strong> : $Y=X\bstar+\eps$, $\eps\sim\N(0,\sigma^2I_n)$, $X$ fixe ($n\times p$). $X\beta=\sum_j\beta_jX_j$ parcourt $\Ima(X)$, de dimension $\rg X$.</li>
+<li><strong>MCO</strong> : équations normales $X\T X\hb=X\T Y$ ; si $\rg X=p$, $\hb\MC=(X\T X)^{-1}X\T Y$. Géométriquement, $X\hb=PY$ est la projection de $Y$ sur $\Ima(X)$, toujours unique.</li>
+<li><strong>Erreur de prédiction</strong> : $\E\norm{X\hb\MC-X\bstar}_n^2=\sigma^2\rg(X)/n$ (car l'erreur est $P\eps$ et $\E\norm{P\eps}^2=\sigma^2\tr P$).</li>
+<li><strong>Quand $p>n$</strong> : $\Ker X\ne\{0\}$, $\bstar$ non identifiable, $X\T X$ non inversible, MCO interpolants (erreur $\approx\sigma^2$).</li>
+<li><strong>Variables corrélées</strong> : $\Cov(\hb\MC)=\sigma^2(X\T X)^{-1}$, variance $\sigma^2/\mu_j$ dans la direction propre $j$ : explose si $\mu_j\approx0$.</li>
+<li><strong>Ridge</strong> : $(X\T X+\lambda I)^{-1}X\T Y$ (critère non normalisé) ; valeurs propres décalées de $\lambda$ ; facteur $\mu_j/(\mu_j+\lambda)$ par direction ; biaisé, plus stable, meilleur que les MCO pour un $\lambda$ bien choisi ; aucun zéro exact.</li>
+<li><strong>$\ell_0$</strong> : MCO sur chaque sous-ensemble + $\lambda_n$ par variable. Cp/AIC : $\lambda_n=2\sigma^2/n$, issu de l'identité d'optimisme (erreur de test = erreur d'apprentissage $+2\sigma^2d/n$ en moyenne). BIC : $\sigma^2\log(n)/n$, plus sévère dès $n\ge8$, adapté à la sélection.</li>
+<li><strong>Coût</strong> : $2^p$ modèles, infaisable au-delà de $p\approx40$.</li>
+<li><strong>Parcimonie (S)</strong> : $\abs{\Astar}\le s$, $s=o(n)$. Oracle (MCO sur $\Astar$) : erreur $\sigma^2\abs{\Astar}/n$, indépendante de $p$ — la cible.</li>
+<li><strong>Lasso</strong> : $\argmin\{\norm{Y-X\beta}_n^2+\lambda\norm\beta_1\}$ ⇔ MCO sous $\norm\beta_1\le t$ ($t\leftrightarrow\lambda$ dépend des données). Convexe et produit des zéros exacts (coins de la boule $\ell_1$).</li>
+</ol>
+</div>
+
+<h2 id="reflexes">Les réflexes à acquérir</h2>
+<div class="box reflexe"><div class="box-h">Huit réflexes de la séance 1</div>
+<ol>
+<li>Quand vous voyez <strong>$X\beta$</strong> → « combinaison des colonnes » ; ce que le modèle peut produire, c'est $\Ima(X)$.</li>
+<li>Pour <strong>minimiser un critère quadratique</strong> → développer, gradient $=0$, vérifier la convexité (hessienne positive).</li>
+<li>Quand vous voyez <strong>$\E\norm{A\eps}^2$ ou $\E[\eps\T M\eps]$</strong> → astuce de la trace : $\sigma^2\tr(A\T A)$, $\sigma^2\tr M$.</li>
+<li>Quand vous voyez <strong>un projecteur $P$</strong> → $P^2=P=P\T$, $\tr P=\rg P$, $I-P$ projette sur l'orthogonal, $P$ laisse fixes les vecteurs de son image.</li>
+<li>Quand il faut <strong>inverser $X\T X$</strong> → penser valeurs propres : petites valeurs propres = variance qui explose ; $+\lambda I$ décale le spectre.</li>
+<li>Quand <strong>$p>n$</strong> → il existe $v\ne0$ avec $Xv=0$ : $\bstar$ n'est pas identifiable, mais $X\bstar$ peut l'être.</li>
+<li>Quand on <strong>compare des modèles</strong> → l'erreur d'apprentissage est optimiste de $2\sigma^2d/n$ : pénaliser (Cp/AIC, BIC) ou valider.</li>
+<li>Devant <strong>une pénalité</strong> → vérifier la convention : un $\frac1n$ ou un $\frac12$ devant l'ajustement se reporte sur $\lambda$.</li>
+</ol>
+</div>
+
+<h2 id="exercices">Exercices</h2>
+<p>Cherchez d'abord seul ; ouvrez l'indice si vous bloquez plus de quelques minutes, et la solution seulement après.</p>
+
+<div class="exo"><div class="exo-h">Exercice 1 — Moindres carrés à la main <span class="lvl">★☆☆</span></div>
+<p>Soit $X=\begin{pmatrix}1&1\\1&2\\1&3\end{pmatrix}$ et $Y=\begin{pmatrix}1\\2\\2\end{pmatrix}$. (a) Calculer $X\T X$, $X\T Y$ et $\hb\MC$. (b) Calculer les résidus et vérifier qu'ils sont orthogonaux aux deux colonnes. (c) Sans calculer $P$, que vaut $\tr(P)$ ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Inverse d'une matrice $2\times2$ : $\begin{pmatrix}a&b\\c&d\end{pmatrix}^{-1}=\frac{1}{ad-bc}\begin{pmatrix}d&-b\\-c&a\end{pmatrix}$. Pour (c), utilisez la cyclicité de la trace.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) $X\T X=\begin{pmatrix}3&6\\6&14\end{pmatrix}$ (déterminant $42-36=6$), $X\T Y=\begin{pmatrix}5\\11\end{pmatrix}$, donc
+$$\hb\MC=\frac16\begin{pmatrix}14&-6\\-6&3\end{pmatrix}\begin{pmatrix}5\\11\end{pmatrix}=\frac16\begin{pmatrix}4\\3\end{pmatrix}=\begin{pmatrix}2/3\\1/2\end{pmatrix}.$$
+(b) Prédictions $(7/6;\,5/3;\,13/6)$, résidus $(-1/6;\,1/3;\,-1/6)$. Avec la colonne de 1 : $-\frac16+\frac13-\frac16=0$ ✓. Avec $(1,2,3)$ : $-\frac16+\frac23-\frac12=0$ ✓.
+(c) $\tr P=\tr\big((X\T X)^{-1}X\T X\big)=\tr I_2=2=\rg X$. (Le calcul direct donne $P=\frac16\begin{pmatrix}5&2&-1\\2&2&2\\-1&2&5\end{pmatrix}$, de trace $12/6=2$.)</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 2 — Propriétés de $X\T X$ <span class="lvl">★☆☆</span></div>
+<p>(a) Montrer que $X\T X$ est symétrique et que $v\T X\T Xv\ge0$ pour tout $v$. (b) En déduire que ses valeurs propres sont $\ge0$. (c) Montrer que $\rg(X\T X)=\rg(X)$.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>$v\T X\T Xv=(Xv)\T(Xv)$. Pour (c) : montrer $\Ker(X\T X)=\Ker X$, puis théorème du rang.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) $(X\T X)\T=X\T(X\T)\T=X\T X$. Et $v\T X\T Xv=\norm{Xv}^2\ge0$.
+(b) Si $X\T Xv=\mu v$ avec $\norm v=1$, alors $\mu=v\T X\T Xv=\norm{Xv}^2\ge0$.
+(c) On a montré au §2 que $\Ker(X\T X)=\Ker X$. Par le théorème du rang appliqué aux deux matrices (qui ont toutes deux $p$ colonnes) : $\rg(X\T X)=p-\dim\Ker(X\T X)=p-\dim\Ker X=\rg X$.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 3 — Une colonne dupliquée <span class="lvl">★★☆</span></div>
+<p>Soit $u\in\R^n$ non nul, $X=(u\ \ u)$ (deux colonnes identiques), $S=\norm u^2$ et $c=u\T Y$. (a) Écrire les équations normales et décrire l'ensemble de leurs solutions. (b) Montrer que $X\hb$ est le même pour toutes. (c) Calculer le Ridge $\hb^R(\lambda)$ (critère non normalisé). Que se passe-t-il quand $\lambda\to0$ ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>$X\T X=S\begin{pmatrix}1&1\\1&1\end{pmatrix}$. Pour le Ridge, soustrayez les deux équations.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) $X\T X=S\begin{pmatrix}1&1\\1&1\end{pmatrix}$, $X\T Y=(c,c)\T$. Les deux équations sont identiques : $S(\beta_1+\beta_2)=c$. Les solutions forment la droite $\{\beta_1+\beta_2=c/S\}$ : une infinité.
+(b) $X\beta=(\beta_1+\beta_2)u=\frac cSu$ pour toutes : c'est la projection de $Y$ sur la droite engendrée par $u$.
+(c) $(X\T X+\lambda I)\beta=X\T Y$ donne $S(\beta_1+\beta_2)+\lambda\beta_1=c$ et $S(\beta_1+\beta_2)+\lambda\beta_2=c$. En soustrayant, $\lambda(\beta_1-\beta_2)=0$, donc $\beta_1=\beta_2=b$ avec $(2S+\lambda)b=c$ : $\hb^R=\frac{c}{2S+\lambda}(1,1)$. Le Ridge partage l'effet <strong>à égalité</strong> entre les deux copies. Quand $\lambda\to0$, on obtient $\frac{c}{2S}(1,1)$ : parmi toutes les solutions MCO, celle de plus petite norme.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 4 — Le Ridge en dimension 1 et le meilleur $\lambda$ <span class="lvl">★★☆</span></div>
+<p>On suppose $p=1$ : $y_i=x_i\bstar+\eps_i$. On note $S=\sum_ix_i^2$ et $\hb(\lambda)=\argmin_\beta\big\{\sum_i(y_i-x_i\beta)^2+\lambda\beta^2\big\}$. (a) Calculer $\hb(\lambda)$, son biais, sa variance. (b) Montrer que le risque $R(\lambda)=\E(\hb(\lambda)-\bstar)^2$ est minimal en $\lambda^*=\sigma^2/{\bstar}^2$ (si $\bstar\neq0$). (c) Interpréter.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>$\hb(\lambda)=\frac{\sum x_iy_i}{S+\lambda}$ et $\Var(\sum x_iy_i)=\sigma^2S$. Dérivez $R(\lambda)=\frac{\lambda^2{\bstar}^2+\sigma^2S}{(S+\lambda)^2}$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) Dérivée nulle : $-2\sum x_i(y_i-x_i\beta)+2\lambda\beta=0$, d'où $\hb(\lambda)=\frac{\sum_ix_iy_i}{S+\lambda}$. Comme $\E\sum x_iy_i=S\bstar$ : biais $=\frac{S\bstar}{S+\lambda}-\bstar=-\frac{\lambda\bstar}{S+\lambda}$. Variance : $\frac{\sigma^2S}{(S+\lambda)^2}$.
+(b) $R(\lambda)=\frac{\lambda^2{\bstar}^2+\sigma^2S}{(S+\lambda)^2}$. En dérivant (quotient) et en simplifiant par $(S+\lambda)$ :
+$$R'(\lambda)=\frac{2\lambda{\bstar}^2(S+\lambda)-2(\lambda^2{\bstar}^2+\sigma^2S)}{(S+\lambda)^3}=\frac{2S(\lambda{\bstar}^2-\sigma^2)}{(S+\lambda)^3}.$$
+$R'<0$ pour $\lambda<\sigma^2/{\bstar}^2$ et $R'>0$ après : minimum en $\lambda^*=\sigma^2/{\bstar}^2$, où $R(\lambda^*)=\frac{\sigma^2}{S+\sigma^2/{\bstar}^2}<\frac{\sigma^2}{S}=R(0)$.
+(c) Plus le bruit est fort par rapport au signal ($\sigma^2/{\bstar}^2$ grand), plus il faut rétrécir. Mais $\lambda^*$ dépend de $\bstar$ inconnu : d'où la validation croisée en pratique.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 5 — Ridge en design orthogonal <span class="lvl">★☆☆</span></div>
+<p>(a) Si $X\T X=I_p$, montrer que $\hb^R(\lambda)=\hb\MC/(1+\lambda)$ (critère non normalisé). (b) Avec le critère normalisé de la diapo, $\norm{Y-X\beta}_n^2+\lambda\norm\beta^2$, et des colonnes normalisées orthogonales $X\T X=nI_p$, montrer qu'on obtient la même formule. (c) Un coefficient Ridge peut-il être exactement nul ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Pour (b), la formule devient $(X\T X+n\lambda I_p)^{-1}X\T Y$ et $\hb\MC=X\T Y/n$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) $(I_p+\lambda I_p)^{-1}X\T Y=\frac{1}{1+\lambda}X\T Y$ et $\hb\MC=(X\T X)^{-1}X\T Y=X\T Y$.
+(b) $(nI_p+n\lambda I_p)^{-1}X\T Y=\frac{1}{1+\lambda}\cdot\frac{X\T Y}{n}=\frac{\hb\MC}{1+\lambda}$ : les deux conventions coïncident dans ce cas, c'est un avantage de normaliser $\norm{X_j}^2=n$.
+(c) Seulement si $\hb\MC_j=0$, événement de probabilité nulle (une variable gaussienne ne prend une valeur précise qu'avec probabilité 0). Le Ridge ne sélectionne pas.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 6 — Estimer $\sigma^2$ <span class="lvl">★★☆</span></div>
+<p>(a) Montrer que $\E\norm{Y-X\hb\MC}^2=\sigma^2(n-\rg X)$. (b) En déduire un estimateur sans biais de $\sigma^2$. (c) Que se passe-t-il si $\rg X=n$ ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>$Y-X\hb=(I-P)Y$ et $(I-P)X\bstar=0$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) $Y-X\hb=(I-P)(X\bstar+\eps)=(I-P)\eps$ car $PX\bstar=X\bstar$. Astuce de la trace : $\E\norm{(I-P)\eps}^2=\sigma^2\tr(I-P)=\sigma^2(n-\rg X)$.
+(b) $\hat\sigma^2=\dfrac{\norm{Y-X\hb\MC}^2}{n-\rg X}$ vérifie $\E\hat\sigma^2=\sigma^2$. (C'est le célèbre « diviser par $n-p$ ».)
+(c) Les résidus sont tous nuls (les MCO interpolent) et la formule donne $0/0$ : on ne peut plus estimer le bruit à partir des résidus. Encore un symptôme de la grande dimension — et une raison pour laquelle on a supposé $\sigma$ connu.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 7 — AIC contre BIC sur un tableau <span class="lvl">★★☆</span></div>
+<p>On a $n=50$, $\sigma^2=1$, et cinq modèles emboîtés de dimensions $d=1,\dots,5$ dont les erreurs d'apprentissage $\norm{Y-X\hb_d}_n^2$ valent $2{,}10$ ; $1{,}30$ ; $1{,}18$ ; $1{,}12$ ; $1{,}09$. Quel modèle choisit AIC ? Et BIC ($\log50\approx3{,}912$) ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>AIC ajoute $2d/50=0{,}04\,d$ ; BIC ajoute $3{,}912\,d/50\approx0{,}0782\,d$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<div class="table-wrap"><table>
+<tr><th>$d$</th><th>apprentissage</th><th>AIC $=+0{,}04d$</th><th>BIC $=+0{,}0782d$</th></tr>
+<tr><td>1</td><td>2,10</td><td>2,14</td><td>2,178</td></tr>
+<tr><td>2</td><td>1,30</td><td>1,38</td><td>1,456</td></tr>
+<tr><td>3</td><td>1,18</td><td>1,30</td><td><strong>1,415</strong></td></tr>
+<tr><td>4</td><td>1,12</td><td><strong>1,28</strong></td><td>1,433</td></tr>
+<tr><td>5</td><td>1,09</td><td>1,29</td><td>1,481</td></tr>
+</table></div>
+<p>AIC choisit $d=4$, BIC choisit $d=3$ : BIC est plus parcimonieux. Le passage de 3 à 4 fait gagner $0{,}06$ d'erreur d'apprentissage : plus que le prix AIC ($0{,}04$), moins que le prix BIC ($0{,}078$).</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 8 — Compter les modèles <span class="lvl">★☆☆</span></div>
+<p>Avec $p=1000$ variables, combien y a-t-il de modèles d'au plus 3 variables ? Est-il raisonnable de tous les ajuster ? Et tous les modèles ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>$\binom{p}{k}=\frac{p!}{k!(p-k)!}$ modèles de taille exactement $k$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>$1+\binom{1000}1+\binom{1000}2+\binom{1000}3=1+1000+499\,500+166\,167\,000\approx1{,}67\times10^8$. Faisable (quelques minutes), mais on s'interdit tout modèle à plus de 3 variables. Tous les modèles : $2^{1000}\approx10^{301}$, totalement hors de portée. D'où le besoin d'une méthode qui ne parcourt pas les sous-ensembles : le Lasso.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 9 — Lasso en dimension 1 : contrainte contre pénalité <span class="lvl">★★☆</span></div>
+<p>Soit $b\in\R$. (a) Résoudre $\min_a(b-a)^2$ sous la contrainte $\abs a\le t$. (b) Résoudre $\min_a\{(b-a)^2+\lambda\abs a\}$ (distinguer $a>0$, $a<0$, $a=0$). (c) Pour $\abs b>\lambda/2$, quel $t$ donne la même solution ? Pourquoi dit-on que « $t$ dépend des données » ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>(a) On projette $b$ sur l'intervalle $[-t,t]$. (b) Sur $a>0$, la fonction est un polynôme du second degré de minimum en $a=b-\lambda/2$ ; ce point n'est admissible que si $b>\lambda/2$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) Le point de $[-t,t]$ le plus proche de $b$ : $a=b$ si $\abs b\le t$, sinon $a=\sgn(b)\,t$. Donc $a=\sgn(b)\min(\abs b,t)$.
+(b) Sur $a>0$ : $(b-a)^2+\lambda a$ a pour dérivée $-2(b-a)+\lambda$, nulle en $a=b-\lambda/2$, admissible si $b>\lambda/2$. Sur $a<0$ : de même $a=b+\lambda/2$, admissible si $b<-\lambda/2$. Sinon ($\abs b\le\lambda/2$), la fonction est décroissante sur $]-\infty,0]$ et croissante sur $[0,\infty[$ : minimum en $a=0$. Bilan : $a=\sgn(b)(\abs b-\lambda/2)_+$ (où $(x)_+=\max(x,0)$), le <strong>seuillage doux</strong> (au cœur de la séance 2).
+(c) Il faut $t=\abs b-\lambda/2$. Ce $t$ dépend de $b$, c'est-à-dire des données : à $\lambda$ fixé, le $t$ équivalent change d'un jeu de données à l'autre (et réciproquement).</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 10 — Un peu de Ridge bat toujours les MCO <span class="lvl">★★★</span></div>
+<p>On suppose $X\T X$ inversible, de valeurs propres $\mu_1,\dots,\mu_p>0$, et on note $\theta_j=v_j\T\bstar$. À partir de $R(\lambda)=\sum_j\frac{\lambda^2\theta_j^2+\sigma^2\mu_j}{(\mu_j+\lambda)^2}$ (§6) : (a) calculer $R'(\lambda)$ ; (b) en supposant $\bstar\neq0$, montrer que $R(\lambda)<R(0)$ pour tout $0<\lambda\le\sigma^2/\max_j\theta_j^2$.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Chaque terme est de la forme de l'exercice 4 avec $S=\mu_j$ et $\bstar=\theta_j$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) Comme à l'exercice 4, la dérivée du terme $j$ vaut $\frac{2\mu_j(\lambda\theta_j^2-\sigma^2)}{(\mu_j+\lambda)^3}$, donc $R'(\lambda)=\sum_j\frac{2\mu_j(\lambda\theta_j^2-\sigma^2)}{(\mu_j+\lambda)^3}$. En $\lambda=0$ : $R'(0)=-2\sigma^2\sum_j\mu_j^{-2}<0$.
+(b) Si $\lambda<\sigma^2/\max_j\theta_j^2$, alors $\lambda\theta_j^2<\sigma^2$ pour tout $j$ : chaque terme de $R'$ est strictement négatif, donc $R$ est strictement décroissante sur $[0,\sigma^2/\max_j\theta_j^2]$, d'où $R(\lambda)<R(0)$ sur tout cet intervalle (borne droite comprise). C'est le théorème de Hoerl et Kennard : il existe toujours un Ridge strictement meilleur que les MCO en risque quadratique — mais l'intervalle dépend de $\bstar$, inconnu.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 11 — Le modèle qui apprend par cœur <span class="lvl">★★☆</span></div>
+<p>On suppose $\rg X=n$ (par exemple $p\ge n$ avec des colonnes « génériques »). (a) Montrer que $X\hb=Y$ et que l'erreur d'apprentissage est nulle. (b) Que vaut l'erreur de prédiction moyenne ? (c) Vérifier l'identité d'optimisme du §8 dans ce cas.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Si $\rg X=n$, $\Ima(X)=\R^n$ : que vaut la projection sur $\R^n$ tout entier ?</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) $\Ima(X)$ est un sous-espace de $\R^n$ de dimension $n$ : c'est $\R^n$. La projection sur $\R^n$ est l'identité, donc $X\hb=PY=Y$ et $\norm{Y-X\hb}_n^2=0$.
+(b) $X\hb-X\bstar=Y-X\bstar=\eps$, donc $\E\norm{X\hb-X\bstar}_n^2=\E\norm\eps_n^2=\sigma^2$ (c'est aussi $\sigma^2\rg(X)/n$ avec $\rg X=n$).
+(c) Gauche : $\sigma^2+\sigma^2=2\sigma^2$. Droite : $0+2\sigma^2n/n=2\sigma^2$ ✓. Le modèle « parfait » sur les données d'apprentissage a une erreur de test deux fois celle du bruit.</p>
+</div></details></div>
+
+<h2 id="suite">Et après ?</h2>
+<p>On a défini le Lasso, mais on ne sait encore rien de lui. La <a href="02_seance2.html">séance 2</a> le regarde de près : que vaut-il pour $\lambda=0$ et $\lambda$ grand ; comment le calculer exactement quand les colonnes sont orthogonales (le <strong>seuillage doux</strong>, que vous avez déjà rencontré à l'exercice 9) ; quelles équations caractérisent sa solution en général (les <strong>conditions KKT</strong>) ; comment évolue la solution quand $\lambda$ varie (le <strong>chemin</strong>, l'algorithme LARS). Elle précise aussi ce qu'on attend d'un « bon » estimateur en grande dimension, en comparant à l'oracle $\sigma^2s/n$ de cette séance.</p>

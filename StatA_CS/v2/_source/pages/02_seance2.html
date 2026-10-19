@@ -1,0 +1,662 @@
+<!--
+title: Séance 2 — Le Lasso de près
+short: S2 · Le Lasso de près
+description: Propriétés du Lasso : cas extrêmes, lecture bayésienne, seuillage doux en design orthogonal, conditions KKT, chemin de régularisation, LARS, trois objectifs et inégalités de sparsité.
+subtitle: Cours2, diapos 25–31 : ce que fait concrètement le Lasso, comment reconnaître sa solution, et ce qu'on peut espérer prouver sur lui.
+-->
+<div class="box objectifs"><div class="box-h">À la fin de cette séance, vous saurez</div>
+<ul class="checklist">
+<li>dire ce que devient le Lasso quand $\lambda=0$ et quand $\lambda$ est grand, et calculer le seuil $\lambda_{\max}$ au-delà duquel tout est nul ;</li>
+<li>retrouver le Lasso comme estimateur bayésien (a priori de Laplace) et le Ridge comme son cousin gaussien ;</li>
+<li>résoudre <strong>à la main</strong> le Lasso en dimension 1 (trois cas) et en design orthogonal : c'est le <em>seuillage doux</em> (<em>soft thresholding</em>) ;</li>
+<li>écrire les <strong>conditions KKT</strong> du Lasso, les lire comme des conditions sur les corrélations avec le résidu, et s'en servir pour <strong>vérifier</strong> qu'un vecteur est (ou n'est pas) la solution ;</li>
+<li>expliquer pourquoi le chemin $\lambda\mapsto\hb^L(\lambda)$ est linéaire par morceaux, et l'idée de l'algorithme LARS ;</li>
+<li>distinguer prédiction, estimation et sélection, et lire une « inégalité de sparsité » en la comparant à l'oracle.</li>
+</ul></div>
+
+<h2 id="avant">Avant de commencer</h2>
+
+<h3 id="ce-quil-faut-savoir">Ce qu'il faut avoir en tête (repris de la Séance 1)</h3>
+
+<p>On observe $n$ couples $(x_i,y_i)$, où $x_i=(x_{i,1},\dots,x_{i,p})$ est une ligne de $p$ variables explicatives et $y_i$ un nombre. On les range dans une matrice et deux vecteurs :</p>
+$$Y=\begin{pmatrix}y_1\\ \vdots\\ y_n\end{pmatrix}\in\R^n,\qquad X=\begin{pmatrix}x_1\\ \vdots\\ x_n\end{pmatrix}=\big(X_1\ \cdots\ X_p\big)\in\R^{n\times p},\qquad Y=X\bstar+\eps,$$
+<p>où $X_j\in\R^n$ est la <strong>colonne</strong> $j$ (les $n$ valeurs de la variable $j$), $\bstar\in\R^p$ le vecteur inconnu des coefficients et $\eps\sim\N(0,\sigma^2I_n)$ le bruit (les $\eps_i$ sont indépendants, gaussiens, centrés, de variance $\sigma^2$). Le produit $X\beta$ est la combinaison des colonnes $X\beta=\sum_j\beta_jX_j$.</p>
+
+<div class="cols">
+<div class="box rappel"><div class="box-h">Rappel — Moindres carrés (S1)</div>
+<p>$\hb\MC$ minimise $\norm{Y-X\beta}^2$. En annulant le gradient $-2X\T(Y-X\beta)$ on obtient les équations normales $X\T X\hb\MC=X\T Y$, d'où $\hb\MC=(X\T X)^{-1}X\T Y$ quand $X\T X$ est inversible, c'est-à-dire quand les colonnes sont linéairement indépendantes (ce qui exige $p\le n$). <a href="00_rappels.html#gradient">Gradients usuels</a>.</p></div>
+<div class="box rappel"><div class="box-h">Rappel — Le Lasso (S1, diapo 23)</div>
+<p>Le Lasso ajoute aux moindres carrés une pénalité proportionnelle à la norme $\ell_1$, $\norm\beta_1=\sum_j\abs{\beta_j}$ :</p>
+$$\hb^L(\lambda)\in\argmin_{\beta\in\R^p}\Big\{\norm{Y-X\beta}_n^2+\lambda\norm\beta_1\Big\},\qquad\lambda\ge0,$$
+<p>où $\norm u_n^2=\frac1n\norm u^2$. Le « $\in$ » rappelle que le minimiseur peut ne pas être unique. Dans cette séance on retire le $\frac1n$ (voir la convention ci-dessous).</p></div>
+</div>
+
+<p>Deux outils serviront beaucoup ; si ce n'est plus frais, lisez-les d'abord :</p>
+<ul>
+<li><a href="00_rappels.html#convexite">la convexité</a> : pour une fonction convexe, tout minimum local est global, et « dérivée nulle » suffit à caractériser le minimum. Le critère du Lasso est convexe (somme d'une fonction quadratique convexe et d'une norme) ;</li>
+<li><a href="00_rappels.html#vraisemblance">la vraisemblance</a> (pour la lecture bayésienne du §1).</li>
+</ul>
+
+<h3 id="fil">Le fil de la séance</h3>
+<p>En Séance 1 on a <em>défini</em> le Lasso. Cette séance répond à trois questions, dans l'ordre :</p>
+<ol class="chain">
+<li><strong>Que fait-il ?</strong> Cas extrêmes, lecture bayésienne (diapo 25), puis un cas où tout se calcule à la main : le design orthogonal, qui fait apparaître le <em>seuillage doux</em> (diapo 26).</li>
+<li><strong>Comment reconnaître sa solution ?</strong> Dans le cas général il n'y a pas de formule, mais il y a une <em>caractérisation</em> : les conditions KKT (diapo 27). Elles expliquent la forme du chemin $\lambda\mapsto\hb^L(\lambda)$ et l'algorithme LARS (diapo 28).</li>
+<li><strong>Que peut-on espérer prouver ?</strong> On précise les trois objectifs (prédire, estimer, sélectionner) et la forme des garanties visées, les <em>inégalités de sparsité</em> (diapos 29–31). La Séance 3 démontrera l'une d'elles.</li>
+</ol>
+
+<h3 id="convention">Convention de toute la page</h3>
+<div class="box methode"><div class="box-h">Convention — critère non normalisé</div>
+<p>Comme les diapos 26–27, on travaille avec</p>
+$$F(\beta)=\norm{Y-X\beta}^2+\lambda\norm\beta_1\qquad(\text{sans le facteur }1/n).$$
+<p>C'est ce critère, et non celui de la diapo 23 (qui contient $\frac1n$), qui donne exactement les conditions KKT écrites sur la diapo 27 ; avec le $\frac1n$, on y lirait $\frac2nX_j\T(Y-X\hb)$. Avec cette convention apparaissent un <strong>facteur 2</strong> dans les conditions KKT ($2X_j\T(Y-X\hb)=\dots$) et un seuil $\lambda/2$ en design orthogonal. Si l'on prend $\frac1n\norm{Y-X\beta}^2+\lambda\norm\beta_1$ ou $\frac12\norm{Y-X\beta}^2+\lambda\norm\beta_1$, les mêmes raisonnements donnent les mêmes formules à un facteur près sur $\lambda$ (vous le referez en Séance 4 avec $\frac12$). <strong>Avant d'utiliser une formule, regardez toujours quelle normalisation elle suppose.</strong></p></div>
+
+<h2 id="proprietes">1. Premières propriétés du Lasso</h2>
+<p class="tldr">$\lambda$ règle un curseur : à $\lambda=0$ on retrouve les moindres carrés, pour $\lambda$ assez grand on obtient le vecteur nul, et entre les deux le Lasso garde d'autant moins de variables que $\lambda$ est grand.</p>
+
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours2 · diapo 25</span></div>
+<ul>
+<li>$\lambda=0\Rightarrow\hb^L=\hb\MC$ : la procédure Lasso sélectionne toutes les variables ;</li>
+<li>$\lambda\to+\infty\Rightarrow\hb^L=0_p$ : elle n'en sélectionne aucune ;</li>
+<li>entre les deux, elle sélectionne d'autant plus de variables que $\lambda$ est petit ;</li>
+<li>le Lasso s'interprète comme un estimateur bayésien : modèle à bruit gaussien et loi a priori de Laplace, de densité $\frac\lambda2\exp(-\lambda\abs{\beta_j})$, sur chaque $\bstar_j$.</li>
+</ul></div>
+
+<h3 id="extremes">Les deux extrémités du curseur</h3>
+<p><strong>$\lambda=0$.</strong> Le critère devient $\norm{Y-X\beta}^2$ : ce sont exactement les moindres carrés. Si $X\T X$ est inversible, la solution est unique, c'est $\hb\MC$, et en général aucune de ses coordonnées n'est nulle (« toutes les variables sont sélectionnées »). Si $p>n$, il y a une infinité de solutions (S1) : le Lasso à $\lambda=0$ n'est pas un estimateur bien défini.</p>
+
+<p><strong>$\lambda$ grand.</strong> Intuition : la pénalité $\lambda\norm\beta_1$ coûte de plus en plus cher, alors que l'ajustement ne peut gagner qu'une quantité bornée. En effet, en $\beta=0$ le critère vaut $F(0)=\norm Y^2$. Tout minimiseur $\hb$ vérifie donc $F(\hb)\le F(0)$, d'où</p>
+$$\lambda\norm{\hb}_1\le\norm{Y-X\hb}^2+\lambda\norm{\hb}_1\le\norm Y^2\qquad\Longrightarrow\qquad\norm{\hb}_1\le\frac{\norm Y^2}{\lambda}\xrightarrow[\lambda\to\infty]{}0.$$
+<p>Ce petit argument montre que $\hb^L(\lambda)\to0$. On verra au §3 un résultat plus fort et très utile : il existe un seuil <strong>fini</strong>, $\lambda_{\max}=2\norm{X\T Y}_\infty$, au-delà duquel $\hb^L(\lambda)$ est <strong>exactement</strong> nul.</p>
+
+<div class="box piege"><div class="box-h">Piège — « plus $\lambda$ est petit, plus il y a de variables »</div>
+<p>C'est vrai « en tendance » et c'est exact en design orthogonal (§2). Mais dans le cas général, quand $\lambda$ diminue, une variable déjà sélectionnée peut <em>ressortir</em> du modèle (son coefficient repasse par 0) : le nombre de variables actives n'est pas toujours monotone en $\lambda$. Lisez la diapo comme une description du comportement typique.</p></div>
+
+<h3 id="bayes">Lecture bayésienne : le Lasso est un « maximum a posteriori »</h3>
+<p class="tldr">Choisir le $\beta$ le plus probable a posteriori quand on croit a priori que chaque coefficient suit une loi de Laplace (pointue en 0) revient exactement à résoudre un Lasso.</p>
+
+<p><strong>Le point de vue bayésien en deux phrases.</strong> On traite le paramètre inconnu $\beta$ comme une variable aléatoire, avec une loi <em>a priori</em> $\pi(\beta)$ qui exprime ce que l'on croit avant de voir les données. Après observation de $Y$, la formule de Bayes donne la loi <em>a posteriori</em> :</p>
+$$\pi(\beta\mid Y)=\frac{f(Y\mid\beta)\,\pi(\beta)}{f(Y)}\ \propto\ \underbrace{f(Y\mid\beta)}_{\text{vraisemblance}}\ \times\ \underbrace{\pi(\beta)}_{\text{a priori}},$$
+<p>où $\propto$ signifie « proportionnel à, comme fonction de $\beta$ » (le dénominateur $f(Y)$ ne dépend pas de $\beta$). L'estimateur du <em class="new">maximum a posteriori</em> (MAP) est le $\beta$ qui maximise $\pi(\beta\mid Y)$.</p>
+
+<div class="box idee"><div class="box-h">Idée</div>
+<p>Maximiser un produit, c'est minimiser $-\log$ de ce produit, c'est-à-dire une <strong>somme</strong> : « $-\log$ vraisemblance » (qui donne les moindres carrés quand le bruit est gaussien) $+$ « $-\log$ a priori » (qui donne la pénalité).</p></div>
+
+<p><strong>Le calcul, pas à pas.</strong> Le modèle est $Y\mid\beta\sim\N(X\beta,\sigma^2I_n)$ et l'a priori rend les $\beta_j$ indépendants de densité $\frac{\lambda}{2}e^{-\lambda\abs{\beta_j}}$ (loi de Laplace).</p>
+<ol class="steps">
+<li>$$f(Y\mid\beta)=\frac{1}{(2\pi\sigma^2)^{n/2}}\exp\Big(-\frac{\norm{Y-X\beta}^2}{2\sigma^2}\Big)$$<span class="why">densité d'un vecteur gaussien de moyenne $X\beta$ et de covariance $\sigma^2I_n$ : produit des $n$ densités $\frac{1}{\sqrt{2\pi\sigma^2}}e^{-(y_i-x_i\beta)^2/(2\sigma^2)}$ (<a href="00_rappels.html#gaussien">rappel</a>).</span></li>
+<li>$$\pi(\beta)=\prod_{j=1}^p\frac\lambda2e^{-\lambda\abs{\beta_j}}=\Big(\frac\lambda2\Big)^pe^{-\lambda\norm\beta_1}$$<span class="why">indépendance des coordonnées a priori : la densité jointe est le produit ; la somme des $\abs{\beta_j}$ est $\norm\beta_1$.</span></li>
+<li>$$-\log\pi(\beta\mid Y)=\frac{1}{2\sigma^2}\norm{Y-X\beta}^2+\lambda\norm\beta_1+C$$<span class="why">on prend $-\log$ du produit vraisemblance × a priori ; $C$ regroupe tout ce qui ne dépend pas de $\beta$ ($\frac n2\log(2\pi\sigma^2)$, $-p\log\frac\lambda2$, $\log f(Y)$).</span></li>
+<li>$$\hb^{\mathrm{MAP}}=\argmin_\beta\Big\{\norm{Y-X\beta}^2+2\sigma^2\lambda\norm\beta_1\Big\}$$<span class="why">maximiser $\pi(\beta\mid Y)$ ⇔ minimiser $-\log\pi(\beta\mid Y)$ ; on multiplie par la constante $2\sigma^2>0$ (ne change pas l'argmin) et on oublie $C$.</span></li>
+</ol>
+<p>C'est un Lasso, avec le paramètre de pénalité $2\sigma^2\lambda$.</p>
+
+<div class="box remarque"><div class="box-h">Note sur la diapo</div>
+<p>La diapo 25 utilise la même lettre $\lambda$ pour le paramètre de la loi de Laplace et pour celui du Lasso. Le calcul ci-dessus montre que ce ne sont pas les mêmes : $\lambda_{\text{Lasso}}=2\sigma^2\lambda_{\text{Laplace}}$ avec notre convention.</p></div>
+
+<p><strong>Le même calcul pour le Ridge.</strong> Avec un a priori gaussien $\beta_j\sim\N(0,\tau^2)$ indépendants, $-\log\pi(\beta)=\frac{1}{2\tau^2}\norm\beta^2+C'$, et le MAP minimise $\norm{Y-X\beta}^2+\frac{\sigma^2}{\tau^2}\norm\beta^2$ : c'est le Ridge de paramètre $\sigma^2/\tau^2$ (exercice 5).</p>
+
+<figure class="fig">
+<svg viewBox="0 0 640 250" role="img" aria-label="Densités de Laplace et de Gauss et pénalités associées">
+<line class="gr" x1="40.0" x2="40.0" y1="24" y2="204"/>
+<text class="tx" x="40.0" y="220" text-anchor="middle">-3</text>
+<line class="gr" x1="81.7" x2="81.7" y1="24" y2="204"/>
+<text class="tx" x="81.7" y="220" text-anchor="middle">-2</text>
+<line class="gr" x1="123.3" x2="123.3" y1="24" y2="204"/>
+<text class="tx" x="123.3" y="220" text-anchor="middle">-1</text>
+<line class="gr" x1="165.0" x2="165.0" y1="24" y2="204"/>
+<text class="tx" x="165.0" y="220" text-anchor="middle">0</text>
+<line class="gr" x1="206.7" x2="206.7" y1="24" y2="204"/>
+<text class="tx" x="206.7" y="220" text-anchor="middle">1</text>
+<line class="gr" x1="248.3" x2="248.3" y1="24" y2="204"/>
+<text class="tx" x="248.3" y="220" text-anchor="middle">2</text>
+<line class="gr" x1="290.0" x2="290.0" y1="24" y2="204"/>
+<text class="tx" x="290.0" y="220" text-anchor="middle">3</text>
+<line class="gr" x1="40" x2="290" y1="144.0" y2="144.0"/>
+<text class="tx" x="34" y="148.0" text-anchor="end">0,25</text>
+<line class="gr" x1="40" x2="290" y1="84.0" y2="84.0"/>
+<text class="tx" x="34" y="88.0" text-anchor="end">0,5</text>
+<line class="gr" x1="40" x2="290" y1="24.0" y2="24.0"/>
+<text class="tx" x="34" y="28.0" text-anchor="end">0,75</text>
+<line class="ax" x1="40" x2="290" y1="204.0" y2="204.0"/>
+<line class="ax" x1="165.0" x2="165.0" y1="24" y2="204"/>
+<text class="tx" x="290" y="236" text-anchor="end">β</text>
+<text class="tx" x="171.0" y="16">densité a priori</text>
+<path class="ln c1" d="M40.0 202.9L41.2 202.8L42.5 202.7L43.7 202.6L45.0 202.5L46.2 202.4L47.5 202.2L48.8 202.0L50.0 201.9L51.2 201.7L52.5 201.5L53.8 201.3L55.0 201.1L56.2 200.8L57.5 200.6L58.8 200.3L60.0 200.0L61.2 199.7L62.5 199.4L63.7 199.0L65.0 198.6L66.2 198.2L67.5 197.8L68.8 197.4L70.0 196.9L71.2 196.4L72.5 195.9L73.8 195.3L75.0 194.7L76.2 194.1L77.5 193.4L78.8 192.8L80.0 192.0L81.2 191.3L82.5 190.5L83.8 189.7L85.0 188.8L86.2 188.0L87.5 187.0L88.8 186.1L90.0 185.1L91.2 184.0L92.5 182.9L93.8 181.8L95.0 180.7L96.2 179.5L97.5 178.2L98.8 177.0L100.0 175.6L101.2 174.3L102.5 172.9L103.8 171.5L105.0 170.0L106.2 168.6L107.5 167.1L108.7 165.5L110.0 163.9L111.2 162.3L112.5 160.7L113.8 159.1L115.0 157.4L116.2 155.7L117.5 154.0L118.8 152.3L120.0 150.6L121.2 148.8L122.5 147.1L123.7 145.3L125.0 143.6L126.2 141.9L127.5 140.1L128.8 138.4L130.0 136.7L131.2 135.0L132.5 133.4L133.8 131.7L135.0 130.1L136.2 128.5L137.5 127.0L138.8 125.5L140.0 124.0L141.2 122.6L142.5 121.2L143.8 119.9L145.0 118.7L146.2 117.5L147.5 116.3L148.8 115.3L150.0 114.3L151.2 113.3L152.5 112.5L153.8 111.7L155.0 111.0L156.2 110.3L157.5 109.8L158.8 109.3L160.0 108.9L161.2 108.6L162.5 108.4L163.8 108.3L165.0 108.3L166.2 108.3L167.5 108.4L168.8 108.6L170.0 108.9L171.2 109.3L172.5 109.8L173.8 110.3L175.0 111.0L176.2 111.7L177.5 112.5L178.8 113.3L180.0 114.3L181.3 115.3L182.5 116.3L183.8 117.5L185.0 118.7L186.2 119.9L187.5 121.2L188.8 122.6L190.0 124.0L191.2 125.5L192.5 127.0L193.8 128.5L195.0 130.1L196.2 131.7L197.5 133.4L198.8 135.0L200.0 136.7L201.2 138.4L202.5 140.1L203.8 141.9L205.0 143.6L206.2 145.3L207.5 147.1L208.7 148.8L210.0 150.6L211.2 152.3L212.5 154.0L213.8 155.7L215.0 157.4L216.3 159.1L217.5 160.7L218.8 162.3L220.0 163.9L221.2 165.5L222.5 167.1L223.8 168.6L225.0 170.0L226.2 171.5L227.5 172.9L228.8 174.3L230.0 175.6L231.2 177.0L232.5 178.2L233.8 179.5L235.0 180.7L236.2 181.8L237.5 182.9L238.7 184.0L240.0 185.1L241.2 186.1L242.5 187.0L243.8 188.0L245.0 188.8L246.3 189.7L247.5 190.5L248.8 191.3L250.0 192.0L251.3 192.8L252.5 193.4L253.8 194.1L255.0 194.7L256.2 195.3L257.5 195.9L258.8 196.4L260.0 196.9L261.2 197.4L262.5 197.8L263.8 198.2L265.0 198.6L266.2 199.0L267.5 199.4L268.8 199.7L270.0 200.0L271.2 200.3L272.5 200.6L273.8 200.8L275.0 201.1L276.2 201.3L277.5 201.5L278.8 201.7L280.0 201.9L281.2 202.0L282.5 202.2L283.8 202.4L285.0 202.5L286.2 202.6L287.5 202.7L288.8 202.8L290.0 202.9"/>
+<path class="ln c2" d="M40.0 201.6L40.6 201.5L41.2 201.5L41.9 201.4L42.5 201.3L43.1 201.3L43.7 201.2L44.4 201.2L45.0 201.1L45.6 201.0L46.2 201.0L46.9 200.9L47.5 200.9L48.1 200.8L48.8 200.7L49.4 200.6L50.0 200.6L50.6 200.5L51.2 200.4L51.9 200.4L52.5 200.3L53.1 200.2L53.8 200.1L54.4 200.0L55.0 199.9L55.6 199.9L56.2 199.8L56.9 199.7L57.5 199.6L58.1 199.5L58.8 199.4L59.4 199.3L60.0 199.2L60.6 199.1L61.2 199.0L61.9 198.9L62.5 198.8L63.1 198.7L63.7 198.5L64.4 198.4L65.0 198.3L65.6 198.2L66.2 198.1L66.9 197.9L67.5 197.8L68.1 197.7L68.8 197.5L69.4 197.4L70.0 197.2L70.6 197.1L71.2 197.0L71.9 196.8L72.5 196.7L73.1 196.5L73.8 196.3L74.4 196.2L75.0 196.0L75.6 195.8L76.2 195.7L76.9 195.5L77.5 195.3L78.1 195.1L78.8 194.9L79.4 194.7L80.0 194.5L80.6 194.3L81.2 194.1L81.9 193.9L82.5 193.7L83.1 193.5L83.8 193.2L84.4 193.0L85.0 192.8L85.6 192.5L86.2 192.3L86.9 192.0L87.5 191.8L88.1 191.5L88.8 191.2L89.4 191.0L90.0 190.7L90.6 190.4L91.2 190.1L91.9 189.8L92.5 189.5L93.1 189.2L93.8 188.9L94.4 188.6L95.0 188.2L95.6 187.9L96.2 187.5L96.9 187.2L97.5 186.8L98.1 186.5L98.8 186.1L99.4 185.7L100.0 185.3L100.6 184.9L101.2 184.5L101.9 184.1L102.5 183.7L103.1 183.2L103.8 182.8L104.4 182.3L105.0 181.9L105.6 181.4L106.2 180.9L106.9 180.4L107.5 179.9L108.1 179.4L108.7 178.8L109.4 178.3L110.0 177.8L110.6 177.2L111.2 176.6L111.9 176.0L112.5 175.4L113.1 174.8L113.8 174.2L114.4 173.6L115.0 172.9L115.6 172.2L116.2 171.6L116.9 170.9L117.5 170.2L118.1 169.4L118.8 168.7L119.4 167.9L120.0 167.2L120.6 166.4L121.2 165.6L121.9 164.7L122.5 163.9L123.1 163.0L123.7 162.2L124.4 161.3L125.0 160.3L125.6 159.4L126.2 158.4L126.9 157.5L127.5 156.5L128.1 155.5L128.8 154.4L129.4 153.4L130.0 152.3L130.6 151.2L131.2 150.0L131.9 148.9L132.5 147.7L133.1 146.5L133.8 145.2L134.4 144.0L135.0 142.7L135.6 141.4L136.2 140.0L136.9 138.7L137.5 137.3L138.1 135.8L138.8 134.4L139.4 132.9L140.0 131.4L140.6 129.8L141.2 128.2L141.9 126.6L142.5 124.9L143.1 123.2L143.8 121.5L144.4 119.7L145.0 117.9L145.6 116.1L146.2 114.2L146.9 112.3L147.5 110.3L148.1 108.3L148.8 106.2L149.4 104.1L150.0 102.0L150.6 99.8L151.2 97.6L151.9 95.3L152.5 93.0L153.1 90.6L153.8 88.2L154.4 85.7L155.0 83.1L155.6 80.5L156.2 77.9L156.9 75.2L157.5 72.4L158.1 69.6L158.8 66.7L159.4 63.8L160.0 60.8L160.6 57.7L161.2 54.6L161.9 51.4L162.5 48.1L163.1 44.8L163.8 41.3L164.4 37.9L165.0 34.3L165.6 37.9L166.2 41.3L166.9 44.8L167.5 48.1L168.1 51.4L168.8 54.6L169.4 57.7L170.0 60.8L170.6 63.8L171.2 66.7L171.9 69.6L172.5 72.4L173.1 75.2L173.8 77.9L174.4 80.5L175.0 83.1L175.6 85.7L176.2 88.2L176.9 90.6L177.5 93.0L178.1 95.3L178.8 97.6L179.4 99.8L180.0 102.0L180.6 104.1L181.3 106.2L181.9 108.3L182.5 110.3L183.1 112.3L183.8 114.2L184.4 116.1L185.0 117.9L185.6 119.7L186.2 121.5L186.9 123.2L187.5 124.9L188.1 126.6L188.8 128.2L189.4 129.8L190.0 131.4L190.6 132.9L191.2 134.4L191.9 135.8L192.5 137.3L193.1 138.7L193.8 140.0L194.4 141.4L195.0 142.7L195.6 144.0L196.2 145.2L196.9 146.5L197.5 147.7L198.1 148.9L198.8 150.0L199.4 151.2L200.0 152.3L200.6 153.4L201.2 154.4L201.9 155.5L202.5 156.5L203.1 157.5L203.8 158.4L204.4 159.4L205.0 160.3L205.6 161.3L206.2 162.2L206.9 163.0L207.5 163.9L208.1 164.7L208.7 165.6L209.4 166.4L210.0 167.2L210.6 167.9L211.2 168.7L211.9 169.4L212.5 170.2L213.1 170.9L213.8 171.6L214.4 172.2L215.0 172.9L215.6 173.6L216.3 174.2L216.9 174.8L217.5 175.4L218.1 176.0L218.8 176.6L219.4 177.2L220.0 177.8L220.6 178.3L221.2 178.8L221.9 179.4L222.5 179.9L223.1 180.4L223.8 180.9L224.4 181.4L225.0 181.9L225.6 182.3L226.2 182.8L226.9 183.2L227.5 183.7L228.1 184.1L228.8 184.5L229.4 184.9L230.0 185.3L230.6 185.7L231.2 186.1L231.9 186.5L232.5 186.8L233.1 187.2L233.8 187.5L234.4 187.9L235.0 188.2L235.6 188.6L236.2 188.9L236.9 189.2L237.5 189.5L238.1 189.8L238.7 190.1L239.4 190.4L240.0 190.7L240.6 191.0L241.2 191.2L241.9 191.5L242.5 191.8L243.1 192.0L243.8 192.3L244.4 192.5L245.0 192.8L245.6 193.0L246.3 193.2L246.9 193.5L247.5 193.7L248.1 193.9L248.8 194.1L249.4 194.3L250.0 194.5L250.6 194.7L251.3 194.9L251.9 195.1L252.5 195.3L253.1 195.5L253.8 195.7L254.4 195.8L255.0 196.0L255.6 196.2L256.2 196.3L256.9 196.5L257.5 196.7L258.1 196.8L258.8 197.0L259.4 197.1L260.0 197.2L260.6 197.4L261.2 197.5L261.9 197.7L262.5 197.8L263.1 197.9L263.8 198.1L264.4 198.2L265.0 198.3L265.6 198.4L266.2 198.5L266.9 198.7L267.5 198.8L268.1 198.9L268.8 199.0L269.4 199.1L270.0 199.2L270.6 199.3L271.2 199.4L271.9 199.5L272.5 199.6L273.1 199.7L273.8 199.8L274.4 199.9L275.0 199.9L275.6 200.0L276.2 200.1L276.9 200.2L277.5 200.3L278.1 200.4L278.8 200.4L279.4 200.5L280.0 200.6L280.6 200.6L281.2 200.7L281.9 200.8L282.5 200.9L283.1 200.9L283.8 201.0L284.4 201.0L285.0 201.1L285.6 201.2L286.2 201.2L286.9 201.3L287.5 201.3L288.1 201.4L288.8 201.5L289.4 201.5L290.0 201.6"/>
+<text class="tx f2" x="177.5" y="60.0" text-anchor="start">Laplace : pic pointu en 0</text>
+<text class="tx f1" x="210.8" y="132.0" text-anchor="start">Gauss</text>
+<line class="gr" x1="370.0" x2="370.0" y1="24" y2="204"/>
+<text class="tx" x="370.0" y="220" text-anchor="middle">-3</text>
+<line class="gr" x1="411.7" x2="411.7" y1="24" y2="204"/>
+<text class="tx" x="411.7" y="220" text-anchor="middle">-2</text>
+<line class="gr" x1="453.3" x2="453.3" y1="24" y2="204"/>
+<text class="tx" x="453.3" y="220" text-anchor="middle">-1</text>
+<line class="gr" x1="495.0" x2="495.0" y1="24" y2="204"/>
+<text class="tx" x="495.0" y="220" text-anchor="middle">0</text>
+<line class="gr" x1="536.7" x2="536.7" y1="24" y2="204"/>
+<text class="tx" x="536.7" y="220" text-anchor="middle">1</text>
+<line class="gr" x1="578.3" x2="578.3" y1="24" y2="204"/>
+<text class="tx" x="578.3" y="220" text-anchor="middle">2</text>
+<line class="gr" x1="620.0" x2="620.0" y1="24" y2="204"/>
+<text class="tx" x="620.0" y="220" text-anchor="middle">3</text>
+<line class="gr" x1="370" x2="620" y1="164.0" y2="164.0"/>
+<text class="tx" x="364" y="168.0" text-anchor="end">1</text>
+<line class="gr" x1="370" x2="620" y1="124.0" y2="124.0"/>
+<text class="tx" x="364" y="128.0" text-anchor="end">2</text>
+<line class="gr" x1="370" x2="620" y1="84.0" y2="84.0"/>
+<text class="tx" x="364" y="88.0" text-anchor="end">3</text>
+<line class="gr" x1="370" x2="620" y1="44.0" y2="44.0"/>
+<text class="tx" x="364" y="48.0" text-anchor="end">4</text>
+<line class="ax" x1="370" x2="620" y1="204.0" y2="204.0"/>
+<line class="ax" x1="495.0" x2="495.0" y1="24" y2="204"/>
+<text class="tx" x="620" y="236" text-anchor="end">β</text>
+<text class="tx" x="501.0" y="16">−log densité</text>
+<path class="ln c1" d="M370.0 24.0L371.2 27.6L372.5 31.1L373.8 34.6L375.0 38.1L376.2 41.5L377.5 45.0L378.8 48.3L380.0 51.6L381.2 54.9L382.5 58.2L383.8 61.4L385.0 64.6L386.2 67.8L387.5 70.9L388.8 74.0L390.0 77.0L391.2 80.0L392.5 83.0L393.8 85.9L395.0 88.8L396.2 91.7L397.5 94.5L398.8 97.3L400.0 100.0L401.2 102.8L402.5 105.4L403.8 108.1L405.0 110.7L406.2 113.3L407.5 115.8L408.8 118.3L410.0 120.8L411.2 123.2L412.5 125.6L413.8 128.0L415.0 130.3L416.2 132.6L417.5 134.8L418.8 137.0L420.0 139.2L421.2 141.3L422.5 143.4L423.8 145.5L425.0 147.6L426.2 149.6L427.5 151.5L428.8 153.4L430.0 155.3L431.2 157.2L432.5 159.0L433.8 160.8L435.0 162.5L436.2 164.2L437.5 165.9L438.8 167.6L440.0 169.2L441.2 170.7L442.5 172.2L443.8 173.7L445.0 175.2L446.2 176.6L447.5 178.0L448.8 179.4L450.0 180.7L451.2 181.9L452.5 183.2L453.8 184.4L455.0 185.6L456.2 186.7L457.5 187.8L458.8 188.9L460.0 189.9L461.2 190.9L462.5 191.8L463.8 192.8L465.0 193.6L466.2 194.5L467.5 195.3L468.8 196.1L470.0 196.8L471.2 197.5L472.5 198.2L473.8 198.8L475.0 199.4L476.2 199.9L477.5 200.5L478.8 201.0L480.0 201.4L481.2 201.8L482.5 202.2L483.8 202.5L485.0 202.8L486.2 203.1L487.5 203.4L488.8 203.6L490.0 203.7L491.2 203.8L492.5 203.9L493.8 204.0L495.0 204.0L496.2 204.0L497.5 203.9L498.8 203.8L500.0 203.7L501.2 203.6L502.5 203.4L503.8 203.1L505.0 202.8L506.2 202.5L507.5 202.2L508.8 201.8L510.0 201.4L511.2 201.0L512.5 200.5L513.8 199.9L515.0 199.4L516.2 198.8L517.5 198.2L518.8 197.5L520.0 196.8L521.2 196.1L522.5 195.3L523.8 194.5L525.0 193.6L526.2 192.8L527.5 191.8L528.8 190.9L530.0 189.9L531.2 188.9L532.5 187.8L533.8 186.7L535.0 185.6L536.2 184.4L537.5 183.2L538.8 182.0L540.0 180.7L541.2 179.4L542.5 178.0L543.8 176.6L545.0 175.2L546.2 173.7L547.5 172.2L548.8 170.7L550.0 169.2L551.2 167.6L552.5 165.9L553.8 164.2L555.0 162.5L556.2 160.8L557.5 159.0L558.8 157.2L560.0 155.3L561.2 153.4L562.5 151.5L563.8 149.5L565.0 147.6L566.2 145.5L567.5 143.4L568.8 141.3L570.0 139.2L571.2 137.0L572.5 134.8L573.8 132.6L575.0 130.3L576.2 127.9L577.5 125.6L578.8 123.2L580.0 120.8L581.2 118.3L582.5 115.8L583.8 113.3L585.0 110.7L586.2 108.1L587.5 105.4L588.8 102.8L590.0 100.0L591.2 97.3L592.5 94.5L593.8 91.7L595.0 88.8L596.2 85.9L597.5 83.0L598.8 80.0L600.0 77.0L601.2 74.0L602.5 70.9L603.8 67.8L605.0 64.6L606.2 61.4L607.5 58.2L608.8 54.9L610.0 51.6L611.2 48.3L612.5 45.0L613.8 41.6L615.0 38.1L616.2 34.6L617.5 31.1L618.8 27.6L620.0 24.0"/>
+<path class="ln c2" d="M370.0 34.3L370.6 35.1L371.2 36.0L371.9 36.8L372.5 37.7L373.1 38.5L373.8 39.4L374.4 40.2L375.0 41.1L375.6 41.9L376.2 42.8L376.9 43.6L377.5 44.5L378.1 45.3L378.8 46.2L379.4 47.0L380.0 47.9L380.6 48.7L381.2 49.6L381.9 50.4L382.5 51.3L383.1 52.1L383.8 53.0L384.4 53.8L385.0 54.7L385.6 55.5L386.2 56.4L386.9 57.2L387.5 58.1L388.1 58.9L388.8 59.8L389.4 60.6L390.0 61.4L390.6 62.3L391.2 63.1L391.9 64.0L392.5 64.8L393.1 65.7L393.8 66.5L394.4 67.4L395.0 68.2L395.6 69.1L396.2 69.9L396.9 70.8L397.5 71.6L398.1 72.5L398.8 73.3L399.4 74.2L400.0 75.0L400.6 75.9L401.2 76.7L401.9 77.6L402.5 78.4L403.1 79.3L403.8 80.1L404.4 81.0L405.0 81.8L405.6 82.7L406.2 83.5L406.9 84.4L407.5 85.2L408.1 86.1L408.8 86.9L409.4 87.8L410.0 88.6L410.6 89.4L411.2 90.3L411.9 91.1L412.5 92.0L413.1 92.8L413.8 93.7L414.4 94.5L415.0 95.4L415.6 96.2L416.2 97.1L416.9 97.9L417.5 98.8L418.1 99.6L418.8 100.5L419.4 101.3L420.0 102.2L420.6 103.0L421.2 103.9L421.9 104.7L422.5 105.6L423.1 106.4L423.8 107.3L424.4 108.1L425.0 109.0L425.6 109.8L426.2 110.7L426.9 111.5L427.5 112.4L428.1 113.2L428.8 114.1L429.4 114.9L430.0 115.8L430.6 116.6L431.2 117.5L431.9 118.3L432.5 119.1L433.1 120.0L433.8 120.8L434.4 121.7L435.0 122.5L435.6 123.4L436.2 124.2L436.9 125.1L437.5 125.9L438.1 126.8L438.8 127.6L439.4 128.5L440.0 129.3L440.6 130.2L441.2 131.0L441.9 131.9L442.5 132.7L443.1 133.6L443.8 134.4L444.4 135.3L445.0 136.1L445.6 137.0L446.2 137.8L446.9 138.7L447.5 139.5L448.1 140.4L448.8 141.2L449.4 142.1L450.0 142.9L450.6 143.8L451.2 144.6L451.9 145.5L452.5 146.3L453.1 147.1L453.8 148.0L454.4 148.8L455.0 149.7L455.6 150.5L456.2 151.4L456.9 152.2L457.5 153.1L458.1 153.9L458.8 154.8L459.4 155.6L460.0 156.5L460.6 157.3L461.2 158.2L461.9 159.0L462.5 159.9L463.1 160.7L463.8 161.6L464.4 162.4L465.0 163.3L465.6 164.1L466.2 165.0L466.9 165.8L467.5 166.7L468.1 167.5L468.8 168.4L469.4 169.2L470.0 170.1L470.6 170.9L471.2 171.8L471.9 172.6L472.5 173.5L473.1 174.3L473.8 175.2L474.4 176.0L475.0 176.8L475.6 177.7L476.2 178.5L476.9 179.4L477.5 180.2L478.1 181.1L478.8 181.9L479.4 182.8L480.0 183.6L480.6 184.5L481.2 185.3L481.9 186.2L482.5 187.0L483.1 187.9L483.8 188.7L484.4 189.6L485.0 190.4L485.6 191.3L486.2 192.1L486.9 193.0L487.5 193.8L488.1 194.7L488.8 195.5L489.4 196.4L490.0 197.2L490.6 198.1L491.2 198.9L491.9 199.8L492.5 200.6L493.1 201.5L493.8 202.3L494.4 203.2L495.0 204.0L495.6 203.2L496.2 202.3L496.9 201.5L497.5 200.6L498.1 199.8L498.8 198.9L499.4 198.1L500.0 197.2L500.6 196.4L501.2 195.5L501.9 194.7L502.5 193.8L503.1 193.0L503.8 192.1L504.4 191.3L505.0 190.4L505.6 189.6L506.2 188.7L506.9 187.9L507.5 187.0L508.1 186.2L508.8 185.3L509.4 184.5L510.0 183.6L510.6 182.8L511.2 181.9L511.9 181.1L512.5 180.2L513.1 179.4L513.8 178.5L514.4 177.7L515.0 176.8L515.6 176.0L516.2 175.2L516.9 174.3L517.5 173.5L518.1 172.6L518.8 171.8L519.4 170.9L520.0 170.1L520.6 169.2L521.2 168.4L521.9 167.5L522.5 166.7L523.1 165.8L523.8 165.0L524.4 164.1L525.0 163.3L525.6 162.4L526.2 161.6L526.9 160.7L527.5 159.9L528.1 159.0L528.8 158.2L529.4 157.3L530.0 156.5L530.6 155.6L531.2 154.8L531.9 153.9L532.5 153.1L533.1 152.2L533.8 151.4L534.4 150.5L535.0 149.7L535.6 148.8L536.2 148.0L536.9 147.1L537.5 146.3L538.1 145.5L538.8 144.6L539.4 143.8L540.0 142.9L540.6 142.1L541.2 141.2L541.9 140.4L542.5 139.5L543.1 138.7L543.8 137.8L544.4 137.0L545.0 136.1L545.6 135.3L546.2 134.4L546.9 133.6L547.5 132.7L548.1 131.9L548.8 131.0L549.4 130.2L550.0 129.3L550.6 128.5L551.2 127.6L551.9 126.8L552.5 125.9L553.1 125.1L553.8 124.2L554.4 123.4L555.0 122.5L555.6 121.7L556.2 120.8L556.9 120.0L557.5 119.1L558.1 118.3L558.8 117.5L559.4 116.6L560.0 115.8L560.6 114.9L561.2 114.1L561.9 113.2L562.5 112.4L563.1 111.5L563.8 110.7L564.4 109.8L565.0 109.0L565.6 108.1L566.2 107.3L566.9 106.4L567.5 105.6L568.1 104.7L568.8 103.9L569.4 103.0L570.0 102.2L570.6 101.3L571.2 100.5L571.9 99.6L572.5 98.8L573.1 97.9L573.8 97.1L574.4 96.2L575.0 95.4L575.6 94.5L576.2 93.7L576.9 92.8L577.5 92.0L578.1 91.1L578.8 90.3L579.4 89.4L580.0 88.6L580.6 87.8L581.2 86.9L581.9 86.1L582.5 85.2L583.1 84.4L583.8 83.5L584.4 82.7L585.0 81.8L585.6 81.0L586.2 80.1L586.9 79.3L587.5 78.4L588.1 77.6L588.8 76.7L589.4 75.9L590.0 75.0L590.6 74.2L591.2 73.3L591.9 72.5L592.5 71.6L593.1 70.8L593.8 69.9L594.4 69.1L595.0 68.2L595.6 67.4L596.2 66.5L596.9 65.7L597.5 64.8L598.1 64.0L598.8 63.1L599.4 62.3L600.0 61.4L600.6 60.6L601.2 59.8L601.9 58.9L602.5 58.1L603.1 57.2L603.8 56.4L604.4 55.5L605.0 54.7L605.6 53.8L606.2 53.0L606.9 52.1L607.5 51.3L608.1 50.4L608.8 49.6L609.4 48.7L610.0 47.9L610.6 47.0L611.2 46.2L611.9 45.3L612.5 44.5L613.1 43.6L613.8 42.8L614.4 41.9L615.0 41.1L615.6 40.2L616.2 39.4L616.9 38.5L617.5 37.7L618.1 36.8L618.8 36.0L619.4 35.1L620.0 34.3"/>
+<text class="tx f1" x="484.6" y="44.0" text-anchor="end">β²/2 → Ridge</text>
+<text class="tx f2" x="505.4" y="44.0" text-anchor="start">√2 |β| → Lasso</text>
+</svg>
+<figcaption>À gauche : densités a priori de Laplace (orange) et de Gauss (bleu), de même variance 1. La Laplace met beaucoup plus de masse <em>très près de 0</em> et a un pic anguleux. À droite : leurs $-\log$ (à une constante près), c'est-à-dire les pénalités correspondantes : $\surd2\,\abs\beta$ (anguleuse en 0 → Lasso) et $\beta^2/2$ (lisse en 0 → Ridge). C'est l'angle en 0 qui produira des coefficients exactement nuls.</figcaption>
+</figure>
+
+<div class="box intu"><div class="box-h">Intuition</div>
+<p>Croire a priori « la plupart des coefficients sont nuls ou minuscules, quelques-uns sont grands » se traduit par une loi très concentrée en 0 mais à queues épaisses : c'est la Laplace. Croire « tous les coefficients sont modérés » se traduit par une gaussienne. Le Lasso et le Ridge encodent ces deux croyances.</p></div>
+
+<div class="box piege"><div class="box-h">Piège</div>
+<p>Le MAP est le <em>mode</em> de la loi a posteriori. Sous un a priori de Laplace, un tirage de $\beta$ n'a presque sûrement <strong>aucune</strong> coordonnée nulle : ce n'est pas l'a priori qui est parcimonieux, c'est le fait de prendre le maximum (le mode) d'une densité anguleuse en 0.</p></div>
+
+<div class="quiz"><p>Question rapide : pourquoi peut-on multiplier le critère par $2\sigma^2$ sans changer le minimiseur ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body"><p>Si $c>0$, $cG(\beta)\le cG(\beta')$ ⇔ $G(\beta)\le G(\beta')$ : l'ordre entre les valeurs est préservé, donc le point où le minimum est atteint ne change pas (seule la valeur minimale est multipliée par $c$). Avec $c<0$ on échangerait min et max.</p></div></details></div>
+
+<h2 id="orthogonal">2. Le design orthogonal : le Lasso se calcule à la main</h2>
+<p class="tldr">Quand les colonnes de $X$ sont orthonormées, le Lasso se découpe en $p$ problèmes à une seule inconnue, et chacun a pour solution le moindre carré $b_j$ « rapproché de 0 de $\lambda/2$, et mis à 0 s'il était déjà plus petit que $\lambda/2$ en valeur absolue » : c'est le seuillage doux.</p>
+
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours2 · diapo 26</span></div>
+<p>L'estimateur Lasso est linéaire par morceaux comme fonction de $\lambda$. Si les colonnes de $X$ sont orthogonales (ou dans le cas trivial $p=1$), chaque composante s'écrit en fonction de $\hb\MC=(X\T X)^{-1}X\T Y$ :</p>
+$$\hb^L_j(\lambda)=\sgn(\hb\MC_j)\big(\abs{\hb\MC_j}-\lambda/2\big)_+,\qquad\forall j\in\{1,\dots,p\},$$
+<p>où $(\alpha)_+=\max(\alpha,0)$ et $\sgn(b)=1$ si $b>0$, $0$ si $b=0$, $-1$ si $b<0$. Si on choisit $\lambda^{(k)}=\abs{\hb\MC_k}$, la linéarité de $\hb^L$ change en ces $\lambda$.</p></div>
+
+<h3 id="decouplage">Pourquoi ce cas est-il si simple ? Le découplage</h3>
+<p><strong>Hypothèse.</strong> « Colonnes orthogonales » signifie ici <em>orthonormées</em> : $X_j\T X_k=0$ si $j\ne k$ et $\norm{X_j}^2=1$, autrement dit</p>
+$$X\T X=I_p.$$
+<p>Cela n'est possible que si $p\le n$ (on ne peut pas avoir plus de $n$ vecteurs orthonormés dans $\R^n$). C'est donc un cas d'école, pas la grande dimension : il sert à <em>voir</em> ce que fait la pénalité $\ell_1$.</p>
+
+<p>Posons $b=X\T Y\in\R^p$. Comme $X\T X=I_p$, on a $b=(X\T X)^{-1}X\T Y=\hb\MC$ : <strong>$b$ est l'estimateur des moindres carrés</strong>, et $b_j=X_j\T Y$ est simplement le produit scalaire de la colonne $j$ avec $Y$.</p>
+
+<ol class="steps">
+<li>$$\norm{Y-X\beta}^2=\norm Y^2-2\beta\T X\T Y+\beta\T X\T X\beta$$<span class="why">on développe $(Y-X\beta)\T(Y-X\beta)$ ; les deux termes croisés $Y\T X\beta$ et $\beta\T X\T Y$ sont des nombres égaux (l'un est le transposé de l'autre).</span></li>
+<li>$$=\norm Y^2-2\beta\T b+\norm\beta^2$$<span class="why">$X\T Y=b$ et $X\T X=I_p$ donne $\beta\T X\T X\beta=\beta\T\beta=\norm\beta^2$.</span></li>
+<li>$$=\sum_{j=1}^p\big(\beta_j^2-2b_j\beta_j\big)+\norm Y^2=\sum_{j=1}^p(\beta_j-b_j)^2+\underbrace{\norm Y^2-\norm b^2}_{\text{ne dépend pas de }\beta}$$<span class="why">on écrit le produit scalaire et la norme coordonnée par coordonnée, puis on complète le carré : $\beta_j^2-2b_j\beta_j=(\beta_j-b_j)^2-b_j^2$.</span></li>
+<li>$$F(\beta)=\sum_{j=1}^p\Big[(\beta_j-b_j)^2+\lambda\abs{\beta_j}\Big]+\text{cte}$$<span class="why">on ajoute la pénalité, qui est elle aussi une somme sur les coordonnées : $\lambda\norm\beta_1=\sum_j\lambda\abs{\beta_j}$.</span></li>
+</ol>
+<p>Le critère est une <strong>somme de $p$ termes dont le $j$-ième ne dépend que de $\beta_j$</strong>. Pour minimiser une telle somme, on minimise chaque terme séparément : chaque coordonnée résout son propre problème à une variable</p>
+$$\hb^L_j=\argmin_{\beta_j\in\R}\ \Big\{(\beta_j-b_j)^2+\lambda\abs{\beta_j}\Big\}.$$
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>Quand vous voyez $X\T X=I$ (ou $X\T X=nI$ avec un critère normalisé par $\frac1n$) → développez le carré : le critère <strong>se découple coordonnée par coordonnée</strong>, et tout se ramène à un problème en dimension 1.</p></div>
+
+<h3 id="seuillage-1d">Le problème à une variable : trois cas</h3>
+<p>Fixons un nombre $b$ et cherchons le minimiseur de $f(\beta)=(\beta-b)^2+\lambda\abs\beta$ sur $\R$. La difficulté est la valeur absolue, qui n'est pas dérivable en 0. La méthode la plus sûre : <strong>séparer les cas selon le signe de $\beta$</strong>, car sur chaque demi-droite $\abs\beta$ est une fonction linéaire.</p>
+
+<ol class="steps">
+<li><strong>Sur $\beta>0$</strong> : $f(\beta)=(\beta-b)^2+\lambda\beta$, $f'(\beta)=2(\beta-b)+\lambda$, qui s'annule en $\beta=b-\lambda/2$.<span class="why">ce point est un candidat seulement s'il est bien dans la région $\beta>0$, c'est-à-dire si $b>\lambda/2$.</span></li>
+<li><strong>Sur $\beta<0$</strong> : $f(\beta)=(\beta-b)^2-\lambda\beta$, $f'(\beta)=2(\beta-b)-\lambda$, qui s'annule en $\beta=b+\lambda/2$.<span class="why">candidat seulement si $b+\lambda/2<0$, c'est-à-dire $b<-\lambda/2$.</span></li>
+<li><strong>Si $\abs b\le\lambda/2$</strong> : aucun des deux candidats n'est valable. Sur $\beta>0$, $f'(\beta)=2\beta+(\lambda-2b)>0$ car $\lambda-2b\ge0$ : $f$ croît. Sur $\beta<0$, $f'(\beta)=2\beta-(\lambda+2b)<0$ car $\lambda+2b\ge0$ : $f$ décroît.<span class="why">$f$ descend jusqu'à 0 puis remonte : le minimum est en $\beta=0$.</span></li>
+<li>Quand $b>\lambda/2$, le candidat $b-\lambda/2$ est bien le minimum global : $f$ est convexe (somme de convexes), et un point où la dérivée s'annule est un minimum global d'une fonction convexe.<span class="why"><a href="00_rappels.html#convexite">rappel convexité</a> ; idem pour $b<-\lambda/2$.</span></li>
+</ol>
+
+<div class="box thm"><div class="box-h">Résultat — Seuillage doux (convention $(\beta-b)^2+\lambda\abs\beta$)</div>
+$$\argmin_{\beta\in\R}\Big\{(\beta-b)^2+\lambda\abs\beta\Big\}=\begin{cases}b-\lambda/2&\text{si }b>\lambda/2,\\[2pt]0&\text{si }\abs b\le\lambda/2,\\[2pt]b+\lambda/2&\text{si }b<-\lambda/2,\end{cases}\qquad\text{soit}\qquad\sgn(b)\big(\abs b-\lambda/2\big)_+.$$
+</div>
+<p>La formule compacte se vérifie cas par cas : si $\abs b\le\lambda/2$, $(\abs b-\lambda/2)_+=0$ ; si $b>\lambda/2$, $\sgn(b)(b-\lambda/2)=b-\lambda/2$ ; si $b<-\lambda/2$, $-(-b-\lambda/2)=b+\lambda/2$. En l'appliquant à chaque coordonnée avec $b_j=\hb\MC_j$, on obtient exactement la formule de la diapo 26.</p>
+
+<div class="widget" data-widget="seuillage" data-seuil="demi" data-lambda="2"></div>
+<p class="small muted">Manipulez $\lambda$ et $b$. Orange : le Lasso. Tant que $\abs b\le\lambda/2$, il renvoie <strong>exactement</strong> 0 (le plateau) ; au-delà, il vaut $b$ décalé de $\lambda/2$ vers 0 (droite parallèle à l'identité). Bleu : le Ridge en design orthogonal, $b/(1+\lambda)$, qui rapproche tout de 0 proportionnellement mais ne met jamais rien à 0.</p>
+
+<div class="box intu"><div class="box-h">Intuition — deux effets dans une seule formule</div>
+<ul>
+<li><strong>Sélection</strong> : les coefficients des moindres carrés trop petits ($\abs{b_j}\le\lambda/2$) sont jugés indiscernables du bruit et mis à zéro ; la variable est écartée.</li>
+<li><strong>Rétrécissement</strong> (<em>shrinkage</em>) : les coefficients gardés sont tous rapprochés de 0 de la même quantité $\lambda/2$. C'est le <strong>biais</strong> du Lasso : même un très grand coefficient perd $\lambda/2$. Retenez-le : la Séance 6 propose des variantes pour le corriger.</li>
+</ul>
+<p>Le nom « Lasso » (<em>Least Absolute Shrinkage and Selection Operator</em>) dit exactement ces deux choses.</p></div>
+
+<div class="box exemple"><div class="box-h">Exemple chiffré</div>
+<p>Prenons $n=4$, $p=2$ et</p>
+$$X=\frac12\begin{pmatrix}1&1\\1&-1\\1&1\\1&-1\end{pmatrix},\qquad Y=\begin{pmatrix}3\\1\\2\\0\end{pmatrix}.$$
+<p>Chaque colonne a pour norme au carré $4\times\frac14=1$, et leur produit scalaire vaut $\frac14(1-1+1-1)=0$ : $X\T X=I_2$. Ensuite $b=X\T Y=\frac12(3+1+2+0,\ 3-1+2-0)=(3,\,2)$.</p>
+<div class="table-wrap"><table>
+<tr><th>$\lambda$</th><th>$\lambda/2$</th><th>$\hb^L_1=\sgn(3)(3-\lambda/2)_+$</th><th>$\hb^L_2=\sgn(2)(2-\lambda/2)_+$</th><th>variables gardées</th></tr>
+<tr><td>0</td><td>0</td><td>3</td><td>2</td><td>{1, 2} (= MCO)</td></tr>
+<tr><td>2</td><td>1</td><td>2</td><td>1</td><td>{1, 2}</td></tr>
+<tr><td>3</td><td>1,5</td><td>1,5</td><td>0,5</td><td>{1, 2}</td></tr>
+<tr><td>5</td><td>2,5</td><td>0,5</td><td>0</td><td>{1}</td></tr>
+<tr><td>6</td><td>3</td><td>0</td><td>0</td><td>∅</td></tr>
+</table></div>
+<p>La variable 2 disparaît en $\lambda=2\times2=4$, la variable 1 en $\lambda=2\times3=6$.</p></div>
+
+<h3 id="chemin-orthogonal">Le chemin de régularisation en design orthogonal</h3>
+<p>On appelle <em class="new">chemin de régularisation</em> (<em>regularization path</em>) la courbe $\lambda\mapsto\hb^L(\lambda)$, pour $\lambda$ allant de 0 à l'infini. En design orthogonal, chaque coordonnée vaut $\sgn(b_j)(\abs{b_j}-\lambda/2)$ tant que $\lambda<2\abs{b_j}$ : une fonction <strong>affine</strong> de $\lambda$ (pente $-\sgn(b_j)/2$), puis 0 pour $\lambda\ge2\abs{b_j}$. Le chemin est donc <strong>linéaire par morceaux</strong>, avec des points de rupture (« coudes ») en</p>
+$$\lambda=2\abs{b_1},\ 2\abs{b_2},\ \dots,\ 2\abs{b_p}.$$
+<p>Lu de droite à gauche ($\lambda$ décroissant depuis $+\infty$), les variables <strong>entrent</strong> dans le modèle une à une, dans l'ordre des $\abs{b_j}$ décroissants ; la première entre en $\lambda=2\max_j\abs{b_j}=2\norm{X\T Y}_\infty$.</p>
+
+<div class="widget" data-widget="chemin" data-b="[2.4,-1.6,1.0,0.4]"></div>
+<p class="small muted">Chaque courbe est un coefficient $\hb^L_j(\lambda)$ ; les points gris marquent $\lambda=2\abs{b_j}$, où la variable sort. Cochez « comparer avec Ridge » : les courbes pointillées $b_j/(1+\lambda)$ tendent vers 0 sans jamais l'atteindre.</p>
+
+<div class="box remarque"><div class="box-h">Note sur la diapo — un facteur 2</div>
+<p>La diapo 26 indique que la linéarité change en $\lambda^{(k)}=\abs{\hb\MC_k}$. Avec la formule de la même diapo (seuil $\lambda/2$), la coordonnée $k$ s'annule quand $\abs{\hb\MC_k}-\lambda/2=0$, c'est-à-dire en $\lambda^{(k)}=2\abs{\hb\MC_k}$. Les deux énoncés coïncident si l'on écrit le critère avec $\frac12\norm{Y-X\beta}^2$ (seuil $\lambda$) : c'est une question de convention, pas d'idée.</p></div>
+
+<div class="quiz"><p>Question rapide : avec $b=(3,2)$ comme dans l'exemple, pour quelles valeurs de $\lambda$ le Lasso garde-t-il exactement une variable ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body"><p>Il faut $\abs{b_2}\le\lambda/2<\abs{b_1}$, soit $2\le\lambda/2<3$, c'est-à-dire $\lambda\in[4,6)$. La variable gardée est la variable 1, celle dont le coefficient des moindres carrés est le plus grand en valeur absolue.</p></div></details></div>
+
+<h2 id="kkt">3. Les conditions KKT : reconnaître la solution du Lasso</h2>
+<p class="tldr">Dans le cas général il n'y a pas de formule, mais une caractérisation : $\hb$ est solution si et seulement si chaque variable a, avec le résidu $Y-X\hb$, un produit scalaire au plus $\lambda/2$ en valeur absolue, avec égalité (et le bon signe) pour les variables sélectionnées.</p>
+
+<h3 id="sous-gradient">Un outil : la « pente » d'une fonction en un point anguleux</h3>
+<p><strong>Le problème.</strong> Pour minimiser une fonction dérivable et convexe, on annule sa dérivée. Mais $\abs\beta$ n'est pas dérivable en 0 — et c'est justement en 0 que se passent les choses intéressantes (les coefficients nuls). Il faut une notion de « dérivée » qui accepte les angles.</p>
+
+<p><strong>L'idée.</strong> Pour une fonction convexe et dérivable, la tangente en un point reste <em>sous</em> le graphe. En un point anguleux, il n'y a pas une tangente mais <em>tout un éventail</em> de droites qui passent par le point et restent sous le graphe. Leurs pentes sont les sous-gradients.</p>
+
+<div class="box def"><div class="box-h">Définition — Sous-gradient (dimension 1)</div>
+<p>Soit $\varphi:\R\to\R$ convexe et $a\in\R$. Un nombre $g$ est un <em class="new">sous-gradient</em> de $\varphi$ en $a$ si la droite de pente $g$ passant par $(a,\varphi(a))$ reste sous le graphe :</p>
+$$\varphi(v)\ \ge\ \varphi(a)+g\,(v-a)\qquad\text{pour tout }v\in\R.$$
+<p>L'ensemble des sous-gradients en $a$ se note $\partial\varphi(a)$ (le <em class="new">sous-différentiel</em>).</p></div>
+
+<div class="widget" data-widget="sousgradient"></div>
+<p class="small muted">Placez $u_0$ en 0 et faites varier la pente : toute pente entre $-1$ et $1$ donne une droite qui reste sous le « V ». Placez $u_0$ ailleurs : une seule pente convient, la dérivée.</p>
+
+<div class="box thm"><div class="box-h">Le sous-différentiel de la valeur absolue</div>
+$$\partial\abs\cdot(a)=\begin{cases}\{1\}&\text{si }a>0,\\ [-1,1]&\text{si }a=0,\\ \{-1\}&\text{si }a<0,\end{cases}\qquad\text{autrement dit}\qquad\partial\abs\cdot(a)=\begin{cases}\{\sgn(a)\}&a\ne0,\\ [-1,1]&a=0.\end{cases}$$
+</div>
+<details class="fold proof"><summary>Preuve détaillée</summary><div class="fold-body">
+<p><strong>En $a=0$.</strong> La condition s'écrit $\abs v\ge gv$ pour tout $v$. Si $\abs g\le1$, alors $gv\le\abs g\abs v\le\abs v$ : c'est vrai. Si $g>1$, prendre $v=1$ donne $1\ge g$, faux ; si $g<-1$, prendre $v=-1$ donne $1\ge-g$, faux. Donc $\partial\abs\cdot(0)=[-1,1]$.</p>
+<p><strong>En $a>0$.</strong> La condition est $\abs v\ge a+g(v-a)$ pour tout $v$. Pour $v=a+t$ avec $t$ petit (positif ou négatif, assez petit pour que $v>0$), elle devient $a+t\ge a+gt$, soit $t(1-g)\ge0$ pour $t>0$ et $t<0$ : il faut $g=1$. Réciproquement $g=1$ convient car $\abs v\ge v=a+1\cdot(v-a)$. Le cas $a<0$ est symétrique.</p>
+</div></details>
+
+<p>Trois règles suffisent pour cette séance (elles seront démontrées en Séance 4) :</p>
+<ol>
+<li><strong>Là où $\varphi$ est dérivable</strong>, il n'y a qu'un sous-gradient : la dérivée, $\partial\varphi(a)=\{\varphi'(a)\}$.</li>
+<li><strong>Règle d'optimalité</strong> : $a$ minimise $\varphi$ convexe <strong>si et seulement si</strong> $0\in\partial\varphi(a)$. <em>Preuve en une ligne</em> : « $0\in\partial\varphi(a)$ » s'écrit $\varphi(v)\ge\varphi(a)+0\cdot(v-a)=\varphi(a)$ pour tout $v$, ce qui est exactement la définition d'un minimum.</li>
+<li><strong>Somme</strong> : si $h$ est convexe dérivable et $\lambda\ge0$, $\partial\big(h+\lambda\abs\cdot\big)(a)=h'(a)+\lambda\,\partial\abs\cdot(a)$ (on ajoute la dérivée de $h$ à chaque élément de l'ensemble).</li>
+</ol>
+
+<div class="box exemple"><div class="box-h">On refait le seuillage doux en deux lignes</div>
+<p>Pour $f(\beta)=(\beta-b)^2+\lambda\abs\beta$, les règles 2 et 3 donnent : $\hb$ minimise $f$ ⇔ $0\in2(\hb-b)+\lambda\,\partial\abs\cdot(\hb)$.</p>
+<ul>
+<li>Si $\hb\ne0$ : $0=2(\hb-b)+\lambda\sgn(\hb)$, donc $\hb=b-\frac\lambda2\sgn(\hb)$ (on retrouve $b\mp\lambda/2$).</li>
+<li>Si $\hb=0$ : $0\in-2b+\lambda[-1,1]$, c'est-à-dire $2b\in[-\lambda,\lambda]$, soit $\abs b\le\lambda/2$.</li>
+</ul>
+<p>C'est exactement le résultat du §2, sans étude de signe de la dérivée. Retenez la forme de la condition en 0 : <strong>« 0 est optimal tant que la pente de la partie lisse, $\abs{2b}$, ne dépasse pas $\lambda$ »</strong>.</p></div>
+
+<h3 id="kkt-derivation">Les conditions KKT du Lasso</h3>
+
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours2 · diapo 27</span></div>
+<p>Si $X$ n'est pas orthogonale, les valeurs du paramètre où la linéarité change se trouvent à partir des conditions d'optimalité du premier ordre, les conditions de Karush–Kuhn–Tucker (KKT). Ensemble actif : $\hA(\lambda)=\{j:\hb^L_j\ne0\}$.</p>
+$$\begin{cases}2X_j\T\big(Y-X\hb^L(\lambda)\big)=\lambda\,\sgn(\hb^L_j)&\forall j\in\hA,\\[2pt] 2\abs{X_j\T\big(Y-X\hb^L(\lambda)\big)}\le\lambda&\forall j\notin\hA.\end{cases}\qquad(2)$$
+<p>Pour trouver les $\lambda^{(k)}$ où la linéarité change, on regarde la seconde ligne : pour $j\notin\hA$, il existe $\lambda^{(k)}$ tel que $\abs{X_j\T(Y-X\hb^L(\lambda^{(k)}))}=\lambda^{(k)}/2$ ; la contrainte devient saturée et $X_j$ devient active.</p></div>
+
+<p><strong>D'où viennent ces conditions ?</strong> On applique, coordonnée par coordonnée, la règle « $0\in$ sous-différentiel ».</p>
+
+<div class="box idee"><div class="box-h">Idée</div>
+<p>Le critère $F(\beta)=\norm{Y-X\beta}^2+\lambda\sum_j\abs{\beta_j}$ est « partie lisse + somme de valeurs absolues de chaque coordonnée ». Pour une telle fonction convexe, $\hb$ est un minimum si et seulement si, <strong>pour chaque $j$</strong>, la dérivée partielle de la partie lisse plus $\lambda$ fois un sous-gradient de $\abs\cdot$ en $\hb_j$ peut valoir 0 (c'est la règle de la somme en dimension $p$, établie en Séance 4). Il ne reste qu'à calculer la dérivée partielle.</p></div>
+
+<ol class="steps">
+<li>$$\frac{\partial}{\partial\beta_j}\norm{Y-X\beta}^2=-2X_j\T(Y-X\beta)$$<span class="why">le gradient de $\beta\mapsto\norm{Y-X\beta}^2$ est $-2X\T(Y-X\beta)$ (<a href="00_rappels.html#gradient">rappel</a>) ; sa $j$-ième coordonnée est le produit scalaire de la $j$-ième colonne avec le résidu.</span></li>
+<li>$$0\in-2X_j\T(Y-X\hb)+\lambda\,\partial\abs\cdot(\hb_j)\qquad\text{pour tout }j$$<span class="why">règle d'optimalité + règle de la somme, coordonnée par coordonnée.</span></li>
+<li>Si $\hb_j\neq0$ : $\partial\abs\cdot(\hb_j)=\{\sgn(\hb_j)\}$, donc $2X_j\T(Y-X\hb)=\lambda\sgn(\hb_j)$.<span class="why">première ligne de (2).</span></li>
+<li>Si $\hb_j=0$ : $\partial\abs\cdot(0)=[-1,1]$, donc $2X_j\T(Y-X\hb)\in[-\lambda,\lambda]$, soit $2\abs{X_j\T(Y-X\hb)}\le\lambda$.<span class="why">seconde ligne de (2).</span></li>
+</ol>
+<p>Comme le critère est convexe, ces conditions sont <strong>nécessaires et suffisantes</strong> : un vecteur qui les vérifie est un minimiseur, et tout minimiseur les vérifie. C'est ce qui les rend si utiles : on peut <strong>vérifier</strong> une solution candidate sans résoudre le problème.</p>
+
+<div class="box remarque"><div class="box-h">Pourquoi « KKT » ?</div>
+<p>Karush, Kuhn et Tucker ont donné les conditions d'optimalité des problèmes sous contraintes d'inégalité. On peut récrire le Lasso avec contraintes ($\beta_j=\beta_j^+-\beta_j^-$, $\beta_j^\pm\ge0$) et leurs conditions donnent exactement (2). Le langage du sous-gradient y mène plus directement ; c'est celui de la Séance 4.</p></div>
+
+<h3 id="kkt-lecture">Lecture : des conditions sur les corrélations avec le résidu</h3>
+<p>Notons $r=Y-X\hb$ le <em class="new">résidu</em> et $c_j=X_j\T r$ le produit scalaire de la variable $j$ avec lui. Si les colonnes sont centrées et de même norme, $c_j$ est proportionnel à la <strong>corrélation empirique</strong> entre la variable $j$ et ce qui reste à expliquer. Les conditions KKT disent :</p>
+<div class="box intu"><div class="box-h">Intuition — un plafond à $\lambda/2$</div>
+<ul>
+<li><strong>Toutes</strong> les variables ont une corrélation avec le résidu au plus $\lambda/2$ en valeur absolue : $\abs{c_j}\le\lambda/2$. C'est un plafond.</li>
+<li>Les variables <strong>actives</strong> sont <strong>collées au plafond</strong> : $\abs{c_j}=\lambda/2$, et le signe de leur coefficient est celui de leur corrélation. Elles sont toutes « également corrélées » au résidu.</li>
+<li>Une variable sous le plafond a un coefficient nul : elle n'explique pas assez le résidu pour « payer » le prix $\lambda$ de son entrée.</li>
+</ul>
+<p>Comparez avec les moindres carrés : $X\T(Y-X\hb\MC)=0$, toutes les corrélations sont nulles (le résidu est orthogonal à toutes les colonnes). Le Lasso <strong>tolère</strong> un résidu encore corrélé avec les variables, jusqu'à $\lambda/2$ : il « refuse » d'ajuster parfaitement.</p></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe — vérifier une solution du Lasso</div>
+<p>Pour savoir si $\beta$ est solution : (1) calculez le résidu $r=Y-X\beta$ ; (2) calculez les $2X_j\T r$ ; (3) vérifiez « $=\lambda\sgn(\beta_j)$ » sur les $j$ tels que $\beta_j\ne0$ et « $\abs{\cdot}\le\lambda$ » sur les autres. Une seule condition violée ⇒ ce n'est pas la solution.</p></div>
+
+<h3 id="lambda-max">Conséquence : au-delà de $\lambda_{\max}$, tout est nul</h3>
+<div class="box thm"><div class="box-h">Proposition — Le seuil $\lambda_{\max}$</div>
+<p>Avec la convention $\norm{Y-X\beta}^2+\lambda\norm\beta_1$,</p>
+$$\hb=0\ \text{est solution du Lasso}\iff\lambda\ \ge\ \lambda_{\max}:=2\norm{X\T Y}_\infty=2\max_{j}\abs{X_j\T Y}.$$</div>
+<p><em>Preuve.</em> En $\beta=0$, toutes les coordonnées sont nulles, donc seule la seconde ligne de (2) s'applique, avec le résidu $r=Y-X\cdot0=Y$ : la condition est $2\abs{X_j\T Y}\le\lambda$ pour tout $j$, c'est-à-dire $\lambda\ge2\max_j\abs{X_j\T Y}$. Comme les KKT sont nécessaires et suffisantes, c'est une équivalence. <span class="qed">□</span></p>
+<p>En pratique, les logiciels (par exemple <code>glmnet</code>) calculent le Lasso sur une grille de $\lambda$ qui commence en $\lambda_{\max}$ : au-dessus, il n'y a rien à calculer. En design orthogonal, $\lambda_{\max}=2\max_j\abs{b_j}$ : on retrouve le moment où la première variable entre (§2).</p>
+
+<h3 id="kkt-exemple">Exemple complet en dimension 2 (design non orthogonal)</h3>
+<div class="box exemple"><div class="box-h">Les données</div>
+$$X=\begin{pmatrix}1&0\\1&1\\0&1\\0&0\end{pmatrix},\quad Y=\begin{pmatrix}3\\2\\1\\1\end{pmatrix},\qquad X\T X=\begin{pmatrix}2&1\\1&2\end{pmatrix},\quad X\T Y=\begin{pmatrix}5\\3\end{pmatrix}.$$
+<p>Les colonnes ne sont pas orthogonales ($X_1\T X_2=1$). Les moindres carrés donnent $\hb\MC=(X\T X)^{-1}X\T Y=\frac13\begin{pmatrix}2&-1\\-1&2\end{pmatrix}\begin{pmatrix}5\\3\end{pmatrix}=\begin{pmatrix}7/3\\1/3\end{pmatrix}$, et $\lambda_{\max}=2\max(5,3)=10$.</p></div>
+
+<p><strong>1. Vérifier un candidat.</strong> On affirme que pour $\lambda=4$, la solution est $\beta=(1{,}5;\ 0)$.</p>
+<ol class="steps">
+<li>$$r=Y-X\beta=\begin{pmatrix}3\\2\\1\\1\end{pmatrix}-\begin{pmatrix}1{,}5\\1{,}5\\0\\0\end{pmatrix}=\begin{pmatrix}1{,}5\\0{,}5\\1\\1\end{pmatrix}$$<span class="why">$X\beta=1{,}5\,X_1$ puisque $\beta_2=0$.</span></li>
+<li>$$2X_1\T r=2(1{,}5+0{,}5)=4=\lambda\cdot\sgn(1{,}5)\quad\checkmark$$<span class="why">variable 1 active : il faut l'égalité, avec le signe de $\beta_1>0$.</span></li>
+<li>$$2\abs{X_2\T r}=2(0{,}5+1)=3\le4\quad\checkmark$$<span class="why">variable 2 inactive : il suffit d'être sous le plafond $\lambda=4$.</span></li>
+</ol>
+<p>Les deux conditions sont vraies : $(1{,}5;0)$ est bien la solution pour $\lambda=4$. <strong>Un mauvais candidat</strong> : pour $\lambda=1$, $(2;0)$ ? Le résidu est $(1,0,1,1)$, $2X_1\T r=2\ne1$ : la première condition échoue, ce n'est pas la solution.</p>
+
+<p><strong>2. Trouver tout le chemin.</strong> La méthode : <em>deviner l'ensemble actif et les signes, résoudre l'égalité (qui est linéaire), puis vérifier les inégalités</em>.</p>
+<ul>
+<li><strong>Pour $\lambda\ge10$</strong> : $\hb=0$ (proposition précédente).</li>
+<li><strong>Juste en dessous de 10</strong> : seule la variable 1 (la plus corrélée, $5>3$) peut entrer, avec un signe $+$. L'égalité $2X_1\T(Y-X_1\beta_1)=\lambda$ s'écrit $2(5-2\beta_1)=\lambda$, d'où $\beta_1=\frac52-\frac\lambda4$. Pour la variable 2 : $X_2\T r=3-\beta_1\cdot X_2\T X_1=3-\beta_1=\frac12+\frac\lambda4$, et l'inégalité $2\abs{X_2\T r}\le\lambda$ s'écrit $1+\frac\lambda2\le\lambda$, soit $\lambda\ge2$. Donc pour $2\le\lambda\le10$ : $\hb=(\frac52-\frac\lambda4,\ 0)$.</li>
+<li><strong>Pour $\lambda\le2$</strong> : les deux variables sont actives (signes $+,+$). Les égalités s'écrivent $2X\T(Y-X\beta)=\lambda(1,1)\T$, soit $X\T X\beta=X\T Y-\frac\lambda2(1,1)\T$ :
+$$\beta=\frac13\begin{pmatrix}2&-1\\-1&2\end{pmatrix}\begin{pmatrix}5-\lambda/2\\3-\lambda/2\end{pmatrix}=\begin{pmatrix}7/3-\lambda/6\\1/3-\lambda/6\end{pmatrix}.$$
+Les signes sont bien $+,+$ tant que $\lambda<2$. En $\lambda=0$ on retrouve $\hb\MC=(7/3,1/3)$ ; en $\lambda=2$, $(2,0)$, qui raccorde avec le morceau précédent.</li>
+</ul>
+
+<figure class="fig">
+<svg viewBox="0 0 560 290" role="img" aria-label="Chemin du Lasso dans l exemple à deux variables">
+<line class="gr" x1="46.0" x2="46.0" y1="26" y2="246"/>
+<text class="tx" x="46.0" y="262" text-anchor="middle">0</text>
+<line class="gr" x1="135.1" x2="135.1" y1="26" y2="246"/>
+<text class="tx" x="135.1" y="262" text-anchor="middle">2</text>
+<line class="gr" x1="224.2" x2="224.2" y1="26" y2="246"/>
+<text class="tx" x="224.2" y="262" text-anchor="middle">4</text>
+<line class="gr" x1="313.3" x2="313.3" y1="26" y2="246"/>
+<text class="tx" x="313.3" y="262" text-anchor="middle">6</text>
+<line class="gr" x1="402.4" x2="402.4" y1="26" y2="246"/>
+<text class="tx" x="402.4" y="262" text-anchor="middle">8</text>
+<line class="gr" x1="491.5" x2="491.5" y1="26" y2="246"/>
+<text class="tx" x="491.5" y="262" text-anchor="middle">10</text>
+<line class="gr" x1="46" x2="536" y1="231.8" y2="231.8"/>
+<text class="tx" x="40" y="235.8" text-anchor="end">0</text>
+<line class="gr" x1="46" x2="536" y1="196.3" y2="196.3"/>
+<text class="tx" x="40" y="200.3" text-anchor="end">0,5</text>
+<line class="gr" x1="46" x2="536" y1="160.8" y2="160.8"/>
+<text class="tx" x="40" y="164.8" text-anchor="end">1</text>
+<line class="gr" x1="46" x2="536" y1="125.4" y2="125.4"/>
+<text class="tx" x="40" y="129.4" text-anchor="end">1,5</text>
+<line class="gr" x1="46" x2="536" y1="89.9" y2="89.9"/>
+<text class="tx" x="40" y="93.9" text-anchor="end">2</text>
+<line class="gr" x1="46" x2="536" y1="54.4" y2="54.4"/>
+<text class="tx" x="40" y="58.4" text-anchor="end">2,5</text>
+<line class="ax" x1="46" x2="536" y1="231.8" y2="231.8"/>
+<line class="ax" x1="46.0" x2="46.0" y1="26" y2="246"/>
+<text class="tx" x="536" y="278" text-anchor="end">λ</text>
+<text class="tx" x="52.0" y="18">β̂ⱼ(λ)</text>
+<path class="ln c1" d="M46.0 66.2L135.1 89.9L491.5 231.8L536.0 231.8"/>
+<path class="ln c2" d="M46.0 208.2L135.1 231.8L491.5 231.8L536.0 231.8"/>
+<line class="ln cm thin dash" x1="135.1" x2="135.1" y1="26" y2="246"/>
+<line class="ln cm thin dash" x1="491.5" x2="491.5" y1="26" y2="246"/>
+<circle class="f1" cx="46.0" cy="66.2" r="4"/>
+<circle class="f2" cx="46.0" cy="208.2" r="4"/>
+<text class="tx f1" x="57.1" y="56.2" text-anchor="start">β̂₁ (MCO : 7/3)</text>
+<text class="tx f2" x="57.1" y="198.2" text-anchor="start">β̂₂ (MCO : 1/3)</text>
+<text class="tx" x="140.1" y="167.9" text-anchor="start">λ = 2 : β̂₂ sort</text>
+<text class="tx" x="486.5" y="40.2" text-anchor="end">λ = 10 = λmax</text>
+</svg>
+<figcaption>Le chemin de l'exemple : trois morceaux affines, coudes en $\lambda=2$ (la variable 2 sort quand $\lambda$ augmente, entre quand il diminue) et $\lambda=10=\lambda_{\max}$.</figcaption>
+</figure>
+
+<figure class="fig">
+<svg viewBox="0 0 560 300" role="img" aria-label="Corrélations avec le résidu en fonction de lambda">
+<line class="gr" x1="46.0" x2="46.0" y1="26" y2="256"/>
+<text class="tx" x="46.0" y="272" text-anchor="middle">0</text>
+<line class="gr" x1="135.1" x2="135.1" y1="26" y2="256"/>
+<text class="tx" x="135.1" y="272" text-anchor="middle">2</text>
+<line class="gr" x1="224.2" x2="224.2" y1="26" y2="256"/>
+<text class="tx" x="224.2" y="272" text-anchor="middle">4</text>
+<line class="gr" x1="313.3" x2="313.3" y1="26" y2="256"/>
+<text class="tx" x="313.3" y="272" text-anchor="middle">6</text>
+<line class="gr" x1="402.4" x2="402.4" y1="26" y2="256"/>
+<text class="tx" x="402.4" y="272" text-anchor="middle">8</text>
+<line class="gr" x1="491.5" x2="491.5" y1="26" y2="256"/>
+<text class="tx" x="491.5" y="272" text-anchor="middle">10</text>
+<line class="gr" x1="46" x2="536" y1="214.2" y2="214.2"/>
+<text class="tx" x="40" y="218.2" text-anchor="end">2</text>
+<line class="gr" x1="46" x2="536" y1="172.4" y2="172.4"/>
+<text class="tx" x="40" y="176.4" text-anchor="end">4</text>
+<line class="gr" x1="46" x2="536" y1="130.5" y2="130.5"/>
+<text class="tx" x="40" y="134.5" text-anchor="end">6</text>
+<line class="gr" x1="46" x2="536" y1="88.7" y2="88.7"/>
+<text class="tx" x="40" y="92.7" text-anchor="end">8</text>
+<line class="gr" x1="46" x2="536" y1="46.9" y2="46.9"/>
+<text class="tx" x="40" y="50.9" text-anchor="end">10</text>
+<line class="ax" x1="46" x2="536" y1="256.0" y2="256.0"/>
+<line class="ax" x1="46.0" x2="46.0" y1="26" y2="256"/>
+<text class="tx" x="536" y="288" text-anchor="end">λ</text>
+<text class="tx" x="52.0" y="18">2|Xⱼᵀ r(λ)|</text>
+<path class="ln cm thin dash" d="M46.0 256.0L536.0 26.0"/>
+<path class="ln c1" d="M46.0 256.0L491.5 46.9L536.0 46.9"/>
+<path class="ln c2" d="M46.0 256.0L135.1 214.2L491.5 130.5L536.0 130.5"/>
+<text class="tx" x="429.1" y="55.3" text-anchor="end">droite y = λ (plafond)</text>
+<text class="tx f2" x="293.3" y="190.4" text-anchor="start">variable 2 : sous le plafond → β̂₂ = 0</text>
+<text class="tx f1" x="291.0" y="99.2" text-anchor="end">variable 1 : sur le plafond → active</text>
+</svg>
+<figcaption>Les mêmes données vues par les KKT : $2\abs{X_j\T r(\lambda)}$ pour chaque variable. La droite pointillée $y=\lambda$ est le plafond. La variable 1 (bleu) est collée au plafond dès $\lambda\le10$ : elle est active. La variable 2 (orange) reste dessous jusqu'à $\lambda=2$, où elle touche le plafond et entre. Au-delà de $\lambda_{\max}=10$, le résidu vaut $Y$ et les deux courbes sont constantes.</figcaption>
+</figure>
+
+<h3 id="chemin-general">Pourquoi le chemin est-il linéaire par morceaux ?</h3>
+<p>L'exemple n'est pas un hasard. Supposons que sur un intervalle de $\lambda$, l'ensemble actif $A=\hA(\lambda)$ et le vecteur des signes $s_A=\sgn(\hb_A)$ ne changent pas. Notons $X_A$ la matrice formée des colonnes de $A$ et $\hb_A$ les coefficients correspondants (les autres sont nuls, donc $X\hb=X_A\hb_A$).</p>
+<ol class="steps">
+<li>$$2X_A\T(Y-X_A\hb_A)=\lambda\,s_A$$<span class="why">c'est la première ligne de (2), écrite pour tous les $j\in A$ à la fois.</span></li>
+<li>$$X_A\T X_A\,\hb_A=X_A\T Y-\frac\lambda2\,s_A$$<span class="why">on développe et on divise par 2.</span></li>
+<li>$$\hb_A(\lambda)=(X_A\T X_A)^{-1}\Big(X_A\T Y-\frac\lambda2\,s_A\Big)$$<span class="why">si les colonnes actives sont linéairement indépendantes, $X_A\T X_A$ est inversible.</span></li>
+</ol>
+<p>Le membre de droite est <strong>affine en $\lambda$</strong> : entre deux changements de l'ensemble actif, le chemin est un segment. Il change de direction (un coude) seulement quand :</p>
+<ul>
+<li>une variable inactive voit $2\abs{X_j\T r}$ atteindre $\lambda$ : sa contrainte devient <em>saturée</em> et elle entre (c'est la description de la diapo 27) ;</li>
+<li>ou un coefficient actif atteint 0 : la variable sort.</li>
+</ul>
+<p>Il y a un nombre fini de coudes ; entre deux coudes il suffit de résoudre un système linéaire. C'est ce qu'exploite l'algorithme LARS.</p>
+
+<div class="box remarque"><div class="box-h">Remarque — qu'est-ce qui est unique ?</div>
+<p>Même quand $\hb^L$ n'est pas unique (par exemple si deux colonnes sont identiques), les <strong>valeurs ajustées</strong> $X\hb^L$ sont les mêmes pour toutes les solutions, ainsi que $\norm{\hb^L}_1$ (si $\lambda>0$). La raison : $u\mapsto\norm{Y-u}^2$ est strictement convexe (exercice 7). Pour des données « génériques » (par exemple tirées d'une loi continue), $\hb^L$ est d'ailleurs unique, mais c'est hors programme.</p></div>
+
+<div class="quiz"><p>Question rapide : dans l'exemple, pour $\lambda=1$, que valent $2X_1\T r$ et $2X_2\T r$ à l'optimum ? Calculez-le sans résoudre de système.</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body"><p>À $\lambda=1$, les deux variables sont actives avec des coefficients positifs ($7/3-1/6$ et $1/3-1/6$), donc par les KKT : $2X_1\T r=2X_2\T r=\lambda=1$. Pas besoin de calcul : une variable active est toujours exactement au plafond.</p></div></details></div>
+
+<h2 id="lars">4. L'algorithme LARS : suivre le chemin</h2>
+<p class="tldr">LARS construit le chemin du Lasso en faisant entrer les variables une à une, chaque fois que l'une d'elles devient aussi corrélée au résidu que celles déjà actives.</p>
+
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours2 · diapo 28</span></div>
+<ul>
+<li>Une solution (approchée) du Lasso peut être obtenue par exemple par l'algorithme LARS (Efron, Hastie, Johnstone, Tibshirani).</li>
+<li>Algorithme fondé sur les conditions KKT, c'est-à-dire sur les corrélations entre le résidu $Y-X\hb^L(\lambda)$ et les variables explicatives.</li>
+<li>Inconvénients : il échoue à construire de bonnes évaluations de l'estimateur quand de fortes corrélations existent entre les variables ; il tend à sélectionner une variable par groupe de variables corrélées, écartant les autres.</li>
+</ul></div>
+
+<p><strong>Le principe</strong> (LARS = <em>Least Angle Regression</em>). On part de $\lambda=\lambda_{\max}$ (tout est nul, le résidu vaut $Y$) et on fait descendre le plafond $\lambda/2$ des KKT. À chaque instant, les variables actives doivent rester <em>également</em> corrélées au résidu, et au plafond.</p>
+<div class="box methode"><div class="box-h">Méthode — LARS (version Lasso), en mots</div>
+<ol>
+<li><strong>Départ</strong> : $\beta=0$, résidu $r=Y$. On calcule les corrélations $c_j=X_j\T Y$ ; la variable la plus corrélée en valeur absolue entre (c'est elle qui touche le plafond en premier, en $\lambda_{\max}$).</li>
+<li><strong>Avancer</strong> : on augmente son coefficient dans le sens du signe de sa corrélation. Le résidu diminue dans la direction de cette colonne, sa corrélation baisse… et celles des autres variables changent aussi.</li>
+<li><strong>Nouvelle entrée</strong> : on s'arrête dès qu'une autre variable atteint la même corrélation absolue. Elle entre dans l'ensemble actif.</li>
+<li><strong>Avancer ensemble</strong> : on fait bouger les coefficients actifs dans la direction qui garde leurs corrélations <strong>égales entre elles</strong> (le résidu fait le même angle avec toutes les colonnes actives : d'où « équiangulaire » et « least angle »). Le long de ce segment, les coefficients évoluent linéairement : c'est le calcul $(X_A\T X_A)^{-1}(\dots)$ du §3.</li>
+<li><strong>Modification Lasso</strong> : si un coefficient actif atteint 0 en chemin, on retire la variable de l'ensemble actif.</li>
+<li>On recommence jusqu'à $\lambda=0$ (moindres carrés si $p\le n$), ou jusqu'à ce que le résidu ne soit plus corrélé à rien.</li>
+</ol></div>
+
+<div class="box exemple"><div class="box-h">LARS sur l'exemple du §3</div>
+<p>Départ : $c=X\T Y=(5,3)$, la variable 1 entre. Avec $\beta=(\beta_1,0)$, les corrélations valent $c_1=5-2\beta_1$ et $c_2=3-\beta_1$ (car $X_1\T X_1=2$, $X_2\T X_1=1$). Elles deviennent égales quand $5-2\beta_1=3-\beta_1$, soit $\beta_1=2$, avec $c_1=c_2=1$. Le plafond vaut alors $\lambda/2=1$, c'est-à-dire $\lambda=2$ : c'est exactement le coude trouvé au §3. Ensuite les deux coefficients avancent ensemble, $\beta=(7/3-\lambda/6,\ 1/3-\lambda/6)$, jusqu'aux moindres carrés $(7/3,1/3)$ en $\lambda=0$, où toutes les corrélations sont nulles.</p></div>
+
+<p><strong>Pourquoi c'est efficace.</strong> Le chemin entier est décrit par ses coudes, et entre deux coudes il suffit d'un système linéaire : le coût total est de l'ordre de celui d'un seul calcul de moindres carrés (tant que le nombre de coudes reste de l'ordre de $\min(n,p)$). Avec la modification Lasso, LARS donne <strong>exactement</strong> le chemin du Lasso (la diapo dit « approchée » : en pratique, on calcule souvent le Lasso par d'autres algorithmes, comme la descente par coordonnées de <code>glmnet</code>, qui donnent une solution approchée à précision voulue).</p>
+
+<div class="box piege"><div class="box-h">Le défaut : les variables corrélées</div>
+<p>Si $X_1$ et $X_2$ sont presque identiques, elles ont presque la même corrélation avec n'importe quel résidu. Dès que $X_1$ est entrée, la corrélation de $X_2$ baisse donc en même temps que celle de $X_1$ en restant juste en dessous : l'écart $(X_1-X_2)\T r$ ne se résorbe que très lentement (quand $\beta_1$ augmente, il diminue de $(X_1-X_2)\T X_1$ par unité, quantité minuscule), et $X_2$ n'entre pas (ou très tard). Laquelle des deux entre en premier dépend de détails minuscules du bruit. Cas extrême : si $X_1=X_2$, leurs corrélations avec le résidu sont toujours égales, le Lasso a une infinité de solutions (exercice 6) et l'algorithme en choisit une arbitrairement. Conséquence pratique : une variable écartée par le Lasso n'est pas forcément inutile, elle peut être « cachée » par une variable corrélée. La Séance 6 (elastic net) répond à ce problème.</p></div>
+
+<h2 id="objectifs">5. Prédire, estimer, sélectionner : quelles garanties viser ?</h2>
+<p class="tldr">Avant de démontrer quoi que ce soit sur le Lasso, il faut dire <em>ce qu'on veut</em> qu'il fasse bien ; les trois objectifs sont de difficulté croissante, et le bon étalon est l'oracle de la Séance 1, $\sigma^2s/n$ ($s$ : nombre de coefficients non nuls de $\bstar$).</p>
+
+<h3 id="trois-objectifs">Trois objectifs différents</h3>
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours2 · diapo 29</span></div>
+<ul>
+<li>fournir la meilleure approximation du vecteur $X\bstar$ : on parle de <strong>prédiction</strong> ;</li>
+<li>estimer le vecteur $\bstar$ : on parle d'<strong>estimation</strong> ;</li>
+<li>identifier le support $\Astar$ de $\bstar$, ou encore le vecteur des signes de $\bstar$ : on parle de <strong>sélection</strong>.</li>
+</ul></div>
+<p>On les mesure par des quantités différentes : $\norm{X\hb-X\bstar}_n^2=\frac1n\norm{X(\hb-\bstar)}^2$ pour la prédiction, $\norm{\hb-\bstar}_1$, $\norm{\hb-\bstar}_2$ ou $\norm{\hb-\bstar}_\infty$ pour l'estimation, et l'événement « $\{j:\hb_j\neq0\}=\Astar$ » pour la sélection, où $\Astar=\{j:\bstar_j\neq0\}$ est le support de $\bstar$.</p>
+
+<div class="box exemple"><div class="box-h">Un exemple qui les sépare</div>
+<p>Supposons $X_1$ et $X_2$ <strong>presque identiques</strong> ($\norm{X_1-X_2}$ minuscule) et $\bstar=(1,0)$ : seule la variable 1 compte. Un estimateur qui répond $\hb=(0,1)$ :</p>
+<ul>
+<li><strong>prédit très bien</strong> : $X\hb-X\bstar=X_2-X_1$, de norme minuscule ;</li>
+<li><strong>estime mal</strong> : $\norm{\hb-\bstar}_1=2$, aussi faux que possible ;</li>
+<li><strong>sélectionne faux</strong> : il désigne la variable 2 au lieu de la 1.</li>
+</ul>
+<p>Leçon : la prédiction est l'objectif le plus facile (on peut prédire bien avec de « mauvais » coefficients), l'estimation demande que les colonnes de $X$ ne soient pas trop semblables, et la sélection en demande encore plus (en plus, il faut que les coefficients non nuls soient assez grands pour être distingués du bruit).</p></div>
+
+<h3 id="inegalites-sparsite">Les inégalités de sparsité</h3>
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours2 · diapo 30</span></div>
+<p>Sous l'hypothèse de sparsité (S) d'indice $s$, un estimateur $\hb$ vérifie une <strong>inégalité de sparsité</strong> (IS)</p>
+$$\begin{aligned}&\text{en prédiction si}&&\E\big[\norm{X\bstar-X\hb}_n^2\big]\le C\,s\,\frac{L(n,p)}{n},\\ &\text{en estimation en norme }\ell_1\text{ si}&&\E\big[\norm{\hb-\bstar}_1\big]\le C\,s\sqrt{\frac{L(n,p)}{n}},\\ &\text{en estimation en norme sup si}&&\E\big[\norm{\hb-\bstar}_\infty\big]\le C\sqrt{\frac{L(n,p)}{n}},\end{aligned}$$
+<p>où $C>0$ et $L(n,p)$ dépend au plus logarithmiquement de $n$ et $p$. Toutes les IS peuvent aussi être énoncées avec probabilité.</p></div>
+
+<p><strong>Décodage.</strong></p>
+<ul>
+<li>$s$ : le nombre (maximal) de coefficients non nuls de $\bstar$ (hypothèse (S) : $\abs{\Astar}\le s$).</li>
+<li>$C$ : une constante qui ne dépend ni de $n$, ni de $p$, ni de $s$ (elle peut dépendre de $\sigma$ et de propriétés de $X$).</li>
+<li>$L(n,p)$ : un facteur « au plus logarithmique », typiquement $L(n,p)=\log p$. Il grandit si lentement qu'on le considère presque comme une constante : $\log(10^4)\approx9{,}2$, $\log(10^6)\approx13{,}8$.</li>
+</ul>
+
+<div class="box intu"><div class="box-h">Intuition — « comme l'oracle, au prix d'un $\log p$ »</div>
+<p>En Séance 1 (diapo 22), l'<strong>oracle</strong> qui connaît le support $\Astar$ fait des moindres carrés sur ces $\abs{\Astar}\le s$ variables seulement, et son erreur de prédiction moyenne vaut $\E\norm{X\hb^{MCR}-X\bstar}_n^2=\sigma^2\abs{\Astar}/n\le\sigma^2s/n$. Une IS en prédiction dit : <strong>sans connaître le support</strong>, on fait aussi bien, à un facteur $C\,L(n,p)\approx C\log p$ près. La dimension $p$ n'apparaît que dans le logarithme : on peut avoir $p=10^6$ variables pour $n=200$ observations, pourvu que $s$ soit petit.</p></div>
+
+<p><strong>D'où viennent les trois vitesses ?</strong> Une heuristique (pas une preuve) les relie entre elles :</p>
+<ol class="steps">
+<li>Avec des colonnes normalisées ($\norm{X_j}^2=n$), un coefficient non nul bien estimé a une erreur d'ordre $\sigma/\sqrt n$ (comme une moyenne de $n$ observations). Ne pas savoir <em>lesquelles</em> des $p$ variables sont actives coûte un facteur $\sqrt{\log p}$ : on est obligé de se protéger contre le pire des $p$ bruits, et le maximum de $p$ gaussiennes est de l'ordre de $\sqrt{2\log p}$.<span class="why">voir la figure ci-dessous et <a href="00_rappels.html#queues">queues gaussiennes</a>.</span></li>
+<li>Donc chaque coordonnée est à environ $\sigma\sqrt{\log p/n}$ près : c'est la vitesse en norme sup.<span class="why">$\norm{\hb-\bstar}_\infty$ = la pire coordonnée.</span></li>
+<li>En norme $\ell_1$ on additionne $s$ erreurs de cette taille : $s\,\sigma\sqrt{\log p/n}$.<span class="why">les erreurs hors support sont (idéalement) nulles.</span></li>
+<li>En prédiction, quand la matrice de Gram ressemble à l'identité, $\norm{X(\hb-\bstar)}_n^2\approx\norm{\hb-\bstar}_2^2$, somme de $s$ carrés : $s\,\sigma^2\log p/n$.<span class="why">$\frac1n\norm{X\delta}^2=\delta\T\frac{X\T X}{n}\delta\approx\norm\delta^2$.</span></li>
+</ol>
+
+<div class="widget" data-widget="maxgauss"></div>
+<p class="small muted">D'où vient le $\log p$ : le plus grand de $p$ bruits gaussiens standards grandit comme $\sqrt{2\log p}$, très lentement. C'est le « prix » de la recherche parmi $p$ variables. Vous verrez ce calcul en vrai en Séance 3.</p>
+
+<div class="box piege"><div class="box-h">Piège — espérance ou probabilité ?</div>
+<p>La diapo écrit les IS en espérance, mais précise qu'on peut les énoncer « avec probabilité ». C'est la forme qu'aura le théorème de la Séance 3 : « avec probabilité au moins $1-p^{1-A^2/8}$, $\norm{X(\hb-\bstar)}^2\le\dots$ ». Les deux formes disent la même chose en substance ; ne soyez pas surpris de passer de l'une à l'autre.</p></div>
+
+<h3 id="lire-is">Lire une IS avec des chiffres</h3>
+<div class="box exemple"><div class="box-h">Application numérique</div>
+<p>$n=200$ observations, $p=10^4$ variables, $s=5$ coefficients non nuls, $\sigma=1$, et $L(n,p)=\log p\approx9{,}21$.</p>
+<div class="table-wrap"><table>
+<tr><th>quantité</th><th>formule</th><th>valeur</th></tr>
+<tr><td>oracle (connaît le support)</td><td>$\sigma^2s/n$</td><td>0,025</td></tr>
+<tr><td>IS en prédiction (sans le $C$)</td><td>$s\log p/n$</td><td>≈ 0,23</td></tr>
+<tr><td>IS en norme $\ell_1$ (sans le $C$)</td><td>$s\sqrt{\log p/n}$</td><td>≈ 1,07</td></tr>
+<tr><td>IS en norme sup (sans le $C$)</td><td>$\sqrt{\log p/n}$</td><td>≈ 0,21</td></tr>
+<tr><td>moindres carrés</td><td>—</td><td>impossibles ($p>n$) ; même avec $p\le n$ leur erreur serait $\sigma^2p/n$</td></tr>
+</table></div>
+<p>Le Lasso paie un facteur $\log p\approx9$ par rapport à l'oracle, mais pas le facteur $p/s=2000$ qu'on paierait en n'exploitant pas la parcimonie.</p></div>
+
+<h2 id="gram-bon-estimateur">6. La matrice de Gram, et ce qu'est un « bon » estimateur</h2>
+<p class="tldr">Les IS ne peuvent pas être vraies pour n'importe quelle matrice $X$ : il faut une hypothèse sur la matrice de Gram $X\T X/n$, qui interdit que des groupes de variables se ressemblent trop.</p>
+
+<div class="box diapo"><div class="box-h">Ce que dit la diapo <span class="ref">Cours2 · diapo 31</span></div>
+<p>Les IS sont généralement difficiles à obtenir ⇒ nécessité d'ajouter une hypothèse, souvent restrictive, sur la matrice de Gram $\Psi_n=\frac{X\T X}{n}$. Un « bon » estimateur : <strong>optimalité</strong> (consistance quand $n\to\infty$ ; IS non asymptotiques), <strong>hypothèses</strong> sur $\Psi_n$ aussi faibles que possible, <strong>complexité algorithmique</strong> raisonnable même si $p>n$, <strong>interprétabilité</strong> (estimateur parcimonieux).</p></div>
+
+<p><strong>Ce que contient $\Psi_n$.</strong> Son coefficient $(j,k)$ est $\frac1nX_j\T X_k$, le produit scalaire (divisé par $n$) des colonnes $j$ et $k$. Si chaque colonne est centrée et normalisée ($\norm{X_j}^2=n$), la diagonale vaut 1 et le coefficient $(j,k)$ est exactement la <strong>corrélation empirique</strong> entre les variables $j$ et $k$ (<a href="00_rappels.html#gram">rappel sur la matrice de Gram</a>). $\Psi_n$ résume donc « qui ressemble à qui » parmi les variables.</p>
+
+<div class="box intu"><div class="box-h">Pourquoi une hypothèse est indispensable</div>
+<p>Si deux colonnes sont identiques, $X_1=X_2$, alors $X(1,0,\dots)=X(0,1,\dots)$ : <strong>les données ne peuvent pas distinguer</strong> $\bstar=(1,0,\dots)$ de $\bstar=(0,1,\dots)$, même sans bruit et avec une infinité d'observations du même design. Aucun estimateur ne peut alors garantir une bonne estimation de $\bstar$ ni retrouver son support. Il faut donc supposer que les colonnes ne sont pas trop corrélées — au moins parmi les petits groupes de variables qui peuvent former le support. Quand $p>n$, $\Psi_n$ n'est jamais inversible (son rang est au plus $n$) : on ne peut pas exiger qu'elle le soit, et toute la finesse de la Séance 3 sera de trouver une hypothèse plus faible (la condition de valeurs propres restreintes).</p></div>
+
+<p><strong>Les quatre qualités d'un « bon » estimateur</strong>, en clair :</p>
+<ul>
+<li><strong>Optimalité</strong>. Asymptotique : l'estimateur converge vers la vérité quand $n\to\infty$ (consistance, <a href="00_rappels.html#convergences">rappel</a>). Non asymptotique : une IS valable pour <em>tous</em> $n$ et $p$, avec des constantes explicites — c'est ce que vise la théorie du Lasso, car $p$ grandit souvent avec $n$.</li>
+<li><strong>Hypothèses faibles</strong> sur $\Psi_n$ : plus elles sont faibles, plus le résultat s'applique à des données réelles (où les variables sont souvent corrélées).</li>
+<li><strong>Complexité raisonnable</strong> : calculable même pour $p\gg n$. Les critères $\ell_0$ (AIC, BIC) échouent ici ($2^p$ modèles) ; le Lasso, convexe, réussit (LARS, descente par coordonnées).</li>
+<li><strong>Interprétabilité</strong> : un estimateur parcimonieux désigne quelques variables, qu'on peut examiner. Le Ridge n'a pas cette qualité.</li>
+</ul>
+<p>Le Lasso coche les deux dernières cases par construction ; les séances 3 et 4 montrent qu'il coche aussi la première, sous une hypothèse sur $\Psi_n$ aussi faible que possible.</p>
+
+<h2 id="resume">Résumé de la séance</h2>
+<div class="box resume">
+<ol>
+<li><strong>Curseur $\lambda$</strong> : $\lambda=0$ → moindres carrés ; $\lambda\ge\lambda_{\max}=2\norm{X\T Y}_\infty$ → $\hb^L=0$ exactement ; entre les deux, typiquement de moins en moins de variables quand $\lambda$ grandit.</li>
+<li><strong>Bayes</strong> : Lasso = maximum a posteriori avec a priori de Laplace (paramètre de pénalité $2\sigma^2\lambda_{\text{Laplace}}$) ; Ridge = MAP avec a priori gaussien.</li>
+<li><strong>Design orthogonal</strong> ($X\T X=I_p$, donc $p\le n$) : le critère se découple ; $\hb^L_j=\sgn(b_j)(\abs{b_j}-\lambda/2)_+$ avec $b=X\T Y=\hb\MC$ : seuillage doux = sélection (mise à 0 des petits) + rétrécissement (biais $\lambda/2$ sur les gros).</li>
+<li><strong>Sous-gradient</strong> : pentes des droites qui restent sous le graphe ; $\partial\abs\cdot(0)=[-1,1]$ ; $a$ minimise $\varphi$ convexe ⇔ $0\in\partial\varphi(a)$.</li>
+<li><strong>KKT</strong> : $2X_j\T(Y-X\hb)=\lambda\sgn(\hb_j)$ si $\hb_j\ne0$, $2\abs{X_j\T(Y-X\hb)}\le\lambda$ sinon ; nécessaires et suffisantes ; lecture : corrélations avec le résidu plafonnées à $\lambda/2$, actives au plafond.</li>
+<li><strong>Chemin</strong> : à ensemble actif et signes fixés, $\hb_A(\lambda)=(X_A\T X_A)^{-1}(X_A\T Y-\frac\lambda2s_A)$ est affine ⇒ chemin linéaire par morceaux ; LARS le suit coude par coude ; il gère mal les variables très corrélées.</li>
+<li><strong>Objectifs</strong> : prédiction (le plus facile), puis estimation, puis sélection (le plus exigeant). Les inégalités de sparsité visent l'erreur de l'oracle $\sigma^2s/n$ à un facteur $\log p$ près ; elles demandent une hypothèse sur $\Psi_n=X\T X/n$.</li>
+</ol></div>
+
+<h2 id="reflexes">Les réflexes à acquérir</h2>
+<div class="box reflexe"><div class="box-h">Réflexes de la Séance 2</div>
+<ul>
+<li><strong>Une valeur absolue dans un problème à une variable</strong> → séparez les cas $\beta>0$, $\beta<0$, $\beta=0$, ou écrivez $0\in$ (dérivée de la partie lisse) $+\lambda[-1,1]$ en 0.</li>
+<li><strong>$X\T X=I$</strong> → développez le carré, le problème se découple, chaque coordonnée est un seuillage doux de $b_j=X_j\T Y$.</li>
+<li><strong>« Montrer que $\beta$ est la solution du Lasso »</strong> → résidu, puis $2X_j\T r$, puis égalité (avec le signe) sur les actives et inégalité sur les inactives.</li>
+<li><strong>« Pour quels $\lambda$ la solution est-elle nulle ? »</strong> → $\lambda\ge2\norm{X\T Y}_\infty$ (avec la convention non normalisée ; recalculez le facteur si la convention change).</li>
+<li><strong>Calculer le chemin à la main</strong> → deviner l'ensemble actif et les signes, résoudre le système linéaire $X_A\T X_A\beta_A=X_A\T Y-\frac\lambda2s_A$, vérifier les inégalités pour trouver jusqu'où ce morceau est valable.</li>
+<li><strong>Pénalité ↔ a priori</strong> → $-\log$ a priori = pénalité ; Laplace ↔ $\ell_1$, Gauss ↔ $\ell_2^2$.</li>
+<li><strong>Une borne d'erreur</strong> → comparez-la à l'oracle $\sigma^2s/n$ : le « prix » acceptable est un facteur $\log p$.</li>
+<li><strong>Une formule avec des 2 qui traînent</strong> → vérifiez d'abord la normalisation du critère ($\norm\cdot^2$, $\frac12\norm\cdot^2$ ou $\frac1n\norm\cdot^2$).</li>
+</ul></div>
+
+<h2 id="exercices">Exercices</h2>
+
+<div class="exo"><div class="exo-h">Exercice 1 — Seuillage doux à la main <span class="lvl">★☆☆</span></div>
+<p>Calculez $\argmin_{\beta\in\R}\{(\beta-b)^2+\lambda\abs\beta\}$ pour $\lambda=2$ et $b\in\{3;\ -0{,}8;\ -3;\ 1\}$.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Le seuil est $\lambda/2=1$ : comparez $\abs b$ à 1.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>$\sgn(b)(\abs b-1)_+$ : pour $b=3$, $2$ ; pour $b=-0{,}8$, $\abs b\le1$ donc $0$ ; pour $b=-3$, $-2$ ; pour $b=1$, $\abs b=1\le1$ donc $0$ (cas limite : le plateau inclut ses bords).</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 2 — Un chemin en design orthogonal <span class="lvl">★☆☆</span></div>
+<p>Avec la matrice $X=\frac12\begin{pmatrix}1&1\\1&-1\\1&1\\1&-1\end{pmatrix}$ du §2 et $Y=(4,0,2,-2)\T$ : (a) calculez $b=X\T Y$ ; (b) donnez $\hb^L(\lambda)$ pour $\lambda=2,5,8$ ; (c) dans quel ordre les variables entrent-elles quand $\lambda$ décroît depuis $+\infty$, et à quelles valeurs ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>$X\T X=I_2$ : chaque coordonnée vaut $\sgn(b_j)(\abs{b_j}-\lambda/2)_+$, et la variable $j$ est active pour $\lambda<2\abs{b_j}$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) $b=\frac12(4+0+2-2,\ 4-0+2+2)=(2,4)$.</p>
+<p>(b) $\lambda=2$ (seuil 1) : $(1,3)$. $\lambda=5$ (seuil 2,5) : $(0;\ 1{,}5)$. $\lambda=8$ (seuil 4) : $(0,0)$.</p>
+<p>(c) $\lambda_{\max}=2\max(2,4)=8$ : la variable 2 entre en $\lambda=8$, puis la variable 1 en $\lambda=2\times2=4$. Pour $\lambda\in[4,8)$ seule la variable 2 est active.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 3 — Qui entre en premier, et avec quel signe ? <span class="lvl">★☆☆</span></div>
+<p>On suppose $X\T Y=(1;\ -7;\ 3;\ 0{,}5)$ (design quelconque). Que vaut $\lambda_{\max}$ ? Juste en dessous de $\lambda_{\max}$, quelle variable est active et quel est le signe de son coefficient ? Justifiez par les KKT.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Quand $\lambda$ est juste en dessous de $\lambda_{\max}$, $\hb$ est petit, donc le résidu est proche de $Y$. Une variable active vérifie $2X_j\T r=\lambda\sgn(\hb_j)$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>$\lambda_{\max}=2\norm{X\T Y}_\infty=2\times7=14$. Juste en dessous, le résidu vaut presque $Y$, donc $2\abs{X_j\T r}\approx(2;\ 14;\ 6;\ 1)$ : seule la variable 2 peut atteindre le plafond $\lambda\approx14$. Elle est donc la seule active. Les KKT donnent $\sgn(\hb_2)=\sgn(X_2\T r)$, et $X_2\T r\approx-7<0$ : son coefficient est <strong>négatif</strong>. Règle : une variable active a le signe de sa corrélation avec le résidu.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 4 — Vérifier et réfuter avec les KKT <span class="lvl">★★☆</span></div>
+<p>On reprend l'exemple du §3 : $X=\begin{pmatrix}1&0\\1&1\\0&1\\0&0\end{pmatrix}$, $Y=(3,2,1,1)\T$. (a) Montrez que $(1,0)$ est la solution pour $\lambda=6$. (b) Montrez que $(0,1)$ n'est la solution du Lasso pour <strong>aucun</strong> $\lambda\ge0$.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>(b) Si $(0,1)$ était solution, la condition d'égalité sur la variable 2 imposerait la valeur de $\lambda$ ; regardez ensuite la condition sur la variable 1.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) $r=Y-X_1=(2,1,1,1)$. $2X_1\T r=2(2+1)=6=\lambda$ ✓ (active, signe +). $2\abs{X_2\T r}=2(1+1)=4\le6$ ✓. C'est la solution (et elle colle à la formule $\frac52-\frac\lambda4=1$).</p>
+<p>(b) $r=Y-X_2=(3,1,0,1)$. La variable 2 est active avec un coefficient positif : il faut $2X_2\T r=\lambda$, or $2X_2\T r=2(1+0)=2$, donc $\lambda=2$ obligatoirement. Mais la variable 1 est inactive et $2\abs{X_1\T r}=2(3+1)=8>2$ : la seconde condition échoue. Aucun $\lambda$ ne convient. Intuition : le résidu de $(0,1)$ reste très corrélé à $X_1$, il serait payant d'utiliser la variable 1.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 5 — Le Ridge est un MAP gaussien <span class="lvl">★★☆</span></div>
+<p>Modèle $Y\mid\beta\sim\N(X\beta,\sigma^2I_n)$, a priori $\beta_1,\dots,\beta_p$ indépendants de loi $\N(0,\tau^2)$. Montrez que le MAP est le Ridge $\argmin\{\norm{Y-X\beta}^2+\lambda\norm\beta^2\}$ et donnez $\lambda$. Que se passe-t-il quand $\tau\to\infty$ ? Interprétez.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Même calcul que pour la Laplace, avec $-\log\pi(\beta)=\frac{1}{2\tau^2}\norm\beta^2+$cte.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>$-\log\pi(\beta\mid Y)=\frac1{2\sigma^2}\norm{Y-X\beta}^2+\frac1{2\tau^2}\norm\beta^2+C$. En multipliant par $2\sigma^2$ : minimiser $\norm{Y-X\beta}^2+\frac{\sigma^2}{\tau^2}\norm\beta^2$. Donc $\lambda=\sigma^2/\tau^2$. Quand $\tau\to\infty$, l'a priori devient « plat » (aucune préférence), $\lambda\to0$ et on retrouve les moindres carrés. Plus l'a priori est confiant ($\tau$ petit), plus on rétrécit vers 0.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 6 — Une colonne dupliquée <span class="lvl">★★☆</span></div>
+<p>Soit $\lambda>0$, $u\in\R^n$ avec $\norm u=1$, et $X=(u\ \ u)$ (deux colonnes identiques). Notons $t^*=\sgn(u\T Y)(\abs{u\T Y}-\lambda/2)_+$. Montrez que $(a,c)$ est solution du Lasso si et seulement si $a+c=t^*$ et $a,c$ sont de même signe que $t^*$ (ou nuls). Combien y a-t-il de solutions si $t^*\neq0$ ? Que vaut $X\hb$ ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>$X(a,c)\T=(a+c)u$ ne dépend que de $t=a+c$, et $\abs a+\abs c\ge\abs{a+c}$ avec égalité si et seulement si $a$ et $c$ sont de même signe.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>Pour tout $(a,c)$, avec $t=a+c$ : $F(a,c)=\norm{Y-tu}^2+\lambda(\abs a+\abs c)\ge\norm{Y-tu}^2+\lambda\abs t=:G(t)$. Le problème en $t$ est un Lasso à une variable de colonne $u$ normée, donc (§2) son minimum est atteint en $t^*$ uniquement. Ainsi $F(a,c)\ge G(t)\ge G(t^*)$, et la valeur $G(t^*)$ est atteinte par $(t^*,0)$. Un couple est donc optimal ssi les deux inégalités sont des égalités : $t=t^*$ et $\abs a+\abs c=\abs{a+c}$, c'est-à-dire $a,c$ de même signe. Si $t^*\neq0$, c'est tout un segment $\{(\alpha t^*,(1-\alpha)t^*):\alpha\in[0,1]\}$ : une infinité de solutions. Mais $X\hb=t^*u$ est le même pour toutes : la prédiction est unique.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 7 — Les valeurs ajustées sont uniques <span class="lvl">★★★</span></div>
+<p>Soit $\lambda>0$ et $\hb,\tilde\beta$ deux solutions du Lasso. Montrez que $X\hb=X\tilde\beta$ et $\norm{\hb}_1=\norm{\tilde\beta}_1$. En déduire que si $\lambda\ge\lambda_{\max}$, la solution 0 est l'unique solution.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Regardez le milieu $\bar\beta=\frac12(\hb+\tilde\beta)$ et utilisez l'identité $\norm{Y-\frac{u+v}2}^2=\frac12\norm{Y-u}^2+\frac12\norm{Y-v}^2-\frac14\norm{u-v}^2$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>Notons $m$ la valeur minimale de $F$, $u=X\hb$, $v=X\tilde\beta$. L'identité de l'indice (développez les carrés pour la vérifier) donne $\norm{Y-X\bar\beta}^2=\frac12\norm{Y-u}^2+\frac12\norm{Y-v}^2-\frac14\norm{u-v}^2$, et l'inégalité triangulaire donne $\norm{\bar\beta}_1\le\frac12\norm{\hb}_1+\frac12\norm{\tilde\beta}_1$. En additionnant : $F(\bar\beta)\le\frac12F(\hb)+\frac12F(\tilde\beta)-\frac14\norm{u-v}^2=m-\frac14\norm{u-v}^2$. Comme $F(\bar\beta)\ge m$, on obtient $\norm{u-v}^2\le0$, donc $u=v$. Ensuite $\lambda\norm{\hb}_1=m-\norm{Y-u}^2=m-\norm{Y-v}^2=\lambda\norm{\tilde\beta}_1$, et $\lambda>0$ donne l'égalité des normes. Enfin si $\lambda\ge\lambda_{\max}$, 0 est solution ; toute autre solution a la même norme $\ell_1$ que 0, c'est-à-dire 0 : elle est nulle.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 8 — Retrouver le seuillage doux depuis la formule du chemin <span class="lvl">★☆☆</span></div>
+<p>Vérifiez qu'en design orthogonal ($X\T X=I_p$), la formule $\hb_A(\lambda)=(X_A\T X_A)^{-1}(X_A\T Y-\frac\lambda2s_A)$ redonne, pour chaque $j$ actif, $\hb_j=b_j-\frac\lambda2\sgn(b_j)$. Pourquoi le signe $s_j$ est-il celui de $b_j$ ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>$X_A\T X_A$ est la sous-matrice de $X\T X=I_p$ formée des lignes et colonnes de $A$. Pour le signe : $s_j$ est par définition le signe de $\hb_j$ lui-même.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>$X_A\T X_A=I$ (sous-matrice de l'identité) et $(X_A\T Y)_j=b_j$, donc $\hb_j=b_j-\frac\lambda2s_j$. Pour que ce coefficient ait bien le signe $s_j$ (cohérence des KKT), il faut $s_j=\sgn(b_j)$ et $\abs{b_j}>\lambda/2$ ; on retrouve $\sgn(b_j)(\abs{b_j}-\lambda/2)$.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 9 — Lire une inégalité de sparsité <span class="lvl">★★☆</span></div>
+<p>On dispose d'une IS en prédiction $\E\norm{X(\hb-\bstar)}_n^2\le C\,s\log p/n$. Avec $p=10^5$, $s=10$, $\sigma=1$ : (a) comparez $s\log p/n$ à l'oracle $s/n$ pour $n=500$ ; (b) quel $n$ faut-il pour que $s\log p/n\le0{,}05$ ? (c) De combien ce $n$ augmente-t-il si l'on passe à $p=10^6$ variables ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>$\log(10^5)\approx11{,}51$ et $\log(10^6)\approx13{,}82$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) $10\times11{,}51/500\approx0{,}23$ contre $10/500=0{,}02$ : facteur $\log p\approx11{,}5$. (b) $n\ge10\times11{,}51/0{,}05\approx2303$. (c) Le $n$ nécessaire est proportionnel à $\log p$ : il est multiplié par $13{,}82/11{,}51\approx1{,}2$. Multiplier le nombre de variables par 10 ne demande que 20 % d'observations en plus : c'est toute la force de la parcimonie.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 10 — Bien prédire sans bien estimer <span class="lvl">★★☆</span></div>
+<p>On suppose $p>n$. Montrez qu'il existe un vecteur $\hb\neq\bstar$ dont l'erreur de prédiction $\norm{X(\hb-\bstar)}_n^2$ est nulle. Qu'en déduire sur la possibilité d'estimer $\bstar$ sans hypothèse supplémentaire ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Théorème du rang : si $p>n$, le noyau de $X$ n'est pas réduit à 0 (<a href="00_rappels.html#rang-noyau">rappel</a>).</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>$\rg X\le n<p$, donc $\dim\Ker X=p-\rg X\ge1$ : il existe $v\neq0$ avec $Xv=0$. Alors $\hb=\bstar+v\neq\bstar$ et $X\hb=X\bstar$ : erreur de prédiction nulle. Les données (qui ne dépendent de $\bstar$ qu'à travers $X\bstar$) ne peuvent pas distinguer $\bstar$ de $\bstar+v$ : sans hypothèse supplémentaire (parcimonie de $\bstar$ <em>et</em> condition sur $X$), estimer $\bstar$ est impossible. C'est le rôle de l'hypothèse sur $\Psi_n$ de la diapo 31.</p></div></details></div>
+
+<h2 id="suite">Et après ?</h2>
+<p>On sait maintenant <em>reconnaître</em> la solution du Lasso (KKT) et ce qu'on <em>voudrait</em> prouver (une inégalité de sparsité). La <a href="03_seance3.html">Séance 3</a> le prouve : sous une hypothèse sur la matrice de Gram, la <strong>condition de valeurs propres restreintes</strong> RE$(s,3)$, et pour une pénalité de l'ordre de $\sigma\sqrt{\log p/n}$ dans le critère normalisé $\frac1n\norm{Y-X\beta}^2$ de la Séance 3 (soit $\lambda$ de l'ordre de $\sigma\sqrt{n\log p}$ avec la convention de cette page), le Lasso vérifie avec grande probabilité une IS en prédiction et en norme $\ell_1$ (théorème de Bickel, Ritov et Tsybakov). Vous y retrouverez trois ingrédients de cette séance : les conditions KKT, le $\log p$ qui vient du maximum de $p$ gaussiennes, et la comparaison à l'oracle.</p>
