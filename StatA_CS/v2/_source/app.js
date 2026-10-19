@@ -603,8 +603,11 @@
       p.poly([[-3 * Math.cos(a), -3 * Math.sin(a)], [3 * Math.cos(a), 3 * Math.sin(a)]], "ln c2");
       p.unclip();
       var inCone = Math.abs(Math.sin(a)) <= c * Math.abs(Math.cos(a)) + 1e-9;
-      ro.textContent = inCone ? "Le noyau entre dans le cône : il existe δ ≠ 0 du cône avec Xδ = 0, donc κ = 0 — la condition RE échoue." :
-        "Le noyau reste hors du cône : sur le cône, ‖Xδ‖ ne s'annule qu'en 0, donc κ > 0 — la condition RE est satisfaite même si X n'est pas injective.";
+      var inOther = Math.abs(Math.cos(a)) <= c * Math.abs(Math.sin(a)) + 1e-9; // cône de J₀ = {2}
+      ro.textContent = inCone ? "Le noyau entre dans le cône de J₀ = {1} : un δ ≠ 0 de ce cône vérifie Xδ = 0, donc κ = 0 et RE échoue." :
+        "Pour J₀ = {1}, le noyau évite le cône : sur ce cône, ‖Xδ‖ ne s'annule qu'en 0. Mais RE exige cela pour TOUS les J₀ de taille ≤ s" +
+        (inOther ? " : ici le noyau est dans le cône de J₀ = {2} (|δ₁| ≤ c|δ₂|), donc RE(1, c) échoue quand même. En dimension 2 avec c ≥ 1, les deux cônes recouvrent le plan : RE n'a d'intérêt qu'en grande dimension." :
+          " ; ici il évite aussi le cône de J₀ = {2} (possible seulement si c < 1), donc RE(1, c) est satisfaite bien que X ne soit pas injective.");
     }
     draw(); redrawers.push(draw);
   };
