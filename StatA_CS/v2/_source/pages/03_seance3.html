@@ -1,0 +1,890 @@
+<!--
+title: Séance 3 — Pourquoi le Lasso marche : condition RE et théorème de Bickel–Ritov–Tsybakov
+short: S3 · Théorème BRT
+description: Cours3, diapos 32–39 : notations, matrice de Gram, cône, valeurs propres restreintes RE(s,3), et la preuve complète, pas à pas, du théorème de Bickel, Ritov et Tsybakov.
+subtitle: Cours3, diapos 32–39. La séance la plus technique du cours : on démontre, ligne par ligne, que le Lasso fait presque aussi bien que l'oracle.
+-->
+
+<div class="box objectifs">
+<div class="box-h">À la fin de cette séance, vous saurez…</div>
+<ul class="checklist">
+<li>lire les notations $M(\beta)$, $J(\beta)$, $\delta_J$ et manipuler les découpages « sur le support / hors du support » ;</li>
+<li>expliquer pourquoi la matrice de Gram $X\T X/n$ est forcément dégénérée quand $p>n$, et pourquoi ce n'est pas grave pour le Lasso ;</li>
+<li>énoncer et dessiner le <strong>cône</strong> $\norm{\delta_{J_0^c}}_1\le 3\norm{\delta_{J_0}}_1$, et dire d'où vient le 3 ;</li>
+<li>énoncer la condition de <strong>valeurs propres restreintes</strong> RE$(s,3)$, la vérifier sur des exemples simples et en tirer des conséquences ;</li>
+<li>énoncer le <strong>théorème de Bickel, Ritov et Tsybakov</strong> et <strong>refaire seul sa preuve</strong> (inégalité de base → bruit → cône → RE → $u^2\le cu$ → probabilité) ;</li>
+<li>dire ce que le théorème garantit… et ce qu'il ne garantit pas.</li>
+</ul>
+</div>
+
+<h2 id="avant">Avant de commencer</h2>
+
+<h3 id="ce-quon-sait">Ce qu'il faut avoir en tête des séances 1 et 2</h3>
+
+<p class="tldr">On cherche à montrer que le Lasso, sans connaître les bonnes variables, prédit presque aussi bien que si on les connaissait.</p>
+
+<p>Reprenons le décor, sans rien supposer acquis.</p>
+<ul>
+<li><strong>Les données.</strong> On observe $n$ réponses $Y=(y_1,\dots,y_n)\T\in\R^n$ et une matrice $X\in\R^{n\times p}$ : la ligne $i$ contient les $p$ variables explicatives de l'individu $i$, la colonne $X_j\in\R^n$ contient la variable $j$ mesurée sur les $n$ individus.</li>
+<li><strong>Le modèle.</strong> $Y=X\bstar+\eps$, où $\bstar\in\R^p$ est le vecteur de coefficients inconnu et $\eps=(\eps_1,\dots,\eps_n)\T$ est un bruit : les $\eps_i$ sont indépendants, de loi $\N(0,\sigma^2)$. La matrice $X$ est considérée comme fixée (non aléatoire) : le seul hasard est dans $\eps$.</li>
+<li><strong>La grande dimension.</strong> On s'intéresse au cas $p>n$, voire $p\gg n$ (plus de variables que d'observations). Les moindres carrés ne marchent plus : $X\T X$ n'est pas inversible (séance 1).</li>
+<li><strong>La parcimonie.</strong> On suppose que peu de coefficients de $\bstar$ sont non nuls : au plus $s$, avec $s$ petit devant $n$. L'ensemble des indices non nuls s'appelle le <em class="new">support</em> de $\bstar$.</li>
+<li><strong>L'oracle.</strong> Si un « oracle » nous donnait le support, on ferait les moindres carrés sur ces $s$ colonnes seulement, et l'erreur de prédiction serait $\E\big[\frac1n\norm{X\hb-X\bstar}^2\big]=\sigma^2\,s/n$ (séance 1, Cours1 diapo 22). <strong>C'est la cible</strong> : on ne pourra pas faire mieux sans information supplémentaire.</li>
+<li><strong>Le Lasso.</strong> Sans oracle, on minimise « erreur d'ajustement + $\lambda\times\norm\beta_1$ » où $\norm\beta_1=\sum_j\abs{\beta_j}$. La pénalité $\ell_1$ met beaucoup de coefficients <em>exactement</em> à zéro (seuillage doux, séance 2).</li>
+<li><strong>Les inégalités de sparsité</strong> (Cours2 diapo 30). On avait fixé l'objectif : montrer que l'erreur de prédiction du Lasso est de l'ordre de $\sigma^2\,s\log p/n$ — l'oracle, à un facteur $\log p$ près. <strong>Cette séance le démontre.</strong></li>
+</ul>
+
+<div class="box intu">
+<div class="box-h">Le défi en une image</div>
+<p>L'oracle connaît les $s$ bonnes variables parmi $p$. Le Lasso doit les trouver tout seul, au milieu de $p-s$ variables inutiles, avec un bruit qui peut « ressembler » par hasard à l'une d'elles. Le prix à payer pour chercher parmi $p$ candidats est un facteur $\log p$ — c'est très peu : pour $p=10\,000$, $\log p\approx 9{,}2$.</p>
+</div>
+
+<h3 id="outils">Les outils que la preuve utilise</h3>
+
+<p>La preuve du théorème n'utilise que des outils élémentaires. Les voici, avec l'endroit où ils servent. Si l'un d'eux ne vous dit plus rien, ouvrez le lien avant de continuer : chaque rappel prend cinq minutes.</p>
+
+<div class="table-wrap"><table>
+<thead><tr><th>Outil</th><th>Énoncé</th><th>Sert à…</th></tr></thead>
+<tbody>
+<tr><td>Inégalité de Hölder <a class="ref" href="00_rappels.html#inegalites-normes">rappel</a></td><td>$\abs{a\T b}\le\norm a_\infty\norm b_1$</td><td>contrôler le terme de bruit $\eps\T X\delta$ (étape 2)</td></tr>
+<tr><td>Normes sur peu de coordonnées <a class="ref" href="00_rappels.html#inegalites-normes">rappel</a></td><td>si $v$ a au plus $s$ coordonnées non nulles : $\norm v_1\le\sqrt s\,\norm v_2$</td><td>passer de $\ell_1$ à $\ell_2$ sur le support (étape 3)</td></tr>
+<tr><td>Inégalité triangulaire <a class="ref" href="00_rappels.html#young">rappel</a></td><td>$\abs a-\abs b\le\abs{a-b}$</td><td>comparer $\norm{\bstar}_1$ et $\norm{\hb}_1$ (étape 2)</td></tr>
+<tr><td>Combinaison linéaire de gaussiennes <a class="ref" href="00_rappels.html#gaussien">rappel</a></td><td>$a\T\eps\sim\N(0,\sigma^2\norm a^2)$</td><td>loi de $X_j\T\eps$ (étape 5)</td></tr>
+<tr><td>Queue gaussienne et borne de l'union <a class="ref" href="00_rappels.html#queues">rappel</a></td><td>$\P(\abs Z>t)\le e^{-t^2/2}$ ; $\P(\cup_jA_j)\le\sum_j\P(A_j)$</td><td>montrer que le bruit est petit avec grande probabilité (étape 5)</td></tr>
+<tr><td>Valeurs propres <a class="ref" href="00_rappels.html#spectral">rappel</a></td><td>$v\T Mv\le\lambda_{\max}(M)\norm v^2$ pour $M$ symétrique</td><td>borne sur la taille du support estimé (bonus)</td></tr>
+<tr><td>« $u^2\le cu$ » <a class="ref" href="00_rappels.html#young">rappel</a></td><td>si $u,c\ge0$ et $u^2\le cu$ alors $u\le c$</td><td>conclure (étape 4)</td></tr>
+</tbody>
+</table></div>
+
+<p>Deux de ces outils sont si centraux qu'on les revoit tout de suite.</p>
+
+<div class="box rappel">
+<div class="box-h"><span>Rappel — Hölder ($\ell_1$ contre $\ell_\infty$)</span></div>
+<p>Pour deux vecteurs $a,b\in\R^p$ :</p>
+$$\begin{aligned}\abs{a\T b}=\Big|\sum_{j=1}^p a_jb_j\Big|&\le\sum_{j=1}^p\abs{a_j}\,\abs{b_j}\\&\le\Big(\max_j\abs{a_j}\Big)\sum_{j=1}^p\abs{b_j}=\norm a_\infty\,\norm b_1 .\end{aligned}$$
+<p>Première inégalité : inégalité triangulaire. Seconde : chaque $\abs{a_j}$ est plus petit que le plus grand d'entre eux. C'est tout.</p>
+</div>
+
+<div class="box rappel">
+<div class="box-h"><span>Rappel — $\norm v_1\le\sqrt k\,\norm v_2$ quand $v$ a au plus $k$ coordonnées non nulles</span></div>
+<p>Soit $K$ l'ensemble des indices où $v_j\neq0$, avec $\abs K\le k$. Par Cauchy–Schwarz appliqué aux vecteurs $(\abs{v_j})_{j\in K}$ et $(1,\dots,1)$ (de longueur $\abs K$) :</p>
+$$\begin{aligned}\norm v_1=\sum_{j\in K}1\cdot\abs{v_j}&\le\sqrt{\textstyle\sum_{j\in K}1^2}\;\sqrt{\textstyle\sum_{j\in K}v_j^2}\\&=\sqrt{\abs K}\,\norm v_2\le\sqrt k\,\norm v_2 .\end{aligned}$$
+<p>Exemple : $v=(3,-4,0,0)$, $k=2$ : $\norm v_1=7\le\sqrt2\times5\approx7{,}07$. L'égalité a lieu quand les $\abs{v_j}$ non nuls sont tous égaux.</p>
+</div>
+
+<h3 id="convention">La convention de cette séance</h3>
+
+<div class="box diapo">
+<div class="box-h">Ce que dit la diapo <span class="ref">Cours3 · diapo 33</span></div>
+<p>Estimateur Lasso :</p>
+$$\hb^L=\argmin_{\beta\in\R^p}\Big\{\frac1n\norm{Y-X\beta}_2^2+2r\norm\beta_1\Big\}\qquad(3)$$
+<p>où $r>0$ est le paramètre de régularisation.</p>
+</div>
+
+<p>Le paramètre de régularisation s'écrit ici $2r$ (au lieu de $\lambda$) et l'erreur d'ajustement est divisée par $n$. Ce n'est qu'une écriture : multiplier tout le critère par $n$ donne $\norm{Y-X\beta}^2+2nr\norm\beta_1$, qui a le même minimiseur. Donc :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Écriture du critère</th><th>Paramètre équivalent</th></tr></thead>
+<tbody>
+<tr><td>$\frac1n\norm{Y-X\beta}^2+2r\norm\beta_1$ (cette séance)</td><td>$2r$</td></tr>
+<tr><td>$\frac1n\norm{Y-X\beta}^2+\lambda\norm\beta_1$ (forme normalisée, Cours1 diapo 23)</td><td>$\lambda=2r$</td></tr>
+<tr><td>$\norm{Y-X\beta}^2+\lambda'\norm\beta_1$ (séance 2, diapos 26–27)</td><td>$\lambda'=2nr$</td></tr>
+</tbody></table></div>
+
+<p>Pourquoi « $2r$ » ? Parce qu'avec ce choix, les conditions d'optimalité (KKT) de la séance 2 prennent une forme très simple. En séance 2, pour le critère $\norm{Y-X\beta}^2+\lambda'\norm\beta_1$, on avait $2X_j\T(Y-X\hb)=\lambda'\sgn(\hb_j)$ si $\hb_j\neq0$ et $\abs{2X_j\T(Y-X\hb)}\le\lambda'$ sinon. Avec $\lambda'=2nr$ et en divisant par $2n$ :</p>
+
+<div class="box thm">
+<div class="box-h">Conditions KKT pour le critère (3)</div>
+$$\begin{aligned}&\frac1n X_j\T(Y-X\hb^L)=r\,\sgn(\hb^L_j)&&\text{si }\hb^L_j\neq0,\\&\Big|\frac1n X_j\T(Y-X\hb^L)\Big|\le r&&\text{si }\hb^L_j=0 .\end{aligned}$$
+<p>En mots : la « corrélation » $\frac1nX_j\T(\text{résidu})$ entre chaque variable et le résidu est bornée par $r$ ; elle vaut exactement $\pm r$ pour les variables sélectionnées.</p>
+</div>
+
+<p>Ces conditions ne servent que pour la troisième conclusion du théorème (la taille du support estimé). Le cœur de la preuve n'en a pas besoin : il utilise seulement le fait que $\hb^L$ <em>minimise</em> le critère.</p>
+
+<h3 id="fil">Le fil de la séance</h3>
+
+<p>Voici l'histoire que racontent les diapos 32 à 39, et donc le plan de cette page.</p>
+<ol class="chain">
+<li><strong>Le problème.</strong> On veut contrôler l'erreur $\delta=\hb^L-\bstar$. Pour les moindres carrés, on « inverse » $X\T X$. Ici c'est impossible : quand $p>n$, il existe des directions $\delta\neq0$ que $X$ ne voit pas ($X\delta=0$). <a href="#gram">§2</a></li>
+<li><strong>L'observation clé.</strong> L'erreur du Lasso n'est pas n'importe quel vecteur : avec grande probabilité, elle vit dans un <em>cône</em>, où au moins un quart de sa masse $\ell_1$ est sur le vrai support. <a href="#cone">§3</a></li>
+<li><strong>L'hypothèse.</strong> On demande seulement que $X$ ne soit pas aveugle <em>sur ce cône</em> : c'est la condition RE$(s,3)$, bien plus faible que l'inversibilité. <a href="#re">§4</a></li>
+<li><strong>Le théorème.</strong> Sous RE$(s,3)$, avec grande probabilité, l'erreur de prédiction du Lasso est $\lesssim\sigma^2 s\log p/n$ : l'oracle, à $\log p$ près. <a href="#theoreme">§5</a></li>
+<li><strong>La preuve</strong>, en cinq étapes que vous saurez refaire. <a href="#preuve">§6</a></li>
+</ol>
+
+<h2 id="notations">1. Les notations de la diapo 33</h2>
+
+<p class="tldr">Trois notations pour parler du support d'un vecteur et pour couper un vecteur en deux morceaux : « sur $J$ » et « hors de $J$ ».</p>
+
+<div class="box diapo">
+<div class="box-h">Ce que dit la diapo <span class="ref">Cours3 · diapo 33</span></div>
+<ul>
+<li>$M(\beta)=\sum_{j=1}^p\ind_{\{\beta_j\neq0\}}=\abs{J(\beta)}$ : nombre de coordonnées non nulles de $\beta$ ; plus $M(\beta)$ est petit, plus $\beta$ est « parcimonieux » (<em>sparse</em>).</li>
+<li>$J(\beta)=\{j\in\{1,\dots,p\}:\beta_j\neq0\}$, et $\abs J$ est le cardinal de $J$.</li>
+<li>Pour $\delta\in\R^p$ et $J\subset\{1,\dots,p\}$, $\delta_J$ est le vecteur de $\R^p$ qui a les mêmes coordonnées que $\delta$ sur $J$ et des zéros sur le complémentaire $J^c$.</li>
+</ul>
+</div>
+
+<p>Décodons. $J(\beta)$ est le <strong>support</strong> de $\beta$ (on l'appelait $\Astar$ pour $\bstar$ en séance 1) et $M(\beta)$ est sa taille, c'est-à-dire $\norm\beta_0$. Attention : $\delta_J$ reste un vecteur de $\R^p$ (de même longueur que $\delta$) ; on a simplement « éteint » les coordonnées hors de $J$.</p>
+
+<div class="box exemple">
+<div class="box-h">Exemple chiffré</div>
+<p>Avec $p=5$ : $\beta=(0,\,2,\,0,\,-1,\,0)$ a pour support $J(\beta)=\{2,4\}$ et $M(\beta)=2$.</p>
+<p>Prenons $\delta=(1,\,-2,\,3,\,0{,}5,\,0)$ et $J=\{1,3\}$. Alors</p>
+$$\delta_J=(1,\,0,\,3,\,0,\,0),\qquad\delta_{J^c}=(0,\,-2,\,0,\,0{,}5,\,0).$$
+<p>On vérifie : $\delta=\delta_J+\delta_{J^c}$, $\norm{\delta_J}_1=4$, $\norm{\delta_{J^c}}_1=2{,}5$ et $\norm\delta_1=6{,}5=4+2{,}5$.</p>
+</div>
+
+<p>Deux propriétés reviendront sans cesse. Elles viennent de ce que $\delta_J$ et $\delta_{J^c}$ ont des coordonnées non nulles à des endroits <em>disjoints</em> :</p>
+$$\begin{gathered}\delta=\delta_J+\delta_{J^c},\\\norm\delta_1=\norm{\delta_J}_1+\norm{\delta_{J^c}}_1,\qquad\norm{\delta_J}_2\le\norm\delta_2 .\end{gathered}$$
+<p>(La dernière : $\norm\delta_2^2=\norm{\delta_J}_2^2+\norm{\delta_{J^c}}_2^2\ge\norm{\delta_J}_2^2$.) Et comme $\delta_J$ a au plus $\abs J$ coordonnées non nulles, le rappel ci-dessus donne $\norm{\delta_J}_1\le\sqrt{\abs J}\,\norm{\delta_J}_2$.</p>
+
+<div class="box reflexe">
+<div class="box-h">Réflexe</div>
+<p>Quand une preuve fait intervenir un ensemble d'indices privilégié (le vrai support), <strong>coupez tous les vecteurs en deux</strong> : « sur $J$ » et « hors de $J$ ». La norme $\ell_1$ se coupe exactement en deux morceaux qui s'additionnent : c'est ce qui la rend si commode.</p>
+</div>
+
+<div class="quiz"><p>Avec $\delta=(0{,}2,\,-0{,}1,\,0,\,0{,}4)$ et $J=\{4\}$, que valent $\delta_J$, $\norm{\delta_{J^c}}_1$ et $M(\delta)$ ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body"><p>$\delta_J=(0,0,0,0{,}4)$ ; $\delta_{J^c}=(0{,}2,-0{,}1,0,0)$ donc $\norm{\delta_{J^c}}_1=0{,}3$ ; $M(\delta)=3$ (trois coordonnées non nulles).</p></div></details></div>
+
+<h2 id="gram">2. La matrice de Gram et le cas dégénéré (diapos 34–35)</h2>
+
+<p class="tldr">Quand $p>n$, la matrice $X\T X/n$ a des valeurs propres nulles : il existe des directions que les données ne voient pas. Les moindres carrés en meurent ; le Lasso, lui, n'a besoin que de « certaines » directions.</p>
+
+<h3 id="gram-def">La matrice de Gram et sa normalisation</h3>
+
+<div class="box diapo">
+<div class="box-h">Ce que dit la diapo <span class="ref">Cours3 · diapo 34</span></div>
+<p>L'hypothèse sur la matrice de Gram $\Psi_n$ n'autorise qu'une faible corrélation entre les variables. Matrice de Gram : $\Psi_n=\big[\Psi^n_{j,k}\big]_{1\le j,k\le p}=\dfrac{X\T X}{n}$ ; $\varphi_{\max}$ est la plus grande valeur propre de $\Psi_n$.</p>
+<p><strong>Hypothèse :</strong> les éléments diagonaux de $\Psi_n$ sont tous égaux à 1. (Remarque : c'est seulement pour simplifier.)</p>
+</div>
+
+<p>Le coefficient $(j,k)$ de $\Psi_n$ est $\frac1nX_j\T X_k=\frac1n\sum_{i=1}^n x_{ij}x_{ik}$ : c'est un <strong>produit scalaire entre deux colonnes</strong>, divisé par $n$ (<a href="00_rappels.html#gram">rappel sur la matrice de Gram</a>).</p>
+<ul>
+<li><strong>Diagonale égale à 1</strong> signifie $\frac1n\norm{X_j}^2=1$, c'est-à-dire $\norm{X_j}^2=n$ pour toute colonne : toutes les variables sont à la même échelle. En pratique, on obtient cela en divisant chaque colonne par $\norm{X_j}/\sqrt n$ (et on centre souvent les colonnes avant).</li>
+<li><strong>Hors diagonale</strong>, si les colonnes sont en plus centrées, $\Psi^n_{jk}$ est la corrélation empirique entre les variables $j$ et $k$ : un nombre entre $-1$ et $1$.</li>
+</ul>
+
+<div class="box intu">
+<div class="box-h">Pourquoi normaliser les colonnes ?</div>
+<p>La pénalité $\norm\beta_1$ traite tous les coefficients de la même manière. Or si l'on mesure une variable en millimètres plutôt qu'en mètres, sa colonne est multipliée par $1000$ et son coefficient divisé par $1000$ : la pénalité ne la « verrait » presque plus. Normaliser met toutes les variables sur un pied d'égalité. Il y a une seconde raison, qui apparaîtra à l'étape 5 de la preuve : avec $\norm{X_j}^2=n$, toutes les quantités $X_j\T\eps$ ont <em>la même loi</em> $\N(0,n\sigma^2)$, donc un même seuil $r$ convient à toutes les variables.</p>
+</div>
+
+<div class="box exemple">
+<div class="box-h">Exemple chiffré</div>
+<p>Avec $n=4$, $p=2$ et des colonnes $X_1=(1,1,1,1)\T$, $X_2=(1,1,-1,-1)\T$ : $\norm{X_1}^2=\norm{X_2}^2=4=n$ et $X_1\T X_2=0$. Donc $\Psi_n=I_2$ : c'est un design <em>orthonormé</em>. Si l'on remplace $X_2$ par $X_2'=(\sqrt2,\sqrt2,0,0)\T$, on a encore $\norm{X_2'}^2=4$, mais $\Psi^n_{12}=\frac14X_1\T X_2'=\frac{2\sqrt2}{4}\approx0{,}71$ : les deux variables se ressemblent beaucoup plus.</p>
+</div>
+
+<p>Enfin, $\varphi_{\max}$ désigne la plus grande valeur propre de $\Psi_n$ (symétrique et positive, donc ses valeurs propres sont réelles et $\ge0$ ; <a href="00_rappels.html#spectral">rappel spectral</a>). Elle mesure à quel point les colonnes peuvent « s'additionner » dans une même direction : $\varphi_{\max}=1$ pour un design orthonormé, $\varphi_{\max}=p$ si toutes les colonnes sont identiques. Elle n'interviendra que dans la troisième conclusion du théorème.</p>
+
+<h3 id="degenere">Le cas dégénéré : $X$ est aveugle dans certaines directions</h3>
+
+<div class="box diapo">
+<div class="box-h">Ce que dit la diapo <span class="ref">Cours3 · diapo 35</span></div>
+<p>Cas dégénéré : pour $p>n$ et même $p\gg n$, $\Psi_n$ est dégénérée :</p>
+$$\min_{\delta\in\R^p:\,\delta\neq0}\frac{(\delta\T\Psi_n\delta)^{1/2}}{\norm\delta_2}=\min_{\delta\in\R^p:\,\delta\neq0}\frac{\norm{X\delta}_2}{\sqrt n\,\norm\delta_2}=0.\qquad(4)$$
+<p>⇒ les moindres carrés ordinaires ne marchent pas, car ils exigent que $\Psi_n$ soit définie positive. → Le Lasso demande des hypothèses beaucoup plus faibles : le minimum dans (4) peut être pris sur un ensemble restreint de vecteurs, et la norme $\norm\delta_2$ au dénominateur peut être remplacée par la norme $\ell_2$ d'une partie seulement de $\delta$.</p>
+</div>
+
+<p>Décodons la formule (4) en trois temps.</p>
+<ol class="steps">
+<li>$$\delta\T\Psi_n\delta=\frac1n\,\delta\T X\T X\delta=\frac1n(X\delta)\T(X\delta)=\frac1n\norm{X\delta}_2^2 .$$<span class="why">définition de $\Psi_n$ et $(X\delta)\T=\delta\T X\T$. D'où l'égalité des deux quotients dans (4).</span></li>
+<li>$$\frac{\norm{X\delta}_2}{\sqrt n\,\norm\delta_2}$$<span class="why">Ce quotient mesure combien $X$ « voit » la direction $\delta$ : on compare la taille de $X\delta$ (ce que l'on observe) à la taille de $\delta$ (ce que l'on cherche). Le carré du minimum de ce quotient est la plus petite valeur propre de $\Psi_n$.</span></li>
+<li>$$p>n\ \Longrightarrow\ \exists\,\delta\neq0,\ X\delta=0\ \Longrightarrow\ \text{le minimum vaut }0 .$$<span class="why">$\rg X\le n<p$, donc par le théorème du rang le noyau de $X$ est de dimension $p-\rg X\ge p-n\ge1$ (<a href="00_rappels.html#rang-noyau">rappel</a>). Pour un $\delta$ non nul du noyau, le quotient vaut 0.</span></li>
+</ol>
+
+<div class="box intu">
+<div class="box-h">Ce que cela veut dire pour l'estimation</div>
+<p>Si $X\delta=0$, alors $X(\bstar+\delta)=X\bstar$ : les vecteurs $\bstar$ et $\bstar+\delta$ produisent <em>exactement</em> les mêmes données en moyenne. Aucune méthode ne peut les distinguer. Pour les moindres carrés, qui ne savent pas choisir entre eux, c'est fatal. Pour une erreur $\delta$ quelconque, on ne peut donc rien dire.</p>
+<p>L'idée du Lasso : <strong>son erreur n'est pas quelconque</strong>. Il suffit que $X$ voie bien les directions où cette erreur peut se trouver. C'est exactement ce que suggère la fin de la diapo 35 :</p>
+<ol>
+<li>prendre le minimum seulement sur un <strong>ensemble restreint</strong> de $\delta$ (le cône de la section suivante) ;</li>
+<li>mettre au dénominateur seulement $\norm{\delta_{J_0}}_2$, la norme de la <strong>partie de $\delta$ sur le vrai support</strong>, au lieu de $\norm\delta_2$.</li>
+</ol>
+</div>
+
+<div class="box piege">
+<div class="box-h">Piège</div>
+<p>« Dégénérée » ne veut pas dire « nulle » ni « inutile ». $\Psi_n$ a au plus $n$ valeurs propres non nulles et au moins $p-n$ valeurs propres nulles. Elle « voit » (plus ou moins bien, selon la taille des valeurs propres non nulles) un sous-espace de dimension $\rg X$ et pas du tout son orthogonal. Toute la question est de savoir si les directions qui nous intéressent sont dans la bonne partie.</p>
+</div>
+
+<h2 id="cone">3. Le cône : là où vit l'erreur du Lasso (diapo 36)</h2>
+
+<p class="tldr">Avec grande probabilité, l'erreur $\delta=\hb^L-\bstar$ met au plus trois fois plus de masse $\ell_1$ hors du vrai support que dessus.</p>
+
+<div class="box diapo">
+<div class="box-h">Ce que dit la diapo <span class="ref">Cours3 · diapo 36</span></div>
+<p>Les résidus $\delta=\hb^L-\bstar$ vérifient, avec une probabilité proche de 1 :</p>
+$$\norm{\delta_{J_0^c}}_1\le3\norm{\delta_{J_0}}_1,\qquad\text{où }J_0=J(\bstar).\qquad(5)$$
+<p>Soit $\Psi$ une matrice $p\times p$ définie positive, $\omega_n=\max_{i,j}\abs{(\Psi_n-\Psi)_{i,j}}$ l'écart maximal entre les coefficients de $\Psi_n$ et de $\Psi$, et $\delta$ vérifiant (5). Alors</p>
+$$\begin{aligned}\frac{\delta\T\Psi_n\delta}{\norm\delta_2^2}&=\frac{\delta\T\Psi\delta+\delta\T(\Psi_n-\Psi)\delta}{\norm\delta_2^2}\\&\ge\frac{\delta\T\Psi\delta}{\norm\delta_2^2}-\frac{\omega_n\norm\delta_1^2}{\norm\delta_2^2}\\&\ge\frac{\delta\T\Psi\delta}{\norm\delta_2^2}-\omega_n\Big(\frac{4\norm{\delta_{J_0}}_1}{\norm{\delta_{J_0}}_2}\Big)^2\\&\ge\frac{\delta\T\Psi\delta}{\norm\delta_2^2}-16\,\omega_n\abs{J_0}.\end{aligned}$$
+<p>⇒ pour $\omega_n\abs{J_0}$ assez petit, $\delta\T\Psi_n\delta/\norm\delta_2^2$ reste loin de 0 ⇒ une sorte de « positivité définie restreinte », valable seulement pour les vecteurs qui vérifient (5).</p>
+</div>
+
+<h3 id="cone-lecture">Lire l'énoncé (5)</h3>
+
+<ul>
+<li>$\delta=\hb^L-\bstar$ est l'<strong>erreur d'estimation</strong> du Lasso (la diapo l'appelle « résidus », mais il s'agit bien de l'erreur sur les coefficients).</li>
+<li>$J_0=J(\bstar)$ est le <strong>vrai support</strong> : les indices des variables réellement utiles. On a $\abs{J_0}=M(\bstar)\le s$.</li>
+<li>$\delta_{J_0}$ est l'erreur commise sur les variables utiles ; $\delta_{J_0^c}$ est l'erreur commise sur les variables inutiles. Comme $\bstar_j=0$ pour $j\notin J_0$, on a simplement $\delta_{J_0^c}=\hb^L_{J_0^c}$ : <strong>c'est ce que le Lasso a mis, à tort, sur les variables inutiles</strong>.</li>
+<li>L'énoncé dit : la masse mise à tort hors du support ne dépasse pas trois fois l'erreur commise sur le support.</li>
+</ul>
+
+<div class="box exemple">
+<div class="box-h">Exemple chiffré</div>
+<p>$p=6$, $\bstar=(2,-1,0,0,0,0)$, donc $J_0=\{1,2\}$. Supposons que le Lasso renvoie $\hb^L=(1{,}6,\,-0{,}7,\,0,\,0{,}3,\,0,\,-0{,}2)$. Alors $\delta=(-0{,}4,\,0{,}3,\,0,\,0{,}3,\,0,\,-0{,}2)$, $\norm{\delta_{J_0}}_1=0{,}7$ et $\norm{\delta_{J_0^c}}_1=0{,}5\le3\times0{,}7=2{,}1$ : $\delta$ est dans le cône.</p>
+<p>En revanche, un estimateur qui renverrait $(2,-1,0{,}9,0{,}9,0{,}9,0)$ aurait une erreur nulle sur $J_0$ et $2{,}7$ hors de $J_0$ : son erreur n'est <em>pas</em> dans le cône. Le Lasso, lui, ne fait (presque) jamais ça.</p>
+</div>
+
+<h3 id="cone-dessin">Le dessin : pourquoi « cône » ?</h3>
+
+<p>L'ensemble $\mathcal C(J_0,3)=\{\delta:\norm{\delta_{J_0^c}}_1\le3\norm{\delta_{J_0}}_1\}$ est un <em class="new">cône</em> : si $\delta$ en fait partie, $t\delta$ aussi pour tout $t\ge0$ (les deux membres sont multipliés par $t$). Seule la <em>direction</em> de $\delta$ compte, pas sa taille. En dimension 2 avec $J_0=\{1\}$, la condition s'écrit $\abs{\delta_2}\le3\abs{\delta_1}$ : c'est la zone comprise entre les droites de pente $+3$ et $-3$, qui contient l'axe horizontal (l'axe du « bon » coefficient).</p>
+
+<div class="widget" data-widget="cone"></div>
+<p>Faites tourner la droite orange (le noyau de $X$, c'est-à-dire les directions que $X$ ne voit pas) : tant qu'elle reste hors de la zone verte, $X$ voit bien toutes les directions <em>du cône</em>, même si elle ne voit pas toutes les directions <em>du plan</em>. Diminuez $c$ : le cône se resserre autour de l'axe $\delta_1$.</p>
+
+<div class="box piege">
+<div class="box-h"><span>Piège : le dessin ne regarde qu'un seul $J_0$</span></div>
+<p>La figure fixe $J_0=\{1\}$. La condition RE de la section 4 demande la même chose <strong>pour tous les ensembles $J_0$ de taille au plus $s$</strong> (parce qu'on ne connaît pas le vrai support). En dimension 2 avec $s=1$, il faudrait aussi traiter $J_0=\{2\}$, dont le cône $\abs{\delta_1}\le3\abs{\delta_2}$ contient l'axe vertical. Or les deux cônes réunis recouvrent tout le plan : si $\abs{\delta_2}>3\abs{\delta_1}$ alors $\abs{\delta_1}<\abs{\delta_2}/3\le3\abs{\delta_2}$. Le noyau tombe donc forcément dans l'un des deux, et RE$(1,3)$ échoue toujours quand $n=1$, $p=2$.</p>
+<p>Ce n'est pas le cas en grande dimension : un vecteur du cône concentre au moins un quart de sa masse $\ell_1$ sur $\abs{J_0}\le s$ coordonnées. Un vecteur « étalé » sur des milliers de coordonnées (comme le sont typiquement les vecteurs du noyau d'une grande matrice) n'appartient à aucun de ces cônes. C'est pour cela que RE peut être vraie quand $p\gg n$.</p>
+</div>
+
+<h3 id="cone-pourquoi3">D'où vient le 3 ? (intuition)</h3>
+
+<div class="box intu">
+<div class="box-h">Une balance entre pénalité et bruit</div>
+<p>Mettre une quantité $\abs{\delta_j}$ sur une variable inutile $j\notin J_0$ a deux effets dans le critère (3) :</p>
+<ul>
+<li>la pénalité augmente de $2r\abs{\delta_j}$ ;</li>
+<li>l'ajustement peut s'améliorer, parce que la variable $j$ « explique » un peu de bruit par hasard. Nous verrons que, avec grande probabilité, ce gain est au plus $r\abs{\delta_j}$ (le bruit corrélé à une variable est au plus de taille $r/2$, et il intervient avec un facteur 2).</li>
+</ul>
+<p>Bilan net hors du support : un coût d'au moins $(2r-r)\abs{\delta_j}=r\abs{\delta_j}$. Sur le support, au contraire, l'erreur peut rapporter jusqu'à $(2r+r)\abs{\delta_j}=3r\abs{\delta_j}$. Le Lasso ne peut donc mettre de la masse hors du support que si elle est « payée » par ce qui se passe sur le support, dans le rapport $\frac{2r+r}{2r-r}=3$.</p>
+<p>Retenez la forme générale : si la pénalité vaut $\lambda$ par unité et le bruit au plus $\eta$, la constante du cône est $\frac{\lambda+\eta}{\lambda-\eta}$. Il faut $\lambda>\eta$ : <strong>la pénalité doit dominer le bruit</strong>. L'exercice 6 fait le calcul exact.</p>
+</div>
+
+<p>La démonstration rigoureuse de (5) tient en dix lignes ; elle utilise seulement le fait que $\hb^L$ minimise le critère. Comme elle partage tous ses calculs avec la preuve du théorème, nous la faisons au moment où nous en avons besoin : c'est l'<a href="#etape2">étape 2 de la preuve</a> (section 6). Pour l'instant, retenez l'énoncé et voyons <em>pourquoi il aide</em>.</p>
+
+<h3 id="cone-calcul">Pourquoi le cône sauve la situation : le calcul de la diapo</h3>
+
+<p>La seconde moitié de la diapo 36 montre qu'<strong>en se restreignant au cône</strong>, une matrice $\Psi_n$ dégénérée peut se comporter comme une matrice inversible. Le cadre : on dispose d'une matrice $\Psi$ <em>définie positive</em> (par exemple, si les lignes de $X$ sont tirées au hasard, la vraie matrice de covariance de ces lignes), et $\Psi_n$ en est une version empirique dont les coefficients sont proches : $\omega_n=\max_{i,j}\abs{(\Psi_n-\Psi)_{ij}}$ est petit. Même si $\omega_n$ est petit, $\Psi_n$ peut être dégénérée (elle l'est dès que $p>n$). Voici le calcul, ligne par ligne, pour $\delta\neq0$ dans le cône (5).</p>
+
+<ol class="steps">
+<li>$$\delta\T\Psi_n\delta=\delta\T\Psi\delta+\delta\T(\Psi_n-\Psi)\delta .$$<span class="why">on écrit $\Psi_n=\Psi+(\Psi_n-\Psi)$ et on développe.</span></li>
+<li>$$\begin{aligned}\abs{\delta\T(\Psi_n-\Psi)\delta}&=\Big|\sum_{i,j}\delta_i(\Psi_n-\Psi)_{ij}\delta_j\Big|\\&\le\omega_n\sum_{i,j}\abs{\delta_i}\abs{\delta_j}=\omega_n\norm\delta_1^2 .\end{aligned}$$<span class="why">inégalité triangulaire, puis chaque coefficient est majoré par le plus grand, $\omega_n$ ; enfin $\sum_{i,j}\abs{\delta_i}\abs{\delta_j}=\big(\sum_i\abs{\delta_i}\big)^2$.</span></li>
+<li>$$\norm\delta_1=\norm{\delta_{J_0}}_1+\norm{\delta_{J_0^c}}_1\le\norm{\delta_{J_0}}_1+3\norm{\delta_{J_0}}_1=4\norm{\delta_{J_0}}_1 .$$<span class="why">découpage de la norme $\ell_1$, puis le cône (5). <strong>C'est ici que le cône sert</strong> : il permet de tout ramener au support.</span></li>
+<li>$$\frac{\norm\delta_1^2}{\norm\delta_2^2}\le\frac{16\norm{\delta_{J_0}}_1^2}{\norm{\delta_{J_0}}_2^2}\le16\abs{J_0} .$$<span class="why">ligne précédente et $\norm\delta_2\ge\norm{\delta_{J_0}}_2$ (au dénominateur, on minore). Puis $\norm{\delta_{J_0}}_1\le\sqrt{\abs{J_0}}\,\norm{\delta_{J_0}}_2$ car $\delta_{J_0}$ a au plus $\abs{J_0}$ coordonnées non nulles. (Si $\delta_{J_0}=0$, le cône force $\delta_{J_0^c}=0$, donc $\delta=0$ : exclu.)</span></li>
+<li>$$\frac{\delta\T\Psi_n\delta}{\norm\delta_2^2}\ge\frac{\delta\T\Psi\delta}{\norm\delta_2^2}-16\,\omega_n\abs{J_0}\ge\lambda_{\min}(\Psi)-16\,\omega_n\abs{J_0} .$$<span class="why">on regroupe les lignes 1, 2 et 4 ; puis $\delta\T\Psi\delta\ge\lambda_{\min}(\Psi)\norm\delta_2^2$ (<a href="00_rappels.html#spectral">rappel</a>).</span></li>
+</ol>
+
+<p><strong>Conclusion.</strong> Si $16\,\omega_n\abs{J_0}<\lambda_{\min}(\Psi)$, le quotient $\delta\T\Psi_n\delta/\norm\delta_2^2$ est minoré par une constante strictement positive <em>pour tous les $\delta$ du cône</em>, alors que son minimum sur tout $\R^p$ vaut $0$. C'est une « positivité définie restreinte » : $\Psi_n$ se comporte comme une matrice inversible, mais seulement dans les directions qui nous intéressent.</p>
+
+<div class="box intu">
+<div class="box-h">Ce que dit ce calcul, en clair</div>
+<p>Sans le cône, il faudrait que <em>tous</em> les $p^2$ coefficients de $\Psi_n$ soient proches de ceux de $\Psi$ <em>et</em> que cela suffise, ce qui est faux quand $p>n$. Avec le cône, l'erreur $\omega_n$ n'est multipliée que par $16\abs{J_0}\le16s$ : il suffit que $s\,\omega_n$ soit petit. Pour des lignes de $X$ tirées au hasard, on sait (hors diapos) que $\omega_n$ est de l'ordre de $\sqrt{\log p/n}$ ; la condition devient « $s\sqrt{\log p/n}$ petit », ce qui autorise $p$ énorme devant $n$.</p>
+</div>
+
+<div class="box remarque">
+<div class="box-h">Note sur la diapo</div>
+<p>Dans la diapo, l'avant-dernière expression remplace $\norm\delta_1^2/\norm\delta_2^2$ par $\big(4\norm{\delta_{J_0}}_1/\norm{\delta_{J_0}}_2\big)^2$ : cela combine les lignes 3 et 4 ci-dessus (cône au numérateur, $\norm\delta_2\ge\norm{\delta_{J_0}}_2$ au dénominateur).</p>
+</div>
+
+<div class="quiz"><p>Pourquoi le calcul ci-dessus ne marcherait-il pas pour un $\delta$ quelconque (hors du cône) ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body"><p>Sans le cône, on ne sait majorer $\norm\delta_1^2/\norm\delta_2^2$ que par $p$ (Cauchy–Schwarz sur $p$ coordonnées) : la borne devient $\lambda_{\min}(\Psi)-\omega_n\,p$, négative dès que $p$ est grand. Le cône remplace $p$ par $16\abs{J_0}$.</p></div></details></div>
+
+<h2 id="re">4. La condition de valeurs propres restreintes RE$(s,3)$ (diapo 37)</h2>
+
+<p class="tldr">RE$(s,3)$ demande que $X$ « voie » bien toutes les directions du cône, quel que soit le support de taille $\le s$ : c'est l'inversibilité, mais seulement là où l'erreur du Lasso peut se trouver.</p>
+
+<h3 id="re-def">L'énoncé, décodé</h3>
+
+<div class="box diapo">
+<div class="box-h">Ce que dit la diapo <span class="ref">Cours3 · diapo 37</span></div>
+<p><strong>Hypothèse de valeurs propres restreintes RE$(s,3)$.</strong> Pour un entier $s$ tel que $1\le s\le p$, on a</p>
+$$\kappa(s,3)=\min_{\substack{J_0\subseteq\{1,\dots,p\},\\ \abs{J_0}\le s}}\ \ \min_{\substack{\delta\neq0,\\ \norm{\delta_{J_0^c}}_1\le3\norm{\delta_{J_0}}_1}}\ \frac{\norm{X\delta}_2}{\sqrt n\,\norm{\delta_{J_0}}_2}>0 .$$
+<p>Remarques : $s$ joue le rôle d'une borne supérieure sur la parcimonie $M(\bstar)$ ; sous RE$(s,3)$, $\min\{\norm{X\delta}_2:M(\delta)\le2s,\ \delta\neq0\}>0$ ⇒ les sous-matrices carrées de taille $\le2s$ de la matrice de Gram sont nécessairement définies positives.</p>
+</div>
+
+<p>Lisons de l'intérieur vers l'extérieur.</p>
+<ol class="steps">
+<li>$$\frac{\norm{X\delta}_2}{\sqrt n\,\norm{\delta_{J_0}}_2}$$<span class="why">c'est le quotient de la formule (4), avec la modification n°2 annoncée par la diapo 35 : au dénominateur, seulement la partie de $\delta$ <em>sur $J_0$</em>. Ce quotient est grand si $X$ « voit » bien la direction $\delta$.</span></li>
+<li>$$\min_{\delta\neq0,\ \delta\in\mathcal C(J_0,3)}$$<span class="why">modification n°1 : on ne regarde que les $\delta$ du cône associé à $J_0$ — les seules directions où l'erreur du Lasso peut tomber si le vrai support est $J_0$.</span></li>
+<li>$$\min_{J_0:\,\abs{J_0}\le s}$$<span class="why">on ne connaît pas le vrai support ! On demande donc que ça marche pour <em>tous</em> les supports possibles de taille au plus $s$. Cette précaution permet d'appliquer l'hypothèse au vrai $J_0=J(\bstar)$ sans le connaître.</span></li>
+<li>$$\kappa(s,3)>0$$<span class="why">aucune direction du (des) cône(s) n'est invisible pour $X$. Plus $\kappa$ est grand, mieux $X$ voit ces directions.</span></li>
+</ol>
+
+<p>Pour la preuve, on retiendra RE$(s,3)$ sous la forme d'une inégalité (il suffit de réécrire « le quotient est $\ge$ son minimum ») :</p>
+<div class="box thm">
+<div class="box-h"><span>RE$(s,3)$, forme utilisable</span></div>
+<p>Pour tout $J_0$ avec $\abs{J_0}\le s$ et tout $\delta$ tel que $\norm{\delta_{J_0^c}}_1\le3\norm{\delta_{J_0}}_1$ :</p>
+$$\norm{\delta_{J_0}}_2\le\frac{\norm{X\delta}_2}{\kappa(s,3)\sqrt n}.$$
+<p>En mots : sur le cône, on contrôle la taille de $\delta$ (sur le support) par ce que l'on observe, $X\delta$.</p>
+</div>
+
+<h3 id="re-comparaison">RE comparée à l'inversibilité</h3>
+
+<ul>
+<li><strong>RE est plus faible que l'inversibilité.</strong> Si $\Psi_n$ est inversible de plus petite valeur propre $\lambda_{\min}>0$, alors pour tout $\delta\neq0$ : $\norm{X\delta}_2^2=n\,\delta\T\Psi_n\delta\ge n\lambda_{\min}\norm\delta_2^2\ge n\lambda_{\min}\norm{\delta_{J_0}}_2^2$, donc $\kappa(s,3)\ge\sqrt{\lambda_{\min}}>0$. Mais RE peut être vraie avec $\lambda_{\min}=0$ (cas $p>n$) : c'est tout son intérêt.</li>
+<li><strong>On a toujours $\kappa(s,3)\le1$</strong> quand les colonnes sont normalisées ($\norm{X_j}^2=n$) : prendre $J_0=\{j\}$ et $\delta=e_j$ (le $j$-ème vecteur de base, qui est dans le cône puisque $\delta_{J_0^c}=0$) donne le quotient $\norm{X_j}_2/(\sqrt n\cdot1)=1$.</li>
+</ul>
+
+<h3 id="re-exemples">Deux exemples à connaître</h3>
+
+<div class="cols">
+<div class="box exemple">
+<div class="box-h"><span>Design orthonormé : $\kappa=1$</span></div>
+<p>Si $X\T X=nI_p$ (possible seulement si $p\le n$), alors $\norm{X\delta}_2^2=\delta\T X\T X\delta=n\norm\delta_2^2\ge n\norm{\delta_{J_0}}_2^2$. Le quotient vaut toujours au moins 1, et 1 est atteint pour $\delta=e_j$. Donc $\kappa(s,3)=1$ pour tout $s$ : c'est le cas idéal.</p>
+</div>
+<div class="box exemple">
+<div class="box-h"><span>Deux colonnes identiques : $\kappa=0$</span></div>
+<p>Si $X_1=X_2$, prenons $\delta=(1,-1,0,\dots,0)$ et $J_0=\{1\}$ (taille $1\le s$). Alors $\norm{\delta_{J_0^c}}_1=1\le3=3\norm{\delta_{J_0}}_1$ : $\delta$ est dans le cône. Et $X\delta=X_1-X_2=0$. Le quotient est nul : $\kappa(s,3)=0$ pour tout $s\ge1$. RE échoue, même avec $s=1$.</p>
+</div>
+</div>
+
+<div class="box intu">
+<div class="box-h">Pourquoi des colonnes identiques sont mortelles</div>
+<p>Si $X_1=X_2$, les données ne peuvent pas distinguer « la variable 1 a un effet 2 » de « la variable 2 a un effet 2 », ni d'un partage quelconque entre les deux. Aucune hypothèse de parcimonie ne lève l'ambiguïté : $(2,0,\dots)$ et $(0,2,\dots)$ sont tous deux 1-parcimonieux. RE exclut précisément ce genre de situations, et plus généralement des colonnes trop corrélées entre elles.</p>
+</div>
+
+<div class="box methode">
+<div class="box-h"><span>Méthode — Montrer que RE$(s,3)$ échoue</span></div>
+<p>Exhiber un ensemble $J_0$ de taille $\le s$ et un vecteur $\delta\neq0$ tels que (i) $X\delta=0$ (ou $\norm{X\delta}$ arbitrairement petit) et (ii) $\norm{\delta_{J_0^c}}_1\le3\norm{\delta_{J_0}}_1$. Le bon réflexe : chercher une combinaison linéaire nulle de <em>peu</em> de colonnes, et prendre pour $J_0$ les indices des plus gros coefficients.</p>
+</div>
+
+<h3 id="re-2s">Conséquence : toute famille de $2s$ colonnes est libre</h3>
+
+<p>La remarque de la diapo 37 dit que RE$(s,3)$ force les sous-matrices de taille $\le2s$ de la matrice de Gram à être définies positives. Autrement dit : <strong>$2s$ colonnes quelconques de $X$ sont toujours linéairement indépendantes</strong>.</p>
+
+<div class="box thm">
+<div class="box-h">Proposition</div>
+<p>Sous RE$(s,3)$ : pour tout $\delta\neq0$ ayant au plus $2s$ coordonnées non nulles, $X\delta\neq0$.</p>
+</div>
+
+<div class="box idee">
+<div class="box-h">Idée de la preuve</div>
+<p>Un vecteur à $2s$ coordonnées non nulles est automatiquement dans un cône : on met dans $J$ ses $s$ plus grosses coordonnées ; les $s$ autres, plus petites une à une, pèsent moins lourd en $\ell_1$. Puis RE interdit $X\delta=0$.</p>
+</div>
+
+<details class="fold proof"><summary>Preuve détaillée</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\delta\neq0,\quad M(\delta)\le2s .$$<span class="why">hypothèse. Soit $J$ l'ensemble des indices des $s$ plus grandes coordonnées de $\delta$ en valeur absolue (si $M(\delta)\le s$, prenez $J=J(\delta)$ : alors $\delta_{J^c}=0$ et le point 3 est immédiat).</span></li>
+<li>$$\text{pour }k\in J^c\text{ et }j\in J:\quad\abs{\delta_k}\le\abs{\delta_j} .$$<span class="why">par construction, $J$ contient les plus grosses coordonnées.</span></li>
+<li>$$\norm{\delta_{J^c}}_1\le s\cdot\min_{j\in J}\abs{\delta_j}\le\sum_{j\in J}\abs{\delta_j}=\norm{\delta_J}_1\le3\norm{\delta_J}_1 .$$<span class="why">$\delta_{J^c}$ a au plus $2s-s=s$ coordonnées non nulles, chacune $\le\min_J\abs{\delta_j}$ ; puis une somme de $s$ termes est au moins $s$ fois le plus petit.</span></li>
+<li>$$\norm{X\delta}_2\ge\kappa(s,3)\sqrt n\,\norm{\delta_J}_2>0 .$$<span class="why">$\delta$ est dans le cône de $J$ ($\abs J\le s$) : on applique RE. Et $\delta_J\neq0$ car $J$ contient la plus grosse coordonnée de $\delta$, non nulle.</span></li>
+</ol>
+<p>Donc $X\delta\neq0$. Traduction matricielle : si $K$ est un ensemble de $\le2s$ indices et $X_K$ la sous-matrice des colonnes de $K$, alors $X_Kv\neq0$ pour tout $v\neq0$, donc $v\T(X_K\T X_K/n)v=\norm{X_Kv}^2/n>0$ : la sous-matrice $X_K\T X_K/n$ de $\Psi_n$ est définie positive. <span class="qed">∎</span></p>
+</div></details>
+
+<p>Trois conséquences pratiques :</p>
+<ul>
+<li><strong>Il faut $n\ge2s$</strong> (dès que $p\ge2s$). $2s$ vecteurs libres de $\R^n$ ne peuvent exister que si $2s\le n$. RE$(s,3)$ est donc impossible si $s>n/2$ : on ne peut pas espérer retrouver plus de $n/2$ coefficients non nuls.</li>
+<li><strong>$\bstar$ est le seul vecteur $s$-parcimonieux compatible avec les données</strong> (remarque de la diapo 39). Si $\beta$ et $\beta'$ ont chacun au plus $s$ coordonnées non nulles et $X\beta=X\beta'$, alors $\delta=\beta-\beta'$ a au plus $2s$ coordonnées non nulles et $X\delta=0$, donc $\delta=0$. RE ne rend pas $X$ injective (il reste une infinité de $\beta$ avec $X\beta=X\bstar$), mais <em>un seul</em> d'entre eux est $s$-parcimonieux.</li>
+<li><strong>RE$(s,3)$ entraîne RE$(s,1)$</strong> : le cône de constante 1 est inclus dans celui de constante 3, et un minimum pris sur un ensemble plus petit est plus grand, donc $\kappa(s,1)\ge\kappa(s,3)>0$. (Utile en séance 4 : la proposition de Cours4, diapo 57, énonce « $2s$ colonnes quelconques sont libres » sous la seule hypothèse RE$(s,1)$ ; c'est l'exercice 9.)</li>
+</ul>
+
+<div class="box remarque">
+<div class="box-h">Peut-on vérifier RE sur une matrice donnée ?</div>
+<p>En pratique, non : il faudrait parcourir tous les ensembles $J_0$ de taille $\le s$, ce qui est combinatoire. On sait en revanche (hors diapos) que si les coefficients de $X$ sont tirés au hasard (par exemple gaussiens indépendants), RE$(s,3)$ est vraie avec grande probabilité dès que $n$ est de l'ordre de $s\log p$ (à une constante près). C'est une hypothèse « raisonnable », pas une hypothèse vérifiable.</p>
+</div>
+
+<h2 id="theoreme">5. Le théorème de Bickel, Ritov et Tsybakov (diapo 38)</h2>
+
+<p class="tldr">Sous RE$(s,3)$ et avec $r$ un peu au-dessus du niveau du bruit, le Lasso a, avec grande probabilité, une erreur de prédiction de l'ordre de $\sigma^2 s\log p/n$ : l'oracle, au facteur $\log p$ près.</p>
+
+<h3 id="brt-enonce">L'énoncé</h3>
+
+<div class="box diapo">
+<div class="box-h">Théorème (Bickel, Ritov, Tsybakov, 2009) <span class="ref">Cours3 · diapo 38</span></div>
+<p><strong>Hypothèses :</strong></p>
+<ul>
+<li>les $\eps_i$ sont des variables aléatoires indépendantes de loi $\N(0,\sigma^2)$, avec $\sigma^2>0$ ;</li>
+<li>les éléments diagonaux de la matrice $X\T X/n$ sont égaux à 1 ;</li>
+<li>$M(\bstar)\le s$, où $1\le s\le p$, $n\ge1$, $p\ge2$ ;</li>
+<li>RE$(s,3)$ est vérifiée.</li>
+</ul>
+<p>On considère l'estimateur Lasso $\hb^L$ défini par (3) avec $r=A\sigma\sqrt{\dfrac{\log p}{n}}$ et $A>2\sqrt2$. Alors, avec probabilité au moins $1-p^{1-A^2/8}$ :</p>
+$$\norm{\hb^L-\bstar}_1\le\frac{16A}{\kappa^2(s,3)}\,\sigma s\sqrt{\frac{\log p}{n}},\qquad(6)$$
+$$\norm{X(\hb^L-\bstar)}_2^2\le\frac{16A^2}{\kappa^2(s,3)}\,\sigma^2 s\log p,\qquad(7)$$
+$$M(\hb^L)\le\frac{64\,\varphi_{\max}}{\kappa^2(s,3)}\,s.\qquad(8)$$
+</div>
+
+<h3 id="brt-decodage">Décodage, ligne par ligne</h3>
+
+<div class="table-wrap"><table>
+<thead><tr><th>Élément</th><th>Ce qu'il veut dire</th><th>Où il sert dans la preuve</th></tr></thead>
+<tbody>
+<tr><td>Bruit gaussien indépendant</td><td>chaque $X_j\T\eps$ est gaussien de loi connue</td><td>étape 5 (probabilité)</td></tr>
+<tr><td>Diagonale de $X\T X/n$ égale à 1</td><td>colonnes normalisées : $\norm{X_j}^2=n$</td><td>étape 5 : tous les $X_j\T\eps$ ont la même loi $\N(0,n\sigma^2)$</td></tr>
+<tr><td>$M(\bstar)\le s$</td><td>au plus $s$ variables utiles</td><td>étape 3 : $\abs{J_0}\le s$ pour appliquer RE et $\norm{\delta_{J_0}}_1\le\sqrt s\norm{\delta_{J_0}}_2$</td></tr>
+<tr><td>RE$(s,3)$</td><td>$X$ voit bien les directions du cône</td><td>étape 3</td></tr>
+<tr><td>$r=A\sigma\sqrt{\log p/n}$</td><td>la régularisation est juste au-dessus du niveau du bruit</td><td>étapes 2 et 5</td></tr>
+<tr><td>$A>2\sqrt2$</td><td>marge de sécurité pour que le bruit ne dépasse $r$ qu'avec petite probabilité</td><td>étape 5</td></tr>
+<tr><td>Probabilité $1-p^{1-A^2/8}$</td><td>le résultat est vrai pour « presque tous » les tirages du bruit</td><td>étape 5</td></tr>
+</tbody></table></div>
+
+<p>Et les trois conclusions :</p>
+<ul>
+<li><strong>(7) — prédiction.</strong> Divisons par $n$ pour retrouver l'erreur de prédiction des séances précédentes :
+$$\frac1n\norm{X\hb^L-X\bstar}_2^2\le\frac{16A^2}{\kappa^2}\cdot\underbrace{\sigma^2\frac{s}{n}}_{\text{oracle}}\cdot\log p .$$
+C'est l'erreur de l'oracle multipliée par une constante et par $\log p$. <strong>C'est l'inégalité de sparsité « en prédiction » de Cours2 diapo 30</strong>, dans sa version « avec grande probabilité » (la diapo la définit avec une espérance, puis signale cette variante), avec $L(n,p)=\log p$ et $C=16A^2\sigma^2/\kappa^2$.</li>
+<li><strong>(6) — estimation en norme $\ell_1$.</strong> L'erreur totale sur les coefficients est de l'ordre de $s\sqrt{\log p/n}$ : comme si chacun des $s$ coefficients utiles était estimé à $\sigma\sqrt{\log p/n}$ près. C'est l'inégalité de sparsité « en norme $\ell_1$ » de Cours2 diapo 30.</li>
+<li><strong>(8) — taille du modèle choisi.</strong> Le Lasso sélectionne au plus une constante fois $s$ variables. Il peut se tromper de variables, mais il ne sélectionne pas des centaines de variables quand $s=5$ (pourvu que $\varphi_{\max}/\kappa^2$ reste raisonnable).</li>
+</ul>
+
+<div class="box intu">
+<div class="box-h"><span>Le rôle de $\kappa$</span></div>
+<p>$\kappa(s,3)$ apparaît au carré au dénominateur des trois bornes. Plus $X$ « voit mal » les directions du cône (variables très corrélées), plus $\kappa$ est petit et plus les garanties se dégradent. Avec $\kappa=0$ (deux colonnes identiques), le théorème ne dit plus rien — et c'est normal, puisqu'on ne peut alors pas distinguer les deux variables.</p>
+</div>
+
+<h3 id="brt-chiffres">Le théorème en chiffres</h3>
+
+<div class="box exemple">
+<div class="box-h"><span>Application numérique : $n=500$, $p=10\,000$, $s=10$, $\sigma=1$</span></div>
+<p>On a $\log p=\log(10^4)\approx9{,}21$ et $\sqrt{\log p/n}\approx0{,}136$.</p>
+<div class="table-wrap"><table>
+<thead><tr><th></th><th>$A=3$</th><th>$A=4$</th></tr></thead>
+<tbody>
+<tr><td>$r=A\sigma\sqrt{\log p/n}$</td><td>$0{,}41$</td><td>$0{,}54$</td></tr>
+<tr><td>probabilité $1-p^{1-A^2/8}$</td><td>$1-10^{-0{,}5}\approx0{,}68$</td><td>$1-10^{-4}=0{,}9999$</td></tr>
+<tr><td>borne (7) divisée par $n$, avec $\kappa=1$</td><td>$\approx26{,}5$</td><td>$\approx47{,}2$</td></tr>
+<tr><td>oracle $\sigma^2s/n$</td><td colspan="2">$0{,}02$</td></tr>
+</tbody></table></div>
+<p>Deux leçons. (1) Augmenter $A$ fait vite monter la probabilité (l'exposant $1-A^2/8$ passe de $-0{,}125$ à $-1$) mais augmente la borne (via $A^2$). (2) Les <strong>constantes sont très pessimistes</strong> : la borne est plus de mille fois l'oracle. Le théorème décrit la bonne <em>forme</em> de l'erreur ($s\log p/n$), pas sa valeur exacte.</p>
+</div>
+
+<div class="box exemple">
+<div class="box-h">Et en vrai ? Une simulation</div>
+<p>Simulation (hors diapos) : $n=200$, $p=1000$, $s=5$, $\sigma=1$, $X$ gaussienne à colonnes normalisées, $\bstar=(3,-2,2,-1{,}5,1,0,\dots,0)$, $A=3$ donc $r\approx0{,}56$. Sur 10 tirages indépendants (de $X$ et du bruit) :</p>
+<ul>
+<li>l'événement « bruit sous contrôle » de la preuve (étape 5) a eu lieu 8 fois sur 10 (la borne théorique garantit seulement $\ge0{,}58$) ;</li>
+<li>le Lasso a sélectionné <em>exactement</em> les 5 bonnes variables à chaque fois : l'erreur hors du support était nulle, donc bien dans le cône ;</li>
+<li>l'erreur de prédiction $\frac1n\norm{X\delta}^2$ valait en moyenne $1{,}42$, à comparer à $s\,r^2\approx1{,}55$ et à la borne (7)$/n$, qui vaut <em>au moins</em> $16\,s\,r^2\approx24{,}9$ (car $\kappa\le1$).</li>
+</ul>
+<p>Moralité : l'erreur réelle est de l'ordre de $s\,r^2=A^2\sigma^2s\log p/n$ — exactement la forme du théorème — sans le facteur 16. Ici, elle vient surtout du <strong>biais</strong> du seuillage doux : chaque coefficient est rapproché de 0 d'environ $r$, ce qui coûte environ $r^2$ par coefficient. C'est le défaut que corrigeront les variantes de la séance 6.</p>
+</div>
+
+<details class="fold more"><summary>Le code de la simulation (Python)</summary><div class="fold-body">
+<pre><code>import numpy as np, math
+rng = np.random.default_rng(0)
+
+def lasso_cd(X, Y, r, iters=300):
+    """Descente par coordonnées pour (1/n)||Y - Xb||^2 + 2r||b||_1, colonnes de norme sqrt(n)."""
+    n, p = X.shape; b = np.zeros(p); R = Y.copy()
+    for _ in range(iters):
+        for j in range(p):
+            z = X[:, j] @ R / n + b[j]                 # coefficient des moindres carrés partiels
+            nb = np.sign(z) * max(abs(z) - r, 0.0)     # seuillage doux au seuil r
+            R -= X[:, j] * (nb - b[j]); b[j] = nb
+    return b
+
+n, p, s, sigma, A = 200, 1000, 5, 1.0, 3.0
+X = rng.standard_normal((n, p)); X = X / np.linalg.norm(X, axis=0) * math.sqrt(n)
+bstar = np.zeros(p); bstar[:s] = [3, -2, 2, -1.5, 1]
+eps = sigma * rng.standard_normal(n); Y = X @ bstar + eps
+r = A * sigma * math.sqrt(math.log(p) / n)
+event = np.max(2 / n * np.abs(X.T @ eps)) &lt;= r      # l'événement de l'étape 5
+d = lasso_cd(X, Y, r) - bstar
+print(event, np.abs(d[s:]).sum() / np.abs(d[:s]).sum(), (X @ d) @ (X @ d) / n)</code></pre>
+<p class="small muted">La mise à jour d'une coordonnée est un seuillage doux au seuil $r$ : c'est la formule de la séance 2, appliquée variable par variable avec le résidu partiel. Le code fait un seul tirage ; les chiffres ci-dessus s'obtiennent en répétant 10 fois les lignes « X = … » à « print », avec le même générateur.</p>
+</div></details>
+
+<h2 id="preuve">6. La preuve, étape par étape</h2>
+
+<p class="tldr">Cinq étapes : comparer le Lasso à la vérité, contrôler le bruit (ce qui donne le cône), appliquer RE, résoudre $u^2\le cu$, montrer que le bruit est contrôlé avec grande probabilité.</p>
+
+<h3 id="carte">La carte de la preuve</h3>
+
+<p>Notations pour toute la preuve : $\delta=\hb^L-\bstar$ (l'erreur), $J_0=J(\bstar)$ (le vrai support, $\abs{J_0}\le s$), $\kappa=\kappa(s,3)$, et l'événement</p>
+$$\mathcal E=\Big\{\max_{1\le j\le p}\frac2n\abs{X_j\T\eps}\le r\Big\}=\Big\{\frac2n\norm{X\T\eps}_\infty\le r\Big\}.$$
+<p>$\mathcal E$ est l'événement « le bruit n'est fortement corrélé à aucune variable ». Les étapes 1 à 4 sont <strong>déterministes</strong> : on suppose que l'on est dans une situation où $\mathcal E$ a lieu, et on en déduit les bornes. L'étape 5 montre que $\mathcal E$ a lieu avec grande probabilité.</p>
+
+<ol class="chain">
+<li><strong>Inégalité de base.</strong> $\hb^L$ minimise le critère, donc fait mieux que $\bstar$ : $\ \frac1n\norm{X\delta}^2\le\frac2n\eps\T X\delta+2r(\norm{\bstar}_1-\norm{\hb^L}_1)$. <a href="#etape1">→</a></li>
+<li><strong>Dompter le bruit, obtenir le cône.</strong> Hölder et $\mathcal E$ : le terme de bruit est $\le r\norm\delta_1$. En découpant selon $J_0$ : $\ \frac1n\norm{X\delta}^2+r\norm\delta_1\le4r\norm{\delta_{J_0}}_1$, d'où le cône $\norm{\delta_{J_0^c}}_1\le3\norm{\delta_{J_0}}_1$. <a href="#etape2">→</a></li>
+<li><strong>Appliquer RE.</strong> Sur le cône, $\norm{\delta_{J_0}}_1\le\sqrt s\,\norm{\delta_{J_0}}_2\le\sqrt s\,\frac{\norm{X\delta}}{\kappa\sqrt n}$. Tout s'exprime avec $u=\norm{X\delta}/\sqrt n$ : $\ u^2+r\norm\delta_1\le\frac{4r\sqrt s}{\kappa}u$. <a href="#etape3">→</a></li>
+<li><strong>Conclure.</strong> $u^2\le cu\Rightarrow u\le c$ donne (7), puis on réinjecte pour (6). <a href="#etape4">→</a></li>
+<li><strong>Probabilité.</strong> Chaque $X_j\T\eps$ est gaussien ; queue gaussienne + borne de l'union : $\P(\mathcal E^c)\le p^{1-A^2/8}$. <a href="#etape5">→</a></li>
+<li><strong>Bonus : (8).</strong> Conditions KKT + $\mathcal E$ : chaque variable sélectionnée « coûte » au moins $r^2/4$ dans une quantité que (7) contrôle. <a href="#etape-bonus">→</a></li>
+</ol>
+
+<div class="box idee">
+<div class="box-h">Idée de la preuve, en quatre phrases</div>
+<p>On ne sait rien de $\hb^L$, sinon qu'il minimise un critère : on l'exploite en le comparant à la vérité $\bstar$. Le seul terme aléatoire qui apparaît est une corrélation entre le bruit et les variables ; avec grande probabilité elle est plus petite que la pénalité, ce qui oblige l'erreur à vivre dans le cône. Sur le cône, RE permet de remplacer « taille de $\delta$ » par « taille de $X\delta$ ». On obtient alors une inégalité du second degré en $\norm{X\delta}$, qu'on résout.</p>
+</div>
+
+<h3 id="etape1">Étape 1 — L'inégalité de base : comparer le Lasso à la vérité</h3>
+
+<p><strong>Objectif :</strong> obtenir une inégalité qui ne fait intervenir que l'erreur $\delta$ et le bruit $\eps$.</p>
+
+<p><strong>L'idée.</strong> Nous ne connaissons aucune formule pour $\hb^L$. La seule chose sûre est sa définition : il minimise le critère (3). Donc la valeur du critère en $\hb^L$ est inférieure ou égale à sa valeur en <em>n'importe quel</em> autre point. On choisit le point qui nous intéresse : la vérité $\bstar$. Peu importe qu'on ne la connaisse pas — l'inégalité est vraie quand même, et c'est tout ce dont une preuve a besoin.</p>
+
+<p class="small muted">Essayez avant de lire : écrivez l'inégalité « critère en $\hb^L$ $\le$ critère en $\bstar$ », remplacez $Y$ par $X\bstar+\eps$ et simplifiez.</p>
+
+<ol class="steps">
+<li>$$\begin{aligned}&\frac1n\norm{Y-X\hb^L}^2+2r\norm{\hb^L}_1\\&\qquad\le\frac1n\norm{Y-X\bstar}^2+2r\norm{\bstar}_1 .\end{aligned}$$<span class="why">$\hb^L$ minimise le critère (3), donc fait au moins aussi bien que $\bstar$.</span></li>
+<li>$$\begin{aligned}Y-X\bstar&=\eps,\\Y-X\hb^L&=X\bstar+\eps-X\hb^L=\eps-X\delta .\end{aligned}$$<span class="why">modèle $Y=X\bstar+\eps$ et définition $\delta=\hb^L-\bstar$.</span></li>
+<li>$$\norm{\eps-X\delta}^2=\norm\eps^2-2\,\eps\T X\delta+\norm{X\delta}^2 .$$<span class="why">$\norm{a-b}^2=\norm a^2-2a\T b+\norm b^2$.</span></li>
+<li>$$\begin{aligned}&\frac1n\norm\eps^2-\frac2n\eps\T X\delta+\frac1n\norm{X\delta}^2+2r\norm{\hb^L}_1\\&\qquad\le\frac1n\norm\eps^2+2r\norm{\bstar}_1 .\end{aligned}$$<span class="why">on remplace dans la ligne 1.</span></li>
+</ol>
+
+<div class="box thm">
+<div class="box-h">Résultat de l'étape 1 — inégalité de base</div>
+$$\frac1n\norm{X\delta}^2\le\frac2n\eps\T X\delta+2r\big(\norm{\bstar}_1-\norm{\hb^L}_1\big).$$
+<p>(On a simplifié $\frac1n\norm\eps^2$ des deux côtés et regroupé.) À gauche : ce que l'on veut borner, l'erreur de prédiction $\norm{X\delta}_n^2=\frac1n\norm{X\delta}^2$. À droite : un <strong>terme de bruit</strong> (aléatoire) et un <strong>terme de pénalité</strong>.</p>
+</div>
+
+<div class="box reflexe">
+<div class="box-h">Réflexe — l'inégalité de base</div>
+<p>Pour analyser un estimateur défini comme un minimiseur : <strong>écrivez « critère(estimateur) $\le$ critère(vérité) »</strong>, remplacez $Y$ par le modèle, développez. C'est le point de départ de presque toutes les preuves de ce cours (on la refera en séance 4 pour les inégalités oracle).</p>
+</div>
+
+<h3 id="etape2">Étape 2 — Dompter le bruit et obtenir le cône</h3>
+
+<p><strong>Objectif :</strong> se débarrasser du terme aléatoire $\frac2n\eps\T X\delta$, puis exploiter la structure de la pénalité.</p>
+
+<h4>2a. Le terme de bruit, par Hölder</h4>
+
+<ol class="steps">
+<li>$$\frac2n\eps\T X\delta=\frac2n(X\T\eps)\T\delta .$$<span class="why">$\eps\T X\delta$ est un nombre, égal à sa transposée $\delta\T X\T\eps=(X\T\eps)\T\delta$. Le vecteur $X\T\eps\in\R^p$ a pour coordonnées les $X_j\T\eps$ : la « corrélation » entre le bruit et chaque variable.</span></li>
+<li>$$\le\frac2n\norm{X\T\eps}_\infty\,\norm\delta_1 .$$<span class="why">Hölder : $\abs{a\T b}\le\norm a_\infty\norm b_1$.</span></li>
+<li>$$\le r\,\norm\delta_1\quad\text{sur }\mathcal E .$$<span class="why">c'est la définition de l'événement $\mathcal E$ : $\frac2n\norm{X\T\eps}_\infty\le r$.</span></li>
+</ol>
+
+<div class="box intu">
+<div class="box-h"><span>Pourquoi Hölder ($\ell_\infty$/$\ell_1$) et pas Cauchy–Schwarz ($\ell_2$/$\ell_2$) ?</span></div>
+<p>Deux raisons, et la seconde est décisive.</p>
+<ol>
+<li>La pénalité est en norme $\ell_1$ : on veut voir apparaître $\norm\delta_1$ pour pouvoir le comparer à elle.</li>
+<li>$\norm{X\T\eps}_\infty=\max_j\abs{X_j\T\eps}$ est un <strong>maximum</strong> de $p$ gaussiennes de variance $n\sigma^2$ : il vaut environ $\sigma\sqrt{2n\log p}$ — il ne grandit qu'en $\sqrt{\log p}$. Au contraire, $\norm{X\T\eps}_2$ est une <strong>somme</strong> de $p$ carrés : $\E\norm{X\T\eps}_2^2=\sum_j\E(X_j\T\eps)^2=pn\sigma^2$, donc $\norm{X\T\eps}_2\approx\sigma\sqrt{np}$, catastrophique quand $p$ est grand. Hölder place la « grande dimension » dans un maximum, qui est presque insensible à $p$.</li>
+</ol>
+</div>
+
+<p>En reportant dans l'inégalité de base, sur $\mathcal E$ :</p>
+$$\frac1n\norm{X\delta}^2\le r\norm\delta_1+2r\big(\norm{\bstar}_1-\norm{\hb^L}_1\big).$$
+
+<h4>2b. Ajouter $r\norm\delta_1$ des deux côtés</h4>
+
+<ol class="steps">
+<li>$$\begin{aligned}\frac1n\norm{X\delta}^2+r\norm\delta_1&\le2r\norm\delta_1+2r\big(\norm{\bstar}_1-\norm{\hb^L}_1\big)\\&=2r\Big(\norm\delta_1+\norm{\bstar}_1-\norm{\hb^L}_1\Big).\end{aligned}$$<span class="why">on ajoute $r\norm\delta_1$ à gauche et à droite, puis on factorise $2r$.</span></li>
+</ol>
+<p>Pourquoi ce geste, qui semble gratuit ? Pour deux raisons : (i) à droite apparaît la combinaison $\norm\delta_1+\norm{\bstar}_1-\norm{\hb^L}_1$, qui se simplifie remarquablement (lemme ci-dessous) ; (ii) à gauche, on garde un terme $r\norm\delta_1$ qui fournira à l'étape 4 la borne (6) sur $\norm\delta_1$, et dès maintenant le cône.</p>
+
+<h4>2c. Le lemme de découpage</h4>
+
+<div class="box thm">
+<div class="box-h">Lemme</div>
+<p>Si $\bstar$ est nul hors de $J_0$ et $\delta=\hb^L-\bstar$, alors</p>
+$$\norm\delta_1+\norm{\bstar}_1-\norm{\hb^L}_1\le2\norm{\delta_{J_0}}_1 .$$
+</div>
+
+<ol class="steps">
+<li>$$\norm\delta_1=\norm{\delta_{J_0}}_1+\norm{\delta_{J_0^c}}_1 .$$<span class="why">la norme $\ell_1$ se coupe en deux (section 1).</span></li>
+<li>$$\norm{\bstar}_1=\norm{\bstar_{J_0}}_1 .$$<span class="why">$\bstar$ est nul hors de $J_0$.</span></li>
+<li>$$\norm{\hb^L}_1=\norm{\hb^L_{J_0}}_1+\norm{\hb^L_{J_0^c}}_1=\norm{\hb^L_{J_0}}_1+\norm{\delta_{J_0^c}}_1 .$$<span class="why">découpage, puis $\delta_{J_0^c}=\hb^L_{J_0^c}-\bstar_{J_0^c}=\hb^L_{J_0^c}$.</span></li>
+<li>$$\begin{aligned}&\norm\delta_1+\norm{\bstar}_1-\norm{\hb^L}_1\\&\quad=\norm{\delta_{J_0}}_1+\underbrace{\norm{\delta_{J_0^c}}_1-\norm{\delta_{J_0^c}}_1}_{=0}+\norm{\bstar_{J_0}}_1-\norm{\hb^L_{J_0}}_1 .\end{aligned}$$<span class="why">on additionne les lignes 1 à 3. <strong>Les termes hors support se compensent exactement</strong> : la masse mise à tort hors de $J_0$ est entièrement « payée » par la pénalité.</span></li>
+<li>$$\begin{aligned}\norm{\bstar_{J_0}}_1-\norm{\hb^L_{J_0}}_1&=\sum_{j\in J_0}\big(\abs{\bstar_j}-\abs{\hb^L_j}\big)\\&\le\sum_{j\in J_0}\abs{\bstar_j-\hb^L_j}=\norm{\delta_{J_0}}_1 .\end{aligned}$$<span class="why">inégalité triangulaire inversée $\abs a-\abs b\le\abs{a-b}$, coordonnée par coordonnée.</span></li>
+</ol>
+<p>En combinant les lignes 4 et 5 : $\norm\delta_1+\norm{\bstar}_1-\norm{\hb^L}_1\le2\norm{\delta_{J_0}}_1$. <span class="qed">∎</span></p>
+
+<div class="box thm">
+<div class="box-h"><span>Résultat de l'étape 2 (l'inégalité centrale), sur $\mathcal E$</span></div>
+$$\frac1n\norm{X\delta}^2+r\norm\delta_1\le4r\norm{\delta_{J_0}}_1 .\qquad(\star)$$
+</div>
+
+<h4>2d. Le cône tombe tout seul</h4>
+
+<ol class="steps">
+<li>$$\begin{aligned}r\norm{\delta_{J_0}}_1+r\norm{\delta_{J_0^c}}_1=r\norm\delta_1&\le\frac1n\norm{X\delta}^2+r\norm\delta_1\\&\le4r\norm{\delta_{J_0}}_1 .\end{aligned}$$<span class="why">découpage de $\norm\delta_1$ ; puis on ajoute la quantité positive $\frac1n\norm{X\delta}^2$ ; puis $(\star)$.</span></li>
+<li>$$\norm{\delta_{J_0^c}}_1\le3\norm{\delta_{J_0}}_1 .$$<span class="why">on retranche $r\norm{\delta_{J_0}}_1$ et on divise par $r>0$. C'est l'énoncé (5) de la diapo 36 : <strong>$4-1=3$</strong>.</span></li>
+</ol>
+
+<div class="box reflexe">
+<div class="box-h">Réflexe — d'où vient le 3</div>
+<p>Pénalité $2r$ par unité, bruit au plus $r$ par unité : sur le support on peut « gagner » $2r+r$, hors du support on « perd » au moins $2r-r$. Rapport $\frac{2r+r}{2r-r}=3$. Si on vous demande de refaire la preuve avec un autre niveau de bruit, la constante du cône est toujours $\frac{\text{pénalité}+\text{bruit}}{\text{pénalité}-\text{bruit}}$.</p>
+</div>
+
+<h3 id="etape3">Étape 3 — Appliquer RE : tout exprimer avec $\norm{X\delta}$</h3>
+
+<p><strong>Objectif :</strong> le membre de droite de $(\star)$ contient $\norm{\delta_{J_0}}_1$, dont on ne connaît pas la taille. On veut le remplacer par $\norm{X\delta}$, qui est déjà à gauche : on aura alors une inégalité « fermée » en une seule inconnue.</p>
+
+<ol class="steps">
+<li>$$\delta\in\mathcal C(J_0,3)\quad\text{et}\quad\abs{J_0}\le s .$$<span class="why">étape 2d et hypothèse $M(\bstar)\le s$ : on est exactement dans les conditions d'application de RE$(s,3)$, avec le <em>vrai</em> support $J_0$ — d'où l'intérêt d'avoir demandé RE pour tous les $J_0$ de taille $\le s$.</span></li>
+<li>$$\norm{\delta_{J_0}}_1\le\sqrt{\abs{J_0}}\,\norm{\delta_{J_0}}_2\le\sqrt s\,\norm{\delta_{J_0}}_2 .$$<span class="why">$\delta_{J_0}$ a au plus $\abs{J_0}\le s$ coordonnées non nulles (Cauchy–Schwarz, voir le rappel en tête de page).</span></li>
+<li>$$\norm{\delta_{J_0}}_2\le\frac{\norm{X\delta}_2}{\kappa\sqrt n} .$$<span class="why">RE$(s,3)$, forme utilisable (section 4).</span></li>
+<li>$$4r\norm{\delta_{J_0}}_1\le\frac{4r\sqrt s}{\kappa}\cdot\frac{\norm{X\delta}_2}{\sqrt n} .$$<span class="why">lignes 2 et 3.</span></li>
+</ol>
+
+<p>Posons $u=\dfrac{\norm{X\delta}_2}{\sqrt n}\ge0$, de sorte que $u^2=\frac1n\norm{X\delta}^2$ (c'est la racine de l'erreur de prédiction). Avec $(\star)$ :</p>
+
+<div class="box thm">
+<div class="box-h">Résultat de l'étape 3</div>
+$$u^2+r\norm\delta_1\le c\,u,\qquad\text{avec } c=\frac{4r\sqrt s}{\kappa}.\qquad(\star\star)$$
+</div>
+
+<div class="box intu">
+<div class="box-h">Pourquoi c'est le moment clé</div>
+<p>Avant l'étape 3, l'inégalité reliait deux quantités différentes ($\norm{X\delta}$ à gauche, $\norm{\delta_{J_0}}_1$ à droite) : impossible d'en tirer une borne. Après, la même quantité $u$ est des deux côtés, avec un carré à gauche et une puissance 1 à droite : un carré ne peut pas rester plus petit qu'une fonction linéaire quand $u$ grandit, donc $u$ est borné. <strong>RE sert exactement à « refermer » l'inégalité.</strong></p>
+</div>
+
+<h3 id="etape4">Étape 4 — Conclure : l'astuce « $u^2\le cu$ »</h3>
+
+<h4>La borne de prédiction (7)</h4>
+<ol class="steps">
+<li>$$u^2\le c\,u .$$<span class="why">dans $(\star\star)$, on retire $r\norm\delta_1\ge0$ du membre de gauche.</span></li>
+<li>$$u\le c .$$<span class="why">si $u=0$, c'est évident ; si $u>0$, on divise par $u$ (<a href="00_rappels.html#young">rappel</a>).</span></li>
+<li>$$\frac1n\norm{X\delta}^2=u^2\le c^2=\frac{16\,r^2s}{\kappa^2} .$$<span class="why">on élève au carré (tout est positif) et on remplace $c$.</span></li>
+<li>$$\norm{X\delta}^2\le\frac{16\,r^2\,s\,n}{\kappa^2}=\frac{16A^2}{\kappa^2}\,\sigma^2s\log p .$$<span class="why">on multiplie par $n$, et $r^2n=A^2\sigma^2\log p$. C'est (7).</span></li>
+</ol>
+
+<h4>La borne d'estimation (6)</h4>
+<ol class="steps">
+<li>$$r\norm\delta_1\le c\,u\le c^2=\frac{16\,r^2s}{\kappa^2} .$$<span class="why">dans $(\star\star)$, on retire cette fois $u^2\ge0$ ; puis $u\le c$.</span></li>
+<li>$$\norm\delta_1\le\frac{16\,r\,s}{\kappa^2}=\frac{16A}{\kappa^2}\,\sigma s\sqrt{\frac{\log p}{n}} .$$<span class="why">on divise par $r$ et on remplace $r=A\sigma\sqrt{\log p/n}$. C'est (6).</span></li>
+</ol>
+
+<div class="box reflexe">
+<div class="box-h">Réflexe — une inégalité, deux bornes</div>
+<p>Quand une inégalité a la forme « $\text{(quantité 1)}+\text{(quantité 2)}\le\text{(quelque chose)}$ » avec deux quantités positives, on obtient <em>deux</em> résultats en jetant l'une puis l'autre. C'est pour cela qu'on avait gardé $r\norm\delta_1$ à gauche à l'étape 2b.</p>
+</div>
+
+<h3 id="etape5">Étape 5 — L'événement $\mathcal E$ est très probable</h3>
+
+<p><strong>Objectif :</strong> montrer $\P(\mathcal E)\ge1-p^{1-A^2/8}$. Jusqu'ici, tout a été démontré « sur $\mathcal E$ » ; il reste à voir que $\mathcal E$ arrive presque toujours.</p>
+
+<ol class="steps">
+<li>$$\begin{aligned}&\mathcal E^c=\bigcup_{j=1}^p\Big\{\frac2n\abs{X_j\T\eps}>r\Big\}\\&\Longrightarrow\quad\P(\mathcal E^c)\le\sum_{j=1}^p\P\Big(\frac2n\abs{X_j\T\eps}>r\Big).\end{aligned}$$<span class="why">le maximum dépasse $r$ si et seulement si l'un des termes dépasse $r$ ; puis borne de l'union $\P(\cup A_j)\le\sum\P(A_j)$ (<a href="00_rappels.html#queues">rappel</a>). Aucune indépendance entre les $X_j\T\eps$ n'est nécessaire.</span></li>
+<li>$$X_j\T\eps=\sum_{i=1}^nx_{ij}\eps_i\sim\N\big(0,\sigma^2\norm{X_j}^2\big)=\N(0,n\sigma^2) .$$<span class="why">combinaison linéaire de gaussiennes indépendantes (<a href="00_rappels.html#gaussien">rappel</a>), et colonnes normalisées $\norm{X_j}^2=n$. C'est ici que sert la normalisation.</span></li>
+<li>$$\begin{aligned}\frac2n\abs{X_j\T\eps}>r&\iff\abs{Z_j}>\frac{r\sqrt n}{2\sigma}=\frac A2\sqrt{\log p},\\&\text{où }Z_j=\frac{X_j\T\eps}{\sigma\sqrt n}\sim\N(0,1) .\end{aligned}$$<span class="why">on divise par $\frac{2}{n}\cdot\sigma\sqrt n=\frac{2\sigma}{\sqrt n}$ ; puis $r\sqrt n/\sigma=A\sqrt{\log p}$.</span></li>
+<li>$$\P\Big(\abs{Z_j}>\tfrac A2\sqrt{\log p}\Big)\le\exp\Big(-\frac12\cdot\frac{A^2\log p}{4}\Big)=p^{-A^2/8} .$$<span class="why">queue gaussienne $\P(\abs Z>t)\le e^{-t^2/2}$ (<a href="00_rappels.html#queues">rappel</a> ; exercice 8), avec $t^2=\frac{A^2}{4}\log p$ ; puis $e^{-a\log p}=p^{-a}$.</span></li>
+<li>$$\P(\mathcal E^c)\le p\cdot p^{-A^2/8}=p^{1-A^2/8},\qquad\P(\mathcal E)\ge1-p^{1-A^2/8} .$$<span class="why">somme de $p$ termes identiques.</span></li>
+</ol>
+
+<p>Pourquoi $A>2\sqrt2$ ? Pour que l'exposant $1-A^2/8$ soit <strong>négatif</strong> : alors $p^{1-A^2/8}<1$, et cette probabilité d'échec tend vers 0 quand $p$ grandit. Avec $A=2\sqrt2$ exactement, la borne vaudrait $p^0=1$ : elle ne dirait rien.</p>
+
+<div class="widget" data-widget="maxgauss"></div>
+<p>La simulation montre $\max_j\abs{Z_j}$ pour $p$ gaussiennes indépendantes : il grandit comme $\sqrt{2\log p}$, très lentement. Or le seuil de la ligne 3 ci-dessus est $\frac A2\sqrt{\log p}$, et $A>2\sqrt2$ équivaut à $\frac A2\sqrt{\log p}>\sqrt{2\log p}$ : <strong>on place $r$ juste au-dessus du maximum typique du bruit</strong>. C'est la vraie raison du choix $r\propto\sigma\sqrt{\log p/n}$ : c'est la plus petite régularisation qui domine le bruit sur toutes les variables à la fois.</p>
+
+<div class="box reflexe">
+<div class="box-h"><span>Réflexe — d'où vient le $\log p$</span></div>
+<p>Quand une preuve demande de contrôler un <strong>maximum de $p$ termes gaussiens</strong> : borne de l'union + queue gaussienne. Le seuil qui marche est de l'ordre de $\sqrt{2\log p}$ écarts-types. Voilà pourquoi le prix de la recherche parmi $p$ variables est un facteur $\log p$, et pourquoi $\lambda\asymp\sigma\sqrt{\log p/n}$ partout dans le cours.</p>
+</div>
+
+<h3 id="etape-bonus">Bonus — La taille du support estimé (8)</h3>
+
+<p><strong>Objectif :</strong> montrer $M(\hb^L)\le64\,\varphi_{\max}s/\kappa^2$ sur $\mathcal E$. Cette fois on utilise les <a href="#convention">conditions KKT</a> du critère (3).</p>
+
+<div class="box idee">
+<div class="box-h">Idée</div>
+<p>Pour chaque variable sélectionnée, les KKT disent que sa corrélation avec le résidu vaut exactement $\pm r$. Le bruit n'en explique qu'au plus $r/2$ ; le reste, au moins $r/2$, vient de l'erreur $X\delta$. Chaque variable sélectionnée « consomme » donc au moins $(r/2)^2$ d'une quantité que la borne (7) contrôle. Il ne peut donc pas y en avoir trop.</p>
+</div>
+
+<ol class="steps">
+<li>$$\frac1nX_j\T(Y-X\hb^L)=r\,\sgn(\hb^L_j) .$$<span class="why">pour tout $j\in J(\hb^L)$ : conditions KKT (rappelées en tête de page) pour les variables sélectionnées.</span></li>
+<li>$$\frac1nX_j\T X\delta=\frac1nX_j\T\eps-r\,\sgn(\hb^L_j) .$$<span class="why">$Y-X\hb^L=\eps-X\delta$ (étape 1), puis on isole le terme en $\delta$.</span></li>
+<li>$$\Big|\frac1nX_j\T X\delta\Big|\ge r-\Big|\frac1nX_j\T\eps\Big|\ge r-\frac r2=\frac r2 .$$<span class="why">inégalité triangulaire inversée ($\abs{\sgn(\hb^L_j)}=1$) ; puis, sur $\mathcal E$, $\frac2n\abs{X_j\T\eps}\le r$, soit $\frac1n\abs{X_j\T\eps}\le\frac r2$.</span></li>
+<li>$$\begin{aligned}M(\hb^L)\,\frac{r^2}{4}&\le\sum_{j\in J(\hb^L)}\Big(\frac1nX_j\T X\delta\Big)^2\\&\le\sum_{j=1}^p\Big(\frac1nX_j\T X\delta\Big)^2=\Big\|\frac1nX\T X\delta\Big\|_2^2 .\end{aligned}$$<span class="why">on élève au carré et on somme sur les $M(\hb^L)$ variables sélectionnées, puis on ajoute les autres termes (positifs).</span></li>
+<li>$$\begin{aligned}\Big\|\frac1nX\T X\delta\Big\|_2^2&=\frac1n(X\delta)\T\Big(\frac{XX\T}{n}\Big)(X\delta)\\&\le\varphi_{\max}\cdot\frac1n\norm{X\delta}^2 .\end{aligned}$$<span class="why">développer $\norm{v}^2=v\T v$ avec $v=\frac1nX\T X\delta$ ; puis $w\T Mw\le\lambda_{\max}(M)\norm w^2$, et $\frac{XX\T}{n}$ a les mêmes valeurs propres non nulles que $\frac{X\T X}{n}=\Psi_n$ (si $X\T Xv=\mu v$ avec $\mu\neq0$, alors $XX\T(Xv)=\mu(Xv)$ et $Xv\neq0$), donc sa plus grande valeur propre est $\varphi_{\max}$.</span></li>
+<li>$$\begin{aligned}M(\hb^L)&\le\frac{4\,\varphi_{\max}}{r^2}\cdot\frac1n\norm{X\delta}^2\\&\le\frac{4\,\varphi_{\max}}{r^2}\cdot\frac{16\,r^2s}{\kappa^2}=\frac{64\,\varphi_{\max}}{\kappa^2}\,s .\end{aligned}$$<span class="why">lignes 4–5, puis l'étape 4 : $\frac1n\norm{X\delta}^2\le16r^2s/\kappa^2$. C'est (8). Le $r^2$ se simplifie : la borne ne dépend pas du choix de $A$.</span></li>
+</ol>
+
+<h3 id="condense">La preuve condensée (à refaire de tête)</h3>
+
+<div class="box resume">
+<div class="box-h">Théorème BRT — la preuve en douze lignes</div>
+<p>Notations : $\delta=\hb^L-\bstar$, $J_0=J(\bstar)$, $u=\norm{X\delta}/\sqrt n$, $\mathcal E=\{\frac2n\norm{X\T\eps}_\infty\le r\}$.</p>
+<ol>
+<li><strong>Base.</strong> Critère$(\hb^L)\le$ critère$(\bstar)$ et $Y-X\hb^L=\eps-X\delta$ : $\ u^2\le\frac2n\eps\T X\delta+2r(\norm{\bstar}_1-\norm{\hb^L}_1)$.</li>
+<li><strong>Bruit.</strong> Hölder, sur $\mathcal E$ : $\frac2n\eps\T X\delta\le r\norm\delta_1$.</li>
+<li><strong>Symétriser.</strong> Ajouter $r\norm\delta_1$ : $\ u^2+r\norm\delta_1\le2r(\norm\delta_1+\norm{\bstar}_1-\norm{\hb^L}_1)$.</li>
+<li><strong>Découper.</strong> $\norm\delta_1+\norm{\bstar}_1-\norm{\hb^L}_1\le2\norm{\delta_{J_0}}_1$ (les termes hors support s'annulent, triangulaire sur le support).</li>
+<li><strong>Centrale.</strong> $u^2+r\norm\delta_1\le4r\norm{\delta_{J_0}}_1$.</li>
+<li><strong>Cône.</strong> $r\norm\delta_1\le4r\norm{\delta_{J_0}}_1\Rightarrow\norm{\delta_{J_0^c}}_1\le3\norm{\delta_{J_0}}_1$.</li>
+<li><strong>RE.</strong> $4r\norm{\delta_{J_0}}_1\le4r\sqrt s\norm{\delta_{J_0}}_2\le\frac{4r\sqrt s}{\kappa}u=cu$.</li>
+<li><strong>Fermée.</strong> $u^2+r\norm\delta_1\le cu$.</li>
+<li><strong>(7).</strong> $u^2\le cu\Rightarrow u\le c\Rightarrow\norm{X\delta}^2\le\frac{16r^2sn}{\kappa^2}=\frac{16A^2}{\kappa^2}\sigma^2s\log p$.</li>
+<li><strong>(6).</strong> $r\norm\delta_1\le cu\le c^2\Rightarrow\norm\delta_1\le\frac{16rs}{\kappa^2}$.</li>
+<li><strong>Probabilité.</strong> $X_j\T\eps/(\sigma\sqrt n)\sim\N(0,1)$, seuil $\frac A2\sqrt{\log p}$, queue $e^{-t^2/2}$, union : $\P(\mathcal E^c)\le p^{1-A^2/8}$.</li>
+<li><strong>(8).</strong> KKT : $\abs{\frac1nX_j\T X\delta}\ge\frac r2$ sur le support estimé ; sommer les carrés : $M(\hb^L)\frac{r^2}4\le\varphi_{\max}u^2\le\varphi_{\max}c^2$.</li>
+</ol>
+</div>
+
+<div class="box methode">
+<div class="box-h">Méthode — Le squelette réutilisable</div>
+<p>Ce schéma (base → bruit par Hölder + max de gaussiennes → découpage selon le support → cône → condition sur $X$ restreinte au cône → $u^2\le cu$) est <strong>le</strong> squelette des preuves de la grande dimension. Vous le retrouverez presque mot pour mot en séance 4 (inégalités oracle), où la vérité $\bstar$ sera remplacée par un $\beta$ quelconque.</p>
+</div>
+
+<h2 id="lecture">7. Lire le théorème avec recul (diapo 39)</h2>
+
+<div class="box diapo">
+<div class="box-h">Ce que dit la diapo <span class="ref">Cours3 · diapo 39</span></div>
+<ul>
+<li>Le théorème ne donne que des bornes supérieures <strong>non asymptotiques</strong> sur l'erreur, avec une certaine probabilité et sous certaines conditions. La probabilité dépend de $p$ et les conditions dépendent de $n$ et $p$. Rappelons que RE$(s,3)$ porte sur la matrice $X$ de taille $n\times p$. Pour en déduire une convergence asymptotique (quand $n\to+\infty$ et/ou $p\to+\infty$), il faudrait des propriétés supplémentaires très fortes.</li>
+<li>RE$(s,3)$ n'implique pas l'identifiabilité de $\bstar$, mais $\bstar$ est défini de façon unique grâce à l'hypothèse $M(\bstar)\le s$.</li>
+</ul>
+</div>
+
+<h3 id="non-asymptotique">« Non asymptotique » : qu'est-ce que ça change ?</h3>
+<p>Un résultat <strong>asymptotique</strong> dit ce qui se passe « à la limite » ($n\to\infty$) ; un résultat <strong>non asymptotique</strong> donne une borne explicite <em>pour vos $n$, $p$, $s$ précis</em>, avec une probabilité explicite (<a href="00_rappels.html#convergences">rappel</a>). C'est ce dont on a besoin en grande dimension, où $p$ peut être de l'ordre de $n$, ou plus grand : « faire tendre $n$ vers l'infini à $p$ fixé » ne décrit pas la situation réelle.</p>
+<p>Pour passer à une convergence quand $n\to\infty$, il faudrait suivre <em>toute une suite</em> de matrices $X=X^{(n)}$, avec $p=p(n)$ et $s=s(n)$, et savoir que :</p>
+<ul>
+<li>$\kappa(s,3)$ reste minoré par une constante $\kappa_0>0$ pour tout $n$ — une propriété de toute la suite de matrices, très forte et invérifiable en pratique ;</li>
+<li>$s\log p/n\to0$ (pour que la borne (7)$/n$ tende vers 0) ;</li>
+<li>$p\to\infty$ (pour que la probabilité $1-p^{1-A^2/8}$ tende vers 1 ; à $p$ fixé, il faudrait faire grandir $A$).</li>
+</ul>
+<p>C'est ce que la diapo appelle des « propriétés supplémentaires très fortes ».</p>
+
+<h3 id="identifiabilite">Identifiabilité</h3>
+<p>Le second point a été démontré en <a href="#re-2s">section 4</a> : RE ne rend pas $X$ injective (quand $p>n$, une infinité de vecteurs $\beta$ vérifient $X\beta=X\bstar$), mais <strong>un seul d'entre eux a au plus $s$ coordonnées non nulles</strong>. Le paramètre « $\bstar$ » visé par le théorème est donc bien défini : c'est l'unique explication parcimonieuse des données.</p>
+
+<h2 id="limites">8. Ce que le théorème ne dit pas</h2>
+
+<ul>
+<li><strong>Pas de garantie de sélection.</strong> Le théorème borne l'erreur de prédiction, l'erreur $\ell_1$ et le <em>nombre</em> de variables choisies, mais il ne dit pas que le Lasso retrouve <em>le bon</em> support. Un vrai coefficient plus petit que l'erreur d'estimation peut être manqué ; des variables inutiles peuvent être sélectionnées (en nombre limité par (8)). Retrouver exactement le support demande des hypothèses plus fortes (hors diapos : condition d'« irreprésentabilité » sur $X$ et coefficients non nuls assez grands).</li>
+<li><strong>Le bon $r$ dépend de $\sigma$</strong>, qui est inconnu en pratique. On choisit alors $\lambda$ par validation croisée (<a href="00_rappels.html#erreur-test">rappel</a>), qui n'est pas couverte par le théorème — et qui choisit souvent un $\lambda$ plus petit que celui de la théorie.</li>
+<li><strong>Les constantes sont pessimistes</strong> (section 5) : le théorème donne la bonne forme $s\log p/n$, pas la bonne valeur.</li>
+<li><strong>RE n'est pas vérifiable</strong> sur une matrice donnée (section 4).</li>
+<li><strong>Bruit gaussien et design fixe.</strong> La preuve n'utilise du caractère gaussien que la queue $\P(\abs Z>t)\le e^{-t^2/2}$ : le résultat s'étend à tout bruit ayant des queues de ce type (dit « sous-gaussien », hors diapos).</li>
+</ul>
+
+<h2 id="resume">Résumé de la séance</h2>
+
+<div class="box resume">
+<ul>
+<li>Notations : $M(\beta)=$ nombre de coordonnées non nulles, $J(\beta)=$ support, $\delta_J=$ « $\delta$ éteint hors de $J$ » ; $\norm\delta_1=\norm{\delta_J}_1+\norm{\delta_{J^c}}_1$ et $\norm{\delta_J}_1\le\sqrt{\abs J}\norm{\delta_J}_2$.</li>
+<li>Quand $p>n$, $\Psi_n=X\T X/n$ est dégénérée : il existe $\delta\neq0$ avec $X\delta=0$. On ne peut pas contrôler une erreur quelconque.</li>
+<li>Mais l'erreur du Lasso vit (sur $\mathcal E$) dans le <strong>cône</strong> $\norm{\delta_{J_0^c}}_1\le3\norm{\delta_{J_0}}_1$ ; le 3 vaut $\frac{\text{pénalité}+\text{bruit}}{\text{pénalité}-\text{bruit}}=\frac{2r+r}{2r-r}$.</li>
+<li><strong>RE$(s,3)$</strong> : $\norm{X\delta}\ge\kappa\sqrt n\norm{\delta_{J_0}}_2$ sur le cône, pour tout $\abs{J_0}\le s$. Plus faible que l'inversibilité ; entraîne que toute famille de $2s$ colonnes est libre ($n\ge2s$) ; $\kappa=1$ en design orthonormé, $\kappa=0$ avec deux colonnes égales.</li>
+<li><strong>Théorème BRT</strong> : avec $r=A\sigma\sqrt{\log p/n}$, $A>2\sqrt2$, avec probabilité $\ge1-p^{1-A^2/8}$ : $\norm{X\delta}^2\le\frac{16A^2}{\kappa^2}\sigma^2s\log p$, $\norm\delta_1\le\frac{16A}{\kappa^2}\sigma s\sqrt{\log p/n}$, $M(\hb^L)\le\frac{64\varphi_{\max}}{\kappa^2}s$.</li>
+<li>En prédiction : l'oracle $\sigma^2s/n$, multiplié par $\log p$ et une constante.</li>
+<li><strong>Preuve</strong> : base → Hölder + $\mathcal E$ → découpage selon $J_0$ → cône → RE → $u^2\le cu$ → probabilité par union + queue gaussienne.</li>
+<li>Non asymptotique ; pas de garantie de sélection ; $r$ dépend de $\sigma$ ; constantes pessimistes.</li>
+</ul>
+</div>
+
+<h2 id="reflexes">Les réflexes à acquérir</h2>
+
+<div class="box reflexe">
+<div class="box-h">Réflexes de la séance 3</div>
+<ul>
+<li><strong>Estimateur défini par un argmin → inégalité de base</strong> : critère(estimateur) $\le$ critère(vérité), puis $Y=X\bstar+\eps$.</li>
+<li><strong>Terme croisé $\eps\T X\delta$ avec pénalité $\ell_1$ → Hölder $\ell_\infty/\ell_1$</strong>, jamais Cauchy–Schwarz : le $\ell_\infty$ d'un vecteur gaussien coûte $\sqrt{\log p}$, le $\ell_2$ coûte $\sqrt p$.</li>
+<li><strong>Maximum de $p$ gaussiennes → union + queue $e^{-t^2/2}$</strong> → seuil $\approx\sqrt{2\log p}$ écarts-types → $\lambda\asymp\sigma\sqrt{\log p/n}$.</li>
+<li><strong>Un ensemble privilégié d'indices → couper chaque vecteur sur $J$ / hors de $J$</strong> ; hors du support, $\delta_{J^c}=\hb_{J^c}$.</li>
+<li><strong>$\abs a-\abs b\le\abs{a-b}$</strong> pour comparer les normes $\ell_1$ de l'estimateur et de la vérité.</li>
+<li><strong>Constante du cône = (pénalité + bruit)/(pénalité − bruit)</strong> ; il faut que la pénalité domine le bruit.</li>
+<li><strong>Une inégalité « fermée » $u^2\le cu$ → $u\le c$</strong> ; et si deux termes positifs sont à gauche, on en tire deux bornes.</li>
+<li><strong>Pour montrer que RE échoue → chercher une combinaison nulle de peu de colonnes</strong>, et mettre les plus gros coefficients dans $J_0$.</li>
+<li><strong>Lire une borne → la diviser par $n$ et la comparer à l'oracle $\sigma^2s/n$</strong>.</li>
+</ul>
+</div>
+
+<h2 id="exercices">Exercices</h2>
+
+<p>Les exercices sont gradués de ★ (application directe) à ★★★ (à chercher). Cherchez avant d'ouvrir l'indice, puis la solution.</p>
+
+<div class="exo"><div class="exo-h">Exercice 1 — Normes d'un vecteur parcimonieux <span class="lvl">★☆☆</span></div>
+<p>Soit $v\in\R^p$ ayant au plus $k$ coordonnées non nulles. (a) Montrer $\norm v_2\le\norm v_1\le\sqrt k\,\norm v_2$. (b) Quand y a-t-il égalité à droite ? (c) Vérifier sur $v=(1,1,1,1,0,\dots,0)$ ($k=4$).</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>(a) Pour la gauche, développez $\norm v_1^2=(\sum\abs{v_j})^2$. Pour la droite, Cauchy–Schwarz avec le vecteur qui vaut 1 sur les coordonnées non nulles.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) $\norm v_1^2=\sum_j\abs{v_j}^2+\sum_{j\neq l}\abs{v_j}\abs{v_l}\ge\sum_jv_j^2=\norm v_2^2$. Pour la droite, avec $K$ l'ensemble des coordonnées non nulles ($\abs K\le k$) : $\norm v_1=\sum_{j\in K}1\cdot\abs{v_j}\le\sqrt{\abs K}\sqrt{\sum_{j\in K}v_j^2}\le\sqrt k\norm v_2$.</p>
+<p>(b) Égalité dans Cauchy–Schwarz quand $(\abs{v_j})_{j\in K}$ est proportionnel à $(1,\dots,1)$, et $\abs K=k$ : $k$ coordonnées non nulles de même valeur absolue.</p>
+<p>(c) $\norm v_1=4$, $\norm v_2=2$, $\sqrt4\times2=4$ : égalité, comme prévu.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 2 — Le lemme de découpage, sous une autre forme <span class="lvl">★★☆</span></div>
+<p>Soit $\bstar$ nul hors de $J_0$, $\hb$ quelconque et $\delta=\hb-\bstar$. Montrer que $\norm{\bstar}_1-\norm{\hb}_1\le\norm{\delta_{J_0}}_1-\norm{\delta_{J_0^c}}_1$. En déduire, sans regarder la preuve, que l'inégalité de base donne sur $\mathcal E$ : $\frac1n\norm{X\delta}^2\le3r\norm{\delta_{J_0}}_1-r\norm{\delta_{J_0^c}}_1$.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Écrivez $\norm{\hb}_1=\norm{\hb_{J_0}}_1+\norm{\delta_{J_0^c}}_1$ et utilisez $\abs a-\abs b\le\abs{a-b}$ sur $J_0$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>$\norm{\bstar}_1-\norm{\hb}_1=\norm{\bstar_{J_0}}_1-\norm{\hb_{J_0}}_1-\norm{\hb_{J_0^c}}_1\le\norm{\delta_{J_0}}_1-\norm{\delta_{J_0^c}}_1$, car $\hb_{J_0^c}=\delta_{J_0^c}$ et $\sum_{j\in J_0}(\abs{\bstar_j}-\abs{\hb_j})\le\sum_{j\in J_0}\abs{\bstar_j-\hb_j}$.</p>
+<p>Inégalité de base + Hölder sur $\mathcal E$ : $\frac1n\norm{X\delta}^2\le r\norm\delta_1+2r(\norm{\bstar}_1-\norm{\hb}_1)\le r(\norm{\delta_{J_0}}_1+\norm{\delta_{J_0^c}}_1)+2r(\norm{\delta_{J_0}}_1-\norm{\delta_{J_0^c}}_1)=3r\norm{\delta_{J_0}}_1-r\norm{\delta_{J_0^c}}_1$. Comme le membre de gauche est $\ge0$, on retrouve directement le cône. C'est une variante équivalente de l'étape 2.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h"><span>Exercice 3 — $\kappa$ pour deux variables corrélées</span> <span class="lvl">★★☆</span></div>
+<p>On prend $p=2$, $s=1$ et une matrice de Gram $\Psi_n=\begin{pmatrix}1&\rho\\\rho&1\end{pmatrix}$ avec $\abs\rho<1$. Calculer $\kappa(1,3)$. Que se passe-t-il quand $\rho\to1$ ? Comparer $\kappa(1,3)^2$ à la plus petite valeur propre de $\Psi_n$.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Par symétrie, $J_0=\{1\}$ suffit. Comme le quotient ne dépend pas de l'échelle de $\delta$, prenez $\delta=(1,t)$ avec $\abs t\le3$, et minimisez $\delta\T\Psi_n\delta=\frac1n\norm{X\delta}^2$ en $t$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>Pour $J_0=\{1\}$, $\delta=(1,t)$, le cône est $\abs t\le3$ et le quotient au carré vaut $\frac{\norm{X\delta}^2}{n\,\delta_1^2}=\delta\T\Psi_n\delta=1+2\rho t+t^2$. Ce trinôme est minimal en $t=-\rho$, qui est bien dans $[-3,3]$, et vaut alors $1-\rho^2$. Le cas $J_0=\{2\}$ est symétrique. Donc $\kappa(1,3)=\sqrt{1-\rho^2}$.</p>
+<p>Quand $\rho\to1$, $\kappa\to0$ : les deux variables deviennent indiscernables et les bornes du théorème explosent (en $1/\kappa^2=1/(1-\rho^2)$). Les valeurs propres de $\Psi_n$ sont $1\pm\rho$, donc $\lambda_{\min}=1-\abs\rho\le1-\rho^2=\kappa^2$ (car $1-\rho^2=(1-\abs\rho)(1+\abs\rho)$) : la constante de RE est meilleure que $\sqrt{\lambda_{\min}}$ (exercice 5 (c)). En revanche, la <em>condition</em> RE$(1,3)$ est vraie exactement quand $\Psi_n$ est inversible ($\abs\rho<1$) : en dimension 2, les cônes de $J_0=\{1\}$ et $J_0=\{2\}$ recouvrent le plan (piège de la section 3). RE n'est strictement plus faible que l'inversibilité qu'en dimension plus grande.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 4 — RE peut échouer sans colonnes égales <span class="lvl">★★☆</span></div>
+<p>Soit $X_1,X_2\in\R^n$ orthogonales avec $\norm{X_1}^2=\norm{X_2}^2=n$, et $X_3=\frac{X_1+X_2}{\sqrt2}$. (a) Vérifier que $\norm{X_3}^2=n$ et qu'aucune paire de colonnes n'est colinéaire. (b) Montrer que RE$(1,3)$ échoue.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Trouvez une combinaison nulle $X\delta=0$ des trois colonnes, puis choisissez $J_0$ de taille 1 sur le plus gros coefficient (méthode de la section 4).</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) $\norm{X_3}^2=\frac12(\norm{X_1}^2+2X_1\T X_2+\norm{X_2}^2)=\frac12(n+0+n)=n$. Les produits scalaires normalisés valent $X_1\T X_3/n=1/\sqrt2$, $X_2\T X_3/n=1/\sqrt2$, $X_1\T X_2/n=0$ : aucune paire n'est colinéaire (il faudrait $\pm1$).</p>
+<p>(b) $\delta=(1,1,-\sqrt2)$ vérifie $X\delta=X_1+X_2-\sqrt2X_3=0$. Avec $J_0=\{3\}$ : $\norm{\delta_{J_0^c}}_1=2\le3\sqrt2=3\norm{\delta_{J_0}}_1$, donc $\delta$ est dans le cône et le quotient de RE est nul : $\kappa(1,3)=0$. Moralité : RE ne se réduit pas à « pas de colonnes trop corrélées deux à deux » ; une colonne qui est combinaison de <em>quelques</em> autres suffit à la faire échouer.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 5 — Comparer les constantes de cône <span class="lvl">★☆☆</span></div>
+<p>(a) Montrer que $\kappa(s,1)\ge\kappa(s,3)$. (b) Montrer que $\kappa(s,3)\le1$ si les colonnes sont normalisées ($\norm{X_j}^2=n$). (c) Montrer que $\kappa(s,3)\ge\sqrt{\lambda_{\min}(\Psi_n)}$.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>(a) Un cône est inclus dans l'autre. (b) Un $\delta$ bien choisi. (c) $\norm{\delta_{J_0}}_2\le\norm\delta_2$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) Si $\norm{\delta_{J_0^c}}_1\le\norm{\delta_{J_0}}_1$ alors $\norm{\delta_{J_0^c}}_1\le3\norm{\delta_{J_0}}_1$ : pour chaque $J_0$, le cône de constante 1 est inclus dans celui de constante 3. Un minimum sur un ensemble plus petit est plus grand : $\kappa(s,1)\ge\kappa(s,3)$.</p>
+<p>(b) $J_0=\{j\}$, $\delta=e_j$ (dans le cône car $\delta_{J_0^c}=0$) : quotient $\norm{X_j}/(\sqrt n\times1)=1$. Le minimum est donc $\le1$.</p>
+<p>(c) $\norm{X\delta}^2=n\,\delta\T\Psi_n\delta\ge n\lambda_{\min}\norm\delta_2^2\ge n\lambda_{\min}\norm{\delta_{J_0}}_2^2$, donc chaque quotient est $\ge\sqrt{\lambda_{\min}}$. (Quand $p>n$, $\lambda_{\min}=0$ et cette minoration est vide : RE dit vraiment quelque chose de plus.)</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 6 — Refaire la preuve avec un niveau de bruit général <span class="lvl">★★★</span></div>
+<p>On garde le critère (3) mais on travaille sur l'événement $\mathcal E_\eta=\{\frac2n\norm{X\T\eps}_\infty\le\eta\}$ avec $0<\eta<2r$. (a) Montrer que sur $\mathcal E_\eta$, $\delta$ est dans le cône de constante $c_0=\frac{2r+\eta}{2r-\eta}$. (b) Montrer que, sous RE$(s,c_0)$ : $\frac1n\norm{X\delta}^2\le\frac{16r^2s}{\kappa(s,c_0)^2}$ et $\norm\delta_1\le\frac{16r^2s}{(2r-\eta)\kappa(s,c_0)^2}$. (c) Retrouver le théorème avec $\eta=r$. (d) Que se passe-t-il si $\eta\ge2r$ ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Partez du résultat de l'exercice 2 avec $\eta$ au lieu de $r$ dans le terme de bruit, puis ajoutez $(2r-\eta)\norm\delta_1$ des deux côtés.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) Base + Hölder sur $\mathcal E_\eta$ + exercice 2 : $\frac1n\norm{X\delta}^2\le\eta(\norm{\delta_{J_0}}_1+\norm{\delta_{J_0^c}}_1)+2r(\norm{\delta_{J_0}}_1-\norm{\delta_{J_0^c}}_1)=(2r+\eta)\norm{\delta_{J_0}}_1-(2r-\eta)\norm{\delta_{J_0^c}}_1$. Le membre de gauche est $\ge0$ et $2r-\eta>0$, d'où $\norm{\delta_{J_0^c}}_1\le c_0\norm{\delta_{J_0}}_1$.</p>
+<p>(b) Ajoutons $(2r-\eta)\norm\delta_1=(2r-\eta)(\norm{\delta_{J_0}}_1+\norm{\delta_{J_0^c}}_1)$ : $\frac1n\norm{X\delta}^2+(2r-\eta)\norm\delta_1\le4r\norm{\delta_{J_0}}_1\le\frac{4r\sqrt s}{\kappa(s,c_0)}u$. Comme dans l'étape 4 : $u\le\frac{4r\sqrt s}{\kappa}$, donc $u^2\le\frac{16r^2s}{\kappa^2}$, et $(2r-\eta)\norm\delta_1\le\frac{16r^2s}{\kappa^2}$.</p>
+<p>(c) Avec $\eta=r$ : $c_0=3$, et $\norm\delta_1\le\frac{16r^2s}{r\kappa^2}=\frac{16rs}{\kappa^2}$ : ce sont exactement (7) et (6).</p>
+<p>(d) Si $\eta\ge2r$, le coefficient $2r-\eta$ de $\norm{\delta_{J_0^c}}_1$ n'est plus positif : on n'obtient plus de cône, la preuve s'effondre. <strong>La pénalité doit dominer le bruit.</strong> Un $\eta$ petit donne un cône étroit (proche de 1) mais l'événement $\mathcal E_\eta$ est moins probable : avec $\eta=\theta r$, l'étape 5 donne $\P(\mathcal E_\eta^c)\le p^{1-\theta^2A^2/8}$, qui se dégrade quand $\theta$ diminue. Le théorème fait le choix $\theta=1$.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 7 — Application numérique <span class="lvl">★★☆</span></div>
+<p>$n=500$, $p=10\,000$, $s=10$, $\sigma=1$, $\kappa=1$. (a) Quelle est la plus petite valeur de $A$ qui garantit, par le théorème, une probabilité au moins $0{,}99$ ? (b) Que valent alors $r$ et la borne (7) divisée par $n$ ? (c) Quel $n$ faudrait-il pour que cette borne passe sous $\sigma^2=1$ ? Commenter.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>(a) Résolvez $p^{1-A^2/8}\le0{,}01$ en passant au logarithme.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) $p^{1-A^2/8}\le10^{-2}\iff(A^2/8-1)\log p\ge\log100\iff A^2\ge8\big(1+\frac{\log100}{\log p}\big)=8(1+\tfrac12)=12$ (car $\log100/\log10^4=2/4$). Donc $A\ge2\sqrt3\approx3{,}46$.</p>
+<p>(b) $r=3{,}46\times\sqrt{9{,}21/500}\approx0{,}47$. Borne : $\frac{16A^2\sigma^2s\log p}{n}=\frac{16\times12\times10\times9{,}21}{500}\approx35{,}4$.</p>
+<p>(c) Il faut $n\ge16A^2s\log p\approx17\,700$. La borne ne devient informative que pour $n$ très grand : les constantes du théorème sont très pessimistes. En pratique (voir la simulation de la section 5), le Lasso fait beaucoup mieux ; le théorème garantit la <em>forme</em> $s\log p/n$.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h"><span>Exercice 8 — La queue gaussienne $\P(\abs Z>t)\le e^{-t^2/2}$</span> <span class="lvl">★★☆</span></div>
+<p>Soit $Z\sim\N(0,1)$, de densité $\varphi(z)=\frac1{\sqrt{2\pi}}e^{-z^2/2}$. (a) Montrer que $\int_t^\infty\varphi(z)\,dz\le\varphi(t)/t$ pour $t>0$. (b) En déduire $\P(\abs Z>t)\le e^{-t^2/2}$ pour $t\ge\sqrt{2/\pi}$. (c) Pour $0\le t\le\sqrt{2/\pi}$, étudier $g(t)=e^{-t^2/2}-\P(\abs Z>t)$. (d) Pourquoi la version « facile » $\P(\abs Z>t)\le2e^{-t^2/2}$ (Chernoff) ne donne-t-elle pas exactement la probabilité du théorème ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>(a) Pour $z\ge t$, $1\le z/t$, et $z\varphi(z)$ a une primitive explicite. (c) Calculez $g(0)$ et $g'(t)$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) $\int_t^\infty\varphi(z)dz\le\int_t^\infty\frac zt\varphi(z)dz=\frac1t\big[-\varphi(z)\big]_t^\infty=\frac{\varphi(t)}t$, car $\varphi'(z)=-z\varphi(z)$.</p>
+<p>(b) $\P(\abs Z>t)=2\int_t^\infty\varphi\le\frac{2\varphi(t)}t=\frac{\sqrt{2/\pi}}{t}e^{-t^2/2}\le e^{-t^2/2}$ dès que $t\ge\sqrt{2/\pi}\approx0{,}80$.</p>
+<p>(c) $\P(\abs Z>t)=1-2\int_0^t\varphi$, donc $g(t)=e^{-t^2/2}-1+2\int_0^t\varphi$, $g(0)=0$ et $g'(t)=-te^{-t^2/2}+2\varphi(t)=e^{-t^2/2}\big(\sqrt{2/\pi}-t\big)\ge0$ sur $[0,\sqrt{2/\pi}]$. Donc $g\ge0$ : l'inégalité vaut aussi sur cet intervalle.</p>
+<p>(d) Avec le facteur 2, l'étape 5 donnerait $\P(\mathcal E^c)\le2p^{1-A^2/8}$ : même conclusion qualitative, mais pas exactement la probabilité $1-p^{1-A^2/8}$ de la diapo. (En séance 4, les diapos utilisent justement la version avec le facteur 2.)</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 9 — Colonnes libres et identifiabilité <span class="lvl">★★☆</span></div>
+<p>(a) Montrer que si RE$(s,1)$ est vraie, toute famille d'au plus $2s$ colonnes de $X$ est libre. (b) En déduire que si $\beta$ et $\beta'$ ont chacun au plus $s$ coordonnées non nulles et $X\beta=X\beta'$, alors $\beta=\beta'$. (c) Avec $n=100$ et $p>n$, quelle est la plus grande parcimonie $s$ pour laquelle RE$(s,1)$ peut être vraie ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>(a) Reprenez la preuve de la section 4 : le choix de $J$ (les $s$ plus grosses coordonnées) donne même $\norm{\delta_{J^c}}_1\le1\cdot\norm{\delta_J}_1$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) Soit $\delta\neq0$ à au plus $2s$ coordonnées non nulles, $J$ ses $s$ plus grosses. Chacune des $\le s$ coordonnées restantes est plus petite que chaque coordonnée de $J$, donc $\norm{\delta_{J^c}}_1\le\norm{\delta_J}_1$ : $\delta$ est dans le cône de constante 1. RE$(s,1)$ donne $\norm{X\delta}\ge\kappa(s,1)\sqrt n\norm{\delta_J}_2>0$. Une combinaison linéaire non triviale d'au plus $2s$ colonnes n'est jamais nulle : la famille est libre.</p>
+<p>(b) $\delta=\beta-\beta'$ a au plus $2s$ coordonnées non nulles et $X\delta=0$ ; par (a), $\delta=0$.</p>
+<p>(c) $2s$ vecteurs libres dans $\R^{100}$ exigent $2s\le100$ : $s\le50$. (C'est une condition nécessaire, loin d'être suffisante : en pratique RE demande plutôt $n\gtrsim s\log p$.)</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 10 — Pourquoi pas Cauchy–Schwarz ? <span class="lvl">★★☆</span></div>
+<p>À l'étape 2a, on aurait pu écrire $\frac2n\eps\T X\delta\le\frac2n\norm{X\T\eps}_2\norm\delta_2\le\frac2n\norm{X\T\eps}_2\norm\delta_1$. (a) Calculer $\E\norm{X\T\eps}_2^2$ (colonnes normalisées). (b) Quelle valeur de $r$ faudrait-il alors pour absorber ce terme dans la pénalité, et que deviendrait la borne de prédiction ? Comparer avec la vraie preuve quand $p=10\,000$, $n=500$.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>$\norm{X\T\eps}_2^2=\sum_j(X_j\T\eps)^2$ et chaque $X_j\T\eps\sim\N(0,n\sigma^2)$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) $\E\norm{X\T\eps}_2^2=\sum_{j=1}^p\E(X_j\T\eps)^2=p\,n\sigma^2$, donc $\norm{X\T\eps}_2\approx\sigma\sqrt{pn}$.</p>
+<p>(b) Il faudrait $r\gtrsim\frac2n\sigma\sqrt{pn}=2\sigma\sqrt{p/n}$, et la borne (7)$/n$, proportionnelle à $r^2s$, deviendrait de l'ordre de $\sigma^2 s\,p/n$ : pire que de ne rien faire quand $p>n$. Avec $p=10^4$, $n=500$ : $\sqrt{p/n}\approx4{,}5$ contre $\sqrt{\log p/n}\approx0{,}14$ pour la vraie preuve, soit un $r$ trente fois plus grand et une borne environ mille fois plus grande. Hölder remplace $p$ par $\log p$ : c'est tout le secret.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 11 — Le cas orthonormé, à la main <span class="lvl">★★★</span></div>
+<p>On suppose $X\T X=nI_p$ (donc $p\le n$). (a) Montrer que le Lasso (3) vaut $\hb^L_j=\sgn(b_j)(\abs{b_j}-r)_+$ avec $b=\frac1nX\T Y=\bstar+\frac1nX\T\eps$. (b) Montrer que sur $\mathcal E$, le Lasso ne sélectionne <strong>aucune</strong> variable hors de $J_0$. (c) Montrer que sur $\mathcal E$, $\abs{\delta_j}\le\frac32r$ pour $j\in J_0$, et en déduire $\frac1n\norm{X\delta}^2\le\frac94\,s\,r^2$. (d) Comparer avec la borne $16\,s\,r^2$ du théorème (ici $\kappa=1$) et avec la simulation de la section 5.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>(a) Développez le critère : il se sépare en $p$ problèmes $(\beta_j-b_j)^2+2r\abs{\beta_j}$. (c) $\abs{\delta_j}\le\abs{\hb_j-b_j}+\abs{b_j-\bstar_j}$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) $\frac1n\norm{Y-X\beta}^2=\frac1n\norm Y^2-\frac2n\beta\T X\T Y+\frac1n\beta\T X\T X\beta=\frac1n\norm Y^2-2\beta\T b+\norm\beta^2=\sum_j(\beta_j-b_j)^2+\text{cte}$. Le critère est donc $\sum_j\big[(\beta_j-b_j)^2+2r\abs{\beta_j}\big]+\text{cte}$, minimisé coordonnée par coordonnée par le seuillage doux au seuil $r$ (séance 2, avec $\lambda=2r$, seuil $\lambda/2=r$). Et $b=\frac1nX\T(X\bstar+\eps)=\bstar+\frac1nX\T\eps$.</p>
+<p>(b) Pour $j\notin J_0$, $b_j=\frac1nX_j\T\eps$ et sur $\mathcal E$, $\abs{b_j}\le r/2<r$ : le seuillage donne $\hb_j=0$. Pas un seul faux positif.</p>
+<p>(c) Pour $j\in J_0$ : $\abs{\hb_j-b_j}\le r$ (le seuillage doux déplace d'au plus $r$) et $\abs{b_j-\bstar_j}=\frac1n\abs{X_j\T\eps}\le r/2$. Donc $\abs{\delta_j}\le\frac32r$. Comme $\delta$ est nul hors de $J_0$ et $\frac1n\norm{X\delta}^2=\delta\T\delta=\norm\delta_2^2$ : $\frac1n\norm{X\delta}^2\le\abs{J_0}\cdot\frac94r^2\le\frac94sr^2$.</p>
+<p>(d) $\frac94$ au lieu de $16$ : le théorème, qui doit couvrir toutes les matrices vérifiant RE, perd un facteur 7 dans ce cas idéal. La simulation (design gaussien, $p>n$) donnait $\approx s\,r^2$ : cohérent avec cet ordre de grandeur.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 12 — Lire les trois bornes <span class="lvl">★☆☆</span></div>
+<p>Dans le design orthonormé ($\kappa=1$, $\varphi_{\max}=1$), que disent (6), (7), (8) ? Pourquoi (8) n'est-il pas en contradiction avec l'exercice 11 (b) ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Remplacez $\kappa$ et $\varphi_{\max}$ par 1. Une borne supérieure peut être très large sans être fausse.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(7) : $\frac1n\norm{X\delta}^2\le16A^2\sigma^2s\log p/n$ ; (6) : $\norm\delta_1\le16A\sigma s\sqrt{\log p/n}$ ; (8) : $M(\hb^L)\le64s$. L'exercice 11 montre que, sur $\mathcal E$, $M(\hb^L)\le s$ en réalité. (8) est simplement une borne beaucoup plus large, valable pour toutes les matrices : elle n'est pas fausse, juste pessimiste dans ce cas favorable.</p>
+</div></details></div>
+
+<h2 id="suite">Et après ?</h2>
+
+<p>La séance 4 reprend <strong>exactement le même squelette</strong> dans un cadre plus général : la fonction de régression $f$ n'est plus forcément linéaire, on l'approche par une combinaison parcimonieuse d'un « dictionnaire » de fonctions, et on compare le Lasso non plus à la vérité $\bstar$ mais au <em>meilleur</em> vecteur $\beta$ possible (inégalités oracle). On y verra deux résultats : une vitesse « lente » en $1/\sqrt n$ <strong>sans aucune hypothèse sur $X$</strong>, et une vitesse « rapide » en $s\log p/n$ <strong>sous RE</strong> — la condition de cette séance. Pour cela, on formalisera l'outil qui se cache derrière les conditions KKT : le sous-différentiel.</p>
