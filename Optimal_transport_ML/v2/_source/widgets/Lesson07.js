@@ -290,7 +290,7 @@
     var eS = slider(s.controls, "ε", -4, -1, 0.01, -3, draw);
     var pSel = select(s.controls, "arithmetic", [["64", "float64 (double)"], ["32", "float32 (single, GPUs)"]], "64", draw);
     var ro = readout(s.controls);
-    legend(s.legend, [["--s2", "entries of K that are exactly 0"], ["--muted", "plain iteration u ← a/Kv"], ["--s3", "log-domain iteration"]]);
+    legend(s.legend, [["--s2", "entries of K that are exactly 0"], ["--muted", "plain iteration u ← a/Kv"], ["--s3", "log-domain iteration (dashed)"]]);
     var xs = [], ys = [], a = [], b = [], i, j;
     for (i = 0; i < n; i++) { xs.push(0.35 * (i + 0.5) / n); ys.push(0.55 + 0.45 * (i + 0.5) / n); a.push(1 / n); b.push(1 / n); }
     var C = l7cost(xs, ys), ITER = 150;
