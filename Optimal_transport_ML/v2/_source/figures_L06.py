@@ -298,7 +298,7 @@ def fig_bb_solver():
     a0 /= a0.sum() * dx; a1 /= a1.sum() * dx
     S = BB1D(a0, a1, L, R, T)
     acts = S.solve(1000)
-    rb, mb = S.interp(S.U)
+    rho_k = S.split(S.U)[0]  # densities rho_k at the times k/T (raw staggered values, no time averaging)
     edges = L + dx * np.arange(N + 1)
     c0 = np.concatenate([[0], np.cumsum(a0 * dx)]); c1 = np.concatenate([[0], np.cumsum(a1 * dx)])
     uu = (np.arange(400000) + 0.5) / 400000
@@ -311,7 +311,7 @@ def fig_bb_solver():
         g = Fig(c, (62, y0 - 46, 320, 46), (L, R), (0, 1.15))
         k = int(round(t * T))
         if 0 < k < T:
-            dens = 0.5 * (rb[k - 1] + rb[k])
+            dens = rho_k[k]
         else:
             dens = a0 if k == 0 else a1
         qh = (1 - t) * qa + t * qb
