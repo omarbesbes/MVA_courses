@@ -18,7 +18,7 @@ $$\min_\theta\ \mathcal L_{\mathrm{MLE}}(\al_\theta,\be):=-\sum_i\log\big(\rho_\
 <dt>$-\sum_i\log\rho_\theta(x_i)$</dt><dd>The negative log-likelihood of the sample $x_1,\dots,x_n$ under the model density $\rho_\theta$.</dd>
 <dt>$\bar\be$</dt><dd>The unknown law of the data; $\be=\frac1n\sum_i\delta_{x_i}$ is its empirical version.</dd>
 <dt>“fails for singular distributions”</dt><dd>A generator $\pf{(g_\theta)}{\zeta}$ that maps a low-dimensional latent space into a large one has no density: its likelihood is not defined (or $-\infty$). Hence the weak losses of §6.</dd>
-<dt>MKE</dt><dd>$\min_\theta\Lc(\al_\theta,\be)$: fit the model by transport. Wasserstein GANs are MKEs with $c=d$ (CompOT §9.4, p. 159).</dd>
+<dt>MKE</dt><dd>$\min_\theta\Lc(\al_\theta,\be)$: fit the model by transport. Wasserstein GANs are MKEs with $c=d$, whose dual potential is approximated by a deep network (CompOT §9.4, pp. 159–161).</dd>
 </dl>
 <p>Let us redo the limit carefully, because the order of the arguments matters (see the note below).</p>
 <ol class="steps">
@@ -28,6 +28,10 @@ $$\min_\theta\ \mathcal L_{\mathrm{MLE}}(\al_\theta,\be):=-\sum_i\log\big(\rho_\
 <p>So maximum likelihood minimises $\KL(\text{data}\,|\,\text{model})$, the “forward” KL. It is finite only if the model puts mass wherever the data have mass.</p>
 <div class="box remark"><div class="box-h">Note on the sources — the limit of the likelihood</div>
 <p>The 2019 notes (p. 40) and CompOT (§9.4, p. 159) write $\mathcal L_{\mathrm{MLE}}(\al,\be)\to\KL(\al|\bar\be)$ for $\mathcal L_{\mathrm{MLE}}=-\sum_i\log\rho_\theta(x_i)$. Two corrections: the sum must be divided by $n$, and the limit is $\KL(\bar\be|\al_\theta)+h(\bar\be)$ — arguments in the other order, plus a constant. <strong>Check</strong> with data $\N(0,1)$ and model $\N(0,4)$, $n=10^6$ samples: $\frac1n\mathcal L_{\mathrm{MLE}}=1.7373$, while $h+\KL(\text{data}|\text{model})=1.4189+0.3181=1.7371$ and $h+\KL(\text{model}|\text{data})=1.4189+0.8069=2.2258$; the unnormalised sum is $1.74\times10^6$.</p>
+</div>
+<div class="box remark"><div class="box-h">Going further — estimating a mixture by maximum likelihood is an entropic transport problem</div>
+<p>“Mixture estimation” in its simplest form: the data $X_1,\dots,X_n$ come from a <em>location mixture</em> $G_\rho=\int\N(y,\sigma^2\Id)\,\rho(\dd y)$ whose mixing law $\rho$ is unknown and may be any probability measure. The <em class="new">non-parametric maximum likelihood estimator</em> (NPMLE) minimises $\ell_n(\rho)=-\frac1n\sum_i\log G_\rho(X_i)$ over all $\rho$. StatOT §6.4 (pp. 197–199) points out “a surprising connection with entropic optimal transport”: the NPMLE satisfies $\hat\rho=\argmin_\rho S_{2\sigma^2}(\mu_n,\rho)$, with $\mu_n=\frac1n\sum_i\delta_{X_i}$, “where $S_{2\sigma^2}(\cdot,\cdot)$ is the entropic optimal transport cost with regularization parameter $\eps=2\sigma^2$. In other words, the NPMLE precisely minimizes the entropic OT cost to the data $\mu_n$.” (StatOT defines the components with the standard Gaussian density, then writes the formula for a general $\sigma$: read the components as $\N(y,\sigma^2\Id)$.)</p>
+<p>Why: by the Gibbs variational principle, $-\log\int e^{-\norm{X_i-y}^2/(2\sigma^2)}\,\rho(\dd y)=\inf_{P_i}\int\frac{\norm{X_i-y}^2}{2\sigma^2}\,\dd P_i(y)+\KL(P_i|\rho)$. Each data point spreads itself over the components ($P_i$), paying the squared distance plus a KL penalty: together the $P_i$ form a transport plan from the data, with an entropic term, and the best $\rho$ is the second marginal of that plan. So here maximum likelihood (a KL) and transport are one problem. Entropic transport is the subject of Lesson 7; StatOT then solves this problem with Wasserstein–Fisher–Rao gradient flows (Lesson 8). (Checked in dimension 1 on a grid of atoms: the EM fixed point minimises $\rho\mapsto S_{2\sigma^2}(\mu_n,\rho)$, and $\ell_n(\hat\rho)=\frac12\log(2\pi\sigma^2)+\frac{S_{2\sigma^2}(\mu_n,\hat\rho)}{2\sigma^2}$.)</p>
 </div>
 
 <h3 id="mix-gauss">KL against $W_2$ on Gaussians</h3>
@@ -82,7 +86,7 @@ $$C_{i,j}=\norm{m_i-n_j}^2+\B(\Sigma_i,\Lambda_j)^2 .$$
 <dl class="decode">
 <dt>$\mathfrak A$</dt><dd>The mixture seen as a <strong>histogram over Gaussians</strong>: weight $a_i$ on the component $\N(m_i,\Sigma_i)$, which is now a point of a metric space (the Gaussians with the $W_2$ distance).</dd>
 <dt>$C_{ij}$</dt><dd>The ground cost between components: $W_2^2$ between two Gaussians, in closed form (Lesson 1: means + Bures). In 1D, $(m_i-n_j)^2+(\sigma_i-\tau_j)^2$.</dd>
-<dt>$\mathrm W_2(\mathfrak A,\mathfrak B)$</dt><dd>Often written $\mathrm{MW}_2$ (“mixture Wasserstein”): an $K\times L$ linear program between the weight vectors — tiny compared with OT between two densities on $\R^d$.</dd>
+<dt>$\mathrm W_2(\mathfrak A,\mathfrak B)$</dt><dd>Often written $\mathrm{MW}_2$ (“mixture Wasserstein”): a $K\times L$ linear program between the weight vectors — tiny compared with OT between two densities on $\R^d$.</dd>
 <dt>collapsed mixture</dt><dd>The usual density $\sum_ia_i\N(m_i,\Sigma_i)$ on $\X$.</dd>
 <dt>Prop. 13.10</dt><dd>Transporting component by component is one particular way of transporting the densities, so it costs at least as much: $W_2\le\mathrm{MW}_2$.</dd>
 </dl>

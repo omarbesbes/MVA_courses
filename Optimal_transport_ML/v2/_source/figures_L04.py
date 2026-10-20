@@ -272,8 +272,8 @@ def fig_cdf():
     D = Fig(c, (60, 285, 500, 85), xr, (-1.7, 0.3))
     D.axes(xticks=[0, 1, 1.5, 2, 3], yticks=[-1.5, 0], xfmt=fmt1, yfmt=lambda v: f"{v:g}".replace("-", "−"), grid=False)
     D.path([(xr[0], 0.4), (0, 0), (1.5, -1.5), (3, 0), (xr[1], -0.4)], "ln c3")
-    D.text(0.55, -0.85, "slope −1", "tx-s t3", "middle")
-    D.text(2.45, -0.85, "slope +1", "tx-s t3", "middle")
+    D.text(0.55, -1.25, "slope −1", "tx-s t3", "middle")  # below the line, which is above −0.8 there
+    D.text(2.45, -1.25, "slope +1", "tx-s t3", "middle")
     D.text(3.38, -0.75, "witness f", "tx-s t3", "end")
     c.save()
 

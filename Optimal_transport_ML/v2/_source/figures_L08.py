@@ -93,7 +93,8 @@ def fig_jko_heat():
         f.path(list(zip(xs, gauss(xs, 0, se))), "ln c3")
         f.path(list(zip(xs, gauss(xs, 0, sj))), "ln c5 thin dash")
     f.text(0.35, 0.79, "t = 0", "tx-s t2", "start")
-    f.text(0.0, gauss(0, 0, js[1][1]), "t = 0.25", "tx-s", "start", dx=8, dy=-2)
+    f.line(0.45, gauss(0.45, 0, math.sqrt(s0 ** 2 + 0.5)), 1.5, 0.55, "ln cm hair")
+    f.text(1.5, 0.55, "t = 0.25", "tx-s", "start", dx=4, dy=4)
     f.text(1.45, gauss(1.45, 0, 1.5) + 0.02, "t = 1", "tx-s", "start", dx=4, dy=-6)
     c.text(190, 18, "densities: exact (green), JKO with τ = 0.25 (purple, dashed)", "tx-b", "middle")
     g = Fig(c, (410, 30, 230, 190), (0, 1.02), (0.4, 1.6))
@@ -281,7 +282,8 @@ def fig_nonconvex():
     g.path(list(zip(ts, vals)), "ln c3")
     g.text(0.5, 1.0, "along the geodesic: 1 at t = ½", "tx-s t3", "middle", dy=-8)
     g.text(0.97, 0.5, "chord (convexity would need ≤)", "tx-s", "end", dy=-6)
-    g.text(0.5, 0.0, "2-semiconcavity bound ½ − 2t(1 − t)", "tx-s t5", "middle", dy=16)
+    g.text(0.5, 0.3, "2-semiconcavity bound", "tx-s t5", "middle")
+    g.text(0.5, 0.2, "½ − 2t(1 − t)", "tx-s t5", "middle")
     c.save()
 
 
@@ -303,9 +305,9 @@ def fig_lsi():
     f.path(Hb, "ln cm thin dash"); f.path(H, "ln c3")
     f.path(Wb, "ln cm thin dot"); f.path(Wd, "ln c1")
     f.text(1.55, math.log10(KL(2 * math.exp(-1.55), 1 - 0.75 * math.exp(-3.1))), "H = KL(αₜ | 𝒩(0,1))", "tx-s t3", "end", dx=-6, dy=10)
-    f.text(1.55, -0.95, "H(0) e⁻²ᵗ", "tx-s", "start", dx=6, dy=-14)
-    f.text(2.3, math.log10(W(2 * math.exp(-2.3), 1 - 0.75 * math.exp(-4.6))), "W = W₂(αₜ, 𝒩(0,1))", "tx-s t1", "end", dx=-4, dy=-10)
-    f.text(2.95, math.log10(W0 * math.exp(-2.95)), "W(0) e⁻ᵗ", "tx-s", "end", dy=-8)
+    f.text(0.08, -2.3, "dashed: H(0) e⁻²ᵗ", "tx-s", "start")
+    f.text(0.75, math.log10(W(2 * math.exp(-0.75), 1 - 0.75 * math.exp(-1.5))), "W = W₂(αₜ, 𝒩(0,1))", "tx-s t1", "start", dy=-10)
+    f.text(0.08, -2.6, "dotted: W(0) e⁻ᵗ", "tx-s", "start")
     c.text(183, 20, "decay of entropy and distance (log scale)", "tx-b", "middle")
     # right: each static bound divided by H
     g = Fig(c, (390, 34, 250, 190), (0, 3), (0.85, 1.4))

@@ -203,9 +203,11 @@
       [0, 0.25, 0.5, 0.75, 1].forEach(function (v) { var tt = el("text", { x: PX + v * PW, y: PY + PH + 14, "class": "tx-s", "text-anchor": "middle" }, g); tt.textContent = fmt(v, 2); });
       var hdr = el("text", { x: PX, y: PY - 26, "class": "tx-b" }, g); hdr.textContent = "Conditional law of Y given X = x" + "ᵢ" + ", x = " + fmt(D.t[sel], 3);
       var sub = el("text", { x: PX, y: PY - 10, "class": "tx-s" }, g); sub.textContent = "(hover or tap a row of the plan to change it)";
-      var nt = el("text", { x: PX + PW, y: PY + 14, "class": "tx-s t3", "text-anchor": "end" }, g); nt.textContent = "mean = T(x) = " + fmt(mean, 3);
-      var nt2 = el("text", { x: PX + PW, y: PY + 28, "class": "tx-s", "text-anchor": "end" }, g); nt2.textContent = "std = " + fmt(Math.sqrt(vr), 3) + ",  √(ε/2) = " + fmt(Math.sqrt(eps / 2), 3);
-      var nt3 = el("text", { x: PX + PW, y: PY + 42, "class": "tx-s", "text-anchor": "end" }, g); nt3.textContent = "grey band: where the exact plan sends x";
+      var lx = mean > 0.5 ? PX + 6 : PX + PW - 6, la = mean > 0.5 ? "start" : "end"; // keep the labels away from the mean line
+      var nt = el("text", { x: lx, y: PY + 14, "class": "tx-s t3", "text-anchor": la }, g); nt.textContent = "mean = T(x) = " + fmt(mean, 3);
+      var nt2 = el("text", { x: lx, y: PY + 28, "class": "tx-s", "text-anchor": la }, g); nt2.textContent = "std = " + fmt(Math.sqrt(vr), 3) + ",  √(ε/2) = " + fmt(Math.sqrt(eps / 2), 3);
+      var nt3 = el("text", { x: lx, y: PY + 42, "class": "tx-s", "text-anchor": la }, g); nt3.textContent = "grey band: where the exact";
+      var nt4 = el("text", { x: lx, y: PY + 56, "class": "tx-s", "text-anchor": la }, g); nt4.textContent = "plan sends x";
       // readout
       var st = l7planStats(P, D.a, D.b, C), e = 0;
       for (i = 0; i < N; i++) e += Math.abs(rows[i] - D.a[i]);
@@ -285,8 +287,8 @@
     s.svg.setAttribute("viewBox", "0 0 " + W + " " + H);
     s.svg.setAttribute("role", "img");
     s.svg.setAttribute("aria-label", "The Gibbs kernel with its underflowed entries, and the marginal errors of the two iterations");
-    var eS = slider(s.controls, "ε", -4, -1, 0.01, -2.5, draw);
-    var pSel = select(s.controls, "arithmetic", [["64", "double precision (float64)"], ["32", "single precision (float32, as on most GPUs)"]], "64", draw);
+    var eS = slider(s.controls, "ε", -4, -1, 0.01, -3, draw);
+    var pSel = select(s.controls, "arithmetic", [["64", "float64 (double)"], ["32", "float32 (single, GPUs)"]], "64", draw);
     var ro = readout(s.controls);
     legend(s.legend, [["--s2", "entries of K that are exactly 0"], ["--muted", "plain iteration u ← a/Kv"], ["--s3", "log-domain iteration"]]);
     var xs = [], ys = [], a = [], b = [], i, j;
@@ -333,24 +335,25 @@
       // the Plot of the errors clears the svg when it is created: create it first, then draw the kernel on the left
       var P = new Plot(s.svg, { x: [0, ITER], y: [-16, 1], w: W, h: H, pad: { l: 360, r: 16, t: 34, b: 36 } });
       var gr = el("g", {}, s.svg), X0 = 40, Y0 = 34, S = 240, cw = S / n;
-      var floorLog = f32 ? 45.2 : 323.3; // -log10 of the smallest positive (subnormal) number
+      var lmin = Infinity, lmax = -Infinity; // grey levels: log K relative to its current range over the nonzero entries
+      for (i = 0; i < n; i++) for (j = 0; j < n; j++) if (K[i][j] > 0) { var lk = Math.log(K[i][j]); lmin = Math.min(lmin, lk); lmax = Math.max(lmax, lk); }
       for (i = 0; i < n; i++) for (j = 0; j < n; j++) {
         if (K[i][j] === 0) el("rect", { x: X0 + j * cw, y: Y0 + i * cw, width: cw + 0.2, height: cw + 0.2, "class": "f2", "fill-opacity": 0.75 }, gr);
         else {
-          var op = 1 - (-Math.log10(K[i][j])) / floorLog;
-          el("rect", { x: X0 + j * cw, y: Y0 + i * cw, width: cw + 0.2, height: cw + 0.2, "class": "fk", "fill-opacity": Math.max(0.04, op * 0.8).toFixed(2) }, gr);
+          var op = lmax > lmin ? (Math.log(K[i][j]) - lmin) / (lmax - lmin) : 1;
+          el("rect", { x: X0 + j * cw, y: Y0 + i * cw, width: cw + 0.2, height: cw + 0.2, "class": "fk", "fill-opacity": (0.08 + 0.72 * op).toFixed(2) }, gr);
         }
       }
       el("rect", { x: X0, y: Y0, width: S, height: S, "class": "ln cm hair nofill" }, gr);
       var tk = el("text", { x: X0 + S / 2, y: Y0 - 10, "class": "tx-b", "text-anchor": "middle" }, gr); tk.textContent = "K = exp(−C/ε), " + (f32 ? "float32" : "float64");
       var tk2 = el("text", { x: X0 + S / 2, y: Y0 + S + 16, "class": "tx-s", "text-anchor": "middle" }, gr); tk2.textContent = "rows: x in [0, 0.35] · columns: y in [0.55, 1]";
-      var tk3 = el("text", { x: X0 + S / 2, y: Y0 + S + 30, "class": "tx-s", "text-anchor": "middle" }, gr); tk3.textContent = "grey level ∝ log K (darker = larger)";
+      var tk3 = el("text", { x: X0 + S / 2, y: Y0 + S + 30, "class": "tx-s", "text-anchor": "middle" }, gr); tk3.textContent = "grey: log K (darker = larger) · red: exactly 0";
       // errors on the right
       P.g = el("g", {}, s.svg);
       P.axes({ xticks: [0, 50, 100, 150], yticks: [0, -4, -8, -12, -16], yfmt: function (v) { return v === 0 ? "1" : "1e" + v; }, xlabel: "cycles" });
       P.clip();
       P.poly(plain.map(function (e, k) { return [k + 1, Math.log10(Math.max(e, 1e-16))]; }), "ln cm");
-      P.poly(logd.map(function (e, k) { return [k + 1, Math.log10(e)]; }), "ln c3");
+      P.poly(logd.map(function (e, k) { return [k + 1, Math.log10(e)]; }), "ln c3 dash");
       P.unclip();
       var hd = el("text", { x: 360, y: 24, "class": "tx-b" }, s.svg); hd.textContent = "row-marginal error ‖P𝟙 − a‖₁";
       if (fail > 0) {

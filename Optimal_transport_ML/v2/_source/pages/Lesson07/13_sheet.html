@@ -1,0 +1,266 @@
+<h2 id="sheet">13. The exercise sheet “Sinkhorn — Exercises”, solved</h2>
+<p class="tldr">Eleven exercises: a $2\times2$ problem solved exactly, the dual of entropic programs (two and three marginals), Gaussians, gradients by the envelope theorem, convexity, invariances, unbalanced transport with and without entropy, $\varphi$-divergences, and the barycentric projection.</p>
+<p>Source: <a href="../course%20material%20exercices%20and%20one%20slides/exo-sinkhorn-uncorrected.pdf">exo-sinkhorn-uncorrected.pdf</a> (8 pages). Exercises 1–7 come without solutions; Exercises 8–11 are marked “Optional – More difficult exercises” and come with the teacher’s solutions, which the solutions below follow — except in Exercise 8, where the printed dual has a sign slip. <strong>The sheet uses the convention $H(P)=\sum P(\log P-1)$</strong> (minus an entropy, <a href="#conventions">conventions box</a>): its values are $L^\eps_C-\eps\big(1+\mathrm H(a)+\mathrm H(b)\big)$ in the notation of this page, with the same minimizers. Every number below was checked by a script (exact formulas, log-domain Sinkhorn, finite differences, a quasi-Newton solver for the unbalanced problems).</p>
+<div class="box idea"><div class="box-h">What the sheet trains</div>
+<ul>
+<li><strong>Computing an entropic plan by hand</strong> when the polytope is a segment (Exercise 1), and seeing the exponentially small distance to the optimal vertex.</li>
+<li><strong>Lagrangian duality with an entropy</strong> (Exercises 2, 3, 8, 9, 10): the same scalar conjugate $\min_t\{st+\eps t(\log t-1)\}=-\eps e^{-s/\eps}$ appears every time.</li>
+<li><strong>Soft $c$-transforms as computations</strong> (Exercises 3, 4, 9): log-domain updates, closure of quadratics.</li>
+<li><strong>Derivatives of optimal values</strong> (Exercises 5, 11): the envelope theorem, the plan as a gradient, the barycentric projection as a gradient step.</li>
+<li><strong>Structure</strong> (Exercises 6, 7): convexity in the marginals, invariance to separable terms and to the scale of the cost.</li>
+</ul>
+</div>
+
+<!-- ============================================================ Ex 1 -->
+<div class="exo" id="sheet-ex1"><div class="exo-h">Sheet, Exercise 1 — $2\times2$ entropic OT with perturbation <span class="lvl">★</span></div>
+<div class="box course"><div class="box-h">The sheet <span class="ref">exo-sinkhorn, Exercise 1, p. 1</span></div>
+<p>Let $C=\begin{pmatrix}0&1\\1&0\end{pmatrix}$, $a=\begin{pmatrix}p\\1-p\end{pmatrix}$, $b=\begin{pmatrix}\frac12\\\frac12\end{pmatrix}$, with $p\in(0,1)$, and let $\eps>0$. Consider $\ \min_{P\in\R^{2\times2}_+}\ps{C}{P}+\eps\sum_{i,j}P_{ij}(\log P_{ij}-1)$ subject to $P\ind=a$, $P\T\ind=b$.</p>
+<p>(1) Show that every admissible transport plan can be written as $P(x)=\begin{pmatrix}x&y(x)\\z(x)&w(x)\end{pmatrix}$ for a single scalar $x$, and give explicit formulas for $y(x),z(x),w(x)$, as well as the admissible interval $I(p)$ for $x$.<br>
+(2) Rewrite the objective as a scalar function $F_\eps(x)$ and compute $F'_\eps(x)$.<br>
+(3) Explain why the optimal $x_\eps(p)$ is necessarily in the interior of $I(p)$ if $p>0$. Optional: from the optimality condition $F'_\eps(x)=0$, give the expression of the optimal $x_\eps(p)$.<br>
+(4) Optional: perform a expansion of $x_\eps(p)$ as a function of $e^{-\eps/2}$, assuming $p<1/2$, shows $x_\eps(p)\sim p+ce^{-2/\eps}$ for some constant $c=c(p)$.</p>
+</div>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>(1) Four unknowns, four marginal equations of which only three are independent. (2) $\frac{\dd}{\dd t}\,t(\log t-1)=\log t$. (3) Look at the sign of $F'_\eps$ at both ends. (4) Put $\delta=p-x$ and $E=e^{-2/\eps}$ in the optimality condition and let $E\to0$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>(1)</strong> The row sums give $y=p-x$ and $w=(1-p)-z$; the first column sum gives $z=\frac12-x$; then $w=\frac12-p+x$, and the second column sum $y+w=\frac12$ holds automatically.</p>
+$$P(x)=\begin{pmatrix}x&p-x\\\frac12-x&\frac12-p+x\end{pmatrix},\qquad I(p)=\Big[\max\big(0,\,p-\tfrac12\big),\ \min\big(p,\,\tfrac12\big)\Big].$$
+<p>The interval comes from the four conditions $x\ge0$, $p-x\ge0$, $\frac12-x\ge0$, $\frac12-p+x\ge0$.</p>
+<p><strong>(2)</strong> $\ps{C}{P(x)}=y+z=p+\frac12-2x$, so</p>
+$$\begin{aligned}F_\eps(x)&=p+\tfrac12-2x+\eps\sum_{t\in\{x,\,p-x,\,\frac12-x,\,\frac12-p+x\}}t(\log t-1),\\F'_\eps(x)&=-2+\eps\log\frac{x\,(\frac12-p+x)}{(p-x)(\frac12-x)} .\end{aligned}$$
+<ol class="steps">
+<li>$$\frac{\dd}{\dd x}\big[x(\log x-1)\big]=\log x,\quad\frac{\dd}{\dd x}\big[(p-x)(\log(p-x)-1)\big]=-\log(p-x),\ \text{etc.}$$<span class="why">$\frac{\dd}{\dd t}t(\log t-1)=\log t$ and the chain rule; $x$ and $w$ increase with $x$, $y$ and $z$ decrease.</span></li>
+</ol>
+<p>Check at $p=0.3$, $\eps=0.5$, $x=0.2$: the formula gives $F'=-1.509585$, finite differences $-1.509585$.</p>
+<p><strong>(3)</strong> $F''_\eps(x)=\eps\big(\frac1x+\frac1{p-x}+\frac1{\frac12-x}+\frac1{\frac12-p+x}\big)>0$: $F_\eps$ is strictly convex on $I(p)$. At the left end of $I(p)$, either $x=0$ or $w=0$: one logarithm in the numerator of $F'_\eps$ tends to $-\infty$, so $F'_\eps\to-\infty$. At the right end, $y=0$ or $z=0$: a logarithm in the denominator, $F'_\eps\to+\infty$. So $F_\eps$ decreases near the left end and increases near the right end, and its unique minimizer is interior. ($p>0$ and $p<1$ make $I(p)$ a non-degenerate segment; this is Prop. 8.3’s positivity, §1.)</p>
+<p><em>Explicit formula.</em> Write $q=e^{2/\eps}$. $F'_\eps(x)=0$ reads $x(\frac12-p+x)=q\,(p-x)(\frac12-x)$, a quadratic equation:</p>
+$$\begin{aligned}&(q-1)x^2-\Big(q\big(p+\tfrac12\big)+\tfrac12-p\Big)x+\frac{qp}2=0,\\&x_\eps(p)=\frac{B-\sqrt{B^2-2q(q-1)p}}{2(q-1)},\qquad B=q\big(p+\tfrac12\big)+\tfrac12-p .\end{aligned}$$
+<p>Both roots are positive (positive sum and product); the admissible one is the smaller (the other is above $\min(p,\frac12)$). Running example $p=0.3$, $\eps=0.5$: $q=e^4=54.598150$, $B=43.878520$, roots $0.287873$ and $0.530784$, so $x_\eps=0.287873$ (and $0.243197$ at $\eps=1$, $0.299749$ at $\eps=0.25$). As $\eps\to\infty$, $q\to1$ and the equation becomes linear: $x\to\frac{p}2=a_1b_1$, the independent coupling.</p>
+<p><strong>(4)</strong> Put $\delta=p-x\ge0$ and $E=e^{-2/\eps}=1/q$. Then $x=p-\delta$, $y=\delta$, $z=\frac12-p+\delta$, $w=\frac12-\delta$, and the optimality condition $xw=q\,yz$ becomes</p>
+$$\delta=E\,\frac{(p-\delta)(\frac12-\delta)}{\frac12-p+\delta}.$$
+<ol class="steps">
+<li>$\delta\to0$ as $E\to0$.<span class="why">For $p<\frac12$ the fraction is bounded on $I(p)$ (its denominator is $\ge\frac12-p>0$), so $\delta=O(E)$.</span></li>
+<li>$$\delta=E\,\frac{p/2+O(\delta)}{\frac12-p+O(\delta)}=\frac{p}{1-2p}\,E+O(E^2).$$<span class="why">Expand numerator and denominator at $\delta=0$ and use $\delta=O(E)$.</span></li>
+<li>$$x_\eps(p)=p-\frac{p}{1-2p}\,e^{-2/\eps}+O(e^{-4/\eps}),\qquad c(p)=-\frac{p}{1-2p}.$$<span class="why">$x=p-\delta$.</span></li>
+</ol>
+<p>For $p=0.3$, $c=-0.75$; the next term is $-5.8125\,E^2$. Check: $p-x_\eps=2.5095\times10^{-4}$ at $\eps=0.25$ against $0.75e^{-8}=2.5160\times10^{-4}$, and $1.5459\times10^{-9}$ at $\eps=0.1$ against $1.5459\times10^{-9}$. The plan converges to the vertex <em>exponentially</em> fast, at the rate $e^{-\Delta/\eps}$ with $\Delta=C_{12}+C_{21}-C_{11}-C_{22}=2$: the optimality condition $\frac{xw}{yz}=e^{\Delta/\eps}$ is the cross-ratio identity of §2.</p>
+</div></details>
+<div class="box remark"><div class="box-h">Note on the sources — the small parameter in (4)</div>
+<p>Question (4) asks for an expansion “as a function of $e^{-\eps/2}$”; the small parameter is $e^{-2/\eps}$, as the end of the same sentence says. Indeed $e^{-\eps/2}\to1$ as $\eps\to0$ ($0.951$ at $\eps=0.1$, $0.995$ at $\eps=0.01$), while $e^{-2/\eps}\to0$.</p>
+</div>
+</div>
+
+<!-- ============================================================ Ex 2 -->
+<div class="exo" id="sheet-ex2"><div class="exo-h">Sheet, Exercise 2 — Dual of an entropic-regularized linear program <span class="lvl">★★</span></div>
+<div class="box course"><div class="box-h">The sheet <span class="ref">exo-sinkhorn, Exercise 2, p. 1</span></div>
+<p>Consider the entropic-regularized linear program $\ \min_{P\ge0,\ A(P)=b}\ps{C}{P}+\eps H(P)$, $H(P):=\sum_iP_i(\log P_i-1)$, where $P$ is a finite-dimensional nonnegative vector (think of $P\in\R^N_+$, or a matrix reshaped as a vector), $C\in\R^N$, $A:\R^N\to\R^m$ is linear, $b\in\R^m$, and $\eps>0$.<br>
+(1) Write the Lagrangian $L(P,\lambda)$. (2) Assuming we can swap $\inf_P$ and $\sup_\lambda$, write the dual problem. (3) Give the primal–dual optimality relation between $P$ and $\lambda$. (4) Give the expression of $A(P)$ in the case of the marginal constraint of classical OT. Compute $A\T$, and show that the dual you obtained matches the classical dual of entropic OT.</p>
+</div>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>After the swap, the minimization over $P\ge0$ separates into $N$ scalar problems $\min_{t\ge0}\{st+\eps t(\log t-1)\}$. For (4), use $\ps{(f,g)}{A(P)}=\ps{A\T(f,g)}{P}$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>(1)</strong> With a multiplier $\lambda\in\R^m$ for $A(P)=b$: $\ L(P,\lambda)=\ps{C}{P}+\eps H(P)+\ps{\lambda}{b-A(P)}=\ps{\lambda}{b}+\ps{C-A\T\lambda}{P}+\eps H(P)$.</p>
+<p><strong>(2)</strong> The dual function is $\inf_{P\ge0}L(P,\lambda)$.</p>
+<ol class="steps">
+<li>$$\min_{t\ge0}\big\{st+\eps t(\log t-1)\big\}=-\eps e^{-s/\eps},\ \text{attained at }t=e^{-s/\eps}.$$<span class="why">Derivative $s+\eps\log t=0$; value $se^{-s/\eps}+\eps e^{-s/\eps}(-\frac s\eps-1)=-\eps e^{-s/\eps}$; the function is strictly convex and tends to $0$ at $t=0$ with slope $-\infty$, so the minimizer is this interior point.</span></li>
+<li>$$\inf_{P\ge0}L(P,\lambda)=\ps{\lambda}{b}-\eps\sum_{i=1}^N\exp\Big(\frac{(A\T\lambda-C)_i}{\eps}\Big).$$<span class="why">Apply step 1 to each coordinate, with $s_i=(C-A\T\lambda)_i$.</span></li>
+</ol>
+<p>Dual problem: $\displaystyle\max_{\lambda\in\R^m}\ \ps{\lambda}{b}-\eps\sum_i\exp\big((A\T\lambda-C)_i/\eps\big)$ — unconstrained, smooth and concave.</p>
+<p><strong>(3)</strong> $P_i=\exp\big((A\T\lambda-C)_i/\eps\big)$ (step 1), with $\lambda$ optimal; the dual gradient $b-A(P)$ then vanishes: primal feasibility.</p>
+<p><strong>(4)</strong> For $P\in\R^{n\times m}$: $A(P)=(P\ind_m,\ P\T\ind_n)\in\R^{n+m}$ and $b=(a,b)$. With $\lambda=(f,g)$:</p>
+$$\begin{aligned}&\ps{(f,g)}{A(P)}=\sum_if_i\sum_jP_{ij}+\sum_jg_j\sum_iP_{ij}=\sum_{ij}(f_i+g_j)P_{ij},\\&\text{so}\quad A\T(f,g)=f\oplus g=(f_i+g_j)_{ij}.\end{aligned}$$
+<p>The dual becomes $\displaystyle\max_{f,g}\ \ps{f}{a}+\ps{g}{b}-\eps\sum_{ij}e^{(f_i+g_j-C_{ij})/\eps}$, with $P_{ij}=e^{f_i/\eps}e^{-C_{ij}/\eps}e^{g_j/\eps}$: the scaling form with $u=e^{f/\eps}$, $v=e^{g/\eps}$ — the dual used in Exercises 5–6. It is OT4ML’s (8.20) written for the sheet’s convention: there, the reference $a\otimes b$ puts the factor $a_ib_j$ in the sum and the constant $+\eps$ appears. Check on the running example at $\eps=0.5$: with $f=(-0.946351,\ -0.099020)$, $g=(0.323734,\ -0.259830)$, the dual value is $-0.821267$, equal to the primal value in the sheet’s convention (<a href="#conventions">conventions box</a>). On a random program with $N=7$, $m=3$, $\eps=0.4$, maximizing the dual by BFGS gives primal $=$ dual $=-0.873502$.</p>
+</div></details>
+</div>
+
+<!-- ============================================================ Ex 3 -->
+<div class="exo" id="sheet-ex3"><div class="exo-h">Sheet, Exercise 3 — Entropic multimarginal OT with 3 marginals <span class="lvl">★★</span></div>
+<div class="box course"><div class="box-h">The sheet <span class="ref">exo-sinkhorn, Exercise 3, pp. 1–2</span></div>
+<p>Let $a\in\R^{n_1}_+$, $b\in\R^{n_2}_+$, $c\in\R^{n_3}_+$ and $C\in\R^{n_1\times n_2\times n_3}$. For $T\in\R^{n_1\times n_2\times n_3}_+$ define the three marginalization operators $\pi_1(T):=\big(\sum_{j,k}T_{ijk}\big)_{i=1}^{n_1}$, $\pi_2(T):=\big(\sum_{i,k}T_{ijk}\big)_{j=1}^{n_2}$, $\pi_3(T):=\big(\sum_{i,j}T_{ijk}\big)_{k=1}^{n_3}$. Consider the problem $\ \min_{T\ge0}\ps{C}{T}+\eps\sum_{i,j,k}T_{ijk}(\log T_{ijk}-1)$ s.t. $\pi_1(T)=a$, $\pi_2(T)=b$, $\pi_3(T)=c$.<br>
+(1) Write the Lagrangian using multipliers $f,g,h$ for $\pi_1,\pi_2,\pi_3$. (2) Assuming one can swap $\min_T$ and $\max_{f,g,h}$, write the dual. (3) Write the Sinkhorn iterations in the log domain for the three potentials. (4) (Bonus) Explain why the usual Hilbert-metric/Birkhoff argument for 2 marginals does not give a contraction here.</p>
+</div>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>It is Exercise 2 with $A(T)=(\pi_1T,\pi_2T,\pi_3T)$ and $A\T(f,g,h)=f\oplus g\oplus h$. For (4): what does the update of $f$ do to the pair $(g,h)$, and how does Hilbert’s metric behave on tensor products $v\otimes w$?</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>(1)</strong> $\ \mathcal L(T,f,g,h)=\ps{C}{T}+\eps\sum T_{ijk}(\log T_{ijk}-1)+\ps{f}{a-\pi_1T}+\ps{g}{b-\pi_2T}+\ps{h}{c-\pi_3T}$.</p>
+<p><strong>(2)</strong> $\ps{f}{\pi_1T}+\ps{g}{\pi_2T}+\ps{h}{\pi_3T}=\sum_{ijk}(f_i+g_j+h_k)T_{ijk}$, and the scalar minimization of Exercise 2 gives</p>
+$$\max_{f,g,h}\ \ps{f}{a}+\ps{g}{b}+\ps{h}{c}-\eps\sum_{i,j,k}\exp\Big(\frac{f_i+g_j+h_k-C_{ijk}}{\eps}\Big),\qquad T_{ijk}=e^{(f_i+g_j+h_k-C_{ijk})/\eps}.$$
+<p><strong>(3)</strong> Zero the derivative of the dual in $f_i$: $a_i=e^{f_i/\eps}\sum_{j,k}e^{(g_j+h_k-C_{ijk})/\eps}$. So, cyclically,</p>
+$$\begin{aligned}f_i&\leftarrow\eps\log a_i-\eps\operatorname{LSE}_{j,k}\Big(\frac{g_j+h_k-C_{ijk}}{\eps}\Big),\qquad g_j\leftarrow\eps\log b_j-\eps\operatorname{LSE}_{i,k}\Big(\frac{f_i+h_k-C_{ijk}}{\eps}\Big),\\h_k&\leftarrow\eps\log c_k-\eps\operatorname{LSE}_{i,j}\Big(\frac{f_i+g_j-C_{ijk}}{\eps}\Big),\end{aligned}$$
+<p>where $\operatorname{LSE}(z)=\max z+\log\sum e^{z-\max z}$ is the stabilized log-sum-exp of §6. Each update makes one marginal exact; each is an exact block maximization of the concave dual. Check: on a random $4\times5\times6$ problem with $C_{ijk}\in[0,1]$ and $\eps=0.3$, $18$ cycles bring the marginal error to $1.9\times10^{-14}$, and primal $=$ dual $=-1.2249200502$.</p>
+<p><strong>(4)</strong> With $u=e^{f/\eps}$, $v=e^{g/\eps}$, $w=e^{h/\eps}$, the update of $u$ is $u=a\oslash\mathcal K(v\otimes w)$, where $\mathcal K$ is the positive $n_1\times(n_2n_3)$ matrix $e^{-C/\eps}$ acting on the vector $v\otimes w\in\R^{n_2n_3}$. Birkhoff’s theorem still applies to $\mathcal K$, but:</p>
+<ol class="steps">
+<li>$d_{\mathcal H}(v\otimes w,v'\otimes w')=d_{\mathcal H}(v,v')+d_{\mathcal H}(w,w')$.<span class="why">$\log(v_jw_k)-\log(v'_jw'_k)=(\log v_j-\log v'_j)+(\log w_k-\log w'_k)$, and the variation ($\max-\min$) of a sum of a function of $j$ and a function of $k$ is the sum of the variations. (Checked numerically: $4.644568$ both ways.)</span></li>
+<li>So $d_{\mathcal H}(u^{\rm new},u^\star)\le\lambda(\mathcal K)\big(d_{\mathcal H}(v,v^\star)+d_{\mathcal H}(w,w^\star)\big)$: the error on $u$ is controlled by the <em>sum</em> of two errors.<span class="why">Theorem 9.17 for $\mathcal K$ and step 1; inversion and multiplication by $a$ are isometries.</span></li>
+<li>If the errors on $v$ and $w$ are both $\le e$, the new error on $u$ is only bounded by $2\lambda e$, which is not smaller than $e$ unless $\lambda<\frac12$.<span class="why">With two marginals the bound was $\lambda e<e$ for every positive kernel; here the factor $2$ can win.</span></li>
+</ol>
+<p>On the random example above, $\lambda(\mathcal K)=0.8885$ at $\eps=0.3$ ($2\lambda=1.777$): no contraction can be concluded, although the iteration converges in $18$ cycles. Only for large temperatures does the argument work ($\lambda=0.4006$ at $\eps=1$); at $\eps=0.1$, $\lambda=0.9996$. Convergence of multimarginal Sinkhorn is proved instead by the Bregman-projection or dual-ascent arguments of §5 and §7.</p>
+</div></details>
+</div>
+
+<!-- ============================================================ Ex 4 -->
+<div class="exo" id="sheet-ex4"><div class="exo-h">Sheet, Exercise 4 — Gaussian example for Sinkhorn in dual form <span class="lvl">★★</span></div>
+<div class="box course"><div class="box-h">The sheet <span class="ref">exo-sinkhorn, Exercise 4, p. 2</span></div>
+<p>Let $\al$ and $\be$ be probability measures on $\R$ and let $c(x,y)=\frac12(x-y)^2$. The entropic OT dual can be written $\ \max_{f,g}\int f\,\dd\al+\int g\,\dd\be-\eps\iint\exp\big(\frac{f(x)+g(y)-c(x,y)}\eps\big)\dd\al(x)\dd\be(y)$.<br>
+(1) Recall the Sinkhorn update on $f$ (dual form).<br>
+(2) Assume $\al=\N(m_1,\sigma_1^2)$, $\be=\N(m_2,\sigma_2^2)$, and $g(y)$ is quadratic, say $g(y)=\frac12ay^2+by+c$. Compute the integral on the right-hand side and show that the updated $f$ is also quadratic.<br>
+(3) Give an intuitive explanation of why (for this quadratic/Gaussian setting) the optimal dual potentials remain quadratic, and what this implies for the optimal coupling $\pi^\star$.</p>
+</div>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>(1) Zero the derivative in $f(x)$ pointwise. (2) The exponent is a quadratic polynomial in $y$; complete the square and use $\int e^{-\frac A2y^2+By}\dd y=\sqrt{2\pi/A}\,e^{B^2/(2A)}$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>(1)</strong> Differentiating in $f(x)$ (pointwise in $x$, against $\dd\al$): $1-e^{f(x)/\eps}\int e^{(g(y)-c(x,y))/\eps}\dd\be(y)=0$, so</p>
+$$f(x)=-\eps\log\int_\R\exp\Big(\frac{g(y)-\frac12(x-y)^2}{\eps}\Big)\dd\be(y)=g^{\bar c,\eps}(x),$$
+<p>the soft $c$-transform (8.27); symmetrically for $g$.</p>
+<p><strong>(2)</strong> Write $\dd\be(y)=\frac{1}{\sqrt{2\pi}\sigma_2}e^{-(y-m_2)^2/(2\sigma_2^2)}\dd y$.</p>
+<ol class="steps">
+<li>$$\frac{g(y)-\frac12(x-y)^2}{\eps}-\frac{(y-m_2)^2}{2\sigma_2^2}=-\frac A2y^2+B(x)\,y-\frac{x^2}{2\eps}+\text{const},$$ with $A=\frac1{\sigma_2^2}+\frac{1-a}{\eps}$ and $B(x)=\frac{b+x}{\eps}+\frac{m_2}{\sigma_2^2}$.<span class="why">Collect the terms in $y^2$: $\frac a{2\eps}-\frac1{2\eps}-\frac1{2\sigma_2^2}$; in $y$: $\frac b\eps+\frac x\eps+\frac{m_2}{\sigma_2^2}$; the constants do not depend on $x$ except $-\frac{x^2}{2\eps}$.</span></li>
+<li>If $A>0$, i.e. $a<1+\eps/\sigma_2^2$: $$\int e^{-\frac A2y^2+B(x)y}\,\dd y=\sqrt{\frac{2\pi}A}\,e^{B(x)^2/(2A)} .$$<span class="why">Complete the square: $-\frac A2(y-B/A)^2+\frac{B^2}{2A}$. If $A\le0$ the integral is infinite and $f=-\infty$: the quadratic $g$ grows too fast.</span></li>
+<li>$$\begin{aligned}f(x)&=\frac{x^2}2-\frac{\eps}{2A}B(x)^2+\text{const}=\frac{a'}2x^2+b'x+c',\\a'&=1-\frac{1}{\eps A},\qquad b'=-\frac1A\Big(\frac b\eps+\frac{m_2}{\sigma_2^2}\Big).\end{aligned}$$<span class="why">$-\eps\log$ of step 2 with the $-\frac{x^2}{2\eps}$ of step 1; $B(x)^2$ is quadratic in $x$ with leading coefficient $1/\eps^2$.</span></li>
+</ol>
+<p>So the soft transform of a quadratic is a quadratic, with explicit coefficients (and $\al$ plays no role in this half-step). Check: quadrature of the integral for $a=0.3$, $b=-0.2$, $\be=\N(-0.5,1.7^2)$, $\eps=0.4$ reproduces $a'/2=-0.0963681$.</p>
+<p><strong>(3)</strong> Starting from $g=0$, every Sinkhorn iterate is quadratic, so the limit potentials are quadratic. Then $\frac{\dd\pi^\star}{\dd x\,\dd y}\propto e^{(f(x)+g(y)-\frac12(x-y)^2)/\eps}\rho_\al(x)\rho_\be(y)$ is the exponential of a quadratic form in $(x,y)$: <strong>$\pi^\star$ is a Gaussian</strong> on $\R^2$, its conditional laws are Gaussian, and its barycentric projection $x\mapsto\E[Y|X=x]$ is affine — the closed form of §8. Gaussians are stable under the three operations of a Sinkhorn step: multiplication by $e^{-c/\eps}$ (a Gaussian kernel), integration, and taking logarithms. Check with $\al=\N(0.3,0.8^2)$, $\be=\N(-0.5,1.7^2)$, $\eps=0.4$: iterating the coefficient maps gives a plan with variances $0.64=0.8^2$ and $2.89=1.7^2$ and cross-covariance $1.174627$, equal to the closed form of §8 for the cost $(x-y)^2$ at temperature $2\eps=0.8$ — since $\frac12(x-y)^2$ at $\eps$ is $(x-y)^2$ at $2\eps$ (Exercise 7(2)).</p>
+</div></details>
+</div>
+
+<!-- ============================================================ Ex 5 -->
+<div class="exo" id="sheet-ex5"><div class="exo-h">Sheet, Exercise 5 — Envelope theorem and gradients of the entropic cost <span class="lvl">★</span></div>
+<div class="box course"><div class="box-h">The sheet <span class="ref">exo-sinkhorn, Exercise 5, p. 2</span></div>
+<p>Recall the envelope theorem in the finite-dimensional smooth case: let $V(\theta):=\min_zF(z,\theta)$ with $F$ smooth, and for each $\theta$ assume there is a unique minimizer $z^\star(\theta)$. Then $\nabla_\theta V(\theta)=\nabla_\theta F(z^\star(\theta),\theta)$, i.e. the derivative of $V$ w.r.t. $\theta$ is the partial derivative of $F$ at the optimizer (no derivative of $z^\star$ needed).</p>
+<p>Let $a\in\R^m_+$, $b\in\R^n_+$ be histograms and $C\in\R^{m\times n}$ a cost matrix. The entropic OT cost is $\ W_\eps(a,b;C):=\min_{P\in\R^{m\times n}_+,\ P\ind=a,\ P\T\ind=b}\big(\ps{C}{P}+\eps\sum_{i,j}P_{ij}(\log P_{ij}-1)\big)$.<br>
+(1) Using the envelope theorem on this primal problem, give the gradient $\nabla_CW_\eps(a,b;C)$.<br>
+(2) Assume the cost comes from positions: $x=(x_1,\dots,x_m)\subset\R^d$, $y=(y_1,\dots,y_n)\subset\R^d$, and $C_{ij}=\frac12\norm{x_i-y_j}^2$. Compute $\nabla_{x_1}W_\eps(a,b;C)$.<br>
+(3) Recall the dual of entropic OT $\ W_\eps(a,b;C)=\max_{f\in\R^m,g\in\R^n}\ps{f}{a}+\ps{g}{b}-\eps\sum_{i,j}\exp\big(\frac{f_i+g_j-C_{ij}}{\eps}\big)$. Using again the envelope theorem, give $\nabla_aW_\eps(a,b;C)$.</p>
+</div>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>(1) $C$ appears only in $\ps{C}{P}$, and the constraint set does not depend on $C$. (2) Chain rule through row 1 of $C$. (3) In the dual, $a$ appears only in $\ps{f}{a}$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>(1)</strong> $F(P,C)=\ps{C}{P}+\eps\sum P(\log P-1)$ has a unique minimizer $P_\eps$ over the fixed set $\U(a,b)$ (Prop. 8.3), and $\nabla_CF(P,C)=P$. So $\ \nabla_CW_\eps=P_\eps$.</p>
+<p><strong>(2)</strong> $\partial C_{1j}/\partial x_1=x_1-y_j$, and $C_{ij}$ for $i\ne1$ does not depend on $x_1$. By the chain rule and (1):</p>
+$$\nabla_{x_1}W_\eps=\sum_j(P_\eps)_{1j}(x_1-y_j)=a_1x_1-\sum_j(P_\eps)_{1j}\,y_j=a_1\big(x_1-T_\eps(x_1)\big),$$
+<p>using $\sum_j(P_\eps)_{1j}=a_1$ and the barycentric projection $T_\eps(x_1)=\frac1{a_1}\sum_j(P_\eps)_{1j}y_j$ (Exercise 11).</p>
+<p><strong>(3)</strong> The dual objective depends on $a$ only through $\ps{f}{a}$, so $\nabla_aW_\eps=f^\star$, an optimal potential. Since $(f^\star+t,g^\star-t)$ is also optimal, this “gradient” is defined up to $t\ind$: only its action on perturbations with $\sum_i\delta a_i=0$ is meaningful, which is all one needs, since $W_\eps=+\infty$ (no coupling) when the masses of $a$ and $b$ differ.</p>
+<p>Check on a random example ($5$ points $x_i$ and $6$ points $y_j$ in $\R^2$, random weights, $\eps=0.3$): (1) the finite-difference derivative in the entry $C_{2,3}$ is $0.0744045$, and $(P_\eps)_{2,3}=0.0744045$; (2) the first coordinate of $\nabla_{x_1}W_\eps$ is $0.490536$ by finite differences and by the formula; (3) the derivative along $a+t(e_1-e_2)$ is $0.461922=f_1-f_2$.</p>
+</div></details>
+</div>
+
+<!-- ============================================================ Ex 6 -->
+<div class="exo" id="sheet-ex6"><div class="exo-h">Sheet, Exercise 6 — Joint convexity and the semi-relaxed problem <span class="lvl">★★</span></div>
+<div class="box course"><div class="box-h">The sheet <span class="ref">exo-sinkhorn, Exercise 6, pp. 2–3</span></div>
+<p>Let $a\in\Delta_m$ and $b\in\Delta_n$ be probability vectors and $C\in\R^{m\times n}$. Consider the (balanced) entropic OT problem $W_\eps(a,b):=\min_{P\in\R^{m\times n}_+,\ P\ind_n=a,\ P\T\ind_m=b}\{\ps{C}{P}+\eps H(P)\}$, $H(P):=\sum_{i,j}P_{ij}(\log P_{ij}-1)$. It is well known (and you may take it for granted) that the dual of this problem is $\ W_\eps(a,b)=\sup_{f,g}\ \ps{f}{a}+\ps{g}{b}-\eps\sum_{i,j}\exp\big(\frac{f_i+g_j-C_{ij}}{\eps}\big)$.<br>
+(1) Using the dual expression above, show that both maps $a\mapsto W_\eps(a,b)$ and $b\mapsto W_\eps(a,b)$ are convex, and in fact that that $W_\eps(a,b)$ is jointly convex in $(a,b)$.<br>
+(2) Show that the outer problem $\min_{a\in\Delta_m}W_\eps(a,b)$ is equivalent to the semi-relaxed problem $\min_{P\ge0,\ P\T\ind_m=b}\ps{C}{P}+\eps H(P)$.<br>
+(3) Solve this semi-relaxed problem in closed form.</p>
+</div>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>(1) A supremum of affine functions is convex. (2) Minimizing over $a$ and then over $P\in\U(a,b)$ is minimizing over all $P\ge0$ with $P\T\ind=b$. (3) The problem separates over the columns.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>(1)</strong> For fixed $(f,g)$, $(a,b)\mapsto\ps{f}{a}+\ps{g}{b}-\eps\sum_{ij}e^{(f_i+g_j-C_{ij})/\eps}$ is affine. A pointwise supremum of affine functions is convex: for $t\in[0,1]$,</p>
+$$\begin{aligned}W_\eps\big(ta+(1-t)a',\,tb+(1-t)b'\big)&=\sup_{f,g}\big[t\,\Phi_{f,g}(a,b)+(1-t)\Phi_{f,g}(a',b')\big]\\&\le t\,W_\eps(a,b)+(1-t)\,W_\eps(a',b'),\end{aligned}$$
+<p>where $\Phi_{f,g}$ is the affine function above; the inequality holds because the sup of a sum is at most the sum of the sups. Joint convexity contains the two separate convexities.</p>
+<p><strong>(2)</strong> $\min_{a\in\Delta_m}\min_{P\in\U(a,b)}=\min\{\,\cdot\,:P\ge0,\ P\T\ind=b\}$: every $P\ge0$ with $P\T\ind=b$ belongs to $\U(a,b)$ for exactly one $a$, namely $a=P\ind$, which is automatically in $\Delta_m$ ($\sum_ia_i=\sum_jb_j=1$).</p>
+<p><strong>(3)</strong> The objective and the constraint split column by column. For column $j$: $\min\sum_iC_{ij}P_{ij}+\eps P_{ij}(\log P_{ij}-1)$ subject to $\sum_iP_{ij}=b_j$.</p>
+<ol class="steps">
+<li>$C_{ij}+\eps\log P_{ij}=\mu_j$ for all $i$.<span class="why">Lagrange condition with one multiplier $\mu_j$ for the column constraint; positivity is automatic (infinite slope of $t\log t$ at $0$).</span></li>
+<li>$$P_{ij}=b_j\,\frac{e^{-C_{ij}/\eps}}{Z_j},\qquad Z_j=\sum_ie^{-C_{ij}/\eps}.$$<span class="why">$P_{ij}=e^{(\mu_j-C_{ij})/\eps}$, and $\mu_j$ is fixed by $\sum_iP_{ij}=b_j$.</span></li>
+<li>$$\text{value}=\eps\sum_jb_j\big(\log b_j-\log Z_j-1\big),\qquad a^\star_i=\sum_jb_j\frac{e^{-C_{ij}/\eps}}{Z_j}.$$<span class="why">On column $j$, $C_{ij}+\eps(\log P_{ij}-1)=\eps(\log b_j-\log Z_j-1)$ for every $i$; multiply by $P_{ij}$ and sum.</span></li>
+</ol>
+<p>Each target $y_j$ distributes its mass over the sources by a softmax of $-C_{\cdot j}/\eps$; no iteration is needed, because only one marginal is constrained. Check ($4\times5$ random costs in $[0,1]$, $\eps=0.25$): the closed-form value is $-0.352287$; $W_\eps(a^\star,b)=-0.352287$; and $W_\eps(a,b)$ exceeds it for $300$ random $a$ (by at least $0.0022$).</p>
+</div></details>
+<div class="box remark"><div class="box-h">Note on the sources — convexity depends on the convention</div>
+<p>Question (1) has a doubled “that that”. More importantly, joint convexity holds in the sheet’s (and CompOT’s) convention, where the dual is affine in $(a,b)$, but <strong>not</strong> for the KL-normalized value of this page: there the dual (8.20) contains $a_ib_j$, a bilinear term, and adding $\eps(1+\mathrm H(a)+\mathrm H(b))$ (a concave function) can break convexity. Over $120$ random pairs with the costs above, the midpoint gap $\frac12\big(W(a,b)+W(a',b')\big)-W\big(\frac{a+a'}2,\frac{b+b'}2\big)$ was always $\ge0.0156$ in the sheet’s convention but went down to $-0.0328$ in the KL convention. OT4ML says exactly this: the KL-normalized value is convex in either marginal when the other is fixed, but not jointly convex in general (p. 260).</p>
+</div>
+</div>
+
+<!-- ============================================================ Ex 7 -->
+<div class="exo" id="sheet-ex7"><div class="exo-h">Sheet, Exercise 7 — Invariance and scaling of the cost <span class="lvl">★</span></div>
+<div class="box course"><div class="box-h">The sheet <span class="ref">exo-sinkhorn, Exercise 7, p. 3</span></div>
+<p>Let $(\X,\mu)$ and $(\Y,\nu)$ be measurable spaces and let $\al$ on $\X$ and $\be$ on $\Y$ be probability measures. For a measurable cost $c$ and $\eps>0$, consider $\ \min_{\pi\in\Pi(\al,\be)}\int c\,\dd\pi+\eps\int\big(\log\frac{\dd\pi}{\dd(\al\otimes\be)}-1\big)\dd\pi$, where we assume $\pi\ll\al\otimes\be$ for all admissible $\pi$.<br>
+(1) (Invariance under potentials) Let $u:\X\to\R$ and $v:\Y\to\R$ be integrable. Show that replacing the cost by $c'(x,y)=c(x,y)+u(x)+v(y)$ does not change the optimal plan.<br>
+(2) (Scaling of the cost) For $\lambda>0$, denote by $\pi_{c,\eps}$ the optimal coupling for cost $c$ and regularization $\eps$, and by $\pi_{\lambda c,\eps}$ the one for the scaled cost $\lambda c$. Show that $\pi_{\lambda c,\eps}=\pi_{c,\eps/\lambda}$.</p>
+</div>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>(1) Integrate $u(x)+v(y)$ against a coupling. (2) Factor $\lambda$ out of the objective.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>(1)</strong> For every $\pi\in\Pi(\al,\be)$: $\int(u(x)+v(y))\,\dd\pi=\int u\,\dd\al+\int v\,\dd\be$, because the marginals of $\pi$ are $\al$ and $\be$. So the objective for $c'$ equals the objective for $c$ plus a constant: same minimizer, value shifted by $\int u\,\dd\al+\int v\,\dd\be$. In the dual, the potentials absorb the change: $(f+u,\,g+v)$.</p>
+<p><strong>(2)</strong> $\int\lambda c\,\dd\pi+\eps\int(\dots)\dd\pi=\lambda\Big[\int c\,\dd\pi+\frac\eps\lambda\int(\dots)\dd\pi\Big]$: multiplying an objective by $\lambda>0$ does not change its minimizer. Values: $\mathcal L^\eps_{\lambda c}=\lambda\mathcal L^{\eps/\lambda}_c$. Only $c/\eps$ matters — which is why $\eps$ must be chosen relative to the scale of the costs.</p>
+<p>Check (random $5\times6$ costs, $\eps=0.3$, $\lambda=3.7$): the plans agree to $8\times10^{-17}$ in (1) and $6\times10^{-17}$ in (2).</p>
+</div></details>
+</div>
+
+<h3 id="sheet-optional">The optional exercises</h3>
+<p>Exercises 8–11 are marked “Optional – More difficult exercises”, and the sheet gives their solutions. They are reproduced here in condensed form, with one correction.</p>
+
+<!-- ============================================================ Ex 8 -->
+<div class="exo" id="sheet-ex8"><div class="exo-h">Sheet, Exercise 8 — Unbalanced OT as a constrained problem, and its dual <span class="lvl">★★</span></div>
+<div class="box course"><div class="box-h">The sheet <span class="ref">exo-sinkhorn, Exercise 8, p. 4</span></div>
+<p>Let $C\in\R^{m\times n}$, $a\in\R^m_+$, $b\in\R^n_+$, $\tau>0$, and $\KL(r|a):=\sum_i\big(r_i\log\frac{r_i}{a_i}-r_i+a_i\big)$. Consider $\ \min_{P\in\R^{m\times n}_+}\ps{C}{P}+\tau\KL(P\ind_n|a)+\tau\KL(P\T\ind_m|b)$. (UOT)<br>
+(1) Show that (UOT) is equivalent to $\min_{P\ge0,\ P\ind_n=r,\ P\T\ind_m=s}\ps{C}{P}+\tau\KL(r|a)+\tau\KL(s|b)$ $(\star)$ and argue that if $(P^\star,r^\star,s^\star)$ solves $(\star)$, then $P^\star$ is an optimal balanced OT plan between the (relaxed) marginals $(r^\star,s^\star)$.<br>
+(2) Write the Lagrangian of $(\star)$ using dual vectors $f\in\R^m$, $g\in\R^n$ for the constraints $P\ind_n=r$ and $P\T\ind_m=s$.<br>
+(3) Assuming we can swap $\inf_{P,r,s}$ and $\sup_{f,g}$, derive the dual involving only the two potentials $f,g$.<br>
+(4) Show that when $\tau\to+\infty$, the dual reduces to the usual OT dual.</p>
+</div>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>(3) Minimize over $P\ge0$ first: a linear function of $P\ge0$ has infimum $0$ or $-\infty$. Then $\inf_{r\ge0}\{\tau\KL(r|a)-fr\}=\tau a(1-e^{f/\tau})$. Keep track of the sign of the constraint you obtain.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>(1)</strong> As in the sheet: the penalties depend on $P$ only through $r=P\ind$ and $s=P\T\ind$; making $r,s$ explicit gives $(\star)$. For fixed $(r,s)$ the penalties are constants, so minimizing over $P$ is the balanced problem between $r$ and $s$ (same mass $\sum_ir_i=\sum_js_j=\sum_{ij}P_{ij}$).</p>
+<p><strong>(2)</strong> $\ \mathcal L=\sum_{ij}(C_{ij}+f_i+g_j)P_{ij}+\sum_i\big(\tau\KL(r_i|a_i)-f_ir_i\big)+\sum_j\big(\tau\KL(s_j|b_j)-g_js_j\big)$, with the multipliers entering as $\ps{f}{P\ind-r}+\ps{g}{P\T\ind-s}$.</p>
+<p><strong>(3)</strong></p>
+<ol class="steps">
+<li>$\inf_{P\ge0}\sum_{ij}(C_{ij}+f_i+g_j)P_{ij}=0$ if $C_{ij}+f_i+g_j\ge0$ for all $i,j$, and $-\infty$ otherwise.<span class="why">A negative coefficient lets $P_{ij}\to\infty$.</span></li>
+<li>$\inf_{r\ge0}\big\{\tau\big(r\log\frac ra-r+a\big)-fr\big\}=\tau a\big(1-e^{f/\tau}\big)$, attained at $r=ae^{f/\tau}$.<span class="why">Derivative $\tau\log\frac ra-f=0$; substitute.</span></li>
+<li>$$\text{dual: }\ \max_{f,g}\ \tau\sum_ia_i\big(1-e^{f_i/\tau}\big)+\tau\sum_jb_j\big(1-e^{g_j/\tau}\big)\quad\text{s.t.}\quad f_i+g_j\ge-C_{ij}\ \ \forall i,j .$$<span class="why">Steps 1–2.</span></li>
+<li>With $f\to-f$, $g\to-g$ (the usual sign convention of transport): $$\max_{f,g}\ \tau\sum_ia_i\big(1-e^{-f_i/\tau}\big)+\tau\sum_jb_j\big(1-e^{-g_j/\tau}\big)\quad\text{s.t.}\quad f_i+g_j\le C_{ij}.$$<span class="why">The change of sign must be applied to the objective <em>and</em> to the constraint.</span></li>
+</ol>
+<p><strong>(4)</strong> As $\tau\to\infty$, $\tau(1-e^{-f/\tau})=f+O(1/\tau)$, so the dual of step 4 tends to $\max\{\ps{f}{a}+\ps{g}{b}:f_i+g_j\le C_{ij}\}$, the Kantorovich dual.</p>
+<p>Check ($6\times7$ random costs in $[0,0.6]$, $\sum a=1$, $\sum b=1.3$, $\tau=0.2$): the primal value is $0.146264$ (transported mass $0.784$), and the dual of step 4 at the potentials $f_i=-\tau\log(r_i/a_i)$, $g_j=-\tau\log(s_j/b_j)$ read off the primal solution is $0.146264$.</p>
+</div></details>
+<div class="box remark"><div class="box-h">Note on the sources — a sign slip in the printed dual</div>
+<p>The printed solution derives the condition $C_{ij}+f_i+g_j\ge0$ correctly, then writes the dual as $\max\ \tau\ps{\ind}{a}-\tau\sum_ia_ie^{f_i/\tau}+\tau\ps{\ind}{b}-\tau\sum_jb_je^{g_j/\tau}$ “s.t. $f_i+g_j\le C_{ij}$”, adding “equivalently, $C_{ij}+f_i+g_j\ge0$ after a sign flip”: the sign of $(f,g)$ was flipped in the constraint but not in the objective. As printed, the problem is unbounded in the wrong way: letting $f,g\to-\infty$ is feasible and the objective tends to $\tau(\sum a+\sum b)=0.46$ in the example above, above the primal value $0.146264$ — weak duality would fail. Part (4) inherits the slip (“$\to-\ps{a}{f}-\ps{b}{g}$ with $f_i+g_j\le C_{ij}$” is unbounded above); it is correct with the constraint $C_{ij}+f_i+g_j\ge0$, or after the full change of sign of step 4. Exercise 10 (the same dual for a general $\varphi$) has the correct form.</p>
+</div>
+</div>
+
+<!-- ============================================================ Ex 9 -->
+<div class="exo" id="sheet-ex9"><div class="exo-h">Sheet, Exercise 9 — Unbalanced OT with entropic regularization <span class="lvl">★★</span></div>
+<div class="box course"><div class="box-h">The sheet <span class="ref">exo-sinkhorn, Exercise 9, p. 6</span></div>
+<p>Let $C\in\R^{m\times n}$, $a\in\R^m_+$, $b\in\R^n_+$, $\tau>0$, $\eps>0$, $H(P):=\sum_{i,j}P_{ij}(\log P_{ij}-1)$, $\KL(r|a):=\sum_i\big(r_i\log\frac{r_i}{a_i}-r_i+a_i\big)$. Consider $\ \min_{P\ge0}\ps{C}{P}+\eps H(P)+\tau\KL(P\ind|a)+\tau\KL(P\T\ind|b)$.<br>
+(1) Compute the dual problem and show it involves only two dual potentials $f\in\R^m$, $g\in\R^n$. (2) For fixed $g$, give the maximizer in $f$ (unbalanced Sinkhorn update). (3) Show that when $\tau\to+\infty$ the dual reduces to the classical entropic OT dual.</p>
+</div>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>Same steps as Exercise 8; the minimization over $P\ge0$ is now the scalar problem of Exercise 2.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>(1)</strong> With $r=P\ind$, $s=P\T\ind$ and the same Lagrangian as in Exercise 8 plus $\eps H(P)$: the minimization over $P\ge0$ gives $-\eps\sum_{ij}e^{-(C_{ij}+f_i+g_j)/\eps}$ (Exercise 2, $s_{ij}=C_{ij}+f_i+g_j$), and those over $r,s$ give $\tau\sum a(1-e^{f/\tau})$ and $\tau\sum b(1-e^{g/\tau})$ (Exercise 8). Dual:</p>
+$$\max_{f,g}\ -\eps\sum_{i,j}e^{-(C_{ij}+f_i+g_j)/\eps}+\tau\sum_ia_i\big(1-e^{f_i/\tau}\big)+\tau\sum_jb_j\big(1-e^{g_j/\tau}\big),$$
+<p>unconstrained: the entropy has replaced the hard constraint $C+f\oplus g\ge0$ of Exercise 8 by a smooth penalty, as in §6. (In this Lagrangian convention the potentials are minus the usual ones.)</p>
+<p><strong>(2)</strong> Zero the derivative in $f_i$: $\sum_je^{-(C_{ij}+f_i+g_j)/\eps}=a_ie^{f_i/\tau}$. With $K_{ij}=e^{-C_{ij}/\eps}$, $v_j=e^{-g_j/\eps}$, $S_i=\sum_jK_{ij}v_j$:</p>
+$$e^{-f_i/\eps}S_i=a_ie^{f_i/\tau}\iff f_i=-\frac{\eps\tau}{\eps+\tau}\log\frac{a_i}{S_i},\qquad\text{i.e.}\quad u_i:=e^{-f_i/\eps}=\Big(\frac{a_i}{(Kv)_i}\Big)^{\frac{\tau}{\tau+\eps}},$$
+<p>the damped update of §12. <strong>(3)</strong> $\tau a(1-e^{f/\tau})\to-af$, so the dual tends to $\max_{f,g}-\eps\sum e^{-(C+f\oplus g)/\eps}-\ps{a}{f}-\ps{b}{g}$, the entropic dual of Exercise 2 written for $(-f,-g)$.</p>
+<p>Check (data of Exercise 8, $\eps=0.05$): the damped Sinkhorn iteration and a direct quasi-Newton minimization of the primal give the same value $-0.008451$ and plans within $1.4\times10^{-7}$; at the formula of (2) the partial gradient vanishes ($6\times10^{-17}$); and with equal masses the unbalanced plan approaches the balanced Sinkhorn plan like $1/\tau$ ($2.6\times10^{-4}$, $2.6\times10^{-6}$, $2.6\times10^{-8}$ for $\tau=10^2$, $10^4$, $10^6$).</p>
+</div></details>
+</div>
+
+<!-- ============================================================ Ex 10 -->
+<div class="exo" id="sheet-ex10"><div class="exo-h">Sheet, Exercise 10 — $\varphi$-divergences, dual form and unbalanced OT <span class="lvl">★★</span></div>
+<div class="box course"><div class="box-h">The sheet <span class="ref">exo-sinkhorn, Exercise 10, p. 7</span></div>
+<p>Let $\al$ and $\be$ be finite nonnegative measures on a measurable space $\X$, and let $\varphi:\R_+\to\R\cup\{+\infty\}$ be convex, lsc, with $\varphi(1)=0$. The $\varphi$-divergence of $\al$ w.r.t. $\be$ is $D_\varphi(\al|\be):=\int\varphi\big(\frac{\dd\al}{\dd\be}(x)\big)\dd\be(x)$ if $\al\ll\be$, $+\infty$ otherwise.<br>
+(1) Recall the convex conjugate $\varphi^\star(t):=\sup_{u\ge0}\big(ut-\varphi(u)\big)$.<br>
+(2) Show that $D_\varphi(\al|\be)=\sup_f\int f\,\dd\al-\int\varphi^\star(f)\,\dd\be$.<br>
+(3) Consider now the unbalanced OT problem $\min_{\pi\ge0}\int c\,\dd\pi+D_\varphi(\pi_1|\al)+D_\varphi(\pi_2|\be)$, where $\pi_1,\pi_2$ are the marginals of $\pi$. Using the dual formula in (2) for each divergence, write a dual problem involving only two test functions $f,g$.</p>
+</div>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>(2) Fenchel–Young pointwise, $\varphi(u)\ge ut-\varphi^\star(t)$, with equality for the right $t$. Where $\be$ has no mass but $\al$ has, $f$ is free. (3) As in Exercise 8.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>(1)</strong> The Legendre–Fenchel transform restricted to $u\ge0$. Examples: KL, $\varphi(u)=u\log u-u+1$: $\varphi^\star(t)=e^t-1$; total variation, $\varphi(u)=\abs{u-1}$: $\varphi^\star(t)=t$ for $-1\le t\le1$, $-1$ for $t<-1$, $+\infty$ for $t>1$.</p>
+<p><strong>(2)</strong> If $\al\ll\be$ with density $u$: for every $f$, Fenchel–Young gives $u(x)f(x)-\varphi^\star(f(x))\le\varphi(u(x))$; integrate against $\be$: $\int f\,\dd\al-\int\varphi^\star(f)\,\dd\be\le D_\varphi(\al|\be)$. Equality: $\varphi=\varphi^{\star\star}$ ($\varphi$ convex lsc), and taking $f(x)$ (a measurable choice of) a maximizer in $\sup_t\{u(x)t-\varphi^\star(t)\}$, or a maximizing sequence, attains the bound. If $\al\not\ll\be$, there is a set $A$ with $\be(A)=0<\al(A)$; $f=k\ind_A$ gives $k\,\al(A)-\varphi^\star(0)\be(\X\setminus A)\to+\infty$: both sides are $+\infty$. Check (KL, random positive vectors on $5$ points): the value at $f=\log\frac{\dd\al}{\dd\be}$ is $0.931591=\KL(\al|\be)$; (TV): at $f=\operatorname{sign}(\al-\be)$ it is $1.781916=\norm{\al-\be}_1$.</p>
+<p><strong>(3)</strong> As printed in the sheet: inserting (2) and exchanging $\min_\pi$ and $\sup_{f,g}$, $\ \inf_{\pi\ge0}\int(c+f\oplus g)\,\dd\pi$ is $0$ if $c(x,y)+f(x)+g(y)\ge0$ everywhere and $-\infty$ otherwise, so</p>
+$$\sup_{f,g}\ -\int\varphi^\star(f)\,\dd\al-\int\varphi^\star(g)\,\dd\be\qquad\text{s.t.}\quad f(x)+g(y)\ge-c(x,y).$$
+<p>For KL, $-\varphi^\star(f)=1-e^f$: with the penalty $\tau\KL$ (i.e. $\varphi$ replaced by $\tau\varphi$, whose conjugate is $\tau\varphi^\star(\cdot/\tau)$) this is the dual of Exercise 8 with the constraint $C+f\oplus g\ge0$ — the correct form of that dual.</p>
+</div></details>
+</div>
+
+<!-- ============================================================ Ex 11 -->
+<div class="exo" id="sheet-ex11"><div class="exo-h">Sheet, Exercise 11 — Barycentric projection from entropic OT <span class="lvl">★</span></div>
+<div class="box course"><div class="box-h">The sheet <span class="ref">exo-sinkhorn, Exercise 11, p. 8</span></div>
+<p>Let $a=\sum_{i=1}^ma_i\delta_{x_i}$ and $b=\sum_{j=1}^nb_j\delta_{y_j}$ be two discrete measures in $\R^d$, and let $P_\eps$ be the optimal plan of entropic OT between $(a,b)$ for some cost $C_{ij}=c(x_i,y_j)$. For $x_i$ with $a_i>0$ define the barycentric projection $\ T_\eps(x_i):=\frac1{a_i}\sum_{j=1}^n(P_\eps)_{ij}\,y_j$.<br>
+(1) Suppose the unregularized OT problem (with the same cost) has a unique Monge map $T:\{x_i\}\to\{y_j\}$, and $P_\eps\rightharpoonup P^\star$ where $P^\star=(\Id,T)_\#a$ is supported on the graph of $T$. Show that $T_\eps(x_i)\to T(x_i)$ for every $i$.<br>
+(2) Assume now that $c(x,y)=\frac12\norm{x-y}^2$ and recall from the previous exercise (envelope theorem) that $\nabla_{x_i}W_\eps(a,b)=a_ix_i-\sum_{j=1}^n(P_\eps)_{ij}y_j$. Express $T_\eps(x_i)$ in terms of $\nabla_{x_i}W_\eps(a,b)$ and $x_i$, and comment on the fact that the barycentric projection is exactly the “OT force” at $x_i$ rescaled by $a_i$.</p>
+</div>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>(1) Finite sums of convergent sequences. (2) Divide the gradient formula by $a_i$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>(1)</strong> As in the sheet: $\sum_j(P_\eps)_{ij}\to\sum_jP^\star_{ij}=a_i$ and $\sum_j(P_\eps)_{ij}y_j\to\sum_jP^\star_{ij}y_j=a_iT(x_i)$ (finite sums, entrywise convergence; $P^\star_{ij}=a_i$ if $y_j=T(x_i)$ and $0$ otherwise). Divide by $a_i>0$. (The convergence $P_\eps\to P^\star$ holds by Prop. 8.10 when the optimal plan is unique.)</p>
+<p><strong>(2)</strong> $\nabla_{x_i}W_\eps=a_ix_i-a_iT_\eps(x_i)$, hence</p>
+$$T_\eps(x_i)=x_i-\frac1{a_i}\nabla_{x_i}W_\eps(a,b).$$
+<p>The barycentric projection is where one explicit gradient step of size $1/a_i$ takes $x_i$: the “force” $-\nabla_{x_i}W_\eps$ points from $x_i$ to its average target, with a magnitude proportional to the mass $a_i$ carried by the point. This is the update of the particles in the widget of §11 (with a step $\frac1{2a_i}$).</p>
+<p>Check: $x=(0,\frac13,\frac23,1)$, $y=(0.2,\ 0.9,\ 1.5,\ 2.4)$, uniform weights, $c=\frac12(x-y)^2$; the Monge map is $x_i\mapsto y_i$. The largest error $\max_i\abs{T_\eps(x_i)-y_i}$ is $0.84$ at $\eps=1$, $0.158$ at $\eps=0.1$ and $0.0145$ at $\eps=0.03$; in each case $x_i-\frac1{a_i}\nabla_{x_i}W_\eps$, computed independently from the gradient formula, coincides with $T_\eps(x_i)$.</p>
+</div></details>
+</div>

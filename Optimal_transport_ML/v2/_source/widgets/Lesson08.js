@@ -238,7 +238,7 @@
       // radial statistics around the mean
       var R = X.map(function (p) { return Math.hypot(p[0] - mx, p[1] - my); }), rmax = Math.max.apply(null, R);
       var f05 = R.filter(function (r) { return r < 0.5; }).length / n, f075 = R.filter(function (r) { return r < 0.75; }).length / n;
-      var lines = ["t = " + fmt(t, 2) + "   f(αₜ) = " + fmt(hist[hist.length - 1][1], 4), "mean (black circle) = (" + fmt(mx, 3) + ", " + fmt(my, 3) + ")",
+      var lines = ["t = " + fmt(t, 2) + "   f(αₜ) = " + fmt(hist[hist.length - 1][1], 4), "mean (small ring) = (" + fmt(mx, 3) + ", " + fmt(my, 3) + ")",
         "largest distance to the mean = " + fmt(rmax, 3), "fraction within 0.5 of the mean = " + fmt(f05, 3), "fraction within 0.75 of the mean = " + fmt(f075, 3)];
       lines.forEach(function (L, k) { var tt = el("text", { x: cx0, y: cy0 + ch + 40 + 17 * k, "class": "tx-s" }, g); tt.textContent = L; });
       ro.textContent = P.formula + ";  explicit Euler steps of size " + dt + " on the n coupled ODEs ẋᵢ = −(1/n) Σⱼ ∇W(xᵢ − xⱼ)" + (P.ext ? " − ∇V(xᵢ)" : "") + ".  Press Run.";
