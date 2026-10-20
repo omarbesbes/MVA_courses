@@ -27,6 +27,9 @@ const PAGES = [
   { file: "04_seance4.html", nav: "S4" },
   { file: "05_seance5.html", nav: "S5" },
   { file: "06_seance6.html", nav: "S6" },
+  { file: "08_td1.html", nav: "TD1" },
+  { file: "09_td2.html", nav: "TD2" },
+  { file: "10_td3.html", nav: "TD3" },
   { file: "07_fiche.html", nav: "Fiche réflexes" },
 ];
 
@@ -109,14 +112,31 @@ function processChunk(chunk, file, src, offset) {
   chunk = chunk.replace(/\\\$/g, DOLLAR);
   chunk = chunk.replace(/\$\$([\s\S]+?)\$\$/g, (m, tex, i) =>
     `<div class="math-display">${renderMath(tex.trim(), true, file, src, offset + i)}</div>`);
-  chunk = chunk.replace(/\$((?:[^$\\]|\\[\s\S])+?)\$/g, (m, tex, i) => {
+  chunk = chunk.replace(/\$((?:[^$\\]|\\[\s\S])+?)\$( [;:!?»]|[.,;:!?)\]%]+)?/g, (m, tex, punct, i) => {
     if (/\n\s*\n/.test(tex)) {
       errors.push(`${file}:${lineOf(src, offset + i)}  $ non fermé (formule en ligne sur un paragraphe vide)`);
       return m;
     }
-    return renderMath(tex, false, file, src, offset + i);
+    const html = renderMath(tex, false, file, src, offset + i);
+    if (!punct) return html;
+    // Une ponctuation collée à la formule ne doit pas passer seule à la ligne. Le navigateur peut
+    // couper après le dernier bloc d'une formule KaTeX (un inline-block) : on place donc le signe
+    // DANS ce dernier bloc, juste avant ses trois fermetures (bloc, katex-html, katex).
+    const tail = "</span></span></span>";
+    // « $x$ ; » : l'espace devant ; : ! ? » devient une espace fine insécable, collée elle aussi.
+    const glued = punct.replace(/^ /, "\u202F");
+    return html.endsWith(tail) ? html.slice(0, -tail.length) + `<span class="kp">${glued}</span>` + tail : html + punct;
   });
   return chunk.replace(new RegExp(DOLLAR, "g"), "$");
+}
+
+// Typographie française : espace fine insécable avant ; : ! ? » et insécable après «, pour qu'aucun
+// signe ne commence une ligne. Seul le texte est touché : balises, <pre>, <code>, <script>, <style> exclus.
+function frenchSpacing(html) {
+  const parts = html.split(/(<pre[\s\S]*?<\/pre>|<code[\s\S]*?<\/code>|<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<[^>]+>)/);
+  return parts
+    .map((part, k) => (k % 2 === 1 ? part : part.replace(/ ([;:!?»])/g, "\u202F$1").replace(/« /g, "«\u00A0")))
+    .join("");
 }
 
 function parseFront(src) {
@@ -211,7 +231,7 @@ function main() {
     const src = fs.readFileSync(path.join(here, "pages", page.file), "utf8");
     const { meta, body } = parseFront(src);
     if (!meta.title) errors.push(`${page.file}: pas de « title » dans l'en-tête`);
-    let html = processMath(body, page.file);
+    let html = frenchSpacing(processMath(body, page.file));
     const t = buildToc(html, page.file);
     allIds[page.file] = t.ids;
     built.push({ page, meta, html: t.html, toc: t.toc, i });

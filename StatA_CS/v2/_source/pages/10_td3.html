@@ -1,0 +1,624 @@
+<!--
+title: TD3 — Modèles linéaires généralisés : logistique et Poisson
+short: TD3 · GLM
+description: Corrigé pédagogique du TD3 : vraisemblance logistique, Ridge et Lasso logistiques, conditions KKT, inégalité oracle pour le Lasso logistique via l'inégalité de Hoeffding, régression de Poisson pénalisée.
+subtitle: TD3 (Modèle linéaire généralisé) : le modèle logistique, une inégalité oracle pour le Lasso logistique, la régression de Poisson. Pas de corrigé officiel : ce corrigé est rédigé pour ce guide et chaque calcul a été vérifié.
+-->
+<div class="box objectifs"><div class="box-h">Ce que ce TD fait travailler</div>
+<ul class="checklist">
+<li>écrire la log-vraisemblance d'un modèle linéaire généralisé (logistique, Poisson) et l'exprimer en fonction de $\beta$ ;</li>
+<li>calculer un gradient et une hessienne par dérivation en chaîne, et en déduire la <strong>convexité</strong> (ou la concavité) ;</li>
+<li>décider si un estimateur pénalisé <strong>existe</strong>, s'il est <strong>unique</strong>, et comment on le <strong>calcule</strong> (Ridge logistique, Lasso logistique, Lasso de Poisson) ;</li>
+<li>écrire et exploiter les <strong>conditions KKT</strong> d'un Lasso de GLM : plus petit $\lambda$ qui annule tout, première variable qui entre ;</li>
+<li>démontrer une <strong>inégalité oracle lente</strong> pour le Lasso logistique : le même schéma qu'en Séance 4, avec l'inégalité de <strong>Hoeffding</strong> à la place de la queue gaussienne.</li>
+</ul>
+<p class="small">Séances concernées : <a href="05_seance5.html">Séance 5</a> (GLM, en particulier les diapos 2026 : convexité p. 24, Lasso des GLM p. 27–28, logistique au tableau p. 29–34, courbure p. 35), <a href="04_seance4.html#oracle-lente">Séance 4</a> (inégalité oracle lente), <a href="02_seance2.html#kkt">Séance 2</a> (conditions KKT, $\lambda_{\max}$).</p>
+</div>
+
+<div class="box remarque"><div class="box-h">Pas de corrigé officiel pour ce TD</div>
+<p>Le dossier <code>TD_et_correction</code> contient les corrigés des TD1 et TD2, mais pas celui du TD3. Le corrigé ci-dessous a donc été <strong>rédigé pour ce guide</strong> : chaque calcul a été refait à la main puis vérifié numériquement (Python). Si ce qui a été fait en séance diffère, c'est la séance qui fait foi — et la comparaison est un bon exercice.</p>
+</div>
+
+<h2 id="avant">Avant de commencer</h2>
+
+<h3 id="avant-prerequis">Ce qu'il faut avoir en tête</h3>
+<p>Le TD mobilise presque toute la Séance 5 et le schéma de preuve de la Séance 4. Si une ligne du tableau ne vous dit plus rien, ouvrez le lien avant d'attaquer l'exercice correspondant.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Outil</th><th>Où le revoir</th><th>Où il sert ici</th></tr></thead>
+<tbody>
+<tr><td>Sigmoïde $\sigma(t)=\frac1{1+e^{-t}}$, logit, $\sigma'=\sigma(1-\sigma)$</td><td><a href="05_seance5.html">Séance 5</a> (rappel en tête de page)</td><td>Ex. 1 et 2</td></tr>
+<tr><td>GLM canonique : gradient $\frac1nX\T(\mu-y)$, hessienne $\frac1nX\T WX$</td><td><a href="05_seance5.html#cas-canonique">Séance 5</a>, Cours5 enrichi p. 24</td><td>Ex. 1 (d), Ex. 3 (2)</td></tr>
+<tr><td>Convexité ; existence et unicité d'un minimiseur</td><td><a href="00_rappels.html#convexite">Rappels — convexité</a>, <a href="00_rappels.html#existence">Rappels — existence</a></td><td>Ex. 1 (2), Ex. 3 (2)</td></tr>
+<tr><td>Sous-différentiel de $\norm\cdot_1$, conditions KKT, $\lambda_{\max}$</td><td><a href="02_seance2.html#kkt">Séance 2</a>, <a href="04_seance4.html">Séance 4</a></td><td>Ex. 1 (4), Ex. 3 (3)–(5)</td></tr>
+<tr><td>Inégalité oracle lente : inégalité de base, Hölder, borne de l'union</td><td><a href="04_seance4.html#oracle-lente">Séance 4</a></td><td>Ex. 2</td></tr>
+<tr><td>Inégalité de Hoeffding</td><td><a href="00_rappels.html#hoeffding">Rappels — Hoeffding</a></td><td>Ex. 2 (3)</td></tr>
+</tbody></table></div>
+
+<div class="box rappel"><div class="box-h">Rappel — Les deux lois du TD sous forme exponentielle (Séance 5)</div>
+<p>Pour un GLM <strong>canonique</strong>, la log-densité s'écrit $\theta y-A(\theta)+B(y)$ et le paramètre naturel vaut $\theta_i=x_i\T\beta$. Les deux lois du TD :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Loi</th><th>$\theta$</th><th>$A(\theta)$</th><th>moyenne $\mu=A'(\theta)$</th><th>variance $A''(\theta)$</th><th>lien canonique</th></tr></thead>
+<tbody>
+<tr><td>Bernoulli $\mathcal B(\mu)$</td><td>$\log\frac{\mu}{1-\mu}$</td><td>$\log(1+e^\theta)$</td><td>$\sigma(\theta)$</td><td>$\mu(1-\mu)$</td><td>logit</td></tr>
+<tr><td>Poisson $\mathcal P(\mu)$</td><td>$\log\mu$</td><td>$e^\theta$</td><td>$e^\theta$</td><td>$\mu$</td><td>log</td></tr>
+</tbody></table></div>
+<p>La variance $A''(\theta)$ est toujours positive : c'est elle qui rend la log-vraisemblance concave (Cours5 enrichi p. 24). <a href="05_seance5.html#moments">Démonstration en Séance 5</a>.</p>
+</div>
+
+<h3 id="avant-notations">Notations et conventions de ce TD</h3>
+<ul>
+<li>$n$ individus, $p$ variables. Le vecteur des covariables de l'individu $i$ est un vecteur <strong>colonne</strong> de $\R^p$ : l'énoncé l'appelle $X_i$ (exercices 1 et 3) ou $z_i$ (exercice 2). Dans les solutions, on écrit $x_i$ pour ce vecteur, comme en Séance 5, de sorte que le prédicteur linéaire est $\eta_i=x_i\T\beta$.</li>
+<li>$X\in\R^{n\times p}$ est la matrice dont les lignes sont les $x_i\T$ ; sa <strong>colonne</strong> $j$ est notée $X_j\in\R^n$ (les valeurs de la variable $j$ chez les $n$ individus). <strong>Attention</strong> : l'énoncé utilise la même lettre $X_i$ pour un individu (ex. 1) et $X_j$ pour une colonne (ex. 3, question 4) ; c'est le contexte (indice $i$ ou $j$) qui tranche.</li>
+<li>$\sigma(t)=\frac{1}{1+e^{-t}}=\frac{e^t}{1+e^t}$ est la sigmoïde ; l'exercice 2 la note $\pi(t)$. On note $\mu_i=\E[Y_i]$ et $\mu=(\mu_1,\dots,\mu_n)\T$.</li>
+<li>$\ell_n(\beta)$ est la log-vraisemblance. <strong>Attention aux normalisations</strong>, qui changent d'un exercice à l'autre et déplacent les facteurs dans les conditions KKT :</li>
+</ul>
+<div class="box methode"><div class="box-h">Conventions — le critère de chaque exercice</div>
+<div class="table-wrap"><table>
+<thead><tr><th>Où</th><th>Critère minimisé</th><th>KKT, variable active ($\hb_j\neq0$)</th><th>KKT, variable inactive ($\hb_j=0$)</th></tr></thead>
+<tbody>
+<tr><td>Ex. 1 (Lasso logistique)</td><td>$-\ell_n(\beta)+\lambda\norm\beta_1$ (somme, sans $\frac1n$)</td><td>$X_j\T(Y-\hat\mu)=\lambda\sgn(\hb_j)$</td><td>$\abs{X_j\T(Y-\hat\mu)}\le\lambda$</td></tr>
+<tr><td>Ex. 2</td><td>$\hat R(\beta)+\lambda\norm\beta_1$ avec $\hat R=-\frac1n\ell_n$</td><td>$\frac1nX_j\T(Y-\hat\mu)=\lambda\sgn(\hb_j)$</td><td>$\abs{\frac1nX_j\T(Y-\hat\mu)}\le\lambda$</td></tr>
+<tr><td>Ex. 3 (Poisson)</td><td>$L_n(\beta)+\lambda\norm\beta_1$ avec $L_n=-\frac1n\ell_n$ + constante</td><td>$\frac1nX_j\T(Y-\hat\mu)=\lambda\sgn(\hb_j)$</td><td>$\abs{\frac1nX_j\T(Y-\hat\mu)}\le\lambda$</td></tr>
+<tr><td>Rappel : linéaire (S2)</td><td>$\norm{Y-X\beta}^2+\lambda\norm\beta_1$</td><td>$2X_j\T(Y-X\hb)=\lambda\sgn(\hb_j)$</td><td>$\abs{2X_j\T(Y-X\hb)}\le\lambda$</td></tr>
+</tbody></table></div>
+<p>Le « 2 » du cas linéaire vient de la dérivée du carré ; en GLM canonique il n'y en a pas, car la dérivée de $A(\eta)-y\eta$ par rapport à $\eta$ vaut $\mu-y$ sans facteur.</p>
+</div>
+
+<h3 id="avant-methode">Comment travailler ce TD</h3>
+<ol>
+<li><strong>Exercice 1</strong> : c'est le « travail au tableau » de la diapo p. 29 du Cours5 enrichi (log-vraisemblance, gradient, hessienne, convexité, Lasso logistique, KKT). Il doit devenir un automatisme.</li>
+<li><strong>Exercice 2</strong> : c'est le cœur théorique. Relisez d'abord la preuve de l'<a href="04_seance4.html#oracle-lente">inégalité oracle lente</a> (Séance 4) : la preuve du TD est la même, ligne pour ligne, à un outil probabiliste près.</li>
+<li><strong>Exercice 3</strong> : une application directe de la méthode de l'exercice 1 à un autre GLM ; la dernière question est un calcul de $\lambda_{\max}$.</li>
+</ol>
+<p>Pour chaque question : cherchez 10 à 15 minutes, puis ouvrez l'indice, puis la solution.</p>
+
+<h2 id="ex1">Exercice 1 — Le modèle logistique</h2>
+
+<div class="box enonce"><div class="box-h">Énoncé <span class="ref">TD3 · exercice 1</span></div>
+<p>Nous nous plaçons dans un cadre de classification binaire où $Y_i\in\{0,1\}$ dépend de $X_i=(X_{i,1},\dots,X_{i,p})\T\in\R^p$ non aléatoire. Nous supposons que</p>
+$$g(\E[Y_i])=X_i\T\bstar$$
+<p>avec $g(x)=\log(x/(1-x))$ la fonction de lien <em>logit</em> et $\bstar\in\R^p$ inconnu. Nous souhaitons estimer $\bstar$ à partir de l'observation de $\{(X_i,Y_i),\ i=1,\dots,n\}$. Pour cela, nous considérons deux critères basés sur la log-vraisemblance des données, que nous noterons par la suite $\ell_n(\beta)$ : un critère de type Ridge</p>
+$$\hb^R(\lambda)=\argmin_{\beta\in\R^p}\{-\ell_n(\beta)+\lambda\norm\beta_2^2\},$$
+<p>et un critère de type Lasso,</p>
+$$\hb^L(\lambda)=\argmin_{\beta\in\R^p}\{-\ell_n(\beta)+\lambda\norm\beta_1\}$$
+<p>dépendant tous deux d'un paramètre $\lambda\ge0$.</p>
+<ol>
+<li>Nous commençons par étudier la log-vraisemblance $\ell_n(\beta)$.
+<ol type="a">
+<li>Soit $Y$ une variable aléatoire de loi binomiale de paramètre $\mu\in\,]0,1[$, calculer la densité de la loi de $Y$ par rapport à la mesure de comptage sur $\{0,1\}$.</li>
+<li>En déduire la vraisemblance de $Y_1,\dots,Y_n$ en fonction de $(\mu_1,\dots,\mu_n)$ telle que, pour tout $i$, $\mu_i=\E[Y_i]$.</li>
+<li>Montrer que $$\ell_n(\beta)=\sum_{i=1}^n\Big(Y_iX_i\T\beta-\log\big(1+e^{X_i\T\beta}\big)\Big).$$</li>
+<li>La fonction $\ell_n$ est-elle convexe ? concave ? dérivable ?</li>
+</ol></li>
+<li>Peut-on calculer facilement l'estimateur $\hb^R(\lambda)$ ? Que vaut-il pour $\lambda=0$ ?</li>
+<li>Supposons que nos données sont des données génomiques, c'est-à-dire que pour $n$ femmes ayant ou non un cancer du sein, nous avons prélevé et analysé l'ARN présent dans un échantillon de leurs cellules et nous disposons des données suivantes : $Y_i=1$ si le $i$-ème individu est atteint d'un cancer du sein ($Y_i=0$ sinon) ; $X_{i,j}$ le nombre de fois où l'ARN correspondant au $j$-ème gène étudié pour l'individu $i$ a été retrouvé. Nous souhaitons déterminer les gènes ayant de l'influence sur l'apparition d'un cancer du sein. Devons-nous calculer l'estimateur Ridge ou l'estimateur Lasso ? Justifier.</li>
+<li>Donner les conditions KKT pour le Lasso dans le modèle logistique.</li>
+</ol>
+</div>
+
+<div class="box idee"><div class="box-h">De quoi parle cet exercice ?</div>
+<p>C'est exactement le programme « à faire au tableau » de la diapo <span class="ref">Cours5 enrichi · p. 29</span> : écrire la log-vraisemblance négative, calculer gradient et hessienne, montrer la convexité, écrire le Lasso logistique et ses conditions KKT. S'y ajoutent deux questions de fond : <strong>l'estimateur existe-t-il ?</strong> (on verra que le maximum de vraisemblance peut ne pas exister, et qu'il n'existe jamais quand $p\ge n$ et que $X$ est de rang $n$) et <strong>Ridge ou Lasso ?</strong> (une question de modélisation, pas de calcul).</p>
+</div>
+
+<h3 id="ex1-q1a">Question 1(a) — La « densité » d'une variable de Bernoulli</h3>
+<p>Une « loi binomiale de paramètre $\mu$ » à valeurs dans $\{0,1\}$ est une loi binomiale $\mathcal B(1,\mu)$, c'est-à-dire une loi de <strong>Bernoulli</strong> : $\P(Y=1)=\mu$, $\P(Y=0)=1-\mu$.</p>
+<div class="box methode"><div class="box-h">Comment l'attaquer</div>
+<p>Pour une variable discrète, la densité par rapport à la mesure de comptage est simplement la fonction $y\mapsto\P(Y=y)$. Le seul travail est de l'écrire en <strong>une seule formule</strong> valable pour $y=0$ et pour $y=1$ — c'est cette forme qui se prête au logarithme.</p>
+</div>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Cherchez une expression de la forme $\mu^{a(y)}(1-\mu)^{b(y)}$ qui vaut $\mu$ en $y=1$ et $1-\mu$ en $y=0$.</p></div></details>
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<p>Pour tout $y\in\{0,1\}$ :</p>
+$$f_\mu(y)=\P(Y=y)=\mu^y(1-\mu)^{1-y}.$$
+<p>Vérification : en $y=1$, $\mu^1(1-\mu)^0=\mu$ ; en $y=0$, $\mu^0(1-\mu)^1=1-\mu$. ✓</p>
+<p>Pourquoi parler de « densité par rapport à la mesure de comptage » ? Parce que la vraisemblance est toujours un produit de densités : pour une loi continue, c'est la densité usuelle ; pour une loi discrète, c'est la probabilité de la valeur observée. La même théorie couvre les deux cas.</p>
+</div></details>
+
+<h3 id="ex1-q1b">Question 1(b) — La vraisemblance de l'échantillon</h3>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Les $Y_i$ sont indépendantes : la loi jointe est le produit des lois marginales.</p></div></details>
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<p>Les $Y_i$ sont indépendantes, de lois $\mathcal B(\mu_i)$ avec $\mu_i=\E[Y_i]$. La probabilité d'observer $(Y_1,\dots,Y_n)$ est donc le produit des probabilités individuelles ; vue comme fonction des paramètres, c'est la vraisemblance :</p>
+$$L(\mu_1,\dots,\mu_n)=\prod_{i=1}^n\mu_i^{Y_i}(1-\mu_i)^{1-Y_i}.$$
+<p>Attention : les $\mu_i$ sont <strong>différents</strong> d'un individu à l'autre (ils dépendent de $X_i$) ; le modèle relie ces $n$ paramètres à un seul vecteur $\beta\in\R^p$ — c'est la question suivante.</p>
+</div></details>
+
+<h3 id="ex1-q1c">Question 1(c) — La log-vraisemblance en fonction de $\beta$</h3>
+<div class="box methode"><div class="box-h">Comment l'attaquer</div>
+<p>Trois gestes : (1) passer au logarithme ; (2) regrouper les termes en $Y_i$ pour faire apparaître le logit $\log\frac{\mu_i}{1-\mu_i}$ ; (3) utiliser le lien, $\log\frac{\mu_i}{1-\mu_i}=X_i\T\beta$, et exprimer $1-\mu_i$ en fonction de $X_i\T\beta$.</p>
+</div>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>De $\log\frac{\mu}{1-\mu}=\eta$, tirez $\mu=\frac{e^\eta}{1+e^\eta}$, puis calculez $1-\mu$.</p></div></details>
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\log L=\sum_{i=1}^n\Big[Y_i\log\mu_i+(1-Y_i)\log(1-\mu_i)\Big]$$<span class="why">le logarithme transforme le produit en somme et $\log(a^b)=b\log a$.</span></li>
+<li>$$=\sum_{i=1}^n\Big[Y_i\log\frac{\mu_i}{1-\mu_i}+\log(1-\mu_i)\Big]$$<span class="why">on développe $(1-Y_i)\log(1-\mu_i)=\log(1-\mu_i)-Y_i\log(1-\mu_i)$ et on regroupe les deux termes multipliés par $Y_i$.</span></li>
+<li>$$\log\frac{\mu_i}{1-\mu_i}=X_i\T\beta\iff\mu_i=\frac{e^{X_i\T\beta}}{1+e^{X_i\T\beta}}=\sigma(X_i\T\beta),\qquad1-\mu_i=\frac{1}{1+e^{X_i\T\beta}}$$<span class="why">c'est le modèle : $g(\mu_i)=X_i\T\beta$ avec $g=\operatorname{logit}$ ; on inverse ($\frac{\mu}{1-\mu}=e^\eta\iff\mu=e^\eta(1-\mu)\iff\mu(1+e^\eta)=e^\eta$).</span></li>
+<li>$$\ell_n(\beta)=\sum_{i=1}^n\Big[Y_iX_i\T\beta-\log\big(1+e^{X_i\T\beta}\big)\Big]$$<span class="why">on remplace : le logit vaut $X_i\T\beta$ et $\log(1-\mu_i)=-\log(1+e^{X_i\T\beta})$.</span></li>
+</ol>
+<p>C'est la forme canonique annoncée en Séance 5 : $\ell_n(\beta)=\sum_i\big[\theta_iY_i-A(\theta_i)\big]$ avec $\theta_i=X_i\T\beta$ et $A(\theta)=\log(1+e^\theta)$. Avec le lien canonique, le paramètre naturel <em>est</em> le prédicteur linéaire.</p>
+</div></details>
+<div class="quiz"><p>Question rapide : pourquoi a-t-on toujours $\ell_n(\beta)<0$ ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body"><p>Chaque terme est le logarithme d'une probabilité $\mu_i^{Y_i}(1-\mu_i)^{1-Y_i}\in\,]0,1[$ (car $0<\mu_i<1$), donc il est strictement négatif. On peut aussi le voir sur la formule : si $Y_i=1$, le terme vaut $\eta-\log(1+e^\eta)=-\log(1+e^{-\eta})<0$ ; si $Y_i=0$, il vaut $-\log(1+e^\eta)<0$. Retenez-le : $-\ell_n\ge0$ servira à la question 2.</p></div></details></div>
+
+<h3 id="ex1-q1d">Question 1(d) — Convexe ? concave ? dérivable ?</h3>
+<div class="box methode"><div class="box-h">Comment l'attaquer</div>
+<p>Pour étudier la convexité d'une fonction de $\R^p$ deux fois dérivable : calculer sa <strong>hessienne</strong> et le signe de la forme quadratique $v\T\nabla^2\ell_n(\beta)v$ (<a href="00_rappels.html#convexite">rappel</a>). Le gradient et la hessienne s'obtiennent terme à terme, par dérivation en chaîne de $\beta\mapsto h(X_i\T\beta)$ : $\nabla_\beta\,h(X_i\T\beta)=h'(X_i\T\beta)X_i$ et $\nabla_\beta^2\,h(X_i\T\beta)=h''(X_i\T\beta)X_iX_i\T$ (<a href="00_rappels.html#gradient">rappel</a>).</p>
+</div>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Avec $h(t)=\log(1+e^t)$ : $h'(t)=\sigma(t)$ et $h''(t)=\sigma(t)(1-\sigma(t))>0$.</p></div></details>
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<p><strong>Dérivabilité.</strong> $\ell_n$ est une somme de fonctions $\beta\mapsto Y_iX_i\T\beta$ (linéaires) et $\beta\mapsto-\log(1+e^{X_i\T\beta})$ (composées d'une forme linéaire, de l'exponentielle et du logarithme d'une quantité $>1$) : elle est $C^\infty$ sur $\R^p$.</p>
+<p><strong>Gradient et hessienne.</strong></p>
+<ol class="steps">
+<li>$$\nabla_\beta\big(Y_iX_i\T\beta\big)=Y_iX_i$$<span class="why">gradient d'une forme linéaire $\beta\mapsto a\T\beta$ : $a$.</span></li>
+<li>$$\nabla_\beta\log\big(1+e^{X_i\T\beta}\big)=\frac{e^{X_i\T\beta}}{1+e^{X_i\T\beta}}X_i=\sigma(X_i\T\beta)X_i=\mu_i(\beta)X_i$$<span class="why">dérivation en chaîne avec $h(t)=\log(1+e^t)$, $h'(t)=\frac{e^t}{1+e^t}=\sigma(t)$.</span></li>
+<li>$$\nabla\ell_n(\beta)=\sum_{i=1}^n\big(Y_i-\mu_i(\beta)\big)X_i=X\T\big(Y-\mu(\beta)\big)$$<span class="why">on somme ; $\sum_ic_iX_i=X\T c$ car les $X_i\T$ sont les lignes de $X$.</span></li>
+<li>$$\nabla^2\ell_n(\beta)=-\sum_{i=1}^n\sigma'(X_i\T\beta)X_iX_i\T=-\sum_{i=1}^n\mu_i(1-\mu_i)X_iX_i\T=-X\T W(\beta)X$$<span class="why">on dérive $-\sigma(X_i\T\beta)X_i$ : $\nabla_\beta\sigma(X_i\T\beta)=\sigma'(X_i\T\beta)X_i$, d'où la matrice $X_iX_i\T$ ; $\sigma'=\sigma(1-\sigma)$ ; $W(\beta)=\diag\big(\mu_i(1-\mu_i)\big)$.</span></li>
+<li>$$v\T\nabla^2\ell_n(\beta)v=-\sum_{i=1}^n\mu_i(1-\mu_i)\big(X_i\T v\big)^2\le0\qquad\forall v\in\R^p$$<span class="why">$v\T X_iX_i\T v=(X_i\T v)^2\ge0$ et $\mu_i(1-\mu_i)>0$.</span></li>
+</ol>
+<p><strong>Conclusion.</strong> La hessienne est semi-définie négative en tout point : $\ell_n$ est <strong>concave</strong> (et $-\ell_n$ est convexe : c'est l'observation clé de la diapo <span class="ref">Cours5 enrichi · p. 24</span>, ici avec $A''(\theta)=\sigma(\theta)(1-\sigma(\theta))$). Elle n'est <strong>pas convexe</strong> (dès qu'un $X_i\neq0$, la forme quadratique est $<0$ pour $v=X_i$). Enfin $v\T\nabla^2\ell_n(\beta)v=0\iff X_i\T v=0$ pour tout $i\iff Xv=0$ : $\ell_n$ est <strong>strictement concave si et seulement si $X$ est de rang $p$</strong> (noyau réduit à $\{0\}$, ce qui exige $p\le n$ ; si au contraire $Xv=0$ avec $v\neq0$, alors $\ell_n(\beta+tv)=\ell_n(\beta)$ pour tout $t$, car $\ell_n$ ne dépend de $\beta$ qu'à travers $X\beta$).</p>
+</div></details>
+<div class="box piege"><div class="box-h">Piège — concave ne veut pas dire « a un maximum »</div>
+<p>Une fonction concave n'a pas forcément de maximum : $t\mapsto-e^{-t}$ est concave, majorée par 0, mais n'atteint jamais 0. C'est exactement ce qui arrive à $\ell_n$ quand les données sont séparables (question 2).</p></div>
+
+<h3 id="ex1-q2">Question 2 — Le Ridge logistique : se calcule-t-il facilement ? et pour $\lambda=0$ ?</h3>
+<div class="box methode"><div class="box-h">Comment l'attaquer</div>
+<p>Trois sous-questions à séparer : (i) le minimiseur <strong>existe</strong>-t-il et est-il <strong>unique</strong> ? (convexité forte + coercivité, <a href="00_rappels.html#existence">rappel</a>) ; (ii) a-t-il une <strong>formule</strong> comme le Ridge linéaire $(X\T X+\lambda I)^{-1}X\T Y$ ? (regarder si l'équation $\nabla=0$ est linéaire) ; (iii) que devient le critère pour $\lambda=0$ ?</p>
+</div>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>La hessienne de $F_\lambda(\beta)=-\ell_n(\beta)+\lambda\norm\beta^2$ est $X\T WX+2\lambda I$. Et $-\ell_n\ge0$ (question rapide plus haut).</p></div></details>
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<p><strong>(i) Existence et unicité pour $\lambda>0$.</strong> Posons $F_\lambda(\beta)=-\ell_n(\beta)+\lambda\norm\beta^2$.</p>
+<ol class="steps">
+<li>$$\nabla^2F_\lambda(\beta)=X\T W(\beta)X+2\lambda I_p\succeq2\lambda I_p$$<span class="why">question 1(d) pour $-\ell_n$, et la hessienne de $\lambda\norm\beta^2$ est $2\lambda I_p$ ; $X\T WX\succeq0$.</span></li>
+<li>$F_\lambda$ est fortement convexe, donc strictement convexe : elle a <strong>au plus un</strong> minimiseur.<span class="why">valeurs propres de la hessienne $\ge2\lambda>0$ partout (<a href="00_rappels.html#existence">rappel</a>).</span></li>
+<li>$$F_\lambda(\beta)\ge\lambda\norm\beta^2\xrightarrow[\norm\beta\to\infty]{}+\infty$$<span class="why">$-\ell_n(\beta)\ge0$ : $F_\lambda$ est coercive et continue, elle atteint donc son minimum.</span></li>
+</ol>
+<p>Donc $\hb^R(\lambda)$ existe et est unique pour tout $\lambda>0$ — quelles que soient les données, même si $p>n$ (c'est la remarque du tableau, <span class="ref">Cours5 enrichi · p. 36</span> : « pb strictement convexe ⇒ unique solution »).</p>
+<p><strong>(ii) Pas de formule fermée.</strong> La condition d'optimalité $\nabla F_\lambda(\beta)=0$ s'écrit</p>
+$$X\T\big(Y-\sigma(X\beta)\big)=2\lambda\beta,$$
+<p>où $\sigma$ s'applique coordonnée par coordonnée. L'inconnue $\beta$ est <strong>à l'intérieur</strong> de la sigmoïde : l'équation n'est pas linéaire, on ne peut pas l'inverser comme $(X\T X+\lambda I)\beta=X\T Y$. Mais le calcul reste « facile » au sens algorithmique : le problème est lisse et fortement convexe, et la méthode de Newton (<a href="00_rappels.html#newton">rappel</a>) converge en pratique en quelques itérations (avec, au besoin, un pas amorti). Son pas s'écrit comme des <strong>moindres carrés pondérés</strong> (IRLS pénalisé, voir <a href="05_seance5.html#irls">Séance 5</a>) :</p>
+<ol class="steps">
+<li>$$\beta_{k+1}=\beta_k-\big[\nabla^2F_\lambda(\beta_k)\big]^{-1}\nabla F_\lambda(\beta_k),\qquad\nabla F_\lambda(\beta)=-X\T(Y-\mu)+2\lambda\beta$$<span class="why">pas de Newton pour minimiser $F_\lambda$.</span></li>
+<li>$$\beta_{k+1}=(X\T W_kX+2\lambda I)^{-1}\big[(X\T W_kX+2\lambda I)\beta_k+X\T(Y-\mu_k)-2\lambda\beta_k\big]$$<span class="why">on met $(\nabla^2F_\lambda)^{-1}$ en facteur.</span></li>
+<li>$$\beta_{k+1}=(X\T W_kX+2\lambda I)^{-1}X\T W_kz_k,\qquad z_k=X\beta_k+W_k^{-1}(Y-\mu_k)$$<span class="why">les $2\lambda\beta_k$ se simplifient et $X\T W_kX\beta_k+X\T(Y-\mu_k)=X\T W_k\big(X\beta_k+W_k^{-1}(Y-\mu_k)\big)$. C'est un Ridge pondéré sur la « réponse de travail » $z_k$.</span></li>
+</ol>
+<div class="box exemple"><div class="box-h">Exemple chiffré — quatre points, un coefficient</div>
+<p>Données : $x=(-2,-1,1,2)$, $y=(0,0,1,1)$, modèle sans constante $\P(Y_i=1)=\sigma(\beta x_i)$, et $\lambda=0{,}5$.</p>
+<p>Premier pas depuis $\beta_0=0$ : tous les $\mu_i=\sigma(0)=\frac12$, $w_i=\frac14$ ; gradient $\nabla F=-\sum_i(y_i-\frac12)x_i=-3$ ; hessienne $\sum_i\frac14x_i^2+2\lambda=\frac{10}4+1=3{,}5$ ; donc $\beta_1=0+\frac{3}{3{,}5}=\frac67\approx0{,}857$.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>itération $k$</th><th>$\beta_k$</th><th>$F_\lambda(\beta_k)$</th><th>$\nabla F_\lambda(\beta_k)$</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>0</td><td>2,7726</td><td>$-3$</td></tr>
+<tr><td>1</td><td>0,857143</td><td>1,405995</td><td>$-0{,}35$</td></tr>
+<tr><td>2</td><td>0,999491</td><td>1,380387</td><td>$-1{,}6\cdot10^{-2}$</td></tr>
+<tr><td>3</td><td>1,006578</td><td>1,380331</td><td>$-3{,}7\cdot10^{-5}$</td></tr>
+<tr><td>4</td><td>1,006594</td><td>1,380331</td><td>$-2\cdot10^{-10}$</td></tr>
+</tbody></table></div>
+<p>Quatre pas suffisent : $\hb^R(0{,}5)\approx1{,}0066$ (avec $\lambda=1$ on trouverait $\approx0{,}7148$ : plus de pénalité, plus de rétrécissement).</p>
+</div>
+<p><strong>(iii) Pour $\lambda=0$ : l'estimateur du maximum de vraisemblance</strong>, solution de $X\T(Y-\hat\mu)=0$ (les équations de vraisemblance du lien canonique, <a href="05_seance5.html#cas-canonique">Séance 5</a>). Mais <strong>attention</strong> : il n'existe pas toujours.</p>
+<ul>
+<li><strong>Données séparables.</strong> Dans l'exemple ci-dessus, $y_i=1$ exactement quand $x_i>0$ : les données sont parfaitement séparées. La dérivée $\ell_n'(\beta)=\sum_i(y_i-\sigma(\beta x_i))x_i$ est <strong>strictement positive pour tout $\beta$</strong> (pour $x_i>0$ on a $y_i=1$ et $(1-\sigma)x_i>0$ ; pour $x_i<0$, $y_i=0$ et $-\sigma\,x_i>0$). Donc $\ell_n$ croît sans fin : $\ell_n(0)=-2{,}7726$, $\ell_n(1)=-0{,}8804$, $\ell_n(2)=-0{,}2902$, $\ell_n(5)=-0{,}0135$, $\ell_n(10)\approx-0{,}0001$… elle tend vers 0 sans jamais l'atteindre : <strong>pas de maximum</strong>, l'« estimateur » part à l'infini.</li>
+<li><strong>Grande dimension.</strong> Si $p\ge n$ et $X$ est de rang $n$, on peut résoudre $X\beta_1=\tilde y$ avec $\tilde y_i=2Y_i-1\in\{-1,1\}$. Alors pour tout $t>0$, chaque terme de $\ell_n(t\beta_1)$ vaut $-\log(1+e^{-t})$ (si $Y_i=1$ : $t-\log(1+e^{t})$ ; si $Y_i=0$ : $-\log(1+e^{-t})$), donc $\ell_n(t\beta_1)=-n\log(1+e^{-t})\to0$ : <strong>quelles que soient les données</strong>, l'EMV n'existe pas. C'est la phrase de la diapo <span class="ref">Cours5 enrichi · p. 27</span> : « the unpenalized maximum likelihood estimator may not be uniquely defined or may fail to exist as a finite vector ».</li>
+<li>Quand il existe et que $X$ est de rang $p$, il est unique (stricte concavité, question 1(d)).</li>
+</ul>
+</div></details>
+<figure class="fig">
+<svg viewBox="0 0 560 300" role="img" aria-label="Log-vraisemblance négative de données séparables, avec et sans pénalité Ridge">
+<line class="gr" x1="117.1" x2="117.1" y1="26" y2="264"/><text class="tx" x="117.1" y="280" text-anchor="middle">0</text>
+<line class="gr" x1="259.4" x2="259.4" y1="26" y2="264"/><text class="tx" x="259.4" y="280" text-anchor="middle">1</text>
+<line class="gr" x1="401.7" x2="401.7" y1="26" y2="264"/><text class="tx" x="401.7" y="280" text-anchor="middle">2</text>
+<line class="gr" x1="544.0" x2="544.0" y1="26" y2="264"/><text class="tx" x="544.0" y="280" text-anchor="middle">3</text>
+<line class="gr" x1="46" x2="544" y1="216.4" y2="216.4"/><text class="tx" x="40" y="220.4" text-anchor="end">1</text>
+<line class="gr" x1="46" x2="544" y1="168.8" y2="168.8"/><text class="tx" x="40" y="172.8" text-anchor="end">2</text>
+<line class="gr" x1="46" x2="544" y1="121.2" y2="121.2"/><text class="tx" x="40" y="125.2" text-anchor="end">3</text>
+<line class="gr" x1="46" x2="544" y1="73.6" y2="73.6"/><text class="tx" x="40" y="77.6" text-anchor="end">4</text>
+<line class="gr" x1="46" x2="544" y1="26.0" y2="26.0"/><text class="tx" x="40" y="30.0" text-anchor="end">5</text>
+<line class="ax" x1="46" x2="544" y1="264.0" y2="264.0"/>
+<line class="ax" x1="117.1" x2="117.1" y1="26" y2="264"/>
+<text class="tx" x="544" y="296" text-anchor="end">β</text>
+<clipPath id="td3clip"><rect x="46" y="26" width="498" height="238"/></clipPath><g clip-path="url(#td3clip)">
+<path class="ln c2" d="M46.0 46.2L47.7 48.6L49.3 50.8L51.0 53.1L52.6 55.4L54.3 57.7L56.0 59.9L57.6 62.1L59.3 64.3L60.9 66.5L62.6 68.7L64.3 70.9L65.9 73.0L67.6 75.2L69.2 77.3L70.9 79.4L72.6 81.5L74.2 83.6L75.9 85.7L77.5 87.7L79.2 89.8L80.9 91.8L82.5 93.8L84.2 95.8L85.8 97.7L87.5 99.7L89.2 101.7L90.8 103.6L92.5 105.5L94.1 107.4L95.8 109.3L97.5 111.1L99.1 113.0L100.8 114.8L102.4 116.6L104.1 118.4L105.8 120.2L107.4 122.0L109.1 123.7L110.7 125.5L112.4 127.2L114.1 128.9L115.7 130.6L117.4 132.3L119.0 133.9L120.7 135.6L122.4 137.2L124.0 138.8L125.7 140.4L127.3 142.0L129.0 143.5L130.7 145.1L132.3 146.6L134.0 148.1L135.6 149.6L137.3 151.1L139.0 152.5L140.6 154.0L142.3 155.4L143.9 156.8L145.6 158.2L147.3 159.6L148.9 161.0L150.6 162.3L152.2 163.7L153.9 165.0L155.6 166.3L157.2 167.6L158.9 168.9L160.5 170.1L162.2 171.4L163.9 172.6L165.5 173.8L167.2 175.0L168.8 176.2L170.5 177.4L172.2 178.5L173.8 179.7L175.5 180.8L177.1 181.9L178.8 183.0L180.5 184.1L182.1 185.2L183.8 186.2L185.4 187.3L187.1 188.3L188.8 189.3L190.4 190.3L192.1 191.3L193.7 192.3L195.4 193.3L197.1 194.2L198.7 195.2L200.4 196.1L202.0 197.0L203.7 197.9L205.4 198.8L207.0 199.7L208.7 200.6L210.3 201.4L212.0 202.3L213.7 203.1L215.3 203.9L217.0 204.7L218.6 205.5L220.3 206.3L222.0 207.1L223.6 207.9L225.3 208.6L226.9 209.4L228.6 210.1L230.3 210.9L231.9 211.6L233.6 212.3L235.2 213.0L236.9 213.7L238.6 214.3L240.2 215.0L241.9 215.7L243.5 216.3L245.2 217.0L246.9 217.6L248.5 218.2L250.2 218.8L251.8 219.4L253.5 220.0L255.2 220.6L256.8 221.2L258.5 221.8L260.1 222.3L261.8 222.9L263.5 223.4L265.1 224.0L266.8 224.5L268.4 225.0L270.1 225.6L271.8 226.1L273.4 226.6L275.1 227.1L276.7 227.6L278.4 228.0L280.1 228.5L281.7 229.0L283.4 229.4L285.0 229.9L286.7 230.4L288.4 230.8L290.0 231.2L291.7 231.7L293.3 232.1L295.0 232.5L296.7 232.9L298.3 233.3L300.0 233.7L301.6 234.1L303.3 234.5L305.0 234.9L306.6 235.3L308.3 235.7L309.9 236.0L311.6 236.4L313.3 236.7L314.9 237.1L316.6 237.4L318.2 237.8L319.9 238.1L321.6 238.5L323.2 238.8L324.9 239.1L326.5 239.4L328.2 239.8L329.9 240.1L331.5 240.4L333.2 240.7L334.8 241.0L336.5 241.3L338.2 241.6L339.8 241.9L341.5 242.1L343.1 242.4L344.8 242.7L346.5 243.0L348.1 243.2L349.8 243.5L351.4 243.8L353.1 244.0L354.8 244.3L356.4 244.5L358.1 244.8L359.7 245.0L361.4 245.2L363.1 245.5L364.7 245.7L366.4 245.9L368.0 246.2L369.7 246.4L371.4 246.6L373.0 246.8L374.7 247.1L376.3 247.3L378.0 247.5L379.7 247.7L381.3 247.9L383.0 248.1L384.6 248.3L386.3 248.5L388.0 248.7L389.6 248.9L391.3 249.1L392.9 249.2L394.6 249.4L396.3 249.6L397.9 249.8L399.6 250.0L401.2 250.1L402.9 250.3L404.6 250.5L406.2 250.6L407.9 250.8L409.5 251.0L411.2 251.1L412.9 251.3L414.5 251.5L416.2 251.6L417.8 251.8L419.5 251.9L421.2 252.1L422.8 252.2L424.5 252.4L426.1 252.5L427.8 252.6L429.5 252.8L431.1 252.9L432.8 253.0L434.4 253.2L436.1 253.3L437.8 253.4L439.4 253.6L441.1 253.7L442.7 253.8L444.4 254.0L446.1 254.1L447.7 254.2L449.4 254.3L451.0 254.4L452.7 254.5L454.4 254.7L456.0 254.8L457.7 254.9L459.3 255.0L461.0 255.1L462.7 255.2L464.3 255.3L466.0 255.4L467.6 255.5L469.3 255.6L471.0 255.7L472.6 255.8L474.3 255.9L475.9 256.0L477.6 256.1L479.3 256.2L480.9 256.3L482.6 256.4L484.2 256.5L485.9 256.6L487.6 256.7L489.2 256.8L490.9 256.9L492.5 256.9L494.2 257.0L495.9 257.1L497.5 257.2L499.2 257.3L500.8 257.4L502.5 257.4L504.2 257.5L505.8 257.6L507.5 257.7L509.1 257.7L510.8 257.8L512.5 257.9L514.1 258.0L515.8 258.0L517.4 258.1L519.1 258.2L520.8 258.3L522.4 258.3L524.1 258.4L525.7 258.5L527.4 258.5L529.1 258.6L530.7 258.6L532.4 258.7L534.0 258.8L535.7 258.8L537.4 258.9L539.0 259.0L540.7 259.0L542.3 259.1L544.0 259.1"/>
+<path class="ln c1" d="M46.0 40.3L47.7 42.9L49.3 45.4L51.0 48.0L52.6 50.5L54.3 53.0L56.0 55.5L57.6 58.0L59.3 60.4L60.9 62.8L62.6 65.2L64.3 67.6L65.9 70.0L67.6 72.3L69.2 74.6L70.9 76.9L72.6 79.2L74.2 81.4L75.9 83.7L77.5 85.9L79.2 88.1L80.9 90.2L82.5 92.4L84.2 94.5L85.8 96.6L87.5 98.7L89.2 100.7L90.8 102.8L92.5 104.8L94.1 106.8L95.8 108.7L97.5 110.7L99.1 112.6L100.8 114.5L102.4 116.4L104.1 118.2L105.8 120.1L107.4 121.9L109.1 123.7L110.7 125.4L112.4 127.2L114.1 128.9L115.7 130.6L117.4 132.3L119.0 133.9L120.7 135.5L122.4 137.1L124.0 138.7L125.7 140.3L127.3 141.8L129.0 143.3L130.7 144.8L132.3 146.3L134.0 147.8L135.6 149.2L137.3 150.6L139.0 152.0L140.6 153.3L142.3 154.7L143.9 156.0L145.6 157.3L147.3 158.5L148.9 159.8L150.6 161.0L152.2 162.2L153.9 163.4L155.6 164.6L157.2 165.7L158.9 166.8L160.5 167.9L162.2 169.0L163.9 170.0L165.5 171.1L167.2 172.1L168.8 173.1L170.5 174.0L172.2 175.0L173.8 175.9L175.5 176.8L177.1 177.7L178.8 178.5L180.5 179.4L182.1 180.2L183.8 181.0L185.4 181.8L187.1 182.6L188.8 183.3L190.4 184.0L192.1 184.7L193.7 185.4L195.4 186.1L197.1 186.7L198.7 187.4L200.4 188.0L202.0 188.6L203.7 189.1L205.4 189.7L207.0 190.2L208.7 190.7L210.3 191.2L212.0 191.7L213.7 192.2L215.3 192.6L217.0 193.0L218.6 193.4L220.3 193.8L222.0 194.2L223.6 194.6L225.3 194.9L226.9 195.2L228.6 195.5L230.3 195.8L231.9 196.1L233.6 196.3L235.2 196.6L236.9 196.8L238.6 197.0L240.2 197.2L241.9 197.4L243.5 197.5L245.2 197.7L246.9 197.8L248.5 197.9L250.2 198.0L251.8 198.1L253.5 198.2L255.2 198.2L256.8 198.3L258.5 198.3L260.1 198.3L261.8 198.3L263.5 198.3L265.1 198.2L266.8 198.2L268.4 198.1L270.1 198.1L271.8 198.0L273.4 197.9L275.1 197.7L276.7 197.6L278.4 197.5L280.1 197.3L281.7 197.1L283.4 197.0L285.0 196.8L286.7 196.6L288.4 196.3L290.0 196.1L291.7 195.9L293.3 195.6L295.0 195.3L296.7 195.0L298.3 194.7L300.0 194.4L301.6 194.1L303.3 193.8L305.0 193.4L306.6 193.1L308.3 192.7L309.9 192.3L311.6 191.9L313.3 191.5L314.9 191.1L316.6 190.7L318.2 190.2L319.9 189.8L321.6 189.3L323.2 188.9L324.9 188.4L326.5 187.9L328.2 187.4L329.9 186.9L331.5 186.3L333.2 185.8L334.8 185.3L336.5 184.7L338.2 184.1L339.8 183.6L341.5 183.0L343.1 182.4L344.8 181.8L346.5 181.1L348.1 180.5L349.8 179.9L351.4 179.2L353.1 178.6L354.8 177.9L356.4 177.2L358.1 176.5L359.7 175.8L361.4 175.1L363.1 174.4L364.7 173.7L366.4 172.9L368.0 172.2L369.7 171.4L371.4 170.6L373.0 169.9L374.7 169.1L376.3 168.3L378.0 167.5L379.7 166.7L381.3 165.8L383.0 165.0L384.6 164.2L386.3 163.3L388.0 162.5L389.6 161.6L391.3 160.7L392.9 159.8L394.6 158.9L396.3 158.0L397.9 157.1L399.6 156.2L401.2 155.3L402.9 154.3L404.6 153.4L406.2 152.4L407.9 151.4L409.5 150.5L411.2 149.5L412.9 148.5L414.5 147.5L416.2 146.5L417.8 145.5L419.5 144.4L421.2 143.4L422.8 142.4L424.5 141.3L426.1 140.3L427.8 139.2L429.5 138.1L431.1 137.0L432.8 135.9L434.4 134.8L436.1 133.7L437.8 132.6L439.4 131.5L441.1 130.3L442.7 129.2L444.4 128.0L446.1 126.9L447.7 125.7L449.4 124.6L451.0 123.4L452.7 122.2L454.4 121.0L456.0 119.8L457.7 118.6L459.3 117.3L461.0 116.1L462.7 114.9L464.3 113.6L466.0 112.4L467.6 111.1L469.3 109.8L471.0 108.6L472.6 107.3L474.3 106.0L475.9 104.7L477.6 103.4L479.3 102.1L480.9 100.7L482.6 99.4L484.2 98.1L485.9 96.7L487.6 95.4L489.2 94.0L490.9 92.7L492.5 91.3L494.2 89.9L495.9 88.5L497.5 87.1L499.2 85.7L500.8 84.3L502.5 82.9L504.2 81.4L505.8 80.0L507.5 78.6L509.1 77.1L510.8 75.6L512.5 74.2L514.1 72.7L515.8 71.2L517.4 69.7L519.1 68.2L520.8 66.7L522.4 65.2L524.1 63.7L525.7 62.2L527.4 60.7L529.1 59.1L530.7 57.6L532.4 56.0L534.0 54.5L535.7 52.9L537.4 51.3L539.0 49.7L540.7 48.1L542.3 46.5L544.0 44.9"/>
+</g>
+<circle class="f1" cx="260.4" cy="198.3" r="5"/>
+<text class="tx f1" x="268.4" y="216.3">minimum unique en β ≈ 1,007</text>
+<text class="tx f2" x="542" y="233.1" text-anchor="end">−ℓₙ(β) → 0 sans jamais l'atteindre</text>
+<text class="tx f1" x="451.5" y="121.2" text-anchor="end">−ℓₙ(β) + 0,5 β²</text>
+</svg><figcaption>Les quatre points séparables $x=(-2,-1,1,2)$, $y=(0,0,1,1)$. Orange : $-\ell_n(\beta)$ décroît vers 0 sans l'atteindre — le maximum de vraisemblance n'existe pas. Bleu : avec la pénalité Ridge $0{,}5\,\beta^2$, le critère remonte pour les grands $\beta$ et a un minimum unique, $\hb^R(0{,}5)\approx1{,}007$.</figcaption>
+</figure>
+
+<h3 id="ex1-q3">Question 3 — Génomique : Ridge ou Lasso ?</h3>
+<div class="box methode"><div class="box-h">Comment l'attaquer</div>
+<p>Une question de modélisation : partir de l'<strong>objectif</strong> (« déterminer les gènes ayant de l'influence ») et des <strong>ordres de grandeur</strong> (combien de gènes, combien de patientes ?), puis se demander ce que chaque estimateur sait faire.</p>
+</div>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>L'objectif est une <em>sélection</em> de variables. Lequel des deux estimateurs met des coefficients <em>exactement</em> à zéro ? Et combien y a-t-il de gènes par rapport au nombre de patientes ?</p></div></details>
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<p><strong>Il faut le Lasso.</strong> Trois arguments :</p>
+<ol>
+<li><strong>L'objectif est la sélection.</strong> « Déterminer les gènes ayant de l'influence », c'est trouver le support de $\bstar$. Le Lasso met <strong>exactement à zéro</strong> les coefficients des gènes jugés sans effet (le coin de la norme $\ell_1$, le seuillage doux : Séances <a href="01_seance1.html">1</a> et <a href="02_seance2.html">2</a>). Le Ridge rétrécit tous les coefficients mais n'en annule (presque) aucun : il déclarerait « influents » tous les gènes étudiés (souvent plusieurs dizaines de milliers), ce qui ne répond pas à la question.</li>
+<li><strong>La grande dimension rend la pénalisation obligatoire.</strong> On étudie typiquement des dizaines de milliers de gènes pour quelques centaines de patientes : $p\gg n$. La question 2 montre qu'alors l'EMV ($\lambda=0$) n'existe pas (dès que $X$ est de rang $n$, le cas typique). Il faut donc pénaliser de toute façon ; entre deux pénalités, on choisit celle qui sert l'objectif.</li>
+<li><strong>L'interprétabilité.</strong> Un modèle avec une poignée de gènes peut être examiné par des biologistes et validé expérimentalement.</li>
+</ol>
+<p><strong>Précautions pratiques</strong> (au-delà de la question) : standardiser les variables avant de pénaliser (des comptages d'ARN ont des échelles très différentes, et la pénalité $\lambda\abs{\beta_j}$ dépend de l'échelle de $X_j$ — c'est la normalisation $\norm{X_j}^2=n$ de la Séance 4), souvent après une transformation logarithmique des comptages ; choisir $\lambda$ par validation croisée ; ne pas pénaliser la constante (convention de la diapo <span class="ref">Cours5 enrichi · p. 27</span>). Et si des gènes très corrélés agissent ensemble, le Lasso n'en garde qu'un, arbitrairement : l'elastic net ou le group-Lasso de la <a href="06_seance6.html">Séance 6</a> sont alors plus adaptés.</p>
+</div></details>
+
+<h3 id="ex1-q4">Question 4 — Les conditions KKT du Lasso logistique</h3>
+<div class="box methode"><div class="box-h">Comment l'attaquer</div>
+<p>La recette de la Séance 2, inchangée : critère convexe = partie lisse + $\lambda\norm\cdot_1$ ⇒ « $\hb$ minimise » ⇔ $0\in\nabla(\text{partie lisse})(\hb)+\lambda\,\partial\norm{\hb}_1$, puis lecture coordonnée par coordonnée.</p>
+</div>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>La partie lisse est $-\ell_n$, de gradient $-X\T(Y-\mu(\beta))$ (question 1(d)). Le sous-différentiel de $\abs{\cdot}$ en 0 est $[-1,1]$.</p></div></details>
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<ol class="steps">
+<li>$G(\beta)=-\ell_n(\beta)+\lambda\norm\beta_1$ est convexe.<span class="why">$-\ell_n$ est convexe (question 1(d)) et une norme est convexe ; une somme de fonctions convexes est convexe.</span></li>
+<li>$$\hb\text{ minimise }G\iff0\in-\nabla\ell_n(\hb)+\lambda\,\partial\norm{\hb}_1\iff X\T(Y-\hat\mu)\in\lambda\,\partial\norm{\hb}_1$$<span class="why">règle « 0 dans le sous-différentiel » pour une fonction convexe, et règle de la somme (la partie $-\ell_n$ est dérivable) ; puis $\nabla\ell_n(\hb)=X\T(Y-\hat\mu)$ avec $\hat\mu_i=\sigma(X_i\T\hb)$.</span></li>
+<li>$$\begin{cases}X_j\T(Y-\hat\mu)=\lambda\,\sgn(\hb_j)&\text{si }\hb_j\neq0,\\[2pt]\abs{X_j\T(Y-\hat\mu)}\le\lambda&\text{si }\hb_j=0,\end{cases}\qquad\hat\mu_i=\sigma(X_i\T\hb)=\frac{e^{X_i\T\hb}}{1+e^{X_i\T\hb}}$$<span class="why">$\partial\norm\beta_1$ est le produit des $\partial\abs{\cdot}(\beta_j)$ : $\{\sgn(\beta_j)\}$ si $\beta_j\neq0$, $[-1,1]$ sinon. Ici $X_j$ est la <strong>colonne</strong> $j$.</span></li>
+</ol>
+<p><strong>Lecture.</strong> Comme en régression linéaire, mais avec le <strong>résidu</strong> $Y-\hat\mu$ (observation moins probabilité prédite) : la « corrélation » de chaque variable avec le résidu est plafonnée à $\lambda$, et les variables actives sont collées au plafond, avec le signe de leur coefficient. Ce qui change par rapport au linéaire : $\hat\mu=\sigma(X\hb)$ dépend <strong>non linéairement</strong> de $\hb$, donc pas de formule même en design orthogonal, et il faut un algorithme itératif.</p>
+<p><strong>Conséquence : $\lambda_{\max}$.</strong> En $\hb=0$, $\hat\mu_i=\sigma(0)=\frac12$ pour tout $i$ ; seule la seconde ligne s'applique, donc</p>
+$$\hb=0\text{ est solution}\iff\lambda\ge\lambda_{\max}=\Big\|X\T\big(Y-\tfrac12\mathbf 1\big)\Big\|_\infty$$
+<p>(sans constante dans le modèle ; avec une constante non pénalisée et $0<\bar Y<1$, elle s'ajuste seule à $\hat\mu_i=\bar Y$ et $\lambda_{\max}=\norm{X\T(Y-\bar Y\mathbf 1)}_\infty$).</p>
+<div class="box exemple"><div class="box-h">Exemple chiffré — le Lasso existe là où l'EMV n'existe pas</div>
+<p>Mêmes quatre points séparables qu'à la question 2 (un coefficient, pas de constante). $\lambda_{\max}=\abs{\sum_ix_i(y_i-\frac12)}=\abs{1+\frac12+\frac12+1}=3$. Pour $\lambda<3$, la solution est $\hb>0$ et vérifie $\sum_i(y_i-\sigma(\hb x_i))x_i=\lambda$ :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>$\lambda$</th><th>2,9</th><th>2</th><th>1</th><th>0,5</th><th>$\to0$</th></tr></thead>
+<tbody><tr><td>$\hb^L(\lambda)$</td><td>0,0400</td><td>0,4196</td><td>1,0120</td><td>1,5874</td><td>$\to+\infty$</td></tr></tbody></table></div>
+<p>Pour tout $\lambda>0$, la pénalité rend le critère coercif : le Lasso existe, alors que l'EMV ($\lambda=0$) n'existe pas. Quand $\lambda\to0$, $\hb^L(\lambda)$ part à l'infini, comme on s'y attend.</p>
+</div>
+<p>Comparez avec la diapo <span class="ref">Cours5 enrichi · p. 28</span>, qui écrit les mêmes conditions pour le critère normalisé $L_n=-\frac1n\ell_n$ : on y lit $\frac1nX_j\T(y-\hat\mu)$, le $\frac1n$ venant de la normalisation.</p>
+</div></details>
+
+<div class="box reflexe"><div class="box-h">À retenir de l'exercice 1</div>
+<ul>
+<li>GLM canonique : $\nabla\ell_n=X\T(Y-\mu)$, $\nabla^2\ell_n=-X\T WX$ avec $W=\diag(\Var Y_i)$ ⇒ $\ell_n$ concave.</li>
+<li>Concave n'implique pas « maximum atteint » : séparation parfaite (automatique si $p\ge n$ et $X$ de rang $n$) ⇒ pas d'EMV. La pénalité (Ridge ou Lasso) rétablit l'existence.</li>
+<li>Ridge logistique : unique, sans formule, calculé par Newton/IRLS. Lasso logistique : KKT avec le résidu $Y-\hat\mu$ et $\lambda_{\max}=\norm{X\T(Y-\frac12\mathbf1)}_\infty$.</li>
+<li>Objectif de sélection ⇒ Lasso.</li>
+</ul></div>
+
+<h2 id="ex2">Exercice 2 — Lasso logistique : une inégalité oracle</h2>
+
+<div class="box enonce"><div class="box-h">Énoncé <span class="ref">TD3 · exercice 2</span></div>
+<p>Soient $(z_1,Y_1),\dots,(z_n,Y_n)\in\R^p\times\{0,1\}$ $n$ observations. Nous considérons le modèle logistique défini de la façon suivante :</p>
+$$\P(Y_i=1)=\pi(z_i\T\beta_0)=\frac{\exp(z_i\T\beta_0)}{1+\exp(z_i\T\beta_0)},$$
+<p>où $z_1,\dots,z_n$ sont supposés déterministes et $\beta_0\in\R^p$ le paramètre inconnu à estimer. Nous introduisons les notations suivantes : $X=(z_{ij})_{1\le i\le n,1\le j\le p}$ ; $J(\beta)=\{j\in\{1,\dots,p\}:\beta_j\neq0\}$. Nous définissons le risque empirique (ou fonction de perte) pour le modèle logistique :</p>
+$$\hat R(\beta)=\frac1n\sum_{i=1}^n\log\big(1+\exp(z_i\T\beta)\big)-Y_iz_i\T\beta$$
+<p>et l'estimateur Lasso :</p>
+$$\hb_L=\argmin_{\beta\in\R^p}\big\{\hat R(\beta)+\lambda\norm\beta_1\big\},$$
+<p>avec $\lambda>0$ paramètre de régularisation. On suppose qu'il existe une constante $0<c<\infty$ telle que $\max_{1\le i\le n}\max_{1\le j\le p}\abs{z_{ij}}\le c$.</p>
+<ol>
+<li>Justifier le choix de $\hat R(\beta)$ dans la définition de l'estimateur Lasso.</li>
+<li>On définit $R(\beta)=\E[\hat R(\beta)]$. Montrer que $$R(\beta)=\hat R(\beta)+\frac1n\sum_{i=1}^nz_i\T\beta\big(Y_i-\pi(z_i\T\beta_0)\big).$$</li>
+<li>On définit le processus empirique suivant : pour tout $j\in\{1,\dots,p\}$, $$V_j=\frac1n\sum_{i=1}^nz_{ij}\eps_i,\qquad\text{avec }\eps_i=Y_i-\E(Y_i).$$
+<ol type="a">
+<li>Montrer que pour tout $\beta\in\R^p$, $$R(\hb_L)\le R(\beta)+\sum_{j=1}^p(\hb_{L,j}-\beta_j)V_j+\lambda\norm\beta_1-\lambda\norm{\hb_L}_1.$$</li>
+<li>Introduire un événement $\cA$ bien choisi dont on calculera la probabilité à l'aide de l'inégalité de Hoeffding définie ci-dessous. <em>Inégalité de Hoeffding</em> : soient $X_1,\dots,X_n$ des variables aléatoires indépendantes telles que $X_i\in[a_i,b_i]$ presque sûrement. On pose $S=\sum_{i=1}^n(X_i-\E(X_i))$. Alors pour tout $x>0$, $$\P(\abs S\ge x)\le2\exp\Big(\frac{-2x^2}{\sum_{i=1}^n(b_i-a_i)^2}\Big).$$</li>
+<li>En déduire que pour $\lambda=A\sqrt{\frac{\log p}n}$ avec $A>\sqrt2c$, avec probabilité au moins $1-2p^{1-A^2/2c^2}$, $$R(\hb_L)-R(\beta_0)\le\inf_{\beta\in\R^p}\Big\{R(\beta)-R(\beta_0)+2A\norm\beta_1\sqrt{\frac{\log p}n}\Big\}.$$</li>
+<li>Commenter ce résultat.</li>
+</ol></li>
+</ol>
+<p><strong>Remarque :</strong> sous l'hypothèse RE$(s,3)$, $$\kappa(s,c_0)=\min_{\substack{J\subset\{1,\dots,M\}\\\abs J\le s}}\ \min_{\substack{\delta\neq0\\\norm{\delta_{J^c}}_1\le3\norm{\delta_J}_1}}\frac{\norm{X\delta}_2}{\sqrt n\norm{\delta_J}_2}>0,$$ et en supposant que $\abs{J(\beta_0)}\le s$, pour $1\le s\le p$, on peut montrer (Kwemou, 2016), avec probabilité supérieure à $1-2p^{1-A^2/2c_2}$, que $$\begin{gathered}R(\hb_L)-R(\beta_0)\le\frac{9sA^2}{\kappa^2(s,3)C}\frac{\log p}n,\\\norm{X\hb_L-X\beta_0}_n^2\le\frac{9s^2A^2}{\kappa^2(s,3)C^2}\frac{\log p}n,\\\norm{\hb_L-\beta_0}_1\le\frac{12sA}{\kappa^2(s,3)C}\sqrt{\frac{\log p}n},\end{gathered}$$ où $C>0$ est telle que $\max_{1\le i\le n}z_i\T\beta\le C$ pour tout $\beta\in\R^p$.</p>
+</div>
+
+<div class="box idee"><div class="box-h">De quoi parle cet exercice ?</div>
+<p>C'est le « <em>Tutorial: an oracle inequality for the logistic Lasso</em> » annoncé par la diapo <span class="ref">Cours5 enrichi · p. 35</span>. On démontre pour le Lasso logistique l'analogue de l'<a href="04_seance4.html#oracle-lente">inégalité oracle lente</a> de la Séance 4 : <strong>la preuve est la même, étape par étape</strong>. Une seule chose change : le « bruit » $\eps_i=Y_i-\E Y_i$ n'est plus gaussien mais <strong>borné</strong> ($Y_i\in\{0,1\}$), et c'est l'inégalité de Hoeffding qui remplace la queue gaussienne.</p>
+<div class="table-wrap"><table>
+<thead><tr><th></th><th>Séance 4 (régression gaussienne)</th><th>TD3, exercice 2 (logistique)</th></tr></thead>
+<tbody>
+<tr><td>Perte empirique</td><td>$\frac1n\norm{y-X\beta}^2$</td><td>$\hat R(\beta)=\frac1n\sum_i\big[\log(1+e^{z_i\T\beta})-Y_iz_i\T\beta\big]$</td></tr>
+<tr><td>Bruit</td><td>$\eps_i\sim\N(0,\sigma^2)$</td><td>$\eps_i=Y_i-\pi(z_i\T\beta_0)\in[-1,1]$</td></tr>
+<tr><td>Terme aléatoire à contrôler</td><td>$\frac2n\eps\T X(\hb-\beta)$</td><td>$\sum_j(\hb_j-\beta_j)V_j=\frac1n\eps\T X(\hb-\beta)$</td></tr>
+<tr><td>Outil probabiliste</td><td>queue gaussienne + borne de l'union</td><td>Hoeffding + borne de l'union</td></tr>
+<tr><td>Choix de $\lambda$</td><td>$2\sigma\sqrt{2(x+\log M)/n}$</td><td>$A\sqrt{\log p/n}$, $A>\sqrt2\,c$</td></tr>
+<tr><td>Conclusion</td><td>$\norm{f_{\hb}-f}_n^2\le\inf_\beta\{\norm{f_\beta-f}_n^2+2\lambda\norm\beta_1\}$</td><td>$R(\hb)-R(\beta_0)\le\inf_\beta\{R(\beta)-R(\beta_0)+2\lambda\norm\beta_1\}$</td></tr>
+<tr><td>Probabilité</td><td>$\ge1-2e^{-x}$</td><td>$\ge1-2p^{1-A^2/(2c^2)}$</td></tr>
+</tbody></table></div>
+<p>Notations : $\pi=\sigma$ est la sigmoïde ; $z_i\in\R^p$ joue le rôle du $x_i$ de la Séance 5 ; $X$ a pour lignes les $z_i\T$ et pour colonnes $X_j=(z_{1j},\dots,z_{nj})\T$. On écrit $\hb$ pour $\hb_L$.</p>
+</div>
+
+<h3 id="ex2-q1">Question 1 — Pourquoi ce risque empirique $\hat R$ ?</h3>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Comparez $\hat R(\beta)$ à la log-vraisemblance $\ell_n(\beta)$ de l'exercice 1, question 1(c).</p></div></details>
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<ol>
+<li><strong>C'est la log-vraisemblance négative normalisée.</strong> D'après l'exercice 1 (1c) avec $X_i=z_i$ : $$\hat R(\beta)=\frac1n\sum_{i=1}^n\Big[\log\big(1+e^{z_i\T\beta}\big)-Y_iz_i\T\beta\Big]=-\frac1n\ell_n(\beta).$$ Minimiser $\hat R$, c'est maximiser la vraisemblance : avec $\lambda=0$ on retrouverait l'EMV, et le Lasso est un <strong>maximum de vraisemblance pénalisé</strong>, exactement le Lasso des GLM de la diapo <span class="ref">Cours5 enrichi · p. 27</span> ($L_n=-\frac1n\ell_n$).</li>
+<li><strong>C'est un risque empirique pour la perte logistique.</strong> Avec le codage $\tilde Y_i=2Y_i-1\in\{-1,1\}$ du tableau (<span class="ref">Cours5 enrichi · p. 32–33</span>), $\log(1+e^{\eta})-Y\eta=\log(1+e^{-\tilde Y\eta})$ (si $Y=1$ : $\log(1+e^\eta)-\eta=\log(e^{-\eta}+1)$ ; si $Y=0$ : $\log(1+e^\eta)$). Donc $\hat R(\beta)=\frac1n\sum_if(\tilde Y_iz_i\T\beta)$ avec $f(t)=\log(1+e^{-t})$ : une <strong>moyenne de pertes</strong>, petite quand le signe de $z_i\T\beta$ s'accorde avec $\tilde Y_i$ avec une grande marge.</li>
+<li><strong>Il est convexe et lisse</strong> (exercice 1, 1(d)) : le problème pénalisé est convexe, donc calculable, et ses solutions sont caractérisées par les conditions KKT.</li>
+<li><strong>Le facteur $\frac1n$</strong> fait de $\hat R$ une moyenne dont l'échelle ne dépend pas de $n$ : c'est ce qui permet de choisir $\lambda$ de l'ordre de $\sqrt{\log p/n}$, comme dans les Séances 3 et 4.</li>
+</ol>
+<p>Existence : $\hat R\ge0$ (chaque terme est un $f(\cdot)>0$) et $\lambda\norm\beta_1\to\infty$, donc le critère est coercif et continu : $\hb_L$ existe (<a href="00_rappels.html#existence">rappel</a>) ; il n'est pas forcément unique (comme pour le Lasso linéaire si $p>n$), d'où le « $\in\argmin$ » qu'il faudrait écrire.</p>
+</div></details>
+
+<h3 id="ex2-q2">Question 2 — Le risque $R(\beta)=\E[\hat R(\beta)]$</h3>
+<div class="box methode"><div class="box-h">Comment l'attaquer</div>
+<p>Dans $\hat R(\beta)$, seules les $Y_i$ sont aléatoires (les $z_i$ et $\beta$ sont fixés), et elles apparaissent <strong>linéairement</strong> : l'espérance se calcule en remplaçant $Y_i$ par $\E Y_i=\pi(z_i\T\beta_0)$.</p>
+</div>
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<ol class="steps">
+<li>$$R(\beta)=\E[\hat R(\beta)]=\frac1n\sum_{i=1}^n\Big[\log\big(1+e^{z_i\T\beta}\big)-\pi(z_i\T\beta_0)\,z_i\T\beta\Big]$$<span class="why">linéarité de l'espérance ; $\log(1+e^{z_i\T\beta})$ est déterministe ; $\E[Y_i]=\P(Y_i=1)=\pi(z_i\T\beta_0)$.</span></li>
+<li>$$R(\beta)-\hat R(\beta)=\frac1n\sum_{i=1}^n\big(Y_i-\pi(z_i\T\beta_0)\big)z_i\T\beta$$<span class="why">on soustrait la définition de $\hat R(\beta)$ : les termes en $\log$ disparaissent.</span></li>
+</ol>
+<p>C'est l'égalité demandée. Lecture : $R$ est <strong>déterministe</strong> (le « vrai » risque, inconnu car il dépend de $\beta_0$), $\hat R$ est aléatoire, et leur écart est une fonction <strong>linéaire</strong> de $\beta$, d'espérance nulle.</p>
+</div></details>
+<details class="fold more"><summary>Pour aller plus loin — l'excès de risque est une divergence de Kullback–Leibler moyenne</summary><div class="fold-body">
+<p>Pour deux lois de Bernoulli, $\mathrm{KL}\big(\mathcal B(p)\,\|\,\mathcal B(q)\big)=p\log\frac pq+(1-p)\log\frac{1-p}{1-q}\ge0$, nulle si et seulement si $p=q$. Avec $q=\sigma(\eta)$ on a $\log q=\eta-\log(1+e^\eta)$ et $\log(1-q)=-\log(1+e^\eta)$, donc</p>
+$$-\big[p\log q+(1-p)\log(1-q)\big]=\log(1+e^\eta)-p\,\eta,$$
+<p>qui est exactement le terme $i$ de $R(\beta)$ avec $p=\pi_i^0:=\pi(z_i\T\beta_0)$ et $\eta=z_i\T\beta$. Le membre de gauche est l'« entropie croisée », égale à l'entropie de $\mathcal B(p)$ plus $\mathrm{KL}(p\|q)$. En soustrayant la même quantité pour $\beta=\beta_0$ (où $q=p$ et KL = 0) :</p>
+$$R(\beta)-R(\beta_0)=\frac1n\sum_{i=1}^n\mathrm{KL}\Big(\mathcal B\big(\pi(z_i\T\beta_0)\big)\,\Big\|\,\mathcal B\big(\pi(z_i\T\beta)\big)\Big)\ \ge0.$$
+<p>Deux conséquences : $\beta_0$ <strong>minimise</strong> $R$, et la quantité $R(\hb)-R(\beta_0)$ de la question 3 (l'« excès de risque ») mesure, en moyenne sur les individus, à quel point les probabilités prédites par $\hb$ diffèrent des vraies. (Vérification numérique avec un seul individu, $z=1$, $\beta_0=0{,}5$, $\beta=1{,}5$ : $R(\beta)-R(\beta_0)=\log(1+e^{1{,}5})-\log(1+e^{0{,}5})-\sigma(0{,}5)\approx0{,}10488$ et $\mathrm{KL}\big(\mathcal B(\sigma(0{,}5))\,\|\,\mathcal B(\sigma(1{,}5))\big)\approx0{,}10488$.)</p>
+</div></details>
+
+<h3 id="ex2-q3a">Question 3(a) — L'inégalité de base</h3>
+<div class="box methode"><div class="box-h">Comment l'attaquer</div>
+<p>Le réflexe de toutes les preuves de garanties du Lasso : $\hb$ minimise le critère, donc son critère est plus petit que celui de n'importe quel concurrent $\beta$ (« inégalité de base », Séances <a href="03_seance3.html">3</a> et <a href="04_seance4.html#oracle-lente">4</a>). Puis on remplace $\hat R$ par $R$ grâce à la question 2.</p>
+</div>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Réécrivez la question 2 sous la forme $\hat R(\beta)=R(\beta)-\sum_j\beta_jV_j$.</p></div></details>
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\frac1n\sum_{i=1}^nz_i\T\beta\,\eps_i=\frac1n\sum_{i=1}^n\sum_{j=1}^pz_{ij}\beta_j\eps_i=\sum_{j=1}^p\beta_j\Big(\frac1n\sum_{i=1}^nz_{ij}\eps_i\Big)=\sum_{j=1}^p\beta_jV_j$$<span class="why">on développe $z_i\T\beta=\sum_jz_{ij}\beta_j$ et on échange les deux sommes finies ; $\eps_i=Y_i-\pi(z_i\T\beta_0)$.</span></li>
+<li>$$\hat R(\beta)=R(\beta)-\sum_{j=1}^p\beta_jV_j\qquad\text{pour tout }\beta$$<span class="why">c'est la question 2 réécrite avec l'étape 1.</span></li>
+<li>$$\hat R(\hb)+\lambda\norm{\hb}_1\le\hat R(\beta)+\lambda\norm\beta_1$$<span class="why">définition de $\hb$ comme minimiseur du critère, comparé au concurrent $\beta$.</span></li>
+<li>$$R(\hb)-\sum_j\hb_jV_j+\lambda\norm{\hb}_1\le R(\beta)-\sum_j\beta_jV_j+\lambda\norm\beta_1$$<span class="why">on remplace $\hat R$ par l'étape 2, en $\hb$ et en $\beta$ (l'étape 2 vaut pour tout vecteur, y compris le vecteur aléatoire $\hb$).</span></li>
+<li>$$R(\hb)\le R(\beta)+\sum_{j=1}^p(\hb_j-\beta_j)V_j+\lambda\norm\beta_1-\lambda\norm{\hb}_1$$<span class="why">on passe les termes en $V_j$ et $\lambda\norm{\hb}_1$ de l'autre côté. C'est l'inégalité demandée.</span></li>
+</ol>
+<p>Comparez avec la Séance 4 : là-bas, le terme aléatoire était $\frac2n\eps\T X(\hb-\beta)$ ; ici c'est $\sum_j(\hb_j-\beta_j)V_j=\frac1n\eps\T X(\hb-\beta)$ (le facteur 2 venait du carré). Le reste de la preuve va consister à rendre ce terme petit devant $\lambda\norm{\hb-\beta}_1$.</p>
+</div></details>
+
+<h3 id="ex2-q3b">Question 3(b) — Un bon événement, et sa probabilité par Hoeffding</h3>
+<div class="box methode"><div class="box-h">Comment l'attaquer</div>
+<ol>
+<li><strong>Quel événement ?</strong> Le terme aléatoire se majore par Hölder : $\sum_j(\hb_j-\beta_j)V_j\le\max_j\abs{V_j}\,\norm{\hb-\beta}_1$. On veut donc que $\max_j\abs{V_j}$ soit petit devant $\lambda$ : on pose $$\cA=\bigcap_{j=1}^p\Big\{\abs{V_j}\le\frac\lambda2\Big\}.$$ (Pourquoi $\lambda/2$ et pas $\lambda$ : voir la fin de la solution.)</li>
+<li><strong>Chaque $V_j$</strong> est $\frac1n\times$ une somme de variables <strong>indépendantes, bornées, centrées</strong> : c'est le cadre de Hoeffding (<a href="00_rappels.html#hoeffding">rappel</a>).</li>
+<li><strong>Tous les $j$ à la fois</strong> : borne de l'union (<a href="00_rappels.html#queues">rappel</a>), comme en Séance 4.</li>
+</ol>
+</div>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Appliquez Hoeffding à $X_i:=z_{ij}Y_i$ (pour $j$ fixé). Dans quel intervalle vit $z_{ij}Y_i$ quand $Y_i\in\{0,1\}$ ? Et que vaut $\sum_i(X_i-\E X_i)$ ?</p></div></details>
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<p>Fixons $j\in\{1,\dots,p\}$.</p>
+<ol class="steps">
+<li>$$X_i:=z_{ij}Y_i,\qquad X_i-\E X_i=z_{ij}(Y_i-\E Y_i)=z_{ij}\eps_i,\qquad S_j:=\sum_{i=1}^n(X_i-\E X_i)=nV_j$$<span class="why">$z_{ij}$ est déterministe, donc sort de l'espérance ; puis définition de $V_j$.</span></li>
+<li>Les $X_i$ sont indépendantes et $X_i\in[a_i,b_i]$ avec $a_i=\min(0,z_{ij})$, $b_i=\max(0,z_{ij})$, donc $b_i-a_i=\abs{z_{ij}}\le c$.<span class="why">les $Y_i$ sont indépendantes ; $Y_i\in\{0,1\}$ donc $z_{ij}Y_i\in\{0,z_{ij}\}$, contenu dans l'intervalle entre $0$ et $z_{ij}$ ; hypothèse $\abs{z_{ij}}\le c$.</span></li>
+<li>$$\P(\abs{S_j}\ge x)\le2\exp\Big(-\frac{2x^2}{\sum_iz_{ij}^2}\Big)\le2\exp\Big(-\frac{2x^2}{nc^2}\Big)\qquad(x>0)$$<span class="why">Hoeffding, puis $\sum_i(b_i-a_i)^2=\sum_iz_{ij}^2\le nc^2$ (un dénominateur plus grand rend l'exponentielle plus grande).</span></li>
+<li>$$\P\Big(\abs{V_j}>\frac\lambda2\Big)=\P\Big(\abs{S_j}>\frac{n\lambda}2\Big)\le2\exp\Big(-\frac{2(n\lambda/2)^2}{nc^2}\Big)=2\exp\Big(-\frac{n\lambda^2}{2c^2}\Big)$$<span class="why">$\abs{V_j}>\lambda/2\iff\abs{S_j}>n\lambda/2$ ; puis l'étape 3 avec $x=n\lambda/2$ (et $\P(\abs S>x)\le\P(\abs S\ge x)$) ; $2\cdot\frac{n^2\lambda^2}{4}\cdot\frac1{nc^2}=\frac{n\lambda^2}{2c^2}$.</span></li>
+<li>$$\P(\cA^c)=\P\Big(\exists j:\ \abs{V_j}>\frac\lambda2\Big)\le\sum_{j=1}^p\P\Big(\abs{V_j}>\frac\lambda2\Big)\le2p\,\exp\Big(-\frac{n\lambda^2}{2c^2}\Big)$$<span class="why">borne de l'union ; aucune indépendance entre les $V_j$ n'est nécessaire (ils sont d'ailleurs fortement dépendants : ils utilisent tous les mêmes $Y_i$).</span></li>
+</ol>
+<p><strong>Pourquoi $\lambda/2$ ?</strong> Deux raisons, l'une immédiate, l'autre pour la suite.</p>
+<ul>
+<li>C'est exactement l'événement qui donne la probabilité $1-2p^{1-A^2/2c^2}$ annoncée à la question (c) (calcul ci-dessous).</li>
+<li>Il laisse une <strong>marge</strong> : sur $\cA$, le terme aléatoire ne consomme que la moitié de la pénalité. Cette marge est inutile pour la borne lente, mais c'est elle qui fournit le <strong>cône</strong> nécessaire aux vitesses rapides de la remarque (voir plus bas). C'est le même mécanisme que dans le théorème BRT de la <a href="03_seance3.html">Séance 3</a> : le bruit n'y consomme que $r\norm\delta_1$ alors que la pénalité vaut $2r\norm\beta_1$.</li>
+</ul>
+<p>(Avec l'événement $\{\abs{V_j}\le\lambda\}$, la question (c) marcherait aussi, avec une probabilité même meilleure, $1-2p^{1-2A^2/c^2}$, mais sans cône.)</p>
+</div></details>
+<div class="box intu"><div class="box-h">Intuition — Hoeffding, c'est une « queue gaussienne pour variables bornées »</div>
+<p>Une variable à valeurs dans un intervalle de longueur $\ell$ a une variance au plus $\ell^2/4$, et sa somme centrée se comporte au plus comme une gaussienne de cette variance : $\P(\abs S\ge x)\le2e^{-x^2/(2v)}$ avec $v=\sum_i(b_i-a_i)^2/4$ — c'est exactement la forme de Hoeffding. Ici $v\le nc^2/4$ : la constante $c$ joue le rôle de $\sigma$ dans la Séance 4. Pas besoin de bruit gaussien : il suffit que les $Y_i$ soient bornées.</p>
+</div>
+
+<h3 id="ex2-q3c">Question 3(c) — L'inégalité oracle</h3>
+<div class="box methode"><div class="box-h">Comment l'attaquer</div>
+<p>Deux calculs indépendants : (1) la probabilité, en remplaçant $\lambda$ par sa valeur dans la question (b) ; (2) sur $\cA$, Hölder puis l'inégalité triangulaire, exactement comme dans la preuve de la Séance 4 : les termes en $\norm{\hb}_1$ s'éliminent.</p>
+</div>
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<p><strong>La probabilité.</strong></p>
+<ol class="steps">
+<li>$$\frac{n\lambda^2}{2c^2}=\frac{n}{2c^2}\cdot A^2\frac{\log p}n=\frac{A^2}{2c^2}\log p$$<span class="why">$\lambda=A\sqrt{\log p/n}$.</span></li>
+<li>$$\P(\cA^c)\le2p\,e^{-\frac{A^2}{2c^2}\log p}=2p\cdot p^{-\frac{A^2}{2c^2}}=2p^{1-\frac{A^2}{2c^2}}$$<span class="why">question (b) ; $e^{-a\log p}=p^{-a}$.</span></li>
+<li>$A>\sqrt2\,c\iff\frac{A^2}{2c^2}>1\iff1-\frac{A^2}{2c^2}<0$.<span class="why">c'est la condition pour que $2p^{1-A^2/2c^2}\to0$ quand $p\to\infty$ (et soit petit dès que $p$ est grand).</span></li>
+</ol>
+<p><strong>L'inégalité, sur $\cA$.</strong> Fixons un concurrent $\beta\in\R^p$ quelconque.</p>
+<ol class="steps">
+<li>$$\sum_{j=1}^p(\hb_j-\beta_j)V_j\le\max_j\abs{V_j}\sum_j\abs{\hb_j-\beta_j}\le\frac\lambda2\norm{\hb-\beta}_1$$<span class="why">Hölder ($\abs{a\T b}\le\norm a_\infty\norm b_1$, <a href="00_rappels.html#inegalites-normes">rappel</a>), puis la définition de $\cA$.</span></li>
+<li>$$\le\frac\lambda2\norm{\hb}_1+\frac\lambda2\norm\beta_1$$<span class="why">inégalité triangulaire : $\norm{\hb-\beta}_1\le\norm{\hb}_1+\norm\beta_1$.</span></li>
+<li>$$R(\hb)\le R(\beta)+\frac\lambda2\norm{\hb}_1+\frac\lambda2\norm\beta_1+\lambda\norm\beta_1-\lambda\norm{\hb}_1=R(\beta)+\frac{3\lambda}2\norm\beta_1-\frac\lambda2\norm{\hb}_1$$<span class="why">on reporte dans la question (a).</span></li>
+<li>$$R(\hb)-R(\beta_0)\le R(\beta)-R(\beta_0)+\frac{3\lambda}2\norm\beta_1\le R(\beta)-R(\beta_0)+2\lambda\norm\beta_1$$<span class="why">on retranche $R(\beta_0)$ des deux côtés et on oublie $-\frac\lambda2\norm{\hb}_1\le0$ ; puis $\frac32\le2$.</span></li>
+<li>$$\text{Sur }\cA:\quad R(\hb)-R(\beta_0)\le\inf_{\beta\in\R^p}\Big\{R(\beta)-R(\beta_0)+2A\norm\beta_1\sqrt{\frac{\log p}n}\Big\}$$<span class="why">l'événement $\cA$ ne dépend pas de $\beta$ : l'étape 4 vaut pour tous les $\beta$ <em>simultanément</em>, donc pour leur inf ; et $2\lambda=2A\sqrt{\log p/n}$.</span></li>
+</ol>
+<p>Avec $\P(\cA)\ge1-2p^{1-A^2/2c^2}$, c'est le résultat demandé (on a même obtenu la constante $\frac32$ au lieu de 2).</p>
+</div></details>
+
+<h3 id="ex2-q3d">Question 3(d) — Commenter le résultat</h3>
+<details class="fold sol"><summary>Commentaire détaillé</summary><div class="fold-body">
+<ul>
+<li><strong>C'est une inégalité oracle.</strong> Le Lasso fait presque aussi bien que <em>le meilleur compromis</em>, parmi tous les $\beta$, entre l'excès de risque de $\beta$ (son « erreur d'approximation ») et sa taille $\norm\beta_1$. Le concurrent idéal dépend de $\beta_0$, inconnu : c'est un oracle. Avec $\beta=\beta_0$ : $$R(\hb)-R(\beta_0)\le2A\norm{\beta_0}_1\sqrt{\frac{\log p}n},$$ qui tend vers 0 dès que $\norm{\beta_0}_1=o\big(\sqrt{n/\log p}\big)$ : le Lasso logistique est consistant en excès de risque (en KL moyen), même si $p\gg n$.</li>
+<li><strong>Elle est « lente ».</strong> Le prix décroît en $1/\sqrt n$ (doubler $n$ ne divise la borne que par $\sqrt2$) et dépend de $\norm\beta_1$, pas du nombre de coefficients non nuls : comme l'inégalité lente de la Séance 4, elle ne « voit » pas vraiment la parcimonie.</li>
+<li><strong>Presque aucune hypothèse.</strong> Rien sur les corrélations entre variables : seulement $\abs{z_{ij}}\le c$. Le $\log p$ est, encore une fois, le prix du maximum sur $p$ variables (borne de l'union).</li>
+<li><strong>Le rôle de $A$.</strong> Grand $A$ ⇒ probabilité plus proche de 1, mais pénalité et borne plus grandes : un compromis. Le seuil $A>\sqrt2\,c$ est l'analogue du $A>2\sqrt2$ du théorème BRT (Séance 3).</li>
+<li><strong>Les constantes sont prudentes.</strong> La simulation ci-dessous montre que la borne est vraie mais large, et que le $\lambda$ théorique rétrécit fortement les coefficients ; en pratique on choisit $\lambda$ par validation croisée.</li>
+</ul>
+</div></details>
+
+<details class="fold more"><summary>Pour aller plus loin — une simulation</summary><div class="fold-body">
+<p>Modèle : $p=200$, $z_{ij}$ uniformes sur $[-1,1]$ (donc $c=1$), $\beta_0=(2,-2,1{,}5,-1,0,\dots,0)$, $\norm{\beta_0}_1=6{,}5$ ; $A=2$, si bien que $\P(\cA)\ge1-2p^{1-A^2/2}=1-2/200=0{,}99$. Le Lasso logistique est calculé par gradient proximal accéléré (chaque pas est un pas de gradient sur $\hat R$ suivi d'un seuillage doux), et le risque $R$ est calculé exactement (on connaît $\beta_0$).</p>
+<pre><code>import numpy as np, math
+rng = np.random.default_rng(2)
+sig  = lambda t: 1/(1 + np.exp(-t))
+soft = lambda v, t: np.sign(v)*np.maximum(np.abs(v) - t, 0)
+
+def lasso_logistique(Z, Y, lam, iters=3000):      # gradient proximal accéléré (FISTA)
+    n, p = Z.shape
+    L = np.linalg.norm(Z, 2)**2/(4*n)               # constante de Lipschitz du gradient de R̂
+    b = np.zeros(p); bb = b.copy(); t = 1
+    for _ in range(iters):
+        g  = Z.T@(sig(Z@bb) - Y)/n                  # gradient de R̂
+        bn = soft(bb - g/L, lam/L)                  # pas proximal = seuillage doux
+        tn = (1 + math.sqrt(1 + 4*t*t))/2
+        bb = bn + (t - 1)/tn*(bn - b); b, t = bn, tn
+    return b
+
+p, c, A = 200, 1.0, 2.0
+b0 = np.zeros(p); b0[:4] = [2, -2, 1.5, -1]
+for n in [1000, 4000, 16000]:
+    Z = rng.uniform(-c, c, (n, p)); pi0 = sig(Z@b0)
+    R = lambda b: np.mean(np.log1p(np.exp(Z@b)) - pi0*(Z@b))   # risque exact
+    lam = A*math.sqrt(math.log(p)/n)
+    Y = (rng.random(n) &lt; pi0).astype(float)
+    bh = lasso_logistique(Z, Y, lam)
+    print(n, lam, R(bh) - R(b0), R(np.zeros(p)) - R(b0), 2*lam*np.abs(b0).sum(),
+          int(np.sum(bh != 0)), np.round(bh[:4], 2))</code></pre>
+<div class="table-wrap"><table>
+<thead><tr><th>$n$</th><th>$\lambda$</th><th>excès de risque $R(\hb)-R(\beta_0)$</th><th>estimateur nul $R(0)-R(\beta_0)$</th><th>borne $2\lambda\norm{\beta_0}_1$</th><th>variables gardées</th></tr></thead>
+<tbody>
+<tr><td class="nowrap">1&nbsp;000</td><td>0,146</td><td>0,223</td><td>0,223</td><td>1,89</td><td>0</td></tr>
+<tr><td class="nowrap">4&nbsp;000</td><td>0,073</td><td>0,150</td><td>0,227</td><td>0,95</td><td>3</td></tr>
+<tr><td class="nowrap">16&nbsp;000</td><td>0,036</td><td>0,061</td><td>0,229</td><td>0,47</td><td>4</td></tr>
+</tbody></table></div>
+<p>Lecture : l'événement $\cA$ a été réalisé à chaque fois et la borne est toujours vérifiée, mais elle est <strong>prudente</strong> (à $n=1000$ elle vaut 1,89 alors que l'estimateur nul fait déjà 0,22). Elle est divisée par 2 quand $n$ est multiplié par 4 (vitesse $1/\sqrt n$). À $n=16\,000$, le Lasso retrouve les 4 bonnes variables, mais ses coefficients $(0{,}93;\,-0{,}91;\,0{,}57;\,-0{,}20)$ sont nettement rétrécis par rapport à $(2;\,-2;\,1{,}5;\,-1)$ : le $\lambda$ théorique est grand. (Une graine différente change légèrement les chiffres, pas les conclusions.)</p>
+</div></details>
+
+<h3 id="ex2-remarque">La remarque : vitesse rapide (Kwemou, 2016)</h3>
+<p>La remarque de l'énoncé annonce des bornes en $s\log p/n$ — la vitesse « rapide » de la Séance 3 — sous la condition RE$(s,3)$ et une hypothèse supplémentaire sur les prédicteurs linéaires. Elle est donnée <strong>sans démonstration</strong> (référence : M. Kwemou, <em>ESAIM: Probability and Statistics</em> 20, 2016) ; les bornes sont recopiées telles quelles dans l'énoncé ci-dessus.</p>
+<div class="box intu"><div class="box-h">Pourquoi une hypothèse de plus qu'en régression linéaire ?</div>
+<p>La diapo <span class="ref">Cours5 enrichi · p. 35</span> l'explique : en régression linéaire la hessienne vaut $\frac1nX\T X$ partout, alors qu'en logistique elle vaut $\frac1nX\T W(\beta)X$ avec $W_{ii}=\pi_i(1-\pi_i)\le\frac14$, et $W_{ii}\to0$ quand $\abs{z_i\T\beta}\to\infty$. La courbure de la perte peut donc disparaître ; pour transformer « $R(\hb)-R(\beta_0)$ petit » en « $\hb$ proche de $\beta_0$ », il faut qu'elle reste minorée là où l'on travaille, d'où une borne $C$ sur les prédicteurs linéaires $z_i\T\beta$.</p>
+</div>
+<details class="fold more"><summary>D'où vient le « 3 » de RE$(s,3)$ — c'est la marge du $\lambda/2$</summary><div class="fold-body">
+<p>Prenons $\beta=\beta_0$ dans la question (a), notons $\delta=\hb-\beta_0$ et $J_0=J(\beta_0)$. Sur $\cA$ : $\sum_j\delta_jV_j\le\frac\lambda2\norm\delta_1$. Comme $\beta_0$ minimise $R$ (voir la KL plus haut), $R(\hb)-R(\beta_0)\ge0$, donc</p>
+$$0\le\frac\lambda2\norm\delta_1+\lambda\norm{\beta_0}_1-\lambda\norm{\hb}_1\le\frac\lambda2\big(\norm{\delta_{J_0}}_1+\norm{\delta_{J_0^c}}_1\big)+\lambda\big(\norm{\delta_{J_0}}_1-\norm{\delta_{J_0^c}}_1\big),$$
+<p>où l'on a utilisé, comme en Séance 3, $\norm{\beta_0}_1-\norm{\hb}_1\le\norm{\delta_{J_0}}_1-\norm{\delta_{J_0^c}}_1$ (découpage selon le support et inégalité triangulaire). En réarrangeant : $\frac\lambda2\norm{\delta_{J_0^c}}_1\le\frac{3\lambda}2\norm{\delta_{J_0}}_1$, c'est-à-dire</p>
+$$\norm{\delta_{J_0^c}}_1\le3\norm{\delta_{J_0}}_1 :$$
+<p>l'erreur est dans le cône de constante 3, exactement celui de RE$(s,3)$. Avec l'événement $\{\abs{V_j}\le\lambda\}$, on obtiendrait seulement $0\le2\lambda\norm{\delta_{J_0}}_1$ : aucun cône. C'est la raison profonde du « bien choisi ».</p>
+</div></details>
+<div class="box remarque"><div class="box-h">Notes sur la remarque de l'énoncé</div>
+<p>Nous n'avons pas pu consulter l'article ; les points suivants sont donc des <strong>questions à vérifier</strong>, pas des corrections certaines (sauf les deux premiers, qui sont des coquilles évidentes).</p>
+<ul>
+<li>« $J\subset\{1,\dots,M\}$ » : il faut lire $\{1,\dots,p\}$ (le $M$ vient du dictionnaire de la Séance 4). De même la quantité notée $\kappa(s,c_0)$ est définie avec la constante 3 : c'est $\kappa(s,3)$.</li>
+<li>« $1-2p^{1-A^2/2c_2}$ » : lire $1-2p^{1-A^2/2c^2}$, la probabilité de la question (c).</li>
+<li>« $\max_iz_i\T\beta\le C$ pour tout $\beta\in\R^p$ » est impossible tel quel : dès qu'un $z_i\neq0$, $z_i\T\beta$ n'est pas borné sur $\R^p$. La condition doit porter sur un ensemble borné de paramètres (contenant $\beta_0$ et $\hb_L$).</li>
+<li>Telle qu'elle est définie, $C$ est une borne <em>supérieure</em> sur les prédicteurs linéaires, mais elle apparaît au <em>dénominateur</em> des bornes : plus $C$ serait grand, meilleures seraient les bornes, ce qui va contre l'intuition de la courbure (plus $\abs{z_i\T\beta}$ peut être grand, plus $W_{ii}$ peut être petit). Il est probable que la constante de l'article soit une borne inférieure de la courbure (qui dépend d'une telle borne) — à vérifier dans l'article.</li>
+<li>La deuxième borne fait apparaître $s^2$, alors que les deux autres (et le théorème BRT de la Séance 3, en prédiction) sont en $s$. À vérifier dans l'article également.</li>
+</ul>
+</div>
+
+<div class="box reflexe"><div class="box-h">À retenir de l'exercice 2</div>
+<ul>
+<li>Le schéma « inégalité de base → terme aléatoire par Hölder → bon événement → triangulaire → inf sur $\beta$ » est <strong>indépendant du modèle</strong> : il marche pour toute perte convexe dont l'écart $R-\hat R$ est linéaire en $\beta$.</li>
+<li>Bruit gaussien ⇒ queue gaussienne ; bruit borné ⇒ Hoeffding. Dans les deux cas, borne de l'union ⇒ $\log p$.</li>
+<li>L'événement « $\max_j\abs{V_j}\le\lambda/2$ » laisse une marge qui donne le cône de constante 3, porte d'entrée des vitesses rapides.</li>
+</ul></div>
+
+<h2 id="ex3">Exercice 3 — Régression de Poisson</h2>
+
+<div class="box enonce"><div class="box-h">Énoncé <span class="ref">TD3 · exercice 3</span></div>
+<p>On considère $n$ variables aléatoires indépendantes $Y_1,\dots,Y_n$ telles que</p>
+$$Y_i\sim\mathcal P(\mu_i),\qquad\mu_i=\exp(X_i\T\bstar),$$
+<p>où $X_i\in\R^p$ est un vecteur de covariables déterministes et $\bstar\in\R^p$ est inconnu. On note $X\in\R^{n\times p}$ la matrice dont les lignes sont les $X_i\T$. Pour $\lambda>0$, on définit l'estimateur Lasso par</p>
+$$\hb_\lambda\in\argmin_{\beta\in\R^p}\big\{L_n(\beta)+\lambda\norm\beta_1\big\},$$
+<p>où $L_n$ est l'opposé de la log-vraisemblance normalisée, à une constante additive près.</p>
+<ol>
+<li>Montrer que $$L_n(\beta)=\frac1n\sum_{i=1}^n\Big[\exp(X_i\T\beta)-Y_iX_i\T\beta\Big].$$</li>
+<li>Calculer le gradient et la Hessienne de $L_n$. Montrer que $L_n$ est convexe. À quelle condition sur $X$ est-elle strictement convexe ?</li>
+<li>Montrer que $\hb_\lambda$ minimise le critère pénalisé si et seulement si $$\frac1nX\T(Y-\hat\mu)\in\lambda\,\partial\norm{\hb_\lambda}_1,\qquad\hat\mu_i=\exp(X_i\T\hb_\lambda).$$ En déduire les conditions KKT selon que $\hb_{\lambda,j}=0$ ou non.</li>
+<li>Montrer que si $\abs{\frac1nX_j\T(Y-\hat\mu)}<\lambda$, alors $\hb_{\lambda,j}=0$. La réciproque est-elle vraie ?</li>
+<li>Supposons $p=3$ et $$\frac1nX\T(Y-\mathbf 1)=\begin{pmatrix}0{,}3\\-0{,}1\\0{,}05\end{pmatrix}.$$ Déterminer la plus petite valeur de $\lambda>0$ pour laquelle le vecteur nul est solution du problème de minimisation.</li>
+</ol>
+</div>
+
+<div class="box idee"><div class="box-h">De quoi parle cet exercice ?</div>
+<p>La même démarche qu'à l'exercice 1, pour des données de <strong>comptage</strong> (nombre d'accidents, de sinistres, d'occurrences d'un mot…). Le modèle de Poisson avec lien log est un GLM canonique ($\theta=\log\mu$, $A(\theta)=e^\theta$, Séance 5) : la log-vraisemblance négative est convexe, et le Lasso se caractérise par les mêmes conditions KKT, avec le résidu $Y-\hat\mu$. La question 5 est un calcul de $\lambda_{\max}$, réflexe à avoir pour tout Lasso.</p>
+</div>
+
+<h3 id="ex3-q1">Question 1 — La log-vraisemblance négative normalisée</h3>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>$\P(Y_i=y)=\frac{\mu_i^ye^{-\mu_i}}{y!}$. Prenez le log, sommez, remplacez $\log\mu_i$ par $X_i\T\beta$, et repérez ce qui ne dépend pas de $\beta$.</p></div></details>
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\ell(\beta)=\sum_{i=1}^n\log\frac{\mu_i^{Y_i}e^{-\mu_i}}{Y_i!}=\sum_{i=1}^n\Big[Y_i\log\mu_i-\mu_i-\log(Y_i!)\Big]$$<span class="why">indépendance (produit des probabilités), puis logarithme.</span></li>
+<li>$$=\sum_{i=1}^n\Big[Y_iX_i\T\beta-\exp(X_i\T\beta)-\log(Y_i!)\Big]$$<span class="why">$\mu_i=\exp(X_i\T\beta)$, donc $\log\mu_i=X_i\T\beta$.</span></li>
+<li>$$-\frac1n\ell(\beta)=\frac1n\sum_{i=1}^n\Big[\exp(X_i\T\beta)-Y_iX_i\T\beta\Big]+\underbrace{\frac1n\sum_{i=1}^n\log(Y_i!)}_{\text{ne dépend pas de }\beta}$$<span class="why">on change de signe et on divise par $n$.</span></li>
+</ol>
+<p>En retirant la constante (qui ne change pas le minimiseur), on obtient $L_n$. C'est la forme générale de la diapo <span class="ref">Cours5 enrichi · p. 24</span>, $L_n(\beta)=\frac1n\sum_i[A(x_i\T\beta)-y_ix_i\T\beta-B(y_i)]$, avec $A(\theta)=e^\theta$ et $B(y)=-\log(y!)$.</p>
+</div></details>
+
+<h3 id="ex3-q2">Question 2 — Gradient, hessienne, convexité</h3>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Même calcul qu'à l'exercice 1 (1d), avec $h(t)=e^t$ au lieu de $\log(1+e^t)$. Pour la stricte convexité, regardez quand $v\T\nabla^2L_n(\beta)v$ peut s'annuler.</p></div></details>
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\nabla L_n(\beta)=\frac1n\sum_{i=1}^n\Big(\exp(X_i\T\beta)-Y_i\Big)X_i=\frac1nX\T\big(\mu(\beta)-Y\big),\qquad\mu_i(\beta)=\exp(X_i\T\beta)$$<span class="why">$\nabla_\beta\exp(X_i\T\beta)=\exp(X_i\T\beta)X_i$ (dérivation en chaîne) et $\nabla_\beta(Y_iX_i\T\beta)=Y_iX_i$.</span></li>
+<li>$$\nabla^2L_n(\beta)=\frac1n\sum_{i=1}^n\exp(X_i\T\beta)X_iX_i\T=\frac1nX\T W(\beta)X,\qquad W(\beta)=\diag\big(\mu_i(\beta)\big)$$<span class="why">on dérive $\exp(X_i\T\beta)X_i$ ; le terme $Y_iX_i$ est constant. Ici $A''(\theta)=e^\theta=\mu$ : la variance d'une loi de Poisson est sa moyenne.</span></li>
+<li>$$v\T\nabla^2L_n(\beta)v=\frac1n\sum_{i=1}^n\mu_i(\beta)\big(X_i\T v\big)^2\ge0\qquad\forall v$$<span class="why">$\mu_i>0$ et un carré est positif : la hessienne est semi-définie positive, donc $L_n$ est <strong>convexe</strong> (<a href="00_rappels.html#convexite">rappel</a>).</span></li>
+</ol>
+<p><strong>Stricte convexité.</strong> Comme tous les $\mu_i(\beta)$ sont $>0$, $v\T\nabla^2L_n(\beta)v=0\iff X_i\T v=0$ pour tout $i\iff Xv=0$.</p>
+<ul>
+<li>Si $X$ est de rang $p$ ($\Ker X=\{0\}$), la hessienne est définie positive partout : $L_n$ est <strong>strictement convexe</strong>.</li>
+<li>Sinon, pour $v\neq0$ dans $\Ker X$, $L_n(\beta+tv)=L_n(\beta)$ pour tout $t$ (seuls les produits $X_i\T\beta$ interviennent) : $L_n$ est constante sur une droite, donc pas strictement convexe.</li>
+</ul>
+<p>Condition : <strong>$X$ de rang $p$</strong>, ce qui exige $p\le n$. En grande dimension ($p>n$), $L_n$ n'est jamais strictement convexe — même situation qu'en régression linéaire.</p>
+<div class="box piege"><div class="box-h">Piège — strictement convexe ne veut pas dire « a un minimum »</div>
+<p>Si toutes les observations valent $Y_i=0$ et que le modèle contient une constante, $L_n(\beta)=\frac1n\sum_ie^{X_i\T\beta}$ tend vers 0 quand la constante tend vers $-\infty$, sans jamais l'atteindre : pas d'estimateur du maximum de vraisemblance. C'est l'analogue de la séparation parfaite en logistique (exercice 1). Avec une pénalité $\lambda\norm\beta_1$ ($\lambda>0$) portant sur <em>tous</em> les coefficients, le critère redevient coercif ($L_n\ge0$ dans ce cas) et le Lasso existe. En revanche, si la constante n'est pas pénalisée (convention de la diapo <span class="ref">Cours5 enrichi · p. 27</span>), le problème persiste : il faut au moins une observation $Y_i>0$.</p></div>
+</div></details>
+
+<h3 id="ex3-q3">Question 3 — Caractérisation par le sous-différentiel et conditions KKT</h3>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Critère convexe ⇒ « minimiseur » ⇔ « 0 appartient au sous-différentiel ». La partie $L_n$ est dérivable : son sous-différentiel est $\{\nabla L_n\}$.</p></div></details>
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<ol class="steps">
+<li>$G(\beta)=L_n(\beta)+\lambda\norm\beta_1$ est convexe.<span class="why">somme d'une fonction convexe (question 2) et d'une norme.</span></li>
+<li>$$\hb\text{ minimise }G\iff0\in\partial G(\hb)=\nabla L_n(\hb)+\lambda\,\partial\norm{\hb}_1$$<span class="why">règle d'optimalité convexe, puis règle de la somme ($L_n$ dérivable) — <a href="04_seance4.html">Séance 4</a>.</span></li>
+<li>$$\iff-\nabla L_n(\hb)\in\lambda\,\partial\norm{\hb}_1\iff\frac1nX\T(Y-\hat\mu)\in\lambda\,\partial\norm{\hb}_1,\quad\hat\mu_i=\exp(X_i\T\hb)$$<span class="why">$0\in a+\lambda S\iff-a\in\lambda S$ ; question 2 : $-\nabla L_n(\hb)=\frac1nX\T(Y-\hat\mu)$.</span></li>
+<li>$$\begin{cases}\frac1nX_j\T(Y-\hat\mu)=\lambda\,\sgn(\hb_j)&\text{si }\hb_j\neq0,\\[3pt]\abs{\frac1nX_j\T(Y-\hat\mu)}\le\lambda&\text{si }\hb_j=0.\end{cases}$$<span class="why">coordonnée par coordonnée : $\partial\abs\cdot(t)=\{\sgn t\}$ si $t\neq0$, $[-1,1]$ si $t=0$. $X_j$ est la colonne $j$ de $X$.</span></li>
+</ol>
+<p>Ce sont exactement les conditions de la diapo <span class="ref">Cours5 enrichi · p. 28</span>, avec $\hat\mu=\exp(X\hb)$.</p>
+</div></details>
+
+<h3 id="ex3-q4">Question 4 — Une inégalité stricte force un coefficient nul ; la réciproque ?</h3>
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<p><strong>Sens direct (par contraposée).</strong> Si $\hb_j\neq0$, la première ligne des KKT donne $\abs{\frac1nX_j\T(Y-\hat\mu)}=\abs{\lambda\sgn(\hb_j)}=\lambda$. Donc si $\abs{\frac1nX_j\T(Y-\hat\mu)}<\lambda$, on ne peut pas avoir $\hb_j\neq0$ : $\hb_j=0$.</p>
+<p><strong>La réciproque est fausse.</strong> $\hb_j=0$ impose seulement $\abs{\frac1nX_j\T(Y-\hat\mu)}\le\lambda$ : l'égalité est permise. Exemple concret : la question 5 avec $\lambda=0{,}3$. Le vecteur nul est solution, donc $\hb_1=0$, et pourtant $\abs{\frac1nX_1\T(Y-\hat\mu)}=0{,}3=\lambda$ : pas d'inégalité stricte. C'est le cas « limite » où la variable est sur le point d'entrer dans le modèle.</p>
+<p>Utilité pratique : une variable dont la corrélation avec le résidu est <em>strictement</em> sous le plafond est certainement inactive ; c'est le principe des règles d'élimination (« <em>screening</em> ») qui accélèrent les logiciels.</p>
+</div></details>
+
+<h3 id="ex3-q5">Question 5 — Le plus petit $\lambda$ qui annule tout</h3>
+<div class="box methode"><div class="box-h">Comment l'attaquer</div>
+<p>Écrire les KKT <strong>au point candidat</strong> $\hb=0$ : toutes les coordonnées sont nulles, donc seule la seconde ligne (l'inégalité) s'applique, avec $\hat\mu$ calculé en $\beta=0$.</p>
+</div>
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\hat\mu_i=\exp(X_i\T0)=e^0=1\quad\text{pour tout }i,\qquad\text{donc }\hat\mu=\mathbf 1$$<span class="why">au point $\beta=0$, toutes les moyennes prédites valent 1.</span></li>
+<li>$$0\text{ est solution}\iff\Big|\frac1nX_j\T(Y-\mathbf 1)\Big|\le\lambda\ \ \text{pour }j=1,2,3\iff\lambda\ge\Big\|\frac1nX\T(Y-\mathbf 1)\Big\|_\infty$$<span class="why">KKT de la question 3, seconde ligne, pour chaque $j$ ; et « pour tout $j$, $\abs{a_j}\le\lambda$ » s'écrit $\norm a_\infty\le\lambda$.</span></li>
+<li>$$\Big\|\frac1nX\T(Y-\mathbf 1)\Big\|_\infty=\max(0{,}3;\ 0{,}1;\ 0{,}05)=0{,}3$$<span class="why">valeurs absolues des coordonnées données.</span></li>
+</ol>
+<p>La plus petite valeur de $\lambda>0$ pour laquelle $\hb=0$ est solution est $\lambda_{\max}=0{,}3$. Pour tout $\lambda\ge0{,}3$, le Lasso de Poisson ne sélectionne aucune variable.</p>
+</div></details>
+<div class="quiz"><p>Question rapide : quand $\lambda$ passe juste sous 0,3, quelle variable entre la première dans le modèle, et avec quel signe ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body"><p>La variable 1 : c'est elle qui atteint le plafond ($\abs{0{,}3}$ est le maximum). Les KKT d'une variable active imposent $\frac1nX_1\T(Y-\hat\mu)=\lambda\sgn(\hb_1)$ ; juste sous $\lambda_{\max}$ cette quantité vaut environ $+0{,}3>0$, donc $\hb_1>0$. Lecture : la variable 1 est positivement corrélée au résidu $Y-\mathbf1$ (les individus où $X_{i1}$ est grand ont plus d'occurrences que prévu), son coefficient devient positif.</p></div></details></div>
+
+<div class="box reflexe"><div class="box-h">À retenir de l'exercice 3</div>
+<ul>
+<li>Poisson canonique : $L_n=\frac1n\sum[e^{x_i\T\beta}-y_ix_i\T\beta]$, gradient $\frac1nX\T(\mu-Y)$, hessienne $\frac1nX\T\diag(\mu)X$ : convexe, strictement si $\rg X=p$.</li>
+<li>$\lambda_{\max}=\norm{\nabla L_n(0)}_\infty$ : ici $\norm{\frac1nX\T(Y-\mathbf 1)}_\infty$.</li>
+<li>« Inégalité stricte ⇒ coefficient nul », mais pas l'inverse.</li>
+</ul></div>
+
+<h2 id="bilan">Ce qu'il faut retenir du TD</h2>
+<p class="tldr">Pour un GLM canonique, tout se lit sur la fonction $A$ : la perte est convexe, son gradient est « $X\T$(prédiction − observation) », sa hessienne est $X\T WX$ avec les variances en poids, et le Lasso se caractérise par une corrélation avec le résidu plafonnée à $\lambda$.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Modèle</th><th>$A(\theta)$</th><th>$L_n(\beta)$ (à une constante près)</th><th>$\nabla L_n(\beta)$</th><th>poids $W_{ii}=A''(x_i\T\beta)$</th><th>$\lambda_{\max}$ (sans constante)</th></tr></thead>
+<tbody>
+<tr><td>Gaussien ($\sigma=1$)</td><td>$\theta^2/2$</td><td>$\frac1{2n}\norm{y-X\beta}^2$</td><td>$\frac1nX\T(X\beta-y)$</td><td>$1$</td><td>$\norm{\frac1nX\T y}_\infty$</td></tr>
+<tr><td>Logistique</td><td>$\log(1+e^\theta)$</td><td>$\frac1n\sum[\log(1+e^{x_i\T\beta})-y_ix_i\T\beta]$</td><td>$\frac1nX\T(\sigma(X\beta)-y)$</td><td>$\mu_i(1-\mu_i)\in\,]0,\frac14]$</td><td>$\norm{\frac1nX\T(y-\frac12\mathbf 1)}_\infty$</td></tr>
+<tr><td>Poisson</td><td>$e^\theta$</td><td>$\frac1n\sum[e^{x_i\T\beta}-y_ix_i\T\beta]$</td><td>$\frac1nX\T(e^{X\beta}-y)$</td><td>$\mu_i$</td><td>$\norm{\frac1nX\T(y-\mathbf 1)}_\infty$</td></tr>
+</tbody></table></div>
+<ul>
+<li>Concavité de $\ell_n$ ≠ existence de l'EMV : séparation parfaite (automatique en logistique si $p\ge n$ et $X$ de rang $n$), comptages tous nuls (modèle avec constante) ⇒ pas d'EMV ; la pénalité rétablit l'existence (et l'unicité pour le Ridge).</li>
+<li>Les inégalités oracle du Lasso suivent un seul schéma, quel que soit le modèle ; seul l'outil de concentration change (gaussien ⇒ queue gaussienne ; borné ⇒ Hoeffding).</li>
+<li>La courbure de la perte logistique peut s'effondrer ($W_{ii}\to0$) : les vitesses rapides demandent des hypothèses en plus (Cours5 enrichi p. 35).</li>
+</ul>
+
+<h2 id="reflexes">Les réflexes du TD</h2>
+<div class="box reflexe"><div class="box-h">Réflexes</div>
+<ul>
+<li><strong>Quand vous voyez un GLM canonique</strong> → écrivez $\ell_n=\sum[y_i\theta_i-A(\theta_i)]$ avec $\theta_i=x_i\T\beta$ ; gradient $X\T(y-\mu)$, hessienne $-X\T\diag(A'')X$.</li>
+<li><strong>Pour montrer la convexité</strong> → signe de $v\T\nabla^2v=\frac1n\sum_iA''(x_i\T\beta)(x_i\T v)^2$ ; pour la stricte convexité → quand ce nombre peut-il être nul ? ($Xv=0$).</li>
+<li><strong>Pour l'existence d'un minimiseur</strong> → coercivité (souvent : perte $\ge0$ + pénalité qui tend vers l'infini) ; convexité seule ne suffit pas.</li>
+<li><strong>Pour un Lasso de GLM</strong> → KKT avec le résidu $y-\hat\mu$ ; $\lambda_{\max}=\norm{\nabla L_n(0)}_\infty$.</li>
+<li><strong>Pour une inégalité oracle</strong> → inégalité de base, Hölder sur le terme aléatoire, événement $\{\max_j\abs{V_j}\le\lambda/2\}$, triangulaire, inf sur $\beta$.</li>
+<li><strong>Variables bornées</strong> → Hoeffding (constante $(b-a)^2$) ; <strong>variables gaussiennes</strong> → queue gaussienne ; <strong>beaucoup de variables</strong> → borne de l'union, d'où un $\log p$.</li>
+</ul></div>
+
+<h2 id="errata">Coquilles repérées</h2>
+<p>Dans l'énoncé (vérifiées sur le PDF) :</p>
+<ul>
+<li><strong>Ex. 1, question 1(a)</strong> : « loi binomiale de paramètre $\mu$ » — il s'agit de la loi de Bernoulli $\mathcal B(\mu)$, c'est-à-dire la binomiale $\mathcal B(1,\mu)$.</li>
+<li><strong>Ex. 1 et 3</strong> : la même lettre désigne l'individu $i$ ($X_i\in\R^p$) et la colonne $j$ ($X_j\in\R^n$, ex. 3 question 4). Pas une erreur, mais une source de confusion : ici on écrit $x_i$ pour l'individu.</li>
+<li><strong>Ex. 2, remarque</strong> : « $J\subset\{1,\dots,M\}$ » à lire $\{1,\dots,p\}$ ; la constante notée $\kappa(s,c_0)$ est définie avec 3, c'est $\kappa(s,3)$ ; « $1-2p^{1-A^2/2c_2}$ » à lire $1-2p^{1-A^2/2c^2}$ ; la condition « $\max_iz_i\T\beta\le C$ pour tout $\beta\in\R^p$ » est impossible telle quelle (voir les <a href="#ex2-remarque">notes sur la remarque</a>, qui signalent aussi deux points à vérifier dans l'article).</li>
+</ul>
+
+<h2 id="suite">Et après ?</h2>
+<p>Ce TD clôt la partie « GLM » du cours. Pour aller plus loin :</p>
+<ul>
+<li>la <a href="06_seance6.html">Séance 6</a> présente les variantes du Lasso (elastic net, group-Lasso…) : celles qu'il faudrait utiliser pour des gènes corrélés ou organisés en voies biologiques (question 3 de l'exercice 1) ;</li>
+<li>le <a href="09_td2.html">TD2</a> fait la preuve complète des vitesses rapides dans le modèle linéaire gaussien — la version « idéale » de la remarque de l'exercice 2 ;</li>
+<li>la <a href="07_fiche.html">fiche réflexes</a> rassemble les formules de tous les modèles.</li>
+</ul>
