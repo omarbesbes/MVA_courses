@@ -1,0 +1,91 @@
+<h2 id="nn">10. Training a two-layer network: a Wasserstein flow of its neurons <span class="ref">OT4ML §15.4, pp. 386–390</span></h2>
+<p class="tldr">Write a wide two-layer network as an average over its neurons: it becomes linear in the empirical measure of the neurons, gradient descent on the weights becomes the Wasserstein gradient flow of a convex (along mixtures) risk, and global convergence becomes a question about where the neurons can go: if they see every direction, a stationary point is a global minimiser.</p>
+
+<h3 id="nn-why">Neurons as particles</h3>
+<p>The loss of a neural network is not convex in its weights, and permuting the hidden neurons does not change the function: the weights are a <em>set</em> of neurons, not a vector. Both difficulties disappear when the network is written as an <strong>average over its neurons</strong> — the mean-field parametrisation — because an average only depends on the empirical measure of the neurons.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML §15.4, p. 387</span></div>
+<p><em>Wasserstein training of two-layer MLPs.</em> The key modeling step is to forget the ordering of the hidden neurons and to regard the network weights as a probability measure on parameter space. […] We use $z\in\R^d$ for the input data and $y\in\R^{d'}$ for the label. A neuron is a particle $x=(u,v)\in\R^d\times\R^{d'}$, where $u$ is the inner weight and $v$ is the outer vector weight. For a scalar nonlinearity $\sigma$, define the vector-valued feature $\psi(x,z)=v\,\sigma(\ps{u}{z})\in\R^{d'}$. The width-$n$ network and its mean-field version are</p>
+$$G_X(z)=\frac1n\sum_{i=1}^n\psi(x_i,z),\qquad G_\al(z)=\int\psi(x,z)\,\dd\al(x),\qquad\al=\frac1n\sum_i\delta_{x_i}.$$
+<p>[…] Let $\zeta$ be a probability distribution on data-label pairs $(z,y)$. The population risk is $f(\al)=\int\ell(G_\al(z),y)\,\dd\zeta(z,y)$ […]. Since $\al\mapsto G_\al$ is linear, $f$ is convex as a function of $\al$ whenever $\ell(\cdot,y)$ is convex. For the empirical neuron law $\al_X=n^{-1}\sum_i\delta_{x_i}$, the Wasserstein metric induces on particles the rescaled metric $n^{-1}\sum_i\norm{\dot x_i}^2$. The corresponding particle flow is $\dot x_i=-n\nabla_{x_i}F(X)$, $F(X)=f\big(\frac1n\sum_i\delta_{x_i}\big)$, which is the gradient flow of $F(X)=f(\al_X)$ for this Wasserstein particle metric, equivalently Euclidean gradient descent with the time scale multiplied by $n$.</p>
+<p>[…] The first variation is $\delta f(\al)(x)=\int\ps{\nabla_1\ell(G_\al(z),y)}{\psi(x,z)}\dd\zeta(z,y)$, (15.28) and the Wasserstein gradient in parameter space is $\nabla_Wf(\al)(x)=\nabla_x\delta f(\al)(x)=\int[D_x\psi(x,z)]\T\nabla_1\ell(G_\al(z),y)\,\dd\zeta(z,y)$.</p>
+</div>
+<dl class="decode">
+<dt>$x=(u,v)$</dt><dd>One hidden neuron: its input weights $u$ and its output weight $v$ (the sheet’s Exercise 5 swaps the letters, see the notation decoder).</dd>
+<dt>$\frac1n\sum_i$</dt><dd>The <em class="new">mean-field</em> normalisation: the output is an <em>average</em> of the neurons’ contributions, so the network depends on the neurons only through their empirical measure $\al$, and $n\to\infty$ makes sense ($\al$ becomes a density over neuron space: an infinitely wide network).</dd>
+<dt>“convex as a function of $\al$”</dt><dd>Along mixtures: $G_\al$ is linear in $\al$ and the loss is convex in the prediction. This convexity is hidden by the parametrisation by weights, and it is <em>not</em> geodesic convexity (§7).</dd>
+<dt>$\delta f(\al)(x)$</dt><dd>For the square loss, the correlation between the current residual $G_\al(z)-y$ and the feature $\psi(x,\cdot)$ of a candidate neuron $x$: adding a bit of neuron $x$ helps when this correlation is negative.</dd>
+<dt>$\dot x_i=-n\nabla_{x_i}F$</dt><dd>Exactly (15.5) of §5: backpropagation on the weights is the Wasserstein flow of the neurons, up to the factor $n$ in the clock. StatOT Prop. 6.16 (p. 202) states the same: the Wasserstein gradient flow started at the empirical measure of the weights stays empirical and follows the (time-rescaled) Euclidean gradient flow.</dd>
+</dl>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML (15.29)–(15.30), p. 387</span></div>
+<p>For the squared Euclidean loss $\ell(s,y)=\frac12\norm{s-y}^2$, the energy is the sum of a quadratic interaction and a linear potential:</p>
+$$f(\al)=\frac12\iint k(x,x')\dd\al(x)\dd\al(x')+\int g(x)\dd\al(x)+\frac12\int\norm{y}^2\dd\zeta(z,y),\qquad(15.29)$$
+<p>with $k(x,x')=\int\ps{\psi(x,z)}{\psi(x',z)}\dd\zeta(z,y)$, $g(x)=-\int\ps{y}{\psi(x,z)}\dd\zeta(z,y)$. (15.30) […] These kernels are generally not convex in the particle variable, so the geodesic-convex convergence theory above does not apply directly.</p>
+</div>
+<p>So the neurons are interacting particles (§5): <strong>they repel each other when they do the same job</strong> (the kernel $k$ is large for neurons with similar features and outputs of the same sign) and <strong>they are attracted by the potential $g$</strong>, low where the feature correlates with the target.</p>
+<div class="box example"><div class="box-h">Worked example — the interaction between two ReLU neurons</div>
+<p>Take scalar outputs, $\sigma=\mathrm{ReLU}$ and Gaussian inputs $z\sim\N(0,\Id_2)$. For neurons $x=(u,v)$, $x'=(u',v')$ whose input weights make an angle $\theta$,</p>
+$$k(x,x')=vv'\,\E\big[\sigma(\ps{u}{z})\,\sigma(\ps{u'}{z})\big]=vv'\,\norm{u}\norm{u'}\,\frac{\sin\theta+(\pi-\theta)\cos\theta}{2\pi}$$
+<p>(the “arc-cosine kernel”; a classical Gaussian computation). Values of the fraction for $\theta=0,\frac\pi3,\frac\pi2,\frac{2\pi}3,\pi$: $0.5,\ 0.3045,\ 0.1592,\ 0.0545,\ 0$ (Monte Carlo with $2\times10^6$ samples: $0.5,\ 0.3042,\ 0.1588,\ 0.0544,\ 0$). Two neurons with the same direction and outputs of the same sign interact most; opposite directions do not interact at all (their ReLUs are never active together).</p>
+</div>
+
+<h3 id="nn-global">When is a stationary point a global minimiser?</h3>
+<p>The risk is convex along mixtures, but the flow moves along transport paths and only moves the mass that is already there: it can stop at a measure that is not optimal because no neuron sits where a new one would help. The book gives two answers.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 15.51, p. 388</span></div>
+<p><strong>Proposition 15.51</strong> (Affine convexity and stationary positive densities). <em>Let $\Omega\subset\R^d$ be connected, let $f=Q+\int V\dd\al+C$ be as above on $\Pc(\Omega)$, and assume that $Q$ is classically convex. Suppose that a Wasserstein gradient flow $\al_t$ of $f$ converges to $\al_\infty=\rho_\infty\dd x$, where $\rho_\infty>0$ almost everywhere on $\Omega$, and that $\inf_{t\ge0}f(\al_t)>-\infty$. Assume that $\delta f(\al_\infty)\in C^1(\Omega)$ and that the squared Wasserstein slope is lower semicontinuous along the convergence […]. Then $\al_\infty$ is a global minimizer of $f$.</em></p>
+</div>
+<details class="fold proof"><summary>Proof (OT4ML pp. 388–389)</summary><div class="fold-body">
+<ol class="steps">
+<li>$\int_0^\infty\!\!\int_\Omega\norm{\nabla\delta f(\al_t)}^2\dd\al_t\,\dd t<+\infty$.<span class="why">Integrate the dissipation identity (§4): the total decrease of $f$ is finite because $f$ is bounded below.</span></li>
+<li>$\int\norm{\nabla\delta f(\al_\infty)}^2\dd\al_\infty=0$.<span class="why">Line 1 forces the inner integral to tend to $0$ along a sequence $t_n\to\infty$; then the assumed lower semicontinuity.</span></li>
+<li>$\nabla\delta f(\al_\infty)=0$ on $\Omega$, so $\delta f(\al_\infty)$ is a constant $c$.<span class="why">$\rho_\infty>0$ almost everywhere and the gradient is continuous; $\Omega$ is connected.</span></li>
+<li>For every $\be$: $f(\be)\ge f(\al_\infty)+\int\delta f(\al_\infty)\dd(\be-\al_\infty)=f(\al_\infty)+c-c=f(\al_\infty)$.<span class="why">Convexity of $f$ along mixtures (the classical convexity of $Q$) gives the tangent inequality.</span></li>
+</ol>
+<p>“Strict positivity is essential to this argument: without it, stationarity controls the first variation only on the support explored by the limiting measure” (p. 389).</p>
+</div></details>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 15.52, p. 389</span></div>
+<p>Chizat and Bach prove global convergence for the unregularized, noiseless Wasserstein flow of positively homogeneous models. Mei, Montanari and Nguyen prove convergence for the noisy, regularized dynamics: at the PDE level the noise adds a diffusion, or Laplacian, term, so an initially singular neuron law is immediately smoothed and acquires a density. […]</p>
+<p><strong>Proposition 15.52</strong> (Formal global optimality for two-homogeneous mean-field flows). <em>Assume that the feature is positively two-homogeneous in the neuron variable, $\psi(\lambda x,z)=\lambda^2\psi(x,z)$ $(\lambda>0)$, and that $f(\al)=J(G_\al)$ with $J$ convex and differentiable as a functional of the predictor. Let $\al$ be a smooth stationary point of the Wasserstein flow, so that $\nabla_x\delta f(\al)(x)=0$ on $\supp(\al)$. Assume also full directional support: for every unit direction $\omega$, the support of $\al$ intersects the ray $\{\lambda\omega:\lambda>0\}$. Then $\al$ is a global minimizer of $f$ over the mean-field model class.</em></p>
+</div>
+<dl class="decode">
+<dt>two-homogeneous</dt><dd>For a ReLU neuron, $\psi((\lambda u,\lambda v),z)=\lambda v\,\sigma(\lambda\ps{u}{z})=\lambda^2\psi((u,v),z)$: scaling a neuron by $\lambda$ scales its output by $\lambda^2$. Only the <em>direction</em> of a neuron matters for what it can do; its norm is an amount.</dd>
+<dt>full directional support</dt><dd>Every direction of neuron space is represented by at least one neuron of the limit. This is what replaces the positive density of Proposition 15.51.</dd>
+<dt>rigorous version</dt><dd>“The rigorous Chizat–Bach theorem replaces the full directional support assumption by propagation and overparameterization hypotheses ensuring that any negative first-variation direction is represented by the evolving support” (p. 390): it assumes that the <em>initialisation</em> covers all directions and that the flow converges.</dd>
+</dl>
+<div class="box idea"><div class="box-h">Idea of the proof</div>
+<p>The first variation $h=\delta f(\al)$ is itself two-homogeneous. Stationarity on a ray gives $h=0$ along it (radial derivative $2rh(\omega)=0$). If some competitor were better, convexity in $\al$ would produce a direction $\omega$ with $h(\omega)<0$; but that ray meets the support, where $h=0$ — contradiction.</p>
+</div>
+<details class="fold proof"><summary>Full proof (OT4ML pp. 389–390)</summary><div class="fold-body">
+<ol class="steps">
+<li>$h(x):=\delta f(\al)(x)=DJ(G_\al)[\psi(x,\cdot)]$ satisfies $h(\lambda x)=\lambda^2h(x)$ for $\lambda>0$, hence $h(0)=0$.<span class="why">Linearity of $DJ(G_\al)$ and two-homogeneity of $\psi$; take $x=0$ and $\lambda\ne1$.</span></li>
+<li>On the support, $h=0$: if $x=r\omega\in\supp(\al)$ with $r>0$, $\norm{\omega}=1$, then $0=\ps{\nabla h(r\omega)}{\omega}=\frac{\dd}{\dd s}h(s\omega)\big|_{s=r}=2rh(\omega)$, so $h(\omega)=0$ and $h(x)=r^2h(\omega)=0$. In particular $\int h\,\dd\al=0$.<span class="why">Stationarity $\nabla h=0$ on the support; differentiate $s\mapsto s^2h(\omega)$.</span></li>
+<li>If $f(\be)<f(\al)$ for some $\be$, then $\int h\,\dd\be<0$.<span class="why">Convexity of $J$: $f(\be)-f(\al)\ge DJ(G_\al)[G_\be-G_\al]=\int h\,\dd(\be-\al)=\int h\,\dd\be$ (line 2).</span></li>
+<li>So $h(x)<0$ for some $x=r\omega\ne0$, i.e. $h(\omega)<0$.<span class="why">A negative integral needs a negative value; $h(0)=0$ and homogeneity.</span></li>
+<li>The support meets the ray of $\omega$ at some $r_\omega\omega$, where $\ps{\nabla h(r_\omega\omega)}{\omega}=2r_\omega h(\omega)<0$ — contradicting stationarity. $\square$<span class="why">Full directional support; line 2’s computation.</span></li>
+</ol>
+</div></details>
+<p><strong>A certificate you can compute.</strong> For a stationary $\al$, global optimality holds iff $h\ge0$ everywhere. For ReLU neurons with scalar output, $h(u,v)=v\,\E\big[(G_\al(z)-y)\,\sigma(\ps{u}{z})\big]=v\,\norm{u}\,g(\hat u)$ with</p>
+$$g(\theta)=\E\big[(G_\al(z)-y)\,\sigma(\ps{u_\theta}{z})\big],\qquad u_\theta=(\cos\theta,\sin\theta),$$
+<p>and since $v$ can have either sign, optimality means <strong>$g\equiv0$ on the circle of directions</strong>: the residual is orthogonal to every ReLU feature. If $g(\theta)\ne0$, a new neuron in direction $\theta$ with outer weight of sign $-g(\theta)$ lowers the risk.</p>
+<div class="box remark"><div class="box-h">When a neuron cannot change the sign of its output weight (derived here)</div>
+<p>Along the flow, each ReLU neuron keeps $c_i=\norm{u_i}^2-v_i^2$ constant: $\frac{\dd}{\dd t}\big(\norm{u}^2-v^2\big)=2\ps{u}{\dot u}-2v\dot v=-2v\,\E\big[r\,\ind_{\ps uz>0}\ps uz\big]+2v\,\E\big[r\,\sigma(\ps uz)\big]=0$, with $r=G_\al-y$, because $\ind_{s>0}\,s=\sigma(s)$. If $c_i<0$ (output weight larger than the input weights), then $v_i^2=\norm{u_i}^2-c_i\ge-c_i>0$ for ever: <strong>$v_i$ never changes sign</strong>. So if all neurons start with $v>0$ and $c_i<0$, the network can never build a negative contribution — the mechanism of the stall in the second preset of the widget ($\norm{u}\approx0.3$, $v\approx0.35$). Neurons with $c_i>0$ can cross $v=0$ (in the first preset a few do).</p>
+</div>
+<div class="widget" data-widget="l8neurons"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p id="nn-widget-text">What to look at: a teacher network with three ReLU neurons (directions $0.4$, $2.4$, $4.4$ rad, outer weights $+1,+1,-1$, blue rays) generates labels on 200 Gaussian inputs; a student with 40 neurons is trained by gradient descent (step $1$), i.e. the Wasserstein flow of its neurons. Each neuron is drawn at $\abs{v}\,u$ (green if $v>0$, purple if $v<0$), with its path. Right: the risk on a log scale, and the certificate $g(\theta)$ with the teacher directions (dashed). <strong>“spread”</strong> (random directions, $\norm u=0.3$, $v\sim\N(0,0.3^2)$): the neurons slide out along the three teacher rays — green ones on the two positive rays, purple ones on the negative ray — and the risk falls from $0.0828$ to $8.8\times10^{-8}$ after about $1000$ steps and $1.8\times10^{-8}$ after $3000$; the certificate is flat ($\max\abs g=1.4\times10^{-5}$): a global minimiser, as Proposition 15.52 predicts. <strong>“one point”</strong> (all neurons near the same point, $\norm u\approx0.3$, $v\approx0.35$): the risk stalls at $0.0315$ (from $0.0651$), no neuron ever gets a negative output weight (the remark above), and the certificate has a clear bump, largest at $\theta=4.43$ rad with $g=+0.19$: <em>exactly the missing negative teacher neuron</em>. The flow is stationary but not optimal; the support does not see every direction.</p>
+
+<div class="box ml"><div class="box-h">In machine learning — the mean-field theory of wide networks</div>
+<p>Four papers released within a month in 2018 (Mei–Montanari–Nguyen, Sirignano–Spiliopoulos, Rotskoff–Vanden-Eijnden, Chizat–Bach; StatOT p. 208) showed that training a wide two-layer network by (stochastic) gradient descent is, as the width $n\to\infty$, a Wasserstein gradient flow of the neuron distribution, and Chizat and Bach proved that for ReLU-type (two-homogeneous) networks this flow, started from an initialisation that covers all directions, can only converge to a <strong>global</strong> minimiser — although the loss in the weights is non-convex. Two caveats that the course stresses: (1) the normalisation $\frac1n$ is essential; with $\frac1{\sqrt n}$ the weights barely move and training is in the “lazy” or neural-tangent-kernel regime, a linear model around the initialisation (StatOT p. 209); (2) the theorem says nothing about rates, and the risk is not geodesically convex, so the time to converge is not controlled. Adding entropy (noise) to the dynamics gives the mean-field Langevin dynamics, for which Mei, Montanari and Nguyen prove convergence (OT4ML p. 389).</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — “global convergence” has hypotheses</div>
+<p>It is a statement about the infinite-width limit, about the limit $t\to\infty$, and it needs the support of the neurons to see every direction. A finite network, or an initialisation concentrated in a few directions, can stall at a stationary point that is not optimal (second preset of the widget). The certificate $g$ detects it.</p>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>Mean-field network $\frac1n\sum_i\psi(x_i,\cdot)$ → a measure of neurons; gradient descent on weights = Wasserstein flow of that measure (clock $\times n$).</li>
+<li>Square loss → interaction energy (kernel $\E[\psi\psi']$) + potential ($-\E[y\psi]$).</li>
+<li>Global optimality of a stationary point → the first variation $h$ must be $\ge0$ everywhere, not only on the support; for ReLU, $g\equiv0$ on the circle.</li>
+</ul>
+</div>
+<div class="quiz"><p>A one-neuron “network” $G(z)=v\,\sigma(\ps uz)$ fits $y(z)=\sigma(z_1)-\sigma(-z_1)=z_1$ on Gaussian inputs in $\R^2$. Can it reach zero risk? What does the certificate say at its best fit?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>No: one ReLU is zero on a half-plane, while $z_1$ is not. Its best fit takes $u$ along $e_1$ and fits $z_1$ on the half-plane $z_1>0$, leaving the residual $-z_1\ind_{z_1<0}=\sigma(-z_1)$. Then $g(\pi)=\E\big[\sigma(-z_1)\cdot\sigma(-z_1)\big]=\frac12>0$: a second neuron in the direction $\theta=\pi$ with a <em>negative</em> output weight would lower the risk — it is the missing teacher neuron $-\sigma(-z_1)$.</p>
+</div></details></div>

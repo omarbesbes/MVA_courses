@@ -1,0 +1,146 @@
+<h2 id="div">6. Divergences, dual norms and GANs <span class="ref">OT4ML Ch. 7, pp. 125–135</span></h2>
+<p class="tldr">Dual norms compare $\al-\be$ against a class of test functions ($\TV$, $W_1$, MMD) and can compare singular measures; $\varphi$-divergences compare densities point by point (KL, Jensen–Shannon, $\TV$) and saturate or explode when supports are disjoint. A GAN learns the test function: Wasserstein and MMD GANs learn a dual-norm witness, the original GAN a density-ratio one.</p>
+
+<h3 id="div-why">The problem: a loss to fit a model to data</h3>
+<p>A generative model produces samples $g_\theta(z)$ from latent noise $z$; the data are finitely many points $y_1,\dots,y_m$. To fit $\theta$ you need a discrepancy $D(\al_\theta,\be)$ between the model law and the data, with two properties:</p>
+<ul>
+<li><strong>defined for singular measures</strong>: the data measure $\be=\frac1m\sum_j\delta_{y_j}$ has no density, and a model that maps a low-dimensional latent space into a high-dimensional one has none either;</li>
+<li><strong>informative when the model is wrong</strong>: if the model sits slightly to the side of the data, $D$ should decrease when the model moves towards the data — so that gradient descent on $\theta$ knows where to go.</li>
+</ul>
+<p>The test case of this section: <strong>translate</strong> a measure by $t$ and watch how each discrepancy reacts.</p>
+
+<h3 id="div-ipm">Dual norms (integral probability metrics)</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 7.1, Ex. 7.2–7.4, p. 125</span></div>
+<p><strong>Definition 7.1 (Dual seminorm and integral probability metric).</strong> Let $B$ be a nonempty symmetric convex class of measurable functions that are integrable against the measures under consideration. For a signed measure $\xi$, define the extended dual seminorm</p>
+$$\norm{\xi}_B:=\sup_f\Big\{\int_\X f(x)\,\dd\xi(x)\ ;\ f\in B\Big\}.\qquad(7.1)$$
+<p>It is a norm when it is finite and $B$ separates signed measures. When applied to $\al-\be$ for probability measures, it is called an integral probability metric (IPM); it is a genuine metric precisely when $B$ separates probability measures.</p>
+<p><strong>Example 7.2 (Total variation)</strong>: $B=\{f\in\mathcal C(\X)\ ;\ \norm{f}_\infty\le1\}$. <strong>Example 7.3 ($W_1$ norm)</strong>: $B=\{f\ ;\ \Lip(f)\le1\}$. <strong>Example 7.4 (Flat norm and Dudley metric)</strong>: $B=\{f\ ;\ \Lip(f)\le1\text{ and }\norm{f}_\infty\le1\}$ […]</p>
+</div>
+<dl class="decode">
+<dt>$B$</dt><dd>A “ball” of test functions (a <em>discriminator class</em>): symmetric ($f\in B\Rightarrow-f\in B$) and convex.</dd>
+<dt>$\norm{\al-\be}_B$</dt><dd>The largest difference of averages $\E_\al f-\E_\be f$ over the class: “the best test in $B$ for telling $\al$ from $\be$”. A maximising $f$ is a <em class="new">witness</em>.</dd>
+<dt>“separates”</dt><dd>$\norm{\al-\be}_B=0$ only if $\al=\be$: the class is rich enough to see every difference.</dd>
+<dt>the examples</dt><dd>Same template, different balls. Bounded functions see <em>any</em> difference of mass (total variation, Lesson 3); 1-Lipschitz functions see <em>how far</em> mass moves ($W_1$, §5); both constraints give the flat norm, which also accepts measures of different masses.</dd>
+</dl>
+<p>Which topology a dual norm defines is decided by the size of its ball (Prop. 7.5, §5): a ball with dense span and compact closure (Lipschitz, RKHS) gives weak convergence; the sup-norm ball is not compact and total variation is the strong topology.</p>
+
+<h3 id="div-mmd">Kernels and the maximum mean discrepancy</h3>
+<div class="box recall"><div class="box-h">Reminder — positive definite kernels</div>
+<p>A symmetric $k(x,y)$ is <em>positive definite</em> if every Gram matrix $\big(k(x_i,x_j)\big)_{ij}$ is positive semi-definite: $\sum_{ij}r_ir_jk(x_i,x_j)\ge0$. Example: the Gaussian kernel $k(x,y)=e^{-\norm{x-y}^2/(2\sigma^2)}$. Such a kernel defines a Hilbert space of functions $\mathcal H$ (the RKHS) in which $h(x)=\ps{h}{k(x,\cdot)}_{\mathcal H}$ (“reproducing property”). More on the <a href="Reminders.html#mmd">Reminders</a> page.</p>
+</div>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 7.9, Prop. 7.10, (7.5), pp. 128–129</span></div>
+<p><strong>Definition 7.9 (Kernel seminorm and MMD)</strong>, for a positive-definite kernel $k$. […] Its kernel seminorm is $\norm{\xi}_k^2:=\iint_{\X\times\X}k(x,y)\,\dd\xi(x)\,\dd\xi(y)$ (7.4). For two probability measures […] the maximum mean discrepancy associated with $k$ is $\mathrm{MMD}_k(\al,\be):=\norm{\al-\be}_k$. It is a genuine distance when the kernel is characteristic, meaning that $\norm{\al-\be}_k=0$ implies $\al=\be$.</p>
+<p><strong>Proposition 7.10 (Kernel seminorm as an RKHS dual norm).</strong> […] $\norm{\xi}_k=\sup_{\norm{h}_{\mathcal H}\le1}\int h(x)\,\dd\xi(x)$, so $\norm{\cdot}_k$ is the dual seminorm in the sense of (7.1) associated with the RKHS unit ball.</p>
+<p>[p. 129] To compute the discrepancy between two discrete measures, one can use</p>
+$$\norm{\al-\be}_k^2=\sum_{i,i'}a_ia_{i'}k(x_i,x_{i'})+\sum_{j,j'}b_jb_{j'}k(y_j,y_{j'})-2\sum_{i,j}a_ib_jk(x_i,y_j).\qquad(7.5)$$
+</div>
+<dl class="decode">
+<dt>$\iint k\,\dd\xi\,\dd\xi$</dt><dd>With $X,X'\sim\al$ and $Y,Y'\sim\be$ independent: $\mathrm{MMD}^2=\E k(X,X')+\E k(Y,Y')-2\E k(X,Y)$. Two samples from the same law look “as similar as” one sample from each.</dd>
+<dt>RKHS unit ball</dt><dd>The witness is $h^\star\propto\int k(x,\cdot)\,\dd(\al-\be)(x)$: the difference of the two densities <strong>smoothed by the kernel</strong>.</dd>
+<dt>(7.5)</dt><dd>For samples, three averages of kernel values: cost $O((n+m)^2)$, no optimisation at all — the main practical advantage of MMD.</dd>
+</dl>
+<div class="box example"><div class="box-h">Worked example — two Diracs</div>
+<p>$\al=\delta_t$, $\be=\delta_0$, Gaussian kernel with $\sigma=1$: by (7.5), $\mathrm{MMD}^2=k(t,t)+k(0,0)-2k(t,0)=2-2e^{-t^2/2}$. So $\mathrm{MMD}=0.0999$ for $t=0.1$, $0.887$ for $t=1$, $1.406$ for $t=3$. It is increasing in $\abs{t}$ (a weak metric: close Diracs are close), but it <strong>saturates</strong> at $\sqrt2=1.414$ once the points are a few $\sigma$ apart — while $W_1=\abs{t}$ keeps growing.</p>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — two-sample tests, MMD GANs, FID and KID</div>
+<p><strong>Kernel two-sample test</strong> (Gretton et al., JMLR 2012). Question: do samples $X_1,\dots,X_n$ and $Y_1,\dots,Y_m$ come from the same law (for instance: did the distribution of user features drift between January and June)? Statistic: the empirical $\mathrm{MMD}^2$ by (7.5) with weights $\frac1n$, $\frac1m$. Calibration: shuffle the $n+m$ points many times, recompute the statistic on random splits, and reject “same law” if the observed value is larger than 95% of the shuffled ones (a permutation test). <strong>MMD GANs</strong> train a generator by minimising this same statistic between generated and real batches (OT4ML p. 134: “MMD generator losses take $B$ to be a unit ball in an RKHS”). <strong>Evaluating generators</strong> (OT4ML Example 7.14, p. 129): the Fréchet Inception Distance embeds real and generated images in the feature space of a pretrained network, fits a Gaussian to each cloud, and reports $W_2^2$ between the two Gaussians — mean term plus the Bures term of <a href="Lesson03.html#gauss">Lesson 3</a>; the Kernel Inception Distance reports an MMD$^2$ in the same feature space.</p>
+</div>
+
+<h3 id="div-phi">$\varphi$-divergences compare densities point by point</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Defs. 7.15–7.16, Ex. 7.19–7.20, pp. 129–132</span></div>
+<p><strong>Definition 7.15 (Entropy function).</strong> A function $\varphi:\R\to\R\cup\{+\infty\}$ is an entropy function if it is proper, lower semicontinuous and convex, with $\mathrm{dom}\,\varphi\subset[0,+\infty)$ and $\mathrm{dom}\,\varphi\cap(0,+\infty)\ne\emptyset$. Its recession slope is $\varphi'_\infty=\lim_{s\to+\infty}\frac{\varphi(s)}s\in\R\cup\{+\infty\}$.</p>
+<p><strong>Definition 7.16 ($\varphi$-Divergences).</strong> Let $\varphi$ be an entropy function and let $\al,\be\in\mathcal M_+(\X)$. Write the Lebesgue decomposition of $\al$ with respect to $\be$ as $\al=\frac{\dd\al}{\dd\be}\be+\al^\perp$, where $\al^\perp\perp\be$. The associated divergence is</p>
+$$\mathcal D_\varphi(\al|\be):=\int_\X\varphi\Big(\frac{\dd\al}{\dd\be}\Big)\dd\be+\varphi'_\infty\,\al^\perp(\X).\qquad(7.6)$$
+<p>[…] If $\varphi$ has superlinear growth, e.g. the usual entropy (7.9), then $\varphi'_\infty=+\infty$ so that $\mathcal D_\varphi(\al|\be)=+\infty$ if $\al$ does not have a density with respect to $\be$.</p>
+<p><strong>Example 7.19 (Kullback–Leibler divergence)</strong>: $\varphi_\KL(s)=s\log(s)-s+1$ for $s>0$, $1$ for $s=0$, $+\infty$ otherwise. <strong>Example 7.20 (Total variation)</strong>: $\varphi_\TV(s)=\abs{s-1}$ for $s\ge0$; $\TV(\al|\be)=\norm{\al-\be}_\TV$, “the full variation norm, without the factor $1/2$ sometimes used for probability measures”.</p>
+<p>[p. 132] For probability measures, the Jensen–Shannon distance is the square root of $\mathrm{JS}(\al,\be)^2=\frac12\KL\big(\al\big|\frac{\al+\be}2\big)+\frac12\KL\big(\be\big|\frac{\al+\be}2\big)$, and satisfies $0\le\mathrm{JS}(\al,\be)^2\le\log2$. […] Its exact entropy generator is $\varphi_{\mathrm{JS}}(s)=\frac12\big(s\log s-(s+1)\log\frac{s+1}2\big)$.</p>
+</div>
+<dl class="decode">
+<dt>$\frac{\dd\al}{\dd\be}$</dt><dd>The density ratio (Radon–Nikodym derivative) of the part of $\al$ that $\be$ “sees”. For histograms on common points: $a_i/b_i$; for densities: $\rho_\al/\rho_\be$.</dd>
+<dt>$\al^\perp$</dt><dd>The part of $\al$ living where $\be$ has no mass. A $\varphi$-divergence charges it $\varphi'_\infty$ per unit: $+\infty$ for KL, $1$ for TV.</dd>
+<dt>$\varphi(1)=0$</dt><dd>All generators vanish at $s=1$, so $\mathcal D_\varphi(\al|\al)=0$; convexity and Jensen give $\mathcal D_\varphi\ge0$ (OT4ML Prop. 7.18).</dd>
+<dt>point by point</dt><dd>A $\varphi$-divergence only compares $\al$ and $\be$ <strong>at the same place</strong>: it does not know how far apart two places are. That is its strength (cheap, $O(n)$ for histograms, invariant under re-labelling of points) and its weakness (blind to geometry).</dd>
+</dl>
+<div class="box recall"><div class="box-h">Reminder — KL, from Lesson 3’s total variation to here</div>
+<p>$\KL(p|q)=\int p\log\frac pq\ge0$, $+\infty$ if $p$ has mass where $q$ has none; total variation $\norm{\al-\be}_\TV=\int\abs{\rho_\al-\rho_\be}\in[0,2]$ (<a href="Lesson03.html#tv">Lesson 3, §5</a>). Both are $\varphi$-divergences. See the <a href="#recall-kl">refresher</a> and the <a href="Reminders.html#f-divergences">Reminders</a>.</p>
+</div>
+<div class="box example" id="div-table"><div class="box-h">Worked example — translate and compare</div>
+<p>Three families, each translated by $t$: two uniform laws $\mathcal U[t,1+t]$ vs $\mathcal U[0,1]$; two Gaussians $\N(t,1)$ vs $\N(0,1)$; two Diracs $\delta_t$ vs $\delta_0$. Values (MMD with the Gaussian kernel, $\sigma=1$; JS by quadrature):</p>
+<div class="table-wrap"><table>
+<thead><tr><th>pair</th><th>$t$</th><th>$\KL$</th><th>$\mathrm{JS}^2$</th><th>$\norm{\cdot}_\TV$</th><th>MMD</th><th>$W_1$</th></tr></thead>
+<tbody>
+<tr><td rowspan="3">uniforms</td><td>0.5</td><td>$+\infty$</td><td>0.3466</td><td>1</td><td>0.432</td><td>0.5</td></tr>
+<tr><td>1</td><td>$+\infty$</td><td>0.6931</td><td>2</td><td>0.801</td><td>1</td></tr>
+<tr><td>2</td><td>$+\infty$</td><td>0.6931</td><td>2</td><td>1.231</td><td>2</td></tr>
+<tr><td rowspan="3">Gaussians</td><td>0.5</td><td>0.125</td><td>0.0303</td><td>0.395</td><td>0.217</td><td>0.5</td></tr>
+<tr><td>1</td><td>0.5</td><td>0.1114</td><td>0.766</td><td>0.421</td><td>1</td></tr>
+<tr><td>2</td><td>2</td><td>0.3368</td><td>1.365</td><td>0.750</td><td>2</td></tr>
+<tr><td>Diracs</td><td>any $t\ne0$</td><td>$+\infty$</td><td>$\log2=0.6931$</td><td>2</td><td>$\sqrt{2-2e^{-t^2/2}}$</td><td>$\abs{t}$</td></tr>
+</tbody></table></div>
+<p>Read the columns. <strong>KL</strong> is infinite as soon as supports differ. <strong>JS²</strong> and <strong>TV</strong> stop changing once the supports are disjoint ($t\ge1$ for the uniforms, every $t\ne0$ for Diracs): they say “different”, not “how different”. <strong>MMD</strong> keeps increasing but saturates. <strong>$W_1$</strong> grows exactly like $t$. For overlapping Gaussians everything is finite, but KL grows like $t^2/2$ and JS² flattens towards $\log2$.</p>
+</div>
+
+<h3 id="div-pinsker">Pinsker’s inequality, and strong versus weak</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Thm. 7.21, p. 131; Remark 7.22, p. 132</span></div>
+<p><strong>Theorem 7.21 (Pinsker inequality).</strong> Let $\al,\be\in\M(\X)$ be probability measures on a measurable space. With the full-variation convention (7.11), $\TV(\al|\be)^2=\norm{\al-\be}_\TV^2\le2\KL(\al|\be)$.</p>
+<p><strong>Remark 7.22 (Strong vs. weak topology).</strong> […] For probability measures on a compact metric space, one has the sharp elementary comparison $W_1(\al,\be)\le\frac{\diam(\X)}2\norm{\al-\be}_\TV$. Indeed, a 1-Lipschitz test function can be shifted by a constant so that its sup norm is at most $\diam(\X)/2$. […] The converse is false: if $x_n\to x$ with $x_n\ne x$, then $\delta_{x_n}\wto\delta_x$ and $W_1(\delta_{x_n},\delta_x)\to0$, whereas $\norm{\delta_{x_n}-\delta_x}_\TV=2$ for every $n$.</p>
+</div>
+<p>So the hierarchy is $\KL\ \Rightarrow\ \TV\ \Rightarrow\ W_1$: a small KL forces a small total variation, which forces a small $W_1$ on a bounded space — and none of the converses holds.</p>
+<div class="box idea"><div class="box-h">Idea of the proof of Pinsker</div>
+<p>Reduce to two points: lumping $\X$ into “where $\al>\be$” and “elsewhere” can only decrease KL and keeps the total variation. On two points it is a one-variable inequality, proved by a second derivative.</p>
+</div>
+<details class="fold proof"><summary>Full proof (OT4ML p. 131, in steps)</summary><div class="fold-body">
+<ol class="steps">
+<li>Assume $\KL(\al|\be)<\infty$ (else there is nothing to prove). Let $A$ be a set where $\al-\be\ge0$ and $\al-\be\le0$ on its complement (a Hahn set), $a=\al(A)$, $b=\be(A)$. Then $a-b=\frac12\norm{\al-\be}_\TV$.<span class="why">$\norm{\al-\be}_\TV=(\al-\be)(A)-(\al-\be)(A^c)$, and $(\al-\be)(A^c)=-(\al-\be)(A)$ because $(\al-\be)(\X)=0$.</span></li>
+<li>$$\KL(\al|\be)\ge a\log\frac ab+(1-a)\log\frac{1-a}{1-b}.$$<span class="why">Coarse-graining onto $(A,A^c)$: on each piece, Jensen’s inequality (the log-sum inequality $\int_Ap\log\frac pq\ge\big(\int_Ap\big)\log\frac{\int_Ap}{\int_Aq}$) .</span></li>
+<li>For fixed $b$, $h(a):=a\log\frac ab+(1-a)\log\frac{1-a}{1-b}-2(a-b)^2$ satisfies $h(b)=0$ and $h'(b)=0$.<span class="why">$h'(a)=\log\frac ab-\log\frac{1-a}{1-b}-4(a-b)$, which is $0$ at $a=b$.</span></li>
+<li>$h''(a)=\frac1a+\frac1{1-a}-4\ge0$, so $h$ is convex and minimal at $a=b$: $h\ge0$.<span class="why">$\frac1a+\frac1{1-a}=\frac1{a(1-a)}\ge4$ because $a(1-a)\le\frac14$.</span></li>
+<li>$\KL(\al|\be)\ge2(a-b)^2=2\cdot\frac14\norm{\al-\be}_\TV^2$, i.e. $\norm{\al-\be}_\TV^2\le2\KL(\al|\be)$.<span class="why">Steps 1, 2 and 4.</span></li>
+</ol>
+</div></details>
+<p><strong>Check on numbers.</strong> Gaussians translated by $t=1$: $\norm{\cdot}_\TV^2=0.5865\le2\KL=1$. For the Dirac family the inequality is true but empty ($4\le\infty$). The second inequality of the box is the upper bound of Exercise 2 of the sheet, proved by duality in <a href="#sheet-2">§9</a>.</p>
+<div class="widget" data-widget="l4divs"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p>What to look at: pick a family and move the shift $t$; the model (orange-red) slides over the data (blue). The curves show each discrepancy as a function of $t$, the dots their current values. For two uniform laws, KL is infinite as soon as $t\ne0$, JS² and TV become <strong>flat</strong> once $\abs{t}\ge1$ (their slope — the gradient a GAN would receive — is $0$), MMD flattens slowly, and only $W_1$ keeps a slope of $\pm1$ pointing back to the data. The readout gives the slopes at the current $t$.</p>
+
+<h3 id="div-gans">GANs: the discriminator is a dual potential</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML §7.4, pp. 133–135</span></div>
+<p>The goal is to fit a generative parametric model $\al_\theta=g_{\theta,\sharp}\zeta$ to empirical data $\be=\frac1m\sum_{j=1}^m\delta_{y_j}$, where $\zeta\in\M(\mathcal Z)$ is a fixed latent probability measure and $g_\theta:\mathcal Z\to\X$ is the generator, often a neural network. […] The original vanilla GAN corresponds, up to an additive constant and the usual reparametrization by a discriminator taking values in $(0,1)$, to the unscaled Jensen–Shannon generator $\hat\varphi_{\mathrm{JS}}=2\varphi_{\mathrm{JS}}$ […]. Moreover, density-ratio losses are informative when the measures overlap but can saturate when model and data are mutually singular: $\mathrm{JS}^2$ reaches its maximum $\log2$ on disjoint supports.</p>
+<p><em>Dual norms and integral probability metrics.</em> Instead of a density-ratio divergence, one can minimize a dual norm (7.1),</p>
+$$\inf_\theta\norm{\al_\theta-\be}_B=\inf_\theta\sup_{f\in B}\int_{\mathcal Z}f\big(g_\theta(z)\big)\,\dd\zeta(z)-\frac1m\sum_{j=1}^mf(y_j).$$
+<p>MMD generator losses take $B$ to be a unit ball in an RKHS; Wasserstein GANs take $B$ to be a Lipschitz ball, following Kantorovich–Rubinstein duality. The advantage is topological […] The corresponding objectives are therefore continuous for weak convergence. They can compare singular empirical and generated measures through test functions instead of requiring pointwise density ratios.</p>
+</div>
+<dl class="decode">
+<dt>$g_{\theta,\sharp}\zeta$</dt><dd>The law of $g_\theta(z)$ for $z\sim\zeta$ (e.g. $z$ Gaussian in $\R^{100}$, $g_\theta(z)$ an image): sampling is easy, the density is unknown or does not exist.</dd>
+<dt>$f\in B$</dt><dd>The <em>discriminator</em> or <em>critic</em>: a test function, implemented as a second network $f_\xi$. The inner $\sup$ is the dual of §1–§5: <strong>the critic is a dual potential</strong>.</dd>
+<dt>$\inf_\theta\sup_f$</dt><dd>A two-player game: the critic looks for the test that best separates fake from real, the generator moves its samples to defeat it.</dd>
+<dt>vanilla GAN</dt><dd>Goodfellow et al. (2014): a discriminator outputs a probability “real”; the game is (up to constants) the dual form of $2\mathrm{JS}^2$ (OT4ML Prop. 7.24 gives the dual of any $\varphi$-divergence, the basis of $f$-GANs).</dd>
+</dl>
+<div class="box example"><div class="box-h">Worked example — parallel segments (why JS fails and $W_1$ works)</div>
+<p>In the plane, data on the vertical segment $\{0\}\times[0,1]$ and the model on $\{\theta\}\times[0,1]$ (both uniform); the parameter $\theta$ is the horizontal position. For $\theta\ne0$ the supports are disjoint, so $\mathrm{JS}^2=\log2$, $\norm{\cdot}_\TV=2$ and $\KL=+\infty$, whatever $\theta$: their derivative in $\theta$ is $0$ (or undefined). But $W_1=\abs{\theta}$ (a translation), with derivative $\mathrm{sign}(\theta)$: gradient descent moves the model straight to the data. The optimal critic is $f(x,y)=x\,\mathrm{sign}(\theta)$ (1-Lipschitz), and its gradient at the generated points is the direction in which to push them. (This is Example 1 of Arjovsky, Chintala and Bottou, ICML 2017.)</p>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — Wasserstein GANs: the critic is a Kantorovich potential</div>
+<p><strong>Data</strong>: images $y_1,\dots,y_m$. <strong>Model</strong>: a generator network $g_\theta:\R^{100}\to\R^{64\times64\times3}$ applied to Gaussian noise. <strong>Loss</strong>: $W_1(\al_\theta,\be)=\max_{\Lip(f)\le1}\E_zf(g_\theta(z))-\frac1m\sum_jf(y_j)$ (with the sign convention of the book), with $f=f_\xi$ a second network, the <em>critic</em>. <strong>Training</strong>: alternate a few steps of stochastic gradient <em>ascent</em> on $\xi$ (make the critic a better witness on mini-batches) and one step of <em>descent</em> on $\theta$, whose gradient is $\E_z\big[\partial_\theta g_\theta(z)\T\,\nabla f_\xi(g_\theta(z))\big]$ (CompOT (9.36), p. 160): each generated sample is pushed along the slope of the potential. Why it helps: when model and data lie on thin, disjoint sets — the typical situation for images, which live near low-dimensional manifolds — the JS loss of the original GAN is saturated at $\log2$ and its gradient vanishes, while $W_1$ still measures the distance. <strong>The catch</strong> is the constraint $\Lip(f_\xi)\le1$ (next box): the original WGAN clipped the weights; later variants penalise $(\norm{\nabla f_\xi}-1)^2$ at points between real and fake samples (Gulrajani et al., 2017) or normalise each layer by its spectral norm (Miyato et al., 2018) — both outside the course resources, and both only approximate the Lipschitz ball, so a trained critic gives an estimate of $W_1$, not its exact value.</p>
+</div>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Remark 7.26, p. 135</span></div>
+<p><strong>Remark 7.26 (Weight clipping is only a proxy).</strong> Wasserstein GANs originally used a tunable clipping parameter $c>0$, constraining each critic parameter to $[-c,c]$, equivalently $\norm{\xi}_\infty\le c$, as a proxy for enforcing a Lipschitz bound. The resulting Lipschitz constant depends on the architecture and on $c$ and is not canonically one. The parameter box is convex, but its image through a neural-network parametrization is neither the full unit Lipschitz ball nor generally a convex class of functions, and optimization in the parameters remains non-concave. Clipping is therefore a practical heuristic rather than a faithful implementation of the Kantorovich–Rubinstein constraint.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — clipped weights do not make a 1-Lipschitz critic</div>
+<p>One hidden layer with $K$ ReLU units and all weights clipped to $[-1,1]$: $f(x)=\sum_{k=1}^K\mathrm{ReLU}(x)$ (all weights equal to $1$) has Lipschitz constant $K$. With $K=10$, the “critic” computes up to $10\,W_1$. A constant factor does not change the minimiser in $\theta$, but the class is not a ball and its size depends on the architecture: the 2019 notes’ claim that clipping “ensures $f_\xi\in B$” (p. 33) is too strong — see the notes on the sources.</p>
+</div>
+<figure class="fig"><!-- include figures/L04/witness.svg --><figcaption>Three witnesses for the same pair of densities ($\al$ orange-red, $\be$ blue). Total variation: the sign of $\rho_\al-\rho_\be$, jumping between $\pm1$. $W_1$: a 1-Lipschitz function with slopes $\pm1$, bending where the CDFs cross (§5). MMD (Gaussian kernel, $\sigma=0.4$): the difference of densities smoothed by the kernel, normalised to the RKHS unit ball. The values of the three distances are printed above each panel (OT4ML Fig. 7.1 shows rescaled versions of these shapes).</figcaption></figure>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>Data are samples (singular) → use a dual norm ($W_1$, MMD) or a transport cost, not a density-ratio divergence.</li>
+<li>A loss is flat on disjoint supports (JS, TV) → no gradient for a generator far from the data.</li>
+<li>A dual norm is a $\sup$ over test functions → in practice the test function is a network (critic), and the class must be controlled (Lipschitz, RKHS norm).</li>
+<li>Comparing two Gaussians in feature space → FID $=W_2^2$ (mean + Bures).</li>
+</ul>
+</div>
+<div class="quiz"><p>Show that $\mathrm{JS}(\al,\be)^2=\log2$ when $\al$ and $\be$ have disjoint supports.</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>On the support of $\al$, $\frac{\al+\be}2=\frac\al2$, so $\frac{\dd\al}{\dd(\al+\be)/2}=2$ there and $\KL\big(\al\big|\frac{\al+\be}2\big)=\int\log2\,\dd\al=\log2$. Same for $\be$. Hence $\mathrm{JS}^2=\frac12\log2+\frac12\log2=\log2$ — independent of how far apart the supports are.</p>
+</div></details></div>
+<div class="quiz"><p>Why is total variation both a $\varphi$-divergence and a dual norm, and why does that not save it for GANs?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>$\varphi_\TV(s)=\abs{s-1}$ gives $\int\abs{\rho_\al-\rho_\be}$, and the ball $\norm{f}_\infty\le1$ gives the same number (the witness is the sign of $\rho_\al-\rho_\be$). But its ball is too large (not compact): $\TV$ is the strong topology, equal to $2$ for any two disjoint supports, so it is as flat as JS for a generator far from the data.</p>
+</div></details></div>

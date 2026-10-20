@@ -1,0 +1,147 @@
+<h2 id="moving">1. Moving mass: particles, densities and the continuity equation <span class="ref">OT4ML §14.1, pp. 328–330</span></h2>
+<p class="tldr">A distribution in motion can be followed particle by particle (each one obeys an ODE $\dot x=v_t(x)$) or watched at fixed places (the density obeys $\partial_t\rho_t+\dv(\rho_tv_t)=0$); the two descriptions are equivalent, but a given motion of the density has many velocity fields, and the most economical one is a gradient.</p>
+
+<h3 id="moving-why">The problem: transport as a motion</h3>
+<p>Until now a transport plan was a <em>static</em> object: a map $T$ or a coupling $\pi$ that says where each unit of mass ends up. Lesson 3 already looked at the motion in between (the displacement interpolation $\al_t$, <a href="Lesson03.html#geo">Lesson 3 §6</a>). This lesson makes the motion the main object, for two reasons.</p>
+<ul>
+<li><strong>Geometry.</strong> In $\R^d$ the squared distance $\norm{x-y}^2$ is the least kinetic energy $\int_0^1\norm{\dot x(t)}^2\dd t$ of a path from $x$ to $y$. We will see that $W_2^2$ is the same thing for distributions (§2). This turns transport into a (convex) optimization over motions, which can be discretized on a grid (§3–§4).</li>
+<li><strong>Machine learning.</strong> Modern generative models (flow matching, diffusion models) produce samples by <em>moving</em> noise along a learned velocity field (§5–§8). To understand them we need the language of moving distributions.</li>
+</ul>
+
+<h3 id="lagrange-euler">Two descriptions of the same motion</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML §14.1, (14.1)–(14.3), p. 328</span></div>
+<p><strong>Lagrangian and Eulerian descriptions.</strong> We consider the evolution $t\mapsto\al_t\in\Pc(\R^d)$. Such an evolution can be described in a “Lagrangian” way as the advection of particles along a (time-dependent) vector field $v_t(x)$ in $\R^d$. At the particle level, this advection is governed by</p>
+$$\frac{\dd x(t)}{\dd t}=v_t(x(t)),\qquad(14.1)$$
+<p>and we write $T_t$ for the associated flow map, so that $T_t(x(0))=x(t)$. The advected measure is then $\al_t=\pf{(T_t)}{\al_0}$. For discrete measures, $\al_t=\frac1n\sum_{i=1}^n\delta_{x_i(t)}$, meaning each $x_i(t)$ solves (14.1).</p>
+<p>In the Eulerian description, the same motion is written directly on the evolving measure: the particle ODE becomes the PDE</p>
+$$\frac{\partial\al_t}{\partial t}+\dv(v_t\al_t)=0.\qquad(14.2)$$
+<p>[…] It is only a classical PDE when $\al_t$ has a smooth density. For general measures, and in particular for empirical measures, it is understood in the distributional sense: for every $\varphi\in C_c^1((0,1)\times\R^d)$,</p>
+$$\int_0^1\!\!\int_{\R^d}\big(\partial_t\varphi(t,x)+\ps{v_t(x)}{\nabla_x\varphi(t,x)}\big)\,\dd\al_t(x)\,\dd t=0.\qquad(14.3)$$
+</div>
+<dl class="decode">
+<dt>$v_t(x)$</dt><dd>A velocity field: at time $t$, the mass located at $x$ moves with velocity $v_t(x)\in\R^d$. It is attached to <em>places</em>, not to particles.</dd>
+<dt>(14.1)</dt><dd>A particle sitting at $x(t)$ moves with the velocity of the place where it is. Given $x(0)$, this ODE determines the whole trajectory (if $v$ is regular, <a href="#recall-ode">refresher</a>).</dd>
+<dt>$T_t$</dt><dd>The flow map: $T_t(x)$ is the position at time $t$ of the particle that started at $x$. $T_0=\Id$.</dd>
+<dt>$\al_t=\pf{(T_t)}{\al_0}$</dt><dd>“Move every bit of the initial mass along its trajectory”: the distribution at time $t$ is the image of $\al_0$ by $T_t$. With random variables: $X_0\sim\al_0$ and $X_t=T_t(X_0)$, then $X_t\sim\al_t$.</dd>
+<dt>(14.2)</dt><dd>The <em class="new">continuity equation</em>. With a density, $\partial_t\rho_t+\dv(\rho_tv_t)=0$: the density at a fixed place increases exactly when more mass flows in than out. $\rho_tv_t$ is the <em>flux</em> (mass per unit time crossing a point). Also called advection or Liouville equation.</dd>
+<dt>(14.3)</dt><dd>The <em>weak form</em>: test the equation against smooth functions $\varphi$ and move the derivatives onto $\varphi$ by integration by parts. It makes sense for Diracs, which have no density.</dd>
+</dl>
+
+<figure class="fig"><!-- include figures/L06/lagrange_euler.svg --><figcaption>The same motion, from $\N(0,1)$ to $\N(4,2^2)$, seen in two ways. Left (Lagrangian): nine particles, each on its own trajectory $x(t)=4t+(1+t)x(0)$ (here straight lines; this is the optimal motion of §2). Right (Eulerian): the density at three times and the velocity $v_t(x)=4+\frac{x-4t}{1+t}$ at fixed places.</figcaption></figure>
+
+<h4>Where the continuity equation comes from: conservation of mass</h4>
+<p>In one dimension, look at the mass in an interval $[a,b]$. Mass is neither created nor destroyed; it only crosses the endpoints. Per unit time, the mass crossing the point $a$ from left to right is $\rho_t(a)v_t(a)$ (density times speed). So</p>
+<ol class="steps">
+<li>$$\frac{\dd}{\dd t}\int_a^b\rho_t(x)\,\dd x=\rho_t(a)v_t(a)-\rho_t(b)v_t(b).$$<span class="why">What enters at $a$ minus what leaves at $b$ (a negative velocity at $a$ means mass leaving, and the formula still holds with the sign).</span></li>
+<li>$$\rho_t(a)v_t(a)-\rho_t(b)v_t(b)=-\int_a^b\partial_x(\rho_tv_t)\,\dd x.$$<span class="why">Fundamental theorem of calculus.</span></li>
+<li>$$\int_a^b\big(\partial_t\rho_t+\partial_x(\rho_tv_t)\big)\dd x=0\ \text{ for all }a<b\quad\Longrightarrow\quad\partial_t\rho_t+\partial_x(\rho_tv_t)=0.$$<span class="why">Differentiate under the integral sign; a continuous function whose integral vanishes on every interval is zero.</span></li>
+</ol>
+<p>In $\R^d$ the same argument with a region $A$ and the divergence theorem (the outgoing flux through the boundary of $A$ is $\int_A\dv(\rho_tv_t)$, <a href="#recall-div">refresher</a>) gives (14.2).</p>
+
+<div class="box example"><div class="box-h">Worked example — a translation and a dilation</div>
+<ul>
+<li><strong>Translation.</strong> $T_t(x)=x+ta$: every particle moves with the constant velocity $v_t\equiv a$, and $\rho_t(x)=\rho_0(x-ta)$. Check: $\partial_t\rho_t=-\ps{a}{\nabla\rho_0(x-ta)}$ and $\dv(\rho_ta)=\ps{a}{\nabla\rho_0(x-ta)}$; they cancel.</li>
+<li><strong>Dilation.</strong> On the line, $T_t(x)=(1+t)x$ sends $\N(0,1)$ to $\al_t=\N(0,(1+t)^2)$. A particle at $x(t)=(1+t)x_0$ has velocity $x_0=\frac{x(t)}{1+t}$, so $v_t(x)=\frac{x}{1+t}$. With $s=1+t$ and $\rho_t(x)=\frac1s\phi(x/s)$ ($\phi$ the standard normal density): $\partial_t\rho_t=\rho_t\big(\frac{x^2}{s^3}-\frac1s\big)$ and $\partial_x\big(\rho_t\frac xs\big)=\frac{\rho_t}s\big(1-\frac{x^2}{s^2}\big)$: they cancel. Numbers at $t=0.5$, $x=1$: $\rho=0.21297$, $\partial_t\rho=-0.07888$, $-\partial_x(\rho v)=-0.07888$.</li>
+</ul>
+</div>
+
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 14.2, p. 329</span></div>
+<p><strong>Proposition 14.2 (Lagrangian flows solve the continuity equation).</strong> Let $(T_t)_{t\in[0,1]}$ be a $C^1$ family of diffeomorphisms of $\R^d$ and define $\al_t=\pf{(T_t)}{\al_0}$. Assume that the derivatives below are integrable with respect to $\al_0$, and define the Eulerian velocity field by</p>
+$$v_t(T_t(y))=\partial_tT_t(y).$$
+<p>Then $(\al_t,v_t)$ solves the continuity equation in the weak sense (14.3). In particular, if $\al_0=\frac1n\sum_i\delta_{x_i(0)}$ is empirical, then $\al_t=\frac1n\sum_i\delta_{x_i(t)}$ is empirical as well, with particle velocities $\dot x_i(t)=v_t(x_i(t))$.</p>
+</div>
+<dl class="decode">
+<dt>$v_t(T_t(y))=\partial_tT_t(y)$</dt><dd>The Eulerian velocity at the place $T_t(y)$ is the speed of the particle that is there (the one that started at $y$). This defines $v_t$ everywhere because $T_t$ is a bijection.</dd>
+<dt>“in the weak sense”</dt><dd>The identity (14.3) for every test function $\varphi$; no density needed.</dd>
+</dl>
+<div class="box idea"><div class="box-h">Idea of the proof</div>
+<p>Averages of a test function along the motion are averages over the initial mass of $\varphi$ evaluated on the trajectories. Differentiate in time with the chain rule: the derivative of $\varphi(t,x(t))$ is $\partial_t\varphi+\ps{\nabla\varphi}{\dot x}$, and $\dot x$ is the velocity. Integrating over time gives (14.3).</p>
+</div>
+<details class="fold proof"><summary>Full proof</summary><div class="fold-body">
+<p>Let $\varphi\in C_c^1((0,1)\times\R^d)$.</p>
+<ol class="steps">
+<li>$$\int\varphi(t,x)\,\dd\al_t(x)=\int\varphi(t,T_t(y))\,\dd\al_0(y).$$<span class="why">Definition of the push-forward $\al_t=\pf{(T_t)}{\al_0}$, applied to the function $x\mapsto\varphi(t,x)$.</span></li>
+<li>$$\frac{\dd}{\dd t}\int\varphi(t,T_t(y))\,\dd\al_0(y)=\int\Big(\partial_t\varphi(t,T_t(y))+\ps{\nabla_x\varphi(t,T_t(y))}{\partial_tT_t(y)}\Big)\dd\al_0(y).$$<span class="why">Chain rule for $t\mapsto\varphi(t,T_t(y))$, and differentiation under the integral sign (allowed by the integrability assumption).</span></li>
+<li>$$\begin{aligned}&=\int\Big(\partial_t\varphi(t,T_t(y))+\ps{\nabla_x\varphi(t,T_t(y))}{v_t(T_t(y))}\Big)\dd\al_0(y)\\&=\int\big(\partial_t\varphi(t,x)+\ps{\nabla_x\varphi(t,x)}{v_t(x)}\big)\dd\al_t(x).\end{aligned}$$<span class="why">Definition of $v_t$; then the push-forward relation again, for the function $x\mapsto\partial_t\varphi(t,x)+\ps{\nabla_x\varphi(t,x)}{v_t(x)}$.</span></li>
+<li>$$\int_0^1\!\!\int\big(\partial_t\varphi+\ps{v_t}{\nabla_x\varphi}\big)\dd\al_t\,\dd t=\Big[\int\varphi(t,x)\,\dd\al_t(x)\Big]_{t=0}^{t=1}=0.$$<span class="why">Integrate step 3 in $t$; $\varphi$ vanishes near $t=0$ and $t=1$ (compact support in $(0,1)$). This is (14.3).</span></li>
+</ol>
+<p>For an empirical measure the same computation is a finite sum over particles, $\frac{\dd}{\dd t}\frac1n\sum_i\varphi(t,x_i(t))=\frac1n\sum_i\big(\partial_t\varphi+\ps{\nabla\varphi}{\dot x_i}\big)$. $\square$</p>
+</div></details>
+
+<div class="box recall"><div class="box-h">Reminder — the continuity equation in probabilistic language</div>
+<p>With $X_t=T_t(X_0)$, the weak form says $\frac{\dd}{\dd t}\E[\varphi(X_t)]=\E[\ps{\nabla\varphi(X_t)}{v_t(X_t)}]$ for smooth $\varphi$ (StatOT Prop. 5.1, p. 142). This is the form used in §6: to check that a velocity moves a curve of laws, differentiate $\E[\varphi(X_t)]$. More: <a href="Reminders.html#continuity-eq">Reminders — the continuity equation</a>.</p>
+</div>
+
+<div class="widget" data-widget="l6continuity"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p>What to look at: choose a velocity field and move $t$ (or press Play). Top: the density $\al_t$ (green) computed from 1200 particles, with $\al_0$ and $\al_1$ dashed, and the velocity field as arrows at fixed places (Eulerian view). Bottom: the trajectories of a few particles in the $(x,t)$ plane (Lagrangian view). The readout checks the <strong>mass balance</strong> in the window $[a,b]$: the rate of change of the mass inside equals the flux in at $a$ minus the flux out at $b$ — the continuity equation, measured. With the clustering field the density concentrates at the stable points $0$ and $\pm3$ while the total mass stays $1$; with the optimal field the kinetic energy is the same at every time.</p>
+
+<h3 id="nonunique">One motion, many velocities</h3>
+<p>Given the particles we found the velocity. Conversely, given only the <em>curve</em> $t\mapsto\al_t$ (for instance snapshots of a population, without tracking individuals), can we recover the velocity? Not uniquely.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML §14.1, p. 329</span></div>
+<p><strong>From measure evolutions to vector fields.</strong> For a given evolution $(\al_t)_t$, there are typically infinitely many velocity fields $v_t$ satisfying</p>
+$$\partial_t\al_t+\dv(\al_tv_t)=0.\qquad(14.5)$$
+<p>This non-uniqueness comes from the kernel of the weighted divergence. The linear space of vector fields that leave a measure $\al$ invariant is</p>
+$$\mathcal H_\al=\big\{v\in L^2(\al;\R^d)\ ;\ \dv(\al v)=0\text{ in distributions}\big\}.$$
+<p>It is usually non-trivial: for instance, if $\al$ is an isotropic Gaussian, $\mathcal H_\al$ contains rotational vector fields generated by anti-symmetric matrices.</p>
+</div>
+<p>If $v_t$ moves the curve and $w\in\mathcal H_{\al_t}$, then $v_t+w$ moves it too: $\dv(\al_t(v_t+w))=\dv(\al_tv_t)+0$. The particles move differently, the distribution does not.</p>
+<div class="box example"><div class="box-h">Worked example — a rotation that moves nothing (StatOT §5.1, Fig. 5.1, p. 144)</div>
+<p>Let $\al=\N(0,\Id_2)$ with density $\rho(x)=\frac1{2\pi}e^{-\norm x^2/2}$, so $\nabla\rho=-x\rho$, and let $v(x)=Jx$ with $J=\begin{pmatrix}0&-1\\1&0\end{pmatrix}$ (rotation by $90°$, anti-symmetric).</p>
+<ol class="steps">
+<li>$$\dv(\rho v)=\ps{\nabla\rho}{Jx}+\rho\,\dv(Jx)=-\rho\ps{x}{Jx}+\rho\,\tr J.$$<span class="why">Product rule $\dv(\rho v)=\ps{\nabla\rho}{v}+\rho\dv v$, and $\dv(Jx)=\tr J$ for a linear field.</span></li>
+<li>$$\ps{x}{Jx}=x_1(-x_2)+x_2x_1=0,\qquad\tr J=0,\qquad\text{so}\quad\dv(\rho v)=0.$$<span class="why">A rotation field is orthogonal to the radius, and an anti-symmetric matrix has zero diagonal.</span></li>
+<li>The constant curve $\al_t=\al$ solves the continuity equation with $v=0$ and with $v=Jx$: every particle turns around the origin, the Gaussian does not change.<span class="why">$\partial_t\al_t=0=-\dv(\al Jx)$.</span></li>
+<li>Kinetic energies: $\int\norm{0}^2\dd\al=0$ against $\int\norm{Jx}^2\dd\al=\E\norm{X}^2=2$.<span class="why">$\norm{Jx}=\norm x$, and $\E\norm X^2=2$ for a standard Gaussian in $\R^2$ (checked by Monte Carlo: $2.006$ with $2\times10^5$ samples).</span></li>
+</ol>
+</div>
+<figure class="fig"><!-- include figures/L06/rotation.svg --><figcaption>Two velocity fields that leave the standard Gaussian unchanged (circles: its level sets). The rotation field moves every particle, at a cost, for nothing.</figcaption></figure>
+
+<h4>Choosing the most economical velocity</h4>
+<p>Among all the velocities that move a given curve, the natural choice is the one with the least kinetic energy: it explains the motion without useless swirling.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML (14.7) and Prop. 14.3, p. 330</span></div>
+<p>A more robust choice, used implicitly in flow matching, optimal transport and Wasserstein gradient flows, is to select among all admissible velocities the one with smallest kinetic energy:</p>
+$$\min_v\ \frac12\int_0^1\!\!\int_{\R^d}\norm{v_t(x)}^2\,\dd\al_t(x)\,\dd t\quad\text{subject to}\quad\partial_t\al_t+\dv(\al_tv_t)=0.\qquad(14.7)$$
+<p><strong>Proposition 14.3 (Least-square velocities are gradients).</strong> Assume that $\al_t=\rho_t\,\dd x$ is a smooth positive density curve, that $\partial_t\rho_t$ has zero integral, and that boundary terms vanish. The minimizer of (14.7), if it exists, is a gradient field $v_t=\nabla\varphi_t$, where $\varphi_t$, unique up to an additive constant on each connected component, solves the weighted Poisson equation</p>
+$$-\dv(\rho_t\nabla\varphi_t)=\partial_t\rho_t.\qquad(14.8)$$
+</div>
+<dl class="decode">
+<dt>(14.7)</dt><dd>The curve $(\al_t)$ is fixed; only the velocity is chosen. The factor $\frac12$ is a convention (it does not change the minimizer).</dd>
+<dt>gradient field</dt><dd>$v_t=\nabla\varphi_t$ for a scalar function $\varphi_t$: no rotational part.</dd>
+<dt>(14.8)</dt><dd>Plug $v_t=\nabla\varphi_t$ into the continuity equation: $\partial_t\rho_t+\dv(\rho_t\nabla\varphi_t)=0$. It is an elliptic equation for $\varphi_t$ (a Poisson equation weighted by $\rho_t$).</dd>
+</dl>
+<div class="box idea"><div class="box-h">Idea of the proof</div>
+<p>At each time, the admissible velocities form an affine space $v^\star+\mathcal H_{\al_t}$. The shortest vector of an affine space is the one orthogonal to its direction $\mathcal H_{\al_t}$, and gradients are exactly what is orthogonal to the fields with $\dv(\rho w)=0$ (integration by parts).</p>
+</div>
+<details class="fold proof"><summary>Proof (orthogonality in $L^2(\al_t)$)</summary><div class="fold-body">
+<p>Fix $t$ and use the inner product $\ps{u}{w}_{\al_t}=\int\ps{u}{w}\rho_t\,\dd x$.</p>
+<ol class="steps">
+<li>If $v$ and $v'$ both satisfy the continuity equation, $w=v'-v$ satisfies $\dv(\rho_tw)=0$: $w\in\mathcal H_{\al_t}$.<span class="why">Subtract the two equations; $\partial_t\rho_t$ cancels.</span></li>
+<li>For any smooth $\varphi$ and $w\in\mathcal H_{\al_t}$: $\ps{\nabla\varphi}{w}_{\al_t}=\int\ps{\nabla\varphi}{\rho_tw}\,\dd x=-\int\varphi\,\dv(\rho_tw)\,\dd x=0$.<span class="why">Integration by parts (boundary terms vanish by assumption).</span></li>
+<li>If the admissible $v_t=\nabla\varphi_t$ is a gradient, then for every admissible $v'=v_t+w$: $\norm{v'}^2_{\al_t}=\norm{v_t}^2_{\al_t}+2\ps{v_t}{w}_{\al_t}+\norm{w}_{\al_t}^2=\norm{v_t}^2_{\al_t}+\norm{w}_{\al_t}^2\ge\norm{v_t}^2_{\al_t}$.<span class="why">Step 2 kills the cross term: Pythagoras. So an admissible gradient is the minimizer, and it is unique ($w=0$).</span></li>
+<li>Conversely, OT4ML introduces a Lagrange multiplier $\varphi_t$ for the constraint: after integration by parts, the Lagrangian at time $t$ is $\int\big(\frac12\norm{v_t}^2-\ps{\nabla\varphi_t}{v_t}\big)\dd\al_t+\int\varphi_t\partial_t\al_t$, minimized pointwise by $v_t=\nabla\varphi_t$; the constraint then gives (14.8).<span class="why">The minimizer of $\frac12\norm v^2-\ps{p}{v}$ is $v=p$. (This is the “formal saddle” argument of OT4ML p. 330; the existence of the solution $\varphi_t$ of (14.8) is the analytic part.)</span></li>
+</ol>
+</div></details>
+<p><strong>In one dimension the velocity is unique.</strong> Integrate the continuity equation from $-\infty$ to $x$, with $F_t$ the CDF of $\al_t$: $\partial_tF_t(x)+\rho_t(x)v_t(x)=0$ (no flux at $-\infty$). So, wherever $\rho_t>0$,</p>
+$$v_t(x)=-\frac{\partial_tF_t(x)}{\rho_t(x)}.$$
+<p>Check on the dilation: $F_t(x)=\Phi(x/(1+t))$ gives $-\partial_tF_t/\rho_t=x/(1+t)$ (numerically $0.66667$ at $t=0.5$, $x=1$). In 1D there is no room to “turn around”: $\mathcal H_\al=\{0\}$ wherever $\rho>0$, since $(\rho w)'=0$ forces $\rho w$ to be a constant, which must be $0$ at $-\infty$.</p>
+
+<div class="box ml"><div class="box-h">In machine learning — continuous normalizing flows and neural ODEs</div>
+<p>A <strong>continuous normalizing flow</strong> (Chen, Rubanova, Bettencourt, Duvenaud, <em>Neural ordinary differential equations</em>, NeurIPS 2018; Grathwohl et al., FFJORD, ICLR 2019) is exactly the Lagrangian picture with a neural network as velocity: $v_\theta(t,x)$ is, say, a multilayer perceptron, samples are produced by drawing $x_0\sim\N(0,\Id)$ and solving $\dot x=v_\theta(t,x)$ up to $t=1$. To train it by maximum likelihood one needs the density along trajectories, which the continuity equation gives: along a trajectory,</p>
+$$\frac{\dd}{\dd t}\log\rho_t(x(t))=\frac{\partial_t\rho_t+\ps{\nabla\rho_t}{v_t}}{\rho_t}=\frac{-\dv(\rho_tv_t)+\ps{\nabla\rho_t}{v_t}}{\rho_t}=-\dv v_t(x(t)),$$
+<p>the “instantaneous change of variables”. The log-likelihood of a data point therefore requires solving the ODE backwards and integrating the trace of the Jacobian of $v_\theta$ along the way — expensive in high dimension. Flow matching (§6) trains the same kind of model <em>without</em> simulating the ODE. Pointer: OT4ML Example 16.2, p. 408 (“simulation-free training of continuous normalizing flows”).</p>
+</div>
+
+<div class="box pitfall"><div class="box-h">Pitfall — the velocity of a curve of distributions is not unique</div>
+<p>Knowing $\al_t$ for all $t$ does not tell you how individual particles move (in dimension $d\ge2$): you can add any field that leaves $\al_t$ invariant. When a statement says “the velocity of the curve”, ask which one: the least-energy one (a gradient), the one of a given flow, or the one learned by a model (§6).</p>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>To check that $(\al_t,v_t)$ solves the continuity equation → compute $\frac{\dd}{\dd t}\E[\varphi(X_t)]$ and compare with $\E[\ps{\nabla\varphi(X_t)}{v_t(X_t)}]$.</li>
+<li>Particles given → velocity $v_t(T_t(y))=\partial_tT_t(y)$. Density given in 1D → $v_t=-\partial_tF_t/\rho_t$.</li>
+<li>A velocity field with zero weighted divergence → it moves particles, not the distribution.</li>
+</ul>
+</div>
+<div class="quiz"><p>On the line, $\al_0=\mathcal U[0,1]$ and $v_t(x)=x$. What is $\al_t$, and what is its kinetic energy at time $t$?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>$\dot x=x$ gives $x(t)=e^tx(0)$, so $\al_t=\mathcal U[0,e^t]$ (density $e^{-t}$ on $[0,e^t]$). Kinetic energy $\int x^2\,\dd\al_t=\frac{e^{2t}}3$. Check of the continuity equation on $(0,e^t)$: $\partial_t\rho_t=-e^{-t}$ and $\partial_x(\rho_tx)=e^{-t}$.</p>
+</div></details></div>

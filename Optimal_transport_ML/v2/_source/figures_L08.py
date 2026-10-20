@@ -186,6 +186,211 @@ def fig_four_flows():
     c.save()
 
 
+def fig_three_reps():
+    """Ornstein-Uhlenbeck flow from two bumps: Langevin paths, deterministic score particles (quantiles), densities."""
+    from scipy.special import ndtr
+    from scipy.optimize import brentq
+    c = Canvas("three_reps", 660, 260, "One Fokker-Planck flow, three representations: noisy particles, deterministic particles, density", sub=SUB)
+    w, m, sd = np.array([0.5, 0.5]), np.array([-2.0, 2.0]), np.array([0.3, 0.3])
+    T = 3.0
+
+    def law(t):
+        e = math.exp(-t)
+        return m * e, np.sqrt(sd ** 2 * e * e + 1 - e * e)
+    ts = np.linspace(0, T, 121)
+    # (a) Langevin paths, Euler-Maruyama with a small step
+    rng = np.random.default_rng(3)
+    h, K = 0.005, int(T / 0.005)
+    starts = np.array([-2.3, -2.0, -1.7, 1.7, 2.0, 2.3])
+    X = starts.copy(); P = [X.copy()]
+    for k in range(K):
+        X = X - h * X + math.sqrt(2 * h) * rng.standard_normal(X.size)
+        P.append(X.copy())
+    P = np.array(P); tt = np.arange(K + 1) * h
+    f = Fig(c, (40, 30, 180, 170), (0, T), (-3.6, 3.6))
+    f.axes(xticks=[0, 1, 2, 3], yticks=[-3, 0, 3], xfmt=lambda v: f"{v:g}", grid=False)
+    for j in range(len(starts)):
+        f.path(list(zip(tt[::4], P[::4, j])), "ln c5 hair")
+    c.text(130, 20, "(LD) Langevin particles", "tx-b", "middle")
+    c.text(130, 224, "noisy, independent, they cross", "tx-s", "middle")
+    # (b) deterministic score particles = quantile curves of the exact law
+    g = Fig(c, (260, 30, 180, 170), (0, T), (-3.6, 3.6))
+    g.axes(xticks=[0, 1, 2, 3], yticks=[-3, 0, 3], xfmt=lambda v: f"{v:g}", grid=False)
+    levels = [0.04, 0.12, 0.25, 0.38, 0.47, 0.53, 0.62, 0.75, 0.88, 0.96]
+    for u in levels:
+        pts = []
+        for t in ts:
+            mm, ss = law(t)
+            q = brentq(lambda x: (w * ndtr((x - mm) / ss)).sum() - u, -10, 10, xtol=1e-12)
+            pts.append((t, q))
+        g.path(pts, "ln c3 thin")
+    c.text(350, 20, "(WGF) score particles", "tx-b", "middle")
+    c.text(350, 224, "ẋ = −x − ∂ₓ log ρₜ: smooth, ordered", "tx-s", "middle")
+    # (c) densities
+    k = Fig(c, (480, 30, 165, 170), (-3.6, 3.6), (0, 0.75))
+    k.line(-3.6, 0, 3.6, 0, "ax")
+    for v in [-3, 0, 3]:
+        k.text(v, 0, f"{v:g}", "tx-s", "middle", dy=13)
+    xs = np.linspace(-3.6, 3.6, 300)
+    filled(k, xs, mix_pdf(xs, w, m, sd), "a2", "ln c2 thin")
+    for t, cls in [(0.3, "ln c3 thin"), (1.0, "ln c3 thin"), (3.0, "ln c3")]:
+        mm, ss = law(t)
+        k.path(list(zip(xs, np.minimum(mix_pdf(xs, w, mm, ss), 0.75))), cls)
+    k.path(list(zip(xs, gauss(xs, 0, 1))), "ln c1 thin dash")
+    c.text(562, 20, "(FP) the density", "tx-b", "middle")
+    c.text(562, 224, "t = 0, 0.3, 1, 3; target 𝒩(0,1)", "tx-s", "middle")
+    c.text(330, 250, "the three objects describe the same curve of measures αₜ (Ornstein–Uhlenbeck flow from ½𝒩(−2,0.3²) + ½𝒩(2,0.3²))", "tx-s", "middle")
+    c.save()
+
+
+def fig_nonconvex():
+    import ot
+    c = Canvas("nonconvex", 640, 270, "The squared Wasserstein distance to a fixed measure is not geodesically convex in the plane", sub=SUB)
+    f = Fig(c, (40, 30, 200, 200), (-1.35, 1.35), (-1.35, 1.35))
+    f.line(-1.35, 0, 1.35, 0, "gr")
+    f.line(0, -1.35, 0, 1.35, "gr")
+    A0 = [(-1, 0), (1, 0)]; A1 = [(0, 1), (0, -1)]; B = [(-0.5, -0.5), (0.5, 0.5)]
+    for p0, p1 in zip(A0, A1):
+        f.line(p0[0], p0[1], p1[0], p1[1], "ln cm thin dash")
+        f.circle((p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2, 6, "f3")
+    for p0 in A0:
+        f.circle(p0[0], p0[1], 6, "f2")
+    for p1 in A1:
+        f.circle(p1[0], p1[1], 6, "f5")
+    for q in B:
+        c.add(f'<rect x="{f.X(q[0]) - 5:.1f}" y="{f.Y(q[1]) - 5:.1f}" width="10" height="10" class="f1"/>')
+    f.text(-1, 0, "α₀", "tx-i t2", "middle", dy=-10)
+    f.text(1, 0, "α₀", "tx-i t2", "middle", dy=-10)
+    f.text(0, 1, "α₁", "tx-i t5", "start", dx=8, dy=4)
+    f.text(0, -1, "α₁", "tx-i t5", "start", dx=8, dy=4)
+    f.text(0.5, 0.5, "β", "tx-i t1", "start", dx=8, dy=4)
+    f.text(-0.5, -0.5, "β", "tx-i t1", "end", dx=-8, dy=4)
+    f.text(-0.5, 0.5, "α½", "tx-i t3", "end", dx=-8, dy=-4)
+    c.text(140, 20, "one geodesic from α₀ to α₁ (dashed)", "tx-b", "middle")
+    c.text(140, 250, "W₂²(α₀,β) = W₂²(α₁,β) = ½, but W₂²(α½,β) = 1", "tx-s", "middle")
+    # right: t -> W2^2(alpha_t, beta) along this geodesic
+    w = np.array([0.5, 0.5]); Bm = np.array(B)
+    ts = np.linspace(0, 1, 101); vals = []
+    for t in ts:
+        X = np.array([((1 - t) * p0[0] + t * p1[0], (1 - t) * p0[1] + t * p1[1]) for p0, p1 in zip(A0, A1)])
+        vals.append(ot.emd2(w, w, ot.dist(X, Bm)))
+    g = Fig(c, (330, 30, 280, 190), (0, 1), (-0.05, 1.1))
+    g.axes(xticks=[0, 0.25, 0.5, 0.75, 1], yticks=[0, 0.5, 1], xfmt=lambda v: f"{v:g}", yfmt=lambda v: f"{v:g}", xlabel="t", ylabel="W₂²(αₜ, β)")
+    g.fn(lambda t: 0.5, "ln cm thin dash", 0, 1, 10)
+    g.fn(lambda t: 0.5 - 2 * t * (1 - t), "ln c5 thin dash", 0, 1, 200)
+    g.path(list(zip(ts, vals)), "ln c3")
+    g.text(0.5, 1.0, "along the geodesic: 1 at t = ½", "tx-s t3", "middle", dy=-8)
+    g.text(0.97, 0.5, "chord (convexity would need ≤)", "tx-s", "end", dy=-6)
+    g.text(0.5, 0.0, "2-semiconcavity bound ½ − 2t(1 − t)", "tx-s t5", "middle", dy=16)
+    c.save()
+
+
+def fig_lsi():
+    c = Canvas("lsi", 660, 280, "Entropy decay and the Talagrand, HWI and log-Sobolev bounds along the Ornstein-Uhlenbeck flow from N(2, 0.25)", sub=SUB)
+    def KL(m, s2): return 0.5 * (s2 + m * m - 1 - math.log(s2))
+    def I(m, s2): sd = math.sqrt(s2); return m * m + (sd - 1 / sd) ** 2
+    def W(m, s2): return math.sqrt(m * m + (math.sqrt(s2) - 1) ** 2)
+    ts = np.linspace(0, 3, 241)
+    H0, W0 = KL(2, 0.25), W(2, 0.25)
+    # left: entropy and distance with their guaranteed decays (log scale)
+    f = Fig(c, (58, 34, 250, 190), (0, 3), (-3, 1))
+    f.axes(xticks=[0, 1, 2, 3], yticks=[-3, -2, -1, 0, 1], xfmt=lambda v: f"{v:g}", yfmt=lambda v: {-3: "10⁻³", -2: "10⁻²", -1: "10⁻¹", 0: "1", 1: "10"}[int(v)], xlabel="time t")
+    H, Wd, Hb, Wb = [], [], [], []
+    for t in ts:
+        m, s2 = 2 * math.exp(-t), 1 - 0.75 * math.exp(-2 * t)
+        H.append((t, math.log10(KL(m, s2)))); Hb.append((t, math.log10(H0 * math.exp(-2 * t))))
+        Wd.append((t, math.log10(W(m, s2)))); Wb.append((t, math.log10(W0 * math.exp(-t))))
+    f.path(Hb, "ln cm thin dash"); f.path(H, "ln c3")
+    f.path(Wb, "ln cm thin dot"); f.path(Wd, "ln c1")
+    f.text(1.55, math.log10(KL(2 * math.exp(-1.55), 1 - 0.75 * math.exp(-3.1))), "H = KL(αₜ | 𝒩(0,1))", "tx-s t3", "end", dx=-6, dy=10)
+    f.text(1.55, -0.95, "H(0) e⁻²ᵗ", "tx-s", "start", dx=6, dy=-14)
+    f.text(2.3, math.log10(W(2 * math.exp(-2.3), 1 - 0.75 * math.exp(-4.6))), "W = W₂(αₜ, 𝒩(0,1))", "tx-s t1", "end", dx=-4, dy=-10)
+    f.text(2.95, math.log10(W0 * math.exp(-2.95)), "W(0) e⁻ᵗ", "tx-s", "end", dy=-8)
+    c.text(183, 20, "decay of entropy and distance (log scale)", "tx-b", "middle")
+    # right: each static bound divided by H
+    g = Fig(c, (390, 34, 250, 190), (0, 3), (0.85, 1.4))
+    g.axes(xticks=[0, 1, 2, 3], yticks=[0.9, 1.0, 1.1, 1.2, 1.3, 1.4], xfmt=lambda v: f"{v:g}", yfmt=lambda v: f"{v:.1f}", xlabel="time t")
+    R = {"tal": [], "hwi": [], "lsi": []}
+    for t in ts:
+        m, s2 = 2 * math.exp(-t), 1 - 0.75 * math.exp(-2 * t)
+        Hv, Wv, Iv = KL(m, s2), W(m, s2), I(m, s2)
+        R["tal"].append((t, Wv * Wv / 2 / Hv)); R["hwi"].append((t, (Wv * math.sqrt(Iv) - Wv * Wv / 2) / Hv)); R["lsi"].append((t, Iv / 2 / Hv))
+    g.line(0, 1, 3, 1, "ln c3")
+    g.path(R["lsi"], "ln c1 thin"); g.path(R["hwi"], "ln c2 thin dash"); g.path(R["tal"], "ln c5 thin")
+    g.text(0.08, R["lsi"][0][1], "(I/2) / H   (log-Sobolev)", "tx-s t1", "start", dx=4, dy=-8)
+    g.text(0.3, 1.18, "(W√I − W²/2) / H   (HWI)", "tx-s t2", "start", dx=4, dy=4)
+    g.text(1.2, 1.0, "H / H = 1", "tx-s t3", "start", dy=-6)
+    g.text(0.08, R["tal"][0][1], "(W²/2) / H   (Talagrand)", "tx-s t5", "start", dx=4, dy=16)
+    c.text(515, 20, "each bound divided by H", "tx-b", "middle")
+    c.text(330, 270, "exact Gaussian formulas; at t = 0 the chain W²/2 ≤ H ≤ W√I − W²/2 ≤ I/2 reads 2.125 ≤ 2.318 ≤ 3.029 ≤ 3.125", "tx-s", "middle")
+    c.save()
+
+
+def mmd_flow_run(n, T, dt=0.01, seed=1):
+    """Energy-distance MMD^2 particle flow x_i' = (2/n) sum_j u(x_i - x_j) - (2/m) sum_j u(x_i - y_j), u(z) = z/|z|."""
+    rng = np.random.default_rng(seed)
+    X = rng.standard_normal((n, 2)) * 0.5 + np.array([-3.0, 0.0])
+    m = 120
+    Y = np.r_[rng.standard_normal((m // 2, 2)) * 0.45 + np.array([2.5, 1.5]), rng.standard_normal((m // 2, 2)) * 0.45 + np.array([2.5, -1.5])]
+    traj = [X.copy()]
+    for k in range(int(round(T / dt))):
+        Dxx = X[:, None] - X[None]; rxx = np.sqrt((Dxx ** 2).sum(-1) + 1e-12)
+        Dxy = X[:, None] - Y[None]; rxy = np.sqrt((Dxy ** 2).sum(-1) + 1e-12)
+        X = X + dt * ((2 / n) * (Dxx / rxx[..., None]).sum(1) - (2 / m) * (Dxy / rxy[..., None]).sum(1))
+        if (k + 1) % 10 == 0:
+            traj.append(X.copy())
+    return np.array(traj), Y
+
+
+def fig_mmd():
+    c = Canvas("mmd", 660, 270, "Energy-distance MMD particle flows with 8 and with 64 particles", sub=SUB)
+    for col, n in enumerate([8, 64]):
+        traj, Y = mmd_flow_run(n, 12.0)
+        f = Fig(c, (20 + col * 330, 30, 300, 200), (-4.6, 4.4), (-3.0, 3.0))
+        f.line(-4.6, -3.0, 4.4, -3.0, "gr")
+        for y in Y:
+            f.circle(y[0], y[1], 2.2, "f1")
+        step = 1 if n == 8 else 2
+        for i in range(0, n, step):
+            f.path(list(zip(traj[:, i, 0], traj[:, i, 1])), "ln c3 hair")
+        for x in traj[0]:
+            f.circle(x[0], x[1], 2.8, "f2")
+        for x in traj[-1]:
+            f.circle(x[0], x[1], 3.2, "f3")
+        c.text(20 + col * 330 + 150, 20, f"n = {n} particles, t from 0 to 12", "tx-b", "middle")
+    c.text(330, 250, "orange-red: initial particles;  green: paths and final positions;  blue: 120 data points (the target β)", "tx-s", "middle")
+    c.text(330, 264, "with few particles the flow can only build a coarse quadrature of β; more particles cover it better", "tx-s", "middle")
+    c.save()
+
+
+def fig_halfplane():
+    from scipy.integrate import solve_ivp
+    c = Canvas("halfplane", 660, 260, "Gaussian Wasserstein gradient flows in the (m, sigma) half-plane: KL, squared W2, Fisher information", sub=SUB)
+    vel = [("KL(α | 𝒩(0,1))", lambda m, s: [-m, 1 / s - s]),
+           ("W₂²(α, 𝒩(0,1))", lambda m, s: [-2 * m, -2 * (s - 1)]),
+           ("Fisher 𝓘(α | 𝒩(0,1))", lambda m, s: [-2 * m, 2 / s ** 3 - 2 * s])]
+    starts = [(-1.6, 0.35), (-1.6, 2.6), (1.7, 2.8), (2.0, 0.5), (0.4, 0.25), (-0.3, 2.9), (1.9, 1.6), (-1.8, 1.4)]
+    for col, (title, v) in enumerate(vel):
+        f = Fig(c, (40 + col * 210, 34, 180, 170), (-2.0, 2.2), (0, 3.1))
+        f.axes(xticks=[-2, -1, 0, 1, 2], yticks=[0, 1, 2, 3], xfmt=lambda u: f"{u:g}", grid=False)
+        for (m0, s0) in starts:
+            sol = solve_ivp(lambda t, z: v(*z), (0, 12), [m0, s0], rtol=1e-9, atol=1e-11, dense_output=True)
+            ts = np.r_[np.linspace(0, 2, 120), np.linspace(2.05, 12, 60)]
+            Z = sol.sol(ts)
+            f.path(list(zip(Z[0], Z[1])), "ln c3 thin")
+            f.circle(m0, s0, 3.2, "f2")
+            for tk in [0.5, 1.0]:
+                zk = sol.sol(tk)
+                f.circle(zk[0], zk[1], 2.2, "f5")
+        f.circle(0, 1, 5, "f1")
+        c.text(40 + col * 210 + 90, 22, title, "tx-b", "middle")
+        f.text(-2.0, 3.1, "σ", "tx-i", "start", dx=4, dy=4)
+        f.text(2.2, 0, "m", "tx-i", "start", dx=5, dy=5)
+    c.text(330, 240, "orange-red: starting Gaussians 𝒩(m, σ²);  green: trajectories;  purple dots: positions at t = 0.5 and t = 1;  blue: the target 𝒩(0,1)", "tx-s", "middle")
+    c.text(330, 254, "only the W₂² flow moves on straight lines: the half-plane is flat for W₂ (W₂² = Δm² + Δσ²), and W₂² is the squared distance", "tx-s", "middle")
+    c.save()
+
+
 if __name__ == "__main__":
-    for fn in [fig_euler, fig_jko_heat, fig_vert_horiz, fig_four_flows]:
+    for fn in [fig_euler, fig_jko_heat, fig_vert_horiz, fig_four_flows, fig_three_reps, fig_nonconvex, fig_lsi, fig_mmd, fig_halfplane]:
         fn()

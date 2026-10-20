@@ -6,90 +6,196 @@ subtitle: Everything the lessons take for granted, recalled from scratch with sm
 kicker: Optimal Transport for ML · study guide v2 · reminders
 -->
 
-<p class="lead">This page is being written. Its section anchors are fixed (the lessons link to them).</p>
+<p class="lead">The lessons use tools from probability, linear algebra, analysis, convex optimization, information theory and stochastic calculus. This page recalls each of them from scratch: why the course needs it, the picture to keep in mind, the precise statement, a small example with numbers, a short proof when it helps, the classical mistakes, and where it shows up in machine learning.</p>
+
+<div class="box summary"><div class="box-h">How to use this page</div>
+<p>You do not need to read it in order. Arrive from a lesson through a link, read the reminder you need, go back. Every reminder (a subsection below) has the same layout:</p>
+<ul>
+<li>a line <strong>“Used in”</strong>, saying which lessons need it and for what;</li>
+<li>the <strong>picture</strong> to keep in mind, then the <strong>precise statement</strong> in a box. When a course resource states it, the reference is given: “OT4ML Def. 2.10, p. 23” is the book <em>Optimal Transport for Machine Learners</em> (<code>ressources/OT4ML.pdf</code>), statement number and PDF page. The other facts are standard textbook material and are presented as such;</li>
+<li>a <strong>worked example</strong> with small numbers (all of them were checked by computer), a <strong>proof</strong> or proof sketch (folded: click to open), the <strong>pitfalls</strong>, and, when there is one, an <strong>application in machine learning</strong>.</li>
+</ul>
+<p>Section 9 summarises the optimal-transport results that every lesson takes for granted, with links to the lessons where they are proved. Lessons 4 to 8 are prepared before the lectures; their links point to the lesson pages as they are written.</p>
+</div>
+
+<p>Which lesson uses what (the main uses; each reminder lists all of them):</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Lesson</th><th>Topic</th><th>Reminders it relies on</th></tr></thead>
+<tbody>
+<tr><td><a href="Lesson01.html">1</a></td><td>Monge’s problem, Brenier, the line, Gaussians</td><td><a href="#measures-basics">measures</a>, <a href="#pushforward">push-forward</a>, <a href="#jacobian">Jacobian</a>, <a href="#cdf-quantile">quantiles</a>, <a href="#sorting">sorting</a>, <a href="#convex-functions">convexity</a>, <a href="#spd">SPD matrices</a>, <a href="#sqrtm">square roots</a>, <a href="#gaussians">Gaussians</a>, <a href="#permutations">permutations</a></td></tr>
+<tr><td><a href="Lesson02.html">2</a></td><td>Kantorovich, linear programming, Birkhoff</td><td><a href="#couplings">couplings</a>, <a href="#lp">linear programming</a>, <a href="#permutations">permutations</a>, <a href="#sorting">sorting</a></td></tr>
+<tr><td><a href="Lesson03.html">3</a></td><td>Wasserstein distances, convergence, barycenters</td><td><a href="#couplings">couplings</a>, <a href="#conditional">conditional laws</a>, <a href="#convergence">convergence</a>, <a href="#norms">Minkowski, Jensen</a>, <a href="#lipschitz">Lipschitz</a>, <a href="#f-divergences">total variation</a>, <a href="#sqrtm">square roots</a></td></tr>
+<tr><td><a href="Lesson04.html">4</a></td><td>Duality, $c$-transforms, $W_1$, GANs</td><td><a href="#lagrange">Lagrange duality</a>, <a href="#lp">LP duality</a>, <a href="#legendre">Legendre transform</a>, <a href="#lipschitz">Lipschitz, Arzelà–Ascoli</a>, <a href="#entropy">KL</a>, <a href="#f-divergences">$f$-divergences</a>, <a href="#gradient-descent">SGD</a></td></tr>
+<tr><td><a href="Lesson05.html">5</a></td><td>Sliced optimal transport</td><td><a href="#cdf-quantile">quantiles</a>, <a href="#sorting">sorting</a>, <a href="#gaussians">projections of Gaussians</a>, <a href="#convergence">Monte Carlo</a>, <a href="#mmd">energy distance</a></td></tr>
+<tr><td><a href="Lesson06.html">6</a></td><td>Dynamic OT, flow matching</td><td><a href="#ode">ODEs and flows</a>, <a href="#continuity-eq">continuity equation</a>, <a href="#divergence">divergence</a>, <a href="#jacobian">Jacobian</a>, <a href="#conditional">conditional expectation</a></td></tr>
+<tr><td><a href="Lesson07.html">7</a></td><td>Entropic OT, Sinkhorn</td><td><a href="#entropy">entropy and KL</a>, <a href="#lagrange">Lagrangian, softmax</a>, <a href="#bregman">Bregman</a>, <a href="#f-divergences">$f$-divergences</a>, <a href="#mmd">MMD</a>, <a href="#convergence">sample complexity</a></td></tr>
+<tr><td><a href="Lesson08.html">8</a></td><td>Gradient flows, diffusion models</td><td><a href="#first-variation">first variation</a>, <a href="#gradient-descent">gradient descent</a>, <a href="#continuity-eq">continuity equation</a>, <a href="#fokker-planck">Fokker–Planck</a>, <a href="#brownian">Brownian motion</a>, <a href="#convex-functions">convexity</a></td></tr>
+</tbody></table></div>
 
 <h2 id="measures">1. Probability measures</h2>
+<p class="tldr">A probability measure spreads one unit of mass over a space; you can integrate functions against it, move it with a map, couple it with another one, and say when a sequence of them converges.</p>
+
 <h3 id="measures-basics">Measures, Diracs, densities, integrals</h3>
-<p>(to be written)</p>
+<p class="small muted"><strong>Used in</strong> every lesson: the objects that optimal transport compares (data sets, densities, model distributions) are probability measures. See also the refresher of <a href="Lesson03.html#recall-measures">Lesson 3</a>.</p>
+<p>Think of a pile of sand of total mass $1$ spread over a space $\X$. A <em class="new">probability measure</em> $\al$ tells you how much sand lies in each region: $\al(A)$ is the mass in the set $A$. You can also <em>weigh a function</em> with it: $\int f\,\dd\al$ is the average of $f$ when each point counts with its share of sand.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 2.1–2.2, p. 20;</span> <span class="ref">Def. 2.5, p. 21;</span> <span class="ref">Def. 2.6, p. 22;</span> <span class="ref">Def. 2.9, p. 23</span></div>
+<p>A probability measure $\al\in\M(\X)$ is a positive measure of total mass $\al(\X)=1$. The three kinds used all the time:</p>
+<ul>
+<li><strong>Dirac</strong> $\delta_x$: $\delta_x(A)=1$ if $x\in A$, $0$ otherwise. Then $\int f\,\dd\delta_x=f(x)$.</li>
+<li><strong>Discrete measure</strong> $\al=\sum_{i=1}^na_i\delta_{x_i}$ with weights in the <em class="new">probability simplex</em> $\Sigma_n=\{a\in\R_+^n:\ \sum_ia_i=1\}$ (a <em>histogram</em>). Then $\al(A)=\sum_{x_i\in A}a_i$ and $\int f\,\dd\al=\sum_ia_if(x_i)$. The <em>empirical measure</em> of a point cloud is $\frac1n\sum_i\delta_{x_i}$.</li>
+<li><strong>Density</strong>: $\dd\al(x)=\rho_\al(x)\,\dd x$, so $\al(A)=\int_A\rho_\al$ and $\int f\,\dd\al=\int f\rho_\al\,\dd x$. More generally, if $\al$ is <em class="new">absolutely continuous</em> with respect to $\lambda$ ($\al\ll\lambda$: $\lambda(A)=0\Rightarrow\al(A)=0$), its relative density $\frac{\dd\al}{\dd\lambda}$ (Radon–Nikodym derivative) satisfies $\int h\,\dd\al=\int h\frac{\dd\al}{\dd\lambda}\,\dd\lambda$.</li>
+</ul>
+<p>Probabilistic reading: a random variable $X$ has law $\al$ (written $X\sim\al$) if $\P(X\in A)=\al(A)$; then $\E[f(X)]=\int f\,\dd\al$.</p>
+</div>
+<dl class="decode">
+<dt>$\supp(\al)$</dt><dd>The <em>support</em>: the smallest closed set carrying all the mass (for $\sum_ia_i\delta_{x_i}$ with $a_i>0$: the points $x_i$).</dd>
+<dt>$\al\perp\be$</dt><dd><em>Mutually singular</em>: they live on disjoint sets (a discrete measure and a density are always mutually singular).</dd>
+<dt>$\Pc_p(\R^d)$</dt><dd>Measures with a finite $p$-th moment, $\int\norm{x}^p\dd\al(x)<\infty$. This is where $W_p$ is finite.</dd>
+</dl>
+<div class="box example"><div class="box-h">Worked example — a mixed measure</div>
+<p>Let $\al=\frac12\delta_0+\frac12\,\mathcal U[0,2]$: half of the mass sits at $0$, the other half is spread uniformly on $[0,2]$ (density $\frac12\cdot\frac12=\frac14$ there).</p>
+<ul>
+<li>$\al(\{0\})=\frac12$ (an atom), $\al(\{1\})=0$ (the density part gives no mass to a point), $\al\big((0,1]\big)=\frac12\cdot\frac12=\frac14$, $\al\big([0,1]\big)=\frac12+\frac14=\frac34$.</li>
+<li>Mean: $\int x\,\dd\al=\frac12\cdot0+\frac12\cdot1=\frac12$. Second moment: $\frac12\cdot0+\frac12\cdot\frac43=\frac23$. Variance: $\frac23-\frac14=\frac5{12}$.</li>
+</ul>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — a density is not a probability</div>
+<p>$\mathcal U[0,\frac12]$ has density $2$ on $[0,\frac12]$: densities can exceed $1$; only their integral is $1$. The “probability of a point” is $0$ for a measure with a density. And $\delta_x$ has <strong>no density</strong> with respect to $\dd x$: the “Dirac function” of physics is a measure, not a function.</p>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — data sets and models are measures</div>
+<p>A data set of $n$ images with $d$ pixels is the empirical measure $\hat\al_n=\frac1n\sum_i\delta_{x_i}$ on $\R^d$; a generative model is a measure $\al_\theta$ with a density, or a push-forward of noise (next reminder). Training means making $\al_\theta$ close to $\hat\al_n$, so we need discrepancies that make sense between a discrete measure and a continuous one. The total variation between them is always $2$ (<a href="Lesson03.html#tv-riemann">Lesson 3</a>) and the KL divergence is $+\infty$ (<a href="#entropy">§6</a>): this is the first argument for transport distances.</p>
+</div>
+
 <h3 id="pushforward">Push-forward of a measure, change of variables</h3>
-<p>(to be written)</p>
+<p class="small muted"><strong>Used in</strong> <a href="Lesson01.html">Lesson 1</a> (Monge’s constraint $\pf{T}{\al}=\be$), <a href="Lesson02.html">Lessons 2</a>–<a href="Lesson03.html#kanto">3</a> (marginals of a plan are push-forwards by the projections; displacement interpolation <a href="Lesson03.html#geo">§6 of Lesson 3</a>), <a href="Lesson05.html">Lesson 5</a> (projections $x\mapsto\ps{\theta}{x}$), <a href="Lesson06.html">Lesson 6</a> (flows), and every generative model.</p>
+<p>Move each grain of sand from $x$ to $T(x)$: the new pile is the <em class="new">push-forward</em> $\pf{T}{\al}$. The mass that lands in a set $B$ is the mass that came from the points sent into $B$.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 2.10, p. 23;</span> <span class="ref">Remark 2.13, p. 25</span></div>
+<p>For a measurable map $T:\X\to\Y$ and $\al\in\M(\X)$, the push-forward $\be=\pf{T}{\al}$ is defined, for every measurable $B\subset\Y$, by</p>
+$$\be(B)=\al\big(\{x\in\X:\ T(x)\in B\}\big),\qquad\text{equivalently}\qquad\int_\Y h(y)\,\dd\be(y)=\int_\X h\big(T(x)\big)\,\dd\al(x)$$
+<p>for every bounded measurable $h$. For a discrete measure, $\pf{T}{\Big(\sum_ia_i\delta_{x_i}\Big)}=\sum_ia_i\delta_{T(x_i)}$: the weights travel with their points. If $X\sim\al$ then $T(X)\sim\pf{T}{\al}$.</p>
+</div>
+<div class="box thm"><div class="box-h">Push-forward of a density <span class="ref">OT4ML Prop. 2.12, p. 24</span></div>
+<p>If $T:U\to V$ is a $C^1$ diffeomorphism between open sets of $\R^d$, $\al=\rho_\al\,\dd x$ and $\be=\pf{T}{\al}=\rho_\be\,\dd y$, then</p>
+$$\rho_\al(x)=\abs{\det T'(x)}\,\rho_\be\big(T(x)\big),\qquad\text{i.e.}\qquad\rho_\be(y)=\frac{\rho_\al\big(T^{-1}(y)\big)}{\abs{\det T'\big(T^{-1}(y)\big)}}.$$
+<p>On the line with $T$ increasing: $\rho_\be\big(T(x)\big)\,T'(x)=\rho_\al(x)$. Where $T$ compresses ($T'<1$) the density goes up; where it stretches ($T'>1$) it goes down.</p>
+</div>
+<figure class="fig"><!-- include figures/REM/pushforward.svg --><figcaption>The uniform law on $[0,2]$ (bottom, orange) pushed by $T(x)=x^2/2$ (green graph) gives the law on the left (blue). Two strips of equal mass $0.2$: the first is compressed into a short interval (high density), the second is stretched (low density).</figcaption></figure>
+<div class="box example"><div class="box-h">Worked example — $T(x)=x^2/2$ on $\mathcal U[0,2]$</div>
+<ol class="steps">
+<li>$$\be\big([0,y]\big)=\al\big(\{x\in[0,2]:\ x^2/2\le y\}\big)=\al\big([0,\sqrt{2y}]\big)=\frac{\sqrt{2y}}2,\qquad 0\le y\le 2.$$<span class="why">Definition of the push-forward with $B=[0,y]$; the density of $\al$ is $\frac12$.</span></li>
+<li>$$\rho_\be(y)=\frac{\dd}{\dd y}\frac{\sqrt{2y}}2=\frac1{2\sqrt{2y}}\quad\text{on }(0,2].$$<span class="why">Differentiate the CDF. Check with the formula: $T^{-1}(y)=\sqrt{2y}$, $T'(x)=x$, so $\rho_\be(y)=\frac{1/2}{\sqrt{2y}}$. Same thing.</span></li>
+<li>Mean of $\be$ in two ways: $\int y\,\dd\be=\int_0^2\frac{y}{2\sqrt{2y}}\,\dd y=\frac23$, and $\int T\,\dd\al=\frac12\E[X^2]=\frac12\cdot\frac43=\frac23$.<span class="why">The second formula of the definition, with $h(y)=y$: you never need the density of $\be$ to integrate against it.</span></li>
+</ol>
+</div>
+<details class="fold proof"><summary>Proof of the density formula</summary><div class="fold-body">
+<p>Take a test function $h$ and change variables $y=T(x)$, $\dd y=\abs{\det T'(x)}\,\dd x$ (<a href="#jacobian">§4</a>):</p>
+$$\int h(y)\rho_\be(y)\,\dd y=\int h\big(T(x)\big)\rho_\al(x)\,\dd x=\int h(y)\,\frac{\rho_\al\big(T^{-1}(y)\big)}{\abs{\det T'\big(T^{-1}(y)\big)}}\,\dd y.$$
+<p>The first equality is the definition of $\pf{T}{\al}$, the second the change of variables. Two densities with the same integral against every $h$ are equal almost everywhere.</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul>
+<li>$\rho_\be\ne\rho_\al\circ T^{-1}$: forgetting the Jacobian factor gives a function that does not integrate to $1$.</li>
+<li>If $T$ is not injective, add the contributions of all the preimages: $\rho_\be(y)=\sum_{x:\,T(x)=y}\rho_\al(x)/\abs{T'(x)}$ in 1D (Exercise 12 of the Lesson 1 sheet is of this kind).</li>
+<li>A map cannot split mass: $\pf{T}{\delta_x}=\delta_{T(x)}$ is always a single Dirac. This is why no map sends $\delta_0$ to $\frac12\delta_{-1}+\frac12\delta_1$, and why Monge’s problem can have no solution (<a href="#ot-monge">§9</a>).</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — generative models are push-forwards</div>
+<p>A GAN generator, a VAE decoder, a normalizing flow and a diffusion or flow-matching sampler all define the model as $\al_\theta=\pf{(G_\theta)}{\zeta}$, with $\zeta=\N(0,\mathrm I)$ and $G_\theta$ a network: to sample, draw $z\sim\zeta$ and output $G_\theta(z)$. The density of $\al_\theta$ is usually unknown (or does not exist when the latent dimension is smaller than the data dimension), so the training loss must be computable from samples — transport distances and MMD are (OT4ML §7.4, p. 134). Normalizing flows instead keep $G_\theta$ invertible and use the density formula above (<a href="#jacobian">§4</a>).</p>
+</div>
+
 <h3 id="couplings">Joint laws, marginals, independence</h3>
-<p>(to be written)</p>
+<p class="small muted"><strong>Used in</strong> <a href="Lesson02.html">Lesson 2</a> (transport plans are matrices with prescribed row and column sums), <a href="Lesson03.html#kanto">Lesson 3</a> (general couplings, gluing), <a href="Lesson04.html">Lesson 4</a> (duality), <a href="Lesson07.html">Lesson 7</a> (the entropy of a plan measures its dependence).</p>
+<p>A <em class="new">joint law</em> describes a pair $(X,Y)$; forgetting one coordinate gives a <em>marginal</em>. In the discrete case it is a table: the marginals are its row sums and its column sums. A <em class="new">coupling</em> of $\al$ and $\be$ is any table with these row and column sums — any way of pairing the mass of $\al$ with the mass of $\be$.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 3.25, p. 63;</span> <span class="ref">Def. 3.26, Remark 3.27, Def. 3.28, p. 64</span></div>
+<p>For $\pi\in\M(\X\times\Y)$ with projections $P_\X(x,y)=x$, $P_\Y(x,y)=y$, the marginals are $\pi_1=\pf{(P_\X)}{\pi}$ and $\pi_2=\pf{(P_\Y)}{\pi}$. The set of couplings is</p>
+$$\U(\al,\be)=\big\{\pi\in\M(\X\times\Y):\ \pi_1=\al,\ \pi_2=\be\big\}.$$
+<p>If $(X,Y)\sim\pi\in\U(\al,\be)$ then $X\sim\al$ and $Y\sim\be$; the coupling encodes their dependence. The product $\al\otimes\be$ (independence) is always a coupling; $\pf{(\Id,T)}{\al}$ encodes the deterministic relation $Y=T(X)$. Discrete case: $\U(a,b)=\{P\in\R_+^{n\times m}:\ P\ind_m=a,\ P\T\ind_n=b\}$.</p>
+</div>
+<p><strong>Independence.</strong> $X$ and $Y$ are independent iff $\pi=\al\otimes\be$ iff $\E[f(X)g(Y)]=\E[f(X)]\,\E[g(Y)]$ for all bounded $f,g$. Independence implies $\mathrm{Cov}(X,Y)=0$, not conversely.</p>
+<div class="box example"><div class="box-h">Worked example — all the couplings of two histograms on $\{0,1\}$</div>
+<p>Take $a=(\frac12,\frac12)$ and $b=(\frac14,\frac34)$, both on the points $\{0,1\}$. The row and column constraints leave one free parameter $p=P_{11}$:</p>
+$$P(p)=\begin{pmatrix}p&\frac12-p\\[2pt]\frac14-p&\frac14+p\end{pmatrix},\qquad 0\le p\le\tfrac14 .$$
+<ul>
+<li>The set of couplings is a segment. Its middle point $p=\frac18=a_1b_1$ is the independent coupling ($\mathrm{Cov}(X,Y)=0$); its ends $p=0$ and $p=\frac14$ have covariances $-\frac18$ and $+\frac18$.</li>
+<li>With the cost $\abs{x-y}$, moving mass costs $P_{12}+P_{21}=\frac34-2p$, smallest at $p=\frac14$: cost $\frac14$. Only a quarter of the mass has to move from $0$ to $1$. (The minimum is at an end of the segment: <a href="#lp">§5, linear programming</a>.)</li>
+</ul>
+</div>
+<figure class="fig"><!-- include figures/REM/couplings.svg --><figcaption>Three couplings of the same two histograms (bars: the marginals). The independent one spreads each row proportionally to $\be$; the monotone one pairs small with small (cost $0.30$ for $\abs{x-y}^2$, optimal, see <a href="#sorting">§2</a>); the anti-monotone one pairs small with large (cost $4.30$).</figcaption></figure>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul>
+<li>The marginals do not determine the joint law: $\U(\al,\be)$ is usually huge (dimension $(n-1)(m-1)$ for histograms).</li>
+<li>Zero covariance is not independence: $X$ uniform on $\{-1,0,1\}$ and $Y=X^2$ have $\mathrm{Cov}(X,Y)=\E[X^3]-\E[X]\E[X^2]=0$, but $\P(X=0,Y=1)=0\ne\P(X=0)\P(Y=1)=\frac29$.</li>
+<li>A coupling is not a map: a row of $P$ can have several nonzero entries (mass is split).</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — choosing a coupling between noise and data</div>
+<p>Flow matching (<a href="Lesson06.html">Lesson 6</a>) draws pairs $(X_0,X_1)$ from a coupling of the noise $\N(0,\mathrm I)$ and the data, and learns to move $X_0$ to $X_1$. With the independent coupling the straight paths cross; with an optimal-transport coupling computed on each minibatch they are shorter and straighter, which makes sampling cheaper (OT4ML Example 16.2 and Fig. 16.1, p. 408). In domain adaptation or single-cell biology the coupling between two unpaired data sets is precisely the unknown matching to infer (OT4ML Examples 3.22 and 3.24, p. 61).</p>
+</div>
+
 <h3 id="conditional">Conditional laws and disintegration</h3>
-<p>(to be written)</p>
+<p class="small muted"><strong>Used in</strong> <a href="Lesson03.html#gluing-general">Lesson 3</a> (the gluing lemma), <a href="Lesson04.html">Lesson 4</a> (barycentric projection of a plan), <a href="Lesson06.html">Lesson 6</a> (the flow-matching velocity is a conditional expectation), <a href="Lesson07.html">Lesson 7</a> (conditional laws of entropic plans).</p>
+<p>Slice the joint law at $X=x$ and renormalise: you get the law of $Y$ <em>given</em> $X=x$. For a transport plan, it says where the mass located at $x$ is sent.</p>
+<div class="box def"><div class="box-h">Definition (standard)</div>
+<ul>
+<li><strong>Discrete:</strong> $\P(Y=y_j\mid X=x_i)=\dfrac{P_{ij}}{a_i}$ for $a_i>0$. <strong>Densities:</strong> $\rho(y\mid x)=\rho(x,y)/\rho_X(x)$.</li>
+<li><strong>Disintegration</strong> (on $\R^d$ and Polish spaces): for $\pi\in\U(\al,\be)$ there is a family $(\pi_x)_x$ of probability measures, unique for $\al$-almost every $x$, with $\int f\,\dd\pi=\int\Big(\int f(x,y)\,\dd\pi_x(y)\Big)\dd\al(x)$: “draw $X\sim\al$, then $Y\sim\pi_X$”.</li>
+<li><strong>Conditional expectation:</strong> $\E[Y\mid X]=m(X)$ with $m(x)=\int y\,\dd\pi_x(y)$. It is a random variable (a function of $X$), with $\E\big[\E[Y\mid X]\big]=\E[Y]$ (tower rule) and $\mathrm{Var}(Y)=\E\big[\mathrm{Var}(Y\mid X)\big]+\mathrm{Var}\big(\E[Y\mid X]\big)$.</li>
+<li><strong>Best prediction:</strong> $m$ minimises $\E\norm{Y-h(X)}^2$ over all functions $h$.</li>
+</ul>
+</div>
+<div class="box example"><div class="box-h">Worked example — the glued plan of Lesson 3</div>
+<p>In the <a href="Lesson03.html#gluing-example">gluing example</a> the glued plan between $x\in\{0,2\}$ and $z\in\{1,3\}$ is $\pi=\begin{pmatrix}3/8&1/8\\1/8&3/8\end{pmatrix}$ (rows $x$, columns $z$).</p>
+<ul>
+<li>Given $X=0$: $Z=1$ with probability $\frac{3/8}{1/2}=\frac34$, $Z=3$ with probability $\frac14$, so $\E[Z\mid X=0]=1.5$. Given $X=2$: $\E[Z\mid X=2]=\frac14+\frac94=2.5$.</li>
+<li>Tower rule: $\frac12\cdot1.5+\frac12\cdot2.5=2=\E[Z]$. Variances: $\mathrm{Var}(Z)=1=\underbrace{0.75}_{\E\,\mathrm{Var}(Z|X)}+\underbrace{0.25}_{\mathrm{Var}\,\E[Z|X]}$.</li>
+<li>The map $x\mapsto\E[Z\mid X=x]$ ($0\mapsto1.5$, $2\mapsto2.5$) is the <em>barycentric projection</em> of the plan: a map built from a plan by averaging where each point sends its mass (OT4ML Def. 12.32, p. 281).</li>
+</ul>
+</div>
+<details class="fold proof"><summary>Why the conditional expectation is the best prediction</summary><div class="fold-body">
+<p>Write $Y-h(X)=\big(Y-m(X)\big)+\big(m(X)-h(X)\big)$ and expand the square. The cross term vanishes: conditioning on $X$, $\E\big[\ps{Y-m(X)}{m(X)-h(X)}\mid X\big]=\ps{\E[Y\mid X]-m(X)}{m(X)-h(X)}=0$. Hence</p>
+$$\E\norm{Y-h(X)}^2=\E\norm{Y-m(X)}^2+\E\norm{m(X)-h(X)}^2\ \ge\ \E\norm{Y-m(X)}^2,$$
+<p>with equality iff $h=m$ almost surely: $m$ is the orthogonal projection of $Y$ on the functions of $X$ (Pythagoras in $L^2$).</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pitfall — conditioning on an event of probability zero</div>
+<p>When $X$ has a density, $\P(X=x)=0$ and “$\P(Y\in B\mid X=x)=\P(Y\in B,X=x)/\P(X=x)$” is $0/0$. The conditional law is then defined through densities or disintegration, and only for almost every $x$. Also, $\P(Y\mid X)$ and $\P(X\mid Y)$ are different objects: for a plan, “where does $x$ send its mass” versus “where does the mass arriving at $y$ come from”.</p>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — regression with the squared loss learns a conditional expectation</div>
+<p>A network trained with the loss $\E\norm{f_\theta(X)-Y}^2$ tends to $\E[Y\mid X]$, the best predictor above. Flow matching uses exactly this: the velocity field that transports noise to data is $v_t(z)=\E\big[X_1-X_0\mid X_t=z\big]$ for $X_t=(1-t)X_0+tX_1$, the average velocity of all straight paths through $z$, learned by least squares (OT4ML Prop. 16.3, p. 408–409). Denoisers are conditional expectations too: Tweedie’s identity $\E[W\mid W+\sigma\eps=z]=z+\sigma^2\nabla\log\rho_\sigma(z)$ links them to the score used by diffusion models (OT4ML Prop. 16.6, p. 411).</p>
+</div>
+
+<div class="quiz"><p>For the optimal plan $P^\star=\begin{pmatrix}1/4&1/4\\0&1/2\end{pmatrix}$ between $a=(\frac12,\frac12)$ and $b=(\frac14,\frac34)$ on $\{0,1\}$ (<a href="#couplings">above</a>), what is the law of $Y$ given $X=0$, and the barycentric projection $x\mapsto\E[Y\mid X=x]$?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>Row $X=0$ has mass $\frac12$, split equally: given $X=0$, $Y=0$ or $Y=1$ with probability $\frac12$ each, so $\E[Y\mid X=0]=\frac12$. Row $X=1$ sends everything to $1$: $\E[Y\mid X=1]=1$. The plan splits the mass at $0$ (it is not a map), and its barycentric projection $0\mapsto\frac12$, $1\mapsto1$ averages the destinations.</p>
+</div></details></div>
+
 <h3 id="convergence">Convergence of random variables and of measures; law of large numbers, central limit theorem</h3>
-<p>(to be written)</p>
-
-<h2 id="oned">2. Distributions on the line</h2>
-<h3 id="cdf-quantile">Cumulative distribution function and quantile function</h3>
-<p>(to be written)</p>
-<h3 id="sorting">Sorting, ranks and monotone rearrangement</h3>
-<p>(to be written)</p>
-
-<h2 id="linalg">3. Linear algebra</h2>
-<h3 id="spd">Symmetric matrices, spectral theorem, positive (semi-)definite matrices</h3>
-<p>(to be written)</p>
-<h3 id="sqrtm">Matrix square root, trace, determinant</h3>
-<p>(to be written)</p>
-<h3 id="gaussians">Gaussian vectors: densities, affine maps, covariances</h3>
-<p>(to be written)</p>
-<h3 id="permutations">Permutation matrices and doubly stochastic matrices</h3>
-<p>(to be written)</p>
-
-<h2 id="analysis">4. Analysis</h2>
-<h3 id="norms">Norms and inequalities: Cauchy–Schwarz, Hölder, Minkowski, Jensen</h3>
-<p>(to be written)</p>
-<h3 id="lipschitz">Continuous and Lipschitz functions, compactness</h3>
-<p>(to be written)</p>
-<h3 id="jacobian">Change of variables in integrals, Jacobian determinant</h3>
-<p>(to be written)</p>
-<h3 id="divergence">Gradient, divergence, Laplacian, integration by parts</h3>
-<p>(to be written)</p>
-<h3 id="ode">Ordinary differential equations and flows of vector fields</h3>
-<p>(to be written)</p>
-<h3 id="continuity-eq">The continuity equation</h3>
-<p>(to be written)</p>
-
-<h2 id="convex">5. Convexity and optimization</h2>
-<h3 id="convex-functions">Convex sets and functions, strict and strong convexity, subgradients</h3>
-<p>(to be written)</p>
-<h3 id="legendre">The Legendre–Fenchel transform (convex conjugate)</h3>
-<p>(to be written)</p>
-<h3 id="lagrange">Lagrangian duality and KKT conditions</h3>
-<p>(to be written)</p>
-<h3 id="lp">Linear programming: polytopes, vertices, duality, complementary slackness</h3>
-<p>(to be written)</p>
-<h3 id="gradient-descent">Gradient descent and stochastic gradient descent</h3>
-<p>(to be written)</p>
-<h3 id="first-variation">Derivatives of functionals of measures: the first variation</h3>
-<p>(to be written)</p>
-
-<h2 id="information">6. Information theory</h2>
-<h3 id="entropy">Entropy and the Kullback–Leibler divergence</h3>
-<p>(to be written)</p>
-<h3 id="f-divergences">$f$-divergences: KL, total variation, Hellinger, $\chi^2$</h3>
-<p>(to be written)</p>
-<h3 id="bregman">Bregman divergences</h3>
-<p>(to be written)</p>
-
-<h2 id="kernels">7. Kernels</h2>
-<h3 id="mmd">Positive definite kernels, MMD and the energy distance</h3>
-<p>(to be written)</p>
-
-<h2 id="stochastic">8. Stochastic processes</h2>
-<h3 id="brownian">Brownian motion and stochastic differential equations</h3>
-<p>(to be written)</p>
-<h3 id="fokker-planck">The heat equation, Fokker–Planck and Ornstein–Uhlenbeck</h3>
-<p>(to be written)</p>
-
-<h2 id="ot-recap">9. The optimal transport facts every lesson reuses</h2>
-<h3 id="ot-monge">Monge’s problem and Brenier’s theorem</h3>
-<p>(to be written)</p>
-<h3 id="ot-kantorovich">Kantorovich’s problem: couplings and the linear program</h3>
-<p>(to be written)</p>
-<h3 id="ot-wasserstein">Wasserstein distances</h3>
-<p>(to be written)</p>
-<h3 id="ot-duality">Duality and $c$-transforms</h3>
-<p>(to be written)</p>
-<h3 id="ot-closed-forms">Closed forms: the line and Gaussians</h3>
-<p>(to be written)</p>
+<p class="small muted"><strong>Used in</strong> <a href="Lesson03.html#conv">Lesson 3</a> (weak convergence, CLT, total variation), <a href="Lesson05.html">Lesson 5</a> (Monte Carlo over directions), <a href="Lesson07.html">Lesson 7</a> (sample complexity of OT), <a href="Lesson08.html">Lesson 8</a> (particle approximations).</p>
+<p>Random variables can be close in several senses: realisation by realisation, with high probability, on average, or only through their laws. For measures, the useful notion compares averages of bounded continuous functions.</p>
+<div class="box def"><div class="box-h">Definitions <span class="ref">weak convergence: OT4ML Def. 4.18, p. 81</span></div>
+<ul>
+<li><strong>Almost surely:</strong> $X_n(\omega)\to X(\omega)$ for all $\omega$ outside a null set. <strong>In probability:</strong> $\P(\norm{X_n-X}>\eps)\to0$ for every $\eps>0$. <strong>In $L^p$:</strong> $\E\norm{X_n-X}^p\to0$.</li>
+<li><strong>Weak convergence</strong> of measures: $\al_n\wto\al$ iff $\int\varphi\,\dd\al_n\to\int\varphi\,\dd\al$ for every bounded continuous $\varphi$. <strong>In law:</strong> $X_n\to X$ in law iff their laws converge weakly. Only the laws matter: the variables need not live on the same probability space.</li>
+<li>Implications: almost surely $\Rightarrow$ in probability $\Rightarrow$ in law, and $L^p\Rightarrow$ in probability (Markov’s inequality).</li>
+</ul>
+</div>
+<div class="box thm"><div class="box-h">Law of large numbers and central limit theorem <span class="ref">OT4ML Prop. 10.1, p. 195;</span> <span class="ref">Remark 4.23, p. 82</span></div>
+<p>Let $X_1,X_2,\dots$ be i.i.d. with law $\al$, mean $m$ and covariance $\Sigma$, and $\bar X_n=\frac1n\sum_{i\le n}X_i$.</p>
+<ul>
+<li><strong>LLN:</strong> $\bar X_n\to m$ almost surely (finite mean suffices). For measures: the empirical measure $\hat\al_n=\frac1n\sum_i\delta_{X_i}$ converges weakly to $\al$ almost surely, and $W_p(\hat\al_n,\al)\to0$ if $\al\in\Pc_p$.</li>
+<li><strong>CLT:</strong> $\sqrt n\,(\bar X_n-m)\to\N(0,\Sigma)$ in law (finite variance needed). So the error of an average of $n$ samples is of order $\sigma/\sqrt n$, in any dimension.</li>
+</ul>
+</div>
+<div class="box example"><div class="box-h">Worked example — one hundred dice</div>
+<p>A die has mean $3.5$ and variance $\frac{35}{12}$. The mean $\bar X_{100}$ of $100$ dice has standard deviation $\sqrt{35/12}/10\approx0.171$. The CLT predicts $\P(\abs{\bar X_{100}-3.5}\le0.34)\approx\P(\abs{Z}\le1.99)\approx0.954$. The exact value, obtained by convolving the law of one die $100$ times, is $0.957$ (the normal approximation with the usual continuity correction also gives $0.957$). The error of an average scales like $1/\sqrt n$: four times more dice, half the error.</p>
+<p><strong>In law but not in probability:</strong> if $X\sim\N(0,1)$ and $X_n=-X$, then $X_n$ has the law of $X$ for every $n$ (convergence in law is trivial), but $\abs{X_n-X}=2\abs{X}$ does not go to $0$.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul>
+<li>Weak convergence does not imply convergence of moments: mass can escape to infinity (<a href="Lesson03.html#conv-escape">Lesson 3</a>). That is why $W_p$-convergence on $\R^d$ is “weak convergence + convergence of $p$-th moments”.</li>
+<li>The CLT needs a finite variance: averages of Cauchy variables do not concentrate at all.</li>
+<li>The $\frac1{\sqrt n}$ rate is for averages of a fixed function. Distances between an empirical measure and its law are slower: $W_p(\hat\al_n,\al)$ decays like $n^{-1/d}$ in dimension $d>2p$ (the curse of dimensionality, OT4ML p. 198), while MMD and sliced distances keep $n^{-1/2}$ (OT4ML Prop. 10.11, p. 203; Thm. 10.16, p. 207).</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — minibatches are Monte Carlo averages</div>
+<p>The loss on a minibatch of size $B$ is an empirical average of per-example losses: it is an unbiased estimate of the population loss, and by the CLT its fluctuation is of order $\sigma/\sqrt B$. Going from $B=64$ to $B=256$ halves the gradient noise. The same reasoning explains why OT losses computed between minibatches are biased and noisy, and why <a href="Lesson07.html">Lesson 7</a> studies entropic and debiased versions with better sample complexity.</p>
+</div>

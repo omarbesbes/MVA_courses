@@ -11,6 +11,7 @@
     if (s.indexOf(".") >= 0) s = s.replace(/0+$/, "").replace(/\.$/, "");
     return s === "-0" ? "0" : s;
   }
+  function l2lam(x) { return x >= 0.01 ? l2n(x, 2) : x.toExponential(1).replace("e-", "e−"); }
   function l2zeros(n, m) { var P = []; for (var i = 0; i < n; i++) { P.push([]); for (var j = 0; j < m; j++) P[i].push(0); } return P; }
   // North-west corner rule on integer masses (exact). Returns the list of steps {i, j, t, rowDone, colDone}.
   function l2northWest(ka, kb) {
@@ -77,8 +78,8 @@
     var ro = readout(sc.controls);
     legend(sc.legend, [["--s2", "current coupling"], ["--s3", "optimal vertex, plan"], ["--text", "vertices"], ["--muted", "cost level lines"]]);
     var cur, basis = null, msg = "", dragging = false;
-    var PX = { x0: 64, y0: 22, w: 270, h: 270, lo: -0.04, hi: 0.56 };
-    function X(s) { return PX.x0 + (s - PX.lo) / (PX.hi - PX.lo) * PX.w; }
+    var PX = { x0: 64, y0: 22, w: 280, h: 270, lo: -0.04, hi: 0.56, slo: -0.15, shi: 0.56 };
+    function X(s) { return PX.x0 + (s - PX.slo) / (PX.shi - PX.slo) * PX.w; }
     function Y(t) { return PX.y0 + PX.h - (t - PX.lo) / (PX.hi - PX.lo) * PX.h; }
     function wts() { return WEIGHTS[wSel.value]; }
     function plan(s, t) { var a = wts().a, b = wts().b; return [[s, t, a[0] - s - t], [b[0] - s, b[1] - t, b[2] - a[0] + s + t]]; }
@@ -196,7 +197,7 @@
       draw(true);
     }
     /* ---- pointer ---- */
-    function toST(e) { var p = svgPoint(sc.svg, e); return [PX.lo + (p.x - PX.x0) / PX.w * (PX.hi - PX.lo), PX.lo + (PX.y0 + PX.h - p.y) / PX.h * (PX.hi - PX.lo)]; }
+    function toST(e) { var p = svgPoint(sc.svg, e); return [PX.slo + (p.x - PX.x0) / PX.w * (PX.shi - PX.slo), PX.lo + (PX.y0 + PX.h - p.y) / PX.h * (PX.hi - PX.lo)]; }
     function inPanel(e) { var p = svgPoint(sc.svg, e); return p.x > PX.x0 - 10 && p.x < PX.x0 + PX.w + 10 && p.y > PX.y0 - 10 && p.y < PX.y0 + PX.h + 10; }
     sc.svg.addEventListener("pointerdown", function (e) {
       if (!inPanel(e)) return;
@@ -224,17 +225,17 @@
       // level lines of the cost: c0 + gs s + gt t
       var c0 = costOf(plan(0, 0)), gs = costOf(plan(1, 0)) - c0, gt = costOf(plan(0, 1)) - c0;
       var gc = el("g", { "clip-path": "url(#" + clipId + ")" }, g);
-      var cs = [PX.lo, PX.hi].map(function (s) { return [PX.lo, PX.hi].map(function (t) { return c0 + gs * s + gt * t; }); });
+      var cs = [PX.slo, PX.shi].map(function (s) { return [PX.lo, PX.hi].map(function (t) { return c0 + gs * s + gt * t; }); });
       var cmin = Math.min(cs[0][0], cs[0][1], cs[1][0], cs[1][1]), cmax = Math.max(cs[0][0], cs[0][1], cs[1][0], cs[1][1]);
       for (k = 1; k < 12; k++) {
         var L = cmin + (cmax - cmin) * k / 12, pts = [];
-        if (Math.abs(gt) > 1e-12) { [PX.lo, PX.hi].forEach(function (s) { pts.push([s, (L - c0 - gs * s) / gt]); }); }
+        if (Math.abs(gt) > 1e-12) { [PX.slo, PX.shi].forEach(function (s) { pts.push([s, (L - c0 - gs * s) / gt]); }); }
         else { [PX.lo, PX.hi].forEach(function (t) { pts.push([(L - c0 - gt * t) / gs, t]); }); }
         l2line(gc, X(pts[0][0]), Y(pts[0][1]), X(pts[1][0]), Y(pts[1][1]), "ln cm hair dash");
       }
       // the optimal level line
       var Lo = opt.c, q0, q1;
-      if (Math.abs(gt) > 1e-12) { q0 = [PX.lo, (Lo - c0 - gs * PX.lo) / gt]; q1 = [PX.hi, (Lo - c0 - gs * PX.hi) / gt]; }
+      if (Math.abs(gt) > 1e-12) { q0 = [PX.slo, (Lo - c0 - gs * PX.slo) / gt]; q1 = [PX.shi, (Lo - c0 - gs * PX.shi) / gt]; }
       else { q0 = [(Lo - c0 - gt * PX.lo) / gs, PX.lo]; q1 = [(Lo - c0 - gt * PX.hi) / gs, PX.hi]; }
       l2line(gc, X(q0[0]), Y(q0[1]), X(q1[0]), Y(q1[1]), "ln c3 thin dash");
       // polygon
@@ -287,7 +288,7 @@
      ====================================================================== */
   WIDGETS.l2nw = function (box) {
     var sc = scaffold(box, "The north-west corner rule, one step at a time — and its cost against the exact optimum");
-    var W = 680, H = 400;
+    var W = 680, H = 340;
     sc.svg.setAttribute("viewBox", "0 0 " + W + " " + H);
     sc.svg.setAttribute("role", "img");
     sc.svg.setAttribute("aria-label", "A transport matrix filled from its top-left corner, and the same plan drawn on the real line");
@@ -297,7 +298,7 @@
       five: { x: [0, 1, 2, 3, 4], y: [0.5, 1.2, 2, 2.6, 3.3, 4.2], ka: [2, 5, 6, 4, 3], kb: [4, 2, 3, 5, 4, 2], N: 20 }
     };
     var pSel = select(sc.controls, "Example", [["book", "a = (0.2, 0.5, 0.3), b = (0.5, 0.1, 0.4)"], ["sheet", "sheet, Ex. 1: a = (1.1, 0.8, 1.1), b = (1, 1, 1)"], ["five", "5 and 6 bins"], ["random", "random histograms"]], "book", function () { load(); });
-    var eSel = select(sc.controls, "cost |x − y|^p, p =", [["2", "2"], ["1", "1"], ["0.5", "½ (concave)"]], "2", function () { draw(); });
+    var eSel = select(sc.controls, "cost |x − y|ᵖ with p =", [["2", "2"], ["1", "1"], ["0.5", "½ (concave)"]], "2", function () { draw(); });
     var shuf = checkbox(sc.controls, "targets in a shuffled order", false, function () { load(true); });
     button(sc.controls, "Step", function () { if (k < steps.length) k++; draw(); });
     button(sc.controls, "Run to the end", function () { k = steps.length; draw(); });
@@ -359,7 +360,7 @@
       for (j = 0; j < m; j++) l2text(g, x0 + (j + 0.5) * cell, y0 + n * cell + 16, mass(cc[j]), cc[j] === 0 ? "tx-s" : "tx-s t1", "middle");
       // the line
       var all = D.x.concat(D.y), lo = Math.min.apply(null, all) - 0.4, hi = Math.max.apply(null, all) + 0.4;
-      var L0 = 440, L1 = 668, yS = 92, yT = 300;
+      var L0 = 440, L1 = 668, yS = 84, yT = 286;
       function LX(v) { return L0 + (v - lo) / (hi - lo) * (L1 - L0); }
       l2text(g, (L0 + L1) / 2, 16, "on the line", "tx-b", "middle");
       l2line(g, L0, yS, L1, yS, "gr"); l2line(g, L0, yT, L1, yT, "gr");
@@ -375,7 +376,7 @@
       else {
         var s2 = steps[k - 1];
         txt = "Step " + k + ": cell (" + (s2.i + 1) + ", " + (s2.j + 1) + ") receives min(" + mass(s2.t + s2.r[s2.i]) + ", " + mass(s2.t + s2.c[s2.j]) + ") = " + mass(s2.t) + ".  " +
-          (s2.rowDone && s2.colDone ? "Row and column exhausted together: move diagonally (a degenerate step)." : s2.rowDone ? "Row " + (s2.i + 1) + " exhausted: move down." : "Column " + (s2.j + 1) + " exhausted: move right.");
+          (k === steps.length ? "Last cell: the last row and the last column are exhausted together." : s2.rowDone && s2.colDone ? "Row and column exhausted together: move diagonally (a degenerate step: fewer than n + m − 1 cells)." : s2.rowDone ? "Row " + (s2.i + 1) + " exhausted: move down." : "Column " + (s2.j + 1) + " exhausted: move right.");
       }
       if (k === steps.length) {
         var nz = steps.length, cost = function (ii, jj) { return Math.pow(Math.abs(D.x[ii] - D.y[jj]), p); };
@@ -384,7 +385,7 @@
         var rel = (nwc - opt) / Math.max(opt, 1e-12);
         txt += "\nDone: " + nz + " filled cells (n + m − 1 = " + (n + m - 1) + "). Cost: north-west " + l2n(nwc, 4) + ", exact optimum " + l2n(opt, 4) +
           (rel < 1e-9 ? "  ✓ the north-west plan is optimal." : "  ✗ north-west is " + fmt(100 * rel, 1) + " % above the optimum.") +
-          (shuf.checked ? "  (Targets not sorted: the rule ignores the cost.)" : p < 1 ? "  (Concave cost: sorting is not enough.)" : "  (Sorted points, convex cost: Prop. 3.10.)");
+          (shuf.checked ? "  (Targets not sorted: the rule ignores the cost.)" : p < 1 ? (rel < 1e-9 ? "  (Concave cost: optimal here by luck; try other examples.)" : "  (Concave cost: sorting is not enough.)") : "  (Sorted points, convex cost: Prop. 3.10.)");
       }
       ro.textContent = txt;
     }
@@ -402,7 +403,7 @@
     sc.svg.setAttribute("aria-label", "A residual bistochastic matrix and the permutation matrices extracted from it with their weights");
     var mSel = select(sc.controls, "Matrix", [["text", "the 3 × 3 example of §6"], ["ex", "the 4 × 4 matrix of Exercise 13.6"], ["dense4", "random dense 4 × 4"], ["dense5", "random dense 5 × 5"], ["mix", "mixture of 3 permutations, 5 × 5"]], "text", function () { load(); });
     var rSel = select(sc.controls, "Matching", [["big", "largest λ first"], ["any", "any perfect matching"]], "big", function () { reset(); });
-    button(sc.controls, "Extract one permutation", step);
+    button(sc.controls, "Extract one permutation", function () { step(false); });
     button(sc.controls, "Run to the end", function () { var guard = 0; while (total() > 1e-9 && guard++ < 60) step(true); draw(); });
     button(sc.controls, "Reset", reset);
     button(sc.controls, "New random matrix", function () { seed++; load(); });
@@ -451,16 +452,18 @@
       for (i = 0; i < n; i++) { R[i][sig[i]] -= lam; if (R[i][sig[i]] < tol) R[i][sig[i]] = 0; }
       terms.push({ lam: lam, sig: Array.prototype.slice.call(sig) });
       lastSig = Array.prototype.slice.call(sig);
-      info = "Extracted σ = [" + lastSig.map(function (v) { return v + 1; }).join(", ") + "] with λ = " + l2n(lam, 3) + " (the smallest entry of R on the matched cells); at least one entry of R became 0.";
+      info = "Extracted σ = [" + lastSig.map(function (v) { return v + 1; }).join(", ") + "] with λ = " + l2lam(lam) + " (the smallest entry of R on the matched cells); at least one entry of R became 0.";
       if (!silent) draw();
     }
     function draw() {
       var g = l2clear(sc.svg), n = R.length, cell = n <= 3 ? 50 : n === 4 ? 44 : 38, x0 = 30, y0 = 40, i, j;
       l2text(g, x0 + n * cell / 2, 22, "residual R (row sums " + l2n(total(), 3) + ")", "tx-b", "middle");
+      l2text(g, x0, y0 + n * cell + 16, "small green numbers: the original P", "tx-s", "start");
       for (i = 0; i < n; i++) for (j = 0; j < n; j++) {
         var v = R[i][j];
         el("rect", { x: x0 + j * cell, y: y0 + i * cell, width: cell, height: cell, "class": v > 1e-9 ? "a3 ln cm hair" : "nofill ln cm hair", "fill-opacity": v > 1e-9 ? (0.12 + 0.6 * Math.min(1, v)).toFixed(2) : null }, g);
-        l2text(g, x0 + (j + 0.5) * cell, y0 + (i + 0.5) * cell + 4, v > 1e-9 ? l2n(v, 2) : "0", "tx-s", "middle");
+        l2text(g, x0 + (j + 0.5) * cell, y0 + (i + 0.5) * cell + 6, v > 1e-9 ? l2n(v, 2) : "0", "tx-s", "middle");
+        if (P0[i][j] > 1e-9) l2text(g, x0 + j * cell + 3, y0 + i * cell + 11, l2n(P0[i][j], 2), "tx-s t3", "start", { "font-size": "9px" });
       }
       if (lastSig) for (i = 0; i < n; i++) el("rect", { x: x0 + lastSig[i] * cell + 2, y: y0 + i * cell + 2, width: cell - 4, height: cell - 4, "class": "ln c3 nofill" }, g);
       // extracted terms
@@ -470,7 +473,7 @@
         var gx = X0 + (k % per) * gw, gy = 36 + Math.floor(k / per) * gh;
         for (var a = 0; a < n; a++) for (var b = 0; b < n; b++) el("rect", { x: gx + b * mc, y: gy + a * mc, width: mc, height: mc, "class": "nofill ln cm hair" }, g);
         for (a = 0; a < n; a++) el("circle", { cx: gx + (tm.sig[a] + 0.5) * mc, cy: gy + (a + 0.5) * mc, r: Math.max(1.8, mc * 0.32), "class": "f3" }, g);
-        l2text(g, gx + n * mc / 2, gy + n * mc + 13, "λ=" + l2n(tm.lam, 2), "tx-s", "middle");
+        l2text(g, gx + n * mc / 2, gy + n * mc + 13, "λ=" + l2lam(tm.lam), "tx-s", "middle");
       });
       var lsum = 0; terms.forEach(function (tm) { lsum += tm.lam; });
       l2text(g, X0, H - 12, terms.length + " permutation(s), Σλ = " + l2n(lsum, 3) + ";  Carathéodory bound (n − 1)² + 1 = " + ((n - 1) * (n - 1) + 1), "tx-s", "start");
@@ -483,7 +486,7 @@
      4. Using a plan: displacement interpolation and barycentric projection (§11)
      ====================================================================== */
   WIDGETS.l2plan = function (box) {
-    var sc = scaffold(box, "Moving along a plan: the interpolation α_t and the barycentric projection (drag the points)");
+    var sc = scaffold(box, "Moving along a plan: the interpolation αₜ and the barycentric projection (drag the points)");
     var W = 680, H = 420;
     sc.svg.setAttribute("viewBox", "0 0 " + W + " " + H);
     sc.svg.setAttribute("role", "img");
@@ -494,7 +497,7 @@
     var bary = checkbox(sc.controls, "barycentric projection", false, function () { draw(); });
     var segs = checkbox(sc.controls, "segments of the plan", true, function () { draw(); });
     var ro = readout(sc.controls);
-    legend(sc.legend, [["--s2", "sources x_i (mass a_i)"], ["--s1", "targets y_j (mass b_j)"], ["--s3", "atoms of α_t; crosses: barycentric projection"]]);
+    legend(sc.legend, [["--s2", "sources xᵢ (mass aᵢ)"], ["--s1", "targets yⱼ (mass bⱼ)"], ["--s3", "atoms of αₜ; crosses: barycentric projection"]]);
     var view = { x0: 12, y0: 12, w: 656, h: 396, xr: [-2.9, 2.9] };
     view.k = view.w / (view.xr[1] - view.xr[0]);
     function VX(x) { return view.x0 + (x - view.xr[0]) * view.k; }
@@ -503,7 +506,7 @@
     function load() {
       var v = pSel.value, rng = mulberry32(11 + 7 * seed), i;
       if (v === "split") { S = [[0, -1.0]]; ka = [2]; T = [[-1.4, 1.1], [1.4, 1.1]]; kb = [1, 1]; }
-      else if (v === "w") { S = [[-1.8, -0.9], [-0.2, -1.3], [1.6, -0.7]]; ka = [3, 2, 1]; T = [[-1.5, 1.0], [-0.2, 1.4], [1.0, 1.1], [2.1, 0.5]]; kb = [1, 2, 2, 1]; }
+      else if (v === "w") { S = [[-1.8, -0.9], [-0.2, -1.3], [1.6, -0.7]]; ka = [4, 3, 2]; T = [[-1.5, 1.0], [-0.2, 1.4], [1.0, 1.1], [2.1, 0.5]]; kb = [2, 3, 2, 2]; }
       else if (v === "perm") {
         S = []; T = []; ka = []; kb = [];
         for (i = 0; i < 8; i++) { var a = 2 * Math.PI * i / 8; S.push([-1.5 + 0.9 * Math.cos(a), 0.9 * Math.sin(a)]); ka.push(1); }
@@ -561,7 +564,7 @@
       var dmin = Infinity;
       for (i = 0; i < distinct.length; i++) for (j = i + 1; j < distinct.length; j++) dmin = Math.min(dmin, Math.hypot(distinct[i].x - distinct[j].x, distinct[i].y - distinct[j].y));
       ro.textContent = "Plan: " + nz + " non-zero entries (n + m − 1 = " + (n + m - 1) + ", nm = " + n * m + "); cost ⟨C, P⟩ = " + l2n(cst, 4) +
-        ".  At t = " + fmt(t, 2) + ", α_t has " + distinct.length + " atom(s)" + (distinct.length > 1 ? ", smallest distance between two of them " + l2n(dmin, 3) : "") + "." + bmsg;
+        ".  At t = " + fmt(t, 2) + ", αₜ has " + distinct.length + " atom(s)" + (distinct.length > 1 ? ", smallest distance between two of them " + l2n(dmin, 3) : "") + "." + bmsg;
     }
     function pick(e) {
       var p = svgPoint(sc.svg, e), best = null, d;

@@ -183,7 +183,7 @@
     var fSel = select(s.controls, "Function", [["quad", "x²/2"], ["exp", "eˣ"], ["abs", "|x|"], ["quart", "x⁴/4"], ["well", "(x² − 1)², not convex"]], "exp", draw);
     var yS = slider(s.controls, "slope y", -2.5, 2.5, 0.05, 1.5, draw);
     var ro = readout(s.controls);
-    legend(s.legend, [["--s1", "f (top)"], ["--s3", "line of slope y touching from below; dot: contact point"], ["--muted", "f* (bottom)"]]);
+    legend(s.legend, [["--s1", "f (top)"], ["--s3", "highest line of slope y below f; dot: contact point"], ["--muted", "the line y·x through 0"], ["--text", "f* (bottom)"]]);
 
     function draw() {
       var F = REM_FUNS[fSel.value], y = Math.round(yS.get() * 100) / 100, c = F.conj(y), i;
@@ -201,7 +201,6 @@
       }
       left.unclip();
       left.text(-2.95, 4.25, F.label, "tx-b t1", "start");
-      left.text(2.95, 4.25, "grey: the line through 0 of slope y", "tx-s", "end");
       // the conjugate
       right.clear();
       right.axes({ xticks: [-2, -1, 0, 1, 2], yticks: [-1, 0, 1, 2, 3, 4], cross: true });

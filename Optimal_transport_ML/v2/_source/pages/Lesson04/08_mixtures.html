@@ -1,0 +1,132 @@
+<h2 id="mix">8. Mixtures: likelihood, KL and transport <span class="ref">2019 notes §9.1; StatOT §6.1; OT4ML §13.2</span></h2>
+<p class="tldr">Maximum likelihood minimises $\KL(\text{data}\,|\,\text{model})$ and needs overlapping densities; variational inference minimises the other KL and seeks a mode; transport fits positions. Gaussian mixtures can be compared by transporting their components: a small OT problem whose ground cost is the $W_2$ distance between Gaussians.</p>
+
+<h3 id="mix-why">The opening question of the syllabus</h3>
+<p>The syllabus of this lesson starts with “variational inference, comparison with KL, mixture estimation, OT on mixture of Gaussians”. Two questions are behind these words.</p>
+<ol>
+<li><strong>Fitting.</strong> To fit a model (a Gaussian, a mixture, a generator) to data or to a target law, which loss should we minimise — a KL divergence (in which direction?) or a transport cost? §6 compared them along translations; here we compare what they <em>choose</em>.</li>
+<li><strong>Comparing mixtures.</strong> Two Gaussian mixtures can be compared as densities on $\R^d$ (with $W_2$), or as collections of meaningful components. The second view gives a cheap and interpretable distance.</li>
+</ol>
+
+<h3 id="mix-mle">Maximum likelihood is a KL projection</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">2019 notes §9.1, pp. 40–41</span></div>
+<p>In the case where $\al_\theta$ has a density $\rho_\theta=\rho_{\al_\theta}$ with respect to the Lebesgue measure (or any other fixed reference measure), the maximum likelihood estimator (MLE) is obtained by solving</p>
+$$\min_\theta\ \mathcal L_{\mathrm{MLE}}(\al_\theta,\be):=-\sum_i\log\big(\rho_\theta(x_i)\big).$$
+<p>This corresponds to using an empirical counterpart of a Kullback–Leibler loss since, assuming the $x_i$ are i.i.d. samples of some $\bar\be$, then $\mathcal L_{\mathrm{MLE}}(\al,\be)\xrightarrow{n\to+\infty}\KL(\al|\bar\be)$. This MLE approach is known to lead to optimal estimation procedures in many cases […]. However, it fails to work when estimating singular distributions, typically when the $\al_\theta$ does not have a density (so that $\mathcal L_{\mathrm{MLE}}(\al_\theta,\be)=+\infty$) […]. In order to cope with such difficult scenario, one has to use weak metrics in place of the MLE functional […]. The class of estimators obtained using $L=\Lc$, often called “Minimum Kantorovitch Estimators” (MKE), was initially introduced in [4].</p>
+</div>
+<dl class="decode">
+<dt>$-\sum_i\log\rho_\theta(x_i)$</dt><dd>The negative log-likelihood of the sample $x_1,\dots,x_n$ under the model density $\rho_\theta$.</dd>
+<dt>$\bar\be$</dt><dd>The unknown law of the data; $\be=\frac1n\sum_i\delta_{x_i}$ is its empirical version.</dd>
+<dt>“fails for singular distributions”</dt><dd>A generator $\pf{(g_\theta)}{\zeta}$ that maps a low-dimensional latent space into a large one has no density: its likelihood is not defined (or $-\infty$). Hence the weak losses of §6.</dd>
+<dt>MKE</dt><dd>$\min_\theta\Lc(\al_\theta,\be)$: fit the model by transport. Wasserstein GANs are MKEs with $c=d$ (CompOT §9.4, p. 159).</dd>
+</dl>
+<p>Let us redo the limit carefully, because the order of the arguments matters (see the note below).</p>
+<ol class="steps">
+<li>$$\frac1n\mathcal L_{\mathrm{MLE}}=-\frac1n\sum_{i=1}^n\log\rho_\theta(x_i)\ \xrightarrow[n\to\infty]{}\ -\int\log\rho_\theta(x)\,\dd\bar\be(x).$$<span class="why">The law of large numbers, for i.i.d. $x_i\sim\bar\be$ (assuming the integral exists). Without the factor $\frac1n$ the sum grows like $n$.</span></li>
+<li>$$=\int\log\frac{\rho_{\bar\be}(x)}{\rho_\theta(x)}\,\dd\bar\be(x)-\int\log\rho_{\bar\be}(x)\,\dd\bar\be(x)=\KL(\bar\be\,|\,\al_\theta)+h(\bar\be).$$<span class="why">Add and subtract $\log\rho_{\bar\be}$ (the data density); $h(\bar\be)=-\int\rho_{\bar\be}\log\rho_{\bar\be}$ is the entropy of the data, which does not depend on $\theta$.</span></li>
+</ol>
+<p>So maximum likelihood minimises $\KL(\text{data}\,|\,\text{model})$, the “forward” KL. It is finite only if the model puts mass wherever the data have mass.</p>
+<div class="box remark"><div class="box-h">Note on the sources — the limit of the likelihood</div>
+<p>The 2019 notes (p. 40) and CompOT (§9.4, p. 159) write $\mathcal L_{\mathrm{MLE}}(\al,\be)\to\KL(\al|\bar\be)$ for $\mathcal L_{\mathrm{MLE}}=-\sum_i\log\rho_\theta(x_i)$. Two corrections: the sum must be divided by $n$, and the limit is $\KL(\bar\be|\al_\theta)+h(\bar\be)$ — arguments in the other order, plus a constant. <strong>Check</strong> with data $\N(0,1)$ and model $\N(0,4)$, $n=10^6$ samples: $\frac1n\mathcal L_{\mathrm{MLE}}=1.7373$, while $h+\KL(\text{data}|\text{model})=1.4189+0.3181=1.7371$ and $h+\KL(\text{model}|\text{data})=1.4189+0.8069=2.2258$; the unnormalised sum is $1.74\times10^6$.</p>
+</div>
+
+<h3 id="mix-gauss">KL against $W_2$ on Gaussians</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">CompOT Remark 8.2, (8.6)–(8.7), p. 122</span></div>
+<p>It is interesting to contrast the geometry of the Kullback–Leibler divergence to that defined by quadratic optimal transport when comparing Gaussians. […] In the univariate case, $d=1$, if $\al=\N(m_\al,\sigma_\al^2)$ and $\be=\N(m_\be,\sigma_\be^2)$, one has</p>
+$$\KL(\al|\be)=\frac12\Big(\frac{\sigma_\al^2}{\sigma_\be^2}+\log\frac{\sigma_\be^2}{\sigma_\al^2}+\frac{\abs{m_\al-m_\be}}{\sigma_\be^2}-1\Big).\qquad(8.6)$$
+<p>This expression shows that the divergence between $\al$ and $\be$ diverges to infinity as $\sigma_\be$ diminishes to $0$ and $\be$ becomes a Dirac mass. In that sense, one can say that singular Gaussians are infinitely far from all other Gaussians in the KL geometry. […] The KL hyperbolic geometry over the space of Gaussian parameters $(m,\sigma)$ should be contrasted with the Euclidean geometry associated to OT […], since in the univariate case $W_2^2(\al,\be)=\abs{m_\al-m_\be}^2+\abs{\sigma_\al-\sigma_\be}^2$. (8.7)</p>
+</div>
+<div class="box remark"><div class="box-h">Note on the sources — a missing square in (8.6)</div>
+<p>The mean term of (8.6) must be $\frac{(m_\al-m_\be)^2}{\sigma_\be^2}$ (as in the <a href="#recall-kl">refresher</a>). <strong>Check:</strong> for $\N(0,1)$ against $\N(2,1)$, numerical integration gives $\KL=2.0000=\frac{2^2}2$, while the printed formula gives $1.0$. The second-order expansion printed just after (8.6) is correct.</p>
+</div>
+<dl class="decode">
+<dt>KL geometry</dt><dd>Moving a mean by $\delta$ costs $\frac{\delta^2}{2\sigma^2}$: <strong>cheap for wide Gaussians, expensive for narrow ones</strong>. A narrow model ($\sigma_\be\to0$) is infinitely far from everything.</dd>
+<dt>$W_2$ geometry</dt><dd>Euclidean in $(m,\sigma)$: moving a mean by $\delta$ costs $\delta^2$ whatever the widths, and a Dirac ($\sigma=0$) is at finite distance.</dd>
+</dl>
+<p><strong>Numbers.</strong> $\KL\big(\N(0,1)\,|\,\N(0,0.1^2)\big)=47.20$ while $W_2^2=(1-0.1)^2=0.81$. And $\KL\big(\N(1,4)\,|\,\N(0,1)\big)=1.3069$ against $W_2^2=1+1=2$. A fitting procedure based on KL will never let the model collapse to a point (infinite penalty); one based on $W_2$ may, if that is cheaper.</p>
+
+<h3 id="mix-vi">Variational inference uses the other KL</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">StatOT §6.1, pp. 173–174</span></div>
+<p>In VI, we posit access to a probability measure $\pi$ over $\R^d$ via an expression for its density, and our goal is to perform inference. A typical example arises when $\pi$ is the posterior distribution from a Bayesian inference problem […]. The idea of VI is to approximate $\pi$ with an element of a simpler class $\mathcal Q$ of probability measures by solving the optimization problem</p>
+$$q^\star=\argmin_{q\in\mathcal Q}\ \KL(q\,\|\,\pi).\qquad(\mathrm{VI})$$
+<p>[…] typically we do not have access directly to $\pi$ but rather to an unnormalized density $\tilde\pi$, and the unknown normalization constant $Z=\int\tilde\pi$ does not affect the optimization objective in (VI). [Footnote: other objectives include] the KL divergence with the order of arguments swapped, which is closer to the statistician’s concept of maximum likelihood.</p>
+</div>
+<dl class="decode">
+<dt>$\pi$</dt><dd>The target, e.g. a Bayesian posterior $\pi(\theta)\propto\text{prior}(\theta)\times\text{likelihood}(\text{data}|\theta)$, known up to its normalising constant $Z$.</dd>
+<dt>$\mathcal Q$</dt><dd>A tractable family: Gaussians, products of independent factors (“mean field”), mixtures.</dd>
+<dt>$\KL(q\|\pi)$</dt><dd>$=\E_q[\log q]-\E_q[\log\tilde\pi]+\log Z$: expectations under $q$, which we can sample; $\log Z$ is a constant. That is why VI uses this direction — the <em>reverse</em> KL, compared with maximum likelihood.</dd>
+</dl>
+<p><strong>The two directions behave very differently on a multimodal target.</strong> Forward $\KL(\pi|q)=\int\pi\log\frac\pi q$ is huge where $\pi>0$ and $q\approx0$: $q$ must <em>cover all the mass</em>. Reverse $\KL(q|\pi)=\int q\log\frac q\pi$ is huge where $q>0$ and $\pi\approx0$: $q$ must <em>avoid the valleys</em>, so it settles on one mode.</p>
+<div class="box example" id="mix-vi-example"><div class="box-h">Worked example — fitting one Gaussian to two bumps</div>
+<p>Target $\pi=0.3\,\N(-2,0.5^2)+0.7\,\N(2,0.5^2)$ (mean $0.8$, standard deviation $1.9$); family $\mathcal Q$: all Gaussians $\N(m,s^2)$.</p>
+<ul>
+<li><strong>Forward KL</strong> (maximum likelihood with infinitely many samples of $\pi$): minimising $-\int\pi\log q$ over Gaussians matches the mean and the variance, $q=\N(0.8,\,1.9^2)$. It covers both bumps and puts mass in the valley: $\KL(\pi|q)=0.724$, but $\KL(q|\pi)=2.096$.</li>
+<li><strong>Reverse KL</strong> (VI): two local minima, $\N(-2.00,\,0.50^2)$ with $\KL(q|\pi)=1.204$ and $\N(2.00,\,0.50^2)$ with $\KL(q|\pi)=0.357$. Each sits on one bump and pays $\approx\log\frac1w$ for the weight $w$ it ignores ($-\log0.3=1.204$, $-\log0.7=0.357$). Their forward KL is huge ($21.7$ and $8.98$): they miss a whole mode. Gradient descent finds one or the other depending on its start.</li>
+<li><strong>$W_2$</strong> (minimum Kantorovich estimator): on the line $W_2^2(\pi,\N(m,s^2))=\int_0^1\big(Q_\pi(u)-m-s\Phi^{-1}(u)\big)^2\dd u$, a least-squares fit of the quantile function. Since $\int_0^1\Phi^{-1}=0$ and $\int_0^1(\Phi^{-1})^2=1$, the solution is $m=\int Q_\pi=\E_\pi X=0.8$ and $s=\int_0^1Q_\pi\Phi^{-1}=1.704$: one broad Gaussian, narrower than moment matching ($W_2^2=0.708$ against $0.746$; the right bump alone gives $3.596$). By Cauchy–Schwarz, $s\le\mathrm{sd}(\pi)$, with equality only for Gaussian $\pi$.</li>
+</ul>
+<p>(Computed by quadrature and Nelder–Mead from three starting points.)</p>
+</div>
+<figure class="fig"><!-- include figures/L04/vi.svg --><figcaption>One Gaussian fitted to the bimodal target $\pi$ (blue). Gold: forward KL / maximum likelihood (moment matching, covers both bumps). Purple: the best reverse-KL fit (variational inference, sits on the heavier bump; the other local minimum sits on the lighter one). Green: the $W_2$ fit (quantile least squares).</figcaption></figure>
+<div class="box ml"><div class="box-h">In machine learning — variational inference and VAEs</div>
+<p><strong>Bayesian inference at scale.</strong> For a Bayesian neural network or a large hierarchical model, the posterior over parameters is known only up to $Z$; VI replaces sampling (MCMC) by optimisation: choose a Gaussian $q$ (often with diagonal covariance) and minimise $\KL(q\|\pi)$ by stochastic gradients, estimating $\E_q[\log q-\log\tilde\pi]$ with samples of $q$. The worked example explains a known behaviour: <strong>mode-seeking</strong> — reverse-KL fits underestimate the spread and can miss modes. <strong>Variational autoencoders</strong> (Kingma and Welling, 2014) do the same, amortised over data: an encoder outputs a Gaussian $q_\phi(z|x)$ approximating the posterior of the latent code, trained by maximising $\log p_\theta(x)-\KL\big(q_\phi(z|x)\,\|\,p_\theta(z|x)\big)$ (the evidence lower bound). StatOT §6.1 studies VI as a gradient flow in the Wasserstein space — the subject of Lesson 8.</p>
+</div>
+
+<h3 id="mix-gmm">OT between Gaussian mixtures</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 13.9, Prop. 13.10, pp. 293–294</span></div>
+<p><strong>Definition 13.9 (Wasserstein-over-Wasserstein distance).</strong> Let $1\le p<+\infty$ and let $\X$ be a Polish metric space. For $\mathfrak A,\mathfrak B\in\Pc_p(\Pc_p(\X))$, define $\ \mathrm W_p^p(\mathfrak A,\mathfrak B):=\inf_{\Pi\in\U(\mathfrak A,\mathfrak B)}\int W_p^p(\al,\be)\,\dd\Pi(\al,\be)$ (13.8).</p>
+<p>For $p=2$, Gaussian mixtures provide a particularly explicit example with two levels of geometry. A mixture $\sum_ia_i\N(m_i,\Sigma_i)$ can either be viewed as the collapsed measure on $\X$, or as the component law $\mathfrak A=\sum_ia_i\delta_{\N(m_i,\Sigma_i)}$ on the Bures–Wasserstein space of Gaussian components. Given two component laws $\mathfrak A=\sum_ia_i\delta_{\N(m_i,\Sigma_i)}$, $\mathfrak B=\sum_jb_j\delta_{\N(n_j,\Lambda_j)}$, the discrete problem induced by (13.8) uses the component cost</p>
+$$C_{i,j}=\norm{m_i-n_j}^2+\B(\Sigma_i,\Lambda_j)^2 .$$
+<p>Let $P^\star$ be an optimal coupling between the weights $a$ and $b$. […] collapsing these component geodesics gives $\bar\al_t=\sum_{i,j}P^\star_{i,j}\N(m_{ij,t},\Sigma_{ij,t})$. […] It is generally not the same as the true $W_2$ interpolation between the collapsed mixture densities, which can split and recombine mass inside and across components.</p>
+<p><strong>Proposition 13.10 (Collapsing is non-expansive).</strong> […] For the collapsed mixtures, $W_p(\bar\al_{\mathfrak A},\bar\be_{\mathfrak B})\le\mathrm W_p(\mathfrak A,\mathfrak B)$.</p>
+</div>
+<dl class="decode">
+<dt>$\mathfrak A$</dt><dd>The mixture seen as a <strong>histogram over Gaussians</strong>: weight $a_i$ on the component $\N(m_i,\Sigma_i)$, which is now a point of a metric space (the Gaussians with the $W_2$ distance).</dd>
+<dt>$C_{ij}$</dt><dd>The ground cost between components: $W_2^2$ between two Gaussians, in closed form (Lesson 1: means + Bures). In 1D, $(m_i-n_j)^2+(\sigma_i-\tau_j)^2$.</dd>
+<dt>$\mathrm W_2(\mathfrak A,\mathfrak B)$</dt><dd>Often written $\mathrm{MW}_2$ (“mixture Wasserstein”): an $K\times L$ linear program between the weight vectors — tiny compared with OT between two densities on $\R^d$.</dd>
+<dt>collapsed mixture</dt><dd>The usual density $\sum_ia_i\N(m_i,\Sigma_i)$ on $\X$.</dd>
+<dt>Prop. 13.10</dt><dd>Transporting component by component is one particular way of transporting the densities, so it costs at least as much: $W_2\le\mathrm{MW}_2$.</dd>
+</dl>
+<div class="box idea"><div class="box-h">Idea of the proof (finite mixtures)</div>
+<p>Glue: for each pair of components $(i,j)$ take an optimal coupling $\gamma_{ij}$ between $\N(m_i,\Sigma_i)$ and $\N(n_j,\Lambda_j)$, and mix them with the weights of an optimal component plan: $\pi=\sum_{ij}P^\star_{ij}\gamma_{ij}$. This is a coupling of the two collapsed mixtures, and its cost is $\sum_{ij}P^\star_{ij}W_2^2(\text{components})=\mathrm{MW}_2^2$. The minimum over all couplings can only be smaller.</p>
+</div>
+<details class="fold proof"><summary>Full proof for finite mixtures</summary><div class="fold-body">
+<ol class="steps">
+<li>$\pi:=\sum_{i,j}P^\star_{ij}\gamma_{ij}$ is a probability on $\X\times\X$.<span class="why">A convex combination of probabilities ($P^\star\ge0$, $\sum_{ij}P^\star_{ij}=1$).</span></li>
+<li>Its first marginal is $\sum_{i,j}P^\star_{ij}\N(m_i,\Sigma_i)=\sum_ia_i\N(m_i,\Sigma_i)=\bar\al$; likewise the second is $\bar\be$.<span class="why">The first marginal of $\gamma_{ij}$ is the $i$-th component; then $\sum_jP^\star_{ij}=a_i$ (row sums of the component plan).</span></li>
+<li>$$W_2^2(\bar\al,\bar\be)\le\int\norm{x-y}^2\dd\pi=\sum_{i,j}P^\star_{ij}\int\norm{x-y}^2\dd\gamma_{ij}=\sum_{i,j}P^\star_{ij}C_{ij}=\mathrm{MW}_2^2 .$$<span class="why">$\pi$ is a coupling of the collapsed mixtures; linearity of the integral; $\gamma_{ij}$ optimal between Gaussians, whose cost is $C_{ij}$.</span></li>
+</ol>
+<p>This is the gluing idea of <a href="Lesson03.html#gluing-general">Lesson 3, §2</a> in another guise: a plan between “parts” combined with plans inside the parts. The book’s proof (p. 294) does the same for general laws $\mathfrak A,\mathfrak B$ with a measurable selection of optimal plans.</p>
+</div></details>
+<div class="box example" id="mix-gmm-example"><div class="box-h">Worked examples — how far apart are $\mathrm{MW}_2$ and $W_2$?</div>
+<ul>
+<li><strong>One component against two.</strong> $\bar\al=\N(0,1)$ and $\bar\be=\frac12\N(-1,0.5^2)+\frac12\N(1,0.5^2)$. The only component plan sends half of $\N(0,1)$ to each component: $\mathrm{MW}_2^2=\frac12\big[(0+1)^2+(1-0.5)^2\big]+\frac12\big[(0-1)^2+(1-0.5)^2\big]=1.25$. The true $W_2^2$ between the densities (quantile formula, by quadrature) is $0.0733$: <strong>17 times smaller</strong>. The true plan splits the Gaussian at $0$ — left half to the left bump, right half to the right one — which a component-wise plan cannot do: it must move the whole $\N(0,1)$ by an affine map to each component.</li>
+<li><strong>Two against two.</strong> $\bar\al=\frac12\N(-2,0.5^2)+\frac12\N(2,0.5^2)$ and $\bar\be=\frac14\N(-1,0.5^2)+\frac34\N(1.5,1^2)$: $C=\begin{pmatrix}1&12.5\\9&0.5\end{pmatrix}$, optimal component plan $P^\star=\begin{pmatrix}0.25&0.25\\0&0.5\end{pmatrix}$, $\mathrm{MW}_2^2=0.25+3.125+0.25=3.625$, while $W_2^2=1.560$.</li>
+</ul>
+<p>(Component LPs with POT; densities with the quantile formula and SciPy quadrature.)</p>
+</div>
+<figure class="fig"><!-- include figures/L04/gmm.svg --><figcaption>$\N(0,1)$ (orange-red) against $\frac12\N(-1,0.25)+\frac12\N(1,0.25)$ (blue). Left: the component-wise transport — half of the mass of the source Gaussian, spread over the whole line, is mapped affinely onto each component ($y=-1+\frac x2$ and $y=1+\frac x2$), so the two maps overlap: $\mathrm{MW}_2^2=1.25$. Right: the true optimal map between the densities, monotone (it splits the source at $0$): $W_2^2=0.073$.</figcaption></figure>
+<div class="widget" data-widget="l4gmm"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p>What to look at: two 1D Gaussian mixtures, and three ways to go from one to the other as $t$ goes from $0$ to $1$. Green: the $\mathrm{MW}_2$ path — each pair of matched components travels along its Gaussian geodesic (means and standard deviations interpolate linearly), with the weights of the optimal component plan. Purple dashed: the true $W_2$ displacement interpolation of the densities (quantile averaging, Lesson 3), which may split a component. Grey: the mixture $(1-t)\bar\al+t\bar\be$. The readout compares $\mathrm{MW}_2^2$ and $W_2^2$ (always $W_2\le\mathrm{MW}_2$) and prints the component plan.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">StatOT §5.6, p. 159</span></div>
+<p>[…] the representation of a Gaussian mixture by a mixing measure $\nu$ is “overparametrized”, i.e., $\nu$ is highly non-unique: consider the equality $\N(0,I)=\int\N(x,\tau I)\,\nu(\dd x)$ where $\nu=\N(0,(1-\tau)I)$, valid for any $\tau\in[0,1]$.</p>
+</div>
+<p>So $\mathrm{MW}_2$ is a distance between <em>mixing laws</em> (component lists), not between densities: the same density written with different components is at positive $\mathrm{MW}_2$ from itself. That is a feature when components have a meaning (clusters, objects), and a bug otherwise.</p>
+<div class="box ml"><div class="box-h">In machine learning — comparing and interpolating Gaussian mixture models</div>
+<p>Gaussian mixture models are fitted everywhere (clustering, density models of colours or patches of images, speaker models in audio). Comparing two fitted GMMs with $K$ and $L$ components by $\mathrm{MW}_2$ costs a $K\times L$ transport problem with closed-form costs — instead of an OT problem between densities in $\R^d$, which has no closed form and is expensive to approximate. The optimal plan $P^\star$ tells <strong>which cluster corresponds to which</strong> (useful to match clusterings of two datasets or two time points), and the component geodesics give interpolations that stay GMMs with at most $K+L-1$ components (a vertex of the transport polytope). Delon and Desolneux (SIAM J. Imaging Sciences, 2020) use this distance for colour transfer between images modelled by GMMs and for GMM barycenters; Chen, Georgiou and Tannenbaum (IEEE Access, 2019) introduced it for GMMs (both cited by StatOT §5.6).</p>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>Maximum likelihood → $\KL(\text{data}|\text{model})$ + const: mass-covering, needs a density everywhere the data are.</li>
+<li>Variational inference → $\KL(q|\pi)$: mode-seeking, needs $\pi$ only up to a constant.</li>
+<li>$W_2$ fit on the line → least squares on quantile functions.</li>
+<li>Two Gaussian mixtures → $\mathrm{MW}_2$: a small LP with cost $W_2^2$ between components; it is an upper bound on $W_2$ between the densities.</li>
+</ul>
+</div>
+<div class="quiz"><p>For a target law $p$ on $\R$ with a density, mean $\mu$ and standard deviation $s_p$, which Gaussian minimises $\KL(p|q)$ over all Gaussians $q$?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>$\KL\big(p|\N(m,s^2)\big)=-h(p)-\E_p\log q=-h(p)+\frac12\log(2\pi s^2)+\frac{\E_p(X-m)^2}{2s^2}$. The minimum in $m$ is at $m=\mu$ (the mean minimises $\E_p(X-m)^2$); then $\frac12\log s^2+\frac{s_p^2}{2s^2}$ has derivative $\frac1s-\frac{s_p^2}{s^3}$, zero at $s=s_p$. Moment matching.</p>
+</div></details></div>
+<div class="quiz"><p>Why is $\mathrm{MW}_2(\mathfrak A,\mathfrak B)=0$ only if the two mixtures have the same components with the same weights, while $W_2(\bar\al,\bar\be)=0$ can happen with different components?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>$\mathrm{MW}_2$ is a Wasserstein distance on the space of Gaussians, so it vanishes iff the two histograms over Gaussians are equal. $W_2$ only sees the collapsed density, and the same density has many mixture representations (StatOT’s example $\N(0,I)=\int\N(x,\tau I)\,\dd\N(0,(1-\tau)I)(x)$).</p>
+</div></details></div>

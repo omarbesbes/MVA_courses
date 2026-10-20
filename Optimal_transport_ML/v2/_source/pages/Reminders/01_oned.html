@@ -1,0 +1,86 @@
+
+<h2 id="oned">2. Distributions on the line</h2>
+<p class="tldr">On the real line a distribution is described by its cumulative distribution function, or equivalently by its quantile function; matching equal quantile levels — sorting — solves optimal transport for every convex cost.</p>
+
+<h3 id="cdf-quantile">Cumulative distribution function and quantile function</h3>
+<p class="small muted"><strong>Used in</strong> <a href="Lesson01.html">Lesson 1</a> (the optimal map $T=C_\be^{-1}\circ C_\al$), <a href="Lesson02.html">Lesson 2</a> (1D discrete transport), <a href="Lesson03.html#recall-1d">Lesson 3</a> ($W_p$ on the line, Riemann sums, <a href="Lesson03.html#oned">barycenters</a>), <a href="Lesson05.html">Lesson 5</a> (sliced OT: every projection is a 1D problem).</p>
+<p>The <em class="new">cumulative distribution function</em> (CDF) accumulates the mass from left to right. The <em class="new">quantile function</em> answers the reverse question: <em>where</em> has a fraction $t$ of the mass been accumulated? It is the inverse of the CDF with the two axes swapped — with a precise convention where the CDF jumps or is flat.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 2.39 and Prop. 2.40, p. 37</span></div>
+<p>For $\al\in\M(\R)$, the CDF and the quantile function (generalized inverse) are</p>
+$$C_\al(x)=\al\big((-\infty,x]\big),\qquad C_\al^{-1}(t)=\inf\{x\in\R:\ C_\al(x)\ge t\},\quad t\in(0,1).$$
+<p>One has $\pf{(C_\al^{-1})}{\mathcal U(0,1)}=\al$. If $\al$ has no atoms, then $\pf{(C_\al)}{\al}=\mathcal U(0,1)$.</p>
+</div>
+<dl class="decode">
+<dt>$C_\al$</dt><dd>Non-decreasing, right-continuous, from $0$ (at $-\infty$) to $1$ (at $+\infty$). It jumps by $\al(\{x\})$ at each atom $x$, and is flat on intervals that carry no mass.</dd>
+<dt>$C_\al^{-1}$</dt><dd>Non-decreasing and left-continuous. <strong>Atoms of $\al$ (jumps of $C_\al$) become flat pieces of $C_\al^{-1}$; gaps of the support (flat pieces of $C_\al$) become jumps of $C_\al^{-1}$.</strong></dd>
+<dt>the key equivalence</dt><dd>$C_\al^{-1}(t)\le x\iff t\le C_\al(x)$, for $t\in(0,1)$ and $x\in\R$. Everything else follows from it.</dd>
+<dt>$\pf{(C_\al^{-1})}{\mathcal U}=\al$</dt><dd><em>Inverse transform sampling</em>: if $U$ is uniform on $(0,1)$, then $C_\al^{-1}(U)\sim\al$.</dd>
+</dl>
+<figure class="fig"><!-- include figures/REM/cdf_quantile.svg --><figcaption>The measure $\al=\frac14\delta_0+\frac12\,\mathcal U[1,2]+\frac14\delta_3$. Left: its CDF jumps at the atoms $0$ and $3$ and is flat on the gaps $(0,1)$ and $(2,3)$. Right: its quantile function, where the roles are exchanged. Green: the level $t=\frac12$ and the median $C_\al^{-1}(\frac12)=1.5$.</figcaption></figure>
+<div class="box example"><div class="box-h">Worked example — the measure of the figure</div>
+<p>For $\al=\frac14\delta_0+\frac12\,\mathcal U[1,2]+\frac14\delta_3$:</p>
+$$C_\al(x)=\begin{cases}0&x<0\\ \frac14&0\le x<1\\ \frac14+\frac{x-1}2&1\le x<2\\ \frac34&2\le x<3\\ 1&x\ge3\end{cases}\qquad\qquad C_\al^{-1}(t)=\begin{cases}0&0<t\le\frac14\\ 1+2\big(t-\frac14\big)&\frac14<t\le\frac34\\ 3&\frac34<t<1.\end{cases}$$
+<ul>
+<li>$C_\al^{-1}(0.1)=0$ and $C_\al(0)=0.25>0.1$: the level $0.1$ falls inside the jump of the atom at $0$. All the levels in $(0,\frac14]$ give the same point.</li>
+<li>$C_\al^{-1}(0.3)=1.1$ and $C_\al(1.1)=0.3$: on the uniform part the two functions are true inverses.</li>
+<li>$C_\al^{-1}(0.75)=2$ but $C_\al^{-1}(0.8)=3$: the quantile function jumps over the gap $(2,3)$.</li>
+<li>Sampling: $C_\al^{-1}(U)=0$ exactly when $U\le\frac14$, an event of probability $\frac14=\al(\{0\})$. (With $200\,000$ simulated uniforms the three events “$=0$”, “$=3$” and “$\in[1,1.5]$” all have frequencies within $0.003$ of $\frac14$.)</li>
+</ul>
+</div>
+<details class="fold proof"><summary>Proof of the key equivalence and of inverse transform sampling</summary><div class="fold-body">
+<ol class="steps">
+<li>If $t\le C_\al(x)$, then $x$ belongs to the set $\{x':\ C_\al(x')\ge t\}$, so its infimum satisfies $C_\al^{-1}(t)\le x$.<span class="why">Definition of an infimum.</span></li>
+<li>Conversely, the set $\{x':\ C_\al(x')\ge t\}$ is an interval $[q,\infty)$ that contains its left end $q=C_\al^{-1}(t)$: it is an interval because $C_\al$ is non-decreasing, and it contains $q$ because $C_\al$ is right-continuous. So $C_\al^{-1}(t)\le x$ implies $x\in[q,\infty)$, i.e. $C_\al(x)\ge t$.<span class="why">Right-continuity is exactly what is needed.</span></li>
+<li>$$\P\big(C_\al^{-1}(U)\le x\big)=\P\big(U\le C_\al(x)\big)=C_\al(x).$$<span class="why">The equivalence, then $\P(U\le s)=s$ for $s\in[0,1]$. Two laws with the same CDF are equal, so $C_\al^{-1}(U)\sim\al$.</span></li>
+</ol>
+</div></details>
+<div class="widget" data-widget="remQuantile"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p>What to look at: move the level $t$. On the CDF (top) the green horizontal line at height $t$ stops at the first point where the CDF reaches $t$: that point is $C^{-1}(t)$, also marked on the quantile function (bottom). On the worked example, every level below $\frac14$ stops on the jump at $0$. Then press “Draw 40 samples”: uniform levels (grey horizontal lines) are mapped to $C^{-1}(U)$ (grey dots under the axis). The samples pile up where the CDF is steep, and each atom receives a fraction of the levels equal to its mass. Try the 5-point empirical measure: its quantile function is a staircase, and sampling from it is drawing one of the five points uniformly.</p>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul>
+<li>$C_\al^{-1}$ is not an inverse function in general: $C_\al\big(C_\al^{-1}(t)\big)\ge t$, strict inside a jump; $C_\al^{-1}\big(C_\al(x)\big)\le x$, strict inside a gap (in the example $C_\al^{-1}(C_\al(0.5))=C_\al^{-1}(0.25)=0<0.5$).</li>
+<li>$\pf{(C_\al)}{\al}$ is uniform only if $\al$ has no atoms; for a discrete $\al$ the variable $C_\al(X)$ takes finitely many values (Exercise 11 of the Lesson 1 sheet).</li>
+<li>Conventions differ: some texts use $\P(X<x)$, or a right-continuous quantile $\inf\{x:\ C(x)>t\}$. They agree except at countably many points, which do not change any integral.</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — sampling and histogram matching</div>
+<p>Inverse transform sampling is how libraries turn uniform random numbers into other laws when $C^{-1}$ is explicit: for the exponential law $C^{-1}(u)=-\log(1-u)$, so $C^{-1}(0.5)=\log2\approx0.693$ is its median. Matching quantiles is also a classical preprocessing: <em>histogram equalization</em> replaces each pixel intensity $x$ by $C_\be^{-1}\big(C_\al(x)\big)$, so that the output histogram is the target $\be$ (OT4ML §1.1, Fig. 1.3, p. 12); colour transfer does it channel by channel, and quantile normalization does it for gene-expression profiles. This map is exactly the optimal transport map on the line (<a href="#ot-closed-forms">§9</a>).</p>
+</div>
+
+<div class="quiz"><p>For the empirical measure of the three points $2,\,-1,\,0.5$, compute $C^{-1}(0.5)$ and $C^{-1}(\frac13)$.</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>Sort: $-1\le0.5\le2$, each with mass $\frac13$. The quantile function is the staircase $C^{-1}(t)=x_{(\lceil3t\rceil)}$. So $C^{-1}(0.5)=x_{(2)}=0.5$ (the median), and $C^{-1}(\frac13)=x_{(1)}=-1$: at the level $t=\frac13$ exactly, $C(-1)=\frac13\ge t$ already, and the infimum convention picks $-1$ (just above, $C^{-1}(0.34)=0.5$).</p>
+</div></details></div>
+
+<h3 id="sorting">Sorting, ranks and monotone rearrangement</h3>
+<p class="small muted"><strong>Used in</strong> <a href="Lesson01.html">Lesson 1</a> (discrete Monge on the line: sort and match), <a href="Lesson02.html">Lesson 2</a> (the north-west corner rule for unequal weights), <a href="Lesson03.html#gluing-example">Lesson 3</a> (monotone plans in the examples), <a href="Lesson05.html">Lesson 5</a> (sliced OT sorts projected samples).</p>
+<p>To pair $n$ points with $n$ points on a line at the smallest total cost, pair the smallest with the smallest, the second with the second, and so on. The reason: two pairs that cross can be uncrossed, and for a convex cost uncrossing never increases the cost.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 1.2, p. 9; Prop. 3.10, p. 55</span></div>
+<p><strong>Monotone matching.</strong> Let $x_1,\dots,x_n$ be pairwise distinct, $y_1,\dots,y_n$ pairwise distinct, and $C_{ij}=h(x_i-y_j)$ with $h$ strictly convex. The unique optimal assignment is the order-preserving permutation. If $h$ is only convex, the sorted matching is still optimal, but other optimal matchings may exist.</p>
+<p><strong>Weighted sweep.</strong> For sorted weighted atoms $x_1\le\dots\le x_n$, $y_1\le\dots\le y_m$ and $c(x,y)=h(x-y)$ with $h$ convex, the north-west corner plan (fill the targets from left to right) is optimal; cost $O(n\log n+m\log m)$ with the sorting.</p>
+</div>
+<dl class="decode">
+<dt>rank</dt><dd>The rank of $x_i$ is its position after sorting. If $\sigma_X$ and $\sigma_Y$ are the sorting permutations, the optimal matching sends $x_{\sigma_X(k)}$ to $y_{\sigma_Y(k)}$ for each $k$, i.e. $\sigma=\sigma_Y\circ\sigma_X^{-1}$.</dd>
+<dt>$W_p$ of point clouds</dt><dd>$W_p^p\Big(\frac1n\sum_i\delta_{x_i},\frac1n\sum_j\delta_{y_j}\Big)=\frac1n\sum_k\abs{x_{(k)}-y_{(k)}}^p$, where $x_{(1)}\le\dots\le x_{(n)}$ are the sorted values. It is the quantile formula of <a href="#ot-closed-forms">§9</a> for staircase quantile functions.</dd>
+<dt>monotone rearrangement</dt><dd>For measures with densities the same rule reads $T=C_\be^{-1}\circ C_\al$: the point at level $t$ of $\al$ goes to the point at level $t$ of $\be$.</dd>
+</dl>
+<figure class="fig"><!-- include figures/REM/sorting.svg --><figcaption>Matching $x=(0,1,3)$ to $y=(1,2,5)$. Reversing the order costs $30$ for the squared distance; the sorted matching costs $6$, the least of the six permutations.</figcaption></figure>
+<div class="box example"><div class="box-h">Worked example — all six permutations</div>
+<p>For $x=(0,1,3)$ and $y=(1,2,5)$, the six matchings cost (squared distance): $6$ (sorted), $8$, $18$, $24$, $26$, $30$ (reversed). Hence $W_2^2=\frac63=2$. With the cost $\abs{x-y}$ the sorted matching costs $4$, but so does the matching $0\to2$, $1\to1$, $3\to5$: for $p=1$ the optimum is not unique ($W_1=\frac43$).</p>
+<p>Unsorted input: $x=(3,0,1)$ and $y=(5,2,1)$. Ranks of $x$: $(3,1,2)$; of $y$: $(3,2,1)$. Match equal ranks: $3\to5$, $0\to1$, $1\to2$ — the same pairs as above.</p>
+</div>
+<details class="fold proof"><summary>Proof: uncrossing two pairs</summary><div class="fold-body">
+<p>Take $x<x'$ matched to $y'>y$ (a crossing), and set $d=y'-y>0$, $D(s)=\frac{h(s)-h(s-d)}d$, the slope of a chord of $h$ of horizontal length $d$. Convexity of $h$ makes $D$ non-decreasing (strictly increasing if $h$ is strictly convex). Then</p>
+$$\big[h(x-y')+h(x'-y)\big]-\big[h(x-y)+h(x'-y')\big]=d\,\big(D(x'-y)-D(x-y)\big)\ge0,$$
+<p>because $x'-y>x-y$; expand the four terms to check the identity. So swapping the two targets does not increase the cost (and strictly decreases it for strictly convex $h$). Repeating the swap removes every crossing; the only matching without crossing pairs equal ranks.</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul>
+<li>For a concave cost ($\abs{x-y}^p$ with $p<1$), sorting is not optimal: for $x=(0,1)$, $y=(1,2)$ and $p=\frac12$, the sorted matching costs $2$ and the crossed one $\sqrt2\approx1.41$.</li>
+<li>For $p=1$, ties are common (“book shifting”, OT4ML Example 1.3, p. 12): sorting gives <em>an</em> optimal matching, not the only one.</li>
+<li>There is no order in dimension $d\ge2$: sorting does not generalise; Brenier’s theorem (<a href="#ot-monge">§9</a>) replaces “increasing” by “gradient of a convex function”.</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — sliced Wasserstein losses</div>
+<p>Sorting is the cheapest exact OT solver: $O(n\log n)$. Sliced Wasserstein distances (<a href="Lesson05.html">Lesson 5</a>, OT4ML Def. 11.23, p. 230) exploit it in high dimension: project both point clouds on random directions $\theta$, sort the projections, and average the 1D costs $\frac1n\sum_k\big(\ps{\theta}{x}_{(k)}-\ps{\theta}{y}_{(k)}\big)^2$. The result is differentiable almost everywhere with respect to the points (the sorting permutation is locally constant), and is used as a training loss for generative models and to compare point clouds or feature distributions.</p>
+</div>
