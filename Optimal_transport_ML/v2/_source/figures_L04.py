@@ -521,10 +521,20 @@ def fig_vi():
     F.path(simplify(F, [(-4.5, 0)] + [(x, pi(x)) for x in xs] + [(5.5, 0)]), "a1", close=True)
     sfn(F, pi, "ln c1 thin", n=800)
     sfn(F, lambda x: stats.norm.pdf(x, mean, math.sqrt(var)), "ln c4")
-    sfn(F, lambda x: stats.norm.pdf(x, 2.0, 0.5003), "ln c5")
-    sfn(F, lambda x: stats.norm.pdf(x, -2.0, 0.5006), "ln c5 dot")
+
+    def kl_q_pi(p):  # reverse KL(q | pi) for q = N(p[0], exp(p[1])^2), by quadrature
+        m_, s_ = p[0], math.exp(p[1])
+        return integrate.quad(lambda x: stats.norm.pdf(x, m_, s_) * (stats.norm.logpdf(x, m_, s_) - math.log(max(pi(x), 1e-300))),
+                              m_ - 12 * s_, m_ + 12 * s_, limit=400)[0]
+    fits = []
+    for m0 in (2.0, -2.0):  # the two local minima of the reverse KL (Nelder-Mead from each bump)
+        r = optimize.minimize(kl_q_pi, [m0, math.log(0.5)], method="Nelder-Mead", options={"xatol": 1e-8, "fatol": 1e-12, "maxiter": 4000})
+        fits.append((r.x[0], math.exp(r.x[1]), r.fun))
+    assert abs(fits[0][2] - 0.3566) < 1e-3 and abs(fits[1][2] - 1.2038) < 1e-3, fits
+    sfn(F, lambda x: stats.norm.pdf(x, fits[0][0], fits[0][1]), "ln c5")
+    sfn(F, lambda x: stats.norm.pdf(x, fits[1][0], fits[1][1]), "ln c5 dot")
     sfn(F, lambda x: stats.norm.pdf(x, mean, sW), "ln c3 dash")
-    assert stats.norm.pdf(2.0, 2.0, 0.5003) < 0.84 and stats.norm.pdf(-2.0, -2.0, 0.5006) < 0.84
+    assert max(stats.norm.pdf(0, 0, fits[0][1]), stats.norm.pdf(0, 0, fits[1][1])) < 0.84
     F.text(2.6, 0.62, "π = 0.3 𝒩(−2, 0.5²) + 0.7 𝒩(2, 0.5²)", "tx-s t1", "start")
     c.text(300, 266, "gold: forward KL / maximum likelihood  𝒩(0.8, 1.9²)   ·   green dashed: W₂ fit  𝒩(0.8, 1.70²)", "tx-s", "middle")
     c.text(300, 282, "purple: reverse KL (VI), best local minimum 𝒩(2, 0.5²); dotted: the other one 𝒩(−2, 0.5²)", "tx-s", "middle")
