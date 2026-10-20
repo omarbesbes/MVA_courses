@@ -515,3 +515,111 @@
     reset();
     redrawers.push(function () { draw(X, last); });
   };
+
+  /* ---------------- Exercise sheet, Exercise 2: Gaussian couplings on the line ---------------- */
+  WIDGETS.l3kcgauss = function (box) {
+    var s = scaffold(box, "Gaussian couplings of α = N(0, σα²) and β = N(0, σβ²): choose the correlation");
+    var W = 660, H = 392;
+    s.svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+    s.svg.setAttribute("role", "img");
+    s.svg.setAttribute("aria-label", "A Gaussian coupling in the plane with its two marginals, and its cost as a function of the covariance c");
+    var sa = slider(s.controls, "σ<sub>α</sub>", 0, 2.4, 0.05, 2, draw);
+    var sb = slider(s.controls, "σ<sub>β</sub>", 0, 2.4, 0.05, 1, draw);
+    var rh = slider(s.controls, "correlation ρ = c / (σ<sub>α</sub>σ<sub>β</sub>)", -1, 1, 0.01, 0.3, draw);
+    button(s.controls, "Optimal coupling: ρ = 1", function () { rh.set(1); draw(); });
+    var ro = readout(s.controls);
+    legend(s.legend, [["--s2", "α (law of X)"], ["--s1", "β (law of Y)"], ["--s3", "coupling π = law of (X, Y)"], ["--muted", "diagonal y = x (no move)"]]);
+    var rnd = mulberry32(11), Z = [];
+    for (var i = 0; i < 240; i++) Z.push([gaussRand(rnd), gaussRand(rnd)]);
+    var P = { x0: 40, y0: 12, w: 340, r: 5 }; // square panel, data range [-r, r] on both axes
+    function MX(x) { return P.x0 + (x + P.r) / (2 * P.r) * P.w; }
+    function MY(y) { return P.y0 + P.w - (y + P.r) / (2 * P.r) * P.w; }
+    function txt(g, x, y, str, cls, anchor) { var t = el("text", { x: x, y: y, "class": cls || "tx-s", "text-anchor": anchor || "start" }, g); t.textContent = str; return t; }
+    function line(g, x1, y1, x2, y2, cls) { return el("line", { x1: x1, y1: y1, x2: x2, y2: y2, "class": cls }, g); }
+    function draw() {
+      var a = sa.get(), b = sb.get(), r = rh.get(), c = r * a * b;
+      sa.out.textContent = fmt(a, 2); sb.out.textContent = fmt(b, 2); rh.out.textContent = fmt(r, 2);
+      while (s.svg.firstChild) s.svg.removeChild(s.svg.firstChild);
+      var g = el("g", {}, s.svg), k;
+      el("rect", { x: P.x0, y: P.y0, width: P.w, height: P.w, "class": "ln cm hair nofill" }, g);
+      [-4, -2, 0, 2, 4].forEach(function (v) {
+        line(g, MX(v), P.y0, MX(v), P.y0 + P.w, "gr");
+        line(g, P.x0, MY(v), P.x0 + P.w, MY(v), "gr");
+        txt(g, MX(v), P.y0 + P.w + 14, String(v), "tx-s", "middle");
+        txt(g, P.x0 - 5, MY(v) + 4, String(v), "tx-s", "end");
+      });
+      txt(g, P.x0 + P.w, P.y0 + P.w + 28, "x (point of α)", "tx-s", "end");
+      txt(g, P.x0 + 4, P.y0 + 12, "y (point of β)", "tx-s");
+      line(g, MX(-P.r), MY(-P.r), MX(P.r), MY(P.r), "ln cm thin dash");
+      // marginals: alpha along the bottom edge, beta along the left edge (shapes only, peak height 1.4)
+      var hmax = 1.4, pts, x;
+      if (a > 1e-9) {
+        pts = [];
+        for (k = 0; k <= 160; k++) { x = -P.r + 2 * P.r * k / 160; pts.push(MX(x).toFixed(1) + " " + MY(-P.r + hmax * Math.exp(-0.5 * x * x / (a * a))).toFixed(1)); }
+        el("path", { d: "M" + pts.join("L"), "class": "ln c2 thin" }, g);
+      } else {
+        line(g, MX(0), MY(-P.r), MX(0), MY(-P.r + hmax), "ln c2");
+        el("circle", { cx: MX(0), cy: MY(-P.r + hmax), r: 4, "class": "f2" }, g);
+      }
+      if (b > 1e-9) {
+        pts = [];
+        for (k = 0; k <= 160; k++) { x = -P.r + 2 * P.r * k / 160; pts.push(MX(-P.r + hmax * Math.exp(-0.5 * x * x / (b * b))).toFixed(1) + " " + MY(x).toFixed(1)); }
+        el("path", { d: "M" + pts.join("L"), "class": "ln c1 thin" }, g);
+      } else {
+        line(g, MX(-P.r), MY(0), MX(-P.r + hmax), MY(0), "ln c1");
+        el("circle", { cx: MX(-P.r + hmax), cy: MY(0), r: 4, "class": "f1" }, g);
+      }
+      // sample of the coupling: X = a Z1, Y = (c/a) Z1 + sqrt(b^2 - c^2/a^2) Z2
+      var cg = el("g", { "fill-opacity": "0.55" }, g);
+      Z.forEach(function (z) {
+        var X = a * z[0], Y = a > 1e-9 ? (c / a) * z[0] + Math.sqrt(Math.max(b * b - c * c / (a * a), 0)) * z[1] : b * z[1];
+        if (Math.abs(X) < P.r && Math.abs(Y) < P.r) el("circle", { cx: MX(X), cy: MY(Y), r: 1.7, "class": "f3" }, cg);
+      });
+      var det = a * a * b * b - c * c, tol = 1e-9 + 1e-6 * a * a * b * b, rank = (a < 1e-9 && b < 1e-9) ? 0 : (det > tol ? 2 : 1);
+      if (rank === 2) {
+        [1, 2].forEach(function (sc) {
+          var e = ellipsePts([0, 0], [a * a, c, c, b * b], sc);
+          el("path", { d: e.map(function (p, j) { return (j ? "L" : "M") + MX(p[0]).toFixed(1) + " " + MY(p[1]).toFixed(1); }).join("") + "Z", "class": "ln c3" + (sc === 2 ? " thin dash" : "") }, g);
+        });
+      }
+      var support;
+      if (rank === 0) { support = "π = δ(0,0): a single point"; el("circle", { cx: MX(0), cy: MY(0), r: 5, "class": "f3" }, g); }
+      else if (rank === 1) {
+        if (b < 1e-9) {
+          line(g, MX(-P.r), MY(0), MX(P.r), MY(0), "ln c3");
+          support = "the horizontal line ℝ × {0}: every x is sent to the single point 0 (the map T ≡ 0)";
+        } else if (a > 1e-9) {
+          var slope = c / (a * a), xe = Math.min(P.r, P.r / Math.max(Math.abs(slope), 1e-9));
+          line(g, MX(-xe), MY(-slope * xe), MX(xe), MY(slope * xe), "ln c3");
+          support = "the line y = " + fmt(slope, 2) + " x: π is carried by the graph of the map T(x) = " + fmt(slope, 2) + " x" + (slope > 0 ? " (increasing: Brenier’s map)" : slope < 0 ? " (decreasing: the worst coupling)" : "");
+        } else {
+          line(g, MX(0), MY(-P.r), MX(0), MY(P.r), "ln c3");
+          support = "the vertical line {0} × ℝ: the single point of α is spread over all of β; no map can do that";
+        }
+      } else support = "the whole plane: π has a density, every x is sent to a whole Gaussian of y’s";
+      // right panel: the cost as a function of c over the feasible interval
+      var Q = { x0: 452, y0: 40, w: 186, h: 150 }, cmax = a * b, top = (a + b) * (a + b), lo = (a - b) * (a - b);
+      var ymax = Math.max(top, 1e-9) * 1.08;
+      function QX(v) { return cmax > 1e-9 ? Q.x0 + (v + cmax) / (2 * cmax) * Q.w : Q.x0 + Q.w / 2; }
+      function QY(v) { return Q.y0 + Q.h - v / ymax * Q.h; }
+      el("rect", { x: Q.x0, y: Q.y0, width: Q.w, height: Q.h, "class": "ln cm hair nofill" }, g);
+      txt(g, Q.x0, Q.y0 - 22, "cost E(X − Y)² = σα² + σβ² − 2c", "tx-s");
+      txt(g, Q.x0, Q.y0 - 8, "over the feasible c ∈ [−σασβ, σασβ]", "tx-s");
+      line(g, QX(-cmax), QY(top), QX(cmax), QY(lo), "ln c3 thin");
+      el("circle", { cx: QX(cmax), cy: QY(lo), r: 4, "class": "fs ln c3 thin" }, g);
+      el("circle", { cx: QX(c), cy: QY(a * a + b * b - 2 * c), r: 4.5, "class": "f3" }, g);
+      txt(g, QX(-cmax), Q.y0 + Q.h + 14, fmt(-cmax, 2), "tx-s", "middle");
+      txt(g, QX(cmax), Q.y0 + Q.h + 14, fmt(cmax, 2), "tx-s", "middle");
+      txt(g, Q.x0 + Q.w / 2, Q.y0 + Q.h + 28, "c", "tx-s", "middle");
+      txt(g, Q.x0 - 4, QY(top) + 4, fmt(top, 2), "tx-s", "end");
+      txt(g, Q.x0 - 4, QY(lo) + 4, fmt(lo, 2), "tx-s", "end");
+      txt(g, Q.x0 + Q.w, Q.y0 + Q.h + 46, "minimum (σα − σβ)² at c = σασβ", "tx-s t3", "end");
+      txt(g, Q.x0, Q.y0 + Q.h + 76, "rank Σ = " + rank, "tx-b");
+      txt(g, Q.x0, Q.y0 + Q.h + 94, rank === 2 ? "π has a density on ℝ²" : rank === 1 ? "π lives on a line" : "π is a single atom", "tx-s");
+      var cost = a * a + b * b - 2 * c;
+      ro.textContent = "c = ρσασβ = " + fmt(c, 2) + ";  cost E(X − Y)² = " + fmt(a * a, 2) + " + " + fmt(b * b, 2) + " − 2·(" + fmt(c, 2) + ") = " + fmt(cost, 2) +
+        ";  best possible (σα − σβ)² = " + fmt(lo, 2) + ".  Support of π: " + support + ".";
+    }
+    draw();
+    redrawers.push(draw);
+  };

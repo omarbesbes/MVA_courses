@@ -19,6 +19,9 @@ $$\Sigma^\star=\Psi(\Sigma^\star)\qquad\text{where}\qquad\Psi(\Sigma)=\sum_{k=1}
 <dt>“the unique solution”</dt><dd>Unique <strong>among positive definite matrices</strong>, as soon as one input with $\lambda_k>0$ has a positive definite $\Sigma_k$. The zero matrix is always a (useless) fixed point, since $\Psi(0)=0$; this is why the algorithm starts from a positive definite $\Sigma^{(0)}$.</dd>
 <dt>$\Sigma^{(\ell)}$</dt><dd>The $\ell$-th iterate of the algorithm, starting from any positive definite $\Sigma^{(0)}$.</dd>
 </dl>
+<div class="box recall"><div class="box-h">Reminder — square roots of positive matrices</div>
+<p>A symmetric positive semi-definite matrix diagonalises in an orthonormal basis, $M=UDU\T$ with $D=\mathrm{diag}(d_i)$, $d_i\ge0$. Its square root is $M^{1/2}=UD^{1/2}U\T$: the only positive semi-definite matrix whose square is $M$. Example: $\begin{pmatrix}2&1\\1&2\end{pmatrix}$ has eigenvalues $3$ and $1$, with eigenvectors $(1,1)/\sqrt2$ and $(1,-1)/\sqrt2$. Its square root has eigenvalues $\sqrt3$ and $1$: $\frac12\begin{pmatrix}\sqrt3+1&\sqrt3-1\\\sqrt3-1&\sqrt3+1\end{pmatrix}$. Beware: in general $(AB)^{1/2}\ne A^{1/2}B^{1/2}$ (unless $A$ and $B$ commute), which is why the formulas keep the sandwich $\Lambda^{1/2}\Sigma\Lambda^{1/2}$. More on the Reminders page: <a href="Reminders.html#sqrtm">matrix square root, trace, determinant</a>, <a href="Reminders.html#gaussians">Gaussian vectors</a>.</p>
+</div>
 
 <h4>Why the means and covariances separate</h4>
 <p>Try a Gaussian candidate $\al=\N(m,\Sigma)$ in the barycenter objective, using the Gaussian formula for each term:</p>
@@ -66,6 +69,12 @@ $$\Sigma^{(\ell+1)}=\big(\Sigma^{(\ell)}\big)^{-1/2}\,\Psi\big(\Sigma^{(\ell)}\b
 <div class="widget" data-widget="gauss"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
 <p>What to look at: three Gaussians in the plane (blue ellipses: one standard deviation). <strong>Drag the green dot inside the triangle</strong> to choose the weights $\lambda$ (the closer to a corner, the more that input counts); the green ellipse is the barycenter $\N(m^\star,\Sigma^\star)$. Near a corner it becomes that input; in the middle, a compromise of <em>shapes</em> (orientations and elongations), not a superposition. The small plot on the right runs both iterations from $\Sigma^{(0)}=I$ and shows the Bures distance to $\Sigma^\star$ (log scale): the board’s $\Psi$ iteration (grey, dashed) and the Álvarez-Esteban update (green, solid). The menu draws the first iterates $\Sigma^{(0)},\dots,\Sigma^{(5)}$ as ellipses.</p>
 
+<div class="box ml"><div class="box-h">In machine learning — the Fréchet Inception Distance (FID)</div>
+<p>The standard score of image generators is a Gaussian $W_2$ (OT4ML p. 129). Pass real and generated images through a pretrained network (Inception) to get feature vectors (2048 numbers per image), fit a Gaussian $\N(m_r,\Sigma_r)$ to the real features and $\N(m_g,\Sigma_g)$ to the generated ones, and report</p>
+$$\mathrm{FID}=\norm{m_r-m_g}^2+\tr\Big(\Sigma_r+\Sigma_g-2\big(\Sigma_r^{1/2}\Sigma_g\Sigma_r^{1/2}\big)^{1/2}\Big),$$
+<p>the squared $W_2$ distance between the two Gaussians: the mean part plus the squared Bures distance of this section. Lower is better. Keep its limits in mind: it only sees the means and covariances of the features, and it is biased when few images are used.</p>
+</div>
+
 <h3 id="oned">Measures on the line: average the quantiles</h3>
 <div class="box board"><div class="box-h">On the board <span class="ref">notes p. 5</span></div>
 <p><strong>1D case:</strong></p>
@@ -95,6 +104,10 @@ $$\Rightarrow\ \forall t,\qquad C_\al^{-1}(t)=\sum_{k=1}^P\lambda_k\,C_{\be_k}^{
 <figure class="fig"><!-- include figures/L03/quantile.svg --><figcaption>Barycenter of $\mathcal U_{[0,1]}$ and $\mathcal U_{[2,4]}$. Left: densities (green: barycenter $\mathcal U_{[1,2.5]}$; dashed: mixture). Right: CDFs; at each level $t$ the green CDF sits at the midpoint of the two input quantiles (dotted segments at $t=\frac14,\frac34$).</figcaption></figure>
 <div class="widget" data-widget="bary1d"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
 <p>What to look at: choose a pair of inputs and move the weight $\lambda$ (the barycenter is $\lambda$-close to $\be_2$). Top: densities — the green barycenter is always a single “shape” that travels and morphs between the inputs, while the grey dashed mixture is a superposition. Bottom: the CDFs, with the horizontal averaging at a few levels. Two bumps against one bump: the barycenter keeps two bumps whose positions and widths interpolate.</p>
+
+<div class="box ml"><div class="box-h">In machine learning — on the line, optimal transport is sorting</div>
+<p>Between two samples of the same size $n$ on $\R$, the optimal plan matches the $i$-th smallest point of one with the $i$-th smallest of the other: computing $W_p$ costs a sort, $O(n\log n)$, instead of a linear program. <em>Sliced</em> Wasserstein distances (<a href="Lesson05.html">Lesson 5</a>) exploit this in high dimension: project both clouds on random directions, sort, and average the 1D costs. The result is cheap and differentiable, and is used as a loss to train generative models and to synthesize textures. The quantile-averaging barycenter of this section is also what the fair-score repair of §7 computes.</p>
+</div>
 
 <div class="box reflex"><div class="box-h">Reflexes</div>
 <ul>

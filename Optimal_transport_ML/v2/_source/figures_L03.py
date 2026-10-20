@@ -297,7 +297,73 @@ def fig_fixedpoint():
     c.save()
 
 
+def fig_kcsplit():
+    """Sheet, Exercises 1 and 3: U[0,1] and (delta_0 + delta_1)/2. Upwards a map, downwards a split."""
+    c = Canvas("kcsplit", 640, 236, "The monotone plan between the uniform law on [0,1] and two Diracs, as arrows and as a set in the product", sub=SUB)
+    f = Fig(c, (50, 34, 250, 140), (-0.12, 1.12), (0, 1))
+    f.path([(0, 0), (1, 0), (1, 0.07), (0, 0.07)], "a2 ln c2 thin", close=True)
+    for k in range(20):
+        s = (k + 0.5) / 20
+        f.line(s, 0.07, 0.0 if s < 0.5 else 1.0, 0.94, "ln c3 hair")
+    for x in (0.0, 1.0):
+        f.circle(x, 0.97, 5.5, "f1")
+    f.text(0, 0.97, "½δ₀", "tx-s t1", "end", dx=-9, dy=4)
+    f.text(1, 0.97, "½δ₁", "tx-s t1", "start", dx=9, dy=4)
+    f.text(0.5, 0, "α = U[0, 1]", "tx-s t2", "middle", dy=18)
+    f.text(0, 0, "0", "tx-s", "middle", dy=32)
+    f.text(0.5, 0, "½", "tx-s", "middle", dy=32)
+    f.text(1, 0, "1", "tx-s", "middle", dy=32)
+    f.line(0.5, -0.02, 0.5, 0.09, "ln ck thin")
+    c.text(175, 18, "up: each s has one destination (a map T)", "tx-s", "middle")
+    c.text(175, 228, "down: each atom spreads over an interval (a split)", "tx-s", "middle")
+    g = Fig(c, (390, 34, 210, 140), (-0.1, 1.1), (-0.25, 1.25))
+    g.axes(xticks=(0, 0.5, 1), yticks=(0, 1), xfmt=lambda v: {0: "0", 0.5: "½", 1: "1"}[v], yfmt=lambda v: str(v), grid=False)
+    g.line(0, 0, 0.5, 0, "ln c3")
+    g.line(0.5, 1, 1, 1, "ln c3")
+    g.line(0.3, -0.25, 0.3, 1.25, "ln cm thin dash")
+    g.circle(0.3, 0, 4.5, "f3")
+    g.text(0.3, 1.25, "one point", "tx-s", "middle", dy=-6)
+    g.text(0.5, 1, "graph of T", "tx-s t3", "end", dx=-6, dy=4)
+    g.text(0.25, 0, "a whole segment", "tx-s", "middle", dy=-9)
+    g.text(1.1, -0.25, "s (point of α)", "tx-s", "end", dy=30)
+    g.text(-0.1, 1.25, "T(s)", "tx-s", "start", dx=4, dy=-6)
+    c.text(495, 228, "the support of π in the product [0, 1] × ℝ", "tx-s", "middle")
+    c.save()
+
+
+def fig_nonmonge():
+    """Sheet, Exercise 6: the optimal plan splits every point; maps only approach its cost."""
+    c = Canvas("nonmonge", 660, 262, "A segment sent onto two parallel segments: the optimal plan splits every point, maps only approach its cost", sub=SUB)
+    def segments(f, label):
+        f.line(-1, 0, -1, 1, "ln c1")
+        f.line(1, 0, 1, 1, "ln c1")
+        f.line(0, 0, 0, 1, "ln c2")
+        f.text(-1, 1, "S₋", "tx-s t1", "middle", dy=-8)
+        f.text(0, 1, "S₀", "tx-s t2", "middle", dy=-8)
+        f.text(1, 1, "S₊", "tx-s t1", "middle", dy=-8)
+        for v in (0, 1):
+            f.text(-1, v, str(v), "tx-s", "end", dx=-7, dy=4)
+    f = Fig(c, (54, 30, 250, 180), (-1.25, 1.25), (0, 1))
+    segments(f, "")
+    for s in (0.08, 0.26, 0.44, 0.62, 0.8, 0.96):
+        c.arrow(f.X(0) - 4, f.Y(s), f.X(-1) + 4, f.Y(s), 3)
+        c.arrow(f.X(0) + 4, f.Y(s), f.X(1) - 4, f.Y(s), 3)
+    c.text(179, 232, "optimal plan π⋆: each (0, s) sends ½ left, ½ right", "tx-s", "middle")
+    c.text(179, 250, "horizontal moves only: cost exactly 1", "tx-s t3", "middle")
+    n = 3
+    g = Fig(c, (384, 30, 250, 180), (-1.25, 1.25), (0, 1))
+    for k in range(n):
+        a0, am, a1 = k / n, k / n + 1 / (2 * n), (k + 1) / n
+        g.path([(0, a0), (0, am), (-1, a1), (-1, a0)], "a3 ln c3 hair", close=True)
+        g.path([(0, am), (0, a1), (1, a1), (1, a0)], "a3 ln c3 hair", close=True)
+        g.line(-0.05, am, 0.05, am, "ln ck hair")
+    segments(g, "")
+    c.text(509, 232, f"a map with n = {n} strips: half of each strip goes left,", "tx-s", "middle")
+    c.text(509, 250, f"half right, stretched ×2: cost 1 + 1/(12n²) ≈ {1 + 1 / (12 * n * n):.4f}", "tx-s t3", "middle")
+    c.save()
+
+
 if __name__ == "__main__":
     for fn in [fig_wpq, fig_testfn, fig_escape, fig_riemann, fig_tv, fig_displacement, fig_split,
-               fig_frechet, fig_grid, fig_nonunique, fig_quantile, fig_fixedpoint]:
+               fig_frechet, fig_grid, fig_nonunique, fig_quantile, fig_fixedpoint, fig_kcsplit, fig_nonmonge]:
         fn()

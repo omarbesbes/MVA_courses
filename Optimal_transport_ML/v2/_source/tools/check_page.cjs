@@ -13,6 +13,8 @@ const shotsIdx = process.argv.indexOf("--shots");
 const shots = shotsIdx > 0 ? process.argv[shotsIdx + 1] : null;
 if (!page) { console.error("usage: node tools/check_page.cjs Page.html [--shots DIR]"); process.exit(2); }
 const url = "file://" + path.resolve(__dirname, "..", "..", page);
+// A figure or widget inside a closed fold (a solution, a proof) is invisible: open its folds before the screenshot.
+const openFolds = (h) => h.evaluate((e) => { for (let d = e.closest("details"); d; d = d.parentElement && d.parentElement.closest("details")) d.open = true; });
 (async () => {
   const browser = await pw.chromium.launch();
   let problems = 0;
@@ -48,12 +50,12 @@ const url = "file://" + path.resolve(__dirname, "..", "..", page);
       await p.click("[data-action=collapse]");
       if (scheme === "light") {
         const figs = await p.$$("figure.fig");
-        for (const [i, f] of figs.entries()) { await f.scrollIntoViewIfNeeded(); await f.screenshot({ path: `${shots}/${base}_fig${String(i).padStart(2, "0")}.png` }); }
+        for (const [i, f] of figs.entries()) { await openFolds(f); await f.scrollIntoViewIfNeeded(); await f.screenshot({ path: `${shots}/${base}_fig${String(i).padStart(2, "0")}.png` }); }
       }
       const ws = await p.$$(".widget");
       for (const [i, x] of ws.entries()) {
         const name = await x.getAttribute("data-widget");
-        await x.scrollIntoViewIfNeeded(); await x.screenshot({ path: `${shots}/${base}_${scheme}_w${String(i).padStart(2, "0")}_${name}.png` });
+        await openFolds(x); await x.scrollIntoViewIfNeeded(); await x.screenshot({ path: `${shots}/${base}_${scheme}_w${String(i).padStart(2, "0")}_${name}.png` });
       }
     }
     await p.close();
