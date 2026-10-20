@@ -16,6 +16,11 @@
     var t = ((a[0] - c[0]) * (c[1] - d[1]) - (a[1] - c[1]) * (c[0] - d[0])) / den;
     return [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])];
   }
+  function l1psd(c, a, b) { // distance from the point c to the segment [a, b] (pixel coordinates)
+    var vx = b[0] - a[0], vy = b[1] - a[1], L2 = vx * vx + vy * vy;
+    var t = L2 > 0 ? l1clamp(((c[0] - a[0]) * vx + (c[1] - a[1]) * vy) / L2, 0, 1) : 0;
+    return Math.hypot(c[0] - a[0] - t * vx, c[1] - a[1] - t * vy);
+  }
   function l1group(x) { return String(Math.round(x)).replace(/\B(?=(\d{3})+(?!\d))/g, " "); }
   function l1fact(n) { var f = 1; for (var k = 2; k <= n; k++) f *= k; return f; }
   function l1clamp(v, a, b) { return Math.min(Math.max(v, a), b); }
@@ -131,9 +136,20 @@
         P.dot(z[0], z[1], 4.5, "fk");
       });
       Y.forEach(function (y) { P.dot(y[0], y[1], 7, "f1 drag"); });
+      // number of each source: among 8 directions around the dot, the one farthest from the other dots and the segments
+      var pix = function (q) { return [P.tx(q[0]), P.ty(q[1])]; };
+      var dots = X.concat(Y).map(pix), segs = [];
+      for (i = 0; i < n; i++) segs.push([pix(X[i]), pix(Y[a[i]])]);
       X.forEach(function (x, k) {
         P.dot(x[0], x[1], 7, "f2 drag");
-        P.text(x[0], x[1], String(k + 1), "tx-s", "middle", 0, -11);
+        var p = pix(x), best = -1e9, bu = [0, -1];
+        for (var q = 0; q < 8; q++) {
+          var th = -Math.PI / 2 + q * Math.PI / 4, u = [Math.cos(th), Math.sin(th)], c = [p[0] + 14 * u[0], p[1] + 14 * u[1]], sc = q === 0 ? 2 : 0, m = 1e9;
+          dots.forEach(function (d, j) { if (j !== k) m = Math.min(m, Math.hypot(c[0] - d[0], c[1] - d[1]) - 9); });
+          segs.forEach(function (g) { m = Math.min(m, l1psd(c, g[0], g[1]) - 4); });
+          if (m + sc > best) { best = m + sc; bu = u; }
+        }
+        P.text(x[0], x[1], String(k + 1), "tx-s", "middle", 14 * bu[0], 14 * bu[1] + 4);
       });
       var lines = ["p = " + fmt(p, 2) + ":  total cost of the optimal pairing = " + fmt(cost, 3) +
         "   (Hungarian method, about n³ = " + l1group(n * n * n) + " elementary steps)"];
@@ -611,8 +627,9 @@
       cdfP.dot(x0, 0, 5, "f2"); cdfP.dot(y0, 0, 5, "f1");
       cdfP.unclip();
       cdfP.text(D.xr[0], 1.02, "CDFs Cα (orange), Cβ (blue)", "tx-s", "start", 2, -8);
-      cdfP.text(x0, 0, "x", "tx-s t2", "middle", 0, -9);
-      cdfP.text(y0, 0, "T(x)", "tx-s t1", "middle", 0, -9);
+      var rgt = y0 >= x0; // labels on the outer sides of the two dots, clear of the dotted lines
+      cdfP.text(x0, 0, "x", "tx-s t2", rgt ? "end" : "start", rgt ? -6 : 6, -6);
+      cdfP.text(y0, 0, "T(x)", "tx-s t1", rgt ? "start" : "end", rgt ? 6 : -6, -6);
       // bottom right: the graph of T
       tP.g = el("g", {}, botSvg);
       tP.axes({ xticks: D.tt.filter(function (v) { return v >= D.tx[0] && v <= D.tx[1]; }), yticks: D.tt, xfmt: function (v) { return fmt(v, 0); }, yfmt: function (v) { return fmt(v, 0); } });

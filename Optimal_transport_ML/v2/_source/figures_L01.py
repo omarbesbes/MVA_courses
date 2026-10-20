@@ -571,6 +571,49 @@ def fig_quantilemap():
 
 
 # ---------------------------------------------------------------------------------------------
+def fig_ex7():
+    """Exercise 7 of the sheet: piecewise constant densities on [0, 1] and the map T = C_beta^{-1} o C_alpha."""
+    c = Canvas("ex7map", 640, 250, "Exercise 7: the two piecewise constant densities and the optimal map, a broken line", sub=SUB)
+    ra = lambda x: 2 / 3 if x < 0.5 else 4 / 3          # normalised densities (mass 3/2 divided out)
+    rb = lambda y: 4 / 3 if y < 0.5 else 2 / 3
+    Ca = lambda x: 2 * x / 3 if x <= 0.5 else 1 / 3 + 4 * (x - 0.5) / 3
+    Cbi = lambda u: 3 * u / 4 if u <= 2 / 3 else 0.5 + 1.5 * (u - 2 / 3)
+    T = lambda x: Cbi(Ca(x))
+    xsplit = 0.75  # C_alpha(3/4) = 2/3 = C_beta(1/2)
+    assert abs(Ca(xsplit) - 2 / 3) < 1e-12
+    f = Fig(c, (60, 34, 240, 160), (0, 1), (0, 1.55))
+    f.axes(xticks=[0, 0.5, 0.75, 1], yticks=[0, 2 / 3, 4 / 3], xfmt=lambda v: {0: "0", 0.5: "½", 0.75: "¾", 1: "1"}[v],
+           yfmt=lambda v: {0: "0", 2 / 3: "2/3", 4 / 3: "4/3"}[v], grid=True, yaxis=False)
+    for rho, k, a in ((ra, 2, "a2"), (rb, 1, "a1")):
+        pts = [(0, 0), (0, rho(0.25)), (0.5, rho(0.25)), (0.5, rho(0.75)), (1, rho(0.75)), (1, 0)]
+        f.path(pts, a, close=True)
+        f.path(pts, f"ln c{k}")
+    f.line(xsplit, 0, xsplit, 1.5, "ln c3 thin dash")
+    f.text(xsplit, 1.5, "Cα = 2/3 here", "tx-s t3", "middle", dy=-4)
+    f.text(0.25, 2 / 3, "α", "tx-i t2", "middle", dy=-6)
+    f.text(0.25, 4 / 3, "β", "tx-i t1", "middle", dy=-6)
+    f.text(0.62, 4 / 3, "α", "tx-i t2", "middle", dy=-6)
+    f.text(0.88, 2 / 3, "β", "tx-i t1", "middle", dy=-6)
+    c.text(180, 18, "normalised densities of α (orange) and β (blue)", "tx-b", "middle")
+    g = Fig(c, (420, 34, 160, 160), (0, 1), (0, 1))
+    g.axes(xticks=[0, 0.5, 0.75, 1], yticks=[0, 0.25, 0.5, 1], xfmt=lambda v: {0: "0", 0.5: "½", 0.75: "¾", 1: "1"}[v],
+           yfmt=lambda v: {0: "0", 0.25: "¼", 0.5: "½", 1: "1"}[v], grid=True, yaxis=False)
+    g.line(0, 0, 1, 1, "gr")
+    corners = [(x, T(x)) for x in (0, 0.5, 0.75, 1)]
+    g.path(corners, "ln c3")
+    for (x0, y0), (x1, y1) in zip(corners[:-1], corners[1:]):
+        if x1 < 1:
+            g.circle(x1, y1, 3.2, "f3")
+        slope = (y1 - y0) / (x1 - x0)
+        g.text((x0 + x1) / 2, (y0 + y1) / 2, "slope " + {0.5: "½", 1.0: "1", 2.0: "2"}[round(slope, 9)], "tx-s t3", "start", dx=7, dy=10)
+    c.text(500, 18, "T = Cβ⁻¹ ∘ Cα (green), below the diagonal", "tx-b", "middle")
+    c.text(500, 236, "corners (½, ¼) and (¾, ½); cost 5/144", "tx-s", "middle")
+    c.save()
+    return corners, sum(  # cost by the midpoint rule on a fine grid, as a check of 5/144
+        (x - T(x)) ** 2 * ra(x) / 200000 for x in (np.arange(200000) + 0.5) / 200000)
+
+
+# ---------------------------------------------------------------------------------------------
 def fig_mccann():
     c = Canvas("mccann", 640, 345, "McCann interpolation between two point clouds along the optimal assignment, and the mixture", sub=SUB)
     rng = np.random.default_rng(3)
@@ -617,3 +660,4 @@ if __name__ == "__main__":
     fig_gauss1d()
     print("quantile map points (r, x, T(x)):", fig_quantilemap())
     print("mccann mean cost, min distance at t=1/2:", fig_mccann())
+    print("ex7 corners of T, cost (5/144 = %.6f):" % (5 / 144), fig_ex7())
