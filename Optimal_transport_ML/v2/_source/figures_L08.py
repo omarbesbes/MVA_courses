@@ -391,6 +391,91 @@ def fig_halfplane():
     c.save()
 
 
+def cells_model():
+    """Toy Waddington landscape (OT4ML Ex. 15.10): f(a) = int V da + sig2 int rho log rho, V(x) = x^4/4 - x^2/2.
+    Implicit finite-volume Fokker-Planck on a grid (flux form, exact Gibbs equilibrium); day 0 = N(0, 0.15^2), days 1, 2 at
+    t = 1.5, 3. Fates of day-0 cells: backward Kolmogorov equation (truth), exact OT, entropic OT (Sinkhorn)."""
+    from scipy.linalg import solve_banded
+    sig2, s0, T, L, N, dt = 0.05, 0.15, 1.5, 2.2, 881, 0.0005
+    V = lambda x: x ** 4 / 4 - x ** 2 / 2
+    x = np.linspace(-L, L, N); dx = x[1] - x[0]
+    U = V(x) / sig2; Uh = V(0.5 * (x[1:] + x[:-1])) / sig2
+    a = sig2 * np.exp(U[:-1] - Uh) / dx ** 2; b = sig2 * np.exp(U[1:] - Uh) / dx ** 2
+    diag = np.zeros(N); diag[:-1] -= a; diag[1:] -= b
+    A = np.vstack([np.r_[0, b], diag, np.r_[a, 0]])
+    M = -dt * A; M[1] += 1
+    AT = np.vstack([np.r_[0, A[2][:-1]], A[1], np.r_[A[0][1:], 0]]); MT = -dt * AT; MT[1] += 1
+    nst = int(round(T / dt))
+    r0 = gauss(x, 0, s0); r0 /= r0.sum() * dx
+    r1 = r0.copy()
+    for _ in range(nst): r1 = solve_banded((1, 1), M, r1)
+    r2 = r1.copy()
+    for _ in range(nst): r2 = solve_banded((1, 1), M, r2)
+    u = (x > 0).astype(float); u[np.abs(x) < 1e-12] = 0.5
+    for _ in range(2 * nst): u = solve_banded((1, 1), MT, u)
+    sub = slice(None, None, 4); xg = x[sub]
+    def dens(r):
+        m = r[sub] / r[sub].sum(); keep = m > 1e-10
+        return xg[keep], m[keep]
+    def sinkhorn(mu, nu, C, eps, it=20000):
+        K = np.exp(-(C - C.min()) / eps); aa = np.ones_like(mu); bb = np.ones_like(nu)
+        for _ in range(it):
+            aa = mu / (K @ bb); bb = nu / (K.T @ aa)
+        return aa[:, None] * K * bb[None]
+    x0, m0 = dens(r0); x1, m1 = dens(r1); x2, m2 = dens(r2)
+    eps = 2 * sig2 * T
+    P01 = sinkhorn(m0, m1, 0.5 * (x0[:, None] - x1[None]) ** 2, eps)
+    P12 = sinkhorn(m1, m2, 0.5 * (x1[:, None] - x2[None]) ** 2, eps)
+    P02 = sinkhorn(m0, m2, 0.5 * (x0[:, None] - x2[None]) ** 2, 2 * eps)
+    K02 = (P01 / P01.sum(1, keepdims=True)) @ (P12 / P12.sum(1, keepdims=True))
+    fate2 = K02[:, x2 > 0].sum(1)
+    fated = P02[:, x2 > 0].sum(1) / P02.sum(1)
+    return dict(x=x, V=V, r0=r0, r1=r1, r2=r2, u=u, x0=x0, fate2=fate2, fated=fated)
+
+
+def fig_cells():
+    c = Canvas("cells", 660, 304, "A toy Waddington landscape: three snapshots of a cell population and the fate of a day-0 cell inferred by transport", sub=SUB)
+    d = cells_model()
+    x = d["x"]
+    # left, top: the landscape V
+    t = Fig(c, (40, 30, 270, 46), (-1.8, 1.8), (-0.3, 0.75))
+    t.fn(d["V"], "ln cm thin", -1.7, 1.7)
+    t.circle(0, 0.07, 4, "f2")
+    c.arrow(t.X(0.12), t.Y(0.05), t.X(0.75), t.Y(-0.12), 2)
+    c.arrow(t.X(-0.12), t.Y(0.05), t.X(-0.75), t.Y(-0.12), 2)
+    t.text(0, 0.75, "landscape V(x) = x⁴/4 − x²/2", "tx-s", "middle", dy=2)
+    # left, bottom: densities of the three snapshots
+    f = Fig(c, (40, 96, 270, 140), (-1.8, 1.8), (0, 2.8))
+    f.axes(xticks=[-1.5, -1, -0.5, 0, 0.5, 1, 1.5], yticks=[0, 1, 2], xfmt=lambda v: f"{v:g}", xlabel="cell state x")
+    keep = np.abs(x) <= 1.8
+    filled(f, x[keep], d["r0"][keep], "f2 a1", "ln c2")
+    filled(f, x[keep], d["r1"][keep], "f3 a1", "ln c3")
+    filled(f, x[keep], d["r2"][keep], "f1 a1", "ln c1")
+    f.text(0.12, 2.55, "day 0", "tx-s t2", "start")
+    i1 = int(np.argmax(d["r1"] * (x > 0)))
+    f.text(x[i1], d["r1"][i1], "day 1", "tx-s t3", "end", dx=-4, dy=-4)
+    i2 = int(np.argmax(d["r2"] * (x > 0)))
+    f.text(x[i2], d["r2"][i2], "day 2", "tx-s t1", "start", dx=6, dy=-2)
+    c.text(175, 20, "three snapshots (different cells each day)", "tx-b", "middle")
+    # right: fate probabilities
+    g = Fig(c, (400, 34, 240, 190), (-0.45, 0.45), (0, 1))
+    g.axes(xticks=[-0.4, -0.2, 0, 0.2, 0.4], yticks=[0, 0.25, 0.5, 0.75, 1], xfmt=lambda v: f"{v:g}", yfmt=lambda v: f"{v:g}", xlabel="position x of the cell at day 0")
+    sel = np.abs(x) <= 0.45
+    g.path(list(zip(x[sel], d["u"][sel])), "ln cm")
+    g.path([(-0.45, 0), (0, 0), (0, 1), (0.45, 1)], "ln c2 thin dash")
+    x0 = d["x0"]; s0 = np.abs(x0) <= 0.45
+    g.path(list(zip(x0[s0], d["fated"][s0])), "ln c5 thin")
+    g.path(list(zip(x0[s0], d["fate2"][s0])), "ln c3 thin dot")
+    g.text(0.03, 0.97, "exact OT", "tx-s t2", "start", dy=10)
+    g.text(-0.43, 0.93, "truth", "tx-s", "start")
+    g.text(-0.43, 0.85, "entropic, day 0 → 2", "tx-s t5", "start")
+    g.text(-0.43, 0.77, "entropic, via day 1", "tx-s t3", "start")
+    c.text(520, 20, "probability to end in the right valley at day 2", "tx-b", "middle")
+    c.text(330, 284, "toy model: Fokker-Planck flow of ∫V dα + σ²∫ρ log ρ (σ² = 0.05), observed at t = 0, 1.5, 3", "tx-s", "middle")
+    c.text(330, 298, "fates: truth from the backward Kolmogorov equation; entropic OT with ε = 2σ²Δt, direct or through day 1", "tx-s", "middle")
+    c.save()
+
+
 if __name__ == "__main__":
-    for fn in [fig_euler, fig_jko_heat, fig_vert_horiz, fig_four_flows, fig_three_reps, fig_nonconvex, fig_lsi, fig_mmd, fig_halfplane]:
+    for fn in [fig_euler, fig_jko_heat, fig_vert_horiz, fig_four_flows, fig_three_reps, fig_nonconvex, fig_lsi, fig_mmd, fig_halfplane, fig_cells]:
         fn()

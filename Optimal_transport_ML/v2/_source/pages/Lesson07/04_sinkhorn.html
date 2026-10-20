@@ -1,0 +1,75 @@
+<h2 id="sinkhorn">4. Sinkhorn’s algorithm <span class="ref">OT4ML §8.2, Algorithm 8.1, pp. 139–141</span></h2>
+<p class="tldr">Fix the rows, then the columns, and repeat: $u\leftarrow a/(Kv)$, $v\leftarrow b/(K\T u)$. Each step costs one matrix–vector product, and the iterates converge to the entropic plan.</p>
+
+<h3 id="sinkhorn-algo">The iteration</h3>
+<p>The scaling equations (8.4), $u\odot(Kv)=a$ and $v\odot(K\T u)=b$, are coupled: $u$ depends on $v$ and conversely. But each one, taken alone, is trivial: if $v$ is known, the first gives $u=a/(Kv)$ (entrywise division); if $u$ is known, the second gives $v=b/(K\T u)$. Sinkhorn’s algorithm solves them alternately.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML (8.5) and Algorithm 8.1, p. 139 · compact (8.5), p. 34</span></div>
+<p>Sinkhorn’s algorithm solves the two equations alternately: it first updates u to enforce the source marginal and then updates v to enforce the target marginal,</p>
+$$u^{(\ell+1)}:=\frac{a}{Kv^{(\ell)}}\qquad\text{and}\qquad v^{(\ell+1)}:=\frac{b}{K\T u^{(\ell+1)}},\qquad(8.5)$$
+<p>initialized with any positive vector, for instance $v^{(0)}=\ind_m$. Division is entrywise. Different initializations may select different representatives of the same scaling class, because $(\lambda u,v/\lambda)$ yields the same coupling for every $\lambda>0$.</p>
+<p><strong>Algorithm 8.1</strong> (Sinkhorn scaling). <em>Input:</em> positive weights a, b, cost matrix C, regularization $\eps>0$, tolerance tol, iteration budget $L\ge1$. <em>Output:</em> entropic coupling P.<br>
+<em>Initialize:</em> set $K_{i,j}=e^{-C_{i,j}/\eps}$, $v^{(0)}=\ind_m$, $r^{(0)}=+\infty$ and $\ell=0$.<br>
+<em>While</em> $r^{(\ell)}>\text{tol}$ and $\ell&lt;L$: set $\ell\leftarrow\ell+1$; $u^{(\ell)}=\frac{a}{Kv^{(\ell-1)}}$; $v^{(\ell)}=\frac{b}{K\T u^{(\ell)}}$; $P^{(\ell)}=\operatorname{diag}(u^{(\ell)})K\operatorname{diag}(v^{(\ell)})$; set $r^{(\ell)}=\max\{\norm{P^{(\ell)}\ind_m-a}_1,\ \norm{(P^{(\ell)})\T\ind_n-b}_1\}$.<br>
+<em>Return</em> $P^{(\ell)}$.</p>
+</div>
+<dl class="decode">
+<dt>$u^{(\ell+1)}=a/(Kv^{(\ell)})$</dt><dd>The <em>row step</em>: rescale each row of $K\operatorname{diag}(v^{(\ell)})$ so that its sum is $a_i$. After it, the source marginal is exact.</dd>
+<dt>$v^{(\ell+1)}=b/(K\T u^{(\ell+1)})$</dt><dd>The <em>column step</em>: rescale each column so that its sum is $b_j$. It repairs the target marginal and, in general, breaks the source marginal again.</dd>
+<dt>$r^{(\ell)}$</dt><dd>The marginal violation. After a column step the columns are exact, so in practice $r^{(\ell)}=\norm{P^{(\ell)}\ind_m-a}_1$, the row error.</dd>
+<dt>$v^{(0)}=\ind_m$</dt><dd>Any positive start works; it only changes the gauge $(\lambda u,v/\lambda)$ of the limit, never the plan.</dd>
+</dl>
+<p>The cost of one cycle is two matrix–vector products with a dense $n\times m$ matrix: $O(nm)$ operations. In the book’s words (p. 141), “a chief computational advantage of Sinkhorn’s algorithm, besides its simplicity, is that the only expensive operation is multiplication by the Gibbs kernel”, and “matrix-vector multiplication streams extremely well on GPU”; to solve many problems with the same cost matrix, the matrix–vector products become matrix–matrix products.</p>
+
+<h3 id="sinkhorn-hand">By hand on the running example</h3>
+<figure class="fig"><!-- include figures/L07/scaling.svg --><figcaption>One Sinkhorn cycle on the running example at $\eps=0.5$. Left: the Gibbs kernel $K$ (grey level = entry), with its row sums (left, orange-red) and column sums (top, blue) against the targets $a=(0.3,0.7)$ and $b=(0.5,0.5)$. Middle: after the row step, the rows sum to $a$ but the columns do not. Right: after the column step, the columns sum to $b$ and the rows are off by $0.107$ each.</figcaption></figure>
+<div class="box example"><div class="box-h">Worked example — three cycles at $\eps=0.5$</div>
+<p>$K=\begin{pmatrix}1&0.135335\\0.135335&1\end{pmatrix}$, $a=(0.3,0.7)$, $b=(0.5,0.5)$, $v^{(0)}=(1,1)$. All numbers rounded to six digits.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>$\ell$</th><th>$Kv^{(\ell-1)}$</th><th>$u^{(\ell)}$</th><th>$K\T u^{(\ell)}$</th><th>$v^{(\ell)}$</th><th>row sums of $P^{(\ell)}$</th><th>row error</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>$(1.135335,\ 1.135335)$</td><td>$(0.264239,\ 0.616558)$</td><td>$(0.347681,\ 0.652319)$</td><td>$(1.438099,\ 0.766496)$</td><td>$(0.407413,\ 0.592587)$</td><td>$0.2148$</td></tr>
+<tr><td>2</td><td>$(1.541833,\ 0.961122)$</td><td>$(0.194574,\ 0.728316)$</td><td>$(0.293140,\ 0.754648)$</td><td>$(1.705668,\ 0.662560)$</td><td>$(0.349325,\ 0.650675)$</td><td>$0.0986$</td></tr>
+<tr><td>3</td><td>$(1.795335,\ 0.893397)$</td><td>$(0.167100,\ 0.783526)$</td><td>$(0.273138,\ 0.806140)$</td><td>$(1.830574,\ 0.620239)$</td><td>$(0.319915,\ 0.680085)$</td><td>$0.0398$</td></tr>
+</tbody></table></div>
+<ol class="steps">
+<li>$$u^{(1)}_1=\frac{0.3}{1+0.135335}=0.264239,\qquad u^{(1)}_2=\frac{0.7}{1.135335}=0.616558.$$<span class="why">$Kv^{(0)}=K\ind$ is the vector of row sums of $K$.</span></li>
+<li>$$\operatorname{diag}(u^{(1)})K=\begin{pmatrix}0.264239&0.035761\\0.083442&0.616558\end{pmatrix},\quad\text{column sums }(0.347681,\ 0.652319)=K\T u^{(1)}.$$<span class="why">Rows now sum to $0.3$ and $0.7$; the columns are off.</span></li>
+<li>$$v^{(1)}=\Big(\frac{0.5}{0.347681},\ \frac{0.5}{0.652319}\Big)=(1.438099,\ 0.766496),\qquad P^{(1)}=\begin{pmatrix}0.380002&0.027411\\0.119998&0.472589\end{pmatrix}.$$<span class="why">The column step; $P^{(1)}_{ij}=u^{(1)}_iK_{ij}v^{(1)}_j$. Its columns sum to $0.5$, its rows to $0.407413$ and $0.592587$.</span></li>
+<li>$$P^{(2)}=\begin{pmatrix}0.331878&0.017447\\0.168122&0.482553\end{pmatrix},\qquad P^{(3)}=\begin{pmatrix}0.305888&0.014026\\0.194112&0.485974\end{pmatrix}.$$<span class="why">Same two steps, twice more. The entry $P_{11}$ goes $0.380\to0.332\to0.306$, towards $0.287873$.</span></li>
+</ol>
+<p>The row errors continue as $0.2148,\ 0.0986,\ 0.0398,\ 0.0151,\ 0.0055,\ 0.0020,\ 0.0007,\ 0.0003$: each cycle multiplies the error by a factor that tends to $0.3624$. The limit (34 cycles bring the row error below $10^{-15}$) is $u=(0.150664,\ 0.820337)$, $v=(1.910696,\ 0.594723)$, the scalings of §2. Where does $0.3624$ come from? It is the square of a correlation of the plan, $\sigma_\eps^2=0.362078$ — see §7.</p>
+</div>
+
+<div class="box intu"><div class="box-h">Intuition — balancing a spreadsheet</div>
+<p>Think of $K$ as a table of preferences and of $a$, $b$ as prescribed row and column totals. Scale the rows to get the right row totals; this spoils the column totals; scale the columns; this spoils the rows, but less; and so on. Survey statisticians do exactly this to adjust a contingency table to known margins (“raking”, or iterative proportional fitting, Deming and Stephan 1940), and transport planners did it to fit traffic matrices. Sinkhorn (1964) proved that the iteration converges for positive matrices, and Sinkhorn and Knopp (1967) characterized when a nonnegative matrix can be scaled. Its role in optimal transport is recent (Cuturi, 2013). <a href="#exo-raking">Exercise 3 of §14</a> rakes a small table.</p>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — Cuturi’s “Sinkhorn distances” (2013)</div>
+<p>Before 2013, transport distances between histograms (for instance bags of visual words, or images seen as histograms of pixel intensities) were attractive in machine learning but too slow: a $k$-nearest-neighbour classifier or a kernel method needs the distance between every pair of training examples, i.e. thousands of linear programs. M. Cuturi (<em>Sinkhorn distances: lightspeed computation of optimal transport</em>, NeurIPS 2013) proposed to replace each linear program by the entropic problem and to solve it with the iteration above. Two features made the difference: the iteration only uses matrix–vector products, which run in parallel on a GPU, and when all the histograms live on the same grid, $K$ is shared, so one histogram can be compared with many others at once (the vectors $v$ of the different problems become the columns of one matrix). OT4ML (p. 138) describes the effect: Sinkhorn “became a practical large-scale tool for machine learning, and also changed the way OT is viewed in ML, from a mostly geometric distance to a differentiable computational primitive”.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — stopping too early, or measuring the wrong error</div>
+<ul>
+<li>After a finite number of cycles, $P^{(\ell)}$ is <strong>not</strong> a coupling: its columns sum to $b$ but its rows do not sum to $a$. Measuring the column error after a column step always gives $0$ and tells you nothing; measure the row error.</li>
+<li>If you need an exact coupling (to compute a cost $\ps{P}{C}$ that is guaranteed to be an upper bound of $L_C$, for instance), round the output to $\U(a,b)$ (Altschuler, Weed and Rigollet, NeurIPS 2017; CompOT Remark 4.6, pp. 69–70).</li>
+<li>For a small $\eps$, the plain iteration divides by numbers that have underflowed to $0$: use the log domain (§6).</li>
+</ul>
+</div>
+<div class="box method"><div class="box-h">Method — Sinkhorn in five lines</div>
+<ol>
+<li>$K\leftarrow e^{-C/\eps}$ (entrywise), $v\leftarrow\ind_m$.</li>
+<li>Repeat: $u\leftarrow a/(Kv)$; $v\leftarrow b/(K\T u)$.</li>
+<li>Every few cycles, compute the row sums $u\odot(Kv)$ and stop when $\norm{u\odot(Kv)-a}_1&lt;\text{tol}$.</li>
+<li>Return $P=\operatorname{diag}(u)K\operatorname{diag}(v)$ — or only $u,v$ if $nm$ is large.</li>
+<li>Value: $L^\eps_C=\ps{f}{a}+\ps{g}{b}$ with $f=\eps\log(u/a)$, $g=\eps\log(v/b)$, valid at convergence (§2).</li>
+</ol>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>Sinkhorn = alternate “fix the rows” / “fix the columns”; cost $O(nm)$ per cycle, parallel, GPU-friendly.</li>
+<li>Stopping criterion → the marginal that was <em>not</em> just fixed.</li>
+<li>Different initializations → same plan, scalings differing by $(\lambda u,v/\lambda)$.</li>
+</ul>
+</div>
+<div class="quiz"><p>For uniform $a=b=\frac1n\ind$ and a symmetric kernel whose rows all have the same sum $s$, how many cycles does Sinkhorn need from $v=\ind$?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>One. $Kv=s\ind$, so $u=\frac1{ns}\ind$; then $K\T u=\frac1n\ind$ (columns of a symmetric matrix have the same sums as its rows), so $v=\ind$ again and $P=K/(ns)$ already has all row and column sums equal to $\frac1n$. Example: the running example’s kernel with $a=b=(\frac12,\frac12)$ gives $P=\frac{1}{2(1+e^{-2})}\begin{pmatrix}1&e^{-2}\\e^{-2}&1\end{pmatrix}$ after one cycle (<a href="#exo-onestep">Exercise 4 of §14</a>).</p>
+</div></details></div>

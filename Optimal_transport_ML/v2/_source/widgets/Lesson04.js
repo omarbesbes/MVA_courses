@@ -282,8 +282,15 @@
     function draw() {
       var P = PRE[preSel.value], t = tS.get(), A = P.a, B = l4shift(P.b, t), i;
       tS.out.textContent = fmt(t, 2);
-      var N = 9600, ST = 16, L = P.L, R = P.R, h = (R - L) / N, xs = [], Fa = [], Fb = [];
-      for (i = 0; i <= N; i++) { var x = L + i * h; xs.push(x); Fa.push(l4cdfComp(A, x)); Fb.push(l4cdfComp(B, x)); }
+      // computations on a window holding all the mass (the shifted β may leave the drawn window [L, R])
+      var lo = L, hi = R;
+      A.concat(B).forEach(function (q) {
+        if (q.t === "d") { lo = Math.min(lo, q.x - 0.5); hi = Math.max(hi, q.x + 0.5); }
+        else if (q.t === "g") { lo = Math.min(lo, q.m - 8 * q.s); hi = Math.max(hi, q.m + 8 * q.s); }
+        else { lo = Math.min(lo, q.a - 0.5); hi = Math.max(hi, q.b + 0.5); }
+      });
+      var N = Math.round(1200 * (hi - lo)), ST = 16, h = (hi - lo) / N, xs = [], Fa = [], Fb = [];
+      for (i = 0; i <= N; i++) { var x = lo + i * h; xs.push(x); Fa.push(l4cdfComp(A, x)); Fb.push(l4cdfComp(B, x)); }
       var W1 = 0, f = [0], changes = 0, prevS = 0;
       for (i = 0; i < N; i++) {
         var d = Fa[i] - Fb[i], sg = l4sign(d, 1e-9);
@@ -313,18 +320,18 @@
       mid.o.x = [L, R];
       mid.clear();
       mid.axes({ xticks: ticks(L, R), yticks: [0, 0.5, 1], yfmt: function (v) { return fmt(v, 1); }, nogrid: true });
-      var up = [], dn = [];
-      for (i = 0; i <= N; i += ST) { up.push([xs[i], Math.max(Fa[i], Fb[i])]); dn.push([xs[i], Math.min(Fa[i], Fb[i])]); }
+      var up = [], dn = [], i0 = Math.max(0, Math.floor((L - lo) / h)), i1 = Math.min(N, Math.ceil((R - lo) / h));
+      for (i = i0; i <= i1; i += ST) { up.push([xs[i], Math.max(Fa[i], Fb[i])]); dn.push([xs[i], Math.min(Fa[i], Fb[i])]); }
       mid.poly(up.concat(dn.reverse()), "a3");
       var pa = [], pb = [];
-      for (i = 0; i <= N; i += ST / 2) { pa.push([xs[i], Fa[i]]); pb.push([xs[i], Fb[i]]); }
+      for (i = i0; i <= i1; i += ST / 2) { pa.push([xs[i], Fa[i]]); pb.push([xs[i], Fb[i]]); }
       mid.poly(pa, "ln c2"); mid.poly(pb, "ln c1");
       // bottom: witness, centred
-      var fmin = Math.min.apply(null, f), fmax = Math.max.apply(null, f), c0 = (fmin + fmax) / 2, half = Math.max((fmax - fmin) / 2, 0.5);
+      var fv = f.slice(i0, i1 + 1), fmin = Math.min.apply(null, fv), fmax = Math.max.apply(null, fv), c0 = (fmin + fmax) / 2, half = Math.max((fmax - fmin) / 2, 0.5);
       bot.o.x = [L, R]; bot.o.y = [-1.12 * half, 1.6 * half];
       bot.clear();
       bot.axes({ xticks: ticks(L, R), yticks: [], nogrid: true });
-      var wp = []; for (i = 0; i <= N; i += ST / 2) wp.push([xs[i], f[i] - c0]);
+      var wp = []; for (i = i0; i <= i1; i += ST / 2) wp.push([xs[i], f[i] - c0]);
       bot.poly(wp, "ln c3");
       bot.text(L + 0.1, 1.33 * half, "witness f (slope ±1), shifted to be centred", "tx-s", "start");
       ro.innerHTML = l4html("W₁ = ∫ |C_{α} − C_{β}| dx = " + fmt(W1, 3) + "      ∫ f d(α − β) = " + fmt(check, 3) + "  (equal: the witness certifies W₁)" +
@@ -646,7 +653,7 @@
       if (mode === "ot") {
         txt = "dual value ℰ₀(g) = ∫ minⱼ(|x − yⱼ|² − gⱼ) dα + ⟨g, b⟩ = " + fmt(r.E, 5) + "    max |α(Lⱼ) − bⱼ| = " + fmt(err, 4) +
           "\nweights g = (" + g.map(function (v) { return fmt(v, 3); }).join(", ") + ")" + (err < 1e-3 ? "   — balanced: the map Lⱼ → yⱼ is optimal and ℰ₀(g) = W₂²" : "");
-        if (gbar) txt += "\nstochastic ascent: " + stoCount + " samples, step 0.08/√(1 + ℓ/30); averaged weights give ℰ₀(ḡ) = " + fmt(evalAt(gbar).E, 5);
+        if (gbar) { var rb = evalAt(gbar); txt += "\nstochastic ascent: " + stoCount + " samples, step 0.08/√(1 + ℓ/30). The iterate g is noisy; the averaged weights ḡ give ℰ₀(ḡ) = " + fmt(rb.E, 5) + ", max |α(Lⱼ(ḡ)) − bⱼ| = " + fmt(maxErr(rb), 4); }
       } else {
         var en = 0;
         if (denSel.value === "unif") r.cells.forEach(function (P, jj) { en += l4polySq(P, Y[jj]); });
