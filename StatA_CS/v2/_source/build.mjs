@@ -112,14 +112,26 @@ function processChunk(chunk, file, src, offset) {
   chunk = chunk.replace(/\\\$/g, DOLLAR);
   chunk = chunk.replace(/\$\$([\s\S]+?)\$\$/g, (m, tex, i) =>
     `<div class="math-display">${renderMath(tex.trim(), true, file, src, offset + i)}</div>`);
-  chunk = chunk.replace(/\$((?:[^$\\]|\\[\s\S])+?)\$/g, (m, tex, i) => {
+  chunk = chunk.replace(/\$((?:[^$\\]|\\[\s\S])+?)\$/g, (m, tex, i, whole) => {
     if (/\n\s*\n/.test(tex)) {
       errors.push(`${file}:${lineOf(src, offset + i)}  $ non fermé (formule en ligne sur un paragraphe vide)`);
       return m;
     }
-    return renderMath(tex, false, file, src, offset + i);
+    // Une ponctuation collée à la formule ne doit pas passer seule à la ligne : on insère un
+    // « word joiner » (U+2060), qui interdit la coupure entre la formule et le signe qui suit.
+    const next = whole[i + m.length] || "";
+    return renderMath(tex, false, file, src, offset + i) + (/[.,;:!?)\]»%]/.test(next) ? "\u2060" : "");
   });
   return chunk.replace(new RegExp(DOLLAR, "g"), "$");
+}
+
+// Typographie française : espace fine insécable avant ; : ! ? » et insécable après «, pour qu'aucun
+// signe ne commence une ligne. Seul le texte est touché : balises, <pre>, <code>, <script>, <style> exclus.
+function frenchSpacing(html) {
+  const parts = html.split(/(<pre[\s\S]*?<\/pre>|<code[\s\S]*?<\/code>|<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<[^>]+>)/);
+  return parts
+    .map((part, k) => (k % 2 === 1 ? part : part.replace(/ ([;:!?»])/g, "\u202F$1").replace(/« /g, "«\u00A0")))
+    .join("");
 }
 
 function parseFront(src) {
@@ -214,7 +226,7 @@ function main() {
     const src = fs.readFileSync(path.join(here, "pages", page.file), "utf8");
     const { meta, body } = parseFront(src);
     if (!meta.title) errors.push(`${page.file}: pas de « title » dans l'en-tête`);
-    let html = processMath(body, page.file);
+    let html = frenchSpacing(processMath(body, page.file));
     const t = buildToc(html, page.file);
     allIds[page.file] = t.ids;
     built.push({ page, meta, html: t.html, toc: t.toc, i });
