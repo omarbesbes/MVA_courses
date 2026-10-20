@@ -57,6 +57,12 @@
     for (var v = 0; v <= max + 1e-9; v += step) t.push(Math.round(v / step) * step);
     return t;
   }
+  function l5niceTicks(lo, hi) { // round ticks inside [lo, hi]
+    var raw = (hi - lo) / 4, p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p;
+    var step = (m < 1.5 ? 1 : m < 3.5 ? 2 : m < 7.5 ? 5 : 10) * p, t = [];
+    for (var v = Math.ceil(lo / step - 1e-9) * step; v <= hi + 1e-9; v += step) t.push(Math.round(v / step) * step);
+    return t;
+  }
   function l5sup(e) { var m = { "-": "⁻", "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹" }; return "10" + String(e).split("").map(function (c) { return m[c]; }).join(""); }
   function l5exp(v) { return v === 0 ? "0" : (Math.abs(v) >= 0.01 && Math.abs(v) < 1000 ? fmt(v, 4) : v.toExponential(2)); }
   function l5text(g, x, y, s, cls, anchor) {
@@ -83,7 +89,7 @@
     var ro = readout(s.controls);
     legend(s.legend, [["--s2", "α"], ["--s1", "β"], ["--s3", "sorted matching; average = SW₂²"], ["--s4", "maximum = MaxSW₂²"], ["--muted", "W₂² and W₂²/2"]]);
     var seed = 1, A, B, prof = [], NP = 720, sw, mx, mxPhi, w2, cx, cy, sc, R;
-    var LP = { x: 12, y: 30, w: 300, h: 300 }, TP = { x: 340, y: 30, w: 320, h: 120 }, PP = { x: 372, y: 196, w: 290, h: 196 };
+    var LP = { x: 12, y: 30, w: 300, h: 300 }, TP = { x: 340, y: 30, w: 320, h: 120 }, PP = { x: 372, y: 196, w: 240, h: 196 };
 
     function makeData() {
       var key = presetSel.value, i, rng;
@@ -163,14 +169,14 @@
       for (i = 0; i < sa.length; i++) el("line", { x1: TX(sa[i]), y1: ya, x2: TX(sb[i]), y2: yb, "class": "ln c3 thin" }, g);
       sa.forEach(function (v) { el("circle", { cx: TX(v), cy: ya, r: 4.5, "class": "f2" }, g); });
       sb.forEach(function (v) { el("circle", { cx: TX(v), cy: yb, r: 4.5, "class": "f1" }, g); });
-      l5text(g, TP.x, ya - 10, "α_θ", "tx-s t2");
-      l5text(g, TP.x, yb + 18, "β_θ", "tx-s t1");
+      l5text(g, TP.x, ya - 10, "slice of α", "tx-s t2");
+      l5text(g, TP.x, yb + 20, "slice of β", "tx-s t1");
       var vcur = l5w22sorted(pa, pb);
       // bottom right: the profile
       var ymax = Math.max(w2, mx) * 1.12;
       function QX(deg) { return PP.x + deg / 180 * PP.w; }
       function QY(v) { return PP.y + PP.h - v / ymax * PP.h; }
-      l5text(g, PP.x + PP.w / 2, PP.y - 12, "W₂²(α_θ, β_θ) for every direction φ", "tx-b", "middle");
+      l5text(g, PP.x + PP.w / 2 + 20, PP.y - 12, "W₂² between the slices, for every φ", "tx-b", "middle");
       el("line", { x1: PP.x, x2: PP.x + PP.w, y1: PP.y + PP.h, y2: PP.y + PP.h, "class": "ax" }, g);
       el("line", { x1: PP.x, x2: PP.x, y1: PP.y, y2: PP.y + PP.h, "class": "ax" }, g);
       [0, 45, 90, 135, 180].forEach(function (d) {
@@ -182,7 +188,7 @@
         el("line", { x1: PP.x, x2: PP.x + PP.w, y1: QY(v), y2: QY(v), "class": "gr" }, g);
         l5text(g, PP.x - 5, QY(v) + 4, fmt(v, v < 1 ? 2 : 1), "tx-s", "end");
       });
-      var lines = [[w2, "ln cm", "W₂²"], [w2 / 2, "ln cm dash", "W₂²/2"], [sw, "ln c3 dash", "SW₂²"], [mx, "ln c4 dot", "max"]];
+      var lines = [[w2, "ln cm", "W₂²"], [w2 / 2, "ln cm dash", "W₂²/2 (bound)"], [sw, "ln c3 dash", "average SW₂²"], [mx, "ln c4 dot", "max MaxSW₂²"]];
       lines.forEach(function (L) { el("line", { x1: PP.x, x2: PP.x + PP.w, y1: QY(L[0]), y2: QY(L[0]), "class": L[1] }, g); });
       var d = "";
       for (i = 0; i <= NP; i++) d += (i ? "L" : "M") + QX(i * 180 / NP).toFixed(1) + " " + QY(prof[i % NP]).toFixed(1);
@@ -194,7 +200,7 @@
       labs.sort(function (a, b) { return a.y - b.y; });
       for (i = 1; i < labs.length; i++) if (labs[i].y - labs[i - 1].y < 11) labs[i].y = labs[i - 1].y + 11;
       labs.forEach(function (lb) { l5text(g, PP.x + PP.w + 4, lb.y, lb.t, lb.c, "start"); });
-      ro.textContent = "φ = " + fmt(phiDeg, 1) + "°:  W₂²(α_θ, β_θ) = " + fmt(vcur, 4) + "  (green segments: the sorted matching of this direction)" +
+      ro.textContent = "φ = " + fmt(phiDeg, 1) + "°:  W₂² between the slices = " + fmt(vcur, 4) + "  (green segments: the sorted matching of this direction)" +
         "\naverage over all directions SW₂² = " + fmt(sw, 4) + "    maximum MaxSW₂² = " + fmt(mx, 4) + " (at φ = " + fmt(mxPhi * 180 / Math.PI, 1) + "°)" +
         "\nW₂² = " + fmt(w2, 4) + " (exact assignment)    SW₂²/W₂² = " + fmt(sw / w2, 3) + " ≤ 1/d = 0.5";
     }
@@ -256,8 +262,8 @@
       top.dot(d, W2, 5, "fm"); top.dot(d, SW2, 5, "f3");
       var last = grid[grid.length - 1];
       top.text(1000, last[1], "W₂", "tx-b", "start", 8, 4);
-      top.text(1000, last[2], "SW₂", "tx-b t3", "start", 8, 4);
-      top.text(1000, last[1] / Math.sqrt(1000), "W₂/√d", "tx-s", "start", 8, 14);
+      top.text(1000, last[2], "SW₂", "tx-b t3", "start", 8, -2);
+      top.text(1000, last[1] / Math.sqrt(1000), "W₂/√d (dotted)", "tx-s", "start", 8, 16);
       // histogram of the per-direction costs at this dimension
       if (!cache[d]) {
         var rng = mulberry32(17 + d), vals = [];
@@ -271,14 +277,15 @@
       var cmax = Math.max.apply(null, counts) / vals2.length;
       bot.o.x = [0, F.vmax]; bot.o.y = [0, cmax * 1.12];
       bot.clear();
-      bot.axes({ xticks: [0, 0.25, 0.5, 0.75, 1].map(function (t) { return t * F.vmax; }), yticks: [], xfmt: function (t) { return fmt(t, 2); }, nogrid: true, xlabel: "cost W₂²(α_θ, β_θ) of a random direction" });
+      bot.axes({ xticks: [0, 0.25, 0.5, 0.75, 1].map(function (t) { return t * F.vmax; }), yticks: [], xfmt: function (t) { return fmt(t, 2); }, nogrid: true, xlabel: "W₂² between the slices, for a random direction" });
       for (i = 0; i < nb; i++) {
         var f = counts[i] / vals2.length;
         if (f > 0) bot.poly([[i / nb * F.vmax, 0], [i / nb * F.vmax, f], [(i + 1) / nb * F.vmax, f], [(i + 1) / nb * F.vmax, 0]], "a3 ln c3 hair");
       }
       bot.seg(SW2sq, 0, SW2sq, cmax * 1.12, "ln c3 dash");
       bot.text(SW2sq, cmax * 1.12, "mean = SW₂²", "tx-s t3", SW2sq > 0.6 * F.vmax ? "end" : "start", SW2sq > 0.6 * F.vmax ? -4 : 4, 10);
-      bot.text(F.vmax, cmax * 1.12, "4 000 random directions", "tx-s", "start", 8, 10);
+      bot.text(F.vmax, cmax * 1.12, "histogram over", "tx-s", "start", 8, 10);
+      bot.text(F.vmax, cmax * 1.12, "4 000 directions", "tx-s", "start", 8, 24);
       ro.textContent = "d = " + d + ":   W₂ = " + fmt(W2, 4) + "   SW₂ = " + fmt(SW2, 4) + "   SW₂/W₂ = " + fmt(SW2 / W2, 4) + "   (1/√d = " + fmt(1 / Math.sqrt(d), 4) + ")" +
         "\nmean of the sampled costs = " + fmt(mean, 4) + " (exact SW₂² = " + l5exp(SW2sq) + ");  directions seeing less than 1% of the largest possible cost: " + fmt(100 * small / vals2.length, 1) + "%";
     }
@@ -332,9 +339,8 @@
       var lo = Math.max(0, P.mean - 2.4 * sd), hi = P.mean + 2.4 * sd;
       top.o.y = [lo, hi];
       top.clear();
-      var yt = [], step = (hi - lo) / 4;
-      for (j = 0; j <= 4; j++) yt.push(lo + j * step);
-      top.axes({ xticks: [1, 4, 16, 64, 256, 1024, 4096], yticks: yt, xfmt: function (t) { return String(t); }, yfmt: function (t) { return fmt(t, 3); }, xlabel: "number of directions K" });
+      var yt = l5niceTicks(lo, hi);
+      top.axes({ xticks: [1, 4, 16, 64, 256, 1024, 4096], yticks: yt, xfmt: function (t) { return String(t); }, yfmt: function (t) { return fmt(t, yt.length > 1 && yt[1] - yt[0] < 0.1 ? 2 : 1); }, xlabel: "number of directions K" });
       top.clip();
       var up = [], dn = [], up2 = [], dn2 = [];
       Ks.forEach(function (k) { up.push([k, P.mean + sd / Math.sqrt(k)]); dn.push([k, P.mean - sd / Math.sqrt(k)]); up2.push([k, P.mean + P.vr / k]); dn2.push([k, P.mean - P.vr / k]); });
@@ -366,7 +372,7 @@
 
   /* --- 4. Iterated sliced matching: the sliced flow and IDT (§11) --- */
   WIDGETS.l5flow = function (box) {
-    var s = scaffold(box, "Iterated sliced matching: sort along random directions, move each point towards its partner of the same rank");
+    var s = scaffold(box, "Iterated sliced matching: sort along random directions, move each point to its partner");
     var W = 680, H = 420, n = 60;
     s.svg.setAttribute("viewBox", "0 0 " + W + " " + H);
     s.svg.setAttribute("role", "img");

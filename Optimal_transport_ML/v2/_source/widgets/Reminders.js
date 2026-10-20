@@ -18,7 +18,7 @@
   var REM_EMP = [-1.2, -0.3, 0.4, 0.9, 2.1];
   var REM_LAWS = {
     mixed: {
-      label: "¼δ₀ + ½𝒰[1,2] + ¼δ₃ (worked example)", L: -0.8, R: 3.8, xt: [0, 1, 2, 3],
+      label: "¼δ₀ + ½𝒰[1,2] + ¼δ₃", L: -0.8, R: 3.8, xt: [0, 1, 2, 3],
       atoms: [[0, 0.25], [3, 0.25]], qjumps: [0.25, 0.75],
       C: function (x) { var v = 0; if (x >= 0) v += 0.25; if (x >= 1) v += 0.5 * Math.min(1, x - 1); if (x >= 3) v += 0.25; return v; },
       Q: function (t) { return t <= 0.25 ? 0 : (t <= 0.75 ? 1 + 2 * (t - 0.25) : 3); }
@@ -49,7 +49,7 @@
     var top = new Plot(s.svg, { x: [-0.8, 3.8], y: [-0.22, 1.08], w: 680, h: 250, pad: { l: 44, r: 16, t: 16, b: 30 }, label: "Cumulative distribution function with a level line" });
     var botSvg = addSvg(box, s.svg);
     var bot = new Plot(botSvg, { x: [0, 1], y: [-0.8, 3.8], w: 680, h: 230, pad: { l: 44, r: 16, t: 14, b: 30 }, label: "Quantile function" });
-    var lawSel = select(s.controls, "Measure", [["mixed", REM_LAWS.mixed.label], ["gmix", "Gaussian mixture"], ["emp", "5 points"], ["expo", "exponential"]], "mixed", function () { samples = []; draw(); });
+    var lawSel = select(s.controls, "Measure", [["mixed", "worked example"], ["gmix", "Gaussian mixture"], ["emp", "5 points"], ["expo", "exponential"]], "mixed", function () { samples = []; draw(); });
     var tS = slider(s.controls, "level t", 0.01, 0.99, 0.01, 0.4, draw);
     button(s.controls, "Draw 40 samples C⁻¹(U)", function () {
       samples = [];
@@ -97,6 +97,7 @@
       top.dot(q, t, 5, "f3");
       top.text(q, 0, "C⁻¹(t) = " + fmt(q, 2), "tx-s t3", "start", 4, -6);
       top.text(D.L, t, "t", "tx-s t3", "start", 4, -5);
+      top.text(D.L, 1.08, "α = " + D.label, "tx-s t2", "start", 6, 10);
       // ---- bottom: the quantile function
       var lo = Infinity, hi = -Infinity;
       for (i = 1; i < 200; i++) { var v = D.Q(i / 200); lo = Math.min(lo, v); hi = Math.max(hi, v); }

@@ -1,0 +1,122 @@
+<!--
+title: Lesson 7 — Entropic regularization and Sinkhorn's algorithm
+short: L7 · Entropic OT and Sinkhorn
+description: Step-by-step study guide for the seventh lecture of the MVA course Optimal Transport for ML (G. Peyré, 18 Nov 2026), prepared from the course resources: the discrete Schrödinger problem, the scaling form and Sinkhorn's algorithm, KL projections, the dual and soft c-transforms, the log domain, convergence in Hilbert's metric, entropic transport between measures, Sinkhorn divergences, sample complexity, gradients of Sinkhorn losses and unbalanced transport, with the exercise sheet fully solved.
+subtitle: The lecture of 18 November 2026 (Gabriel Peyré), prepared from the course resources before it takes place. Every statement is quoted with its reference, decoded symbol by symbol, motivated, proved line by line, tried on small numbers — and connected to what it is used for in machine learning.
+kicker: Optimal Transport for ML · Lesson 7 · study guide v2
+footer: Optimal Transport for Machine Learning (MVA / IASD, J. Delon &amp; G. Peyré) — study guide, version 2. This lesson was prepared from the course resources before the lecture: the book <em>Optimal Transport for Machine Learners</em> (<code>ressources/OT4ML.pdf</code>, chapters 8–11), the compact notes, the 2019 notes, Peyré–Cuturi and Chewi–Niles-Weed–Rigollet, and the exercise sheet <code>exo-sinkhorn-uncorrected.pdf</code>. Page numbers are PDF page numbers.
+-->
+
+<div class="box objectives">
+<div class="box-h">What you will be able to do after this page</div>
+<ol>
+<li>Write the <strong>entropic transport problem</strong> $\min_P\ps{P}{C}+\eps\KL(P|a\otimes b)$, explain why its three usual conventions have the same solution, and read the penalty as the <strong>mutual information</strong> of the coupling.</li>
+<li>Prove that the solution exists, is unique and positive, and has the <strong>scaling form</strong> $P=\operatorname{diag}(u)K\operatorname{diag}(v)$ with the Gibbs kernel $K=e^{-C/\eps}$; derive <strong>Sinkhorn’s algorithm</strong> from it and run it by hand.</li>
+<li>Explain Sinkhorn in three equivalent ways: alternating <strong>row and column scalings</strong>, alternating <strong>KL projections</strong> on the two marginal constraints, and exact block ascent on the <strong>dual</strong> by <strong>soft $c$-transforms</strong> — and implement it in the <strong>log domain</strong>.</li>
+<li>State and prove the <strong>linear convergence</strong> of Sinkhorn in Hilbert’s projective metric, and explain why the rate actually observed is the squared correlation $\sigma_\eps^2$ of the plan, with about $1/\eps$ iterations.</li>
+<li>Describe entropic transport between <strong>general measures</strong>: the limits $\eps\to0$ (optimal transport) and $\eps\to\infty$ (independence), Gaussians in closed form, and the bias of order $\eps\log(1/\eps)$.</li>
+<li>Define the <strong>Sinkhorn divergence</strong>, prove that it is non-negative, explain how it interpolates between optimal transport and MMD, and compare the <strong>sample complexities</strong> $n^{-1/d}$ (transport) and $n^{-1/2}$ (entropic transport at fixed $\eps$, MMD).</li>
+<li>Compute the <strong>gradients</strong> of Sinkhorn losses (dual potentials, barycentric projections) and use them in machine learning: generative models, domain adaptation, attention, barycenters, single-cell trajectories with <strong>unbalanced</strong> transport.</li>
+</ol>
+</div>
+
+<h2 id="start">0. Before you start</h2>
+
+<h3 id="howto">How to read this page</h3>
+<p><strong>The lecture has not taken place yet</strong> (it is scheduled for 18 November 2026). This page was prepared from the course resources, in the order of the syllabus, so that you can read it before the lecture and annotate it during. If something said in class differs from this page, trust the lecture. Each statement of the course appears in a box like this one, with its exact reference (statement number and PDF page):</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 8.5, p. 138</span></div>
+<p>A faithful quote of the book <em>Optimal Transport for Machine Learners</em> (OT4ML), of the compact notes, of the 2019 notes, of Peyré–Cuturi (“CompOT”), of Chewi–Niles-Weed–Rigollet (“StatOT”) or of the exercise sheet, in their notation.</p>
+</div>
+<p>It is followed by a <strong>decoding</strong> (each symbol in words), the <strong>problem it solves</strong>, a <strong>small example with numbers</strong>, the <strong>idea of the proof</strong>, then the <strong>full proof</strong>, folded (the button “Open all proofs” opens everything). The compact notes contain the same statements with their own numbering; when it differs, the reference box gives both (for instance “OT4ML Prop. 8.5 · compact Prop. 8.4”). Other boxes:</p>
+<div class="cols">
+<div class="box recall"><div class="box-h">Reminder — …</div><p>A prerequisite, recalled where it is used.</p></div>
+<div class="box ml"><div class="box-h">In machine learning — …</div><p>What the notion is used for, concretely.</p></div>
+<div class="box intu"><div class="box-h">Intuition</div><p>The picture to keep in mind.</p></div>
+<div class="box example"><div class="box-h">Worked example</div><p>Numbers you can check by hand.</p></div>
+<div class="box pitfall"><div class="box-h">Pitfall</div><p>A classical mistake.</p></div>
+<div class="box reflex"><div class="box-h">Reflex</div><p>“When you see … → think …”.</p></div>
+</div>
+<p>All the numbers on this page were computed by scripts before being written (Sinkhorn in exact arithmetic or in the log domain, exact linear programs with POT, Gaussian closed forms, finite differences). The interactive figures recompute everything in your browser. One example runs through §1–§7: it is the exercise sheet’s Exercise 1 with $p=0.3$ (“the running example”).</p>
+
+<h3 id="story">The story of the lesson in seven steps</h3>
+<p class="tldr">Adding an entropy penalty to optimal transport turns a large linear program into a smooth, strictly convex problem whose solution is a rescaled Gibbs kernel, computed by alternately normalizing rows and columns; the price is a bias, which can be measured and largely removed, and the reward is speed, differentiability and statistics that do not suffer from the dimension.</p>
+<ol class="chain">
+<li><strong>Why regularize (§1).</strong> The Kantorovich linear program is slow ($\approx n^3$ operations), its solutions are sparse vertices that jump when the data move, and its value is not differentiable. Adding $\eps\KL(P|a\otimes b)$ — the <em>mutual information</em> of the coupling — gives a unique, positive, smooth solution: the <em>discrete Schrödinger problem</em>.</li>
+<li><strong>Its solution has a product form (§2–§3).</strong> $P=\operatorname{diag}(u)\,e^{-C/\eps}\operatorname{diag}(v)$: only $n+m$ unknowns. As $\eps\to0$ it tends to an optimal transport plan; as $\eps\to\infty$, to the independent coupling $a\otimes b$.</li>
+<li><strong>Sinkhorn’s algorithm (§4–§5).</strong> Fix the rows, then the columns, and repeat: two matrix–vector products per iteration. Each half-step is a KL projection on one marginal constraint.</li>
+<li><strong>The dual (§6–§7).</strong> In logarithmic variables, Sinkhorn alternates <em>soft $c$-transforms</em>, the smooth versions of the $c$-transforms of Lesson 4; run in the log domain it never underflows. It converges linearly, at a speed that degrades like $1/\eps$.</li>
+<li><strong>General measures (§8).</strong> The same problem between densities: closed forms for Gaussians, a bias of order $\eps\log(1/\eps)$ with respect to $W_2^2$.</li>
+<li><strong>Debiasing and statistics (§9–§10).</strong> Subtracting the self-transport terms gives the <em>Sinkhorn divergence</em>, a true divergence between optimal transport ($\eps\to0$) and MMD ($\eps\to\infty$), estimated from $n$ samples at the rate $n^{-1/2}$ instead of $n^{-1/d}$.</li>
+<li><strong>Learning (§11–§12).</strong> The gradients of these losses are the dual potentials and the barycentric projections: generative models, domain adaptation, barycenters. Relaxing the marginals (unbalanced transport) only changes Sinkhorn into a damped iteration.</li>
+</ol>
+
+<h3 id="toolbox">What you need from earlier lessons</h3>
+<p>Open only the refreshers you need; each says what is used on this page and where.</p>
+
+<details class="fold more" id="recall-lp"><summary>Refresher — the Kantorovich linear program (Lesson 2)</summary><div class="fold-body">
+<p>For histograms $a\in\R^n_+$, $b\in\R^m_+$ with the same total mass $1$, the <em class="new">couplings</em> (transport plans) are the matrices</p>
+$$\U(a,b)=\big\{P\in\R^{n\times m}_+\ :\ P\ind_m=a,\ P\T\ind_n=b\big\},$$
+<p>whose row sums are $a$ and column sums are $b$. $P_{ij}$ is the mass sent from $x_i$ to $y_j$. The product $a\otimes b=(a_ib_j)_{ij}$ (the <em>independent coupling</em>) always belongs to $\U(a,b)$. The Kantorovich problem with cost matrix $C$ is the linear program $L_C(a,b)=\min_{P\in\U(a,b)}\ps{P}{C}$, $\ps{P}{C}=\sum_{ij}P_{ij}C_{ij}$. Facts used here: a minimum is attained at a <strong>vertex</strong> of the polytope $\U(a,b)$, which has at most $n+m-1$ non-zero entries (sparse); it need not be unique; on the line the monotone (north-west corner) plan is optimal for $\abs{x-y}^p$, $p\ge1$. See <a href="Reminders.html#lp">Reminders — linear programming</a>, <a href="Reminders.html#couplings">couplings</a>, and the first companion, <a href="../companion/Lesson02.html#lp">Lesson 2 §2</a>.</p>
+</div></details>
+
+<details class="fold more" id="recall-duality"><summary>Refresher — Kantorovich duality and $c$-transforms (Lesson 4)</summary><div class="fold-body">
+<p>The dual of the linear program is</p>
+$$L_C(a,b)=\max_{f\in\R^n,\ g\in\R^m}\Big\{\ps{f}{a}+\ps{g}{b}\ :\ f_i+g_j\le C_{ij}\ \text{for all }i,j\Big\}.$$
+<p>$f_i$ and $g_j$ are <em>prices</em> paid to send a unit of mass out of $x_i$ and into $y_j$; they may not exceed the cost of the trip. Given $g$, the best $f$ is the <em class="new">$c$-transform</em> $f_i=g^{\bar c}_i=\min_j\,(C_{ij}-g_j)$. Alternating hard $c$-transforms does not solve the dual (it stalls after one cycle). <strong>Used here</strong> in §6, where Sinkhorn alternates <em>soft</em> $c$-transforms, and in §11 (potentials as gradients). See <a href="Reminders.html#ot-duality">Reminders — OT duality</a> and the first companion, <a href="../companion/Lesson04.html#ctransform">Lesson 4 §3</a>.</p>
+</div></details>
+
+<details class="fold more" id="recall-kl"><summary>Refresher — entropy, relative entropy (KL) and Pinsker’s inequality</summary><div class="fold-body">
+<p>For a probability vector $p$, the <em class="new">Shannon entropy</em> $\mathrm H(p)=-\sum_ip_i\log p_i$ (with $0\log0=0$) measures how spread $p$ is: it is $0$ for a Dirac, and maximal, $\log n$, for the uniform law on $n$ points. For non-negative vectors or matrices of the same size, the <em class="new">relative entropy</em> (Kullback–Leibler divergence) is</p>
+$$\KL(P|Q)=\sum_{ij}\Big(P_{ij}\log\frac{P_{ij}}{Q_{ij}}-P_{ij}+Q_{ij}\Big)\ \ge0,$$
+<p>with equality if and only if $P=Q$ (it is $+\infty$ if $P_{ij}>0$ where $Q_{ij}=0$). The terms $-P_{ij}+Q_{ij}$ cancel in the sum when $P$ and $Q$ have the same total mass. KL is not symmetric and is not a distance, but it controls the total variation: <strong>Pinsker’s inequality</strong> $\norm{P-Q}_1\le\sqrt{2\KL(P|Q)}$ for probability vectors. <strong>Used</strong> in §1 (the penalty), §3 (limits), §5 (projections), §7. See <a href="Reminders.html#entropy">Reminders — entropy</a> and <a href="Reminders.html#f-divergences">$\varphi$-divergences</a>.</p>
+</div></details>
+
+<details class="fold more" id="recall-convex"><summary>Refresher — Lagrange multipliers and convex conjugates</summary><div class="fold-body">
+<p><strong>Lagrange.</strong> To minimize a smooth convex $F(P)$ under linear equality constraints $\mathcal A(P)=y$, introduce multipliers $\lambda$ and the Lagrangian $F(P)+\ps{\lambda}{y-\mathcal A(P)}$. At an interior minimizer, $\nabla F(P)=\mathcal A\T\lambda$; for convex problems with linear constraints this condition is also sufficient. <strong>Conjugate.</strong> The convex conjugate of $\varphi$ is $\varphi^*(s)=\sup_r\{rs-\varphi(r)\}$, and the <em>Fenchel–Young inequality</em> $\varphi(r)+\varphi^*(s)\ge rs$ holds for all $r,s$, with equality iff $s=\varphi'(r)$. The example used all along: for $\varphi(r)=r\log r-r+1$ ($r\ge0$), $\varphi^*(s)=e^s-1$, attained at $r=e^s$. <strong>Used</strong> in §2 (scaling form), §6 (the dual) and in the exercise sheet. See <a href="Reminders.html#lagrange">Reminders — Lagrange duality</a> and <a href="Reminders.html#legendre">Legendre transform</a>.</p>
+</div></details>
+
+<details class="fold more" id="recall-gauss"><summary>Refresher — Gaussians and the Bures distance (Lesson 1)</summary><div class="fold-body">
+<p>Between $\N(m_\al,\Sigma_\al)$ and $\N(m_\be,\Sigma_\be)$ the optimal plan for $\norm{x-y}^2$ is given by an affine map, and $W_2^2=\norm{m_\al-m_\be}^2+\B(\Sigma_\al,\Sigma_\be)^2$ with $\B(\Sigma,\Lambda)^2=\tr\big(\Sigma+\Lambda-2(\Lambda^{1/2}\Sigma\Lambda^{1/2})^{1/2}\big)$; on the line, $W_2^2=(m_\al-m_\be)^2+(\sigma_\al-\sigma_\be)^2$. <strong>Used</strong> in §8–§9, where entropic transport between Gaussians has a closed form too. See <a href="Reminders.html#gaussians">Reminders — Gaussians</a> and <a href="Lesson03.html#recall-brenier">Lesson 3, the Brenier refresher</a>.</p>
+</div></details>
+
+<details class="fold more" id="recall-mmd"><summary>Refresher — kernels and MMD</summary><div class="fold-body">
+<p>A symmetric function $k(x,y)$ is a <em class="new">positive definite kernel</em> if $\sum_{ij}c_ic_jk(x_i,x_j)\ge0$ for all points and real coefficients; example: the Gaussian kernel $e^{-\norm{x-y}^2/\sigma^2}$. It defines the norm $\norm{\xi}_k^2=\iint k\,\dd\xi\,\dd\xi$ of a signed measure $\xi$, and the <em class="new">maximum mean discrepancy</em> $\mathrm{MMD}_k(\al,\be)=\norm{\al-\be}_k$. It is computed with sums of kernel evaluations, with no optimization. <strong>Used</strong> in §9 (Sinkhorn divergences tend to a kernel norm as $\eps\to\infty$) and §10 (MMD is estimated at the rate $n^{-1/2}$). See <a href="Reminders.html#mmd">Reminders — MMD</a>.</p>
+</div></details>
+
+<h3 id="notation">Notation decoder</h3>
+<p>This page follows the book (OT4ML) and the common notation of the course. The table says how to read each symbol.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Symbol</th><th>Read</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td>$a\in\R^n_+$, $b\in\R^m_+$</td><td>“histograms”</td><td>Weights of $\al=\sum_ia_i\delta_{x_i}$ and $\be=\sum_jb_j\delta_{y_j}$, each summing to $1$.</td></tr>
+<tr><td>$C$, $C_{ij}=c(x_i,y_j)$</td><td>“cost matrix”</td><td>Price of moving a unit of mass from $x_i$ to $y_j$.</td></tr>
+<tr><td>$\U(a,b)$; $\ps{P}{C}$</td><td>“couplings”; “cost of $P$”</td><td>Plans with marginals $a,b$; $\sum_{ij}P_{ij}C_{ij}$.</td></tr>
+<tr><td>$\eps>0$</td><td>“the temperature”</td><td>Weight of the entropy penalty (the regularization strength).</td></tr>
+<tr><td>$\mathrm H(P)$</td><td>“Shannon entropy”</td><td>$-\sum_{ij}P_{ij}\log P_{ij}$ (OT4ML Def. 8.1).</td></tr>
+<tr><td>$\KL(P|Q)$</td><td>“relative entropy”</td><td>$\sum_{ij}P_{ij}\log\frac{P_{ij}}{Q_{ij}}-P_{ij}+Q_{ij}$ (OT4ML Def. 8.7).</td></tr>
+<tr><td>$L^\eps_C(a,b)$</td><td>“entropic transport cost”</td><td>On this page: the value of $\min_{P\in\U(a,b)}\ps{P}{C}+\eps\KL(P|a\otimes b)$ (the book’s (8.8)); $L_C(a,b)$ is the unregularized value.</td></tr>
+<tr><td>$P_\eps$</td><td>“the entropic plan”</td><td>The unique minimizer.</td></tr>
+<tr><td>$K=e^{-C/\eps}$</td><td>“Gibbs kernel”</td><td>Entrywise exponential, $K_{ij}=e^{-C_{ij}/\eps}$.</td></tr>
+<tr><td>$u,v$; $\operatorname{diag}(u)$</td><td>“scalings”</td><td>Positive vectors with $P_\eps=\operatorname{diag}(u)K\operatorname{diag}(v)$, i.e. $P_{ij}=u_iK_{ij}v_j$.</td></tr>
+<tr><td>$f,g$</td><td>“dual potentials”</td><td>$u=a\odot e^{f/\eps}$, $v=b\odot e^{g/\eps}$ (OT4ML (8.21)).</td></tr>
+<tr><td>$\odot$, $\oslash$, $\frac ab$</td><td>“entrywise product / division”</td><td>$(u\odot w)_i=u_iw_i$, $(a/w)_i=a_i/w_i$.</td></tr>
+<tr><td>$f\oplus g$</td><td>“direct sum”</td><td>The matrix $(f_i+g_j)_{ij}$.</td></tr>
+<tr><td>$\min^\eps_b(h)$</td><td>“soft minimum”</td><td>$-\eps\log\sum_jb_je^{-h_j/\eps}$ (§6).</td></tr>
+<tr><td>$d_{\mathcal H}$; $\lambda(K)$</td><td>“Hilbert metric”; “Birkhoff factor”</td><td>A distance between positive vectors up to scaling; the contraction ratio of $K$ (§7).</td></tr>
+<tr><td>$S_\eps(\al,\be)$</td><td>“Sinkhorn divergence”</td><td>$L^\eps(\al,\be)-\frac12L^\eps(\al,\al)-\frac12L^\eps(\be,\be)$ (§9); the book writes $\bar{\mathcal L}^\eps_c$.</td></tr>
+<tr><td>$\hat\al_n$</td><td>“empirical measure”</td><td>$\frac1n\sum_{i=1}^n\delta_{X_i}$ with $X_i$ independent draws from $\al$ (§10).</td></tr>
+</tbody></table></div>
+
+<div class="box pitfall" id="conventions"><div class="box-h">Pitfall — four ways to write the penalty, one minimizer, four values</div>
+<p>The resources do not all write the same penalty. On couplings $P\in\U(a,b)$ (total mass $1$), with the Shannon entropy $\mathrm H$:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Source</th><th>Objective</th><th>equals, on $\U(a,b)$</th></tr></thead>
+<tbody>
+<tr><td>OT4ML (8.1) (Def. 8.2)</td><td>$\ps{P}{C}-\eps\mathrm H(P)$</td><td>$\ps{P}{C}-\eps\mathrm H(P)$</td></tr>
+<tr><td>OT4ML (8.8), 2019 notes (26), <strong>this page</strong></td><td>$\ps{P}{C}+\eps\KL(P|a\otimes b)$</td><td>$\ps{P}{C}-\eps\mathrm H(P)+\eps\big(\mathrm H(a)+\mathrm H(b)\big)$</td></tr>
+<tr><td>CompOT (4.2), with $\mathbf H(P)=-\sum P(\log P-1)$</td><td>$\ps{P}{C}-\eps\mathbf H(P)$</td><td>$\ps{P}{C}-\eps\mathrm H(P)-\eps$</td></tr>
+<tr><td>exercise sheet, $H(P)=\sum P(\log P-1)$</td><td>$\ps{P}{C}+\eps H(P)$</td><td>$\ps{P}{C}-\eps\mathrm H(P)-\eps$</td></tr>
+</tbody></table></div>
+<p>They differ by constants on $\U(a,b)$, so they have <strong>the same minimizer</strong> — but <strong>not the same value</strong>. On the running example at $\eps=0.5$ the four values are $-0.3213$, $0.3307$, $-0.8213$ and $-0.8213$. Values matter for the bias (§3, §8), the Sinkhorn divergence (§9) and convexity (Exercise 6 of the sheet). The sheet also uses the letter $H$ for <em>minus</em> the entropy, and OT4ML Prop. 8.17 uses $\mathrm H(\al)=\int\rho_\al\log\rho_\al$ (also minus an entropy): always check the sign.</p>
+</div>
+<p>Colour code of the figures: <span class="al">$a$, $\al$ (source, orange-red)</span>, <span class="be">$b$, $\be$ (target, blue)</span>, <span class="ga">third measure (purple)</span>, <span class="bar">maps, barycentric projections and iterates (green)</span>; transport plans are drawn as grey levels (darker = more mass).</p>

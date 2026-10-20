@@ -1,0 +1,77 @@
+<h2 id="numerics">4. Computing dynamic OT on a grid (in brief) <span class="ref">CompOT §7.2–7.3, pp. 109–112; OT4ML p. 333–334</span></h2>
+<p class="tldr">Discretize density and momentum on a staggered space-time grid, so that the discrete continuity equation is exact; then minimize the convex, non-smooth action under this linear constraint by Douglas–Rachford splitting, which alternates a pointwise cubic equation and a Poisson solve.</p>
+
+<h3 id="num-why">Why a grid solver</h3>
+<p>On the line, quantile functions give the optimal path for free (<a href="Lesson03.html#oned">Lesson 3 §8</a>). In dimension 2 or 3 — interpolating two images, moving a density inside a domain with obstacles — there is no closed form. The convex formulation (14.13) suggests a direct method: sample $\rho$ and $m$ on a grid in space <em>and</em> time and solve a finite convex problem. Its size is the number of space-time grid points, $T\times n_1\times n_2$, instead of the $n^2$ unknowns of a transport plan between two images with $n$ pixels. The price: the objective $J$ is not smooth (it jumps to $+\infty$ when $\rho=0$, $m\ne0$), so plain gradient descent does not apply. CompOT (p. 106) also notes the limit: this approach needs a grid, so it works in low dimension only.</p>
+
+<h3 id="num-grid">The staggered grid</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">CompOT §7.2, pp. 109–110</span></div>
+<p>We discretize time as $t_k=k/T\in[0,1]$ and assume the space is uniformly discretized at points $x_i=(i_1/n_1,i_2/n_2)\in\X=[0,1]^2$. We use a staggered grid representation, so that $\al_t$ is represented using $\mathbf a\in\R^{(T+1)\times n_1\times n_2}$ associated to half grid points in time, whereas $J$ is represented using $J=(J_1,J_2)$, where $J_1\in\R^{T\times(n_1+1)\times n_2}$ and $J_1\in\R^{T\times n_1\times(n_2+1)}$ are stored at half grid points in each space direction. Using this representation, […] the time derivative is computed as $(\partial_t\mathbf a)_{k,i}:=\mathbf a_{k+1,i}-\mathbf a_{k,i}$ and spatial divergence as</p>
+$$\dv(J)_{k,i}:=J^1_{k,i_1+1,i_2}-J^1_{k,i_1,i_2}+J^2_{k,i_1,i_2+1}-J^2_{k,i_1,i_2},\qquad(7.10)$$
+<p>which are both defined at grid points […]. In order to evaluate the functional to be optimized, one needs interpolation operators from midgrid points to grid points […] The simplest choice is to use a linear operator $I(r,s)=\frac{r+s}2$ […]. The discrete counterpart to (7.3) reads</p>
+$$\min_{(\mathbf a,J)\in\mathcal C(\mathbf a_0,\mathbf a_1)}\Theta\big(I_a(\mathbf a),I_J(J)\big),\qquad\Theta(\tilde{\mathbf a},\tilde J):=\sum_{k=1}^T\sum_{i_1=1}^{n_1}\sum_{i_2=1}^{n_2}\theta(\tilde{\mathbf a}_{k,i},\tilde J_{k,i}),\qquad(7.11)$$
+<p>where the constraint now reads $\mathcal C(\mathbf a_0,\mathbf a_1):=\{(\mathbf a,J):\partial_t\mathbf a+\dv(J)=0,\ (\mathbf a_{0,\cdot},\mathbf a_{T,\cdot})=(\mathbf a_0,\mathbf a_1)\}$.</p>
+</div>
+<dl class="decode">
+<dt>$\mathbf a$</dt><dd>The densities, one per cell and per time $t_k$, $k=0,\dots,T$ (so $T+1$ time layers). The first and last layers are the data $\mathbf a_0,\mathbf a_1$.</dd>
+<dt>$J=(J_1,J_2)$</dt><dd>The momentum, one component per space direction, stored on the <em>faces</em> between cells and at <em>mid-times</em>: $J_1$ has $n_1+1$ faces in the first direction. (The second array should read $J_2$; see the note below.)</dd>
+<dt>(7.10)</dt><dd>With this placement, “mass in a cell at $t_{k+1}$ minus mass at $t_k$” and “flux in minus flux out through its faces” are both natural differences: the discrete continuity equation $\partial_t\mathbf a+\dv J=0$ is an exact balance, cell by cell (CompOT absorbs the grid steps into the units).</dd>
+<dt>$I_a,I_J$</dt><dd>Averages that bring $\mathbf a$ and $J$ to common points (cell centres, mid-times), where $\theta=J$ of §3 can be evaluated.</dd>
+<dt>(7.11)</dt><dd>A finite convex problem: a sum of perspective functions of averaged values, under linear equality constraints.</dd>
+</dl>
+<figure class="fig"><!-- include figures/L06/staggered.svg --><figcaption>A staggered grid in one space dimension with $N=4$ cells and $T=3$ time steps. Densities (dots) at cell centres and integer times, momenta (arrows) on the faces and at mid-times, zero flux through the walls. The action is evaluated on the averages (crosses).</figcaption></figure>
+
+<h3 id="num-dr">Douglas–Rachford splitting</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Alg. 14.1, p. 334, and CompOT p. 112</span></div>
+<p><strong>Algorithm 14.1: Douglas–Rachford for dynamic Benamou–Brenier.</strong> Input: functionals $\mathcal F$, $\mathcal G=\iota_{\mathcal C}$, proximal parameter $\tau>0$, initial field $Z^{(0)}$ […]. For $\ell=0,\dots,L-1$ do: $\ U^{(\ell+1)}=\mathrm{prox}_{\tau\mathcal F}(Z^{(\ell)})$. Project reflected point: $\ \tilde U^{(\ell+1)}=\mathrm{prox}_{\tau\mathcal G}(2U^{(\ell+1)}-Z^{(\ell)})=\mathrm{Proj}_{\mathcal C}(2U^{(\ell+1)}-Z^{(\ell)})$. Update $\ Z^{(\ell+1)}=Z^{(\ell)}+\tilde U^{(\ell+1)}-U^{(\ell+1)}$. […]</p>
+<p>(CompOT, p. 112:) The proximal operator $\mathrm{Prox}_{\tau\Theta}$ is computed by solving a cubic polynomial equation at each grid position. The orthogonal projection on the affine constraint $\mathcal C(\mathbf a_0,\mathbf a_1)$ involves the resolution of a Poisson equation, which can be achieved in $O(N\log(N))$ operations using the fast Fourier transform, where $N=Tn_1n_2$ is the number of grid points. Lastly, the proximal operator $\mathrm{Prox}_{\tau G}$ is a linear projector, which requires the inversion of a small linear system.</p>
+</div>
+<dl class="decode">
+<dt>$\mathrm{prox}_{\tau\mathcal F}(Z)$</dt><dd>The <em>proximal operator</em>: $\argmin_U\frac12\norm{U-Z}^2+\tau\mathcal F(U)$ — a step that decreases $\mathcal F$ without going far from $Z$. For an indicator function $\iota_{\mathcal C}$ (0 on $\mathcal C$, $+\infty$ outside) it is the orthogonal projection on $\mathcal C$.</dd>
+<dt>$\mathcal F$, $\mathcal G$</dt><dd>The problem is split as $\min\mathcal F+\mathcal G$ with $\mathcal F$ the action (local, non-smooth) and $\mathcal G$ the indicator of the continuity equation (global, linear). Each is easy alone; together they are not.</dd>
+<dt>the iteration</dt><dd>Douglas–Rachford never needs a gradient: it alternates the two proximal steps on a “reflected” point. At convergence $U^{(\ell)}$ and $\tilde U^{(\ell)}$ coincide and solve the problem. Papadakis, Peyré and Oudet (2014) showed that the original ALG2 solver of Benamou and Brenier is of this type (ADMM on the dual).</dd>
+<dt>“small linear system”</dt><dd>When the averages are kept as separate variables (as in CompOT), a third projection, onto “averages = average of the staggered values”, is needed: one small tridiagonal system per line of the grid.</dd>
+</dl>
+<div class="box recall"><div class="box-h">Reminder — proximal operators</div>
+<p>For a convex l.s.c. function $f$, $\mathrm{prox}_{\tau f}(z)=\argmin_u\frac12\norm{u-z}^2+\tau f(u)$ exists and is unique; its fixed points are the minimizers of $f$. Examples: $f=\iota_{\mathcal C}$ gives the projection on $\mathcal C$; $f=\frac12\norm{u}^2$ gives $z/(1+\tau)$. Splitting methods (forward–backward, Douglas–Rachford, ADMM) minimize sums $f+g$ using only $\mathrm{prox}_f$ and $\mathrm{prox}_g$. More: <a href="Reminders.html#convex-functions">Reminders — convex functions</a>, <a href="Reminders.html#gradient-descent">gradient methods</a>.</p>
+</div>
+
+<h4>The pointwise step: a cubic equation</h4>
+<p>At one grid point, with $\tau>0$ and data $(\tilde a,\tilde m)$, we need $\argmin_{(a,m)}\frac12(a-\tilde a)^2+\frac12\norm{m-\tilde m}^2+\tau\frac{\norm m^2}a$.</p>
+<ol class="steps">
+<li>$$\partial_m:\quad m-\tilde m+\frac{2\tau}{a}m=0\quad\Longrightarrow\quad m=\frac{a}{a+2\tau}\,\tilde m.$$<span class="why">Gradient in $m$ of a strictly convex function of $m$ (for fixed $a>0$).</span></li>
+<li>$$\partial_a:\quad a-\tilde a-\tau\frac{\norm m^2}{a^2}=0\quad\Longrightarrow\quad(a-\tilde a)(a+2\tau)^2=\tau\norm{\tilde m}^2.$$<span class="why">Substitute step 1: $\norm m^2/a^2=\norm{\tilde m}^2/(a+2\tau)^2$.</span></li>
+<li>Take the largest real root $a^\star$ of this cubic; if it is $\le0$ (which happens iff $-4\tau\tilde a\ge\norm{\tilde m}^2$), the prox is $(0,0)$.<span class="why">The function is convex in $(a,m)$; the root with $a>0$ is the minimizer when it exists, otherwise the minimum is on the boundary, where $J$ forces $m=0$ (and then $a=0$ is the closest point with $a\ge0$, $\tilde a<0$).</span></li>
+</ol>
+<div class="box example"><div class="box-h">Worked example — one proximal step</div>
+<p>$(\tilde a,\tilde m)=(1,2)$, $\tau=\frac12$: solve $(a-1)(a+1)^2=2$. The root is $a^\star=1.35930$, and $m^\star=\frac{1.35930}{2.35930}\cdot2=1.15229$. A direct numerical minimization of the objective gives the same point (objective $0.91226$). The step reduced the momentum (from $2$ to $1.15$) and increased the density (from $1$ to $1.36$): both lower $m^2/a$. With $(\tilde a,\tilde m)=(-1,\frac12)$: $-4\tau\tilde a=2\ge\frac14$, so the prox is $(0,0)$ (objective $0.625$).</p>
+</div>
+
+<h4>The global step: a Poisson equation</h4>
+<p>Projecting $(\rho,m)$ orthogonally onto $\{\partial_t\rho+\dv m=0$, endpoints fixed$\}$ is a least-squares problem with linear constraints $AU=b$: $\mathrm{Proj}(U)=U-A\T(AA\T)^{-1}(AU-b)$. The matrix $AA\T$ is a discrete Laplacian in space-time (the constraint is a space-time divergence, and $A\T$ a space-time gradient), with Neumann-type boundary conditions: hence a Poisson equation, solved by fast cosine transforms.</p>
+
+<div class="box example"><div class="box-h">Worked example — the solver on a two-bump to one-bump problem</div>
+<p>We implemented this scheme in one space dimension (64 cells on $[-4,4]$, $T=32$ time steps, $\tau$ scaled as $10\,\Delta t\Delta x$, started from the mixture path with zero momentum), from $\al_0=\frac12\N(-2,0.4^2)+\frac12\N(0,0.4^2)$ to $\al_1=\N(2,0.6^2)$. The reference is $W_2^2=9.2784$ between the two discretized (piecewise constant) densities, computed from their quantile functions (the continuous value is $9.2839$).</p>
+<div class="table-wrap"><table>
+<thead><tr><th>iterations</th><th>50</th><th>100</th><th>250</th><th>500</th><th>1000</th></tr></thead>
+<tbody>
+<tr><td>discrete action</td><td>9.3896</td><td>9.3068</td><td>9.2836</td><td>9.2795</td><td>9.2791</td></tr>
+<tr><td>relative difference to $W_2^2$</td><td>+1.2%</td><td>+0.31%</td><td>+0.056%</td><td>+0.012%</td><td>+0.008%</td></tr>
+</tbody></table></div>
+<p>The action converges much faster than the densities: at $t=\frac12$ the computed density is at $L^1$ distance $0.028$ from the exact McCann density after 1000 iterations, $0.018$ after 3000. The computed densities are non-negative up to $-2\times10^{-4}$.</p>
+</div>
+<figure class="fig"><!-- include figures/L06/bb_solver.svg --><figcaption>Left: densities computed by Douglas–Rachford after 1000 iterations (filled steps) against the exact displacement interpolation of the discretized endpoints (thin dashed), at five times; the left bump and the right bump both travel and merge into one. Right: the discrete action along the iterations (logarithmic iteration axis), converging to the discrete $W_2^2$ (dashed).</figcaption></figure>
+<div class="box remark"><div class="box-h">Practical notes</div>
+<ul>
+<li><strong>A checkerboard in time.</strong> The action only sees the averages $\bar\rho_k=\frac12(\rho_k+\rho_{k+1})$, so an oscillation $\rho_k+(-1)^k\eps$ is invisible to the objective. Report densities as averages of adjacent mid-time values (as in the figure), not the raw $\rho_k$.</li>
+<li><strong>Why bother in 1D?</strong> It is a test bed with a known answer. The same code runs in 2D and 3D, inside domains with obstacles (CompOT Fig. 7.3), and with extra terms (congestion, mean-field games, OT4ML §14.7), where no closed form exists.</li>
+<li><strong>Other solvers.</strong> Interior-point methods for second-order cone programs (CompOT pp. 110–111: $\Theta$ becomes a linear function under rotated Lorentz cone constraints) are precise but each iteration solves a large linear system; first-order splitting methods scale better.</li>
+</ul>
+</div>
+<div class="box remark"><div class="box-h">Note on the sources — CompOT §7.2–7.3</div>
+<p>Three slips, harmless once noticed: (i) p. 109, the second momentum array is printed $J_1\in\R^{T\times n_1\times(n_2+1)}$; it is $J_2$, as in (7.10). (ii) p. 108, “$\theta:\to\R^+\cup\{+\infty\}$” lacks its domain, $\R_+\times\R^d$ as in (7.5), and (7.3) “can thus be extended […] from density to functions” should read “from densities to measures” (the point of 1-homogeneity). (iii) p. 111, the cone constraint is written $(z_{k,i},\tilde{\mathbf a}_{k,i},\tilde J_{i,j})\in\mathcal L$; the momentum index is $\tilde J_{k,i}$.</p>
+</div>
+<div class="quiz"><p>Why does the staggered placement make the discrete continuity equation exact, while a co-located grid (all unknowns at the same points) would not?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>With densities in cells and fluxes on the faces between cells, the change of mass in a cell is exactly “flux in minus flux out” through its two faces, and every flux leaving one cell enters its neighbour: total mass is conserved exactly. With co-located values the divergence must be approximated by centred differences, which do not telescope cell by cell and admit spurious oscillating solutions.</p>
+</div></details></div>
