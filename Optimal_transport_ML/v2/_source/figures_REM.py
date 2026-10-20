@@ -236,7 +236,7 @@ def fig_gaussian():
     # labels just outside the one-sigma ellipse, which passes through the tips of the scaled eigenvectors
     f.text(1.5, 1.58, "√3", "tx-b t3", "start", dx=2)
     f.text(0.86, -0.9, "1", "tx-b t3", "start", dx=2, dy=6)
-    f.text(-4.2, 4.0, "one- and two-σ ellipses", "tx-s t2", "start")
+    f.text(-4.2, 4.0, "1σ and 2σ ellipses", "tx-s t2", "start")
     f.text(-4.2, -4.0, "x ∼ 𝒩(0, Σ), 160 samples", "tx-s", "start")
     # right: laws of the projections
     g = Fig(c, (360, 36, 260, 170), (-5, 5), (0, 0.42))
