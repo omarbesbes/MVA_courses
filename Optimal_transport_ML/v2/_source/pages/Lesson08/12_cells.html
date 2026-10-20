@@ -1,0 +1,73 @@
+<h2 id="cells">12. Cells: trajectories from snapshots <span class="ref">OT4ML Ex. 3.24, Ex. 15.10</span></h2>
+<p class="tldr">Sequencing a cell destroys it: each day one observes a new population, never the same cell twice. Transport reconstructs plausible trajectories from these snapshots — couplings between consecutive days give soft ancestor–descendant masses, and their products give lineages — and a gradient-flow model (a drift down a landscape $V$ plus diffusion) turns the snapshots into a dynamical law.</p>
+
+<h3 id="cells-snap">Snapshots and couplings</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Ex. 3.24, pp. 61–62</span></div>
+<p><strong>Example 3.24</strong> (Application to single-cell population dynamics). Single-cell sequencing observes different cells at each collection time. If $x_i^{[k]}\in\X$ denotes the state of cell $i$ at time $t_k$, write</p>
+$$\al_{t_k}=\sum_{i=1}^{n_k}a_i^{[k]}\delta_{x_i^{[k]}}\quad\text{and}\quad\mathbf a^{[k]}=(a_i^{[k]})_{i=1}^{n_k}\in\Sigma_{n_k}.$$
+<p>[…] A balanced transport between two consecutive snapshots is represented by a matrix $\mathbf P^{[k]}\in\R_+^{n_k\times n_{k+1}}$ satisfying $\mathbf P^{[k]}\mathbf 1_{n_{k+1}}=\mathbf a^{[k]}$ and $(\mathbf P^{[k]})\T\mathbf 1_{n_k}=\mathbf a^{[k+1]}$. Its entry $\mathbf P^{[k]}_{i,j}$ is a soft ancestor–descendant mass, not evidence that the same cell was observed twice. For every row with positive sum, the normalization</p>
+$$\mathbf K^{[k]}_{i,j}:=\frac{\mathbf P^{[k]}_{i,j}}{\sum_{j'=1}^{n_{k+1}}\mathbf P^{[k]}_{i,j'}}$$
+<p>defines a conditional transition probability; multiplying successive matrices $\mathbf K^{[k]}$ yields population-level lineage probabilities across several collection times. Waddington-OT modifies this balanced baseline by incorporating growth estimates and relaxing the marginal constraints through unbalanced transport, as discussed in Example 11.4. […] this visualization need not coincide with the ground geometry used to compute $\mathbf P^{[k]}$.</p>
+</div>
+<dl class="decode">
+<dt>$x_i^{[k]}$</dt><dd>The state of a cell: its gene-expression profile (thousands of numbers, usually reduced to a few dozen principal components). Each day $k$ brings new cells: the index $i$ does not follow a cell from one day to the next.</dd>
+<dt>$\mathbf P^{[k]}$</dt><dd>A transport plan between day $k$ and day $k+1$ (Lesson 2). $\mathbf P^{[k]}_{ij}$ is the mass that the reconstruction sends from cell $i$ to cell $j$ — a guess about descent, not an observation.</dd>
+<dt>$\mathbf K^{[k]}$</dt><dd>Row $i$ of $\mathbf P^{[k]}$ divided by its mass: the law of the descendants of cell $i$ at the next day. A Markov matrix, like the attention matrices of §11.</dd>
+<dt>$\mathbf K^{[0]}\mathbf K^{[1]}\cdots$</dt><dd>Chaining days: the law at day $k$ of the descendants of a cell of day $0$, hence “fate probabilities”: which fraction of the progeny of cell $i$ ends in a given cell type.</dd>
+<dt>unbalanced, growth</dt><dd>Cells divide and die, so the mass is not conserved between days; Example 11.4 (p. 219) relaxes the marginal constraints with divergence penalties (Lesson 7).</dd>
+</dl>
+
+<h3 id="cells-flow">A gradient-flow model of the population</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Ex. 15.10, p. 360</span></div>
+<p><strong>Example 15.10</strong> (Application to single-cell gradient-flow models). Instead of only coupling successive snapshots, one may posit that a latent population law evolves by</p>
+$$\partial_t\al_t+\dv(\al_tv_t)=0,\qquad v_t=-\nabla_Wf(\al_t)=-\nabla\delta f(\al_t).$$
+<p>Here $\delta f(\al_t)$ is the first variation, with the convention introduced above. For example, if $\al=\rho\dd x$, the energy $f(\al)=\int V\dd\al+\sigma^2\int\rho\log\rho\,\dd x$ gives a drift toward a potential landscape $V$ together with diffusion of strength $\sigma^2$. In single-cell modeling, $V$, interaction terms or a neural approximation of $v_t$ can be fitted from unpaired population snapshots. This links Waddington-landscape intuition to the mathematical language of dynamic OT, Fokker–Planck equations and flow matching.</p>
+</div>
+<dl class="decode">
+<dt>$f=\int V\dd\al+\sigma^2\int\rho\log\rho$</dt><dd>The Fokker–Planck energy of §4 with temperature $\sigma^2$: velocity $-\nabla V-\sigma^2\nabla\log\rho$, PDE $\partial_t\rho=\dv(\rho\nabla V)+\sigma^2\Delta\rho$, and each cell follows the Langevin equation $\dd X=-\nabla V(X)\dd t+\sqrt{2\sigma^2}\dd B$ (§6).</dd>
+<dt>“Waddington landscape”</dt><dd>Waddington’s picture (1957) of development as balls rolling down a landscape with branching valleys, one per cell fate: $V$ is that landscape, the valleys are its minima, and the Gibbs measure $\propto e^{-V/\sigma^2}$ is the long-time population.</dd>
+<dt>“fitted from unpaired snapshots”</dt><dd>An inverse problem: find $V$ (or $v_t$) such that the flow started at the first snapshot passes near the next ones — measured with a transport or kernel discrepancy (§8).</dd>
+</dl>
+<p>Why a <em>gradient</em> model? Because snapshots cannot see motions that do not change the density. If cells with density $\N(0,\Id_2)$ rotate, $\dot x=Jx$ with $J$ the rotation by $90^\circ$, then $\dv(\rho Jx)=\ps{\nabla\rho}{Jx}+\rho\,\dv(Jx)=-\rho\ps{x}{Jx}+0=0$: every snapshot is the same Gaussian, and no method based on snapshots alone can detect the rotation. Restricting to drifts $-\nabla V$ removes this ambiguity (our remark; the identifiability of gradient-drift diffusions from snapshots is a theme of Lavenant et al., cited below).</p>
+
+<div class="box example" id="cells-example"><div class="box-h">Worked example — a toy Waddington landscape (our construction, computed by script)</div>
+<p>Cells start at the top of the landscape $V(x)=\frac{x^4}4-\frac{x^2}2$ (a hill at $0$, valleys at $\pm1$: two fates) and follow the Fokker–Planck flow of Example 15.10 with $\sigma^2=0.05$, from $\N(0,0.15^2)$. We observe the population at days $0,1,2$ = times $0,\ 1.5,\ 3$ (densities computed on a grid by an implicit finite-volume scheme). The fraction of cells still undecided ($\abs{x}&lt;0.25$) is $0.901$, $0.187$, $0.055$.</p>
+<p><strong>Question:</strong> a cell is at position $x$ on day $0$; with which probability will it be in the right valley ($x&gt;0$) on day 2? The truth is $u(x)=\P(X_3&gt;0\,|\,X_0=x)$, the solution of the backward Kolmogorov equation $\partial_tu=\sigma^2u''-V'u'$ (Monte Carlo check at $x=0.1$ with $2\times10^5$ paths: $0.6656$ vs $0.6653$). The transport reconstructions only see the three densities:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>$x$ at day 0</th><th>$-0.3$</th><th>$-0.2$</th><th>$-0.1$</th><th>$0$</th><th>$0.1$</th><th>$0.2$</th><th>$0.3$</th></tr></thead>
+<tbody>
+<tr><td>truth</td><td>$0.106$</td><td>$0.199$</td><td>$0.335$</td><td>$0.5$</td><td>$0.665$</td><td>$0.801$</td><td>$0.894$</td></tr>
+<tr><td>exact OT, day 0 → 2</td><td>$0$</td><td>$0$</td><td>$0$</td><td>—</td><td>$1$</td><td>$1$</td><td>$1$</td></tr>
+<tr><td>entropic OT, day 0 → 2, $\eps=0.3$</td><td>$0.163$</td><td>$0.250$</td><td>$0.366$</td><td>$0.499$</td><td>$0.632$</td><td>$0.748$</td><td>$0.836$</td></tr>
+<tr><td>entropic OT via day 1: $\mathbf K^{[0]}\mathbf K^{[1]}$, $\eps=0.15$</td><td>$0.115$</td><td>$0.201$</td><td>$0.333$</td><td>$0.499$</td><td>$0.665$</td><td>$0.797$</td><td>$0.884$</td></tr>
+</tbody></table></div>
+<ul>
+<li><strong>Exact OT</strong> is monotone on the line (Lesson 3): the left half of day 0 goes to the left valley, deterministically. The fate of each cell is decided, which is false: noise near the hilltop decides.</li>
+<li><strong>Entropic OT</strong> (Lesson 7, cost $\frac12\abs{x-y}^2$) gives soft fates. The choice $\eps=2\sigma^2\Delta t$ is not arbitrary: for pure diffusion, the transition kernel over a time $\Delta t$ is $\propto e^{-\abs{x-y}^2/(4\sigma^2\Delta t)}=e^{-\frac12\abs{x-y}^2/\eps}$, and the entropic plan is then the true joint law of the cells at the two times (the static Schrödinger problem). The drift makes this approximate, less so over a shorter interval: chaining the two daily couplings as in Example 3.24 is much closer to the truth than the direct coupling (largest error $0.010$ against $0.058$ in the table).</li>
+<li><strong>Interpolating the snapshots.</strong> Predicting day 1 from days 0 and 2 alone: the McCann midpoint (average of the quantile functions, <a href="Lesson03.html#geo">Lesson 3, §6</a>) is at $W_2$-distance $0.180$ from the true day 1, the mixture $\frac12(\al_0+\al_2)$ at $0.185$ (day 2 alone: $0.262$). Neither is good: displacement interpolation moves every cell at constant speed on a straight line, whereas cells leave the hilltop slowly and then fast (at day 1 the mean of $\abs{x}$ is $0.586$, the midpoint predicts $0.476$). A dynamical model — here, the Fokker–Planck flow of $V$ — carries the right clock.</li>
+</ul>
+</div>
+<figure class="fig"><!-- include figures/L08/cells.svg --><figcaption>Left: the landscape and the three snapshots; day 0 is concentrated at the hilltop, day 1 is spread between the hilltop and the valleys, day 2 sits in the two valleys. Right: the fate of a day-0 cell. Exact OT (dashed) decides every fate; entropic OT between day 0 and day 2 (purple) is too flat; the product of the two daily entropic couplings (green dots) almost coincides with the truth (grey).</figcaption></figure>
+
+<div class="box ml"><div class="box-h">In machine learning — trajectory inference for single cells</div>
+<p><strong>Waddington-OT</strong> (Schiebinger et al., <em>Cell</em> 2019; [479] in OT4ML) analyses a reprogramming time course (fibroblasts to stem cells, sampled every half day over 18 days, OT4ML Fig. 3.7): entropic, unbalanced couplings between consecutive days in a space of gene expression, with growth rates estimated from proliferation genes, chained as in Example 3.24 to compute the ancestors and the fate probabilities of every cell. <strong>TrajectoryNet</strong> (Tong et al., ICML 2020, [525]) fits a continuous normalising flow regularised by the Benamou–Brenier kinetic energy (Lesson 6), so that the cells follow near-optimal continuous paths through all snapshots. <strong>Lavenant, Zhang, Kim and Schiebinger</strong> ([334], 2021) give a mathematical theory of trajectory inference for diffusions with gradient drift — the model of Example 15.10 — and recover the law of the trajectories by an entropy-regularised transport problem over all time points. <strong>GENOT</strong> (Klein, Uscidda, Theis, Cuturi, NeurIPS 2024, [315]) learns entropic (Gromov–)Wasserstein couplings with flow matching, so that one can sample descendants of a new cell, even between different measurement modalities. <strong>Concrete picture:</strong> the table above, with the line replaced by a 30-dimensional space of principal components and the two valleys by two cell types.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul>
+<li><strong>A coupling is not a lineage measurement.</strong> “A soft ancestor–descendant mass, not evidence that the same cell was observed twice” (Ex. 3.24). Validate on held-out days or with lineage barcodes.</li>
+<li><strong>The picture is not the geometry.</strong> Couplings are computed in expression space; the 2D drawings (force layouts, UMAP) are for display only: “this visualization need not coincide with the ground geometry used to compute $\mathbf P^{[k]}$” (p. 62).</li>
+<li><strong>Mass is not conserved</strong> (division, death, sampling): balanced plans force spurious transitions; use unbalanced transport (Ex. 11.4).</li>
+<li><strong>Snapshots cannot see density-preserving motions</strong> (rotation above): assume gradient drifts, or bring extra information.</li>
+</ul>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>Unpaired snapshots → one empirical measure per day; consecutive days → transport plans; rows normalised → Markov matrices; products → lineages and fates.</li>
+<li>Noisy dynamics → entropic couplings, $\eps\approx2\sigma^2\Delta t$; short intervals are better than long ones.</li>
+<li>Mechanistic model → gradient flow of $\int V\dd\al+\sigma^2\int\rho\log\rho$: landscape $V$, Fokker–Planck PDE, Langevin cells, Gibbs equilibrium $e^{-V/\sigma^2}$.</li>
+</ul>
+</div>
+<div class="quiz"><p>Day 0: two cells at $0$ and $1$; day 1: two cells at $0.4$ and $3$ (equal masses, cost $\abs{x-y}^2$). Give the exact OT plan $\mathbf P^{[0]}$ and $\mathbf K^{[0]}$. Then day 2: cells at $1$ and $2$; compute $\mathbf K^{[0]}\mathbf K^{[1]}$. What is wrong with a balanced model if, in truth, the cell at $3$ died?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>On the line the optimal plan is monotone: $0\to0.4$, $1\to3$, so $\mathbf P^{[0]}=\frac12\Id$ and $\mathbf K^{[0]}=\Id$. Day 1 → day 2: monotone again, $0.4\to1$, $3\to2$, $\mathbf K^{[1]}=\Id$, so $\mathbf K^{[0]}\mathbf K^{[1]}=\Id$: the cell at $1$ on day 0 is declared the ancestor of the cell at $2$ on day 2, through the cell at $3$. If the cell at $3$ died, its mass had to go somewhere: a balanced plan must send all the mass of day 1 to day 2, so it invents a transition $3\to2$ (and $1\to3$ before it). An unbalanced plan can let that mass disappear at a cost (Ex. 11.4).</p>
+</div></details></div>
