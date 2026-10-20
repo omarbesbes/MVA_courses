@@ -1,0 +1,675 @@
+<!--
+title: TD1 — Méthodes pénalisées : Ridge, Lasso et sélection de modèles
+short: TD1 · Ridge, Lasso, sélection
+description: Le TD1 corrigé pas à pas : unicité et forme contrainte du Ridge, biais et variance par les valeurs propres, équivalence du Lasso pénalisé et contraint, et une inégalité oracle pour la sélection de modèles.
+subtitle: Exercice 1 : le Ridge (unicité, forme contrainte, biais, variance) — Exercice 2 : Lasso pénalisé ⇔ Lasso contraint — Exercice 3 : sélection de modèles et inégalité oracle. Sources : TD_et_correction/TD1.pdf et Correction_TD1.pdf.
+-->
+
+<div class="box objectifs"><div class="box-h">Ce que ce TD fait travailler</div>
+<ul class="checklist">
+<li>montrer qu'un problème d'optimisation a <strong>une unique solution</strong> (forte convexité, coercivité) et la calculer en annulant le gradient ;</li>
+<li>passer d'un problème <strong>pénalisé</strong> à un problème <strong>contraint</strong> et inversement, en comparant les critères aux solutions — d'abord pour le Ridge (solution unique), puis pour le Lasso (solutions peut-être multiples) ;</li>
+<li>calculer le <strong>biais</strong> et la <strong>variance</strong> du Ridge dans la base propre de $X\T X$ ;</li>
+<li>démontrer une <strong>inégalité oracle</strong> pour la sélection de modèles : l'inégalité de base, le terme croisé, la concentration gaussienne, la borne de l'union pondérée par des poids $\Pi_m$, puis l'absorption.</li>
+</ul>
+<p>Séances concernées : <a href="01_seance1.html">Séance 1</a> (Ridge, Cp/AIC/BIC, Lasso contraint ou pénalisé), <a href="02_seance2.html">Séance 2</a> (non-unicité du Lasso), et pour le style de preuve de l'exercice 3, <a href="03_seance3.html">Séance 3</a> (inégalité de base).</p>
+</div>
+
+<h2 id="avant">Avant de commencer</h2>
+
+<h3 id="avant-prerequis">Les outils qui servent</h3>
+<p>Chaque outil est rappelé au moment où il sert ; le tableau dit où le retrouver si vous voulez le revoir avant.</p>
+<div class="table-wrap"><table>
+<tr><th>Outil</th><th>Où il sert</th><th>Rappel</th></tr>
+<tr><td>Existence et unicité d'un minimiseur (compacité, coercivité, stricte et forte convexité)</td><td>ex. 1 Q1–Q2, ex. 2</td><td><a href="00_rappels.html#existence">existence</a>, <a href="00_rappels.html#convexite">convexité</a></td></tr>
+<tr><td>Gradient d'une forme quadratique, $\nabla\norm{Y-X\beta}^2=-2X\T(Y-X\beta)$</td><td>ex. 1 Q1</td><td><a href="00_rappels.html#gradient">gradient</a></td></tr>
+<tr><td>Théorème spectral, matrices orthogonales</td><td>ex. 1 Q3–Q4</td><td><a href="00_rappels.html#spectral">spectral</a></td></tr>
+<tr><td>Espérance et covariance d'un vecteur aléatoire, $\E[\eps\T M\eps]=\sigma^2\tr M$</td><td>ex. 1 Q4, ex. 3 Q1–Q2(b)</td><td><a href="00_rappels.html#esperance">espérance</a>, <a href="00_rappels.html#forme-quadratique">forme quadratique</a></td></tr>
+<tr><td>Projection orthogonale, trace d'un projecteur = rang</td><td>ex. 3</td><td><a href="00_rappels.html#projection">projection</a>, <a href="00_rappels.html#trace">trace</a></td></tr>
+<tr><td>Lois du $\chi^2$ et exponentielle, $\E(\xi-c)_+=e^{-c}$</td><td>ex. 3 Q2(c)–(d)</td><td><a href="00_rappels.html#lois-usuelles">lois usuelles</a></td></tr>
+<tr><td>Concentration gaussienne des fonctions lipschitziennes</td><td>ex. 3 Q2(d)</td><td><a href="00_rappels.html#concentration">concentration</a></td></tr>
+<tr><td>Young $2xy\le ax^2+y^2/a$, $(x+y)^2\le(1+\alpha)x^2+(1+\alpha^{-1})y^2$, $\max\le\sum(\cdot)_+$</td><td>ex. 3 Q2(c)–(e)</td><td><a href="00_rappels.html#young">petites inégalités</a></td></tr>
+</table></div>
+
+<h3 id="avant-methode">Comment travailler ce TD</h3>
+<ol class="chain">
+<li>Lisez l'énoncé de l'exercice (encadré « Énoncé », recopié fidèlement du PDF), puis l'encadré « De quoi parle cet exercice ? ».</li>
+<li>Pour chaque question : lisez la méthode, cherchez <strong>au moins 10 minutes</strong> sur papier, puis ouvrez l'indice, cherchez encore, et seulement ensuite la solution détaillée.</li>
+<li>Comparez avec l'encadré « Le corrigé officiel » : il dit ce que fait le corrigé distribué (<code>Correction_TD1.pdf</code>), ce que la solution ci-dessus détaille en plus, et les coquilles éventuelles.</li>
+<li>L'exercice 3 est nettement plus difficile que les deux premiers : faites-le en deux fois, en commençant par la carte de la preuve.</li>
+</ol>
+
+<h3 id="avant-notations">Notations et conventions</h3>
+<ul>
+<li>$Y\in\R^n$, $X\in\R^{n\times p}$ déterministe, $Y=X\bstar+\eps$ avec $\eps\sim\N(0,\sigma^2I_n)$. L'énoncé note $X_i$ la <strong>ligne</strong> $i$ de $X$ (un vecteur ligne), de sorte que $X_i\beta$ est un nombre et
+$$\sum_{i=1}^n(Y_i-X_i\beta)^2=\norm{Y-X\beta}^2,$$
+puisque $X_i\beta$ est exactement la $i$-ième coordonnée du vecteur $X\beta$. Dans l'exercice 3, en revanche, $X_j$ désigne la <strong>colonne</strong> $j$ (c'est l'énoncé qui change de convention ; on le rappellera).</li>
+<li>Les critères du TD sont <strong>non normalisés</strong> (pas de $\frac1n$) : c'est pour cela que le Ridge vaut $(X\T X+\lambda I_p)^{-1}X\T Y$, la formule de la diapo 11, et non $(X\T X+n\lambda I_p)^{-1}X\T Y$, qu'on obtiendrait avec un $\frac1n$ devant l'ajustement (<a href="01_seance1.html#ridge-formule">Séance 1</a>).</li>
+<li>On note $f_0(\beta)=\norm{Y-X\beta}^2$ la partie « ajustement » de tous les critères.</li>
+<li>L'énoncé note $\lambda_1,\dots,\lambda_p$ les valeurs propres de $X\T X$ <em>et</em> $\lambda$ le paramètre de pénalité : la même lettre pour deux choses. Dans cette page, comme en Séance 1, les valeurs propres s'appellent $\mu_1,\dots,\mu_p$ (« notées $\lambda_j$ dans l'énoncé »).</li>
+<li>$\ps{u}{v}=u\T v$ est le produit scalaire usuel (de $\R^p$ dans l'exercice 1, de $\R^n$ dans l'exercice 3) ; $(x)_+=\max(x,0)$.</li>
+</ul>
+
+<h2 id="ex1">Exercice 1 — Propriétés de l'estimateur Ridge</h2>
+
+<div class="box enonce"><div class="box-h">Énoncé <span class="ref">TD1 · exercice 1</span></div>
+<p>Soit $Y=(Y_1,\dots,Y_n)\T$, $X=(x_{i,j})_{1\le i\le n,\,1\le j\le p}$ non aléatoire vérifiant $Y=X\bstar+\eps$, avec $\eps\sim\N(0,\sigma^2I)$ et $\bstar=(\beta_1^*,\dots,\beta_p^*)\T\in\R^p$. Nous considérons, pour $\lambda>0$, l'estimateur Ridge
+$$\hb^R(\lambda)=(X\T X+\lambda I_p)^{-1}X\T Y.$$</p>
+<ol>
+<li>Montrer que le problème de minimisation
+$$\min_{\beta\in\R^p}\Big\{\sum_{i=1}^n(Y_i-X_i\beta)^2+\lambda\norm\beta^2\Big\}\qquad(1)$$
+admet $\hb^R(\lambda)$ comme unique solution.</li>
+<li>Montrer que toute solution du problème d'optimisation sous contrainte suivant
+$$\min_{\beta\in\R^p,\ \norm\beta\le M_\lambda}\Big\{\sum_{i=1}^n(Y_i-X_i\beta)^2\Big\}\qquad(2)$$
+avec $M_\lambda=\norm{(X\T X+\lambda I_p)^{-1}X\T Y}$ est aussi solution du problème (1). En déduire que $\hb^R(\lambda)$ est aussi l'unique solution du problème (2).</li>
+<li>Exprimer la norme au carré du biais de $\hb^R(\lambda)$ en fonction des valeurs propres $\lambda_1,\dots,\lambda_p$ (comptées avec multiplicité) de $X\T X$ : $B^R(\lambda):=\norm{\E[\hb^R(\lambda)]-\bstar}^2$.</li>
+<li>Exprimer $V^R(\lambda):=\E\big[\norm{\hb^R(\lambda)-\E[\hb^R(\lambda)]}^2\big]$ de $\hb^R(\lambda)$ en fonction de la variance du bruit $\sigma^2$ et des valeurs propres $\lambda_1,\dots,\lambda_p$.</li>
+</ol></div>
+
+<div class="box idee"><div class="box-h">De quoi parle cet exercice ?</div>
+<p>C'est la version « démontrée proprement » de ce que la <a href="01_seance1.html#ridge">Séance 1 (§6)</a> a présenté sur le Ridge. Q1 : la formule $(X\T X+\lambda I_p)^{-1}X\T Y$ est bien <em>le</em> minimiseur du critère pénalisé, et il est unique — même quand $p>n$. Q2 : le même vecteur est aussi la solution d'un problème <strong>contraint</strong> (« moindres carrés dans une boule »), ce qui justifie le dessin des diapos (ellipse qui touche une boule). Q3–Q4 : on mesure le prix (le biais) et le gain (la variance) du Ridge, direction propre par direction propre — c'est le compromis biais–variance que la figure de la Séance 1 permettait de manipuler.</p></div>
+
+<h3 id="ex1-q1">Question 1 — Le Ridge est l'unique minimiseur du critère pénalisé</h3>
+<p>On note $f(\beta)=\norm{Y-X\beta}^2+\lambda\norm\beta^2=f_0(\beta)+\lambda\norm\beta^2$ (c'est le critère (1), voir les notations). Il faut montrer deux choses : (i) $f$ a un et un seul minimiseur ; (ii) ce minimiseur est $\hb^R(\lambda)$.</p>
+
+<div class="box methode"><div class="box-h">Comment l'attaquer</div>
+<ol>
+<li><strong>Unicité</strong> : une fonction strictement convexe a au plus un minimiseur.</li>
+<li><strong>Existence</strong> : une fonction continue et coercive ($f(\beta)\to+\infty$ quand $\norm\beta\to\infty$) atteint son minimum (<a href="00_rappels.html#existence">rappel</a>).</li>
+<li><strong>Calcul</strong> : pour une fonction convexe et dérivable, « minimiseur » ⇔ « gradient nul » (<a href="00_rappels.html#convexite">rappel</a>) ; on résout le système linéaire obtenu.</li>
+</ol></div>
+
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>Pour la stricte convexité, il suffit qu'<em>un</em> des deux morceaux le soit : $\beta\mapsto\lambda\norm\beta^2$ l'est (développez $\norm{t\beta_1+(1-t)\beta_2}^2$ avec $2\ps{\beta_1}{\beta_2}=\norm{\beta_1}^2+\norm{\beta_2}^2-\norm{\beta_1-\beta_2}^2$). Pour la coercivité : $f(\beta)\ge\lambda\norm\beta^2$. Pour l'inversibilité de $X\T X+\lambda I_p$ : regardez ses valeurs propres.</p></div></details>
+
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<p><strong>Étape 1 — $\beta\mapsto\lambda\norm\beta^2$ est « fortement convexe ».</strong> Soient $\beta_1,\beta_2\in\R^p$ et $t\in\,]0,1[$.</p>
+<ol class="steps">
+<li>$$\begin{aligned}&\lambda\norm{t\beta_1+(1-t)\beta_2}^2\\&=\lambda\big(t^2\norm{\beta_1}^2+2t(1-t)\ps{\beta_1}{\beta_2}\\&\qquad+(1-t)^2\norm{\beta_2}^2\big)\end{aligned}$$<span class="why">on développe le carré de la norme : $\norm{a+b}^2=\norm a^2+2\ps ab+\norm b^2$.</span></li>
+<li>$$\begin{aligned}=\lambda\Big(&t^2\norm{\beta_1}^2+(1-t)^2\norm{\beta_2}^2\\&+t(1-t)\big(\norm{\beta_1}^2+\norm{\beta_2}^2\\&\qquad\qquad-\norm{\beta_1-\beta_2}^2\big)\Big)\end{aligned}$$<span class="why">on remplace $2\ps{\beta_1}{\beta_2}$ par $\norm{\beta_1}^2+\norm{\beta_2}^2-\norm{\beta_1-\beta_2}^2$ (c'est $\norm{\beta_1-\beta_2}^2=\norm{\beta_1}^2-2\ps{\beta_1}{\beta_2}+\norm{\beta_2}^2$ lu à l'envers).</span></li>
+<li>$$\begin{aligned}=t\lambda\norm{\beta_1}^2&+(1-t)\lambda\norm{\beta_2}^2\\&-\lambda t(1-t)\norm{\beta_1-\beta_2}^2\end{aligned}$$<span class="why">on regroupe : $t^2+t(1-t)=t$ devant $\norm{\beta_1}^2$, et $(1-t)^2+t(1-t)=1-t$ devant $\norm{\beta_2}^2$.</span></li>
+</ol>
+<p>Si $\beta_1\ne\beta_2$, le dernier terme est strictement négatif : l'inégalité de convexité $\lambda\norm{t\beta_1+(1-t)\beta_2}^2\le t\lambda\norm{\beta_1}^2+(1-t)\lambda\norm{\beta_2}^2$ est <strong>stricte</strong>, et même avec une marge $\lambda t(1-t)\norm{\beta_1-\beta_2}^2$ : c'est ce qu'on appelle la <em class="new">forte convexité</em>.</p>
+
+<p><strong>Étape 2 — $f$ est strictement convexe.</strong> $f_0(\beta)=\norm{Y-X\beta}^2$ est convexe (c'est le carré d'une norme composé avec l'application affine $\beta\mapsto Y-X\beta$ ; ou : sa hessienne $2X\T X$ est semi-définie positive, <a href="00_rappels.html#convexite">rappel</a>). Une somme d'une fonction convexe et d'une fonction strictement convexe est strictement convexe (on additionne une inégalité large et une inégalité stricte). Donc $f$ a <strong>au plus un</strong> minimiseur : si $\beta_1\ne\beta_2$ réalisaient tous deux le minimum $m$, leur milieu donnerait $f<\frac12m+\frac12m=m$, absurde.</p>
+
+<p><strong>Étape 3 — $f$ a au moins un minimiseur.</strong> $f$ est continue (polynôme en les coordonnées de $\beta$) et $f(\beta)\ge\lambda\norm\beta^2\to+\infty$ quand $\norm\beta\to\infty$ : $f$ est coercive, donc elle atteint son minimum (<a href="00_rappels.html#existence">rappel : on se ramène au compact $\{f\le f(0)\}$</a>).</p>
+
+<p><strong>Étape 4 — Caractériser ce minimiseur.</strong> $f$ est convexe et dérivable, donc $\bar\beta$ la minimise si et seulement si $\nabla f(\bar\beta)=0$.</p>
+<ol class="steps">
+<li>$$\nabla f(\beta)=-2X\T(Y-X\beta)+2\lambda\beta$$<span class="why">gradient des moindres carrés (<a href="00_rappels.html#gradient">rappel</a>) plus gradient de $\lambda\norm\beta^2=\lambda\beta\T\beta$, qui vaut $2\lambda\beta$.</span></li>
+<li>$$\begin{aligned}&\nabla f(\bar\beta)=0\\&\iff X\T X\bar\beta+\lambda\bar\beta=X\T Y\\&\iff(X\T X+\lambda I_p)\,\bar\beta=X\T Y\end{aligned}$$<span class="why">on développe, on divise par 2 et on factorise $\bar\beta$ (attention : $\lambda\bar\beta=\lambda I_p\bar\beta$, pas « $X\T X+\lambda$ »).</span></li>
+<li>$$\begin{aligned}v\T(X\T X+\lambda I_p)v&=\norm{Xv}^2+\lambda\norm v^2\\&\ge\lambda\norm v^2>0\end{aligned}$$<span class="why">pour tout $v\ne0$ (la dernière inégalité est stricte car $\lambda>0$ et $v\ne0$). $X\T X+\lambda I_p$ est donc définie positive : ses valeurs propres sont $\mu_j+\lambda\ge\lambda>0$, elle est inversible — même si $X\T X$ ne l'est pas (cas $p>n$).</span></li>
+<li>$$\bar\beta=(X\T X+\lambda I_p)^{-1}X\T Y=\hb^R(\lambda)$$<span class="why">on multiplie à gauche par l'inverse.</span></li>
+</ol>
+<p><strong>Conclusion.</strong> $f$ a exactement un minimiseur, et c'est $\hb^R(\lambda)$. <span class="qed">□</span></p>
+<p class="small muted"><strong>Autre preuve, plus courte.</strong> La hessienne de $f$ est $\nabla^2f=2(X\T X+\lambda I_p)$, définie positive d'après l'étape 4.3 : $f$ est une fonction quadratique strictement convexe, son unique point critique est son unique minimiseur.</p>
+</div></details>
+
+<div class="box officiel"><div class="box-h">Le corrigé officiel <span class="ref">Correction_TD1 · p. 1–2</span></div>
+<p>Il suit exactement ce chemin : forte convexité de $\lambda\norm\beta^2$ (même calcul), donc stricte convexité de $f$, coercivité, caractère $C^1$, puis $\nabla f=0$. La solution ci-dessus détaille en plus : pourquoi l'identité $2\ps{\beta_1}{\beta_2}=\dots$ intervient, pourquoi « coercive » donne l'existence, pourquoi « gradient nul » suffit (convexité), et pourquoi $X\T X+\lambda I_p$ est inversible. Coquille sans conséquence : à la deuxième ligne du calcul, « $t^2\lambda\Vert\beta_1l^2$ » se lit $t^2\lambda\norm{\beta_1}^2$.</p></div>
+
+<h3 id="ex1-q2">Question 2 — La forme contrainte du Ridge</h3>
+<p>On pose $M_\lambda=\norm{\hb^R(\lambda)}$ et l'on considère le problème (2) : minimiser $f_0(\beta)=\norm{Y-X\beta}^2$ sur la boule fermée $B=\{\beta:\norm\beta\le M_\lambda\}$. Il faut montrer : toute solution de (2) est solution de (1), puis en déduire que $\hb^R(\lambda)$ est l'<em>unique</em> solution de (2).</p>
+
+<div class="box intu"><div class="box-h">Intuition — le dessin des diapos</div>
+<p>Les lignes de niveau de $f_0$ sont des ellipses centrées en $\hb\MC$, l'estimateur des moindres carrés ordinaires (MCO), quand $X\T X$ est inversible. Le Ridge est sur la sphère de rayon $M_\lambda$. Si un point $\tilde\beta$ de la boule faisait strictement mieux que $\hb^R$ pour l'ajustement $f_0$, alors, puisqu'il ne paie pas plus de pénalité ($\lambda\norm{\tilde\beta}^2\le\lambda M_\lambda^2$), il ferait mieux que $\hb^R$ pour le critère pénalisé — impossible. C'est l'équivalence « contrainte ⇔ pénalité » de la <a href="01_seance1.html#lasso-equivalence">Séance 1</a> et du <a href="00_rappels.html#lagrange">rappel sur Lagrange</a>, démontrée ici pour le Ridge.</p></div>
+
+<div class="box methode"><div class="box-h">Comment l'attaquer</div>
+<p>Pour montrer qu'une solution d'un problème est solution d'un autre : prendre une solution $\tilde\beta$ du premier, utiliser que la solution connue du second est <strong>admissible</strong> pour le premier, et comparer les critères. Ne pas oublier l'<strong>existence</strong> d'une solution de (2) : sans elle, « toute solution de (2) vaut $\hb^R$ » ne dirait rien.</p></div>
+
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>$\hb^R(\lambda)$ appartient à $B$ (sa norme vaut exactement $M_\lambda$), donc $f_0(\tilde\beta)\le f_0(\hb^R(\lambda))$. Ajoutez $\lambda\norm{\tilde\beta}^2\le\lambda M_\lambda^2$. Pour l'existence : $B$ est fermée et bornée.</p></div></details>
+
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<p><strong>Étape 0 — (2) a au moins une solution.</strong> $f_0$ est continue et $B$ est une boule fermée bornée de $\R^p$, donc compacte : une fonction continue sur un compact non vide atteint son minimum (théorème de Weierstrass, <a href="00_rappels.html#existence">rappel</a>).</p>
+<p><strong>Étape 1 — Toute solution de (2) minimise (1).</strong> Soit $\tilde\beta$ une solution de (2).</p>
+<ol class="steps">
+<li>$$\norm{\hb^R(\lambda)}=M_\lambda\quad\Longrightarrow\quad\hb^R(\lambda)\in B$$<span class="why">définition de $M_\lambda$ : le Ridge est admissible pour (2).</span></li>
+<li>$$f_0(\tilde\beta)\le f_0\big(\hb^R(\lambda)\big)$$<span class="why">$\tilde\beta$ minimise $f_0$ sur $B$, et $\hb^R(\lambda)$ est un point de $B$.</span></li>
+<li>$$\lambda\norm{\tilde\beta}^2\le\lambda M_\lambda^2=\lambda\norm{\hb^R(\lambda)}^2$$<span class="why">$\tilde\beta\in B$ donc $\norm{\tilde\beta}\le M_\lambda$, et $\lambda>0$.</span></li>
+<li>$$\begin{aligned}f(\tilde\beta)&=f_0(\tilde\beta)+\lambda\norm{\tilde\beta}^2\\&\le f_0\big(\hb^R(\lambda)\big)+\lambda\norm{\hb^R(\lambda)}^2\\&=f\big(\hb^R(\lambda)\big)\end{aligned}$$<span class="why">on additionne les lignes 2 et 3.</span></li>
+<li>$$f\big(\hb^R(\lambda)\big)\le f(\beta)$$<span class="why">pour tout $\beta\in\R^p$, car (Q1) $\hb^R(\lambda)$ minimise $f$ sur tout $\R^p$.</span></li>
+</ol>
+<p>Les lignes 4 et 5 donnent $f(\tilde\beta)\le f(\beta)$ pour tout $\beta$ : $\tilde\beta$ est un minimiseur de (1). Par l'unicité de Q1, $\tilde\beta=\hb^R(\lambda)$.</p>
+<p><strong>Étape 2 — Conclusion.</strong> (2) a au moins une solution (étape 0), et toute solution vaut $\hb^R(\lambda)$ (étape 1). Donc (2) a exactement une solution, $\hb^R(\lambda)$. <span class="qed">□</span></p>
+<p class="small muted"><strong>Remarque.</strong> Le rayon $M_\lambda$ qui « correspond » à $\lambda$ dépend des données $Y$ : la correspondance contrainte ↔ pénalité n'est pas une formule fixe (c'est le « $\lambda$ dépend des données » de la diapo 23). Dans la base propre ($v_1,\dots,v_p$ : vecteurs propres orthonormés de $X\T X$, associés à $\mu_1,\dots,\mu_p$), $\norm{\hb^R(\lambda)}^2=\sum_j\frac{(v_j\T X\T Y)^2}{(\mu_j+\lambda)^2}$ décroît quand $\lambda$ augmente : plus on pénalise, plus la boule équivalente est petite.</p>
+</div></details>
+
+<div class="box officiel"><div class="box-h">Le corrigé officiel <span class="ref">Correction_TD1 · p. 2</span></div>
+<p>Même raisonnement, dans le même ordre (existence par compacité, admissibilité du Ridge, comparaison des critères, unicité de Q1). La solution ci-dessus rend explicite la ligne « $\lambda\norm{\tilde\beta}^2\le\lambda M_\lambda^2$ » et le rôle de l'existence dans la conclusion « unique solution ».</p></div>
+
+<h3 id="ex1-q3">Question 3 — Le biais au carré, valeur propre par valeur propre</h3>
+<p>On veut $B^R(\lambda)=\norm{\E[\hb^R(\lambda)]-\bstar}^2$ en fonction des valeurs propres $\mu_1,\dots,\mu_p$ de $X\T X$.</p>
+
+<div class="box methode"><div class="box-h">Comment l'attaquer</div>
+<ol>
+<li>$\hb^R(\lambda)=AY$ est <strong>linéaire en $Y$</strong> avec $A=(X\T X+\lambda I_p)^{-1}X\T$ : son espérance est $A\,\E[Y]=AX\bstar$.</li>
+<li>Une matrice construite à partir de $X\T X$ (inverse, somme avec $\lambda I_p$…) se lit dans la <strong>base propre</strong> de $X\T X$ : on diagonalise.</li>
+</ol></div>
+
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>Écrivez $X\T X=(X\T X+\lambda I_p)-\lambda I_p$ pour faire apparaître $\bstar-\lambda(X\T X+\lambda I_p)^{-1}\bstar$. Puis $X\T X=PDP\T$ avec $P$ orthogonale ($PP\T=P\T P=I_p$) et $D=\diag(\mu_1,\dots,\mu_p)$, et $\lambda I_p=\lambda PP\T$.</p></div></details>
+
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\begin{aligned}\E[\hb^R(\lambda)]&=(X\T X+\lambda I_p)^{-1}X\T\,\E[Y]\\&=(X\T X+\lambda I_p)^{-1}X\T X\bstar\end{aligned}$$<span class="why">linéarité de l'espérance (la matrice est déterministe) et $\E[Y]=X\bstar+\E[\eps]=X\bstar$.</span></li>
+<li>$$\begin{aligned}&=(X\T X+\lambda I_p)^{-1}\\&\qquad\times\big((X\T X+\lambda I_p)-\lambda I_p\big)\bstar\\&=\bstar-\lambda(X\T X+\lambda I_p)^{-1}\bstar\end{aligned}$$<span class="why">on ajoute et retranche $\lambda I_p$, puis $(X\T X+\lambda I_p)^{-1}(X\T X+\lambda I_p)=I_p$.</span></li>
+<li>$$B^R(\lambda)=\norm{\lambda(X\T X+\lambda I_p)^{-1}\bstar}^2$$<span class="why">on soustrait $\bstar$ ; le signe disparaît dans la norme.</span></li>
+<li>$$\begin{aligned}X\T X+\lambda I_p&=PDP\T+\lambda PP\T\\&=P(D+\lambda I_p)P\T\end{aligned}$$<span class="why">théorème spectral pour la matrice symétrique $X\T X$ (<a href="00_rappels.html#spectral">rappel</a>), et $I_p=PP\T$.</span></li>
+<li>$$(X\T X+\lambda I_p)^{-1}=P(D+\lambda I_p)^{-1}P\T$$<span class="why">vérification : $P(D+\lambda I_p)P\T\cdot P(D+\lambda I_p)^{-1}P\T=P(D+\lambda I_p)(D+\lambda I_p)^{-1}P\T=PP\T=I_p$ ; l'inverse d'une diagonale inverse ses coefficients $\mu_j+\lambda>0$.</span></li>
+<li>$$\begin{aligned}B^R(\lambda)&=\lambda^2\norm{P(D+\lambda I_p)^{-1}P\T\bstar}^2\\&=\lambda^2\norm{(D+\lambda I_p)^{-1}P\T\bstar}^2\end{aligned}$$<span class="why">une matrice orthogonale conserve la norme : $\norm{Pu}^2=u\T P\T Pu=u\T u$.</span></li>
+<li>$$\begin{gathered}\boxed{\,B^R(\lambda)=\sum_{j=1}^p\frac{\lambda^2}{(\mu_j+\lambda)^2}\,\theta_j^2\,}\\\theta_j=[P\T\bstar]_j=v_j\T\bstar\end{gathered}$$<span class="why">$(D+\lambda I_p)^{-1}$ est diagonale de coefficients $1/(\mu_j+\lambda)$ ; $\theta_j$ est la coordonnée de $\bstar$ sur le $j$-ième vecteur propre $v_j$ (la $j$-ième colonne de $P$).</span></li>
+</ol>
+<p><strong>Lecture.</strong> Dans chaque direction propre $v_j$, le Ridge garde la fraction $\frac{\mu_j}{\mu_j+\lambda}$ de la composante (Séance 1, <a href="01_seance1.html#ridge-spectral">§6</a>) : il perd donc la fraction $\frac{\lambda}{\mu_j+\lambda}$ de $\theta_j$, d'où ce terme au carré. Ce biais est nul en $\lambda=0$ si tous les $\mu_j$ sont $>0$ (une direction du noyau de $X$, où $\mu_j=0$, garde le biais $\theta_j^2$ pour tout $\lambda>0$), croît avec $\lambda$, tend vers $\norm\bstar^2=\sum_j\theta_j^2$ quand $\lambda\to\infty$ (le Ridge tend vers 0), et il est <strong>plus fort dans les directions de petite valeur propre</strong> (petit $\mu_j$) : ce sont celles que le Ridge écrase le plus.</p>
+</div></details>
+
+<div class="box officiel"><div class="box-h">Le corrigé officiel <span class="ref">Correction_TD1 · p. 2</span></div>
+<p>Calcul identique (avec $P$, $D$ et la notation $\lambda_j$ pour les valeurs propres). Ajouts ici : la vérification de l'inverse, la conservation de la norme par $P$, et l'interprétation de $\theta_j=[P\T\bstar]_j$.</p></div>
+
+<h3 id="ex1-q4">Question 4 — La variance</h3>
+<p>On veut $V^R(\lambda)=\E\big[\norm{\hb^R(\lambda)-\E[\hb^R(\lambda)]}^2\big]$ : la dispersion totale de l'estimateur autour de sa moyenne.</p>
+
+<div class="box methode"><div class="box-h">Comment l'attaquer</div>
+<p>Écrire l'écart à la moyenne comme une matrice fois le bruit, $\hb^R-\E\hb^R=A\eps$, puis utiliser $\E\norm{A\eps}^2=\sigma^2\tr(AA\T)$ (<a href="00_rappels.html#forme-quadratique">rappel</a>) — ou, ce qui revient au même, $\E\norm{Z-\E Z}^2=\tr\Cov(Z)$. Ensuite, diagonaliser.</p></div>
+
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>$A=(X\T X+\lambda I_p)^{-1}X\T$ et $AA\T=(X\T X+\lambda I_p)^{-1}X\T X(X\T X+\lambda I_p)^{-1}$. Dans la base propre, cette matrice est $P\,\diag\big(\frac{\mu_j}{(\mu_j+\lambda)^2}\big)P\T$, et $\tr(PMP\T)=\tr M$.</p></div></details>
+
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\begin{aligned}&\hb^R(\lambda)-\E[\hb^R(\lambda)]\\&\quad=A(Y-\E Y)=A\eps,\\&A=(X\T X+\lambda I_p)^{-1}X\T\end{aligned}$$<span class="why">$\hb^R=AY$ et $\E\hb^R=A\,\E Y$ ; la différence est $A(Y-\E Y)$, et $Y-\E Y=\eps$.</span></li>
+<li>$$\begin{aligned}V^R(\lambda)&=\E\norm{A\eps}^2=\E[\eps\T A\T A\eps]\\&=\sigma^2\tr(A\T A)=\sigma^2\tr(AA\T)\end{aligned}$$<span class="why">espérance d'une forme quadratique d'un bruit de covariance $\sigma^2I_n$ (<a href="00_rappels.html#forme-quadratique">rappel</a>), puis $\tr(A\T A)=\tr(AA\T)$ (cyclicité, <a href="00_rappels.html#trace">rappel</a>).</span></li>
+<li>$$\begin{aligned}AA\T&=(X\T X+\lambda I_p)^{-1}X\T X\\&\quad\times(X\T X+\lambda I_p)^{-1}\end{aligned}$$<span class="why">$(X\T)\T=X$ et $\big((X\T X+\lambda I_p)^{-1}\big)\T=(X\T X+\lambda I_p)^{-1}$ (matrice symétrique). C'est aussi $\Cov(\hb^R)/\sigma^2$.</span></li>
+<li>$$\begin{aligned}AA\T&=P(D+\lambda I_p)^{-1}D(D+\lambda I_p)^{-1}P\T\\&=P\,\diag\Big(\frac{\mu_j}{(\mu_j+\lambda)^2}\Big)P\T\end{aligned}$$<span class="why">on remplace chaque facteur par sa forme diagonalisée (Q3, lignes 4–5) ; les $P\T P=I_p$ du milieu disparaissent ; un produit de matrices diagonales se calcule coefficient par coefficient.</span></li>
+<li>$$\boxed{\,V^R(\lambda)=\sigma^2\sum_{j=1}^p\frac{\mu_j}{(\mu_j+\lambda)^2}\,}$$<span class="why">$\tr(PMP\T)=\tr(MP\T P)=\tr M$ : la trace est la somme des coefficients diagonaux de $M$.</span></li>
+</ol>
+<p><strong>Lecture.</strong> La variance ne dépend pas de $\bstar$, et chaque terme $\frac{\mu_j}{(\mu_j+\lambda)^2}$ décroît quand $\lambda$ augmente. En $\lambda\to0$ (si tous les $\mu_j>0$) on retrouve la variance des moindres carrés $\sigma^2\sum_j1/\mu_j$ (Séance 1, <a href="01_seance1.html#conditionnement">§4</a>), qui explose si une valeur propre est petite ; les directions de valeur propre nulle (le noyau de $X$) contribuent 0 : le Ridge n'y met rien.</p>
+</div></details>
+
+<div class="box officiel"><div class="box-h">Le corrigé officiel <span class="ref">Correction_TD1 · p. 3</span></div>
+<p>Il calcule la matrice de covariance $\Sigma^R_\lambda=\sigma^2(X\T X+\lambda I_p)^{-1}X\T X(X\T X+\lambda I_p)^{-1}$ (via « $\hb^R$ est un vecteur gaussien »), puis $V^R=\tr\Sigma^R_\lambda$, avec le rappel $\E\norm Z^2=\tr\Var(Z)$ pour $Z$ centré (le corrigé ajoute « le résultat est vrai dans le cas non centré » : c'est faux tel quel, car $\E\norm Z^2=\tr\Var(Z)+\norm{\E Z}^2$ ; ce qui est toujours vrai, et ce qui sert ici, c'est $\E\norm{Z-\E Z}^2=\tr\Var(Z)$). C'est la même chose que les lignes 1–3 ci-dessus ; la diagonalisation finale (ligne 4) y est seulement affirmée. Remarque : la gaussianité n'est pas nécessaire, seule la covariance $\sigma^2I_n$ du bruit sert.</p></div>
+
+<div class="box exemple"><div class="box-h">Exemple chiffré — le compromis</div>
+<p>Deux directions propres, $\mu=(4;\,1)$, $\theta=(1;\,1)$, $\sigma^2=1$. Le risque total $\E\norm{\hb^R-\bstar}^2=B^R+V^R$ (décomposition biais–variance, <a href="00_rappels.html#estimateur">rappel</a>) vaut :</p>
+<div class="table-wrap"><table>
+<tr><th>$\lambda$</th><th>$B^R(\lambda)=\frac{\lambda^2}{(4+\lambda)^2}+\frac{\lambda^2}{(1+\lambda)^2}$</th><th>$V^R(\lambda)=\frac{4}{(4+\lambda)^2}+\frac{1}{(1+\lambda)^2}$</th><th>risque</th></tr>
+<tr><td>0 (MCO)</td><td>0</td><td>1,25</td><td>1,25</td></tr>
+<tr><td>0,5</td><td>0,1235</td><td>0,6420</td><td>0,7654</td></tr>
+<tr><td>1</td><td>0,29</td><td>0,41</td><td><strong>0,70</strong></td></tr>
+<tr><td>2</td><td>0,5556</td><td>0,2222</td><td>0,7778</td></tr>
+</table></div>
+<p>Le meilleur $\lambda$ est ici exactement $\lambda^*=1=\sigma^2/\theta_j^2$ : le terme $j$ du risque est minimal en $\lambda=\sigma^2/\theta_j^2$ (Séance 1, exercice 10), et ici tous les $\theta_j$ sont égaux. Le Ridge divise le risque des MCO par près de 1,8 (de 1,25 à 0,70).</p>
+<div class="widget" data-widget="biaisvariance" data-mu="[4,1]" data-theta="[1,1]" data-sigma2="1"></div>
+<p class="small muted">La figure reprend cet exemple : biais² (bleu) croissant, variance (orange) décroissante, risque (noir) minimal autour de $\lambda=1$.</p></div>
+
+<details class="fold more"><summary>Pour aller plus loin — un peu de Ridge bat toujours les moindres carrés</summary><div class="fold-body">
+<p>Si $X\T X$ est inversible (tous les $\mu_j>0$), la dérivée du risque $R(\lambda)=\sum_j\frac{\lambda^2\theta_j^2+\sigma^2\mu_j}{(\mu_j+\lambda)^2}$ vaut $\sum_j\frac{2\mu_j(\lambda\theta_j^2-\sigma^2)}{(\mu_j+\lambda)^3}$, donc $R'(0)=-2\sigma^2\sum_j\mu_j^{-2}<0$ : le risque commence par décroître, et un petit $\lambda>0$ fait strictement mieux que les MCO (résultat de Hoerl et Kennard, hors TD ; démontré à l'exercice 10 de la <a href="01_seance1.html#exercices">Séance 1</a>). Dans l'exemple, $R'(0)=-2(1/16+1)=-2{,}125$.</p></div></details>
+
+<div class="box reflexe"><div class="box-h">Ce qu'il faut retenir de l'exercice 1</div>
+<ul>
+<li><strong>Unique minimiseur</strong> : stricte (ou forte) convexité pour l'unicité + coercivité pour l'existence + gradient nul pour le calcul.</li>
+<li><strong>Pénalisé → contraint</strong> : la solution pénalisée est admissible pour le problème contraint de rayon « sa propre norme » ; comparer les critères.</li>
+<li><strong>Estimateur linéaire $AY$</strong> : espérance $AX\bstar$, écart $A\eps$, variance totale $\sigma^2\tr(AA\T)$.</li>
+<li><strong>Matrice fabriquée à partir de $X\T X$</strong> → base propre : chaque direction $v_j$ se traite séparément, avec ses facteurs $\frac{\lambda}{\mu_j+\lambda}$ (biais) et $\frac{\mu_j}{(\mu_j+\lambda)^2}$ (variance).</li>
+</ul></div>
+
+<h2 id="ex2">Exercice 2 — Lasso : forme pénalisée et forme contrainte</h2>
+
+<div class="box enonce"><div class="box-h">Énoncé <span class="ref">TD1 · exercice 2</span></div>
+<p>Soit $Y=(Y_1,\dots,Y_n)\T$, $X=(x_{i,j})_{1\le i\le n,\,1\le j\le p}$ non aléatoire vérifiant $Y=X\bstar+\eps$, avec $\eps\sim\N(0,\sigma^2I)$ et $\bstar=(\beta_1^*,\dots,\beta_p^*)\T\in\R^p$. L'objectif est de montrer que les problèmes d'optimisation
+$$\min_{\beta\in\R^p}\Big\{\sum_{i=1}^n(Y_i-X_i\beta)^2+\lambda\norm\beta_1\Big\}\qquad(3)$$
+et
+$$\min_{\beta\in\R^p,\ \norm\beta_1\le M_\lambda}\Big\{\sum_{i=1}^n(Y_i-X_i\beta)^2\Big\}\qquad(4)$$
+sont équivalents lorsque $M_\lambda$ est bien choisi, dans le sens où l'ensemble des solutions des deux problèmes est identique (on rappelle que pour le Lasso on n'a pas unicité de la solution).</p>
+<ol>
+<li>Montrer que, pour toutes solutions $\hb_\lambda^{(L,1)}$ et $\hb_\lambda^{(L,2)}$ du problème pénalisé (3), $\norm{\hb_\lambda^{(L,1)}}_1=\norm{\hb_\lambda^{(L,2)}}_1$. Nous noterons par la suite cette valeur commune $N_\lambda$.</li>
+<li>Montrer que toute solution de (3) est aussi solution de (4) lorsque $M_\lambda=N_\lambda$.</li>
+<li>Montrer que toute solution de (4) est aussi solution de (3) lorsque $M_\lambda=N_\lambda$.</li>
+</ol></div>
+
+<div class="box idee"><div class="box-h">De quoi parle cet exercice ?</div>
+<p>La diapo 23 (<a href="01_seance1.html#lasso-equivalence">Séance 1, §10</a>) affirme que le Lasso pénalisé et le Lasso contraint sont « équivalents point par point ». Pour le Ridge (exercice 1), c'était simple car la solution est unique. Pour le Lasso, il peut y avoir <strong>plusieurs solutions</strong> (par exemple quand deux colonnes de $X$ sont identiques, <a href="06_seance6.html#enet-duplique">Séance 6</a>). Il faut donc d'abord trouver une quantité commune à toutes les solutions — leur norme $\ell_1$, c'est Q1 — pour savoir quel rayon $M_\lambda$ choisir ; puis montrer que les deux <strong>ensembles</strong> de solutions coïncident (Q2 et Q3 : une inclusion chacune).</p></div>
+
+<p>Notations : $f(\beta)=f_0(\beta)+\lambda\norm\beta_1$ (critère (3)), avec $f_0(\beta)=\norm{Y-X\beta}^2$ et $\lambda>0$. Ici $X_i$ est la <em>ligne</em> $i$ de $X$. Le problème (3) a au moins une solution : $f$ est continue et coercive, car $f(\beta)\ge\lambda\norm\beta_1\ge\lambda\norm\beta_2\to\infty$ (<a href="00_rappels.html#existence">rappel</a>) — mais elle n'est pas forcément unique, car $\norm\cdot_1$ n'est pas strictement convexe et $f_0$ non plus quand $\Ker X\ne\{0\}$.</p>
+
+<h3 id="ex2-q1">Question 1 — Toutes les solutions du Lasso ont la même norme $\ell_1$</h3>
+
+<div class="box methode"><div class="box-h">Comment l'attaquer</div>
+<p>Pour montrer que deux minimiseurs d'une fonction convexe partagent une quantité : regarder leur <strong>milieu</strong>. Il est aussi un minimiseur (convexité), et toute inégalité <em>stricte</em> qui apparaîtrait en passant au milieu donnerait une contradiction.</p></div>
+
+<div class="box rappel"><div class="box-h">Rappel — la stricte convexité de $x\mapsto x^2$</div>
+<p>Pour des réels $a\ne b$ : $\big(\frac{a+b}2\big)^2<\frac{a^2+b^2}2$, car la différence vaut $\frac{a^2+b^2}{2}-\frac{(a+b)^2}{4}=\frac{(a-b)^2}{4}>0$. Pour $a=b$, c'est une égalité.</p></div>
+
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>Montrez d'abord que deux solutions ont les <strong>mêmes valeurs ajustées</strong> : $X\hb^{(1)}=X\hb^{(2)}$. Sinon une ligne $i$ diffère, et le milieu $\tilde\beta$ fait strictement mieux sur le terme $i$ de $f_0$, et pas plus mal ailleurs ni sur la pénalité. Ensuite : même valeur de $f$, même valeur de $f_0$, donc même pénalité.</p></div></details>
+
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<p>Soient $\hb^{(1)}$ et $\hb^{(2)}$ deux solutions de (3) et $m=\min f$, de sorte que $f(\hb^{(1)})=f(\hb^{(2)})=m$. On pose $\tilde\beta=\frac12\hb^{(1)}+\frac12\hb^{(2)}$.</p>
+<p><strong>Étape 1 — Mêmes valeurs ajustées, par l'absurde.</strong> Supposons qu'il existe une ligne $i_0$ telle que $X_{i_0}\hb^{(1)}\ne X_{i_0}\hb^{(2)}$. Notons $a_i=Y_i-X_i\hb^{(1)}$ et $b_i=Y_i-X_i\hb^{(2)}$ ; alors $Y_i-X_i\tilde\beta=\frac{a_i+b_i}2$.</p>
+<ol class="steps">
+<li>$$\begin{aligned}(Y_{i_0}-X_{i_0}\tilde\beta)^2&=\Big(\frac{a_{i_0}+b_{i_0}}2\Big)^2\\&<\frac{a_{i_0}^2+b_{i_0}^2}{2}\end{aligned}$$<span class="why">stricte convexité de $x\mapsto x^2$, avec $a_{i_0}\ne b_{i_0}$ (rappel ci-dessus).</span></li>
+<li>$$(Y_i-X_i\tilde\beta)^2\le\frac{a_i^2+b_i^2}{2}\quad\text{pour }i\ne i_0$$<span class="why">même inégalité, large cette fois (égalité possible si $a_i=b_i$).</span></li>
+<li>$$f_0(\tilde\beta)<\tfrac12f_0(\hb^{(1)})+\tfrac12f_0(\hb^{(2)})$$<span class="why">on somme sur $i$ : une inégalité stricte plus des inégalités larges donnent une inégalité stricte ; $\sum_ia_i^2=f_0(\hb^{(1)})$ et $\sum_ib_i^2=f_0(\hb^{(2)})$.</span></li>
+<li>$$\lambda\norm{\tilde\beta}_1\le\tfrac12\lambda\norm{\hb^{(1)}}_1+\tfrac12\lambda\norm{\hb^{(2)}}_1$$<span class="why">inégalité triangulaire pour $\norm\cdot_1$ (et homogénéité : $\norm{\frac12u}_1=\frac12\norm u_1$), multipliée par $\lambda\ge0$.</span></li>
+<li>$$\begin{aligned}f(\tilde\beta)&<\tfrac12f(\hb^{(1)})+\tfrac12f(\hb^{(2)})\\&=\tfrac12m+\tfrac12m=m\end{aligned}$$<span class="why">somme des lignes 3 et 4.</span></li>
+</ol>
+<p>C'est impossible : $m$ est le minimum de $f$, donc $f(\tilde\beta)\ge m$. L'hypothèse est fausse : $X_i\hb^{(1)}=X_i\hb^{(2)}$ pour toute ligne $i$, c'est-à-dire $X\hb^{(1)}=X\hb^{(2)}$.</p>
+<p><strong>Étape 2 — Même norme $\ell_1$.</strong></p>
+<ol class="steps">
+<li>$$\begin{aligned}f_0(\hb^{(1)})&=\norm{Y-X\hb^{(1)}}^2\\&=\norm{Y-X\hb^{(2)}}^2=f_0(\hb^{(2)})\end{aligned}$$<span class="why">$f_0$ ne dépend de $\beta$ qu'à travers $X\beta$ (étape 1).</span></li>
+<li>$$\begin{aligned}\lambda\norm{\hb^{(1)}}_1&=f(\hb^{(1)})-f_0(\hb^{(1)})\\&=m-f_0(\hb^{(1)})\\&=m-f_0(\hb^{(2)})\\&=\lambda\norm{\hb^{(2)}}_1\end{aligned}$$<span class="why">définition de $f$, puis $f(\hb^{(1)})=f(\hb^{(2)})=m$ et la ligne précédente.</span></li>
+<li>$$\norm{\hb^{(1)}}_1=\norm{\hb^{(2)}}_1=:N_\lambda$$<span class="why">on divise par $\lambda>0$.</span></li>
+</ol>
+<p><span class="qed">□</span></p>
+<p><strong>Ce que montre aussi la preuve.</strong> Les <strong>valeurs ajustées</strong> $X\hb^L$ sont les mêmes pour toutes les solutions du Lasso : c'est la remarque « qu'est-ce qui est unique ? » de la <a href="02_seance2.html#chemin-general">Séance 2</a> (fin du §3), et l'<a href="02_seance2.html#exercices">exercice 7</a> de cette séance est exactement notre Q1. Exemple : avec une colonne dupliquée, les solutions $(\dots,\alpha c,(1-\alpha)c)$, $\alpha\in[0,1]$, de la <a href="06_seance6.html#enet-duplique">Séance 6</a> ont toutes la même norme $\ell_1$, $\abs{\alpha c}+\abs{(1-\alpha)c}=\abs c$, et le même ajustement.</p>
+</div></details>
+
+<div class="box piege"><div class="box-h">Piège — le cas $\lambda=0$</div>
+<p>La conclusion est fausse pour $\lambda=0$ : les moindres carrés avec $p>n$ ont pour solutions $\hb\MC+v$, $v\in\Ker X$, de normes $\ell_1$ différentes. La division par $\lambda$ à la dernière ligne est donc essentielle — la pénalité est ce qui force la norme à être la même.</p></div>
+
+<div class="box officiel"><div class="box-h">Le corrigé officiel <span class="ref">Correction_TD1 · p. 3–4</span></div>
+<p>Même preuve (milieu, stricte convexité de $x\mapsto x^2$, inégalité triangulaire, contradiction), puis la même déduction. Attention à la notation : dans l'hypothèse du corrigé « il existe $j$ tel que $X_j\hb^{(L,1)}\ne X_j\hb^{(L,2)}$ », $j$ est un indice de <em>ligne</em> ($X_j$ est la ligne $j$ de $X$, comme dans $Y_j$), pas un indice de variable. L'énoncé écrit d'ailleurs $\beta_\lambda^{(L,1)}$ (sans chapeau) puis $\hb_\lambda^{(L,1)}$ : c'est le même objet.</p></div>
+
+<h3 id="ex2-q2">Question 2 — Une solution pénalisée est solution contrainte</h3>
+<p>On prend $M_\lambda=N_\lambda$ et une solution $\hb$ de (3). Il faut montrer : $\hb$ est admissible pour (4) et $f_0(\hb)\le f_0(\beta)$ pour tout $\beta$ admissible.</p>
+
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>Écrivez $f(\hb)\le f(\beta)$ et isolez $f_0(\hb)$ : il reste $\lambda(\norm\beta_1-N_\lambda)$, qui est $\le0$ pour les $\beta$ admissibles.</p></div></details>
+
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\norm{\hb}_1=N_\lambda=M_\lambda$$<span class="why">Q1 : toute solution de (3) a pour norme $N_\lambda$. Donc $\hb$ vérifie la contrainte $\norm\cdot_1\le M_\lambda$ de (4).</span></li>
+<li>$$f_0(\hb)+\lambda\norm{\hb}_1\le f_0(\beta)+\lambda\norm\beta_1$$<span class="why">pour tout $\beta\in\R^p$, car $\hb$ minimise $f$ sur $\R^p$.</span></li>
+<li>$$f_0(\hb)\le f_0(\beta)+\lambda\big(\norm\beta_1-N_\lambda\big)$$<span class="why">on fait passer $\lambda\norm{\hb}_1=\lambda N_\lambda$ à droite.</span></li>
+<li>$$f_0(\hb)\le f_0(\beta)\quad\text{si }\norm\beta_1\le M_\lambda=N_\lambda$$<span class="why">dans ce cas $\lambda(\norm\beta_1-N_\lambda)\le0$, puisque $\lambda>0$.</span></li>
+</ol>
+<p>$\hb$ est admissible et fait au moins aussi bien que tout point admissible : c'est une solution de (4). <span class="qed">□</span></p>
+</div></details>
+
+<h3 id="ex2-q3">Question 3 — Une solution contrainte est solution pénalisée</h3>
+<p>Toujours avec $M_\lambda=N_\lambda$ : soit $\tilde\beta$ une solution de (4). Il faut montrer que $f(\tilde\beta)=\min f$.</p>
+
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>Prenez une solution $\hb$ de (3) (il en existe). Elle est admissible pour (4), donc $f_0(\tilde\beta)\le f_0(\hb)$. Et $\lambda\norm{\tilde\beta}_1\le\lambda M_\lambda=\lambda\norm{\hb}_1$.</p></div></details>
+
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<p>Soit $\hb$ une solution de (3) (elle existe, voir plus haut).</p>
+<ol class="steps">
+<li>$$\begin{aligned}&\norm{\hb}_1=N_\lambda=M_\lambda\\&\Longrightarrow\ f_0(\tilde\beta)\le f_0(\hb)\end{aligned}$$<span class="why">$\hb$ est admissible pour (4) et $\tilde\beta$ minimise $f_0$ parmi les points admissibles.</span></li>
+<li>$$\lambda\norm{\tilde\beta}_1\le\lambda M_\lambda=\lambda\norm{\hb}_1$$<span class="why">$\tilde\beta$ est admissible pour (4), et $\lambda>0$.</span></li>
+<li>$$\begin{aligned}f(\tilde\beta)&=f_0(\tilde\beta)+\lambda\norm{\tilde\beta}_1\\&\le f_0(\hb)+\lambda\norm{\hb}_1=f(\hb)=\min f\end{aligned}$$<span class="why">somme des deux lignes.</span></li>
+</ol>
+<p>Comme $f(\tilde\beta)\ge\min f$ par définition du minimum, on a égalité : $\tilde\beta$ est une solution de (3). <span class="qed">□</span></p>
+<p><strong>Bilan de l'exercice.</strong> Avec $M_\lambda=N_\lambda$, Q2 donne « solutions de (3) ⊂ solutions de (4) » et Q3 donne l'inclusion inverse : <strong>les deux ensembles de solutions sont égaux</strong>. Le rayon qui convient est la norme $\ell_1$ commune des solutions pénalisées — il dépend des données $Y$ par l'intermédiaire de $\hb$.</p>
+</div></details>
+
+<div class="box officiel"><div class="box-h">Le corrigé officiel <span class="ref">Correction_TD1 · p. 4</span></div>
+<p>Q2 et Q3 suivent exactement ces étapes. Coquille dans Q3 : le corrigé écrit $f^L_\lambda(\tilde\beta_{M_\lambda})=f_0(\tilde\beta_{M_\lambda})+\norm{\tilde\beta_{M_\lambda}}_1\le f_0(\hb^L_\lambda)+M_\lambda$ ; il manque le facteur $\lambda$ deux fois : lire $f_0(\tilde\beta_{M_\lambda})+\lambda\norm{\tilde\beta_{M_\lambda}}_1\le f_0(\hb^L_\lambda)+\lambda M_\lambda$. La conclusion est inchangée.</p></div>
+
+<div class="box reflexe"><div class="box-h">Ce qu'il faut retenir de l'exercice 2</div>
+<ul>
+<li><strong>Plusieurs minimiseurs d'une fonction convexe</strong> → regarder leur milieu : toute stricte convexité « cachée » (ici celle de $x\mapsto x^2$ sur les valeurs ajustées) dit ce qu'ils ont en commun.</li>
+<li><strong>Pénalisé ⇔ contraint</strong> : le bon rayon est la norme (pénalité) d'une solution pénalisée ; chaque inclusion se montre en comparant les critères en une solution de l'autre problème.</li>
+<li>Pour le Lasso, ce qui est <strong>unique</strong> : $X\hb$, $\norm{\hb}_1$, la valeur du critère — pas forcément $\hb$.</li>
+</ul></div>
+
+<h2 id="ex3">Exercice 3 — Un problème de sélection de modèle : une inégalité oracle</h2>
+
+<div class="box enonce"><div class="box-h">Énoncé <span class="ref">TD1 · exercice 3</span></div>
+<p>Soit $Y=(Y_1,\dots,Y_n)\T$ et $X=[X_1,\dots,X_p]\in\R^{n\times p}$. Considérons le modèle de régression linéaire suivant :
+$$Y=f^*+\eps,$$
+avec $f^*=X\bstar\in\R^n$ et $\eps\sim\N(0,\sigma^2I_n)$. Soit $m^*=\{j\in\{1,\dots,p\}:\beta^*_j\ne0\}$ l'ensemble des coordonnées non nulles du vecteur $\bstar$. Cet ensemble appelé <em>modèle</em> est inconnu. On définit $\hat f_m=X\hb=P_{S_m}Y$ où $P_{S_m}:\R^n\to\R^n$ est la matrice de projection orthogonale sur $S_m=\mathrm{Vect}\{X_j,\ j\in m\}$ et $m\subset\{1,\dots,p\}$.</p>
+<p>Soit $\mathcal M$ une collection de modèles, on veut sélectionner $\hat m\in\mathcal M$ tel que le risque de $\hat f_{\hat m}$ soit le plus petit possible. On note $m_0$ l'oracle, $m_0=\argmin_{m\in\mathcal M}\E\big[\norm{\hat f_m-f^*}^2\big]$ et $\hat f_{m_0}$ l'estimateur oracle. On cherche $\hat m\in\mathcal M$ tel que $\E\big[\norm{\hat f_{\hat m}-f^*}^2\big]\le C\,\E\big[\norm{\hat f_{m_0}-f^*}^2\big]$, avec $C>0$.</p>
+<p><strong>Remarques :</strong> 1. $m^*$ n'appartient pas forcément à $\mathcal M$. 2. Même si $m^*\in\mathcal M$, $m^*$ peut être différent de $m_0$. 3. L'oracle n'est pas aléatoire mais dépend de $\bstar$ donc $\hat f_{m_0}$ n'est pas utilisable en pratique.</p>
+<p>On définit le risque de $\hat f_m$ par $R(\hat f_m):=\E\big[\norm{\hat f_m-f^*}^2\big]$ et $d_m=\dim(S_m)$.</p>
+<p><strong>Questions :</strong></p>
+<ol>
+<li>Montrer que $R(\hat f_m)=\norm{(I_n-P_{S_m})f^*}^2+\sigma^2d_m$ et interpréter ce résultat.</li>
+<li>On considère le critère de sélection de modèle suivant :
+$$C(m)=\norm{Y-\hat f_m}^2+\sigma^2\,\mathrm{pen}(m)$$
+où $\mathrm{pen}(m):=K\big(\sqrt{d_m}+\sqrt{2\log(1/\Pi_m)}\big)^2$ pour $K>1$ et $\Pi_m\in\,]0,1]$ tel que $\sum_{m\in\mathcal M}\Pi_m=1$, et $\hat m:=\argmin_{m\in\mathcal M}C(m)$.
+<ol type="a">
+<li>Soit $m\in\mathcal M$ fixé. Montrer que
+$$\begin{aligned}R(\hat f_{\hat m})\le{}&R(\hat f_m)+2\E\big[\ps{\eps}{f^*-\hat f_m}\big]\\&+\sigma^2\mathrm{pen}(m)\\&+\E\big[2\ps{\eps}{\hat f_{\hat m}-f^*}\\&\qquad-\sigma^2\mathrm{pen}(\hat m)\big].\quad(5)\end{aligned}$$</li>
+<li>Montrer que $\E\big[\ps{\eps}{f^*-\hat f_m}\big]=-\sigma^2d_m$.</li>
+<li>Soit $a>1$, on introduit $\bar S_{\hat m}=\mathrm{Vect}(S_{\hat m},f^*)$. Montrer que
+$$\begin{aligned}2\ps{\eps}{\hat f_{\hat m}-f^*}\le{}&a\sigma^2(N^2+U_{\hat m})\\&+a^{-1}\norm{\hat f_{\hat m}-f^*}^2,\end{aligned}$$
+avec $N^2=\dfrac{\norm{P_{\mathrm{Vect}(f^*)}\eps}^2}{\sigma^2}\sim\chi^2(1)$ et $U_m=\dfrac{\norm{P_{\tilde S_m}\eps}^2}{\sigma^2}$, où $\tilde S_m\oplus\mathrm{Vect}(f^*)=\bar S_m$.</li>
+<li>On pose $a=\frac{K+1}{2}>1$. En déduire qu'il existe une variable aléatoire $Z$ telle que
+$$\begin{aligned}&2\ps{\eps}{\hat f_{\hat m}-f^*}-\sigma^2\mathrm{pen}(\hat m)\\&\quad\le a^{-1}\norm{\hat f_{\hat m}-f^*}^2+Z\end{aligned}$$
+avec $\E(Z)\le C_K\sigma^2$ et $C_K\ge0$ une constante qui dépend de $K$. On pourra utiliser le lemme suivant. <em><strong>Lemme :</strong> On suppose que $F:\R^d\to\R$ est 1-lipschitzienne et $Z\sim\N(0,\sigma^2I_d)$. Alors il existe $\xi\sim\mathcal E(1)$ tel que $F(Z)\le\E[F(Z)]+\sigma\sqrt{2\xi}$.</em></li>
+<li>Montrer que $\sigma^2\mathrm{pen}(m)\le2KR(\hat f_m)+4K\sigma^2\log(\Pi^{-1})$.</li>
+<li>En déduire qu'il existe $C_K>0$ qui ne dépend que de $K$ tel que
+$$\begin{aligned}&\E\big[\norm{\hat f_{\hat m}-f^*}^2\big]\\&\quad\le C_K\min_{m\in\mathcal M}\Big\{\E\big[\norm{\hat f_m-f^*}\big]\\&\qquad\qquad+\sigma^2\log(\Pi_m^{-1})+\sigma^2\Big\}.\end{aligned}$$</li>
+<li>Que peut-on dire lorsque $\log(\Pi_m^{-1})\le Cd_m$, où $C>0$ est une constante ?</li>
+</ol></li>
+</ol>
+<p class="small muted">Recopié tel quel, y compris deux petites coquilles de l'énoncé signalées plus bas : en (e) lire $\log(\Pi_m^{-1})$, en (f) lire $\E\big[\norm{\hat f_m-f^*}^2\big]$ (avec le carré).</p>
+</div>
+
+<div class="box idee"><div class="box-h">De quoi parle cet exercice ?</div>
+<p><strong>Le problème.</strong> On dispose d'une collection $\mathcal M$ de modèles (des ensembles de variables). Pour chacun, on sait calculer l'estimateur des moindres carrés $\hat f_m$. Lequel garder ? Le meilleur, l'<em>oracle</em> $m_0$, dépend de $\bstar$ inconnu. On le remplace par $\hat m$, qui minimise un critère « ajustement + pénalité », et on veut <strong>garantir</strong> que $\hat f_{\hat m}$ fait presque aussi bien que l'oracle : c'est une <em class="new">inégalité oracle</em>.</p>
+<p><strong>Le lien avec le cours.</strong> C'est exactement la question des critères $\ell_0$ de la <a href="01_seance1.html#l0">Séance 1 (§8)</a> : Cp/AIC utilise $\mathrm{pen}(m)=2d_m$, BIC $\mathrm{pen}(m)=d_m\log n$. La Séance 1 a justifié Cp par une identité <em>pour un modèle fixé</em> ; elle prévenait que, si l'on choisit le modèle avec les données, cette identité ne suffit plus. Ce TD fait la vraie preuve, <strong>non asymptotique</strong>, pour <strong>n'importe quelle collection</strong> (même les $2^p$ sous-ensembles de variables). Le prix : une pénalité plus forte, avec une constante $K>1$ et un terme $\sqrt{2\log(1/\Pi_m)}$ qui « paie » la taille de la collection.</p>
+<p><strong>Le style de preuve</strong> est celui de toute la grande dimension (Séance 3, théorème de Bickel–Ritov–Tsybakov) : inégalité de base, contrôle du terme croisé « bruit × erreur », borne de l'union, absorption.</p></div>
+
+<div class="box idee"><div class="box-h">La carte de la preuve</div>
+<ol class="chain">
+<li><strong>(1) Biais–variance</strong> d'un modèle fixé : $R(\hat f_m)=\text{biais}^2+\sigma^2d_m$. C'est ce que l'oracle équilibre.</li>
+<li><strong>(a) Inégalité de base</strong> : $C(\hat m)\le C(m)$, on remplace $Y$ par $f^*+\eps$ et on développe. Il reste deux termes croisés « bruit × erreur ».</li>
+<li><strong>(b) Le terme croisé du modèle fixé $m$</strong> se calcule exactement : $-\sigma^2d_m$ en espérance (trace d'un projecteur).</li>
+<li><strong>(c) Le terme croisé du modèle choisi $\hat m$</strong> ne se calcule pas ($\hat m$ dépend du bruit !). On le majore par Young : un morceau $a^{-1}\norm{\hat f_{\hat m}-f^*}^2$ (qu'on absorbera) et des projections du bruit $N^2+U_{\hat m}$.</li>
+<li><strong>(d) Le cœur</strong> : contrôler $U_{\hat m}$ <em>sans savoir quel modèle est choisi</em> — on majore par le pire cas, $\max_m$, puis par une somme sur $m$ ; chaque modèle est contrôlé par la concentration gaussienne, et les poids $\Pi_m$ (de somme 1) bornent la somme par une constante, quelle que soit la taille de $\mathcal M$. La pénalité est taillée exactement pour ça.</li>
+<li><strong>(e)</strong> La pénalité d'un modèle fixé est au plus de l'ordre de son risque, plus $\log(1/\Pi_m)$.</li>
+<li><strong>(f) Assembler</strong> et faire passer $a^{-1}R(\hat f_{\hat m})$ à gauche (possible car $a>1$) : inégalité oracle. <strong>(g)</strong> Si $\log(1/\Pi_m)\lesssim d_m$, on fait aussi bien que l'oracle à une constante près.</li>
+</ol></div>
+
+<p>Notations pour toute la suite : $P_m=P_{S_m}$ (projection orthogonale sur $S_m$, symétrique et idempotente : $P_m\T=P_m$, $P_m^2=P_m$, <a href="00_rappels.html#projection">rappel</a>), $d_m=\dim S_m=\tr P_m$ (<a href="00_rappels.html#trace">trace d'un projecteur = rang</a>), $L_m=\log(1/\Pi_m)\ge0$ (car $\Pi_m\le1$). Ici $X_j$ est la <em>colonne</em> $j$ de $X$.</p>
+
+<h3 id="ex3-q1">Question 1 — Le risque d'un modèle : biais² + variance</h3>
+
+<div class="box methode"><div class="box-h">Comment l'attaquer</div>
+<p>Écrire $\hat f_m-f^*$ comme « partie déterministe + partie aléatoire centrée », développer le carré : le terme croisé est d'espérance nulle (bruit centré), et la partie aléatoire est un projeté du bruit, dont l'espérance du carré est $\sigma^2\tr P_m$.</p></div>
+
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>$\hat f_m=P_m(f^*+\eps)$, donc $\hat f_m-f^*=-(I_n-P_m)f^*+P_m\eps$.</p></div></details>
+
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\begin{aligned}\hat f_m-f^*&=P_mf^*+P_m\eps-f^*\\&=-(I_n-P_m)f^*+P_m\eps\end{aligned}$$<span class="why">$\hat f_m=P_mY$ et $Y=f^*+\eps$.</span></li>
+<li>$$\begin{aligned}\norm{\hat f_m-f^*}^2={}&\norm{(I_n-P_m)f^*}^2\\&-2\ps{(I_n-P_m)f^*}{P_m\eps}\\&+\norm{P_m\eps}^2\end{aligned}$$<span class="why">$\norm{a+b}^2=\norm a^2+2\ps ab+\norm b^2$ avec $a=-(I_n-P_m)f^*$, $b=P_m\eps$. (En fait le terme croisé est même nul : $(I_n-P_m)f^*$ est orthogonal à $S_m$, qui contient $P_m\eps$.)</span></li>
+<li>$$\begin{aligned}&\E\big[\ps{(I_n-P_m)f^*}{P_m\eps}\big]\\&\quad=\ps{(I_n-P_m)f^*}{P_m\E[\eps]}=0\end{aligned}$$<span class="why">linéarité de l'espérance : le premier vecteur est déterministe, et $\E[\eps]=0$.</span></li>
+<li>$$\begin{aligned}\E\norm{P_m\eps}^2&=\E[\eps\T P_m\T P_m\eps]=\E[\eps\T P_m\eps]\\&=\sigma^2\tr P_m=\sigma^2d_m\end{aligned}$$<span class="why">$P_m\T P_m=P_m^2=P_m$ (projecteur orthogonal), espérance d'une forme quadratique (<a href="00_rappels.html#forme-quadratique">rappel</a>), et la trace d'un projecteur est la dimension de l'espace sur lequel il projette.</span></li>
+<li>$$\boxed{\,R(\hat f_m)=\norm{(I_n-P_m)f^*}^2+\sigma^2d_m\,}$$<span class="why">espérance de la ligne 2, avec les lignes 3 et 4.</span></li>
+</ol>
+<p><strong>Interprétation.</strong> Le premier terme est le <strong>biais au carré</strong> : le carré de la distance de $f^*$ au sous-espace $S_m$ — ce que le modèle ne sait pas représenter. Il <em>diminue</em> quand le modèle grossit ($S_m$ plus grand). Le second est la <strong>variance</strong> : chaque dimension du modèle laisse passer une part $\sigma^2$ du bruit. Il <em>augmente</em> avec le modèle. L'oracle $m_0$ réalise le meilleur compromis ; c'est la même formule que celle de la <a href="01_seance1.html#erreur-theoreme">Séance 1 (§3)</a> (divisée par $n$ là-bas, où l'erreur est mesurée en $\norm\cdot_n^2$), mais pour un modèle qui peut être faux (biais non nul).</p>
+<div class="box exemple"><div class="box-h">Exemple chiffré — pourquoi l'oracle n'est pas forcément le vrai modèle (remarque 2)</div>
+<p>Deux colonnes orthonormées ($X\T X=I_2$), $\bstar=(3;\,0{,}1)$, $\sigma^2=1$, $\mathcal M$ = tous les sous-ensembles de $\{1,2\}$. Le vrai modèle est $m^*=\{1,2\}$. Comme les colonnes sont orthonormées, $(I-P_m)f^*=\sum_{j\notin m}\beta^*_jX_j$ et son carré vaut $\sum_{j\notin m}\beta_j^{*2}$ :</p>
+<div class="table-wrap"><table>
+<tr><th>modèle $m$</th><th>biais² $\sum_{j\notin m}\beta^{*2}_j$</th><th>variance $\sigma^2d_m$</th><th>risque</th></tr>
+<tr><td>$\emptyset$</td><td>9,01</td><td>0</td><td>9,01</td></tr>
+<tr><td>$\{1\}$</td><td>0,01</td><td>1</td><td><strong>1,01</strong></td></tr>
+<tr><td>$\{2\}$</td><td>9</td><td>1</td><td>10</td></tr>
+<tr><td>$\{1,2\}=m^*$</td><td>0</td><td>2</td><td>2</td></tr>
+</table></div>
+<p>L'oracle est $m_0=\{1\}\ne m^*$ : la variable 2 existe vraiment, mais son effet ($0{,}1^2=0{,}01$) est bien plus petit que le prix de son estimation ($\sigma^2=1$). Mieux vaut l'oublier.</p></div>
+</div></details>
+
+<div class="box officiel"><div class="box-h">Le corrigé officiel <span class="ref">Correction_TD1 · p. 6</span></div>
+<p>Même décomposition, présentée comme « $\E\norm{\hat f_m-\E\hat f_m}^2+\norm{\E\hat f_m-f^*}^2$ ». Abus d'écriture à corriger en lisant : le corrigé écrit $\E\norm{\hat f_m-\E\hat f_m}^2=\norm{\Var(\hat f_m)}^2=\norm{P_{S_m}\Var(Y)P_{S_m}\T}^2$ ; il faut lire $\tr\Cov(\hat f_m)=\tr\big(P_{S_m}(\sigma^2I_n)P_{S_m}\T\big)=\sigma^2\tr P_{S_m}$ — une <em>trace</em>, pas une norme au carré.</p></div>
+
+<h3 id="ex3-q2a">Question 2(a) — L'inégalité de base</h3>
+
+<div class="box methode"><div class="box-h">Comment l'attaquer</div>
+<p>C'est le réflexe des estimateurs définis par un minimum (<a href="03_seance3.html#etape1">Séance 3, étape 1</a>) : $\hat m$ minimise $C$, donc $C(\hat m)\le C(m)$ pour <em>tout</em> $m$ ; on remplace $Y$ par $f^*+\eps$ et on développe les carrés.</p></div>
+
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>$\norm{Y-\hat f}^2=\norm{f^*-\hat f}^2+2\ps{\eps}{f^*-\hat f}+\norm\eps^2$ pour tout vecteur $\hat f$ : le $\norm\eps^2$ est le même des deux côtés.</p></div></details>
+
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\begin{aligned}&\norm{Y-\hat f_{\hat m}}^2+\sigma^2\mathrm{pen}(\hat m)\\&\quad\le\norm{Y-\hat f_m}^2+\sigma^2\mathrm{pen}(m)\end{aligned}$$<span class="why">$C(\hat m)\le C(m)$ : $\hat m$ minimise $C$ sur $\mathcal M$ et $m\in\mathcal M$.</span></li>
+<li>$$\begin{aligned}\norm{Y-\hat f}^2&=\norm{(f^*-\hat f)+\eps}^2\\&=\norm{f^*-\hat f}^2+2\ps{\eps}{f^*-\hat f}\\&\quad+\norm\eps^2\end{aligned}$$<span class="why">valable pour tout vecteur $\hat f$ ; on l'applique à $\hat f_{\hat m}$ et à $\hat f_m$.</span></li>
+<li>$$\begin{aligned}&\norm{\hat f_{\hat m}-f^*}^2+2\ps{\eps}{f^*-\hat f_{\hat m}}\\&\quad+\sigma^2\mathrm{pen}(\hat m)\\&\le\norm{\hat f_m-f^*}^2+2\ps{\eps}{f^*-\hat f_m}\\&\quad+\sigma^2\mathrm{pen}(m)\end{aligned}$$<span class="why">on remplace dans la ligne 1 ; les deux $\norm\eps^2$ se simplifient.</span></li>
+<li>$$\begin{aligned}&\norm{\hat f_{\hat m}-f^*}^2\\&\le\norm{\hat f_m-f^*}^2+2\ps{\eps}{f^*-\hat f_m}\\&\quad+\sigma^2\mathrm{pen}(m)\\&\quad+\Big(2\ps{\eps}{\hat f_{\hat m}-f^*}-\sigma^2\mathrm{pen}(\hat m)\Big)\end{aligned}$$<span class="why">on fait passer à droite les termes en $\hat m$ : $-2\ps{\eps}{f^*-\hat f_{\hat m}}=2\ps{\eps}{\hat f_{\hat m}-f^*}$.</span></li>
+<li>$$\begin{aligned}R(\hat f_{\hat m})\le{}&R(\hat f_m)+2\E\big[\ps{\eps}{f^*-\hat f_m}\big]\\&+\sigma^2\mathrm{pen}(m)\\&+\E\big[2\ps{\eps}{\hat f_{\hat m}-f^*}\\&\qquad-\sigma^2\mathrm{pen}(\hat m)\big]\end{aligned}$$<span class="why">on prend l'espérance ; par définition $R(\hat f_{\hat m})=\E\norm{\hat f_{\hat m}-f^*}^2$ (espérance sur tout l'aléa, y compris celui de $\hat m$) ; $\mathrm{pen}(m)$ est déterministe. C'est (5).</span></li>
+</ol>
+<p><strong>Pourquoi garder le dernier terme groupé.</strong> Pour $m$ fixé, l'espérance du terme croisé se calcule (question b). Pour $\hat m$, non : la projection $P_{\hat m}$ dépend elle-même de $\eps$, donc le calcul de (b), qui utilise une matrice <em>fixe</em>, ne s'applique plus — et $\hat m$ a justement été choisi parce que $\hat f_{\hat m}$ « colle au bruit ». On le garde donc avec $-\sigma^2\mathrm{pen}(\hat m)$, qui va servir à le compenser.</p>
+</div></details>
+
+<div class="box officiel"><div class="box-h">Le corrigé officiel <span class="ref">Correction_TD1 · p. 6</span></div>
+<p>Une phrase : « il suffit donc de remplacer $Y$ par $f^*+\eps$ et de développer la norme 2, puis de passer à l'espérance ». La solution ci-dessus écrit chacune de ces opérations.</p></div>
+
+<h3 id="ex3-q2b">Question 2(b) — Le terme croisé d'un modèle fixé</h3>
+
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>$f^*-\hat f_m=(I_n-P_m)f^*-P_m\eps$. Le premier morceau est déterministe ; le second donne une forme quadratique en $\eps$.</p></div></details>
+
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\begin{aligned}\ps{\eps}{f^*-\hat f_m}&=\ps{\eps}{(I_n-P_m)f^*}\\&\quad-\ps{\eps}{P_m\eps}\end{aligned}$$<span class="why">Q1, ligne 1 (au signe près), et bilinéarité du produit scalaire.</span></li>
+<li>$$\begin{aligned}&\E\big[\ps{\eps}{(I_n-P_m)f^*}\big]\\&\quad=\ps{\E[\eps]}{(I_n-P_m)f^*}=0\end{aligned}$$<span class="why">le vecteur $(I_n-P_m)f^*$ est déterministe et $\E\eps=0$.</span></li>
+<li>$$\begin{aligned}\E\big[\ps{\eps}{P_m\eps}\big]&=\E[\eps\T P_m\eps]\\&=\sigma^2\tr P_m=\sigma^2d_m\end{aligned}$$<span class="why">forme quadratique (<a href="00_rappels.html#forme-quadratique">rappel</a>) et trace d'un projecteur.</span></li>
+<li>$$\boxed{\,\E\big[\ps{\eps}{f^*-\hat f_m}\big]=-\sigma^2d_m\,}$$</li>
+</ol>
+<p><strong>Ce que cela veut dire : l'optimisme de l'erreur d'apprentissage.</strong> En développant comme en (a) : $\E\norm{Y-\hat f_m}^2=R(\hat f_m)-2\sigma^2d_m+n\sigma^2$. Sur de nouvelles observations $Y'=f^*+\eps'$ (bruit indépendant de $Y$), le terme croisé serait d'espérance nulle : $\E\norm{Y'-\hat f_m}^2=R(\hat f_m)+n\sigma^2$. L'erreur d'apprentissage est donc trop optimiste de $2\sigma^2d_m$ : le modèle « a vu » le bruit et s'y est adapté, d'autant plus qu'il a de dimensions. C'est exactement l'identité de Cp/AIC de la <a href="01_seance1.html#cp-aic">Séance 1</a>, et la raison pour laquelle on pénalise par un multiple de $d_m$.</p>
+</div></details>
+
+<div class="box officiel"><div class="box-h">Le corrigé officiel <span class="ref">Correction_TD1 · p. 6</span></div>
+<p>Même calcul, en une ligne. Deux raccourcis : la première égalité $\E\ps{\eps}{f^*-P_{S_m}Y}=-\E\ps{\eps}{P_{S_m}(f^*+\eps)}$ « oublie » le terme $\E\ps{\eps}{f^*}$, nul car $\E\eps=0$ ; et « $-\E[\mathrm{Tr}(\eps P_{S_m}\eps)]=-\mathrm{Tr}(P_{S_m})\E[\eps\eps\T]$ » est à lire $-\E[\tr(P_{S_m}\eps\eps\T)]=-\tr\big(P_{S_m}\E[\eps\eps\T]\big)=-\sigma^2\tr P_{S_m}$.</p></div>
+
+<h3 id="ex3-q2c">Question 2(c) — Le terme croisé du modèle choisi</h3>
+
+<div class="box methode"><div class="box-h">Comment l'attaquer</div>
+<p>Comme on ne peut pas calculer l'espérance (le modèle $\hat m$ dépend du bruit), on <strong>majore</strong>. Le vecteur $\hat f_{\hat m}-f^*$ vit dans un petit sous-espace : on peut donc remplacer $\eps$ par son projeté sur ce sous-espace, puis séparer les deux facteurs par Young.</p></div>
+
+<div class="box rappel"><div class="box-h">Rappel — Young</div>
+<p>Pour $x,y\ge0$ et $a>0$ : $2xy\le ax^2+\frac{y^2}{a}$, car $ax^2+\frac{y^2}a-2xy=\big(\sqrt a\,x-\frac{y}{\sqrt a}\big)^2\ge0$ (<a href="00_rappels.html#young">rappel</a>). Le paramètre $a$ règle le partage : un grand $a$ met presque tout sur $x^2$ et presque rien sur $y^2$.</p></div>
+
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>(i) $\hat f_{\hat m}\in S_{\hat m}$ et $f^*\in\mathrm{Vect}(f^*)$, donc $v=\hat f_{\hat m}-f^*\in\bar S_{\hat m}$ ; pour un tel $v$, $\ps{\eps}{v}=\ps{P_{\bar S_{\hat m}}\eps}{v}$. (ii) Cauchy–Schwarz puis Young. (iii) Pythagore dans $\bar S=\tilde S\oplus\mathrm{Vect}(f^*)$.</p></div></details>
+
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<p>On note $\bar P=P_{\bar S_{\hat m}}$ et $v=\hat f_{\hat m}-f^*$.</p>
+<ol class="steps">
+<li>$$v\in\bar S_{\hat m}=\mathrm{Vect}(S_{\hat m},f^*)$$<span class="why">$\hat f_{\hat m}=P_{\hat m}Y\in S_{\hat m}$ et $f^*\in\mathrm{Vect}(f^*)$ : leur différence est dans l'espace engendré par les deux.</span></li>
+<li>$$\ps{\eps}{v}=\ps{\eps}{\bar Pv}=\ps{\bar P\eps}{v}$$<span class="why">$\bar Pv=v$ car $v\in\bar S_{\hat m}$ (une projection ne bouge pas les vecteurs de son image), puis $\bar P\T=\bar P$ (projection orthogonale).</span></li>
+<li>$$\begin{aligned}2\ps{\eps}{v}&\le2\norm{\bar P\eps}\,\norm v\\&\le a\norm{\bar P\eps}^2+a^{-1}\norm v^2\end{aligned}$$<span class="why">Cauchy–Schwarz, puis Young avec $x=\norm{\bar P\eps}$ et $y=\norm v$.</span></li>
+<li>$$\begin{aligned}&\bar S_{\hat m}=\tilde S_{\hat m}\oplus\mathrm{Vect}(f^*)\quad(\text{orthogonale})\\&\Longrightarrow\ \norm{\bar P\eps}^2=\norm{P_{\mathrm{Vect}(f^*)}\eps}^2\\&\qquad\qquad\quad+\norm{P_{\tilde S_{\hat m}}\eps}^2\end{aligned}$$<span class="why">on prend pour $\tilde S_{\hat m}$ l'orthogonal de $f^*$ dans $\bar S_{\hat m}$ ; la projection sur une somme orthogonale est la somme des projections, et Pythagore (<a href="00_rappels.html#projection">rappel</a>).</span></li>
+<li>$$\begin{aligned}2\ps{\eps}{\hat f_{\hat m}-f^*}\le{}&a\sigma^2\big(N^2+U_{\hat m}\big)\\&+a^{-1}\norm{\hat f_{\hat m}-f^*}^2\end{aligned}$$<span class="why">on divise et multiplie par $\sigma^2$ : $\norm{P_{\mathrm{Vect}(f^*)}\eps}^2=\sigma^2N^2$ et $\norm{P_{\tilde S_{\hat m}}\eps}^2=\sigma^2U_{\hat m}$. C'est l'inégalité demandée.</span></li>
+</ol>
+<p><strong>Les lois en jeu</strong> (<a href="00_rappels.html#lois-usuelles">rappel</a> : si $S$ est un sous-espace <em>fixe</em> de dimension $k$, $\norm{P_S\eps}^2/\sigma^2\sim\chi^2(k)$).</p>
+<ul>
+<li>$N^2\sim\chi^2(1)$ (si $f^*\neq0$ ; si $f^*=0$, $N^2=0$) : $\mathrm{Vect}(f^*)$ est une droite fixe. En particulier $\E N^2=1$.</li>
+<li>Pour un modèle $m$ <strong>fixé</strong>, $U_m\sim\chi^2(\dim\tilde S_m)$ avec, si $f^*\neq0$, $\dim\tilde S_m=\dim\bar S_m-1$, soit $d_m$ si $f^*\notin S_m$ et $d_m-1$ si $f^*\in S_m$. Dans les deux cas $\dim\tilde S_m\le d_m$.</li>
+<li>Mais $U_{\hat m}$ <strong>ne suit pas</strong> de loi du $\chi^2$ : le sous-espace $\tilde S_{\hat m}$ est choisi avec les données, typiquement là où le bruit est grand. C'est toute la difficulté de la question (d).</li>
+</ul>
+</div></details>
+
+<div class="box intu"><div class="box-h">Intuition — ce que l'on a gagné</div>
+<p>Le terme croisé du modèle choisi a été remplacé par deux choses : un morceau $a^{-1}\norm{\hat f_{\hat m}-f^*}^2$, une fraction de la quantité même que l'on veut borner (on la fera passer à gauche à la fin), et des <strong>tailles de projections du bruit</strong>, $N^2+U_{\hat m}$ : le bruit projeté sur la droite fixe $\mathrm{Vect}(f^*)$ et sur $\tilde S_{\hat m}$, où les données n'interviennent plus qu'à travers le choix de $\hat m$. Modèle par modèle, ce sont des $\chi^2$ dont on connaît très bien la taille.</p></div>
+
+<div class="box officiel"><div class="box-h">Le corrigé officiel <span class="ref">Correction_TD1 · p. 6</span></div>
+<p>Exactement ces trois lignes (projection, Young, décomposition), plus la remarque $U_m\sim\chi^2(d_m)$ ou $\chi^2(d_m-1)$ et « $\hat m$ dépend des données, donc $U_{\hat m}$ ne suit pas une loi du $\chi^2$ ». La solution ci-dessus justifie en plus $\ps{\eps}{v}=\ps{\bar P\eps}{v}$ et le passage par Cauchy–Schwarz.</p></div>
+
+<h3 id="ex3-q2d">Question 2(d) — Contrôler le modèle choisi : concentration et borne de l'union</h3>
+<p>On pose $a=\frac{K+1}2$ (qui est $>1$ car $K>1$) et $Z:=a\sigma^2(N^2+U_{\hat m})-\sigma^2\mathrm{pen}(\hat m)$. D'après (c),
+$$\begin{aligned}&2\ps{\eps}{\hat f_{\hat m}-f^*}-\sigma^2\mathrm{pen}(\hat m)\\&\quad\le a\sigma^2(N^2+U_{\hat m})+a^{-1}\norm{\hat f_{\hat m}-f^*}^2\\&\qquad-\sigma^2\mathrm{pen}(\hat m)\\&\quad=a^{-1}\norm{\hat f_{\hat m}-f^*}^2+Z.\end{aligned}$$
+Toute la question est donc de montrer $\E Z\le C_K\sigma^2$ : la pénalité du modèle choisi doit compenser, en moyenne, la taille du bruit projeté sur ce modèle.</p>
+
+<div class="box idee"><div class="box-h">Idée — trois gestes</div>
+<ol>
+<li><strong>Se débarrasser de $\hat m$</strong> : quel que soit le modèle choisi, $aU_{\hat m}-\mathrm{pen}(\hat m)\le a\max_m(\cdots)\le a\sum_m(\cdots)_+$. Une somme sur des modèles <em>fixés</em>, on sait la traiter.</li>
+<li><strong>Un modèle fixé à la fois</strong> : $\sigma\sqrt{U_m}=\norm{P_{\tilde S_m}\eps}$ est la norme d'un projeté du bruit, une fonction 1-lipschitzienne de $\eps$ ; la concentration gaussienne (le lemme) dit qu'elle dépasse sa moyenne ($\le\sigma\sqrt{d_m}$) d'au plus $\sigma\sqrt{2\xi_m}$, avec $\xi_m$ exponentielle.</li>
+<li><strong>Payer chaque modèle avec son poids $\Pi_m$</strong> : la pénalité contient $\sqrt{2\log(1/\Pi_m)}$, si bien que le dépassement « au-delà de la pénalité » a une espérance $\lesssim\Pi_m$ ; et $\sum_m\Pi_m=1$.</li>
+</ol>
+<p>C'est une <strong>borne de l'union pondérée</strong> : comme pour le maximum de $p$ gaussiennes (de l'ordre de $\sqrt{2\log p}$, <a href="00_rappels.html#queues">rappel</a>), on paie $\sqrt{2\log(1/\Pi_m)}$ pour pouvoir regarder tous les modèles à la fois.</p></div>
+
+<div class="box rappel"><div class="box-h">Rappel — le lemme de concentration, sous la forme utilisée</div>
+<p>Si $F:\R^n\to\R$ est 1-lipschitzienne ($\abs{F(u)-F(v)}\le\norm{u-v}$) et $\eps\sim\N(0,\sigma^2I_n)$, alors $F(\eps)\le\E F(\eps)+\sigma\sqrt{2\xi}$ avec $\xi$ de loi exponentielle $\mathcal E(1)$ (densité $e^{-x}$ sur $\R_+$). Ce qu'on utilise vraiment : $\P(\xi>x)\le e^{-x}$, d'où, pour $c\ge0$, $\E(\xi-c)_+=\int_c^\infty\P(\xi>t)\,\dd t\le e^{-c}$ (<a href="00_rappels.html#concentration">concentration</a>, <a href="00_rappels.html#lois-usuelles">loi exponentielle</a>). Le point remarquable : la borne ne dépend pas de la dimension $n$.</p></div>
+
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>(1) $a\cdot\frac{2}{K+1}=1$, donc $aU-\mathrm{pen}=a\big(U-\frac{2}{K+1}\mathrm{pen}\big)$. (2) $F(\eps)=\norm{P_{\tilde S_m}\eps}$ est 1-lipschitzienne et $\E F(\eps)\le\sqrt{\E F(\eps)^2}\le\sigma\sqrt{d_m}$. (3) $\sqrt{2\xi}\le\sqrt{2L_m}+\sqrt{2(\xi-L_m)_+}$. (4) $(x+y)^2\le(1+\alpha)x^2+(1+\alpha^{-1})y^2$ avec $\alpha=\frac{K-1}{K+1}$ : vérifiez que $(1+\alpha)x^2$ est exactement $\frac2{K+1}\mathrm{pen}(m)$.</p></div></details>
+
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<p><strong>Étape 1 — La partie $N^2$.</strong> $\E[a\sigma^2N^2]=a\sigma^2\E[N^2]\le a\sigma^2$, car $N^2\sim\chi^2(1)$ a pour espérance 1 (ou vaut 0 si $f^*=0$).</p>
+
+<p><strong>Étape 2 — Se débarrasser du modèle choisi.</strong></p>
+<ol class="steps">
+<li>$$\begin{aligned}&aU_{\hat m}-\mathrm{pen}(\hat m)\\&\quad=a\Big(U_{\hat m}-\frac{2}{K+1}\mathrm{pen}(\hat m)\Big)\end{aligned}$$<span class="why">$a=\frac{K+1}2$, donc $\frac1a=\frac{2}{K+1}$.</span></li>
+<li>$$\begin{aligned}&\le a\max_{m\in\mathcal M}\Big(U_m-\frac{2}{K+1}\mathrm{pen}(m)\Big)\\&\le a\sum_{m\in\mathcal M}\Big(U_m-\frac{2}{K+1}\mathrm{pen}(m)\Big)_+\end{aligned}$$<span class="why">$\hat m$ est l'un des $m$ ; et un maximum est inférieur à la somme des parties positives (le plus grand terme, s'il est positif, figure dans la somme, et les autres termes sont $\ge0$ ; s'il est négatif, la somme est $\ge0$ ; <a href="00_rappels.html#young">rappel</a>).</span></li>
+</ol>
+<p>Il suffit donc de borner, <strong>pour chaque modèle $m$ fixé</strong>, $\E\big(U_m-\frac{2}{K+1}\mathrm{pen}(m)\big)_+$.</p>
+
+<p><strong>Étape 3 — Un modèle fixé : concentration.</strong> Fixons $m$ et notons $P=P_{\tilde S_m}$, $k=\dim\tilde S_m\le d_m$.</p>
+<ol class="steps">
+<li>$$\begin{aligned}\abs{\norm{Pu}-\norm{Pv}}&\le\norm{P(u-v)}\\&\le\norm{u-v}\end{aligned}$$<span class="why">inégalité triangulaire inversée, puis une projection orthogonale ne rallonge pas les vecteurs. Donc $F(\eps)=\norm{P\eps}$ est 1-lipschitzienne.</span></li>
+<li>$$\begin{aligned}&\norm{P\eps}\le\E\norm{P\eps}+\sigma\sqrt{2\xi_m},\\&\P(\xi_m>x)\le e^{-x}\end{aligned}$$<span class="why">le lemme de l'énoncé, appliqué à $F$ et à $\eps\sim\N(0,\sigma^2I_n)$.</span></li>
+<li>$$\E\norm{P\eps}\le\sqrt{\E\norm{P\eps}^2}=\sigma\sqrt k\le\sigma\sqrt{d_m}$$<span class="why">Jensen ($\E V\le\sqrt{\E V^2}$ pour $V\ge0$, car $\Var V\ge0$) et $\E\norm{P\eps}^2=\sigma^2\tr P=\sigma^2k$.</span></li>
+<li>$$U_m=\frac{\norm{P\eps}^2}{\sigma^2}\le\big(\sqrt{d_m}+\sqrt{2\xi_m}\big)^2$$<span class="why">on divise les lignes 2–3 par $\sigma$ (tout est positif), puis on élève au carré.</span></li>
+</ol>
+
+<p><strong>Étape 4 — Faire apparaître le poids $\Pi_m$.</strong> On note $L_m=\log(1/\Pi_m)\ge0$.</p>
+<ol class="steps">
+<li>$$\begin{aligned}&\xi_m\le L_m+(\xi_m-L_m)_+\\&\Longrightarrow\ \sqrt{2\xi_m}\le\sqrt{2L_m}\\&\hphantom{\Longrightarrow\ \sqrt{2\xi_m}\le{}}+\sqrt{2(\xi_m-L_m)_+}\end{aligned}$$<span class="why">si $\xi_m\le L_m$ c'est évident, sinon c'est une égalité ; puis $\sqrt{u+v}\le\sqrt u+\sqrt v$ (élever au carré).</span></li>
+<li>$$\begin{aligned}&U_m\le(x+y)^2,\quad\text{où}\\&x=\sqrt{d_m}+\sqrt{2L_m},\\&y=\sqrt{2(\xi_m-L_m)_+}\end{aligned}$$<span class="why">on reporte dans l'étape 3.4. Remarque : $\mathrm{pen}(m)=Kx^2$.</span></li>
+<li>$$(x+y)^2\le(1+\alpha)x^2+(1+\alpha^{-1})y^2$$<span class="why">pour tout $\alpha>0$ : $2xy\le\alpha x^2+\alpha^{-1}y^2$ (Young avec $a=\alpha$).</span></li>
+<li>$$\begin{aligned}&\alpha=\frac{K-1}{K+1}:\qquad 1+\alpha=\frac{2K}{K+1},\\&2(1+\alpha^{-1})=2\Big(1+\frac{K+1}{K-1}\Big)=\frac{4K}{K-1}\end{aligned}$$<span class="why">calcul ; $\alpha>0$ exige $K>1$. Ce choix est fait pour que $(1+\alpha)x^2=\frac{2K}{K+1}x^2=\frac{2}{K+1}\mathrm{pen}(m)$.</span></li>
+<li>$$\begin{aligned}&U_m-\frac{2}{K+1}\mathrm{pen}(m)\\&\quad\le\frac{4K}{K-1}(\xi_m-L_m)_+\end{aligned}$$<span class="why">lignes 2–4 : $U_m\le\frac{2}{K+1}\mathrm{pen}(m)+(1+\alpha^{-1})\cdot2(\xi_m-L_m)_+$.</span></li>
+<li>$$\begin{aligned}&\Big(U_m-\frac{2}{K+1}\mathrm{pen}(m)\Big)_+\\&\quad\le\frac{4K}{K-1}(\xi_m-L_m)_+\end{aligned}$$<span class="why">le membre de droite est $\ge0$, donc il majore aussi la partie positive du membre de gauche.</span></li>
+<li>$$\begin{aligned}&\E\Big(U_m-\frac{2}{K+1}\mathrm{pen}(m)\Big)_+\\&\quad\le\frac{4K}{K-1}\E(\xi_m-L_m)_+\\&\quad\le\frac{4K}{K-1}e^{-L_m}=\frac{4K}{K-1}\Pi_m\end{aligned}$$<span class="why">rappel ci-dessus : $\E(\xi-c)_+\le e^{-c}$ ; et $e^{-\log(1/\Pi_m)}=\Pi_m$.</span></li>
+</ol>
+
+<p><strong>Étape 5 — Sommer sur les modèles et conclure.</strong></p>
+<ol class="steps">
+<li>$$\begin{aligned}&\E\big[aU_{\hat m}-\mathrm{pen}(\hat m)\big]\le a\sum_{m\in\mathcal M}\frac{4K}{K-1}\Pi_m\\&\quad=\frac{K+1}{2}\cdot\frac{4K}{K-1}=\frac{2K(K+1)}{K-1}\end{aligned}$$<span class="why">étape 2 (en espérance) et étape 4.7 ; $\sum_m\Pi_m=1$. C'est ici que la condition sur les poids sert.</span></li>
+<li>$$\begin{aligned}\E Z&=\sigma^2\Big(a\E N^2+\E\big[aU_{\hat m}-\mathrm{pen}(\hat m)\big]\Big)\\&\le\sigma^2\Big(\frac{K+1}2+\frac{2K(K+1)}{K-1}\Big)\\&=:C_K\sigma^2\end{aligned}$$<span class="why">définition de $Z$, étape 1 et ligne précédente.</span></li>
+</ol>
+<p>Avec $2\ps{\eps}{\hat f_{\hat m}-f^*}-\sigma^2\mathrm{pen}(\hat m)\le a^{-1}\norm{\hat f_{\hat m}-f^*}^2+Z$ (début de la question), c'est le résultat. Par exemple $K=3$ donne $a=2$, $\alpha=\frac12$ et $C_3=2+12=14$. <span class="qed">□</span></p>
+<p><strong>Pourquoi $K>1$ ?</strong> Il faut $\alpha=\frac{K-1}{K+1}>0$ pour l'étape 4 (sinon le terme $(1+\alpha^{-1})y^2$ explose : $C_K\to\infty$ quand $K\to1$) et $a=\frac{K+1}2>1$ pour pouvoir, à la question (f), faire passer $a^{-1}R(\hat f_{\hat m})$ à gauche.</p>
+</div></details>
+
+<div class="box piege"><div class="box-h">Piège — traiter $\hat m$ comme s'il était fixé</div>
+<p>L'erreur classique serait d'écrire « $U_{\hat m}\sim\chi^2(d_{\hat m})$, donc $\E U_{\hat m}\le\E d_{\hat m}$ ». C'est faux : $\hat m$ est choisi <em>parce que</em> le bruit y est grand, et le maximum de nombreux $\chi^2$ est bien plus grand que chacun d'eux. Réflexe : <strong>quand un objet est choisi avec les données, borner par le pire cas (un max, puis une somme pondérée)</strong>.</p></div>
+
+<div class="box officiel"><div class="box-h">Le corrigé officiel <span class="ref">Correction_TD1 · p. 6–7</span></div>
+<p>Même architecture : $\max$, somme des parties positives, lemme appliqué à $\varepsilon\mapsto\norm{P_{\tilde S_m}\eps}$ (1-lipschitzienne), Jensen, $\sqrt{2\xi_m}\le\sqrt{2\log\Pi_m^{-1}}+\sqrt{2(\xi_m-\log\Pi_m^{-1})_+}$, puis $\alpha=\frac{K-1}{K+1}$ et $\E[(\xi_m-\log\Pi_m^{-1})_+]=\Pi_m$. Il obtient $\E[aU_{\hat m}-\mathrm{pen}(\hat m)]\le\frac{2K(K+1)}{K-1}$. Un oubli : le terme $a\sigma^2N^2$ de $Z$ n'est pas traité ; il ajoute $a\sigma^2=\frac{K+1}2\sigma^2$ à la constante, d'où le $C_K$ ci-dessus. Cela ne change rien à la conclusion (une constante qui ne dépend que de $K$).</p></div>
+
+<h3 id="ex3-q2e">Question 2(e) — La pénalité est au plus de l'ordre du risque</h3>
+
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>$(u+v)^2\le2u^2+2v^2$, et le risque contient la variance $\sigma^2d_m$.</p></div></details>
+
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\begin{aligned}\mathrm{pen}(m)&=K\big(\sqrt{d_m}+\sqrt{2L_m}\big)^2\\&\le K\big(2d_m+2\cdot2L_m\big)\\&=2Kd_m+4KL_m\end{aligned}$$<span class="why">$(u+v)^2\le2u^2+2v^2$, car $2u^2+2v^2-(u+v)^2=(u-v)^2\ge0$.</span></li>
+<li>$$\begin{aligned}\sigma^2d_m&\le\norm{(I_n-P_m)f^*}^2+\sigma^2d_m\\&=R(\hat f_m)\end{aligned}$$<span class="why">Q1 : le biais² est positif.</span></li>
+<li>$$\begin{aligned}&\sigma^2\mathrm{pen}(m)\\&\le2K\sigma^2d_m+4K\sigma^2L_m\\&\le2KR(\hat f_m)+4K\sigma^2\log(\Pi_m^{-1})\end{aligned}$$<span class="why">on multiplie la ligne 1 par $\sigma^2$, puis on utilise la ligne 2.</span></li>
+</ol>
+<p class="small muted">L'énoncé écrit $\log(\Pi^{-1})$ : il s'agit de $\log(\Pi_m^{-1})$, le poids du modèle $m$.</p>
+</div></details>
+
+<h3 id="ex3-q2f">Question 2(f) — Assembler : l'inégalité oracle</h3>
+
+<div class="box methode"><div class="box-h">Comment l'attaquer</div>
+<p>Reporter (b), (d), (e) dans (5) ; le risque cherché $R(\hat f_{\hat m})$ apparaît alors <em>aussi à droite</em>, avec le facteur $a^{-1}<1$ : on le fait passer à gauche (on « l'absorbe »). C'est le geste de la fin de l'inégalité oracle rapide (<a href="04_seance4.html#rapide-preuve">Séance 4</a>, étape F : Young, puis le terme quadratique est absorbé à gauche) ; dans la preuve de Bickel–Ritov–Tsybakov, l'erreur apparaît aussi des deux côtés, mais on conclut par « $u^2\le cu\Rightarrow u\le c$ ».</p></div>
+
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\begin{aligned}R(\hat f_{\hat m})\le{}&R(\hat f_m)-2\sigma^2d_m+\sigma^2\mathrm{pen}(m)\\&+a^{-1}R(\hat f_{\hat m})+C_K\sigma^2\end{aligned}$$<span class="why">dans (5) : (b) donne $2\E\ps{\eps}{f^*-\hat f_m}=-2\sigma^2d_m$ ; (d), en espérance, donne $\E[2\ps{\eps}{\hat f_{\hat m}-f^*}-\sigma^2\mathrm{pen}(\hat m)]\le a^{-1}\E\norm{\hat f_{\hat m}-f^*}^2+\E Z\le a^{-1}R(\hat f_{\hat m})+C_K\sigma^2$.</span></li>
+<li>$$\begin{aligned}&\Big(1-\frac1a\Big)R(\hat f_{\hat m})\\&\quad\le R(\hat f_m)+\sigma^2\mathrm{pen}(m)+C_K\sigma^2\end{aligned}$$<span class="why">on fait passer $a^{-1}R(\hat f_{\hat m})$ à gauche (ce risque est fini : $\norm{\hat f_{\hat m}}\le\norm Y$ car une projection raccourcit), et on oublie $-2\sigma^2d_m\le0$.</span></li>
+<li>$$\begin{aligned}&\frac{K-1}{K+1}R(\hat f_{\hat m})\\&\quad\le(1+2K)R(\hat f_m)\\&\qquad+4K\sigma^2\log(\Pi_m^{-1})+C_K\sigma^2\end{aligned}$$<span class="why">$1-\frac1a=1-\frac{2}{K+1}=\frac{K-1}{K+1}>0$, et (e).</span></li>
+<li>$$\begin{aligned}&R(\hat f_{\hat m})\\&\le C'_K\Big(R(\hat f_m)+\sigma^2\log(\Pi_m^{-1})+\sigma^2\Big),\\&C'_K=\frac{K+1}{K-1}\max\big(1+2K,\,4K,\,C_K\big)\end{aligned}$$<span class="why">on divise par $\frac{K-1}{K+1}$ et on majore chaque coefficient par le plus grand.</span></li>
+<li>$$\boxed{\begin{aligned}&\E\norm{\hat f_{\hat m}-f^*}^2\\&\quad\le C'_K\min_{m\in\mathcal M}\Big\{\E\norm{\hat f_m-f^*}^2\\&\qquad\qquad+\sigma^2\log(\Pi_m^{-1})+\sigma^2\Big\}\end{aligned}}$$<span class="why">la ligne 4 vaut pour tout $m\in\mathcal M$ (le $m$ de (a) était arbitraire) : on prend le meilleur.</span></li>
+</ol>
+<p>Les constantes sont pessimistes : pour $K=3$, $C'_3=2\max(7,12,14)=28$. Ce qui compte est leur forme : elles ne dépendent ni de $n$, ni de $p$, ni de la taille de $\mathcal M$, ni de $f^*$.</p>
+</div></details>
+
+<div class="box officiel"><div class="box-h">Le corrigé officiel <span class="ref">Correction_TD1 · p. 7</span></div>
+<p>(e) : même calcul. (f) : « en mettant bout à bout tous les résultats obtenus […] on en déduit le résultat demandé » ; la solution ci-dessus fait ce montage et donne une valeur explicite de la constante. Dans l'énoncé de (f), lire $\E\big[\norm{\hat f_m-f^*}^2\big]$ : le carré manque.</p></div>
+
+<h3 id="ex3-q2g">Question 2(g) — Quand $\log(\Pi_m^{-1})\le Cd_m$</h3>
+
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\sigma^2\log(\Pi_m^{-1})\le C\sigma^2d_m\le C\,R(\hat f_m)$$<span class="why">hypothèse, puis $\sigma^2d_m\le R(\hat f_m)$ (Q1).</span></li>
+<li>$$\begin{aligned}\E\norm{\hat f_{\hat m}-f^*}^2\le{}&C'_K(1+C)\min_{m\in\mathcal M}R(\hat f_m)\\&+C'_K\sigma^2\end{aligned}$$<span class="why">on reporte dans (f).</span></li>
+<li>$$\begin{aligned}&\E\norm{\hat f_{\hat m}-f^*}^2\\&\quad\le C'_K(2+C)\min_{m\in\mathcal M}R(\hat f_m)\\&\quad=C'_K(2+C)\,R(\hat f_{m_0})\end{aligned}$$<span class="why">si tous les modèles vérifient $d_m\ge1$ (chacun contient au moins une direction), alors $\sigma^2\le\sigma^2d_m\le R(\hat f_m)$ pour tout $m$, donc le $\sigma^2$ additif est absorbé. Sous l'hypothèse de (g), c'est automatique dès que $\mathcal M$ contient au moins deux modèles : $d_m=0$ imposerait $\log(1/\Pi_m)\le0$, donc $\Pi_m=1$, et les autres poids, tous $>0$, ne pourraient plus sommer à 0.</span></li>
+</ol>
+<p><strong>Conclusion.</strong> Sans connaître $\bstar$, le modèle sélectionné fait <strong>aussi bien que l'oracle, à une constante près</strong> : c'est exactement l'objectif annoncé par l'énoncé, $\E\norm{\hat f_{\hat m}-f^*}^2\le C\,\E\norm{\hat f_{m_0}-f^*}^2$. La condition $\log(\Pi_m^{-1})\le Cd_m$ dit que la collection n'est « pas trop riche » : on peut donner à chaque modèle un poids au moins $e^{-Cd_m}$.</p>
+</div></details>
+
+<div class="box officiel"><div class="box-h">Le corrigé officiel <span class="ref">Correction_TD1 · p. 7</span></div>
+<p>« Lorsque $\log\Pi_m^{-1}\le Cd_m$, $\hat f_{\hat m}$ atteint la même vitesse de convergence que l'oracle (à une constante près) ». La solution ci-dessus montre comment le $\sigma^2$ additif est absorbé.</p></div>
+
+<details class="fold more"><summary><span>Pour aller plus loin — comment choisir les poids $\Pi_m$ (et d'où revient le $\log p$)</span></summary><div class="fold-body">
+<p>Les poids sont un <strong>budget de complexité</strong> : leur somme vaut 1, et un modèle de poids $\Pi_m$ paie $\sqrt{2\log(1/\Pi_m)}$ dans la pénalité. Deux cas typiques (calculs vérifiés), où l'on suppose les colonnes de $X$ linéairement indépendantes, de sorte que $d_m=\abs m$ (le nombre de variables du modèle).</p>
+<p><strong>1. Modèles emboîtés</strong> $m_d=\{1,\dots,d\}$, un par dimension $d=1,\dots,p$. Avec $\Pi_{m_d}=c_p\,e^{-d}$, où $c_p=1/\sum_{d=1}^pe^{-d}$ fait sommer les poids à 1 et vérifie $c_p\ge e-1$ (car $\sum_{d\ge1}e^{-d}=\frac1{e-1}$, série géométrique), on a $\log(1/\Pi_{m_d})=d-\log c_p\le d-\log(e-1)\approx d-0{,}54\le d$ : la question (g) s'applique avec $C=1$. La pénalité vaut au plus $K(\sqrt d+\sqrt{2d})^2=K(1+\sqrt2)^2d\approx5{,}83\,Kd$ : <strong>proportionnelle à $d$, comme Cp/AIC</strong> ($2d$), avec une constante plus grande — le prix d'une garantie non asymptotique.</p>
+<p><strong>2. Tous les sous-ensembles</strong> de $\{1,\dots,p\}$ ($2^p$ modèles). Avec $\Pi_m=\frac{1}{(p+1)\binom{p}{d_m}}$ (on répartit le budget uniformément entre les tailles, puis entre les modèles d'une même taille ; la somme vaut $\sum_{d=0}^p\binom pd\cdot\frac{1}{(p+1)\binom pd}=1$),
+on a, pour $d_m\ge1$ (grâce à $\binom pd\le(ep/d)^d$) :
+$$\begin{aligned}\log(1/\Pi_m)&=\log(p+1)+\log\binom{p}{d_m}\\&\le\log(p+1)+d_m\log\frac{ep}{d_m}.\end{aligned}$$
+La pénalité est donc de l'ordre de $d_m\log(p/d_m)$ : <strong>le $\log p$ revient</strong>. La condition de (g) n'est plus vraie avec un $C$ indépendant de $p$ ; on obtient « l'oracle à un facteur $\log p$ près » : pour le vrai modèle de taille $s$ (biais nul), le terme de droite vaut environ $\sigma^2s+\sigma^2s\log(ep/s)$ — la vitesse $\sigma^2s\log p$ du Lasso (théorème de Bickel–Ritov–Tsybakov, <a href="03_seance3.html#theoreme">Séance 3</a>, où elle s'écrit $\sigma^2s\log p/n$ car l'erreur y est mesurée en $\norm\cdot_n^2$), à des constantes près. Le $\log p$ est le prix de la recherche parmi $2^p$ modèles, qu'on la fasse par $\ell_0$ ou par le Lasso. La différence est ailleurs : ici, <strong>aucune condition sur $X$</strong> n'est demandée, mais il faut parcourir les $2^p$ modèles, ce qui est impossible dès que $p$ dépasse quelques dizaines ; le Lasso atteint la même vitesse en temps de calcul raisonnable, au prix d'une condition sur le design (<a href="03_seance3.html#re">la condition RE</a>).</p>
+<p><strong>Une simulation</strong> (design orthonormé, $p=200$ variables dont $s=5$ actives d'amplitude commune $b$, $\sigma=1$, $n=500$ pour BIC ; 3000 répétitions). Pour une taille $d$, le meilleur modèle garde les $d$ plus grands $\abs{X_j\T Y}$ ; chaque critère choisit ensuite $d$. Le risque de l'oracle vaut 5.</p>
+<div class="table-wrap"><table>
+<tr><th>amplitude $b$</th><th>Cp/AIC ($2d$)</th><th>BIC ($d\log n$)</th><th>TD1, $K=1{,}5$</th><th>TD1, $K=3$</th></tr>
+<tr><td>3</td><td>117,5 ($\hat d\approx35$)</td><td>36,1 ($\hat d\approx5{,}9$)</td><td>45,0 ($\hat d\approx0$)</td><td>45,0 ($\hat d\approx0$)</td></tr>
+<tr><td>6</td><td>116,2 ($\hat d\approx36$)</td><td>24,6 ($\hat d\approx7{,}4$)</td><td>18,5 ($\hat d\approx4{,}6$)</td><td>169,5 ($\hat d\approx0{,}3$)</td></tr>
+<tr><td>8</td><td>116,2 ($\hat d\approx36$)</td><td>24,6 ($\hat d\approx7{,}4$)</td><td>5,2 ($\hat d=5{,}0$)</td><td>26,0 ($\hat d\approx4{,}7$)</td></tr>
+<tr><td>12</td><td>116,2 ($\hat d\approx36$)</td><td>24,6 ($\hat d\approx7{,}4$)</td><td>5,1 ($\hat d=5{,}0$)</td><td>5,1 ($\hat d=5{,}0$)</td></tr>
+</table></div>
+<p><strong>Lecture.</strong> (i) Sur $2^{200}$ modèles, Cp/AIC <strong>sur-apprend massivement</strong> : il garde environ 35 variables dont 30 de bruit (pour une variable de bruit, $\P(\abs{N(0,1)}>\sqrt2)\approx0{,}16$, et $0{,}16\times195\approx31$). Son identité d'optimisme ne valait que pour un modèle fixé. (ii) La pénalité du TD ne sur-apprend jamais, et devient optimale dès que le signal est net. (iii) Mais ses constantes sont prudentes : avec des signaux moyens, elle peut tout rejeter. La théorie garantit « l'oracle à une constante près » pour <em>toutes</em> les situations ; en pratique on calibre $K$ sur les données (par exemple par l'« heuristique de pente » de Birgé et Massart — hors programme).</p>
+<pre><code># Python : reproduire une ligne du tableau (b = amplitude)
+import numpy as np
+from math import lgamma, log
+rng = np.random.default_rng(11)
+p, s, b, n, R = 200, 5, 8.0, 500, 3000
+beta = np.zeros(p); beta[:s] = b
+d = np.arange(p + 1)
+L = log(p + 1) + np.array([lgamma(p + 1) - lgamma(k + 1) - lgamma(p - k + 1) for k in d])
+pens = {"AIC": 2.0 * d, "BIC": d * log(n),
+        "TD K=1.5": 1.5 * (np.sqrt(d) + np.sqrt(2 * L)) ** 2,
+        "TD K=3": 3.0 * (np.sqrt(d) + np.sqrt(2 * L)) ** 2}
+risk = {k: 0.0 for k in pens}
+for _ in range(R):
+    z = beta + rng.standard_normal(p)           # z = X^T Y en design orthonormé
+    o = np.argsort(-z ** 2)
+    cum = np.concatenate([[0.0], np.cumsum(z[o] ** 2)])          # ||Y||^2 - ||Y - f_d||^2
+    err = np.concatenate([[0.0], np.cumsum((z[o] - beta[o]) ** 2)])
+    bias = np.concatenate([np.cumsum((beta[o] ** 2)[::-1])[::-1], [0.0]])
+    for k, pen in pens.items():
+        dh = int(np.argmin(-cum + pen))
+        risk[k] += (err[dh] + bias[dh]) / R
+print(risk)</code></pre>
+</div></details>
+
+<div class="box reflexe"><div class="box-h">Ce qu'il faut retenir de l'exercice 3</div>
+<ul>
+<li><strong>Inégalité de base</strong> : comparer le critère en l'estimateur et en un concurrent quelconque, remplacer $Y$ par signal + bruit, développer.</li>
+<li><strong>Terme croisé d'un objet fixé</strong> : se calcule (espérance nulle, ou trace d'un projecteur). <strong>D'un objet choisi par les données</strong> : se majore (projection + Young, puis pire cas).</li>
+<li><strong>Pire cas sur une collection</strong> : $\max\le\sum(\cdot)_+$, puis concentration modèle par modèle, puis poids $\Pi_m$ de somme 1 : c'est la borne de l'union pondérée, et le $\sqrt{2\log(1/\Pi_m)}$ de la pénalité en est le prix.</li>
+<li><strong>Absorption</strong> : un terme $a^{-1}R$ à droite avec $a>1$ se fait passer à gauche.</li>
+</ul></div>
+
+<h2 id="bilan">Ce qu'il faut retenir du TD</h2>
+<div class="box resume">
+<ul>
+<li><strong>Ridge</strong> : pour $\lambda>0$, $\hb^R(\lambda)=(X\T X+\lambda I_p)^{-1}X\T Y$ est l'<em>unique</em> minimiseur de $\norm{Y-X\beta}^2+\lambda\norm\beta^2$ (forte convexité + coercivité), et l'unique solution des moindres carrés sur la boule de rayon $\norm{\hb^R(\lambda)}$.</li>
+<li><strong>Biais et variance du Ridge</strong> dans la base propre de $X\T X$ : $B^R(\lambda)=\sum_j\frac{\lambda^2\theta_j^2}{(\mu_j+\lambda)^2}$ (croît avec $\lambda$), $V^R(\lambda)=\sigma^2\sum_j\frac{\mu_j}{(\mu_j+\lambda)^2}$ (décroît avec $\lambda$).</li>
+<li><strong>Lasso</strong> : toutes ses solutions ont les mêmes valeurs ajustées $X\hb$ et la même norme $\ell_1$, $N_\lambda$ ; avec $M_\lambda=N_\lambda$, les solutions du Lasso pénalisé et du Lasso contraint sont <em>exactement les mêmes</em>.</li>
+<li><strong>Sélection de modèles</strong> : avec $\mathrm{pen}(m)=K\big(\sqrt{d_m}+\sqrt{2\log(1/\Pi_m)}\big)^2$, $K>1$, $\sum_m\Pi_m=1$, on a l'inégalité oracle $\E\norm{\hat f_{\hat m}-f^*}^2\le C'_K\min_m\{R(\hat f_m)+\sigma^2\log(1/\Pi_m)+\sigma^2\}$ ; si $\log(1/\Pi_m)\le Cd_m$, on fait aussi bien que l'oracle à une constante près. Pour la collection de tous les sous-ensembles, le prix est un facteur $\log p$.</li>
+</ul></div>
+
+<h2 id="reflexes">Les réflexes du TD</h2>
+<div class="box reflexe"><div class="box-h">Existence, unicité, calcul</div>
+<p>Pour « le problème admet $\hat\beta$ comme unique solution » → existence (continuité + compact, ou coercivité), unicité (stricte convexité), caractérisation (gradient nul si convexe et dérivable, sous-gradient sinon).</p></div>
+<div class="box reflexe"><div class="box-h">Pénalisé ⇔ contraint</div>
+<p>Pour passer d'une forme à l'autre → la solution de l'une est <strong>admissible</strong> pour l'autre ; comparer les deux critères en ce point ; le bon niveau de contrainte est la norme pénalisée ($\norm\cdot$ ou $\norm\cdot_1$, sans le $\lambda$) évaluée en la solution pénalisée (et il dépend des données).</p></div>
+<div class="box reflexe"><div class="box-h">Plusieurs solutions</div>
+<p>Quand un problème convexe a plusieurs solutions → leur milieu est encore solution ; la stricte convexité d'un morceau du critère dit ce que les solutions ont en commun (ici, les valeurs ajustées).</p></div>
+<div class="box reflexe"><div class="box-h">Estimateur linéaire</div>
+<p>Quand $\hat\beta=AY$ → biais $AX\bstar-\bstar$, écart à la moyenne $A\eps$, variance totale $\sigma^2\tr(AA\T)$ ; si $A$ est fabriquée avec $X\T X$, passer dans la base propre.</p></div>
+<div class="box reflexe"><div class="box-h">Objet choisi par les données</div>
+<p>Quand un modèle (ou un ensemble de variables) est choisi avec les données → ne jamais calculer « comme s'il était fixé » ; majorer par le pire cas sur la collection, puis par une somme pondérée ($\max\le\sum(\cdot)_+$, poids de somme 1) ; la pénalité doit payer $\sqrt{2\log(1/\Pi_m)}$.</p></div>
+<div class="box reflexe"><div class="box-h">Terme croisé bruit × erreur</div>
+<p>Projeter le bruit sur le sous-espace où vit l'erreur, Cauchy–Schwarz, Young avec un paramètre $a>1$, puis absorber $a^{-1}\times$(erreur) à gauche.</p></div>
+
+<h2 id="errata">Coquilles repérées</h2>
+<p>Seules les coquilles vérifiées sur les PDF sont listées ; aucune ne change les résultats.</p>
+<div class="table-wrap"><table>
+<tr><th>Où</th><th>Écrit</th><th>À lire</th></tr>
+<tr><td>Énoncé, ex. 1 Q2</td><td>« est aussi solution du problem (1) »</td><td>« problème »</td></tr>
+<tr><td>Énoncé, ex. 1 Q3–Q4</td><td>valeurs propres $\lambda_1,\dots,\lambda_p$ et pénalité $\lambda$</td><td>deux objets différents ; notés ici $\mu_j$ et $\lambda$</td></tr>
+<tr><td>Énoncé, ex. 2</td><td>« identifque » ; $\beta_\lambda^{(L,1)}$ puis $\hb_\lambda^{(L,1)}$</td><td>« identique » ; le même objet (une solution de (3))</td></tr>
+<tr><td>Énoncé, ex. 3 (e)</td><td>$\log(\Pi^{-1})$</td><td>$\log(\Pi_m^{-1})$</td></tr>
+<tr><td>Énoncé, ex. 3 (f)</td><td>$\E\big[\norm{\hat f_m-f^*}\big]$</td><td>$\E\big[\norm{\hat f_m-f^*}^2\big]$</td></tr>
+<tr><td>Corrigé, ex. 1 Q1</td><td>« $t^2\lambda\Vert\beta_1l^2$ »</td><td>$t^2\lambda\norm{\beta_1}^2$</td></tr>
+<tr><td>Corrigé, ex. 1, rappel après Q4</td><td>$\E[\norm X^2]=\mathrm{Tr}(\Var(X))$ pour un vecteur aléatoire $X$ centré, « vrai dans le cas non centré »</td><td>vrai seulement si $X$ est centré : en général $\E\norm X^2=\tr\Var(X)+\norm{\E X}^2$ ; c'est $\E\norm{X-\E X}^2=\tr\Var(X)$ qui est toujours vrai</td></tr>
+<tr><td>Corrigé, ex. 2 Q3</td><td>$f_0(\tilde\beta_{M_\lambda})+\norm{\tilde\beta_{M_\lambda}}_1\le f_0(\hb^L_\lambda)+M_\lambda$</td><td>$f_0(\tilde\beta_{M_\lambda})+\lambda\norm{\tilde\beta_{M_\lambda}}_1\le f_0(\hb^L_\lambda)+\lambda M_\lambda$</td></tr>
+<tr><td>Corrigé, ex. 3 Q1</td><td>$\norm{\Var(\hat f_m)}^2=\norm{P_{S_m}\Var(Y)P_{S_m}\T}^2$</td><td>$\tr\Cov(\hat f_m)=\tr\big(P_{S_m}\sigma^2I_nP_{S_m}\T\big)=\sigma^2d_m$</td></tr>
+<tr><td>Corrigé, ex. 3 Q2(b)</td><td>$\E[\mathrm{Tr}(\eps P_{S_m}\eps)]=\mathrm{Tr}(P_{S_m})\E[\eps\eps\T]$</td><td>$\E[\tr(P_{S_m}\eps\eps\T)]=\tr\big(P_{S_m}\E[\eps\eps\T]\big)$</td></tr>
+<tr><td>Corrigé, ex. 3 Q2(d)</td><td>« $\E[aU_m-\mathrm{pen}(\hat m)]\le\dots=\frac{2K(K+1)}{K-1}$. Donc […] $\le C_K\sigma^2+a^{-1}R(\hat f_{\hat m})$ », sans traiter le terme $a\sigma^2N^2$ de $Z$</td><td>$U_{\hat m}$ (et non $U_m$) ; et $C_K$ doit contenir $\E[aN^2]\le\frac{K+1}2$ : $C_K=\frac{K+1}2+\frac{2K(K+1)}{K-1}$</td></tr>
+<tr><td>Corrigé, ex. 3 (g)</td><td>« à une constante prêt »</td><td>« à une constante près »</td></tr>
+</table></div>
+
+<h2 id="suite">Et après ?</h2>
+<p>Le <a href="09_td2.html">TD2</a> démontre le théorème de Bickel, Ritov et Tsybakov pour le Lasso avec les mêmes gestes que l'exercice 3 : inégalité de base, terme croisé « bruit × erreur » contrôlé sur un événement de grande probabilité (cette fois par la queue gaussienne et la borne de l'union sur les $p$ variables), puis une inégalité où l'erreur apparaît des deux côtés, que l'on résout. Si l'exercice 3 vous a paru long, relisez sa carte avant d'attaquer le TD2 : c'est la même histoire, avec le Lasso à la place de $\ell_0$. Le <a href="10_td3.html">TD3</a> passe aux modèles linéaires généralisés (logistique, Poisson).</p>

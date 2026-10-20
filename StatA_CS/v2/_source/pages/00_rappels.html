@@ -1,11 +1,11 @@
 <!--
 title: Rappels — la boîte à outils
 short: Rappels
-description: Les prérequis du cours de statistiques avancées réexpliqués pas à pas : normes, rang, matrice de Gram, valeurs propres, projection, trace, gradient, convexité, Lagrange, Newton, vecteurs gaussiens, queues gaussiennes, biais-variance, vraisemblance, information de Fisher, validation croisée, tests.
-subtitle: Tout ce que les diapos supposent connu, réexpliqué depuis le début : algèbre linéaire, optimisation, probabilités, statistique. Chaque rappel dit où il sert dans le cours.
+description: Les prérequis du cours de statistiques avancées réexpliqués pas à pas : normes, rang, matrice de Gram, valeurs propres, projection, trace, gradient, convexité, existence d'un minimiseur, Lagrange, Newton, vecteurs gaussiens, khi-deux et exponentielle, queues gaussiennes, concentration, Hoeffding, Slutsky, biais-variance, vraisemblance, information de Fisher, validation croisée, tests.
+subtitle: Tout ce que les diapos et les TD supposent connu, réexpliqué depuis le début : algèbre linéaire, optimisation, probabilités, statistique. Chaque rappel dit où il sert dans le cours.
 -->
 <div class="box objectifs"><div class="box-h">Comment utiliser cette page</div>
-<p>Cette page n'est <strong>pas</strong> à lire d'une traite. C'est une boîte à outils : les pages des séances y renvoient au moment précis où un outil devient nécessaire (« voir le rappel sur la trace »). Quand vous suivez un tel lien, lisez le rappel, faites le mini-exercice, puis revenez à la séance.</p>
+<p>Cette page n'est <strong>pas</strong> à lire d'une traite. C'est une boîte à outils : les pages des séances et des TD y renvoient au moment précis où un outil devient nécessaire (« voir le rappel sur la trace »). Quand vous suivez un tel lien, lisez le rappel, faites le mini-exercice, puis revenez à la séance.</p>
 <p>Chaque rappel suit le même plan :</p>
 <ol>
 <li><strong>Où ça sert</strong> : dans quelle séance et quelle diapo l'outil intervient (pour savoir pourquoi on s'embête) ;</li>
@@ -412,7 +412,7 @@ $$\nabla_\beta\norm{Y-X\beta}^2=-2X\T(Y-X\beta),\qquad \nabla^2_\beta\norm{Y-X\b
 
 <h3 id="convexite">Convexité : fonctions, ensembles, minimum global, unicité</h3>
 <p class="tldr">Pour une fonction convexe, « gradient nul » (ou plus généralement « pas de direction de descente ») suffit à garantir un minimum global : c'est pour ça que le cours tient tant à la convexité.</p>
-<p><strong>Où ça sert :</strong> Cours 1 (diapo 23 : le Lasso est convexe, pas $\ell_0$), Cours 4 (diapos 49–53 : sous-différentiel), Cours 6 (diapos 74–76 : bridge convexe ssi $\gamma\ge1$ ; diapo 85 : elastic net strictement convexe).</p>
+<p><strong>Où ça sert :</strong> Cours 1 (diapo 23 : le Lasso est convexe, pas $\ell_0$), Cours 4 (diapos 49–53 : sous-différentiel), Cours5 enrichi (p. 24 : la log-vraisemblance négative d'un GLM canonique est convexe), Cours 6 (diapos 74–76 : bridge convexe ssi $\gamma\ge1$ ; diapo 85 : elastic net strictement convexe), TD1 (exercices 1 et 2) et TD3 (exercice 1).</p>
 
 <div class="box def"><div class="box-h">Définitions</div>
 <ul>
@@ -463,6 +463,71 @@ $$\nabla_\beta\norm{Y-X\beta}^2=-2X\T(Y-X\beta),\qquad \nabla^2_\beta\norm{Y-X\b
 
 <div class="quiz"><p>Mini-exercice : montrez que $x\mapsto\abs x$ est convexe mais pas strictement convexe.</p>
 <details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>C'est une norme sur $\R$, donc convexe. Pas strictement : pour $u=1$, $v=2$, $t=\frac12$, $\abs{1{,}5}=1{,}5=\frac12\abs1+\frac12\abs2$ ; l'inégalité est une égalité (le graphe est une droite sur $[0,\infty)$).</p></div></details></div>
+
+<h3 id="existence">Existence et unicité d'un minimiseur : compact, coercivité, forte convexité</h3>
+<p class="tldr">Un minimiseur existe si la fonction est continue et « remonte à l'infini » (coercive) ; il est unique si elle est strictement convexe. Une pénalité $\lambda\norm\beta^2$ avec $\lambda>0$ apporte les deux d'un coup : c'est pour cela que le Ridge a toujours une solution, et une seule.</p>
+<p><strong>Où ça sert :</strong> TD1 exercice 1 (le Ridge a une unique solution ; le problème contraint « $\norm\beta\le M_\lambda$ » a une solution car on minimise une fonction continue sur une boule fermée), TD1 exercice 2 (le Lasso a toujours au moins une solution, pas forcément une seule), TD3 exercice 1 (Ridge logistique : solution unique ; maximum de vraisemblance logistique : peut ne pas exister), Cours5 enrichi p. 27 (« the unpenalized maximum likelihood estimator may not be uniquely defined or may fail to exist ») et p. 36 (au tableau : Ridge logistique « strictement convexe ⇒ unique solution »).</p>
+
+<div class="box def"><div class="box-h">Deux définitions</div>
+<ul>
+<li>$f:\R^p\to\R$ est <strong>coercive</strong> si $f(\beta)\to+\infty$ quand $\norm\beta\to\infty$ : loin de l'origine, elle est forcément grande.</li>
+<li>$f$ est <strong>fortement convexe</strong> (de module $c>0$) si $\beta\mapsto f(\beta)-\frac c2\norm\beta^2$ est encore convexe : $f$ est « au moins aussi courbée qu'une parabole ».</li>
+</ul></div>
+
+<div class="box thm"><div class="box-h">Les quatre résultats à connaître</div>
+<ol>
+<li><strong>Compact (Weierstrass)</strong> : une fonction continue sur un ensemble <em>fermé, borné et non vide</em> de $\R^p$ (un compact ; par exemple une boule fermée $\{\norm\beta\le M\}$) atteint son minimum.</li>
+<li><strong>Coercivité</strong> : une fonction continue et coercive sur $\R^p$ atteint son minimum.</li>
+<li><strong>Unicité</strong> : une fonction strictement convexe a au plus un minimiseur (rappel <a href="#convexite">convexité</a>).</li>
+<li><strong>Le cas du cours</strong> : si $f(\beta)=h(\beta)+\lambda\norm\beta^2$ avec $h$ continue, convexe et <strong>positive</strong> ($h\ge0$), et $\lambda>0$, alors $f$ a <strong>exactement un</strong> minimiseur. Plus généralement, toute fonction fortement convexe sur $\R^p$ est strictement convexe et coercive, donc a exactement un minimiseur (admis dans le cas général ; la preuve ci-dessous le montre dans le cas 4).</li>
+</ol></div>
+
+<details class="fold proof"><summary>Preuves</summary><div class="fold-body">
+<p><strong>1 (idée).</strong> Soit $m$ la borne inférieure de $f$ sur le compact $K$ et $(\beta_k)$ une suite de points de $K$ avec $f(\beta_k)\to m$. Comme $K$ est borné, on peut en extraire une sous-suite convergente (Bolzano–Weierstrass) ; sa limite $\bar\beta$ reste dans $K$ (fermé), et par continuité $f(\bar\beta)=\lim f(\beta_k)=m$ : le minimum est atteint (et $m$ est fini).</p>
+<p><strong>2.</strong></p>
+<ol class="steps">
+<li>Fixons un point $\beta_0$ et posons $K=\{\beta:\ f(\beta)\le f(\beta_0)\}$.<span class="why">un « sous-niveau » : les points au moins aussi bons que $\beta_0$</span></li>
+<li>$K$ est borné : par coercivité, il existe $R$ tel que $\norm\beta>R\Rightarrow f(\beta)>f(\beta_0)$, donc $K\subset\{\norm\beta\le R\}$. Il est fermé ($f$ est continue) et non vide ($\beta_0\in K$).<span class="why">c'est exactement la définition de « $f\to+\infty$ à l'infini »</span></li>
+<li>Par le résultat 1, $f$ atteint son minimum sur $K$ en un point $\bar\beta$. Hors de $K$, $f(\beta)>f(\beta_0)\ge f(\bar\beta)$ : $\bar\beta$ est un minimiseur sur tout $\R^p$.<span class="why">on n'a écarté que des points moins bons que $\beta_0$</span></li>
+</ol>
+<p><strong>4.</strong></p>
+<ol class="steps">
+<li>$$\norm{tu+(1-t)v}^2=t\norm u^2+(1-t)\norm v^2-t(1-t)\norm{u-v}^2\qquad(t\in[0,1])$$<span class="why">on développe $\norm{tu+(1-t)v}^2=t^2\norm u^2+2t(1-t)\,u\T v+(1-t)^2\norm v^2$, on remplace $2u\T v=\norm u^2+\norm v^2-\norm{u-v}^2$, puis $t^2+t(1-t)=t$ et $(1-t)^2+t(1-t)=1-t$</span></li>
+<li>$$f\big(tu+(1-t)v\big)\le tf(u)+(1-t)f(v)-\lambda t(1-t)\norm{u-v}^2$$<span class="why">$h$ est convexe ; on ajoute $\lambda$ fois l'identité précédente</span></li>
+<li>Pour $u\neq v$ et $t\in(0,1)$, le dernier terme est strictement négatif : $f$ est <strong>strictement</strong> convexe (et même fortement convexe, de module $2\lambda$).<span class="why">$\lambda t(1-t)\norm{u-v}^2>0$</span></li>
+<li>$f(\beta)\ge\lambda\norm\beta^2\to+\infty$ : $f$ est coercive. Elle est continue, donc a un minimiseur (résultat 2), et un seul (résultat 3).<span class="why">$h\ge0$</span></li>
+</ol>
+<p>L'identité de l'étape 1, multipliée par $\lambda$, est exactement le calcul du corrigé officiel du TD1 (exercice 1, question 1) pour montrer que $\beta\mapsto\lambda\norm\beta^2$ est fortement convexe.</p>
+</div></details>
+
+<div class="box exemple"><div class="box-h">Les critères du cours, passés au crible</div>
+<div class="table-wrap"><table>
+<tr><th>Critère</th><th>Convexe ?</th><th>Coercif ?</th><th>Conclusion</th></tr>
+<tr><td>Moindres carrés $\norm{Y-X\beta}^2$</td><td>oui</td><td>seulement si $\Ker X=\{0\}$</td><td>un minimiseur existe toujours (c'est une projection, rappel <a href="#projection">projection</a>) ; unique ssi $\rg X=p$</td></tr>
+<tr><td>Ridge $\norm{Y-X\beta}^2+\lambda\norm\beta^2$, $\lambda>0$</td><td>fortement</td><td>oui ($\ge\lambda\norm\beta^2$)</td><td><strong>exactement une</strong> solution (TD1 ex. 1)</td></tr>
+<tr><td>Lasso $\norm{Y-X\beta}^2+\lambda\norm\beta_1$, $\lambda>0$</td><td>oui, pas strictement en général</td><td>oui ($\ge\lambda\norm\beta_1$)</td><td><strong>au moins une</strong> solution ; plusieurs possibles (TD1 ex. 2)</td></tr>
+<tr><td>Log-vraisemblance logistique négative $-\ell_n$</td><td>oui</td><td>pas toujours</td><td>peut n'avoir <strong>aucun</strong> minimiseur (données séparables, exemple ci-dessous) ; s'il en existe un et que $p>n$, il n'est pas unique</td></tr>
+<tr><td>Ridge logistique $-\ell_n+\lambda\norm\beta^2$, $\lambda>0$</td><td>fortement</td><td>oui ($-\ell_n\ge0$)</td><td><strong>exactement une</strong> solution (Cours5 enrichi p. 36, TD3 ex. 1)</td></tr>
+</table></div>
+<p>La coercivité est <strong>suffisante</strong>, pas nécessaire : les moindres carrés ont toujours un minimiseur même quand ils ne sont pas coercifs ($p>n$), parce qu'on sait le construire (projection). Et $-\ell_n\ge0$ car c'est une somme de $-\log$ de probabilités, toutes $\le1$.</p></div>
+
+<div class="box exemple"><div class="box-h">Exemple chiffré : quand le maximum de vraisemblance n'existe pas</div>
+<p>Régression logistique sans constante, deux observations : $(x_1,y_1)=(-1,0)$ et $(x_2,y_2)=(1,1)$. Les données sont <em>séparables</em> : le signe de $x$ prédit parfaitement $y$. La log-vraisemblance négative (formule du TD3, exercice 1) vaut
+$$-\ell_n(\beta)=\sum_{i=1}^2\Big[\log\big(1+e^{x_i\beta}\big)-y_ix_i\beta\Big]=\log\big(1+e^{-\beta}\big)+\Big[\log\big(1+e^{\beta}\big)-\beta\Big]=2\log\big(1+e^{-\beta}\big),$$
+car $\log(1+e^{\beta})-\beta=\log\big((1+e^{\beta})e^{-\beta}\big)=\log(e^{-\beta}+1)$.</p>
+<div class="table-wrap"><table>
+<tr><th>$\beta$</th><td>0</td><td>1</td><td>2</td><td>5</td><td>10</td></tr>
+<tr><th>$-\ell_n(\beta)$</th><td>1,386</td><td>0,627</td><td>0,254</td><td>0,0134</td><td>0,0001</td></tr>
+</table></div>
+<p>La fonction décroît strictement et tend vers 0 sans jamais l'atteindre : <strong>aucun minimiseur</strong>. Elle n'est pas coercive (elle tend vers 0, pas vers $+\infty$, quand $\beta\to+\infty$). Avec le Ridge, $2\log(1+e^{-\beta})+0{,}1\,\beta^2$ est coercive et strictement convexe : son unique minimiseur, obtenu en annulant la dérivée $-\frac{2}{1+e^{\beta}}+0{,}2\,\beta$, est $\beta\approx1{,}63$.</p></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>Avant de parler de « la » solution d'un problème d'optimisation : (1) <strong>existe-t-elle ?</strong> → continuité + compact (contrainte fermée et bornée), ou coercivité ; (2) <strong>est-elle unique ?</strong> → stricte convexité. Une pénalité $\lambda\norm\beta^2$ ($\lambda>0$) ajoutée à un critère convexe positif règle les deux questions d'un coup.</p></div>
+
+<div class="quiz"><p>Mini-exercice 1 : pourquoi le problème contraint $\min\norm{Y-X\beta}^2$ sous $\norm\beta\le M$ (TD1, exercice 1, question 2) a-t-il au moins une solution ?</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>On minimise la fonction continue $\beta\mapsto\norm{Y-X\beta}^2$ sur la boule $\{\norm\beta\le M\}$, qui est fermée, bornée et non vide (elle contient 0) : c'est le résultat 1 (Weierstrass).</p></div></details></div>
+<div class="quiz"><p>Mini-exercice 2 : montrez que le critère du Lasso $\norm{Y-X\beta}^2+\lambda\norm\beta_1$ ($\lambda>0$) atteint son minimum, même si $p>n$.</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>Il est continu, et minoré par $\lambda\norm\beta_1\ge\lambda\norm\beta_2\to+\infty$ (rappel <a href="#inegalites-normes">inégalités entre normes</a>) : il est coercif, donc atteint son minimum (résultat 2). Mais il n'est pas strictement convexe en général : l'unicité n'est pas garantie (le TD1, exercice 2, montre que toutes les solutions ont au moins la même norme $\ell_1$).</p></div></details></div>
 
 <h3 id="lagrange">Contrainte ou pénalité : l'idée du multiplicateur de Lagrange</h3>
 <p class="tldr">Minimiser $f$ sous la contrainte $g\le t$ ou minimiser $f+\lambda g$ donne les mêmes solutions, pour des valeurs de $t$ et $\lambda$ qui se correspondent ; c'est pourquoi le Lasso a deux définitions.</p>
@@ -531,8 +596,8 @@ $$f(\beta+h)\approx f(\beta)+\nabla f(\beta)\T h+\tfrac12h\T\nabla^2f(\beta)h .$
 <details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$\nabla f(\beta_0)=-2X\T(Y-X\beta_0)$ et $\nabla^2f=2X\T X$. Donc $\beta_1=\beta_0+(X\T X)^{-1}X\T(Y-X\beta_0)=\beta_0+(X\T X)^{-1}X\T Y-\beta_0=(X\T X)^{-1}X\T Y=\hb\MC$ : la solution exacte en un pas, car l'approximation quadratique d'une fonction quadratique est la fonction elle-même.</p></div></details></div>
 
 <h3 id="young">Petites inégalités qui débloquent les preuves</h3>
-<p class="tldr">Quatre astuces élémentaires reviennent dans toutes les preuves des séances 3 et 4 ; les connaître évite de rester bloqué sur une ligne.</p>
-<p><strong>Où ça sert :</strong> Cours 3 (diapos 36–38 : cône et théorème BRT), Cours 4 (diapos 55 et 58 : inégalités oracle).</p>
+<p class="tldr">Sept astuces élémentaires reviennent dans les preuves des séances 3 et 4 et des TD ; les connaître évite de rester bloqué sur une ligne.</p>
+<p><strong>Où ça sert :</strong> Cours 3 (diapos 36–38 : cône et théorème BRT), Cours 4 (diapos 55 et 58 : inégalités oracle ; Preuves cours 4, p. 1–4), TD1 exercice 3 (sélection de modèles : astuces 5 à 7), TD2 (même preuve que le Cours 3).</p>
 
 <div class="box thm"><div class="box-h">La boîte à astuces</div>
 <ol>
@@ -540,6 +605,9 @@ $$f(\beta+h)\approx f(\beta)+\nabla f(\beta)\T h+\tfrac12h\T\nabla^2f(\beta)h .$
 <li><strong>« $2ab\le a^2+b^2$ »</strong>, et sa version réglable (Young) : pour tout $\eta>0$, $ab\le\eta a^2+\frac{b^2}{4\eta}$.</li>
 <li><strong>« $u^2\le cu$ »</strong> avec $u,c\ge0$ entraîne $u\le c$.</li>
 <li><strong>« $u^2\le cu+d$ »</strong> avec $u,c,d\ge0$ entraîne $u\le c+\sqrt d$.</li>
+<li><strong>Carré d'une somme, avec un poids</strong> : pour tout $\alpha>0$, $(a+b)^2\le(1+\alpha)a^2+(1+\alpha^{-1})b^2$. Avec $\alpha=1$ : $(a+b)^2\le2a^2+2b^2$.</li>
+<li><strong>Racine d'une somme</strong> : pour $a,b\ge0$, $\sqrt{a+b}\le\sqrt a+\sqrt b$.</li>
+<li><strong>Un maximum est plus petit que la somme des parties positives</strong> : pour une famille finie de nombres, $\max_mx_m\le\sum_m(x_m)_+$ ; donc, pour des variables aléatoires, $\E[\max_mX_m]\le\sum_m\E[(X_m)_+]$.</li>
 </ol></div>
 
 <details class="fold proof"><summary>Preuves</summary><div class="fold-body">
@@ -548,14 +616,18 @@ $$f(\beta+h)\approx f(\beta)+\nabla f(\beta)\T h+\tfrac12h\T\nabla^2f(\beta)h .$
 <li>$0\le(a-b)^2=a^2-2ab+b^2$ ; et $0\le\big(\sqrt\eta\,a-\frac{b}{2\sqrt\eta}\big)^2=\eta a^2-ab+\frac{b^2}{4\eta}$.<span class="why">un carré est positif ; on développe</span></li>
 <li>Si $u>0$, on divise $u^2\le cu$ par $u$ ; si $u=0$, la conclusion $0\le c$ est l'hypothèse $c\ge0$ (sans elle, $u=0$ et $c<0$ serait un contre-exemple).<span class="why">attention : on ne divise jamais par une quantité qui pourrait être nulle sans le dire</span></li>
 <li>$u$ est entre les racines de $u^2-cu-d$, donc $u\le\frac{c+\sqrt{c^2+4d}}2\le\frac{c+c+2\sqrt d}2=c+\sqrt d$.<span class="why">$\sqrt{c^2+4d}\le c+2\sqrt d$ car $(c+2\sqrt d)^2=c^2+4c\sqrt d+4d$</span></li>
+<li>$2ab\le\alpha a^2+\alpha^{-1}b^2$, puis $(a+b)^2=a^2+2ab+b^2\le(1+\alpha)a^2+(1+\alpha^{-1})b^2$.<span class="why">$0\le\big(\sqrt\alpha\,a-\frac{b}{\sqrt\alpha}\big)^2=\alpha a^2-2ab+\frac{b^2}\alpha$</span></li>
+<li>$(\sqrt a+\sqrt b)^2=a+b+2\sqrt{ab}\ge a+b$, puis on prend la racine des deux membres (positifs).<span class="why">la racine carrée est croissante sur $[0,\infty)$</span></li>
+<li>Le maximum vaut l'un des termes, disons $x_{m_0}$ ; et $x_{m_0}\le(x_{m_0})_+\le\sum_m(x_m)_+$. En espérance : $\E[\max_mX_m]\le\E\big[\sum_m(X_m)_+\big]=\sum_m\E[(X_m)_+]$.<span class="why">tous les termes $(x_m)_+$ sont positifs, donc ajouter les autres ne peut qu'augmenter la somme ; puis linéarité de l'espérance (somme de termes positifs)</span></li>
 </ol></div></details>
 
 <div class="box exemple"><div class="box-h">Comment elles apparaissent dans le cours</div>
-<p>(Notations des séances 3–4 : $s$ = nombre maximal de coefficients non nuls de $\bstar$ ; $r$ et $\lambda$ = niveaux de pénalité ; $\kappa>0$ = constante de la condition RE.)</p>
+<p>(Notations des séances 3–4 : $s$ = nombre maximal de coefficients non nuls de $\bstar$ ; $r$ et $\lambda$ = niveaux de pénalité ; $\kappa>0$ = constante de la condition RE ; en séance 4, $M$ = nombre de variables (le $p$ des autres séances) et $x>0$ règle la probabilité de succès $1-2e^{-x}$.)</p>
 <ul>
 <li><strong>Triangulaire inversée</strong> (Cours 3) : avec $\delta=\hb-\bstar$ et $J_0$ le support de $\bstar$, $\norm{\bstar_{J_0}}_1-\norm{\hb_{J_0}}_1\le\norm{\delta_{J_0}}_1$.</li>
 <li><strong>« $u^2\le cu$ »</strong> (Cours 3) : on arrive à $u^2\le\frac{4r\sqrt s}{\kappa}u$ avec $u=\norm{X\delta}/\sqrt n$, d'où $u\le\frac{4r\sqrt s}{\kappa}$.</li>
-<li><strong>Young</strong> (Cours 4, inégalité rapide) : $\frac{3\lambda\sqrt s}{2\kappa}\,u\le u^2+\frac{9\lambda^2s}{16\kappa^2}$ (Young avec $\eta=1$, $a=u$, $b=\frac{3\lambda\sqrt s}{2\kappa}$) — c'est ce qui fait apparaître le $18$ de la diapo 58, avec le $\lambda$ doublé de la preuve rapide, $\lambda=4\sigma\sqrt{2(x+\log M)/n}$ : $\frac{9\lambda^2s}{16\kappa^2}=\frac{18\sigma^2s(x+\log M)}{\kappa^2n}$.</li>
+<li><strong>Young</strong> (Cours 4, inégalité rapide, dans la preuve de la professeure, Preuves cours 4 p. 4) : l'estimateur y minimise $\frac1n\norm{Y-X\beta}^2+2\lambda\norm\beta_1$ (pénalité $2\lambda\norm\beta_1$), avec le <em>même</em> $\lambda=2\sigma\sqrt{2(x+\log M)/n}$ que pour l'inégalité lente. On arrive à un terme $\frac{3\lambda\sqrt s}{\kappa}\,u$ avec $u=\norm{X(\hb-\beta)}/\sqrt n$ ($\beta$ : un concurrent quelconque ayant au plus $s$ coefficients non nuls), et Young avec $\eta=1$, $a=u$, $b=\frac{3\lambda\sqrt s}{\kappa}$ donne $\frac{3\lambda\sqrt s}{\kappa}\,u\le u^2+\frac{9\lambda^2s}{4\kappa^2}$. Comme $\lambda^2=\frac{8\sigma^2(x+\log M)}n$, on a $\frac{9\lambda^2s}{4\kappa^2}=\frac{18\sigma^2s(x+\log M)}{\kappa^2n}$ : c'est le $18$ de la diapo 58.</li>
+<li><strong>Astuces 5, 6, 7</strong> (TD1, exercice 3, où $K>1$ est la constante de la pénalité) : le modèle choisi $\hat m$ dépend des données, donc on majore la quantité gênante par un maximum sur <em>tous</em> les modèles, puis par la somme des parties positives (astuce 7) ; pour $\xi,c\ge0$, $\sqrt{2\xi}\le\sqrt{2c}+\sqrt{2(\xi-c)_+}$ car $\xi\le c+(\xi-c)_+$ (astuce 6 ; dans le TD, $\xi$ est la variable exponentielle du rappel <a href="#concentration">concentration</a> et $c=\log(1/\Pi_m)$, où $\Pi_m\in(0,1]$ est le poids donné au modèle $m$) ; et $(a+b)^2\le(1+\alpha)a^2+(1+\alpha^{-1})b^2$ avec $\alpha=\frac{K-1}{K+1}$ (astuce 5) sépare une partie absorbée par la pénalité d'une partie de petite espérance.</li>
 </ul></div>
 
 <div class="box reflexe"><div class="box-h">Réflexe</div>
@@ -565,6 +637,8 @@ $$f(\beta+h)\approx f(\beta)+\nabla f(\beta)\T h+\tfrac12h\T\nabla^2f(\beta)h .$
 <details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$u^2-3u-4=(u-4)(u+1)\le0$ et $u+1>0$, donc $u\le4$. L'astuce 4 donne $u\le3+\sqrt4=5$ : moins précis mais immédiat.</p></div></details></div>
 <div class="quiz"><p>Mini-exercice 2 : montrez que pour des vecteurs $a,b$ et un ensemble d'indices $J$, $\norm{a_J}_1-\norm{b_J}_1\le\norm{(a-b)_J}_1$, où $a_J$ garde les coordonnées de $a$ dans $J$ et met les autres à 0.</p>
 <details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>C'est la triangulaire inversée pour la norme $\ell_1$ appliquée aux vecteurs $a_J$ et $b_J$, en remarquant que $a_J-b_J=(a-b)_J$.</p></div></details></div>
+<div class="quiz"><p>Mini-exercice 3 : avec $d\ge0$ et $L\ge0$, déduisez de l'astuce 5 que $\big(\sqrt d+\sqrt{2L}\big)^2\le2d+4L$ (c'est l'inégalité de la question (e) du TD1, exercice 3).</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>Astuce 5 avec $\alpha=1$, $a=\sqrt d$, $b=\sqrt{2L}$ : $(a+b)^2\le2a^2+2b^2=2d+2\times2L=2d+4L$.</p></div></details></div>
 
 <h2 id="probabilites">Probabilités</h2>
 <p class="lead">Le bruit $\eps$ est aléatoire, donc les estimateurs aussi. Pour dire « l'estimateur est proche de la vérité », il faut savoir calculer des espérances de vecteurs, manipuler des gaussiennes et contrôler la probabilité qu'un bruit soit exceptionnellement grand.</p>
@@ -627,13 +701,61 @@ $$X_j\T\eps\sim\N(0,\,n\sigma^2),\qquad \frac{X_j\T\eps}{\sigma\sqrt n}\sim\N(0,
 <p>$n=100$, colonnes normalisées, $\sigma=2$ : $X_j\T\eps\sim\N(0,400)$ (écart-type 20) et $\frac1nX_j\T\eps\sim\N(0,\sigma^2/n)=\N(0,0{,}04)$ (écart-type 0,2). C'est ce second nombre — la « corrélation entre la variable $j$ et le bruit » — que $\lambda$ devra dominer pour toutes les variables à la fois.</p></div>
 
 <div class="box remarque"><div class="box-h">Pour aller un peu plus loin : khi-deux</div>
-<p>Si $Z_1,\dots,Z_k$ sont indépendantes $\N(0,1)$, $\sum_iZ_i^2$ suit une loi du khi-deux à $k$ degrés de liberté, d'espérance $k$. Par exemple $\norm{P\eps}^2/\sigma^2\sim\chi^2(\rg P)$ pour un projecteur $P$ : c'est la version « en loi » du rappel suivant.</p></div>
+<p>Si $Z_1,\dots,Z_k$ sont indépendantes $\N(0,1)$, $\sum_iZ_i^2$ suit une loi du khi-deux à $k$ degrés de liberté, d'espérance $k$. Par exemple $\norm{P\eps}^2/\sigma^2\sim\chi^2(\rg P)$ pour un projecteur $P$ : c'est la version « en loi » du rappel sur les <a href="#forme-quadratique">formes quadratiques</a>. Tout cela est détaillé, avec la preuve, dans le rappel suivant (<a href="#lois-usuelles">khi-deux et exponentielle</a>).</p></div>
 
 <div class="box reflexe"><div class="box-h">Réflexe</div>
 <p>Quand vous voyez $X_j\T\eps$ (ou $X\T\eps$) : c'est une gaussienne centrée de variance $\sigma^2\norm{X_j}^2$. Standardisez-la pour vous ramener à $\N(0,1)$, puis utilisez les <a href="#queues">queues gaussiennes</a>.</p></div>
 
 <div class="quiz"><p>Mini-exercice : $a=(1,2,2)$, $\eps\sim\N(0,9I_3)$. Loi de $a\T\eps$ ? Probabilité que $\abs{a\T\eps}>18$ ?</p>
 <details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$\norm a^2=1+4+4=9$, donc $a\T\eps\sim\N(0,81)$, écart-type 9. $\P(\abs{a\T\eps}>18)=\P(\abs Z>2)\approx0{,}0455$.</p></div></details></div>
+
+<h3 id="lois-usuelles">Deux lois à connaître : khi-deux et exponentielle</h3>
+<p class="tldr">La norme au carré d'un bruit gaussien projeté sur un sous-espace de dimension $d$ suit, à $\sigma^2$ près, une loi du $\chi^2(d)$, d'espérance $d$ ; une variable exponentielle dépasse $x$ avec probabilité $e^{-x}$, ce qui donne $\E[(\xi-c)_+]=e^{-c}$.</p>
+<p><strong>Où ça sert :</strong> TD1 exercice 3 (questions (c) et (d) : $N^2\sim\chi^2(1)$ ; pour un modèle fixé, $U_m\sim\chi^2(d_m)$ ou $\chi^2(d_m-1)$ ; variables $\xi_m$ exponentielles et $\E[(\xi_m-\log\Pi_m^{-1})_+]=\Pi_m$) ; Cours 1 (diapos 7, 17, 22 : la version « en loi » de $\E\norm{P\eps}^2=\sigma^2d$).</p>
+
+<div class="box def"><div class="box-h">Définitions</div>
+<ul>
+<li><strong>Khi-deux</strong> : si $Z_1,\dots,Z_k$ sont indépendantes de loi $\N(0,1)$, la loi de $Z_1^2+\dots+Z_k^2$ est le <strong>$\chi^2(k)$</strong> (« khi-deux à $k$ degrés de liberté »). Son espérance vaut $k$ (chaque $Z_i^2$ a pour espérance $\Var Z_i=1$) et sa variance $2k$.</li>
+<li><strong>Exponentielle</strong> $\mathcal E(1)$ : la loi de densité $e^{-x}$ sur $[0,+\infty)$. Sa queue est $\P(\xi>x)=\int_x^\infty e^{-u}\,du=e^{-x}$ pour $x\ge0$, et $\E\xi=1$.</li>
+</ul></div>
+
+<div class="box thm"><div class="box-h">Projection d'un bruit gaussien</div>
+<p>Soit $\eps\sim\N(0,\sigma^2I_n)$ et $S$ un sous-espace de $\R^n$ de dimension $d$, de projecteur orthogonal $P_S$. Alors
+$$\frac{\norm{P_S\eps}^2}{\sigma^2}\sim\chi^2(d).$$
+Si $S$ et $T$ sont deux sous-espaces <strong>orthogonaux</strong>, $P_S\eps$ et $P_T\eps$ sont <strong>indépendants</strong>, et la projection sur $S\oplus T$ vérifie $\norm{P_{S\oplus T}\eps}^2=\norm{P_S\eps}^2+\norm{P_T\eps}^2$ (Pythagore).</p></div>
+
+<details class="fold proof"><summary>Preuve</summary><div class="fold-body">
+<ol class="steps">
+<li>Soit $u_1,\dots,u_d$ une base orthonormée de $S$ et $U=(u_1\ \cdots\ u_d)\in\R^{n\times d}$, de sorte que $U\T U=I_d$. Alors $P_S=UU\T$, $P_S\eps=\sum_{k=1}^d(u_k\T\eps)\,u_k$ et $\norm{P_S\eps}^2=\eps\T UU\T UU\T\eps=\norm{U\T\eps}^2=\sum_{k=1}^d(u_k\T\eps)^2$.<span class="why">matrice chapeau du rappel <a href="#projection">projection</a> avec $X=U$ : $U(U\T U)^{-1}U\T=UU\T$ puisque $U\T U=I_d$</span></li>
+<li>Le vecteur $U\T\eps=(u_1\T\eps,\dots,u_d\T\eps)$ est gaussien, centré, de covariance $U\T(\sigma^2I_n)U=\sigma^2I_d$.<span class="why">transformation linéaire d'un vecteur gaussien (rappel <a href="#gaussien">gaussien</a>) et règle du sandwich (rappel <a href="#esperance">espérance</a>)</span></li>
+<li>Ses coordonnées sont donc indépendantes, de loi $\N(0,\sigma^2)$, et $\norm{P_S\eps}^2/\sigma^2=\sum_k(u_k\T\eps/\sigma)^2$ est une somme de $d$ carrés de $\N(0,1)$ indépendantes : un $\chi^2(d)$.<span class="why">pour un vecteur gaussien, coordonnées non corrélées ⇔ indépendantes (fait admis)</span></li>
+<li>Pour $T\perp S$, de base orthonormée rangée dans $V$ : $\Cov(U\T\eps,V\T\eps)=\sigma^2U\T V=0$. Donc $U\T\eps$ et $V\T\eps$ sont indépendants, ainsi que $P_S\eps=UU\T\eps$ et $P_T\eps=VV\T\eps$ qui en sont des fonctions. Enfin, les colonnes de $(U\ \ V)$ forment une base orthonormée de $S\oplus T$, donc $P_{S\oplus T}=UU\T+VV\T$ (même calcul qu'à l'étape 1) : $P_{S\oplus T}\eps=P_S\eps+P_T\eps$, somme de deux vecteurs orthogonaux, et Pythagore donne la somme des carrés.<span class="why">$U\T V=0$ car les vecteurs de $S$ sont orthogonaux à ceux de $T$ ; et le vecteur $(U\T\eps,V\T\eps)$ est gaussien (transformation linéaire de $\eps$), donc covariance croisée nulle ⇔ indépendance</span></li>
+</ol></div></details>
+
+<div class="box thm"><div class="box-h">Exponentielle et partie positive</div>
+<p>Si $\xi\sim\mathcal E(1)$ et $c\ge0$ :
+$$\E\big[(\xi-c)_+\big]=e^{-c}.$$
+Plus généralement, si l'on sait seulement que $\P(\xi>x)\le e^{-x}$ pour tout $x\ge0$, alors $\E[(\xi-c)_+]\le e^{-c}$.</p></div>
+<ol class="steps">
+<li>$$\E W=\int_0^{\infty}\P(W>t)\,dt\qquad\text{pour toute variable aléatoire }W\ge0$$<span class="why">« formule de la queue » : $W=\int_0^\infty\ind\{t<W\}\,dt$, puis on échange espérance et intégrale (tout est positif)</span></li>
+<li>$$\P\big((\xi-c)_+>t\big)=\P(\xi>c+t)=e^{-c-t}\qquad(t\ge0)$$<span class="why">pour $t\ge0$, $(\xi-c)_+>t\iff\xi-c>t$</span></li>
+<li>$$\E[(\xi-c)_+]=\int_0^\infty e^{-c-t}\,dt=e^{-c}$$<span class="why">avec seulement $\P(\xi>x)\le e^{-x}$, la même intégrale donne $\le e^{-c}$</span></li>
+</ol>
+
+<div class="box exemple"><div class="box-h">Exemples chiffrés</div>
+<ul>
+<li>$\P(\chi^2(1)>3{,}84)=\P(\abs Z>1{,}96)=5\,\%$ (car $1{,}96^2\approx3{,}84$) ; pour un $\chi^2(10)$ (espérance 10), le quantile à 95 % vaut $18{,}31$.</li>
+<li>$\E[(\xi-2)_+]=e^{-2}\approx0{,}135$ (une simulation de 400 000 tirages donne 0,1355).</li>
+<li>Dans le TD1 : pour un modèle de poids $\Pi_m=0{,}01$, on prend $c=\log(1/\Pi_m)=\log100\approx4{,}61$, et $\E[(\xi_m-c)_+]=e^{-c}=\Pi_m=0{,}01$. C'est ce qui permet ensuite de <strong>sommer</strong> sur tous les modèles, puisque $\sum_m\Pi_m=1$.</li>
+</ul></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>« Norme au carré d'un bruit gaussien projeté » → $\sigma^2\times\chi^2(\text{dimension})$, d'espérance $\sigma^2\times$dimension. « Espérance d'une partie positive » → formule de la queue $\E W=\int_0^\infty\P(W>t)\,dt$.</p></div>
+
+<div class="quiz"><p>Mini-exercice 1 : $\eps\sim\N(0,4I_5)$ et $S$ le plan engendré par les deux premiers vecteurs de la base canonique. Loi de $(\eps_1^2+\eps_2^2)/4$ ? Espérance de $\eps_1^2+\eps_2^2$ ?</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$P_S\eps=(\eps_1,\eps_2,0,0,0)$, donc $(\eps_1^2+\eps_2^2)/4=\norm{P_S\eps}^2/\sigma^2\sim\chi^2(2)$, et $\E[\eps_1^2+\eps_2^2]=4\times2=8$.</p></div></details></div>
+<div class="quiz"><p>Mini-exercice 2 : retrouvez $\E[(\xi-1)_+]=e^{-1}$ par un calcul direct d'intégrale.</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$\E[(\xi-1)_+]=\int_1^\infty(x-1)\,e^{-x}\,dx$ ; avec $u=x-1$ : $\int_0^\infty u\,e^{-u-1}\,du=e^{-1}\int_0^\infty u\,e^{-u}\,du=e^{-1}\times1$ (la dernière intégrale est l'espérance d'une $\mathcal E(1)$).</p></div></details></div>
 
 <h3 id="forme-quadratique">Espérance d'une forme quadratique : $\E[\eps\T M\eps]=\sigma^2\tr M$</h3>
 <p class="tldr">L'espérance d'une forme quadratique du bruit se réduit à une trace ; pour un projecteur, la trace est la dimension.</p>
@@ -670,7 +792,7 @@ $$\E[\eps\T M\eps]=\sigma^2\tr M .$$
 
 <h3 id="queues">Queues gaussiennes, borne de l'union, maximum de $p$ gaussiennes</h3>
 <p class="tldr">Une gaussienne dépasse $t$ avec une probabilité inférieure à $e^{-t^2/2}$ ; en additionnant ces probabilités sur $p$ variables, on obtient que leur maximum reste de l'ordre de $\sqrt{2\log p}$. C'est l'origine du $\log p$ dans tout le cours.</p>
-<p><strong>Où ça sert :</strong> Cours 3 (diapo 38 : probabilité $1-p^{1-A^2/8}$ et $r=A\sigma\sqrt{\log p/n}$), Cours 4 (diapos 54–58 : probabilité $1-2e^{-x}$ et $\lambda=2\sigma\sqrt{2(x+\log M)/n}$, où $x>0$ règle la confiance et $M$ est le nombre de variables, le « $p$ » de la séance 4).</p>
+<p><strong>Où ça sert :</strong> Cours 3 (diapo 38 : probabilité $1-p^{1-A^2/8}$ et $r=A\sigma\sqrt{\log p/n}$), Cours 4 (diapos 54–58 : probabilité $1-2e^{-x}$ et $\lambda=2\sigma\sqrt{2(x+\log M)/n}$, où $x>0$ règle la confiance et $M$ est le nombre de variables, le « $p$ » de la séance 4 ; la preuve de la professeure renvoie au TD2 pour la queue gaussienne), TD2 (questions 2 à 4 : $\P(\abs Z\ge z)\le2e^{-z^2/2}$ par Chernoff, et la borne de l'union).</p>
 
 <figure class="fig">
 <svg viewBox="0 0 520 215" aria-label="Densité gaussienne et queues au-delà de plus ou moins 2">
@@ -746,9 +868,89 @@ La plus forte « corrélation apparente » entre une variable et le bruit pur es
 <div class="quiz"><p>Mini-exercice 2 : avec la borne de l'union et $\P(\abs Z>t)\le2e^{-t^2/2}$, trouvez un seuil $t$ tel que $\P(\max_{j\le1000}\abs{Z_j}>t)\le0{,}05$.</p>
 <details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>Il suffit que $1000\times2e^{-t^2/2}\le0{,}05$, soit $e^{-t^2/2}\le2{,}5\times10^{-5}$, soit $t^2\ge2\log(40\,000)\approx21{,}2$ : $t\approx4{,}60$. (Avec la version fine $e^{-t^2/2}$ : $t^2\ge2\log(20\,000)$, $t\approx4{,}45$.)</p></div></details></div>
 
+<h3 id="concentration">Concentration gaussienne : les fonctions lipschitziennes d'un bruit</h3>
+<p class="tldr">Si $F$ est 1-lipschitzienne et $Z\sim\N(0,\sigma^2I_d)$, alors $F(Z)$ dépasse sa moyenne de $\sigma t$ avec probabilité au plus $e^{-t^2/2}$, <strong>quelle que soit la dimension</strong> $d$ : la même queue que pour une seule gaussienne.</p>
+<p><strong>Où ça sert :</strong> TD1 exercice 3, question (d) : le lemme donné par l'énoncé (« il existe $\xi\sim\mathcal E(1)$ tel que $F(Z)\le\E[F(Z)]+\sigma\sqrt{2\xi}$ ») est exactement ce résultat, appliqué à $F(\eps)=\norm{P_{\tilde S_m}\eps}$ pour contrôler tous les modèles $m$ à la fois.</p>
+
+<div class="box def"><div class="box-h">Fonction lipschitzienne</div>
+<p>$F:\R^d\to\R$ est <strong>$L$-lipschitzienne</strong> si $\abs{F(u)-F(v)}\le L\norm{u-v}$ pour tous $u,v$ : elle ne peut pas varier plus vite que la distance (multipliée par $L$). Exemples de fonctions 1-lipschitziennes :</p>
+<ul>
+<li>$z\mapsto a\T z$ avec $\norm a=1$ (Cauchy–Schwarz : $\abs{a\T u-a\T v}\le\norm a\norm{u-v}$) ;</li>
+<li>$z\mapsto\norm z$ (triangulaire inversée : $\abs{\norm u-\norm v}\le\norm{u-v}$) ;</li>
+<li>$z\mapsto\norm{P_Sz}$ pour un projecteur orthogonal : $\abs{\norm{P_Su}-\norm{P_Sv}}\le\norm{P_S(u-v)}\le\norm{u-v}$ (une projection ne rallonge pas : Pythagore) ;</li>
+<li>$z\mapsto\max_jz_j$ : $\abs{\max_ju_j-\max_jv_j}\le\max_j\abs{u_j-v_j}\le\norm{u-v}$.</li>
+</ul></div>
+
+<div class="box thm"><div class="box-h">Concentration gaussienne (Tsirelson–Ibragimov–Sudakov, admis)</div>
+<p>Si $Z\sim\N(0,\sigma^2I_d)$ et si $F$ est $L$-lipschitzienne, alors pour tout $t\ge0$ :
+$$\P\Big(F(Z)\ge\E F(Z)+\sigma Lt\Big)\le e^{-t^2/2}.$$</p>
+<p>La preuve demande des outils hors programme (calcul stochastique, ou inégalité de Sobolev logarithmique gaussienne) : on l'admet, comme le fait l'énoncé du TD1.</p></div>
+
+<div class="box intu"><div class="box-h">Pourquoi c'est remarquable</div>
+<p>Pour $F(z)=a\T z$ avec $\norm a=1$, $F(Z)\sim\N(0,\sigma^2)$ et l'énoncé n'est autre que la queue gaussienne $\P(Z\ge t)\le e^{-t^2/2}$ du rappel <a href="#queues">queues</a>. Le théorème dit que <strong>toute</strong> fonction lipschitzienne d'un vecteur gaussien est au moins aussi concentrée qu'une seule gaussienne, <strong>même en dimension énorme</strong>. Par exemple, $\norm Z$ vaut en moyenne environ $\sigma\sqrt d$, mais ses fluctuations autour de cette moyenne sont de l'ordre de $\sigma$ seulement, pas de $\sigma\sqrt d$.</p></div>
+
+<div class="box thm"><div class="box-h">La forme utilisée dans le TD1</div>
+<p>Posons $\xi=\frac12\Big(\frac{(F(Z)-\E F(Z))_+}{\sigma L}\Big)^2\ge0$. Alors
+$$F(Z)\le\E F(Z)+\sigma L\sqrt{2\xi}\qquad\text{et}\qquad\P(\xi>x)\le e^{-x}\quad(x\ge0).$$
+Autrement dit, $\xi$ a une queue au plus exponentielle, comme une $\mathcal E(1)$ : c'est le « il existe $\xi\sim\mathcal E(1)$ » de l'énoncé du TD1. Pour la suite du TD, seule cette queue compte : elle suffit pour $\E[(\xi-c)_+]\le e^{-c}$ (rappel <a href="#lois-usuelles">khi-deux et exponentielle</a>).</p></div>
+<details class="fold proof"><summary>Preuve</summary><div class="fold-body">
+<ol class="steps">
+<li>Si $F(Z)\le\E F(Z)$, l'inégalité $F(Z)\le\E F(Z)+\sigma L\sqrt{2\xi}$ est vraie puisque $\sqrt{2\xi}\ge0$ ; sinon, $\sigma L\sqrt{2\xi}=F(Z)-\E F(Z)$ et c'est une égalité.<span class="why">par définition, $\sqrt{2\xi}=(F(Z)-\E F(Z))_+/(\sigma L)$</span></li>
+<li>$$\P(\xi>x)=\P\big(F(Z)-\E F(Z)>\sigma L\sqrt{2x}\big)\le e^{-(\sqrt{2x})^2/2}=e^{-x}$$<span class="why">pour $x\ge0$, $\xi>x$ signifie $(F(Z)-\E F(Z))_+>\sigma L\sqrt{2x}$ ; on applique le théorème avec $t=\sqrt{2x}$</span></li>
+</ol>
+<p>(Quitte à agrandir l'espace de probabilité, on peut même remplacer $\xi$ par une vraie variable de loi $\mathcal E(1)$ plus grande que lui ; c'est inutile pour les calculs du TD.)</p></div></details>
+
+<div class="box exemple"><div class="box-h">Exemple : la norme d'un bruit projeté</div>
+<p>$\eps\sim\N(0,\sigma^2I_n)$ et $S$ un sous-espace de dimension $d$. D'abord la moyenne : $\E\norm{P_S\eps}\le\sqrt{\E\norm{P_S\eps}^2}=\sigma\sqrt d$ (Jensen, $(\E W)^2\le\E[W^2]$, puis le rappel <a href="#forme-quadratique">forme quadratique</a>). Puis la concentration, avec $F=\norm{P_S\,\cdot\,}$ et $L=1$ : avec probabilité au moins $1-e^{-x}$,
+$$\norm{P_S\eps}\le\sigma\big(\sqrt d+\sqrt{2x}\big),\qquad\text{soit}\qquad\frac{\norm{P_S\eps}^2}{\sigma^2}\le\big(\sqrt d+\sqrt{2x}\big)^2.$$
+Chiffres : $d=10$, $x=3$ (probabilité $1-e^{-3}\approx0{,}95$) : la borne vaut $(\sqrt{10}+\sqrt6)^2\approx31{,}5$, alors que le vrai quantile du $\chi^2(10)$ à ce niveau est $18{,}3$. La borne est prudente, mais explicite et valable en toute dimension : c'est exactement l'inégalité $U_m\le(\sqrt{d_m}+\sqrt{2\xi_m})^2$ du TD1.</p></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>Pour contrôler une quantité compliquée d'un bruit gaussien (une norme, un maximum, la norme d'une projection) : (1) vérifier qu'elle est $L$-lipschitzienne (souvent $L=1$) ; (2) majorer sa <strong>moyenne</strong> (souvent par Jensen) ; (3) la concentration ajoute au plus $\sigma L\sqrt{2x}$, avec probabilité au moins $1-e^{-x}$.</p></div>
+
+<div class="quiz"><p>Mini-exercice : $Z\sim\N(0,I_p)$. Montrez que $\P\big(\max_jZ_j\ge\E[\max_jZ_j]+t\big)\le e^{-t^2/2}$ pour tout $t\ge0$.</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$z\mapsto\max_jz_j$ est 1-lipschitzienne (exemple ci-dessus) et $\sigma=1$ : c'est le théorème avec $L=1$. Par ailleurs, pour $p\ge2$, $\E[\max_jZ_j]\le\sqrt{2\log p}$. En effet, pour $\theta>0$, Jensen (pour la fonction convexe $\exp$) puis « un maximum de termes positifs est plus petit que leur somme » donnent $e^{\theta\E[\max_jZ_j]}\le\E\big[e^{\theta\max_jZ_j}\big]\le\sum_j\E[e^{\theta Z_j}]=p\,e^{\theta^2/2}$ (calcul de $\E[e^{\theta Z}]$ du rappel <a href="#queues">queues</a>), d'où $\E[\max_jZ_j]\le\frac{\log p}\theta+\frac\theta2=\sqrt{2\log p}$ avec $\theta=\sqrt{2\log p}$. Donc $\P\big(\max_jZ_j\ge\sqrt{2\log p}+t\big)\le e^{-t^2/2}$ : le maximum de $p$ gaussiennes dépasse très rarement $\sqrt{2\log p}$ de plus de quelques unités.</p></div></details></div>
+
+<h3 id="hoeffding">L'inégalité de Hoeffding : des variables bornées se comportent comme des gaussiennes</h3>
+<p class="tldr">Une somme de $n$ variables indépendantes et bornées s'écarte de sa moyenne de $x$ avec probabilité au plus $2\exp\big(-2x^2/\sum_i(b_i-a_i)^2\big)$ : une queue « gaussienne », sans supposer de loi gaussienne.</p>
+<p><strong>Où ça sert :</strong> TD3 exercice 2 (Lasso logistique) : les réponses $Y_i\in\{0,1\}$ ne sont pas gaussiennes, mais bornées ; Hoeffding remplace la queue gaussienne pour contrôler $V_j=\frac1n\sum_iz_{ij}\eps_i$ et justifier $\lambda=A\sqrt{\log p/n}$. C'est aussi l'outil derrière les inégalités oracle du Lasso logistique annoncées dans le Cours5 enrichi (p. 35).</p>
+
+<div class="box thm"><div class="box-h">Inégalité de Hoeffding (telle que dans l'énoncé du TD3)</div>
+<p>Soient $X_1,\dots,X_n$ des variables indépendantes avec $X_i\in[a_i,b_i]$ presque sûrement, et $S=\sum_{i=1}^n(X_i-\E X_i)$. Pour tout $x>0$ :
+$$\P(\abs S\ge x)\le2\exp\Big(-\frac{2x^2}{\sum_{i=1}^n(b_i-a_i)^2}\Big).$$
+Sans valeur absolue : $\P(S\ge x)\le\exp\big(-2x^2/\sum_i(b_i-a_i)^2\big)$.</p></div>
+
+<details class="fold proof"><summary>Idée de la preuve (Chernoff, comme pour les gaussiennes)</summary><div class="fold-body">
+<ol class="steps">
+<li><strong>Lemme de Hoeffding</strong> (admis) : si $a\le X\le b$, alors pour tout $\theta\in\R$, $\E\big[e^{\theta(X-\E X)}\big]\le e^{\theta^2(b-a)^2/8}$.<span class="why">c'est l'analogue de $\E[e^{\theta Z}]=e^{\theta^2\sigma^2/2}$ pour une gaussienne $\N(0,\sigma^2)$, avec $\sigma^2$ remplacé par $(b-a)^2/4$ ; la preuve utilise la convexité de $x\mapsto e^{\theta x}$ sur $[a,b]$</span></li>
+<li>$$\E[e^{\theta S}]=\prod_{i=1}^n\E\big[e^{\theta(X_i-\E X_i)}\big]\le e^{\theta^2D/8},\qquad D=\sum_{i=1}^n(b_i-a_i)^2$$<span class="why">l'espérance d'un produit de variables indépendantes est le produit des espérances</span></li>
+<li>$$\P(S\ge x)\le e^{-\theta x}\,\E[e^{\theta S}]\le e^{-\theta x+\theta^2D/8}\qquad(\theta>0)$$<span class="why">Markov appliqué à $e^{\theta S}$, comme dans la preuve de Chernoff (rappel <a href="#queues">queues</a>)</span></li>
+<li>$$\theta=\frac{4x}{D}\ \Rightarrow\ \P(S\ge x)\le e^{-4x^2/D+2x^2/D}=e^{-2x^2/D}$$<span class="why">on choisit le $\theta$ qui minimise l'exposant $-\theta x+\theta^2D/8$</span></li>
+<li>Même raisonnement pour $-S$, puis on additionne : $\P(\abs S\ge x)\le2e^{-2x^2/D}$.<span class="why">borne de l'union</span></li>
+</ol></div></details>
+
+<div class="box intu"><div class="box-h">Pourquoi « comme des gaussiennes »</div>
+<p>Une somme gaussienne de variance $v$ vérifie $\P(\abs S\ge x)\le2e^{-x^2/(2v)}$. Hoeffding donne exactement cette forme avec $v=\sum_i(b_i-a_i)^2/4$ : chaque variable à valeurs dans un intervalle de longueur $b_i-a_i$ « compte » au plus comme une gaussienne d'écart-type $(b_i-a_i)/2$ — qui est d'ailleurs le plus grand écart-type possible pour une variable à valeurs dans $[a_i,b_i]$.</p></div>
+
+<div class="box exemple"><div class="box-h">Exemple chiffré : 100 lancers de pièce</div>
+<p>$X_i\in\{0,1\}$ de moyenne $\frac12$, $n=100$, $S=\sum_i(X_i-\frac12)$ (nombre de piles moins 50). Hoeffding : $\P(\abs S\ge10)\le2\exp(-2\times100/100)=2e^{-2}\approx0{,}27$. La vraie valeur (loi binomiale) est $\approx0{,}057$. La borne est environ 5 fois trop grande, mais elle a la bonne forme ($e^{-cx^2}$) et ne demande <strong>aucun</strong> calcul de loi.</p></div>
+
+<div class="box exemple"><div class="box-h">L'application du TD3</div>
+<p>$V_j=\frac1n\sum_iz_{ij}\eps_i$ avec $\eps_i=Y_i-\E Y_i$, $Y_i\in\{0,1\}$ et $\abs{z_{ij}}\le c$. On pose $X_i=z_{ij}Y_i\in[\min(0,z_{ij}),\max(0,z_{ij})]$, un intervalle de longueur $\abs{z_{ij}}\le c$, et $S=\sum_iz_{ij}\eps_i=nV_j$ :
+$$\P\Big(\abs{V_j}\ge\frac\lambda2\Big)=\P\Big(\abs S\ge\frac{n\lambda}2\Big)\le2\exp\Big(-\frac{2(n\lambda/2)^2}{\sum_iz_{ij}^2}\Big)\le2\exp\Big(-\frac{n\lambda^2}{2c^2}\Big).$$
+Avec $\lambda=A\sqrt{\log p/n}$, cela vaut $2p^{-A^2/(2c^2)}$, et la borne de l'union sur les $p$ variables donne $2p^{1-A^2/(2c^2)}$ : la probabilité de l'énoncé du TD3.</p></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>Bruit <strong>non gaussien mais borné</strong> (réponses 0/1, comptages plafonnés) → Hoeffding à la place de la queue gaussienne : même forme $e^{-(\cdots)x^2}$, la demi-longueur $(b_i-a_i)/2$ jouant le rôle de $\sigma$. Le reste de la preuve (borne de l'union, choix de $\lambda\asymp\sqrt{\log p/n}$) ne change pas.</p></div>
+
+<div class="quiz"><p>Mini-exercice 1 : $n=400$ variables de Bernoulli de paramètre $p$ inconnu, indépendantes. Majorez $\P(\abs{\bar Y-p}\ge0{,}1)$.</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$\abs{\bar Y-p}\ge0{,}1\iff\abs S\ge40$ avec $S=\sum_i(Y_i-p)$, et $b_i-a_i=1$ : $\P\le2\exp(-2\times40^2/400)=2e^{-8}\approx6{,}7\times10^{-4}$.</p></div></details></div>
+<div class="quiz"><p>Mini-exercice 2 : combien d'observations faut-il pour garantir $\P(\abs{\bar Y-p}\ge0{,}05)\le0{,}05$ ?</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>Il suffit que $2\exp\big(-2(0{,}05n)^2/n\big)=2e^{-0{,}005n}\le0{,}05$, soit $n\ge\log(40)/0{,}005\approx737{,}8$ : $n=738$ observations suffisent.</p></div></details></div>
+
 <h3 id="convergences">Convergences, « $o(1)$ », asymptotique et non asymptotique</h3>
 <p class="tldr">Un résultat asymptotique dit ce qui se passe quand $n\to\infty$ ; un résultat non asymptotique donne une borne valable pour chaque $n$, avec une probabilité explicite. Le cours privilégie le second.</p>
-<p><strong>Où ça sert :</strong> Cours 1 (diapo 7 : « consistant »), Cours 2 (diapo 31 : optimalité asymptotique vs non asymptotique), Cours 3 (diapo 39), Cours 5 (diapo 72 : convergence en probabilité et en loi).</p>
+<p><strong>Où ça sert :</strong> Cours 1 (diapo 7 : « consistant »), Cours 2 (diapo 31 : optimalité asymptotique vs non asymptotique), Cours 3 (diapo 39), Cours 5 (diapo 72, et Cours5 enrichi p. 26 : convergence en probabilité et en loi de l'estimateur du maximum de vraisemblance ; voir aussi <a href="#slutsky">Slutsky</a> ci-dessous).</p>
 
 <div class="box def"><div class="box-h">Définitions</div>
 <ul>
@@ -773,6 +975,38 @@ La plus forte « corrélation apparente » entre une variable et le bruit pur es
 <details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>Markov avec $W=(Z_n-c)^2$ et $a=\eta^2$ : $\P(\abs{Z_n-c}>\eta)=\P((Z_n-c)^2>\eta^2)\le\E[(Z_n-c)^2]/\eta^2\to0$.</p></div></details></div>
 <div class="quiz"><p>Mini-exercice 2 : avec $s=10$, la quantité $s\log p/n$ tend-elle vers 0 si $p=n^2$ ? si $p=e^n$ ?</p>
 <details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$p=n^2$ : $10\times2\log n/n\to0$, oui. $p=e^n$ : $10\times n/n=10$, non : avec exponentiellement plus de variables que d'observations, même le Lasso ne peut plus garantir une petite erreur.</p></div></details></div>
+
+<h3 id="slutsky">Le lemme de Slutsky et les intervalles de confiance « plug-in »</h3>
+<p class="tldr">Dans une convergence en loi, on peut remplacer une quantité inconnue par un estimateur consistant : c'est ce qui transforme « $\sqrt n\,I(\bstar)^{1/2}(\hb-\bstar)\to\N(0,I_p)$ » (inutilisable, car $\bstar$ est inconnu) en un intervalle de confiance calculable avec $I(\hb)$.</p>
+<p><strong>Où ça sert :</strong> Cours5 enrichi p. 26–27 (au tableau : intervalle de confiance pour $\bstar$ dans un modèle linéaire généralisé) ; Séance 5 (intervalles de Wald).</p>
+
+<div class="box thm"><div class="box-h">Deux outils (admis)</div>
+<ol>
+<li><strong>Application continue</strong> : si $Y_n\xrightarrow{\P}a$ et si $g$ est continue en $a$, alors $g(Y_n)\xrightarrow{\P}g(a)$.</li>
+<li><strong>Lemme de Slutsky</strong> : si $X_n\xrightarrow{\mathcal L}X$ et $Y_n\xrightarrow{\P}c$ où $c$ est une <strong>constante</strong>, alors $X_n+Y_n\xrightarrow{\mathcal L}X+c$, $\ Y_nX_n\xrightarrow{\mathcal L}cX$, et $X_n/Y_n\xrightarrow{\mathcal L}X/c$ si $c\neq0$. Même chose avec des vecteurs $X_n$ et des matrices $Y_n\xrightarrow{\P}C$ : $Y_nX_n\xrightarrow{\mathcal L}CX$.</li>
+</ol></div>
+
+<div class="box exemple"><div class="box-h">Exemple : l'intervalle de confiance d'une proportion</div>
+<p>$Y_1,\dots,Y_n$ de Bernoulli($p$), indépendantes, et $\hat p=\bar Y$. Le TCL donne $\sqrt n(\hat p-p)/\sqrt{p(1-p)}\xrightarrow{\mathcal L}\N(0,1)$, mais $p$ est inconnu. Comme $\hat p\xrightarrow{\P}p$ (loi des grands nombres) et que $u\mapsto\sqrt{p(1-p)/(u(1-u))}$ est continue en $p\in(0,1)$, Slutsky donne
+$$\frac{\sqrt n(\hat p-p)}{\sqrt{\hat p(1-\hat p)}}=\underbrace{\frac{\sqrt n(\hat p-p)}{\sqrt{p(1-p)}}}_{\xrightarrow{\mathcal L}\N(0,1)}\times\underbrace{\sqrt{\frac{p(1-p)}{\hat p(1-\hat p)}}}_{\xrightarrow{\P}1}\xrightarrow{\mathcal L}\N(0,1).$$
+D'où l'intervalle asymptotique à 95 % $\hat p\pm1{,}96\sqrt{\hat p(1-\hat p)/n}$ : avec $n=100$ et $\hat p=0{,}3$, on obtient $[0{,}21;\ 0{,}39]$ (le même que dans le rappel <a href="#fisher">Fisher</a>).</p></div>
+
+<div class="box exemple"><div class="box-h">L'application du tableau (Cours5 enrichi p. 26–27)</div>
+<ol class="steps">
+<li>$$\sqrt n\,I(\bstar)^{1/2}(\hb-\bstar)\xrightarrow{\mathcal L}\N(0,I_p)$$<span class="why">c'est la normalité asymptotique $\sqrt n(\hb-\bstar)\to\N(0,I(\bstar)^{-1})$ « standardisée » ; mais elle fait intervenir $\bstar$, inconnu</span></li>
+<li>$$\sqrt n\,I(\hb)^{1/2}(\hb-\bstar)=\underbrace{\big[I(\hb)^{1/2}I(\bstar)^{-1/2}\big]}_{\xrightarrow{\P}I_p}\ \sqrt n\,I(\bstar)^{1/2}(\hb-\bstar)$$<span class="why">on insère $I(\bstar)^{-1/2}I(\bstar)^{1/2}=I_p$ ; le crochet tend vers $I_p$ car $\hb\xrightarrow{\P}\bstar$ et $\beta\mapsto I(\beta)^{1/2}$ est continue (outil 1)</span></li>
+<li>$$\sqrt n\,I(\hb)^{1/2}(\hb-\bstar)\xrightarrow{\mathcal L}\N(0,I_p)$$<span class="why">Slutsky (outil 2), version matricielle</span></li>
+<li>En dimension 1 : $\P\Big(\bstar\in\Big[\hb\pm q_{1-\alpha/2}\,\frac{I(\hb)^{-1/2}}{\sqrt n}\Big]\Big)\xrightarrow[n\to\infty]{}1-\alpha$, où $q_{1-\alpha/2}$ est le quantile d'ordre $1-\alpha/2$ de $\N(0,1)$ (1,96 pour $\alpha=5\,\%$). Pour une coordonnée $j$ en dimension $p$ : $\hb_j\pm q_{1-\alpha/2}\sqrt{[I(\hb)^{-1}]_{jj}/n}$.<span class="why">le tableau écrit « $\P(\bstar\in IC(\alpha))\ge1-\alpha$ » : c'est le but visé, atteint seulement quand $n\to\infty$</span></li>
+</ol></div>
+
+<div class="box piege"><div class="box-h">Piège</div>
+<p>Slutsky exige que $Y_n$ converge vers une <strong>constante</strong>. Si $X_n\to X$ et $Y_n\to Y$ en loi avec $Y$ aléatoire, le produit $X_nY_n$ ne converge pas forcément vers $XY$ : il faudrait connaître la loi jointe du couple.</p></div>
+
+<div class="box reflexe"><div class="box-h">Réflexe</div>
+<p>« Une loi limite qui dépend du paramètre inconnu » → remplacez ce paramètre par un estimateur consistant dans la variance, et justifiez-le par continuité + Slutsky. C'est la recette de tous les intervalles de Wald.</p></div>
+
+<div class="quiz"><p>Mini-exercice : $Y_i$ de Poisson($\lambda$), $\hat\lambda=\bar Y$, $I(\lambda)=1/\lambda$ (rappel <a href="#fisher">Fisher</a>). Donnez un intervalle de confiance asymptotique à 95 % pour $\lambda$, puis sa valeur pour $n=50$ et $\bar y=4$.</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>TCL : $\sqrt n(\hat\lambda-\lambda)\to\N(0,\lambda)$ ; et $\hat\lambda\xrightarrow{\P}\lambda$. Par Slutsky, $\sqrt n(\hat\lambda-\lambda)/\sqrt{\hat\lambda}\to\N(0,1)$, d'où l'intervalle $\bar y\pm1{,}96\sqrt{\bar y/n}$. Numériquement : $4\pm1{,}96\sqrt{0{,}08}=4\pm0{,}55$, soit $[3{,}45;\ 4{,}55]$.</p></div></details></div>
 
 <h2 id="statistique">Statistique</h2>
 <p class="lead">Les questions du cours sont statistiques : un estimateur est-il proche de la vérité ? Comment le choisir ? Que vaut-il face à de nouvelles données ? Voici le vocabulaire et les quelques résultats classiques qu'il suppose.</p>
@@ -839,7 +1073,7 @@ Maximiser $\ell$ revient à <strong>minimiser $\norm{Y-X\beta}^2$</strong> : l'E
 
 <h3 id="fisher">Score, information de Fisher, normalité asymptotique</h3>
 <p class="tldr">La courbure de la log-vraisemblance (l'information de Fisher) mesure combien les données renseignent sur le paramètre ; l'EMV a une variance asymptotique égale à son inverse.</p>
-<p><strong>Où ça sert :</strong> Cours 5 (diapo 67 : $\E[\partial\ell/\partial\theta]=0$ et $-\E[\partial^2\ell/\partial\theta^2]=\E[(\partial\ell/\partial\theta)^2]$ ; diapo 72 : $\sqrt n(\hb-\beta)\to\N(0,I(\beta)^{-1})$).</p>
+<p><strong>Où ça sert :</strong> Cours 5 (diapo 67 : $\E[\partial\ell/\partial\theta]=0$ et $-\E[\partial^2\ell/\partial\theta^2]=\E[(\partial\ell/\partial\theta)^2]$, démontrées au tableau dans le Cours5 enrichi p. 17–18 ; diapo 72, Cours5 enrichi p. 26 : $\sqrt n(\hb-\beta)\to\N(0,I(\beta)^{-1})$, avec l'information de Fisher <em>moyenne</em>).</p>
 
 <div class="box def"><div class="box-h">Définitions (un paramètre réel, une observation)</div>
 <ul>
@@ -858,7 +1092,7 @@ Maximiser $\ell$ revient à <strong>minimiser $\norm{Y-X\beta}^2$</strong> : l'E
 </ol></div></details>
 
 <div class="box thm"><div class="box-h">Normalité asymptotique de l'EMV</div>
-<p>Sous des conditions de régularité, $\sqrt n(\hat\theta_n-\theta)\xrightarrow{\mathcal L}\N\big(0,I(\theta)^{-1}\big)$. Autrement dit, pour $n$ grand, $\hat\theta_n\approx\N\big(\theta,\frac1{nI(\theta)}\big)$, d'où l'<strong>intervalle de confiance de Wald</strong> à 95 % : $\hat\theta\pm1{,}96/\sqrt{nI(\hat\theta)}$.</p></div>
+<p>Sous des conditions de régularité, $\sqrt n(\hat\theta_n-\theta)\xrightarrow{\mathcal L}\N\big(0,I(\theta)^{-1}\big)$. Autrement dit, pour $n$ grand, $\hat\theta_n\approx\N\big(\theta,\frac1{nI(\theta)}\big)$, d'où l'<strong>intervalle de confiance de Wald</strong> à 95 % : $\hat\theta\pm1{,}96/\sqrt{nI(\hat\theta)}$. (Remplacer $I(\theta)$, inconnu, par $I(\hat\theta)$ est justifié par le lemme de <a href="#slutsky">Slutsky</a>.)</p></div>
 
 <div class="box exemple"><div class="box-h">Exemple : Bernoulli</div>
 <p>$\log f_p(y)=y\log p+(1-y)\log(1-p)$ ; $\partial^2_p\log f_p=-\frac y{p^2}-\frac{1-y}{(1-p)^2}$ ; donc $I(p)=\frac{p}{p^2}+\frac{1-p}{(1-p)^2}=\frac1p+\frac1{1-p}=\frac1{p(1-p)}$. La variance asymptotique de $\hat p$ est $\frac{p(1-p)}n$ (c'est d'ailleurs la variance exacte de $\bar y$). Avec $n=100$ et $\hat p=0{,}3$ : écart-type $\sqrt{0{,}21/100}\approx0{,}046$, intervalle $0{,}3\pm0{,}09=[0{,}21;\,0{,}39]$.</p></div>
@@ -957,6 +1191,9 @@ On rejette $H_0$ si $\abs{T_j}$ dépasse environ 2 (pour $n-p$ grand et $\alpha=
 <tr><td><a href="02_seance2.html">S2</a> — seuillage doux, KKT, LARS</td><td><strong><a href="#convexite">convexité</a></strong>, <a href="#gradient">gradient</a>, <a href="#lagrange">Lagrange</a>, <a href="#vecteurs-normes">normes</a>, <a href="#vraisemblance">vraisemblance</a> (lecture bayésienne), <a href="#gram">Gram</a>, <a href="#convergences">asymptotique / non asymptotique</a></td></tr>
 <tr><td><a href="03_seance3.html">S3</a> — condition RE, théorème BRT</td><td><strong><a href="#inegalites-normes">Hölder et $\sqrt s$</a></strong>, <strong><a href="#young">petites inégalités</a></strong>, <strong><a href="#gaussien">gaussiennes</a></strong>, <strong><a href="#queues">queues et union</a></strong>, <a href="#spectral">valeurs propres</a>, <a href="#convergences">convergences</a></td></tr>
 <tr><td><a href="04_seance4.html">S4</a> — sous-différentiel, inégalités oracle</td><td><strong><a href="#convexite">convexité</a></strong>, <a href="#inegalites-normes">Hölder</a>, <strong><a href="#young">Young</a></strong>, <strong><a href="#queues">queues et union</a></strong>, <a href="#gaussien">gaussiennes</a></td></tr>
-<tr><td><a href="05_seance5.html">S5</a> — modèles linéaires généralisés</td><td><strong><a href="#vraisemblance">vraisemblance</a></strong>, <strong><a href="#fisher">Fisher</a></strong>, <strong><a href="#newton">Newton</a></strong>, <a href="#esperance">espérance et variance</a>, <a href="#convergences">convergences</a>, <a href="#convexite">convexité</a>, <a href="#gradient">gradient</a></td></tr>
+<tr><td><a href="05_seance5.html">S5</a> — modèles linéaires généralisés</td><td><strong><a href="#vraisemblance">vraisemblance</a></strong>, <strong><a href="#fisher">Fisher</a></strong>, <strong><a href="#newton">Newton</a></strong>, <a href="#esperance">espérance et variance</a>, <a href="#convergences">convergences</a>, <strong><a href="#slutsky">Slutsky</a></strong> (intervalles de confiance), <a href="#convexite">convexité</a>, <a href="#existence">existence d'un minimiseur</a>, <a href="#gradient">gradient</a></td></tr>
 <tr><td><a href="06_seance6.html">S6</a> — variantes du Lasso</td><td><strong><a href="#convexite">convexité</a></strong>, <a href="#vecteurs-normes">normes</a>, <a href="#projection">projection</a>, <a href="#lagrange">Lagrange</a>, <a href="#erreur-test">validation croisée</a></td></tr>
+<tr><td><a href="08_td1.html">TD1</a> — Ridge, Lasso pénalisé ⇔ contraint, sélection de modèles</td><td><strong><a href="#existence">existence d'un minimiseur</a></strong>, <a href="#convexite">convexité</a>, <a href="#lagrange">Lagrange</a>, <strong><a href="#spectral">valeurs propres</a></strong>, <a href="#esperance">covariance</a>, <a href="#forme-quadratique">forme quadratique</a>, <a href="#projection">projection</a>, <strong><a href="#lois-usuelles">khi-deux et exponentielle</a></strong>, <strong><a href="#concentration">concentration gaussienne</a></strong>, <strong><a href="#young">petites inégalités</a></strong>, <a href="#estimateur">biais–variance</a></td></tr>
+<tr><td><a href="09_td2.html">TD2</a> — le théorème de Bickel, Ritov et Tsybakov pas à pas</td><td><strong><a href="#queues">queues et union</a></strong>, <a href="#gaussien">gaussiennes</a>, <strong><a href="#inegalites-normes">Hölder et Cauchy–Schwarz</a></strong>, <strong><a href="#young">petites inégalités</a></strong>, <a href="#spectral">valeurs propres</a> ($\varphi_{\max}$), <a href="#convexite">convexité</a> (conditions KKT)</td></tr>
+<tr><td><a href="10_td3.html">TD3</a> — logistique, Lasso logistique, Poisson</td><td><strong><a href="#vraisemblance">vraisemblance</a></strong>, <a href="#gradient">gradient</a>, <a href="#convexite">convexité</a>, <strong><a href="#existence">existence d'un minimiseur</a></strong>, <a href="#newton">Newton</a>, <strong><a href="#hoeffding">Hoeffding</a></strong>, <a href="#queues">borne de l'union</a>, <a href="#fisher">Fisher</a></td></tr>
 </table></div>

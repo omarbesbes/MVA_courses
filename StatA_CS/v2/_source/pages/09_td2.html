@@ -1,0 +1,870 @@
+<!--
+title: TD2 — Le théorème de Bickel, Ritov et Tsybakov, pas à pas
+short: TD2 · Preuve de BRT
+description: TD2 (inégalités oracle pour le Lasso dans le modèle linéaire gaussien) : un lemme valable pour tout β, le cône, le théorème de Bickel, Ritov et Tsybakov, avec le corrigé manuscrit commenté question par question.
+subtitle: TD2 et son corrigé manuscrit. On redémontre le théorème de la séance 3 en passant par un lemme « oracle », valable pour tout β, qui donne en prime deux résultats nouveaux.
+-->
+
+<div class="box objectifs">
+<div class="box-h">Ce que ce TD fait travailler</div>
+<ul class="checklist">
+<li>écrire l'<strong>inégalité de base</strong> en comparant le Lasso non pas à la vérité $\bstar$, mais à <strong>n'importe quel</strong> vecteur $\beta$ — et comprendre pourquoi c'est plus fort ;</li>
+<li>contrôler le bruit : loi des $V_j$, borne de l'union, et <strong>démontrer</strong> la queue gaussienne $\P(\abs Z\ge z)\le2e^{-z^2/2}$ par la méthode de Chernoff ;</li>
+<li>tirer des <strong>conditions KKT</strong> deux résultats que la séance 3 n'énonçait pas : une borne $\ell_\infty$ (3) et une borne sur le nombre de variables sélectionnées valable sans hypothèse RE (4) ;</li>
+<li>en déduire le <strong>cône</strong>, puis les trois bornes du <strong>théorème de Bickel, Ritov et Tsybakov</strong> ;</li>
+<li>lire le corrigé manuscrit, repérer ce qu'il saute et ce qui diffère des diapos (numérotation, probabilité).</li>
+</ul>
+<p class="small">Séances concernées : <a href="03_seance3.html">Séance 3</a> (le théorème lui-même, prouvé autrement), <a href="02_seance2.html">Séance 2</a> (conditions KKT), <a href="04_seance4.html">Séance 4</a> (inégalités « oracle », dont ce lemme est un premier exemple). Prérequis rappelés : <a href="00_rappels.html#gaussien">vecteurs gaussiens</a>, <a href="00_rappels.html#queues">queues gaussiennes et borne de l'union</a>, <a href="00_rappels.html#spectral">valeurs propres</a>.</p>
+</div>
+
+<h2 id="avant">Avant de commencer</h2>
+
+<h3 id="avant-cadre">Le cadre, sans rien supposer acquis</h3>
+
+<p class="tldr">Même modèle, même estimateur et même hypothèse de normalisation qu'en séance 3 : seul le chemin de la preuve change.</p>
+
+<ul>
+<li><strong>Les données.</strong> $n\ge1$ observations, $p\ge2$ variables. La matrice $X=(x_{ij})_{1\le i\le n,\,1\le j\le p}\in\R^{n\times p}$ est fixée (non aléatoire). Sa ligne $i$ est $x_i$ (les $p$ variables de l'individu $i$) ; sa colonne $j$ est $X_j\in\R^n$ (la variable $j$ sur les $n$ individus — le TD la note $X^j$).</li>
+<li><strong>Le modèle.</strong> $Y=X\bstar+\eps$, avec $\bstar\in\R^p$ inconnu et $\eps=(\eps_1,\dots,\eps_n)\T$, où les $\eps_i$ sont indépendants de loi $\N(0,\sigma^2)$, $\sigma^2>0$. Tout le hasard est dans $\eps$.</li>
+<li><strong>La normalisation.</strong> On suppose $\mathrm{diag}(X\T X/n)_j=1$ pour tout $j$. Le coefficient $(j,j)$ de $X\T X$ est $X_j\T X_j=\sum_i x_{ij}^2$, donc l'hypothèse dit $\frac1n\sum_{i=1}^nx_{ij}^2=1$, c'est-à-dire $\norm{X_j}^2=n$ : <strong>toutes les colonnes ont la même norme $\sqrt n$</strong>.</li>
+<li><strong>La norme empirique.</strong> Pour $u\in\R^n$, $\norm u_n^2=\frac1n\norm u^2=\frac1n\sum_{i=1}^nu_i^2$. Ainsi $\norm{X\hb^L-X\bstar}_n^2$ est l'<strong>erreur de prédiction</strong> moyenne par observation.</li>
+<li><strong>Le Lasso.</strong> Avec $r=A\sigma\sqrt{\log p/n}$ et $A>2\sqrt2$,
+$$\hb^L=\argmin_{\beta\in\R^p}\Big\{\frac1n\norm{Y-X\beta}_2^2+2r\norm\beta_1\Big\}.\qquad(1)$$</li>
+<li><strong>Support et parcimonie.</strong> $J(\beta)=\{j:\beta_j\neq0\}$ est le support de $\beta$, et $\mathcal M(\beta)=\abs{J(\beta)}$ son nombre de coordonnées non nulles (noté $M(\beta)$ en séance 3). Pour $J\subset\{1,\dots,p\}$, $\delta_J$ est le vecteur égal à $\delta$ sur $J$ et nul ailleurs.</li>
+<li><strong>La plus grande valeur propre.</strong> $\phi_{\max}$ est la plus grande valeur propre de la matrice de Gram $X\T X/n$ (notée $\varphi_{\max}$ en séance 3).</li>
+</ul>
+
+<div class="box methode">
+<div class="box-h">Convention — le critère (1) et ses conditions KKT</div>
+<p>C'est exactement la convention de la <a href="03_seance3.html#convention">séance 3</a> : erreur d'ajustement divisée par $n$, paramètre écrit $2r$. Le gradient de $\beta\mapsto\frac1n\norm{Y-X\beta}^2$ est $-\frac2nX\T(Y-X\beta)$ et le sous-différentiel de $2r\abs{\beta_j}$ est $\{2r\sgn(\beta_j)\}$ si $\beta_j\neq0$, $[-2r,2r]$ si $\beta_j=0$ (<a href="02_seance2.html#kkt-derivation">séance 2</a>). La règle « $0\in$ sous-différentiel », divisée par 2, donne :</p>
+$$\begin{aligned}&\frac1nX_j\T(Y-X\hb^L)=r\,\sgn(\hb^L_j)&&\text{si }\hb^L_j\neq0,\\&\Big|\frac1nX_j\T(Y-X\hb^L)\Big|\le r&&\text{si }\hb^L_j=0 .\end{aligned}$$
+<p>Le « 2 » devant $r$ a été choisi pour que ce 2 disparaisse : le corrigé le fait remarquer (« le 2 devant le paramètre de régularisation permet de s'affranchir du 2 dans KKT »).</p>
+</div>
+
+<h3 id="avant-apport">Ce que le TD ajoute à la séance 3</h3>
+
+<p>La séance 3 a démontré le théorème en comparant le Lasso à la vérité $\bstar$. Le TD procède en deux temps : d'abord un <strong>lemme</strong> où l'on compare le Lasso à un vecteur $\beta$ <strong>quelconque</strong>, puis le théorème, obtenu en choisissant $\beta=\bstar$.</p>
+
+<div class="table-wrap"><table>
+<thead><tr><th></th><th>Séance 3</th><th>TD2</th></tr></thead>
+<tbody>
+<tr><td>On compare $\hb^L$ à…</td><td>la vérité $\bstar$</td><td>n'importe quel $\beta\in\R^p$ (lemme), puis $\beta=\bstar$</td></tr>
+<tr><td>Événement « bruit sous contrôle »</td><td>$\mathcal E=\{\frac2n\norm{X\T\eps}_\infty\le r\}$</td><td>$\cA=\bigcap_j\{2\abs{V_j}\le r\}$ avec $V_j=\frac1nX_j\T\eps$ : <strong>le même événement</strong></td></tr>
+<tr><td>Queue gaussienne utilisée</td><td>$\P(\abs Z\ge t)\le e^{-t^2/2}$ (version fine)</td><td>$\P(\abs Z\ge z)\le2e^{-z^2/2}$ (Chernoff, démontrée en question 3)</td></tr>
+<tr><td>Probabilité obtenue</td><td>$1-p^{1-A^2/8}$</td><td>$1-2p^{1-A^2/8}$</td></tr>
+<tr><td>Résultats</td><td>(6), (7), (8) de la diapo 38</td><td>lemme : (2), (3), (4) ; corollaire : le cône ; théorème : (5), (6), (7)</td></tr>
+<tr><td>Nouveautés</td><td>—</td><td>(2) pour tout $\beta$ ; la borne $\ell_\infty$ (3) ; (4) sans hypothèse RE</td></tr>
+</tbody></table></div>
+
+<div class="box intu">
+<div class="box-h">Pourquoi « pour tout $\beta$ » est plus fort</div>
+<p>En séance 3, on démontrait : « l'erreur du Lasso est petite <em>si</em> $\bstar$ est parcimonieux ». Le lemme (2) dit davantage : pour <em>n'importe quel</em> candidat $\beta$, le Lasso prédit presque aussi bien que $\beta$, avec un prix qui ne porte que sur les coordonnées <em>du support de $\beta$</em>. Même si $\bstar$ a beaucoup de petits coefficients non nuls, on peut comparer le Lasso à une bonne approximation parcimonieuse $\beta$ de $\bstar$. C'est la forme des <strong>inégalités oracle</strong> que la <a href="04_seance4.html">séance 4</a> développe : « aussi bien que le meilleur candidat, à un prix près ».</p>
+</div>
+
+<div class="box remarque">
+<div class="box-h">Attention aux numéros</div>
+<p>Trois numérotations coexistent. Les bornes du théorème sont numérotées (5), (6), (7) dans le TD, et (6), (7), (8) dans les diapos (Cours3 diapo 38) et en séance 3. Le corrigé manuscrit numérote (1), (2), (3) les trois résultats du lemme, que l'énoncé numérote (2), (3), (4) ; mais aux pages 2 et 3, ses « (2) est prouvé » et « (3) est prouvée » suivent la numérotation de l'énoncé. <strong>Sur cette page, on suit la numérotation de l'énoncé du TD.</strong></p>
+</div>
+
+<h3 id="avant-outils">Les outils utilisés</h3>
+
+<div class="table-wrap"><table>
+<thead><tr><th>Outil</th><th>Énoncé</th><th>Où</th></tr></thead>
+<tbody>
+<tr><td>Inégalité triangulaire inversée <a class="ref" href="00_rappels.html#young">rappel</a></td><td>$\abs a-\abs b\le\abs{a-b}$</td><td>questions 5 et 7</td></tr>
+<tr><td>Cauchy–Schwarz sur peu de coordonnées <a class="ref" href="00_rappels.html#inegalites-normes">rappel</a></td><td>$\sum_{j\in J}\abs{v_j}\le\sqrt{\abs J}\,\big(\sum_{j\in J}v_j^2\big)^{1/2}$</td><td>question 5, théorème</td></tr>
+<tr><td>Combinaison linéaire de gaussiennes <a class="ref" href="00_rappels.html#gaussien">rappel</a></td><td>$\sum_ia_i\eps_i\sim\N\big(0,\sigma^2\sum_ia_i^2\big)$</td><td>question 2</td></tr>
+<tr><td>Borne de l'union, inégalité de Markov <a class="ref" href="00_rappels.html#queues">rappel</a></td><td>$\P(\cup_jA_j)\le\sum_j\P(A_j)$ ; $\P(W\ge a)\le\E W/a$ pour $W\ge0$</td><td>questions 2 à 4</td></tr>
+<tr><td>Conditions KKT du Lasso <a class="ref" href="03_seance3.html#convention">séance 3</a></td><td>voir l'encadré « Convention » ci-dessus</td><td>questions 6 et 7</td></tr>
+<tr><td>Quotient de Rayleigh <a class="ref" href="00_rappels.html#spectral">rappel</a></td><td>$w\T Mw\le\lambda_{\max}(M)\norm w^2$ pour $M$ symétrique</td><td>question 9</td></tr>
+<tr><td>Condition RE$(s,3)$ <a class="ref" href="03_seance3.html#re-def">séance 3</a></td><td>sur le cône, $\norm{\delta_{J_0}}_2\le\norm{X\delta}_2/(\kappa\sqrt n)$</td><td>théorème</td></tr>
+</tbody></table></div>
+
+<h3 id="avant-methode">Comment travailler ce TD</h3>
+<ol>
+<li>Lisez l'énoncé d'une question, puis l'encadré « Méthode ». Cherchez <strong>dix minutes</strong> sur papier.</li>
+<li>Bloqué ? Ouvrez l'<strong>indice</strong>, cherchez encore. Ensuite seulement, la <strong>solution détaillée</strong> : chaque ligne y est justifiée.</li>
+<li>Lisez l'encadré « Le corrigé officiel » : il dit ce que fait le corrigé manuscrit, ce qu'il saute, et ses coquilles éventuelles.</li>
+<li>À la fin, refaites toute la chaîne de tête à partir du <a href="#bilan">bilan</a>, puis comparez avec la <a href="03_seance3.html#condense">preuve condensée de la séance 3</a>.</li>
+</ol>
+
+<h2 id="lemme">1. Le lemme (questions 1 à 9)</h2>
+
+<div class="box enonce">
+<div class="box-h">Énoncé — Lemme <span class="ref">TD2 · page 1</span></div>
+<p>Soient $p\ge2$, $n\ge1$. Soient $\eps_1,\dots,\eps_n$ des variables aléatoires réelles indépendantes, identiquement distribuées de loi $\N(0,\sigma^2)$, $\sigma^2>0$. On définit l'estimateur Lasso par</p>
+$$\hat\beta_L=\argmin_{\beta\in\R^p}\Big\{\frac1n\norm{Y-X\beta}_2^2+2r\norm\beta_1\Big\},\qquad(1)$$
+<p>avec $r=A\sigma\sqrt{\dfrac{\log p}{n}}$ et $A>2\sqrt2$. On suppose que $\mathrm{diag}(X\T X/n)_j=1$ pour tout $j\in\{1,\dots,p\}$. Alors avec probabilité supérieure à $1-2p^{1-A^2/8}$, on a pour tout $\beta\in\R^p$,</p>
+$$\begin{aligned}&\norm{X\hb^L-X\bstar}_n^2+r\sum_{j=1}^p\abs{\hb^L_j-\beta_j}\\&\quad\le\norm{X\beta-X\bstar}_n^2+4r\sum_{j\in J(\beta)}\abs{\hb^L_j-\beta_j}\\&\quad\le\norm{X\beta-X\bstar}_n^2\\&\qquad\quad+4r\sqrt{\mathcal M(\beta)}\,\sqrt{\sum_{j\in J(\beta)}\abs{\hb^L_j-\beta_j}^2}\qquad(2)\end{aligned}$$
+$$\Big\|\frac1nX\T(X\bstar-X\hb_L)\Big\|_\infty\le\frac{3r}2\qquad(3)$$
+$$\mathcal M(\hb^L)\le\frac{4\phi_{\max}}{r^2}\norm{X\hb^L-X\bstar}_n^2,\qquad(4)$$
+<p>où $\phi_{\max}$ est la valeur propre maximale de $\dfrac{X\T X}{n}$.</p>
+<p><strong>Preuve :</strong> questions 1 à 9 ci-dessous.</p>
+</div>
+
+<div class="box idee">
+<div class="box-h">De quoi parle ce lemme ?</div>
+<p>Trois affirmations, toutes vraies sur un même événement $\cA$ de grande probabilité :</p>
+<ul>
+<li><strong>(2), la forme oracle.</strong> Le Lasso fait au moins aussi bien que n'importe quel candidat $\beta$ en prédiction, à un prix près, et ce prix ne fait intervenir que les coordonnées d'indice $j\in J(\beta)$, le support de $\beta$. Avec $\beta=\bstar$, on retrouvera l'inégalité centrale $(\star)$ de la <a href="03_seance3.html#etape2">séance 3</a>.</li>
+<li><strong>(3), une borne $\ell_\infty$.</strong> L'erreur de prédiction $X\bstar-X\hb^L$ est presque orthogonale à <em>chaque</em> colonne de $X$.</li>
+<li><strong>(4), la taille du modèle.</strong> Le nombre de variables sélectionnées est contrôlé par l'erreur de prédiction. Aucune hypothèse RE n'est nécessaire ici.</li>
+</ul>
+</div>
+
+<p>Voici le plan des neuf questions : elles suivent exactement le squelette de la séance 3.</p>
+<ol class="chain">
+<li><strong>Question 1 — inégalité de base</strong> avec un $\beta$ quelconque. Le bruit y apparaît sous la forme $2\sum_j(\hb^L_j-\beta_j)V_j$.</li>
+<li><strong>Questions 2 à 4 — le bruit est petit</strong> avec grande probabilité : loi des $V_j$, queue gaussienne (démontrée), borne de l'union.</li>
+<li><strong>Question 5 — sur $\cA$</strong>, on « dompte » le bruit et on découpe selon le support de $\beta$ : c'est (2).</li>
+<li><strong>Question 6 — conditions KKT</strong> + $\cA$ : c'est (3).</li>
+<li><strong>Questions 7 à 9 — chaque variable sélectionnée coûte</strong> au moins $r^2/4$ dans une quantité contrôlée par l'erreur de prédiction : c'est (4).</li>
+</ol>
+
+<h3 id="q1">Question 1 — L'inégalité de base, pour un $\beta$ quelconque</h3>
+
+<div class="box enonce">
+<div class="box-h">Question 1 <span class="ref">TD2 · page 1</span></div>
+<p>Montrer que pour tout $\beta\in\R^p$,</p>
+$$\begin{aligned}&\norm{X\bstar-X\hb^L}_n^2+2r\sum_{j=1}^p\abs{\hb^L_j}\\&\quad\le\norm{X\bstar-X\beta}_n^2+2\sum_{j=1}^p(\hb^L_j-\beta_j)V_j+2r\sum_{j=1}^p\abs{\beta_j},\end{aligned}$$
+<p>avec $V_j=\dfrac1n\sum_{i=1}^n\eps_ix_{ij}$ et $X=(x_{ij})_{1\le i\le n,1\le j\le p}$ la matrice de covariables.</p>
+</div>
+
+<div class="box methode">
+<div class="box-h">Méthode</div>
+<p>On ne connaît aucune formule pour $\hb^L$ : on n'utilise que sa <strong>définition</strong>. Il minimise le critère, donc il fait au moins aussi bien que n'importe quel $\beta$. On écrit « critère$(\hb^L)\le$ critère$(\beta)$ », on remplace $Y$ par $X\bstar+\eps$, on développe les carrés et on simplifie.</p>
+</div>
+
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>Pour tout vecteur $b$, $Y-Xb=(X\bstar-Xb)+\eps$. Développez $\norm{(X\bstar-Xb)+\eps}_n^2$ avec $\norm{a+c}^2=\norm a^2+2\ps ac+\norm c^2$ : le terme $\norm\eps_n^2$ est le même pour $b=\hb^L$ et pour $b=\beta$. Pour le terme croisé, écrivez le produit scalaire comme une double somme sur $i$ et $j$.</p>
+</div></details>
+
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<p>Notons $\hat S(\beta)=\frac1n\norm{Y-X\beta}^2=\norm{Y-X\beta}_n^2$ l'erreur d'ajustement (notation du corrigé), et $\ps uv=\sum_iu_iv_i$ le produit scalaire de $\R^n$.</p>
+<ol class="steps">
+<li>$$\hat S(\hb^L)+2r\norm{\hb^L}_1\le\hat S(\beta)+2r\norm\beta_1,\quad\forall\beta\in\R^p .$$<span class="why">$\hb^L$ minimise le critère (1) : sa valeur en $\hb^L$ est inférieure ou égale à sa valeur en n'importe quel point.</span></li>
+<li>$$Y-Xb=(X\bstar-Xb)+\eps\qquad\text{pour tout }b\in\R^p .$$<span class="why">modèle $Y=X\bstar+\eps$.</span></li>
+<li>$$\hat S(b)=\norm{X\bstar-Xb}_n^2+\frac2n\ps{\eps}{X\bstar-Xb}+\norm\eps_n^2 .$$<span class="why">$\norm{a+c}^2=\norm a^2+2\ps ac+\norm c^2$, puis division par $n$.</span></li>
+<li>$$\begin{aligned}&\norm{X\bstar-X\hb^L}_n^2+\frac2n\ps{\eps}{X\bstar-X\hb^L}+2r\norm{\hb^L}_1\\&\quad\le\norm{X\bstar-X\beta}_n^2\\&\qquad+\frac2n\ps{\eps}{X\bstar-X\beta}+2r\norm\beta_1 .\end{aligned}$$<span class="why">on applique la ligne 3 à $b=\hb^L$ et à $b=\beta$ dans la ligne 1 ; le terme $\norm\eps_n^2$, présent des deux côtés, se simplifie.</span></li>
+<li>$$\begin{aligned}&\frac2n\ps{\eps}{X\bstar-X\beta}-\frac2n\ps{\eps}{X\bstar-X\hb^L}\\&\quad=\frac2n\ps{\eps}{X(\hb^L-\beta)} .\end{aligned}$$<span class="why">on fait passer le terme de gauche à droite ; le produit scalaire est linéaire en son second argument, et $(X\bstar-X\beta)-(X\bstar-X\hb^L)=X\hb^L-X\beta$.</span></li>
+<li>$$\begin{aligned}\frac2n\ps{\eps}{X(\hb^L-\beta)}&=\frac2n\sum_{i=1}^n\eps_i\sum_{j=1}^px_{ij}(\hb^L_j-\beta_j)\\&=\sum_{j=1}^p(\hb^L_j-\beta_j)\cdot\underbrace{\frac2n\sum_{i=1}^n\eps_ix_{ij}}_{=2V_j} .\end{aligned}$$<span class="why">la $i$-ème coordonnée de $X(\hb^L-\beta)$ est $\sum_jx_{ij}(\hb^L_j-\beta_j)$ ; on échange les deux sommes finies.</span></li>
+</ol>
+<p>En reportant les lignes 5 et 6 dans la ligne 4, on obtient exactement l'inégalité demandée. <span class="qed">∎</span></p>
+</div></details>
+
+<div class="box officiel">
+<div class="box-h">Le corrigé officiel <span class="ref">Correction_TD2 · p. 1</span></div>
+<p>Le corrigé suit le même chemin, avec la même notation $\hat S(\beta)=\frac1n\norm{Y-X\beta}_2^2$. Il écrit la double somme sous la forme $\frac2n\sum_i\eps_ix_i(\hb^L-\beta)$, où $x_i$ est la <em>ligne</em> $i$, puis la réécrit $\sum_j(\hb^L_j-\beta_j)\,2V_j$. La solution ci-dessus ajoute seulement la justification de chaque ligne.</p>
+</div>
+
+<div class="box intu">
+<div class="box-h">Lire le résultat</div>
+<p>$V_j=\frac1nX_j\T\eps$ mesure à quel point le bruit « ressemble » à la variable $j$ : c'est une corrélation empirique entre le bruit et la colonne $X_j$. Le seul terme aléatoire de l'inégalité est $2\sum_j(\hb^L_j-\beta_j)V_j$. Avec $\beta=\bstar$, le premier terme de droite s'annule et l'on retrouve l'<a href="03_seance3.html#etape1">inégalité de base de la séance 3</a>, puisque $2\sum_j(\hb^L_j-\bstar_j)V_j=\frac2n\eps\T X\delta$ avec $\delta=\hb^L-\bstar$.</p>
+</div>
+
+<h3 id="q2">Question 2 — L'événement $\cA$ et la borne de l'union</h3>
+
+<div class="box enonce">
+<div class="box-h">Question 2 <span class="ref">TD2 · page 1</span></div>
+<p>Soit $\cA=\bigcap_{j=1}^p\{2\abs{V_j}\le r\}$, montrer que $\P(\cA^c)\le\displaystyle\sum_{j=1}^p\P\Big(\abs\eta>\frac{\sqrt n\,r}{2\sigma}\Big)$, avec $\eta\sim\N(0,1)$.</p>
+</div>
+
+<div class="box methode">
+<div class="box-h">Méthode</div>
+<ol>
+<li>Trouver la <strong>loi de $V_j$</strong> : c'est une combinaison linéaire de gaussiennes indépendantes.</li>
+<li>Écrire $\cA^c$ comme une <strong>réunion</strong> et appliquer la borne de l'union.</li>
+<li><strong>Standardiser</strong> : se ramener à une $\N(0,1)$.</li>
+</ol>
+</div>
+
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>$V_j=\sum_i\frac{x_{ij}}n\eps_i$. Sa variance est $\sigma^2\sum_i\big(\frac{x_{ij}}n\big)^2$ : utilisez la normalisation $\sum_ix_{ij}^2=n$. Puis $\{2\abs{V_j}>r\}=\{\frac{\sqrt n}\sigma\abs{V_j}>\frac{\sqrt n\,r}{2\sigma}\}$.</p>
+</div></details>
+
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<ol class="steps">
+<li>$$V_j=\sum_{i=1}^n\frac{x_{ij}}n\,\eps_i\sim\N\Big(0,\ \sigma^2\sum_{i=1}^n\frac{x_{ij}^2}{n^2}\Big)=\N\Big(0,\ \frac{\sigma^2}{n}\Big) .$$<span class="why">combinaison linéaire de variables gaussiennes indépendantes centrées de variance $\sigma^2$ : elle est gaussienne, centrée, de variance $\sigma^2\sum_ia_i^2$ (<a href="00_rappels.html#gaussien">rappel</a>) ; puis $\sum_ix_{ij}^2=n$ (normalisation).</span></li>
+<li>$$\eta_j:=\frac{\sqrt n}{\sigma}V_j\sim\N(0,1)\qquad\text{pour tout }j .$$<span class="why">on divise une $\N(0,\sigma^2/n)$ par son écart-type $\sigma/\sqrt n$. Grâce à la normalisation, <strong>tous les $\eta_j$ ont la même loi</strong>.</span></li>
+<li>$$\cA^c=\bigcup_{j=1}^p\{2\abs{V_j}>r\} .$$<span class="why">le complémentaire d'une intersection est la réunion des complémentaires : $\cA$ échoue si et seulement si l'un des $2\abs{V_j}$ dépasse $r$.</span></li>
+<li>$$\P(\cA^c)\le\sum_{j=1}^p\P\big(2\abs{V_j}>r\big) .$$<span class="why">borne de l'union $\P(\cup_jB_j)\le\sum_j\P(B_j)$ (<a href="00_rappels.html#queues">rappel</a>). Elle ne demande <em>aucune</em> indépendance entre les $V_j$ — heureusement, car ils sont corrélés dès que les colonnes le sont.</span></li>
+<li>$$\begin{aligned}2\abs{V_j}>r&\iff\frac{\sqrt n}{\sigma}\abs{V_j}>\frac{\sqrt n\,r}{2\sigma}\\&\iff\abs{\eta_j}>\frac{\sqrt n\,r}{2\sigma} .\end{aligned}$$<span class="why">on divise par 2, puis on multiplie par $\sqrt n/\sigma>0$ (cela ne change pas le sens de l'inégalité).</span></li>
+<li>$$\P(\cA^c)\le\sum_{j=1}^p\P\Big(\abs\eta>\frac{\sqrt n\,r}{2\sigma}\Big),\qquad\eta\sim\N(0,1) .$$<span class="why">lignes 4 et 5, et chaque $\eta_j$ a la loi de $\eta$.</span></li>
+</ol>
+</div></details>
+
+<div class="box officiel">
+<div class="box-h">Le corrigé officiel <span class="ref">Correction_TD2 · p. 1–2</span></div>
+<p>Même calcul. La loi de $V_j$ est justifiée en haut de la page 2 (« cf. dos de la feuille ») : $V_j\sim\N\big(0,\frac{\sigma^2}{n^2}\sum_ix_{ij}^2\big)=\N\big(0,\frac{\sigma^2}n\big)$ car $\frac1n\sum_ix_{ij}^2=1$.</p>
+</div>
+
+<div class="box reflexe">
+<div class="box-h">Réflexe — à quoi sert la normalisation des colonnes</div>
+<p>Quand vous voyez « $\mathrm{diag}(X\T X/n)=1$ », pensez : <strong>tous les $X_j\T\eps/n$ ont la même loi $\N(0,\sigma^2/n)$</strong>. On peut alors utiliser un <em>même</em> seuil $r$ pour toutes les variables, et la borne de l'union devient « $p$ fois la même probabilité ».</p>
+</div>
+
+<h3 id="q3">Question 3 — La queue gaussienne : $\P(\abs Z\ge z)\le2e^{-z^2/2}$</h3>
+
+<div class="box enonce">
+<div class="box-h">Question 3 <span class="ref">TD2 · page 1</span></div>
+<p>Montrer que si $Z\sim\N(0,1)$, alors $\P(\abs Z\ge z)\le2e^{-z^2/2}$ pour tout $z>0$.</p>
+</div>
+
+<div class="box methode">
+<div class="box-h">Méthode — la méthode de Chernoff</div>
+<p>L'inégalité de Markov seule, $\P(W\ge a)\le\E W/a$, est faible. L'astuce consiste à l'appliquer non pas à $\abs Z$ mais à $e^{\theta Z}$, puis à <strong>choisir le meilleur $\theta$</strong>. Comme la fonction exponentielle grossit très vite, la borne obtenue décroît comme $e^{-z^2/2}$.</p>
+</div>
+
+<div class="box rappel">
+<div class="box-h">Rappel — l'inégalité de Markov</div>
+<p>Si $W\ge0$ et $a>0$, alors $\P(W\ge a)\le\dfrac{\E W}{a}$. Preuve en une ligne : $a\,\ind\{W\ge a\}\le W$ (si $W\ge a$, le membre de gauche vaut $a\le W$ ; sinon il vaut $0\le W$) ; on prend l'espérance : $a\,\P(W\ge a)\le\E W$.</p>
+</div>
+
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>Par symétrie, $\P(\abs Z\ge z)=2\P(Z\ge z)$. Pour $\theta>0$ : $\{Z\ge z\}=\{e^{\theta Z}\ge e^{\theta z}\}$. Appliquez Markov, calculez $\E[e^{\theta Z}]$ en complétant le carré dans l'exposant, puis minimisez en $\theta$.</p>
+</div></details>
+
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<p>On note $\theta$ le paramètre (le corrigé l'appelle $\lambda$ ; on évite ici toute confusion avec un paramètre de régularisation).</p>
+<ol class="steps">
+<li>$$\begin{aligned}\P(\abs Z\ge z)&=\P(Z\ge z)+\P(Z\le-z)\\&=2\,\P(Z\ge z) .\end{aligned}$$<span class="why">les deux événements sont disjoints car $z>0$, et $Z$ et $-Z$ ont la même loi (densité paire).</span></li>
+<li>$$\P(Z\ge z)=\P\big(e^{\theta Z}\ge e^{\theta z}\big)\qquad\text{pour tout }\theta>0 .$$<span class="why">$x\mapsto e^{\theta x}$ est strictement croissante quand $\theta>0$ : les deux événements sont les mêmes.</span></li>
+<li>$$\P\big(e^{\theta Z}\ge e^{\theta z}\big)\le e^{-\theta z}\,\E\big[e^{\theta Z}\big] .$$<span class="why">Markov appliquée à $W=e^{\theta Z}\ge0$ et $a=e^{\theta z}>0$.</span></li>
+<li>$$\begin{aligned}\E\big[e^{\theta Z}\big]&=\int_{\R}e^{\theta x}\frac{e^{-x^2/2}}{\sqrt{2\pi}}\,\dd x\\&=e^{\theta^2/2}\int_{\R}\frac{e^{-(x-\theta)^2/2}}{\sqrt{2\pi}}\,\dd x=e^{\theta^2/2} .\end{aligned}$$<span class="why">on complète le carré : $\theta x-\frac{x^2}2=\frac{\theta^2}2-\frac{(x-\theta)^2}2$ ; la dernière intégrale est celle de la densité de $\N(\theta,1)$, qui vaut 1.</span></li>
+<li>$$\P(Z\ge z)\le\exp\Big(\frac{\theta^2}2-\theta z\Big)\qquad\text{pour tout }\theta>0 .$$<span class="why">lignes 2 à 4.</span></li>
+<li>$$\min_{\theta>0}\Big(\frac{\theta^2}2-\theta z\Big)=-\frac{z^2}2,\quad\text{atteint en }\theta=z .$$<span class="why">la fonction $g(\theta)=\frac{\theta^2}2-\theta z$ a pour dérivée $\theta-z$ : négative avant $z$, positive après. Son minimum est $g(z)=\frac{z^2}2-z^2=-\frac{z^2}2$, et $\theta=z$ est bien $>0$.</span></li>
+<li>$$\begin{gathered}\P(Z\ge z)\le e^{-z^2/2},\\\text{donc}\quad\P(\abs Z\ge z)\le2\,e^{-z^2/2} .\end{gathered}$$<span class="why">on prend $\theta=z$ dans la ligne 5 (c'est la meilleure borne que donne la méthode), puis la ligne 1.</span></li>
+</ol>
+</div></details>
+
+<div class="box officiel">
+<div class="box-h">Le corrigé officiel <span class="ref">Correction_TD2 · p. 2</span></div>
+<p>Exactement cette preuve, encadrée comme un « Lemme » : Markov sur $e^{\lambda Z}$, $\E[e^{\lambda Z}]=e^{\lambda^2/2}$ (affirmé sans calcul : c'est la ligne 4 ci-dessus), puis « on choisit celui qui minimise la quantité » en étudiant $f(\lambda)=\lambda z-\lambda^2/2$, maximale en $\lambda=z$.</p>
+</div>
+
+<div class="box exemple">
+<div class="box-h">Que vaut cette borne ?</div>
+<div class="table-wrap"><table>
+<thead><tr><th>$z$</th><th>valeur exacte $\P(\abs Z\ge z)$</th><th>Chernoff $2e^{-z^2/2}$ (TD)</th><th>version fine $e^{-z^2/2}$</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>0,3173</td><td>1,2131 (inutile : $>1$)</td><td>0,6065</td></tr>
+<tr><td>2</td><td>0,0455</td><td>0,2707</td><td>0,1353</td></tr>
+<tr><td>3</td><td>0,0027</td><td>0,0222</td><td>0,0111</td></tr>
+</tbody></table></div>
+<p>La borne est grossière (de 4 à 8 fois la vraie valeur dans ce tableau), mais elle a <strong>la bonne vitesse de décroissance</strong>, en $e^{-z^2/2}$. C'est tout ce dont la preuve a besoin.</p>
+</div>
+
+<div class="box remarque">
+<div class="box-h">Une version plus fine, sans le facteur 2</div>
+<p>On peut montrer $\P(\abs Z\ge z)\le e^{-z^2/2}$ pour tout $z\ge0$ (preuve dans les <a href="00_rappels.html#queues">Rappels</a>). La séance 3 utilise cette version ; c'est elle qui donne la probabilité $1-p^{1-A^2/8}$ de la diapo 38, au lieu du $1-2p^{1-A^2/8}$ du TD (voir la <a href="#q4">question 4</a>).</p>
+</div>
+
+<div class="box reflexe">
+<div class="box-h">Réflexe — la méthode de Chernoff</div>
+<p>Pour borner une queue $\P(Z\ge z)$ : <strong>Markov sur $e^{\theta Z}$, puis optimiser en $\theta$</strong>. Il suffit de connaître $\E[e^{\theta Z}]$ (ici $e^{\theta^2/2}$). La même recette donne l'inégalité de Hoeffding pour les variables bornées (<a href="00_rappels.html#hoeffding">Rappels</a>), qui joue au <a href="10_td3.html#ex2-q3b">TD3</a> le rôle des questions 2 à 4.</p>
+</div>
+
+<h3 id="q4">Question 4 — La probabilité de $\cA$</h3>
+
+<div class="box enonce">
+<div class="box-h">Question 4 <span class="ref">TD2 · page 1</span></div>
+<p>En déduire que $\P(2\abs{V_j}>r)\le2p^{-A^2/8}$ et que $\P(\cA^c)\le2p^{1-A^2/8}$.</p>
+</div>
+
+<div class="box methode">
+<div class="box-h">Méthode</div>
+<p>Remplacer $r$ par sa valeur dans le seuil $z=\frac{\sqrt n\,r}{2\sigma}$ de la question 2, appliquer la question 3, puis sommer sur $j$.</p>
+</div>
+
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>Calculez $\frac{\sqrt n\,r}{\sigma}$ : le $\sqrt n$ et le $\sigma$ se simplifient. Puis $e^{-a\log p}=p^{-a}$.</p>
+</div></details>
+
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<ol class="steps">
+<li>$$z:=\frac{\sqrt n\,r}{2\sigma}=\frac{\sqrt n}{2\sigma}\cdot A\sigma\sqrt{\frac{\log p}{n}}=\frac A2\sqrt{\log p} .$$<span class="why">définition de $r$ ; $\sqrt n\cdot\sqrt{1/n}=1$ et $\sigma/\sigma=1$.</span></li>
+<li>$$\frac{z^2}2=\frac{A^2}{8}\log p .$$<span class="why">$z^2=\frac{A^2}4\log p$.</span></li>
+<li>$$\begin{aligned}\P(2\abs{V_j}>r)&=\P(\abs\eta>z)\le\P(\abs\eta\ge z)\\&\le2e^{-z^2/2}=2e^{-\frac{A^2}8\log p}=2p^{-A^2/8} .\end{aligned}$$<span class="why">question 2 ; l'événement $\{\abs\eta>z\}$ est contenu dans $\{\abs\eta\ge z\}$ ; question 3 (avec $z>0$) ; ligne 2 ; et $e^{-a\log p}=(e^{\log p})^{-a}=p^{-a}$.</span></li>
+<li>$$\P(\cA^c)\le\sum_{j=1}^p2p^{-A^2/8}=2p\cdot p^{-A^2/8}=2p^{1-A^2/8} .$$<span class="why">question 2 : somme de $p$ termes tous majorés par la même quantité.</span></li>
+</ol>
+<p>Donc $\P(\cA)\ge1-2p^{1-A^2/8}$, ce qui est la probabilité annoncée par le lemme. <span class="qed">∎</span></p>
+</div></details>
+
+<div class="box officiel">
+<div class="box-h">Le corrigé officiel <span class="ref">Correction_TD2 · p. 2</span></div>
+<p>Même calcul, écrit en une ligne : $\P(2\abs{V_j}>r)=2\P\big(Z>\frac{r\sqrt n}{2\sigma}\big)\le2\exp\big(-\frac{r^2n}{8\sigma^2}\big)=2\exp\big(-\frac{A^2}8\log p\big)=2p^{-A^2/8}$, puis la somme sur $j$.</p>
+</div>
+
+<div class="box intu">
+<div class="box-h">Pourquoi $A>2\sqrt2$, et ce que valent ces nombres</div>
+<p>La borne $2p^{1-A^2/8}$ ne dit quelque chose que si elle est petite. L'exposant $1-A^2/8$ est négatif si et seulement si $A^2>8$, c'est-à-dire $A>2\sqrt2\approx2{,}83$ : alors la probabilité d'échec tend vers 0 quand $p$ grandit. Avec $p=10\,000$ :</p>
+<div class="table-wrap"><table>
+<thead><tr><th></th><th>$A=3$</th><th>$A=4$</th></tr></thead>
+<tbody>
+<tr><td>borne du TD : $\P(\cA^c)\le2p^{1-A^2/8}$</td><td>$0{,}632$</td><td>$2\times10^{-4}$</td></tr>
+<tr><td>borne de la diapo : $p^{1-A^2/8}$</td><td>$0{,}316$</td><td>$10^{-4}$</td></tr>
+</tbody></table></div>
+<p>Pour $A=3$, la garantie du TD est faible ($\P(\cA)\ge0{,}37$) ; pour $A=4$, elle est excellente. Mais ce ne sont que des <strong>bornes</strong> : en pratique $\cA$ a lieu bien plus souvent (voir la <a href="#verif">vérification numérique</a>).</p>
+</div>
+
+<div class="widget" data-widget="maxgauss"></div>
+<p>La figure simule $\max_j\abs{\eta_j}$ pour $p$ gaussiennes standard : il grandit comme $\sqrt{2\log p}$. L'événement $\cA$ s'écrit $\max_j\abs{\eta_j}\le z=\frac A2\sqrt{\log p}$, et $A>2\sqrt2$ équivaut à $\frac A2\sqrt{\log p}>\sqrt{2\log p}$ : <strong>on place le seuil juste au-dessus du maximum typique du bruit.</strong></p>
+
+<h3 id="q5">Question 5 — Sur $\cA$ : le résultat (2)</h3>
+
+<div class="box enonce">
+<div class="box-h">Question 5 <span class="ref">TD2 · page 2</span></div>
+<p>Montrer que sur $\cA$,</p>
+$$\begin{aligned}&\norm{X\hb^L-X\bstar}_n^2+r\sum_{j=1}^p\abs{\hb^L_j-\beta_j}\\&\quad\le\norm{X\beta-X\bstar}_n^2+2r\sum_{j=1}^p\big(\abs{\hb^L_j-\beta_j}+\abs{\beta_j}-\abs{\hb^L_j}\big)\end{aligned}$$
+<p>et en déduire le résultat (2).</p>
+</div>
+
+<div class="box methode">
+<div class="box-h">Méthode — le même geste qu'en séance 3</div>
+<ol>
+<li>Sur $\cA$, borner le terme de bruit $2\sum_j(\hb^L_j-\beta_j)V_j$ par $r\sum_j\abs{\hb^L_j-\beta_j}$.</li>
+<li><strong>Ajouter $r\sum_j\abs{\hb^L_j-\beta_j}$ des deux côtés</strong> (le geste « gratuit » de l'<a href="03_seance3.html#etape2">étape 2b de la séance 3</a>).</li>
+<li>Découper la somme selon que $j$ est dans le support $J(\beta)$ ou non : hors du support, les termes <strong>s'annulent exactement</strong>.</li>
+</ol>
+</div>
+
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>Pour $j\notin J(\beta)$, on a $\beta_j=0$ : que vaut $\abs{\hb^L_j-\beta_j}+\abs{\beta_j}-\abs{\hb^L_j}$ ? Pour $j\in J(\beta)$, utilisez $\abs{\beta_j}-\abs{\hb^L_j}\le\abs{\hb^L_j-\beta_j}$. Pour la seconde ligne de (2) : Cauchy–Schwarz sur les $\mathcal M(\beta)$ indices de $J(\beta)$.</p>
+</div></details>
+
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<p><strong>Première partie : l'inégalité intermédiaire.</strong></p>
+<ol class="steps">
+<li>$$\begin{aligned}2\sum_{j=1}^p(\hb^L_j-\beta_j)V_j&\le\sum_{j=1}^p2\abs{V_j}\,\abs{\hb^L_j-\beta_j}\\&\le r\sum_{j=1}^p\abs{\hb^L_j-\beta_j}\qquad\text{sur }\cA .\end{aligned}$$<span class="why">$x\le\abs x$ et $\abs{ab}=\abs a\abs b$ terme à terme ; puis, sur $\cA$, $2\abs{V_j}\le r$ pour <em>tout</em> $j$. (C'est l'inégalité de Hölder $\abs{a\T b}\le\norm a_\infty\norm b_1$ écrite à la main.)</span></li>
+<li>$$\begin{aligned}&\norm{X\hb^L-X\bstar}_n^2+2r\sum_j\abs{\hb^L_j}\\&\quad\le\norm{X\beta-X\bstar}_n^2+r\sum_j\abs{\hb^L_j-\beta_j}+2r\sum_j\abs{\beta_j} .\end{aligned}$$<span class="why">on reporte la ligne 1 dans la question 1 (et $\norm{X\bstar-Xb}_n=\norm{Xb-X\bstar}_n$).</span></li>
+<li>$$\begin{aligned}&\norm{X\hb^L-X\bstar}_n^2+r\sum_j\abs{\hb^L_j-\beta_j}\\&\quad\le\norm{X\beta-X\bstar}_n^2+2r\sum_j\abs{\hb^L_j-\beta_j}\\&\qquad\quad+2r\sum_j\abs{\beta_j}-2r\sum_j\abs{\hb^L_j}\\&\quad=\norm{X\beta-X\bstar}_n^2\\&\qquad\quad+2r\sum_{j=1}^p\big(\abs{\hb^L_j-\beta_j}+\abs{\beta_j}-\abs{\hb^L_j}\big) .\end{aligned}$$<span class="why">on ajoute $r\sum_j\abs{\hb^L_j-\beta_j}$ des deux côtés, on fait passer $2r\sum_j\abs{\hb^L_j}$ à droite, et on regroupe les trois sommes en une seule.</span></li>
+</ol>
+<p>C'est l'inégalité demandée.</p>
+<p><strong>Deuxième partie : on découpe selon le support de $\beta$.</strong> Notons $t_j=\abs{\hb^L_j-\beta_j}+\abs{\beta_j}-\abs{\hb^L_j}$.</p>
+<ol class="steps">
+<li>$$j\notin J(\beta)\ :\quad t_j=\abs{\hb^L_j-0}+0-\abs{\hb^L_j}=0 .$$<span class="why">hors du support, $\beta_j=0$. <strong>Les termes hors support se compensent exactement</strong> : la « masse » que le Lasso met à tort hors de $J(\beta)$ est entièrement payée par la pénalité.</span></li>
+<li>$$j\in J(\beta)\ :\quad t_j\le2\abs{\hb^L_j-\beta_j} .$$<span class="why">$t_j=\abs{\hb^L_j-\beta_j}+\big(\abs{\beta_j}-\abs{\hb^L_j}\big)$, et l'inégalité triangulaire inversée donne $\abs{\beta_j}-\abs{\hb^L_j}\le\abs{\beta_j-\hb^L_j}$ : chacun des deux morceaux vaut au plus $\abs{\hb^L_j-\beta_j}$.</span></li>
+<li>$$\begin{aligned}&\norm{X\hb^L-X\bstar}_n^2+r\sum_{j=1}^p\abs{\hb^L_j-\beta_j}\\&\quad\le\norm{X\beta-X\bstar}_n^2+4r\sum_{j\in J(\beta)}\abs{\hb^L_j-\beta_j} .\end{aligned}$$<span class="why">on reporte les lignes 1 et 2 dans l'inégalité intermédiaire : $2r\sum_jt_j\le2r\sum_{j\in J(\beta)}2\abs{\hb^L_j-\beta_j}$. C'est la première ligne de (2).</span></li>
+<li>$$\begin{aligned}\sum_{j\in J(\beta)}\abs{\hb^L_j-\beta_j}&\le\sqrt{\abs{J(\beta)}}\,\sqrt{\sum_{j\in J(\beta)}\abs{\hb^L_j-\beta_j}^2}\\&=\sqrt{\mathcal M(\beta)}\,\sqrt{\sum_{j\in J(\beta)}\abs{\hb^L_j-\beta_j}^2} .\end{aligned}$$<span class="why">Cauchy–Schwarz entre les vecteurs $(1,\dots,1)$ et $(\abs{\hb^L_j-\beta_j})_{j\in J(\beta)}$, qui ont $\abs{J(\beta)}=\mathcal M(\beta)$ coordonnées (<a href="00_rappels.html#inegalites-normes">rappel</a>). C'est la seconde ligne de (2).</span></li>
+</ol>
+<p>Tout ceci a été fait sur $\cA$, pour un $\beta$ arbitraire. <span class="qed">∎</span></p>
+</div></details>
+
+<div class="box officiel">
+<div class="box-h">Le corrigé officiel <span class="ref">Correction_TD2 · p. 2</span></div>
+<p>Identique : « en sommant des deux côtés $r\sum_j\abs{\hb_j-\beta_j}$ », puis « $\abs{\hb_j-\beta_j}+\abs{\beta_j}-\abs{\hb_j}=0$ pour $j\notin J(\beta)$ » et « $\abs{\beta_j}-\abs{\hb_j}\le\abs{\hb_j-\beta_j}$ (inégalité triangulaire) ». La seconde ligne de (2) (Cauchy–Schwarz) n'y est pas rédigée : elle est utilisée directement dans la preuve du théorème.</p>
+</div>
+
+<div class="box piege">
+<div class="box-h">Piège — « pour tout $\beta$ », mais un seul événement</div>
+<p>L'événement $\cA$ ne dépend pas de $\beta$ : il ne fait intervenir que le bruit. Donc, <strong>sur $\cA$, l'inégalité (2) est vraie simultanément pour tous les $\beta$</strong>. Ce n'est pas « pour chaque $\beta$, avec grande probabilité » (ce qui laisserait un événement d'exception différent pour chaque $\beta$). C'est ce qui autorise ensuite à choisir $\beta$ comme on veut, y compris en fonction des données.</p>
+</div>
+
+<div class="quiz"><p>Question rapide : que dit (2) pour $\beta=0$ ? Et pour $\beta=\hb^L$ ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>Pour $\beta=0$ : $J(0)=\varnothing$, la somme de droite est vide, donc $\norm{X\hb^L-X\bstar}_n^2+r\norm{\hb^L}_1\le\norm{X\bstar}_n^2$. Sur $\cA$, le Lasso prédit au moins aussi bien que le prédicteur nul, et $\norm{\hb^L}_1\le\norm{X\bstar}_n^2/r$. Pour $\beta=\hb^L$ : les deux membres valent $\norm{X\hb^L-X\bstar}_n^2$, l'inégalité est une égalité sans intérêt.</p>
+</div></details></div>
+
+<h3 id="q6">Question 6 — La borne $\ell_\infty$ (3), grâce aux conditions KKT</h3>
+
+<div class="box enonce">
+<div class="box-h">Question 6 <span class="ref">TD2 · page 2</span></div>
+<p>En utilisant les conditions KKT satisfaites par le Lasso, en déduire (3).</p>
+</div>
+
+<div class="box methode">
+<div class="box-h">Méthode</div>
+<ol>
+<li>Les KKT disent que <strong>toutes</strong> les corrélations $\frac1nX_j\T(Y-X\hb^L)$ entre les variables et le résidu sont bornées par $r$.</li>
+<li>Écrire l'erreur de prédiction comme « résidu moins bruit » : $X\bstar-X\hb^L=(Y-X\hb^L)-\eps$.</li>
+<li>Inégalité triangulaire pour la norme $\ell_\infty$, et $\cA$ pour le bruit.</li>
+</ol>
+</div>
+
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>Les coordonnées de $\frac1nX\T\eps$ sont exactement les $V_j$. Sur $\cA$, $\abs{V_j}\le r/2$ pour tout $j$.</p>
+</div></details>
+
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\begin{aligned}&\frac1nX\T(Y-X\hb^L)=r\,\hat g,\\&\text{avec }\hat g_j=\sgn(\hb^L_j)\text{ si }\hb^L_j\neq0,\ \ \hat g_j\in[-1,1]\text{ sinon} .\end{aligned}$$<span class="why">conditions KKT du critère (1) (encadré « Convention » en tête de page) : $\hat g$ est un sous-gradient de $\norm\cdot_1$ en $\hb^L$.</span></li>
+<li>$$\Big\|\frac1nX\T(Y-X\hb^L)\Big\|_\infty=r\,\norm{\hat g}_\infty\le r .$$<span class="why">toutes les coordonnées de $\hat g$ sont dans $[-1,1]$.</span></li>
+<li>$$X\bstar-X\hb^L=(Y-X\hb^L)-\eps .$$<span class="why">$Y=X\bstar+\eps$, donc $X\bstar=Y-\eps$.</span></li>
+<li>$$\begin{aligned}\frac1nX\T(X\bstar-X\hb^L)&=\frac1nX\T(Y-X\hb^L)-\frac1nX\T\eps,\\\frac1nX\T\eps&=(V_1,\dots,V_p)\T .\end{aligned}$$<span class="why">on multiplie la ligne 3 par $\frac1nX\T$ ; la coordonnée $j$ de $\frac1nX\T\eps$ est $\frac1n\sum_ix_{ij}\eps_i=V_j$.</span></li>
+<li>$$\begin{aligned}&\Big\|\frac1nX\T(X\bstar-X\hb^L)\Big\|_\infty\\&\qquad\le\Big\|\frac1nX\T(Y-X\hb^L)\Big\|_\infty+\max_j\abs{V_j}\\&\qquad\le r+\frac r2=\frac{3r}2 .\end{aligned}$$<span class="why">inégalité triangulaire pour $\norm\cdot_\infty$ ; ligne 2 ; et sur $\cA$, $2\abs{V_j}\le r$ pour tout $j$. C'est (3).</span></li>
+</ol>
+</div></details>
+
+<div class="box officiel">
+<div class="box-h">Le corrigé officiel <span class="ref">Correction_TD2 · p. 3</span></div>
+<p>Même raisonnement en deux lignes. Le corrigé ajoute la remarque utile : « le $\frac1n$ vient du Lasso $\argmin\{\frac1n\norm{Y-X\beta}^2+2r\norm\beta_1\}$ au lieu de $\norm{Y-X\beta}^2$ ». Avec le critère non normalisé de la séance 2, les KKT s'écriraient $\abs{2X_j\T(Y-X\hb)}\le\lambda'$ : attention à la convention.</p>
+</div>
+
+<div class="box intu">
+<div class="box-h">Lire (3)</div>
+<p>(3) dit : pour <em>chaque</em> variable $j$, $\big|\frac1nX_j\T(X\bstar-X\hb^L)\big|\le\frac{3r}2$. L'erreur de prédiction est <strong>presque orthogonale à toutes les colonnes</strong>. Comparez :</p>
+<ul>
+<li>pour les moindres carrés, le résidu est <em>exactement</em> orthogonal aux colonnes ($X\T(Y-X\hb\MC)=0$) ;</li>
+<li>le Lasso tolère une corrélation jusqu'à $r$ avec le résidu (ligne 2) : c'est précisément la contrainte de Dantzig, ce qui montre que le Lasso est un point admissible du <a href="06_seance6.html#dantzig">sélecteur de Dantzig</a> (séance 6, à la normalisation près).</li>
+</ul>
+<p>Notez que (3) ne demande <strong>aucune hypothèse sur $X$</strong> (pas de RE) : seulement $\cA$ et les KKT.</p>
+</div>
+
+<h3 id="q7">Question 7 — Chaque variable sélectionnée est corrélée à l'erreur</h3>
+
+<div class="box enonce">
+<div class="box-h">Question 7 <span class="ref">TD2 · page 2</span></div>
+<p>Montrer que $\Big|\dfrac1n(X^j)\T(X\bstar-X\hb^L)\Big|\ge\dfrac r2$ pour $j\in\{1,\dots,p\}$ et $\hb^L_j\neq0$, où $X^j$ est la $j$-ème colonne de $X$.</p>
+</div>
+
+<div class="box methode">
+<div class="box-h">Méthode</div>
+<p>Pour une variable <strong>sélectionnée</strong> ($\hb^L_j\neq0$), les KKT donnent une <em>égalité</em> : sa corrélation avec le résidu vaut exactement $\pm r$. Le bruit en explique au plus $r/2$ (sur $\cA$) ; le reste vient forcément de l'erreur de prédiction.</p>
+</div>
+
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>Reprenez la décomposition de la question 6 coordonnée par coordonnée, et utilisez $\abs{a-b}\ge\abs a-\abs b$.</p>
+</div></details>
+
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<p>Soit $j$ tel que $\hb^L_j\neq0$ ; on se place sur $\cA$.</p>
+<ol class="steps">
+<li>$$\frac1nX_j\T(Y-X\hb^L)=r\,\sgn(\hb^L_j) .$$<span class="why">condition KKT pour une coordonnée non nulle (première ligne).</span></li>
+<li>$$\begin{aligned}\frac1nX_j\T(X\bstar-X\hb^L)&=\frac1nX_j\T(Y-X\hb^L)-\frac1nX_j\T\eps\\&=r\,\sgn(\hb^L_j)-V_j .\end{aligned}$$<span class="why">$X\bstar-X\hb^L=(Y-X\hb^L)-\eps$ (question 6, ligne 3) et $\frac1nX_j\T\eps=V_j$.</span></li>
+<li>$$\begin{aligned}\Big|\frac1nX_j\T(X\bstar-X\hb^L)\Big|&\ge\abs{r\,\sgn(\hb^L_j)}-\abs{V_j}\\&=r-\abs{V_j}\ge r-\frac r2=\frac r2 .\end{aligned}$$<span class="why">inégalité triangulaire inversée $\abs{a-b}\ge\abs a-\abs b$ ; $\abs{\sgn(\hb^L_j)}=1$ car $\hb^L_j\neq0$ ; sur $\cA$, $\abs{V_j}\le r/2$.</span></li>
+</ol>
+</div></details>
+
+<div class="box officiel">
+<div class="box-h">Le corrigé officiel <span class="ref">Correction_TD2 · p. 3</span></div>
+<p>Identique : « pour $\hb_j\neq0$, $\big|\frac1n(X^j)\T(X\bstar-X\hb)\big|\ge\big|\frac1n(X^j)\T(Y-X\hb)\big|-\big|\frac1n(X^j)\T\eps\big|\ge\abs{r\sgn(\hb_j)}-\frac r2=\frac r2$ ».</p>
+</div>
+
+<div class="box intu">
+<div class="box-h">Lire la question 7</div>
+<p>« On ne sélectionne pas une variable gratuitement. » Toute variable que le Lasso garde est corrélée d'au moins $r/2$ avec son erreur de prédiction $X\bstar-X\hb^L$. Si cette erreur est petite, elle ne peut pas être corrélée à beaucoup de variables à la fois : c'est ce que les questions 8 et 9 quantifient.</p>
+</div>
+
+<h3 id="q8">Question 8 — Sommer les carrés</h3>
+
+<div class="box enonce">
+<div class="box-h">Question 8 <span class="ref">TD2 · page 2</span></div>
+<p>En déduire que $\dfrac1{n^2}(X\bstar-X\hb^L)\T XX\T(X\bstar-X\hb^L)\ge\dfrac{r^2}4\mathcal M(\hb^L)$.</p>
+</div>
+
+<div class="box methode">
+<div class="box-h">Méthode</div>
+<p>Reconnaître dans le membre de gauche une <strong>somme de $p$ carrés</strong>, un par variable. On ne garde que les variables sélectionnées, et la question 7 minore chacune de leurs contributions par $(r/2)^2$.</p>
+</div>
+
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>Posez $v=X\bstar-X\hb^L$. Alors $v\T XX\T v=\norm{X\T v}^2$, et les coordonnées de $X\T v$ sont les $X_j\T v$.</p>
+</div></details>
+
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<p>Posons $v=X\bstar-X\hb^L\in\R^n$ et plaçons-nous sur $\cA$.</p>
+<ol class="steps">
+<li>$$\begin{aligned}\frac1{n^2}v\T XX\T v&=\frac1{n^2}(X\T v)\T(X\T v)\\&=\Big\|\frac1nX\T v\Big\|^2=\sum_{j=1}^p\Big(\frac1nX_j\T v\Big)^2 .\end{aligned}$$<span class="why">$v\T XX\T v=(X\T v)\T(X\T v)$ ; la $j$-ème coordonnée de $X\T v$ est $X_j\T v$.</span></li>
+<li>$$\ge\sum_{j:\ \hb^L_j\neq0}\Big(\frac1nX_j\T v\Big)^2 .$$<span class="why">on retire les termes des $j$ non sélectionnés, qui sont des carrés, donc $\ge0$.</span></li>
+<li>$$\ge\sum_{j:\ \hb^L_j\neq0}\Big(\frac r2\Big)^2=\frac{r^2}4\,\mathcal M(\hb^L) .$$<span class="why">question 7 : chacun des $\mathcal M(\hb^L)$ termes restants est $\ge(r/2)^2$.</span></li>
+</ol>
+</div></details>
+
+<div class="box officiel">
+<div class="box-h">Le corrigé officiel <span class="ref">Correction_TD2 · p. 3</span></div>
+<p>Même chaîne d'inégalités, notée (A) dans le corrigé.</p>
+</div>
+
+<h3 id="q9">Question 9 — Valeurs propres : conclure (4)</h3>
+
+<div class="box enonce">
+<div class="box-h">Question 9 <span class="ref">TD2 · page 2</span></div>
+<p>En déduire (4).</p>
+</div>
+
+<div class="box methode">
+<div class="box-h">Méthode</div>
+<p>Majorer cette fois le membre de gauche de la question 8 par l'erreur de prédiction, grâce à la plus grande valeur propre de $XX\T/n$ (quotient de Rayleigh), puis montrer que celle-ci est égale à $\phi_{\max}$, la plus grande valeur propre de $X\T X/n$.</p>
+</div>
+
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>Pour une matrice symétrique $M$, $w\T Mw\le\lambda_{\max}(M)\norm w^2$. Et si $X\T Xu=\mu u$ avec $\mu\neq0$, que vaut $XX\T(Xu)$ ?</p>
+</div></details>
+
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<p><strong>Lemme : $XX\T/n$ et $X\T X/n$ ont la même plus grande valeur propre.</strong></p>
+<ol class="steps">
+<li>$$\begin{aligned}&X\T Xu=\mu u,\ u\neq0,\ \mu\neq0\\&\quad\Longrightarrow\ Xu\neq0\ \text{ et }\ XX\T(Xu)=\mu\,(Xu) .\end{aligned}$$<span class="why">si l'on avait $Xu=0$, alors $\mu u=X\T(Xu)=0$, impossible car $\mu\neq0$ et $u\neq0$ ; ensuite $XX\T(Xu)=X(X\T Xu)=X(\mu u)=\mu Xu$.</span></li>
+<li><p><strong>Les valeurs propres non nulles de $X\T X$ et de $XX\T$ sont les mêmes.</strong></p><span class="why">la ligne 1 montre que toute valeur propre non nulle de $X\T X$ en est une de $XX\T$ ; le même argument, en échangeant les rôles de $X$ et $X\T$, donne l'inverse.</span></li>
+<li>$$\lambda_{\max}\Big(\frac{XX\T}n\Big)=\lambda_{\max}\Big(\frac{X\T X}n\Big)=\phi_{\max} .$$<span class="why">les deux matrices sont symétriques positives (valeurs propres $\ge0$, car $w\T XX\T w=\norm{X\T w}^2\ge0$ et $u\T X\T Xu=\norm{Xu}^2\ge0$) : leur plus grande valeur propre est leur plus grande valeur propre non nulle (ou 0 si $X=0$), commune par la ligne 2.</span></li>
+</ol>
+<p><strong>Conclusion.</strong> Avec $v=X\bstar-X\hb^L$, sur $\cA$ :</p>
+<ol class="steps">
+<li>$$\begin{aligned}\frac1{n^2}v\T XX\T v&=\frac1n\,v\T\Big(\frac{XX\T}n\Big)v\\&\le\frac1n\,\phi_{\max}\norm v^2=\phi_{\max}\norm v_n^2 .\end{aligned}$$<span class="why">quotient de Rayleigh $w\T Mw\le\lambda_{\max}(M)\norm w^2$ pour $M=XX\T/n$ symétrique (<a href="00_rappels.html#spectral">rappel</a>), puis le lemme ; enfin $\frac1n\norm v^2=\norm v_n^2$.</span></li>
+<li>$$\frac{r^2}4\mathcal M(\hb^L)\le\phi_{\max}\norm{X\hb^L-X\bstar}_n^2 .$$<span class="why">question 8 à gauche, ligne précédente à droite ; $\norm{v}_n=\norm{X\hb^L-X\bstar}_n$.</span></li>
+<li>$$\mathcal M(\hb^L)\le\frac{4\phi_{\max}}{r^2}\norm{X\hb^L-X\bstar}_n^2 .$$<span class="why">on multiplie par $4/r^2>0$. C'est (4).</span></li>
+</ol>
+</div></details>
+
+<div class="box officiel">
+<div class="box-h">Le corrigé officiel <span class="ref">Correction_TD2 · p. 3</span></div>
+<p>Le corrigé justifie l'égalité des valeurs propres en une parenthèse (« si $\lambda$ vp de $X\T X$ et $u$ vecteur propre : $X\T Xu=\lambda u\Rightarrow XX\T(Xu)=\lambda Xu$ »), écrit la majoration (B) $\frac1{n^2}v\T XX\T v\le\frac{\phi_{\max}}n\norm v_2^2=\phi_{\max}\norm v_n^2$, puis combine (A) et (B). La solution ci-dessus ajoute le point qu'il omet : il faut $Xu\neq0$, ce qui demande $\lambda\neq0$.</p>
+</div>
+
+<div class="box remarque">
+<div class="box-h">Pour aller plus loin — $\phi_{\max}$ n'est pas petit quand $p\gg n$</div>
+<p>La diagonale de $X\T X/n$ vaut 1, donc sa trace vaut $p$ : la somme de ses valeurs propres est $p$. Or elle a au plus $\rg X\le n$ valeurs propres non nulles. Donc, quand $p>n$, <strong>$\phi_{\max}\ge p/n$</strong> (la plus grande est au moins la moyenne des non nulles). Pour une matrice gaussienne à colonnes normalisées, $\phi_{\max}$ vaut environ $(1+\sqrt{p/n})^2$ (résultat classique, hors programme ; vérifié numériquement : environ $7{,}2$ en moyenne pour $n=100$, $p=300$, contre $(1+\sqrt3)^2\approx7{,}46$). La borne (7) du théorème sur la taille du modèle, proportionnelle à $\phi_{\max}$, devient donc <em>pessimiste</em> quand $p\gg n$.</p>
+</div>
+
+<div class="box resume">
+<div class="box-h">Le lemme, récapitulé</div>
+<p>Sur l'événement $\cA=\{\max_j2\abs{V_j}\le r\}$, de probabilité $\ge1-2p^{1-A^2/8}$ (questions 2–4) :</p>
+<ul>
+<li><strong>(2)</strong> pour <em>tout</em> $\beta\in\R^p$ : $\ \norm{X\hb^L-X\bstar}_n^2+r\norm{\hb^L-\beta}_1\le\norm{X\beta-X\bstar}_n^2+4r\sum_{j\in J(\beta)}\abs{\hb^L_j-\beta_j}$ (question 5) ;</li>
+<li><strong>(3)</strong> $\ \norm{\frac1nX\T(X\bstar-X\hb^L)}_\infty\le\frac{3r}2$ (question 6) ;</li>
+<li><strong>(4)</strong> $\ \mathcal M(\hb^L)\le\frac{4\phi_{\max}}{r^2}\norm{X\hb^L-X\bstar}_n^2$ (questions 7–9).</li>
+</ul>
+<p>Aucune de ces trois affirmations ne demande d'hypothèse sur $X$ autre que la normalisation des colonnes. La condition RE n'interviendra que pour le théorème.</p>
+</div>
+
+<h3 id="verif">Vérification numérique (hors TD)</h3>
+
+<p>Pour se convaincre que le lemme n'est pas qu'un jeu d'écriture, on peut calculer un Lasso et tester (2), (3), (4). Simulation : $n=100$, $p=300$, $s=4$, $\sigma=1$, $X$ gaussienne à colonnes normalisées, $\bstar=(2,\,-1{,}5,\,1,\,-0{,}8,\,0,\dots,0)$, $A=3$ (donc $r\approx0{,}72$), 20 tirages indépendants de $X$ et du bruit. On teste (2) pour 8 vecteurs $\beta$ par tirage : $\bstar$, $0$, cinq vecteurs aléatoires à 6 coordonnées non nulles, et une perturbation de $\bstar$.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Ce qu'on mesure</th><th>Résultat</th></tr></thead>
+<tbody>
+<tr><td>l'événement $\cA$ a eu lieu</td><td>19 tirages sur 20 — alors que la borne $1-2p^{1-A^2/8}$ ne garantit ici que $0{,}02$ !</td></tr>
+<tr><td>(2) vérifiée, sur $\cA$, pour tous les $\beta$ testés</td><td>oui ; le plus grand rapport « gauche / droite » observé vaut $0{,}61$</td></tr>
+<tr><td>(3) : $\max_j\abs{\frac1nX_j\T(X\bstar-X\hb^L)}\big/\frac{3r}2$</td><td>au plus $0{,}85$ : la borne est assez serrée</td></tr>
+<tr><td>(4) : $\mathcal M(\hb^L)$ divisé par la borne</td><td>au plus $0{,}05$ : la borne est très large</td></tr>
+<tr><td>le cône du corollaire</td><td>vérifié à chaque fois</td></tr>
+</tbody></table></div>
+<p>Leçon : la garantie $1-2p^{1-A^2/8}$ est très pessimiste ici ($A^2/8=1{,}125$ à peine plus grand que 1). Le coupable n'est pas la borne de l'union : avec la vraie valeur de $\P(\abs\eta>z)$ au lieu de Chernoff, elle donnerait déjà $\P(\cA)\ge0{,}89$. C'est la queue de Chernoff qui est lâche : au seuil $z=\frac32\sqrt{\log300}\approx3{,}58$, elle est environ 10 fois trop grande. Les inégalités du lemme, elles, tiennent dès que $\cA$ a lieu, et c'est ce que la preuve affirme.</p>
+
+<details class="fold more"><summary>Le code de la vérification (Python)</summary><div class="fold-body">
+<pre><code>import numpy as np, math
+rng = np.random.default_rng(1)
+
+def lasso_cd(X, Y, r, iters=2000, tol=1e-12):
+    """Descente par coordonnées pour (1/n)||Y - Xb||^2 + 2r||b||_1, colonnes de norme sqrt(n)."""
+    n, p = X.shape; b = np.zeros(p); R = Y.copy()
+    for _ in range(iters):
+        maxd = 0.0
+        for j in range(p):
+            z = X[:, j] @ R / n + b[j]                  # coefficient partiel
+            nb = np.sign(z) * max(abs(z) - r, 0.0)      # seuillage doux au seuil r
+            if nb != b[j]:
+                R -= X[:, j] * (nb - b[j]); maxd = max(maxd, abs(nb - b[j])); b[j] = nb
+        if maxd &lt; tol: break
+    return b
+
+norm_n2 = lambda u: (u @ u) / len(u)
+n, p, s, sigma, A = 100, 300, 4, 1.0, 3.0
+nA, q2, q3, q4 = 0, 0.0, 0.0, 0.0                   # nombre de fois où A a lieu, rapports maximaux
+for t in range(20):
+    X = rng.standard_normal((n, p)); X = X / np.linalg.norm(X, axis=0) * math.sqrt(n)
+    bstar = np.zeros(p); bstar[:s] = [2.0, -1.5, 1.0, -0.8]
+    eps = sigma * rng.standard_normal(n); Y = X @ bstar + eps
+    r = A * sigma * math.sqrt(math.log(p) / n)
+    V = X.T @ eps / n
+    if not np.all(2 * np.abs(V) &lt;= r):              # on n'est pas sur l'événement A
+        continue
+    nA += 1
+    bh = lasso_cd(X, Y, r)
+    betas = [bstar, np.zeros(p)]
+    for k in range(5):                              # cinq beta aléatoires à 6 coordonnées non nulles
+        idx = rng.choice(p, 6, replace=False); b = np.zeros(p)
+        b[idx] = rng.standard_normal(6); betas.append(b)
+    b = bstar.copy(); b[:s] += 0.3 * rng.standard_normal(s); betas.append(b)   # bstar perturbé
+    for beta in betas:                              # (2)
+        J = beta != 0
+        lhs = norm_n2(X @ bh - X @ bstar) + r * np.abs(bh - beta).sum()
+        rhs = norm_n2(X @ beta - X @ bstar) + 4 * r * np.abs(bh - beta)[J].sum()
+        assert lhs &lt;= rhs + 1e-9; q2 = max(q2, lhs / rhs)
+    m3 = np.max(np.abs(X.T @ (X @ bstar - X @ bh) / n))
+    assert m3 &lt;= 1.5 * r + 1e-9; q3 = max(q3, m3 / (1.5 * r))                       # (3)
+    phimax = np.linalg.eigvalsh(X.T @ X / n).max()
+    b4 = 4 * phimax / r**2 * norm_n2(X @ bh - X @ bstar)
+    assert (bh != 0).sum() &lt;= b4 + 1e-9; q4 = max(q4, (bh != 0).sum() / b4)         # (4)
+    d = bh - bstar
+    assert np.abs(d[s:]).sum() &lt;= 3 * np.abs(d[:s]).sum() + 1e-9                     # cône
+print(f"A a lieu {nA} fois sur 20 ; rapports max : (2) {q2:.2f}, (3) {q3:.2f}, (4) {q4:.2f}")</code></pre>
+<p class="small muted">La mise à jour d'une coordonnée est un seuillage doux au seuil $r$ (séance 2), appliqué variable par variable au résidu partiel. Les conditions KKT sont vérifiées à $10^{-12}$ près à la sortie de l'algorithme : c'est nécessaire, car (3) et (4) reposent sur elles.</p>
+</div></details>
+
+<h2 id="corollaire">2. Le corollaire : l'erreur vit dans le cône</h2>
+
+<div class="box enonce">
+<div class="box-h">Énoncé — Corollaire <span class="ref">TD2 · page 2</span></div>
+<p>Sous les mêmes hypothèses que le lemme précédent, on a avec probabilité supérieure à $1-2p^{1-A^2/8}$, $\norm{\delta_{J_0^c}}_1\le3\norm{\delta_{J_0}}_1$ avec $\delta=\hb^L-\bstar$ et $J_0=J(\bstar)$ ensemble des indices des coefficients non nuls de $\bstar$.</p>
+<p><strong>Preuve :</strong> déduire de (2) le résultat du corollaire.</p>
+</div>
+
+<div class="box methode">
+<div class="box-h">Méthode</div>
+<p>(2) est vraie pour tout $\beta$ : choisissez $\beta=\bstar$. Le premier terme de droite disparaît, et il ne reste qu'une comparaison entre la masse $\ell_1$ de l'erreur partout et sur le support.</p>
+</div>
+
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>Avec $\beta=\bstar$ : $J(\beta)=J_0$ et $\norm{X\bstar-X\bstar}_n=0$. Puis $\norm\delta_1=\norm{\delta_{J_0}}_1+\norm{\delta_{J_0^c}}_1$.</p>
+</div></details>
+
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<p>On se place sur $\cA$ (probabilité $\ge1-2p^{1-A^2/8}$).</p>
+<ol class="steps">
+<li>$$\norm{X\delta}_n^2+r\norm\delta_1\le0+4r\sum_{j\in J_0}\abs{\delta_j}=4r\norm{\delta_{J_0}}_1 .$$<span class="why">première ligne de (2) avec $\beta=\bstar$ : $\hb^L-\bstar=\delta$, $\norm{X\bstar-X\bstar}_n^2=0$ et $J(\bstar)=J_0$.</span></li>
+<li>$$r\norm{\delta_{J_0}}_1+r\norm{\delta_{J_0^c}}_1=r\norm\delta_1\le4r\norm{\delta_{J_0}}_1 .$$<span class="why">découpage $\norm\delta_1=\norm{\delta_{J_0}}_1+\norm{\delta_{J_0^c}}_1$ ; on retire $\norm{X\delta}_n^2\ge0$ du membre de gauche de la ligne 1.</span></li>
+<li>$$\norm{\delta_{J_0^c}}_1\le3\norm{\delta_{J_0}}_1 .$$<span class="why">on retranche $r\norm{\delta_{J_0}}_1$ et on divise par $r>0$.</span></li>
+</ol>
+</div></details>
+
+<div class="box officiel">
+<div class="box-h">Le corrigé officiel <span class="ref">Correction_TD2 · p. 4</span></div>
+<p>Une ligne : « d'après (1) du lemme avec $\beta=\bstar$, $r\norm{\hb-\bstar}_1\le4r\norm{(\hb-\bstar)_{J_0}}_1\iff\norm{(\hb-\bstar)_{J_0^c}}_1\le3\norm{(\hb-\bstar)_{J_0}}_1$ » — rappel : le « (1) » du corrigé est le « (2) » de l'énoncé.</p>
+</div>
+
+<div class="box intu">
+<div class="box-h">Lire le corollaire</div>
+<p>C'est exactement l'énoncé (5) de la diapo 36 et l'<a href="03_seance3.html#cone">étape « cône » de la séance 3</a>. L'erreur du Lasso ne peut pas être n'importe quel vecteur : au moins un quart de sa masse $\ell_1$ est sur le vrai support $J_0$. Le « 3 » vient de « $4-1$ » : on retranche le $r\norm{\delta_{J_0}}_1$ de gauche des $4r\norm{\delta_{J_0}}_1$ de droite. Autrement dit $3=\frac{2r+r}{2r-r}$ : sur le support, l'erreur peut rapporter jusqu'à « pénalité $+$ bruit » par unité ; hors du support, elle coûte au moins « pénalité $-$ bruit » (voir le <a href="03_seance3.html#etape2">réflexe « d'où vient le 3 »</a>).</p>
+</div>
+
+<h2 id="theoreme">3. Le théorème de Bickel, Ritov et Tsybakov</h2>
+
+<h3 id="th-enonce">L'énoncé</h3>
+
+<div class="box enonce">
+<div class="box-h">Énoncé — Théorème (Bickel, Ritov, Tsybakov, 2009) <span class="ref">TD2 · page 2 (en anglais dans le TD)</span></div>
+<p><strong>Hypothèses :</strong></p>
+<ul>
+<li>les $\eps_i$ sont des variables aléatoires indépendantes de loi $\N(0,\sigma^2)$, $\sigma^2>0$ ;</li>
+<li>les éléments diagonaux de la matrice $X\T X/n$ sont égaux à 1 ;</li>
+<li>$\mathcal M(\bstar)\le s$, où $1\le s\le p$, $n\ge1$, $p\ge2$ ;</li>
+<li>RE$(s,3)$ est satisfaite.</li>
+</ul>
+<p>On considère l'estimateur Lasso $\hb^L$ défini par (1) avec $r=A\sigma\sqrt{\dfrac{\log p}{n}}$ et $A>2\sqrt2$. Alors, avec probabilité au moins $1-p^{1-A^2/8}$,</p>
+$$\norm{\hb^L-\bstar}_1\le\frac{16A}{\kappa^2(s,3)}\,\sigma s\sqrt{\frac{\log p}n},\qquad(5)$$
+$$\norm{X(\hb^L-\bstar)}_2^2\le\frac{16A^2}{\kappa^2(s,3)}\,\sigma^2s\log p,\qquad(6)$$
+$$\mathcal M(\hb^L)\le\frac{64\,\phi_{\max}}{\kappa^2(s,3)}\,s .\qquad(7)$$
+<p><strong>Preuve :</strong> déduire du lemme et du corollaire précédents les trois inégalités du théorème.</p>
+</div>
+
+<p>Ce sont, mot pour mot, les bornes (6), (7), (8) de la diapo 38, décodées ligne à ligne <a href="03_seance3.html#brt-decodage">en séance 3</a>. Il nous faut une seule chose de plus que le lemme : l'hypothèse RE$(s,3)$.</p>
+
+<div class="box rappel">
+<div class="box-h">Rappel — RE$(s,3)$ sous la forme utilisable <a class="ref" href="03_seance3.html#re-def">séance 3</a></div>
+<p>$\kappa=\kappa(s,3)>0$ et, pour tout $J_0$ avec $\abs{J_0}\le s$ et tout $\delta$ dans le cône $\norm{\delta_{J_0^c}}_1\le3\norm{\delta_{J_0}}_1$ :</p>
+$$\begin{aligned}&\kappa\,\norm{\delta_{J_0}}_2\le\frac{\norm{X\delta}_2}{\sqrt n},\\&\text{soit}\quad\kappa^2\norm{\delta_{J_0}}_2^2\le\frac1n\norm{X\delta}_2^2=\norm{X\delta}_n^2 .\end{aligned}$$
+<p>En mots : sur le cône, ce que l'on observe ($X\delta$) contrôle la taille de l'erreur sur le support.</p>
+</div>
+
+<div class="box idee">
+<div class="box-h">Idée de la preuve</div>
+<ol>
+<li>(2) avec $\beta=\bstar$ et Cauchy–Schwarz : $\norm{X\delta}_n^2\le4r\sqrt s\,\norm{\delta_{J_0}}_2$.</li>
+<li>Le corollaire place $\delta$ dans le cône : RE donne $\kappa^2\norm{\delta_{J_0}}_2^2\le\norm{X\delta}_n^2$.</li>
+<li>En chaînant les deux, on borne $\norm{\delta_{J_0}}_2$ par $4r\sqrt s/\kappa^2$, puis on réinjecte pour (6) ; le cône donne (5) ; le lemme (4) donne (7).</li>
+</ol>
+</div>
+
+<h3 id="th-prediction">La borne de prédiction (6)</h3>
+
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<p>On note $\delta=\hb^L-\bstar$, $J_0=J(\bstar)$, $\kappa=\kappa(s,3)$, et on se place sur $\cA$.</p>
+<ol class="steps">
+<li>$$\begin{aligned}\norm{X\delta}_n^2+r\norm\delta_1&\le4r\sqrt{\mathcal M(\bstar)}\,\norm{\delta_{J_0}}_2\\&\le4r\sqrt s\,\norm{\delta_{J_0}}_2 .\qquad(*)\end{aligned}$$<span class="why">seconde ligne de (2) avec $\beta=\bstar$ ($\norm{X\bstar-X\bstar}_n=0$, $J(\bstar)=J_0$ et $\sqrt{\sum_{j\in J_0}\delta_j^2}=\norm{\delta_{J_0}}_2$), puis $\mathcal M(\bstar)\le s$.</span></li>
+<li>$$\kappa^2\norm{\delta_{J_0}}_2^2\le\norm{X\delta}_n^2 .$$<span class="why">le corollaire place $\delta$ dans le cône de $J_0$, et $\abs{J_0}=\mathcal M(\bstar)\le s$ : RE$(s,3)$ s'applique (rappel ci-dessus).</span></li>
+<li>$$\kappa^2\norm{\delta_{J_0}}_2^2\le\norm{X\delta}_n^2\le4r\sqrt s\,\norm{\delta_{J_0}}_2 .$$<span class="why">ligne 2, puis $(*)$ dont on a retiré $r\norm\delta_1\ge0$ à gauche.</span></li>
+<li>$$\norm{\delta_{J_0}}_2\le\frac{4r\sqrt s}{\kappa^2} .$$<span class="why">si $\norm{\delta_{J_0}}_2>0$, on divise la ligne 3 par $\kappa^2\norm{\delta_{J_0}}_2$ ; si $\norm{\delta_{J_0}}_2=0$, c'est évident.</span></li>
+<li>$$\norm{X\delta}_n^2\le4r\sqrt s\cdot\frac{4r\sqrt s}{\kappa^2}=\frac{16\,r^2s}{\kappa^2} .$$<span class="why">on réinjecte la ligne 4 dans la ligne 3.</span></li>
+<li>$$\norm{X\delta}_2^2=n\,\norm{X\delta}_n^2\le\frac{16\,r^2sn}{\kappa^2}=\frac{16A^2}{\kappa^2}\,\sigma^2s\log p .$$<span class="why">on multiplie par $n$ ; $r^2n=A^2\sigma^2\frac{\log p}{n}\cdot n=A^2\sigma^2\log p$. C'est (6).</span></li>
+</ol>
+</div></details>
+
+<div class="box officiel">
+<div class="box-h">Le corrigé officiel <span class="ref">Correction_TD2 · p. 4</span></div>
+<p>C'est exactement cette route : $(*)$, puis « en appliquant l'hypothèse RE$(s,3)$ », $\kappa^2\norm{\delta_{J_0}}_2^2\le\norm{X\delta}_2^2/n\le4r\sqrt s\norm{\delta_{J_0}}_2$, d'où $\norm{\delta_{J_0}}_2\le4r\sqrt s/\kappa^2$ et $\norm{X\delta}_2^2\le16r^2sn/\kappa^2$. Le corrigé note en marge « (7) slides, (6) TD » : c'est la même borne.</p>
+</div>
+
+<div class="cols">
+<div class="box methode"><div class="box-h">Route du TD</div><p>RE donne $\kappa^2\norm{\delta_{J_0}}_2^2\le\norm{X\delta}_n^2\le4r\sqrt s\norm{\delta_{J_0}}_2$ : on <strong>borne d'abord $\norm{\delta_{J_0}}_2$</strong>, puis on réinjecte.</p></div>
+<div class="box methode"><div class="box-h">Route de la séance 3</div><p>RE remplace $\norm{\delta_{J_0}}_2$ par $\norm{X\delta}_2/(\kappa\sqrt n)$ : on obtient $u^2\le cu$ avec $u=\norm{X\delta}_n$, et l'on <strong>borne directement $u$</strong> (<a href="03_seance3.html#etape4">étape 4</a>).</p></div>
+</div>
+<p>Les deux routes donnent la même constante 16. Retenez-en une ; sachez reconnaître l'autre.</p>
+
+<h3 id="th-l1">La borne d'estimation $\ell_1$ (5)</h3>
+
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\begin{aligned}\norm\delta_1&=\norm{\delta_{J_0}}_1+\norm{\delta_{J_0^c}}_1\\&\le\norm{\delta_{J_0}}_1+3\norm{\delta_{J_0}}_1=4\norm{\delta_{J_0}}_1 .\end{aligned}$$<span class="why">découpage selon $J_0$, puis le corollaire (cône).</span></li>
+<li>$$4\norm{\delta_{J_0}}_1\le4\sqrt s\,\norm{\delta_{J_0}}_2 .$$<span class="why">Cauchy–Schwarz : $\delta_{J_0}$ a au plus $\abs{J_0}\le s$ coordonnées non nulles (<a href="00_rappels.html#inegalites-normes">rappel</a>).</span></li>
+<li>$$\norm\delta_1\le4\sqrt s\cdot\frac{4r\sqrt s}{\kappa^2}=\frac{16\,r\,s}{\kappa^2}=\frac{16A}{\kappa^2}\,\sigma s\sqrt{\frac{\log p}n} .$$<span class="why">ligne 4 de la preuve de (6), puis $r=A\sigma\sqrt{\log p/n}$. C'est (5).</span></li>
+</ol>
+</div></details>
+
+<div class="box officiel">
+<div class="box-h">Le corrigé officiel <span class="ref">Correction_TD2 · p. 4</span></div>
+<p>Même chaîne : $\norm\delta_1\le4\norm{\delta_{J_0}}_1\le4\sqrt s\norm{\delta_{J_0}}_2\le16A\sigma s\sqrt{\log p/n}/\kappa^2$. Coquille d'écriture : la première égalité est écrite « $\norm\delta_1=\norm{\delta_{J_0}}_2+\norm{\delta_{J_0^c}}_1$ » ; il faut lire $\norm{\delta_{J_0}}_1$.</p>
+</div>
+
+<h3 id="th-support">La taille du modèle sélectionné (7)</h3>
+
+<details class="fold sol"><summary>Solution détaillée</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\mathcal M(\hb^L)\le\frac{4\phi_{\max}}{r^2}\norm{X\delta}_n^2 .$$<span class="why">(4) du lemme (questions 7–9), vraie sur $\cA$ sans hypothèse RE.</span></li>
+<li>$$\le\frac{4\phi_{\max}}{r^2}\cdot\frac{16\,r^2s}{\kappa^2}=\frac{64\,\phi_{\max}}{\kappa^2}\,s .$$<span class="why">ligne 5 de la preuve de (6). Le $r^2$ se simplifie : la borne ne dépend pas de $A$. C'est (7).</span></li>
+</ol>
+</div></details>
+
+<div class="box officiel">
+<div class="box-h">Le corrigé officiel <span class="ref">Correction_TD2 · p. 4</span></div>
+<p>« D'après (3), $\mathcal M(\hb)\le\frac{4\phi_{\max}}{r^2}\norm{X\hb-X\bstar}_n^2\le\frac{4\phi_{\max}}{r^2n}\norm{X\delta}_2^2\le\frac{64\phi_{\max}s}{\kappa^2}$ » (le « (3) » du corrigé est le « (4) » de l'énoncé).</p>
+</div>
+
+<h3 id="th-proba">Avec quelle probabilité ?</h3>
+
+<p>Les trois bornes ont été obtenues <strong>sur l'événement $\cA$</strong>. Avec les outils du TD, elles ont donc lieu avec probabilité au moins $1-2p^{1-A^2/8}$ (question 4). Or l'énoncé du théorème (recopié de la diapo 38) annonce $1-p^{1-A^2/8}$ : il manque un facteur 2.</p>
+
+<div class="box remarque">
+<div class="box-h">Note sur l'énoncé — d'où vient l'écart de probabilité</div>
+<p>Il n'y a pas d'erreur de raisonnement : c'est la borne de queue qui diffère. Le TD démontre $\P(\abs Z\ge z)\le2e^{-z^2/2}$ (question 3) ; la séance 3 utilise la version plus fine $\P(\abs Z\ge z)\le e^{-z^2/2}$, valable pour tout $z\ge0$ (<a href="00_rappels.html#queues">Rappels</a>, et <a href="03_seance3.html#etape5">étape 5 de la séance 3</a>). En remplaçant la question 3 par cette version, la question 4 donne $\P(2\abs{V_j}>r)\le p^{-A^2/8}$, donc $\P(\cA^c)\le p^{1-A^2/8}$ : c'est la probabilité de l'énoncé. Retenez : <strong>avec les seuls outils du TD, on obtient $1-2p^{1-A^2/8}$</strong> ; le corrigé l'écrit d'ailleurs ainsi pour le lemme et le corollaire.</p>
+</div>
+
+<h3 id="th-chiffres">Le théorème en chiffres</h3>
+
+<div class="box exemple">
+<div class="box-h">Application numérique : $n=500$, $p=10\,000$, $s=10$, $\sigma=1$</div>
+<p>$\log p\approx9{,}21$ et $\sqrt{\log p/n}\approx0{,}136$. Les bornes sont données avec $\kappa=1$ (meilleur cas possible pour des colonnes normalisées) ; sinon il faut les diviser par $\kappa^2$.</p>
+<div class="table-wrap"><table>
+<thead><tr><th></th><th>$A=3$</th><th>$A=4$</th></tr></thead>
+<tbody>
+<tr><td>$r=A\sigma\sqrt{\log p/n}$</td><td>$0{,}41$</td><td>$0{,}54$</td></tr>
+<tr><td>probabilité (outils du TD) $1-2p^{1-A^2/8}$</td><td>$\ge0{,}37$</td><td>$\ge0{,}9998$</td></tr>
+<tr><td>probabilité (diapo) $1-p^{1-A^2/8}$</td><td>$\ge0{,}68$</td><td>$\ge0{,}9999$</td></tr>
+<tr><td>(6) divisée par $n$ : $\norm{X\delta}_n^2\le$</td><td>$26{,}5$</td><td>$47{,}2$</td></tr>
+<tr><td>(5) : $\norm\delta_1\le$</td><td>$65{,}1$</td><td>$86{,}9$</td></tr>
+<tr><td>erreur de l'oracle $\sigma^2s/n$</td><td colspan="2">$0{,}02$</td></tr>
+</tbody></table></div>
+<p>Comme en séance 3 : la <strong>forme</strong> $s\log p/n$ est la bonne, les <strong>constantes</strong> sont très pessimistes (la simulation de la <a href="03_seance3.html#brt-chiffres">séance 3</a> montre une erreur réelle de l'ordre de $s\,r^2$, sans le facteur 16).</p>
+</div>
+
+<h2 id="bilan">Ce qu'il faut retenir du TD</h2>
+
+<div class="box resume">
+<div class="box-h">Le TD2 en huit lignes</div>
+<ol>
+<li><strong>Base (Q1).</strong> Critère$(\hb^L)\le$ critère$(\beta)$ pour <em>tout</em> $\beta$ ; avec $Y=X\bstar+\eps$ : $\norm{X\bstar-X\hb^L}_n^2+2r\norm{\hb^L}_1\le\norm{X\bstar-X\beta}_n^2+2\sum_j(\hb^L_j-\beta_j)V_j+2r\norm\beta_1$, où $V_j=\frac1nX_j\T\eps$.</li>
+<li><strong>Bruit (Q2–Q4).</strong> $V_j\sim\N(0,\sigma^2/n)$ ; Chernoff $\P(\abs Z\ge z)\le2e^{-z^2/2}$ ; union : $\P(\cA^c)\le2p^{1-A^2/8}$, avec $\cA=\{2\abs{V_j}\le r\ \forall j\}$.</li>
+<li><strong>(2) (Q5).</strong> Sur $\cA$ : bruit $\le r\norm{\hb^L-\beta}_1$ ; ajouter $r\norm{\hb^L-\beta}_1$ ; les termes hors de $J(\beta)$ s'annulent ; triangulaire inversée sur $J(\beta)$ ; Cauchy–Schwarz.</li>
+<li><strong>(3) (Q6).</strong> KKT : $\norm{\frac1nX\T(Y-X\hb^L)}_\infty\le r$ ; $X\bstar-X\hb^L=(Y-X\hb^L)-\eps$ ; triangulaire : $\le r+r/2$.</li>
+<li><strong>(4) (Q7–Q9).</strong> Variable sélectionnée ⇒ corrélation avec l'erreur $\ge r/2$ ; sommer les carrés ; $\lambda_{\max}(XX\T/n)=\phi_{\max}$.</li>
+<li><strong>Cône.</strong> (2) avec $\beta=\bstar$ : $r\norm\delta_1\le4r\norm{\delta_{J_0}}_1$, d'où $\norm{\delta_{J_0^c}}_1\le3\norm{\delta_{J_0}}_1$.</li>
+<li><strong>Théorème.</strong> $\norm{X\delta}_n^2\le4r\sqrt s\norm{\delta_{J_0}}_2$ et RE ⇒ $\norm{\delta_{J_0}}_2\le4r\sqrt s/\kappa^2$ ⇒ (6) ; cône + Cauchy–Schwarz ⇒ (5) ; (4) ⇒ (7).</li>
+<li><strong>Probabilité.</strong> $1-2p^{1-A^2/8}$ avec Chernoff ; $1-p^{1-A^2/8}$ (énoncé, diapo) avec la queue gaussienne fine.</li>
+</ol>
+</div>
+
+<div class="table-wrap"><table>
+<thead><tr><th>Résultat</th><th>Ingrédients</th><th>Hypothèse sur $X$</th></tr></thead>
+<tbody>
+<tr><td>(2), forme oracle</td><td>définition du Lasso, $\cA$, découpage selon $J(\beta)$</td><td>colonnes normalisées</td></tr>
+<tr><td>(3), borne $\ell_\infty$</td><td>KKT, $\cA$</td><td>colonnes normalisées</td></tr>
+<tr><td>(4), taille du modèle</td><td>KKT, $\cA$, valeurs propres</td><td>colonnes normalisées</td></tr>
+<tr><td>Corollaire (cône)</td><td>(2) avec $\beta=\bstar$</td><td>colonnes normalisées</td></tr>
+<tr><td>Théorème (5), (6), (7)</td><td>(2), cône, RE, (4)</td><td>+ RE$(s,3)$ et $\mathcal M(\bstar)\le s$</td></tr>
+</tbody></table></div>
+
+<h2 id="reflexes">Les réflexes du TD</h2>
+
+<div class="box reflexe">
+<div class="box-h">Comparer à un $\beta$ quelconque, pas seulement à la vérité</div>
+<p>Pour analyser un estimateur défini par minimisation : « critère(estimateur) $\le$ critère($\beta$) » <strong>pour tout $\beta$</strong>. On obtient une inégalité de type oracle ; le cas $\beta=\bstar$ n'est qu'un choix parmi d'autres. C'est le point de départ des inégalités oracle de la <a href="04_seance4.html">séance 4</a>.</p>
+</div>
+
+<div class="box reflexe">
+<div class="box-h">Un événement de bruit qui ne dépend pas de $\beta$</div>
+<p>Quand le seul terme aléatoire est $\sum_j(\hb_j-\beta_j)V_j$, bornez-le par $\max_j\abs{V_j}\cdot\norm{\hb-\beta}_1$ et travaillez sur $\{\max_j\abs{V_j}\le\text{seuil}\}$. Cet événement ne dépend que du bruit : sur lui, le résultat vaut <strong>pour tous les $\beta$ à la fois</strong>.</p>
+</div>
+
+<div class="box reflexe">
+<div class="box-h">Chernoff pour toute queue</div>
+<p>$\P(Z\ge z)\le\inf_{\theta>0}e^{-\theta z}\E[e^{\theta Z}]$. Pour une gaussienne standard : $e^{-z^2/2}$. Retenez aussi le seuil qui en découle : un maximum de $p$ gaussiennes standard reste sous $\sqrt{2\log p}$ (à peu près).</p>
+</div>
+
+<div class="box reflexe">
+<div class="box-h">« Ajouter $r\norm{\hb-\beta}_1$ des deux côtés »</div>
+<p>Ce geste fait apparaître $\abs{\hb_j-\beta_j}+\abs{\beta_j}-\abs{\hb_j}$, qui vaut <strong>0 hors du support de $\beta$</strong> et au plus $2\abs{\hb_j-\beta_j}$ dessus. C'est lui qui fabrique le cône et le prix « $4r$ sur le support ».</p>
+</div>
+
+<div class="box reflexe">
+<div class="box-h">Les KKT donnent des bornes $\ell_\infty$</div>
+<p>Pour le critère $\frac1n\norm{Y-X\beta}^2+2r\norm\beta_1$ : $\norm{\frac1nX\T(Y-X\hb)}_\infty\le r$, avec égalité $=r\sgn(\hb_j)$ sur les variables sélectionnées. Pour borner une corrélation avec l'erreur $X\bstar-X\hb$ : écrire « résidu moins bruit ».</p>
+</div>
+
+<div class="box reflexe">
+<div class="box-h">Compter les variables sélectionnées</div>
+<p>Si chaque variable sélectionnée contribue au moins $c$ à une somme de carrés que l'on sait majorer par $B$, alors il y en a au plus $B/c$. Ici : $c=r^2/4$, $B=\phi_{\max}\norm{X\hb-X\bstar}_n^2$.</p>
+</div>
+
+<div class="box reflexe">
+<div class="box-h">$X\T X$ et $XX\T$</div>
+<p>Elles ont les mêmes valeurs propres non nulles ($X\T Xu=\mu u\Rightarrow XX\T(Xu)=\mu Xu$). Utile chaque fois qu'une quantité s'écrit $v\T XX\T v$ alors que l'hypothèse porte sur $X\T X$.</p>
+</div>
+
+<h2 id="entrainement">Pour s'entraîner</h2>
+
+<div class="exo"><div class="exo-h">Exercice 1 — Le lemme contre le prédicteur nul <span class="lvl">★☆☆</span></div>
+<p>Écrire (2) pour $\beta=0$. En déduire que, sur $\cA$, $\norm{\hb^L}_1\le\norm{X\bstar}_n^2/r$ et $\norm{X\hb^L-X\bstar}_n\le\norm{X\bstar}_n$. Interpréter.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Que vaut $J(0)$ ?</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>$J(0)=\varnothing$ : la somme $\sum_{j\in J(0)}$ est vide, nulle. (2) devient $\norm{X\hb^L-X\bstar}_n^2+r\norm{\hb^L}_1\le\norm{X\bstar}_n^2$. En retirant l'un ou l'autre des deux termes positifs de gauche : $r\norm{\hb^L}_1\le\norm{X\bstar}_n^2$ et $\norm{X\hb^L-X\bstar}_n^2\le\norm{X\bstar}_n^2$. Interprétation : sur $\cA$, le Lasso ne fait jamais pire que le prédicteur nul, et sa norme $\ell_1$ est d'autant plus petite que $r$ est grand.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 2 — Retrouver la probabilité de la diapo <span class="lvl">★★☆</span></div>
+<p>On admet que $\P(\abs Z\ge z)\le e^{-z^2/2}$ pour tout $z\ge0$ (<a href="00_rappels.html#queues">Rappels</a>). Refaire la question 4 avec cette borne. Calculer les deux garanties ($1-2p^{1-A^2/8}$ et la nouvelle) pour $p=1000$ et $A=3$, puis $A=3{,}5$.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Seul le facteur 2 disparaît : $\P(2\abs{V_j}>r)\le p^{-A^2/8}$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>Avec $z=\frac A2\sqrt{\log p}$ : $\P(2\abs{V_j}>r)\le e^{-z^2/2}=p^{-A^2/8}$, donc $\P(\cA^c)\le p^{1-A^2/8}$ et $\P(\cA)\ge1-p^{1-A^2/8}$ : c'est l'énoncé du théorème. Pour $p=1000$ : avec $A=3$, $p^{1-9/8}=1000^{-0{,}125}\approx0{,}42$, donc les garanties sont $1-0{,}84=0{,}16$ (TD) et $1-0{,}42=0{,}58$ (fine) ; avec $A=3{,}5$, l'exposant vaut $1-12{,}25/8=-0{,}53125$, $1000^{-0{,}53125}\approx0{,}025$, d'où $1-0{,}051\approx0{,}95$ (TD) et $1-0{,}025\approx0{,}97$ (fine). Le facteur 2 compte quand la probabilité d'échec est grande, presque plus quand elle est petite.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 3 — Le Lasso et la contrainte de Dantzig <span class="lvl">★★☆</span></div>
+<p>Soit $D_\rho=\{\beta\in\R^p:\norm{\frac1nX\T(Y-X\beta)}_\infty\le\rho\}$. Montrer que $\hb^L\in D_r$ toujours, et que $\bstar\in D_{r/2}$ sur $\cA$. En déduire (3) sans repasser par $V_j$.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>$Y-X\bstar=\eps$. Puis $X\bstar-X\hb^L=(Y-X\hb^L)-(Y-X\bstar)$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>KKT (question 6, ligne 2) : $\norm{\frac1nX\T(Y-X\hb^L)}_\infty\le r$, donc $\hb^L\in D_r$, quelles que soient les données. Pour $\bstar$ : $\frac1nX\T(Y-X\bstar)=\frac1nX\T\eps=(V_j)_j$, de norme $\ell_\infty\le r/2$ sur $\cA$, donc $\bstar\in D_{r/2}$. Enfin $\frac1nX\T(X\bstar-X\hb^L)=\frac1nX\T(Y-X\hb^L)-\frac1nX\T(Y-X\bstar)$, de norme $\le r+r/2$ par l'inégalité triangulaire : c'est (3). Moralité : deux points d'un même « tube » $\ell_\infty$ autour des données ont des « corrélations » $\frac1nX\T X\beta$ proches au sens $\ell_\infty$ (ce qui ne dit pas que $\norm{\hb^L-\bstar}_\infty$ est petit) — c'est l'idée du <a href="06_seance6.html#dantzig">sélecteur de Dantzig</a>.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 4 — Un niveau de bruit quelconque <span class="lvl">★★★</span></div>
+<p>Soit $c>1$ et $\cA_c=\{c\abs{V_j}\le r\ \forall j\}$ (le TD prend $c=2$). (a) Montrer que sur $\cA_c$, pour tout $\beta$ : $\norm{X\hb^L-X\bstar}_n^2+2r\big(1-\frac1c\big)\norm{\hb^L-\beta}_1\le\norm{X\beta-X\bstar}_n^2+4r\sum_{j\in J(\beta)}\abs{\hb^L_j-\beta_j}$. (b) En déduire le cône $\norm{\delta_{J_0^c}}_1\le\frac{c+1}{c-1}\norm{\delta_{J_0}}_1$. (c) Montrer que $\P(\cA_c^c)\le2p^{1-A^2/(2c^2)}$. Commenter le compromis.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>(a) Sur $\cA_c$, le bruit est $\le\frac{2r}c\norm{\hb^L-\beta}_1$. Ajoutez $2r(1-\frac1c)\norm{\hb^L-\beta}_1$ des deux côtés : le coefficient de $\sum_j\abs{\hb^L_j-\beta_j}$ à droite devient $2r$, comme dans la question 5. (c) Le seuil devient $z=\frac{\sqrt n\,r}{c\sigma}=\frac Ac\sqrt{\log p}$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) Sur $\cA_c$ : $2\sum_j(\hb^L_j-\beta_j)V_j\le\frac{2r}c\norm{\hb^L-\beta}_1$. La question 1 donne $\norm{X\hb^L-X\bstar}_n^2+2r\norm{\hb^L}_1\le\norm{X\beta-X\bstar}_n^2+\frac{2r}c\norm{\hb^L-\beta}_1+2r\norm\beta_1$. On ajoute $2r(1-\frac1c)\norm{\hb^L-\beta}_1$ des deux côtés : à droite, $\big(\frac{2r}c+2r-\frac{2r}c\big)\norm{\hb^L-\beta}_1=2r\norm{\hb^L-\beta}_1$, et l'on termine exactement comme à la question 5 (termes nuls hors de $J(\beta)$, au plus $2\abs{\hb^L_j-\beta_j}$ dessus).</p>
+<p>(b) Avec $\beta=\bstar$ : $2r(1-\frac1c)\big(\norm{\delta_{J_0}}_1+\norm{\delta_{J_0^c}}_1\big)\le4r\norm{\delta_{J_0}}_1$, d'où $\norm{\delta_{J_0^c}}_1\le\Big(\frac{2}{1-1/c}-1\Big)\norm{\delta_{J_0}}_1=\frac{c+1}{c-1}\norm{\delta_{J_0}}_1$. Pour $c=2$ : 3. C'est la règle « $\frac{\text{pénalité}+\text{bruit}}{\text{pénalité}-\text{bruit}}$ » de la <a href="03_seance3.html#etape2">séance 3</a>, avec une pénalité $2r$ et un bruit $2r/c$.</p>
+<p>(c) $c\abs{V_j}>r\iff\abs{\eta_j}>\frac{\sqrt n\,r}{c\sigma}=\frac Ac\sqrt{\log p}$ ; Chernoff : $\le2\exp\big(-\frac{A^2}{2c^2}\log p\big)=2p^{-A^2/(2c^2)}$ ; union : $2p^{1-A^2/(2c^2)}$, petit si $A>c\sqrt2$. Compromis : un $c$ plus grand donne un cône plus étroit ($\frac{c+1}{c-1}\downarrow1$) mais exige un $A$ plus grand pour la même probabilité, donc un $r$ plus grand et des bornes plus grandes (elles sont proportionnelles à $r$ ou $r^2$).</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercice 5 — Pourquoi $\phi_{\max}\ge p/n$ <span class="lvl">★★☆</span></div>
+<p>On suppose $p>n$ et $\mathrm{diag}(X\T X/n)=1$. Montrer que $\phi_{\max}\ge p/n$. Que dit alors la borne (7) quand $p=10\,n$ ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Calculez la trace de $X\T X/n$ de deux façons ; combien de valeurs propres non nulles au plus ?</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>$\tr(X\T X/n)=\sum_j\norm{X_j}^2/n=p$, et c'est aussi la somme des valeurs propres $\mu_1,\dots,\mu_p\ge0$. Le rang de $X\T X$ est celui de $X$, au plus $n$ : au plus $n$ valeurs propres sont non nulles. Leur somme vaut $p$, donc la plus grande vaut au moins $p/n$ : $\phi_{\max}\ge p/n$. Avec $p=10n$ : $\phi_{\max}\ge10$, et (7) donne au mieux $\mathcal M(\hb^L)\le640\,s/\kappa^2$. La borne garde la bonne <em>forme</em> (proportionnelle à $s$) mais sa constante se dégrade quand $p\gg n$.</p>
+</div></details></div>
+
+<h2 id="errata">Coquilles repérées</h2>
+
+<p>Uniquement des points vérifiés sur l'énoncé (TD2.pdf) et sur le corrigé manuscrit (Correction_TD2.pdf).</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Où</th><th>Ce qui est écrit</th><th>Ce qu'il faut lire</th></tr></thead>
+<tbody>
+<tr><td>Énoncé, théorème</td><td>« with probability at least $1-p^{1-A^2/8}$ », alors que le lemme et le corollaire donnent $1-2p^{1-A^2/8}$</td><td>avec les outils du TD (question 3), on obtient $1-2p^{1-A^2/8}$ ; la probabilité de l'énoncé demande la queue gaussienne fine (voir <a href="#th-proba">ci-dessus</a>)</td></tr>
+<tr><td>Énoncé vs diapos</td><td>bornes (5), (6), (7)</td><td>ce sont les bornes (6), (7), (8) de Cours3 diapo 38</td></tr>
+<tr><td>Corrigé, p. 1 et p. 4</td><td>résultats du lemme numérotés (1), (2), (3) (alors que « (2) est prouvé », p. 2, et « (3) est prouvée », p. 3, suivent l'énoncé)</td><td>(2), (3), (4) de l'énoncé</td></tr>
+<tr><td>Corrigé, p. 4, dernière ligne</td><td>$\norm\delta_1=\norm{\delta_{J_0}}_2+\norm{\delta_{J_0^c}}_1$</td><td>$\norm\delta_1=\norm{\delta_{J_0}}_1+\norm{\delta_{J_0^c}}_1$</td></tr>
+<tr><td>Énoncé, notations</td><td>$\hat\beta_L$ dans (1) et (3), $\hb^L$ ailleurs ; $\mathcal M$ (TD) contre $M$ (diapos)</td><td>mêmes objets</td></tr>
+</tbody></table></div>
+
+<h2 id="suite">Et après ?</h2>
+<ul>
+<li>La <a href="04_seance4.html">séance 4</a> reprend exactement ce schéma (inégalité de base contre un $\beta$ quelconque, événement de bruit, découpage selon le support de $\beta$) pour des <strong>inégalités oracle</strong> lente et rapide, dans un modèle de régression non linéaire.</li>
+<li>Le <a href="10_td3.html#ex2">TD3 (exercice 2)</a> fait la même chose pour le Lasso <strong>logistique</strong> : la réponse est binaire, le bruit est borné, et l'inégalité de Hoeffding remplace la queue gaussienne.</li>
+<li>Pour réviser : la <a href="03_seance3.html#condense">preuve condensée de la séance 3</a> et la <a href="07_fiche.html">fiche réflexes</a>.</li>
+</ul>
