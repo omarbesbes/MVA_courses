@@ -1,0 +1,147 @@
+<h2 id="dual">1. The discrete dual: prices that certify a plan <span class="ref">OT4ML §5.1, pp. 95–96</span></h2>
+<p class="tldr">Put a price on each source and on each target, never more than the cost of a route: the total price is a lower bound on the cost of every plan; the best prices reach exactly the optimal cost; and an optimal plan only uses the routes whose price equals their cost.</p>
+
+<h3 id="dual-why">The problem: how do you know that a plan is optimal?</h3>
+<p>Lesson 2 solved the transport linear program and found sparse optimal plans. Suppose now that a colleague hands you a plan $P$ of cost $4.4$ and claims it is optimal. Checking it against every other plan is hopeless (the polytope $\U(a,b)$ has infinitely many points, and exponentially many vertices). What you want is a <em class="new">certificate</em>: a short piece of evidence, checkable in a few operations, proving that <strong>no plan costs less than $4.4$</strong>. For a minimisation problem such evidence is a <strong>lower bound</strong> equal to the cost of the plan — and lower bounds are exactly what duality produces.</p>
+<p>You have already met such a certificate for the assignment problem (Lesson 1, Hungarian algorithm: numbers $u_i,v_j$ with $u_i+v_j\le C_{ij}$, see the <a href="../companion/Lesson01.html#discrete-hungarian">first companion</a>). This section shows that it exists for every transport problem, and what it means.</p>
+
+<h3 id="dual-prices">A shipping company sets prices</h3>
+<p>Peyré and Cuturi tell the dual as a story. An operator must move goods from warehouses (the sources, with supplies $a_i$) to factories (the targets, with demands $b_j$); shipping one unit from warehouse $i$ to factory $j$ costs $C_{ij}$. Instead of solving the linear program, the operator outsources the job.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">CompOT Remark 2.21, pp. 28–30</span></div>
+<p><em>Outsourcing logistics.</em> […] The vendor splits the logistic task into that of collecting and then delivering the goods and will apply a collection price $f_i$ to collect a unit of resource at each warehouse $i$ (no matter where that unit is sent to) and a price $g_j$ to deliver a unit of resource to factory $j$ (no matter from which warehouse that unit comes from). On aggregate, since there are exactly $a_i$ units at warehouse $i$ and $b_j$ needed at factory $j$, the vendor asks as a consequence of that pricing scheme a price of $\ps{f}{a}+\ps{g}{b}$ to solve the operator’s logistic problem.</p>
+<p><em>Checking prices.</em> […] if for any pair $i,j$ the aggregate price $f_i+g_j$ is strictly larger than $C_{i,j}$, the vendor is charging more than the fair price charged by the transportation company for that task, and the operator should refuse the vendor’s offer. […] for any transport plan $P$ (including the optimal one $P^\star$), the marginal constraints imply</p>
+$$\sum_{i,j}P_{i,j}C_{i,j}\ \ge\ \sum_{i,j}P_{i,j}\big(f_i+g_j\big)=\ps{f}{a}+\ps{g}{b}.$$
+</div>
+<dl class="decode">
+<dt>$f_i$, $g_j$</dt><dd>The vendor’s price list: $f_i$ per unit collected at warehouse $i$, $g_j$ per unit delivered at factory $j$. A route $i\to j$ is billed $f_i+g_j$ per unit, whatever the route actually costs.</dd>
+<dt>$\ps{f}{a}+\ps{g}{b}$</dt><dd>The vendor’s total bill: every unit is collected once and delivered once, and the amounts collected ($a$) and delivered ($b$) are fixed. The bill does not depend on the plan.</dd>
+<dt>$f_i+g_j\le C_{ij}$</dt><dd>“No route is billed more than it costs”: otherwise the operator would ship along that route himself. The vendor wants the <strong>largest bill</strong> that passes this check.</dd>
+<dt>the inequality</dt><dd>Whatever plan the operator might run himself, it costs at least the bill. So the bill is a <strong>lower bound</strong> on the optimal cost $\mathrm L_C(a,b)$.</dd>
+</dl>
+<p>Let us check the inequality line by line; it is the whole of “weak duality”.</p>
+<ol class="steps">
+<li>$$\sum_{i,j}P_{ij}C_{ij}\ \ge\ \sum_{i,j}P_{ij}\big(f_i+g_j\big)$$<span class="why">Term by term: $C_{ij}\ge f_i+g_j$ (the prices pass the check) and $P_{ij}\ge0$.</span></li>
+<li>$$=\sum_if_i\Big(\sum_jP_{ij}\Big)+\sum_jg_j\Big(\sum_iP_{ij}\Big)$$<span class="why">Split the sum and group the terms of $f_i$ by row, those of $g_j$ by column.</span></li>
+<li>$$=\sum_if_ia_i+\sum_jg_jb_j=\ps{f}{a}+\ps{g}{b}.$$<span class="why">The rows of a coupling sum to $a$, its columns to $b$. Only here do we use that $P$ is a coupling.</span></li>
+</ol>
+
+<div class="box example" id="dual-example"><div class="box-h">Worked example — three warehouses, three factories</div>
+<p>Costs in euros per ton (rows: warehouses W₁, W₂, W₃; columns: factories F₁, F₂, F₃), supplies $a$ and demands $b$ in hundreds of tons:</p>
+<div class="table-wrap"><table>
+<thead><tr><th></th><th>F₁ ($b_1=0.4$)</th><th>F₂ ($b_2=0.4$)</th><th>F₃ ($b_3=0.2$)</th></tr></thead>
+<tbody>
+<tr><th>W₁ ($a_1=0.5$)</th><td>4</td><td>8</td><td>2</td></tr>
+<tr><th>W₂ ($a_2=0.3$)</th><td>6</td><td>7</td><td>8</td></tr>
+<tr><th>W₃ ($a_3=0.2$)</th><td>5</td><td>4</td><td>3</td></tr>
+</tbody></table></div>
+<p><strong>A cheap price list.</strong> Charge nothing for collecting, $f=(0,0,0)$, and for delivering to F$_j$ the cheapest cost of reaching it, $g_j=\min_iC_{ij}$: $g=(4,4,2)$. Every route passes the check ($f_i+g_j=g_j\le C_{ij}$), and the bill is $0.4\cdot4+0.4\cdot4+0.2\cdot2=3.6$. Hence <strong>every plan costs at least $3.6$</strong>.</p>
+<p><strong>A better price list.</strong> $f=(1,3,0)$ and $g=(3,4,1)$. The billed prices $f_i+g_j$ are</p>
+$$\big(f_i+g_j\big)_{ij}=\begin{pmatrix}4&5&2\\6&7&4\\3&4&1\end{pmatrix}\ \le\ C=\begin{pmatrix}4&8&2\\6&7&8\\5&4&3\end{pmatrix}\quad\text{entrywise},$$
+<p>and the bill is $\ps{f}{a}+\ps{g}{b}=(0.5+0.9+0)+(1.2+1.6+0.2)=4.4$. <strong>Every plan costs at least $4.4$.</strong></p>
+<p><strong>A plan.</strong> $P^\star=\begin{pmatrix}0.3&0&0.2\\0.1&0.2&0\\0&0.2&0\end{pmatrix}$ has row sums $(0.5,0.3,0.2)=a$, column sums $(0.4,0.4,0.2)=b$, and costs $0.3\cdot4+0.2\cdot2+0.1\cdot6+0.2\cdot7+0.2\cdot4=4.4$.</p>
+<p>The plan costs $4.4$ and nothing can cost less: <strong>the plan is optimal, and $\mathrm L_C(a,b)=4.4$</strong>. A few additions, multiplications and comparisons checked it; no other plan was examined. (Checked with an exact LP solver.)</p>
+</div>
+
+<h3 id="dual-thm">The dual linear program</h3>
+<p>The vendor’s best strategy is a linear program: maximise the bill under the checks. The theorem says that the vendor can always charge <em>exactly</em> the optimal cost — never less, and of course never more.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 5.1 and Prop. 5.2, p. 95</span></div>
+<p><strong>Definition 5.1 (Admissible potentials).</strong> For a discrete problem with marginal sizes $n,m$ and cost matrix $C\in\R^{n\times m}$, a pair $(f,g)\in\R^n\times\R^m$ is admissible if it lies below the cost:</p>
+$$\mathrm R(C):=\big\{(f,g)\in\R^n\times\R^m\ ;\ \forall(i,j)\in[\![n]\!]\times[\![m]\!],\ f_i+g_j\le C_{i,j}\big\}.\qquad(5.1)$$
+<p>Equivalently, $f\oplus g\le C$ entrywise. In particular, the feasible set depends on the cost matrix, not on the marginal weights.</p>
+<p><strong>Proposition 5.2 (Discrete Kantorovich duality).</strong> One has</p>
+$$\mathrm L_C(a,b)=\max_{(f,g)\in\mathrm R(C)}\ \ps{f}{a}+\ps{g}{b}.\qquad(5.2)$$
+</div>
+<dl class="decode">
+<dt>$[\![n]\!]$</dt><dd>The set of indices $\{1,\dots,n\}$.</dd>
+<dt>$f\oplus g$</dt><dd>The $n\times m$ matrix $(f_i+g_j)_{ij}$: “$f$ down the rows, $g$ across the columns”.</dd>
+<dt>$\mathrm R(C)$</dt><dd>The admissible price lists: an intersection of $nm$ half-spaces, a convex polyhedron in $\R^{n+m}$. It is <strong>never empty</strong> ($f=0$, $g_j=\min_iC_{ij}$ belongs to it) and <strong>never bounded</strong> (you can always lower prices).</dd>
+<dt>$\mathrm L_C(a,b)$</dt><dd>The optimal transport cost $\min_{P\in\U(a,b)}\ps{C}{P}$.</dd>
+<dt>“max”</dt><dd>The supremum is attained: there are <strong>optimal potentials</strong> $(f^\star,g^\star)$, also called <em class="new">Kantorovich potentials</em>.</dd>
+<dt>primal / dual sizes</dt><dd>The primal has $nm$ unknowns and $n+m$ equality constraints; the dual has $n+m$ unknowns and $nm$ inequality constraints. Same value.</dd>
+</dl>
+<div class="box recall"><div class="box-h">Reminder — Lagrangian duality for linear programs</div>
+<p>For $\min\{\ps{c}{p}:\ Ap=q,\ p\ge0\}$, the dual function $H(h)=\min_{p\ge0}\ps{c}{p}+\ps{h}{q-Ap}$ is always a lower bound (weak duality), and for a feasible linear program with finite value $\max_hH=\min_p$ (strong duality), both attained. Key computation: $\min_{p\ge0}\ps{v}{p}$ is $0$ if $v\ge0$, $-\infty$ otherwise. Details in the <a href="#recall-lp">refresher</a> above and on the <a href="Reminders.html#lp">Reminders</a> page.</p>
+</div>
+<div class="box idea"><div class="box-h">Idea of the proof</div>
+<p>Put a multiplier on each marginal constraint: $f_i$ on “row $i$ sums to $a_i$”, $g_j$ on “column $j$ sums to $b_j$”. Minimising the Lagrangian over $P\ge0$ gives $\ps{f}{a}+\ps{g}{b}$ if $C-f\oplus g\ge0$ and $-\infty$ otherwise: the dual function <em>is</em> the vendor’s bill, restricted to admissible prices. Weak duality is the one-line inequality above; equality is strong duality of linear programs.</p>
+</div>
+<details class="fold proof"><summary>Full proof (Lagrangian duality)</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\mathcal L(P,f,g)=\ps{C}{P}+\ps{a-P\ind_m}{f}+\ps{b-P\T\ind_n}{g}.$$<span class="why">The Lagrangian of $\min\{\ps{C}{P}:\ P\ind_m=a,\ P\T\ind_n=b,\ P\ge0\}$, with multipliers $f\in\R^n$ for the row constraints and $g\in\R^m$ for the column constraints (OT4ML (5.3)). $\ind_m$ is the vector of ones, so $P\ind_m$ is the vector of row sums.</span></li>
+<li>$$\mathcal L(P,f,g)=\ps{f}{a}+\ps{g}{b}+\ps{C-f\oplus g}{P}.$$<span class="why">Expand: $\ps{P\ind_m}{f}=\sum_{ij}P_{ij}f_i$ and $\ps{P\T\ind_n}{g}=\sum_{ij}P_{ij}g_j$, so the two terms in $P$ combine into $-\sum_{ij}P_{ij}(f_i+g_j)=-\ps{f\oplus g}{P}$.</span></li>
+<li>$$\min_{P\ge0}\mathcal L(P,f,g)=\begin{cases}\ps{f}{a}+\ps{g}{b}&\text{if }C-f\oplus g\ge0,\\-\infty&\text{otherwise.}\end{cases}$$<span class="why">$\min_{P\ge0}\ps{Q}{P}$ is $0$ when $Q\ge0$ (take $P=0$; nothing is negative) and $-\infty$ when some $Q_{ij}<0$ (put a huge mass on $(i,j)$).</span></li>
+<li>$$\max_{f,g}\ \min_{P\ge0}\mathcal L=\max_{(f,g)\in\mathrm R(C)}\ps{f}{a}+\ps{g}{b}\ \le\ \mathrm L_C(a,b).$$<span class="why">Maximising the dual function only makes sense on $\mathrm R(C)$, where it is the bill. The inequality is weak duality (the three-line computation above).</span></li>
+<li>The primal polytope $\U(a,b)$ is non-empty (it contains $ab\T$) and compact, so the primal value is finite and attained. Strong duality for linear programs then gives equality in line 4, and a maximiser $(f^\star,g^\star)$ exists.<span class="why">Finite-dimensional LP duality (e.g. Bertsimas–Tsitsiklis, Thm. 4.4, cited by CompOT p. 27). This is the only non-elementary step.</span></li>
+</ol>
+</div></details>
+
+<h3 id="dual-cs">Complementary slackness: where an optimal plan may move mass</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 5.3, pp. 95–96</span></div>
+<p><strong>Proposition 5.3 (Discrete complementary slackness).</strong> For every $P\in\U(a,b)$ and $(f,g)\in\mathrm R(C)$,</p>
+$$\ps{C}{P}-\ps{f}{a}-\ps{g}{b}=\sum_{i,j}P_{i,j}\big(C_{i,j}-f_i-g_j\big)\ \ge\ 0.$$
+<p>The plan and potentials are respectively primal and dual optimal if and only if</p>
+$$\mathrm{Supp}(P)\subset\big\{(i,j)\in[\![n]\!]\times[\![m]\!]\ ;\ f_i+g_j=C_{i,j}\big\}.\qquad(5.4)$$
+</div>
+<dl class="decode">
+<dt>$C_{ij}-f_i-g_j$</dt><dd>The <em class="new">slack</em> of route $(i,j)$: how much cheaper the vendor bills it than it costs. Admissible prices have all slacks $\ge0$.</dd>
+<dt>left-hand side</dt><dd>The <em class="new">duality gap</em>: cost of the plan minus the bill. It is the sum of the slacks, weighted by the mass the plan sends along each route.</dd>
+<dt>$\mathrm{Supp}(P)$</dt><dd>The support: the routes with $P_{ij}>0$.</dd>
+<dt>$\{f_i+g_j=C_{ij}\}$</dt><dd>The <em class="new">contact set</em>: routes billed exactly at cost. (5.4) says: an optimal plan moves mass <strong>only along contacts</strong> of optimal prices.</dd>
+</dl>
+<div class="box idea"><div class="box-h">Idea of the proof</div>
+<p>The gap is a weighted sum of non-negative numbers. Strong duality says that at the optimum the gap is $0$, so each term vanishes: wherever $P_{ij}>0$, the slack is $0$. Conversely, a plan and prices with zero gap are both optimal, because each one is a bound for the other.</p>
+</div>
+<details class="fold proof"><summary>Full proof</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\ps{f}{a}+\ps{g}{b}=\sum_{i,j}P_{ij}(f_i+g_j),\quad\text{so}\quad\ps{C}{P}-\ps{f}{a}-\ps{g}{b}=\sum_{i,j}P_{ij}\big(C_{ij}-f_i-g_j\big).$$<span class="why">The computation of the weak-duality steps (rows of $P$ sum to $a$, columns to $b$).</span></li>
+<li>Each term $P_{ij}(C_{ij}-f_i-g_j)$ is $\ge0$, hence so is the gap.<span class="why">$P\ge0$, and $(f,g)\in\mathrm R(C)$ means every slack is $\ge0$.</span></li>
+<li>If $P$ and $(f,g)$ are optimal, then $\ps{C}{P}=\mathrm L_C=\ps{f}{a}+\ps{g}{b}$, so the gap is $0$; a sum of non-negative terms is $0$ only if every term is $0$; so $P_{ij}>0\Rightarrow C_{ij}=f_i+g_j$.<span class="why">Strong duality (Prop. 5.2) makes the two optimal values equal.</span></li>
+<li>Conversely, if $P$ lives on contacts, the gap is $0$: $\ps{C}{P}=\ps{f}{a}+\ps{g}{b}$. But every plan costs $\ge\ps{f}{a}+\ps{g}{b}$ (weak duality), so $P$ is optimal; and every admissible bill is $\le\ps{C}{P}$, so $(f,g)$ is optimal.<span class="why">Only weak duality is needed for this direction: a feasible plan and admissible prices with equal values certify each other.</span></li>
+</ol>
+</div></details>
+<div class="box example"><div class="box-h">Worked example — the slacks of the shipping problem</div>
+<p>With $f=(1,3,0)$ and $g=(3,4,1)$, the slack matrix is</p>
+$$C-f\oplus g=\begin{pmatrix}0&3&0\\0&0&4\\2&0&2\end{pmatrix},\qquad P^\star=\begin{pmatrix}0.3&0&0.2\\0.1&0.2&0\\0&0.2&0\end{pmatrix}.$$
+<p>The five routes used by $P^\star$ are exactly the five zeros of the slack matrix, so the gap $\sum_{ij}P^\star_{ij}(C_{ij}-f_i-g_j)$ is $0$: this is the certificate. The four other routes are billed below their cost (by $3$, $4$, $2$, $2$ euros per ton): an optimal plan must not use them. Five is $n+m-1$: the support of $P^\star$ is a spanning tree of the bipartite graph warehouses–factories (Lesson 2: vertices of $\U(a,b)$), drawn below.</p>
+</div>
+<figure class="fig"><!-- include figures/L04/prices.svg --><figcaption>The shipping example. Warehouses (orange-red, top) with their supplies $a_i$ and collection prices $f_i$; factories (blue, bottom) with their demands $b_j$ and delivery prices $g_j$. The green routes are the contacts $f_i+g_j=C_{ij}$ — exactly the routes used by the optimal plan, with the tons carried. They form a tree; the four other routes (not drawn) have slack $3,4,2,2$.</figcaption></figure>
+
+<div class="widget" data-widget="l4dual"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p>What to look at: each cell of the table is a route $W_i\to F_j$; it shows its cost $C_{ij}$, the vendor’s price $f_i+g_j$ and the slack. Move the collection prices $f_i$: with “best response” on, the delivery prices are the largest admissible ones, $g_j=\min_i(C_{ij}-f_i)$, so every column keeps at least one contact (green). The gauge on the right compares the bill with the optimal cost $4.4$: it never goes above, and it reaches $4.4$ exactly when the dots (the optimal plan) all sit on green cells. Switch to free prices to see a red cell: a route billed above its cost, which the operator refuses. The second example has a degenerate optimal plan, and a whole segment of optimal prices.</p>
+
+<h3 id="dual-more">The gauge, uniqueness, and what prices measure</h3>
+<p><strong>The gauge.</strong> Adding $s$ to every $f_i$ and subtracting $s$ from every $g_j$ changes neither the routes’ prices $f_i+g_j$ nor the bill (since $\sum_ia_i=\sum_jb_j=1$). So prices are only defined up to this shift — CompOT notes that a vendor can pay you to collect and recover it on delivery. One fixes it by a <em class="new">gauge</em>, for instance $f_1=0$ or $\ps{f}{a}=0$ (OT4ML Fig. 5.1). An exact LP solver normalised with $f_1=0$ returns $f=(0,2,-1)$, $g=(4,5,2)$ for the example: the same prices shifted by $s=-1$.</p>
+<p><strong>Finding the prices from the plan.</strong> When the optimal plan has $n+m-1$ positive entries forming a tree (a <em>non-degenerate</em> vertex), the equations $f_i+g_j=C_{ij}$ on its support determine the prices up to the gauge. Walk along the tree:</p>
+<ol class="steps">
+<li>$f_1=1$.<span class="why">The gauge: any value would do.</span></li>
+<li>$g_1=C_{11}-f_1=3$ and $g_3=C_{13}-f_1=1$.<span class="why">Routes W₁→F₁ and W₁→F₃ are used, hence contacts.</span></li>
+<li>$f_2=C_{21}-g_1=3$.<span class="why">Route W₂→F₁ is used.</span></li>
+<li>$g_2=C_{22}-f_2=4$, then $f_3=C_{32}-g_2=0$.<span class="why">Routes W₂→F₂ and W₃→F₂ are used.</span></li>
+<li>Check the four unused routes: slacks $8-5=3$, $8-4=4$, $5-3=2$, $3-1=2$, all $\ge0$. The prices are admissible, hence optimal.<span class="why">Complementary slackness (Prop. 5.3), converse direction.</span></li>
+</ol>
+<p>This is exactly what the network simplex of Lesson 2 does at every vertex; when step 5 finds a negative slack, that route enters the tree (a pivot). When the optimal plan is degenerate (fewer than $n+m-1$ entries), the equations leave freedom and the optimal prices are not unique (exercise 1 of §10).</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML p. 96</span></div>
+<p>The formulation (5.2) shows that $(a,b)\mapsto\mathrm L_C(a,b)$ is a convex function (as a supremum of linear functions). From the primal problem (3.2), one also sees that $C\mapsto\mathrm L_C(a,b)$ is concave.</p>
+</div>
+<p>Decoding: in (5.2) the admissible set $\mathrm R(C)$ does not depend on $(a,b)$ (Def. 5.1 insists on it), and for fixed prices the bill $\ps{f}{a}+\ps{g}{b}$ is linear in $(a,b)$; a supremum of linear functions is convex. Symmetrically, $\U(a,b)$ does not depend on $C$ and $\ps{C}{P}$ is linear in $C$; an infimum of linear functions is concave.</p>
+<div class="box ml"><div class="box-h">In machine learning — the prices are the gradient of an OT loss</div>
+<p>When OT is used as a <strong>loss between histograms</strong> — a predicted histogram $a_\theta$ (the softmax output of a network over $n$ labels, or the weights of a mixture) against a target histogram $b$ — training needs the derivative of $a\mapsto\mathrm L_C(a,b)$. Duality gives it for free: $\mathrm L_C(a,b)=\max_{(f,g)\in\mathrm R(C)}\ps{f}{a}+\ps{g}{b}$ is a maximum of functions linear in $a$, and when the optimal prices are unique (up to the gauge), its derivative is the optimal $f^\star$ (Danskin’s theorem; along directions that keep $\sum_ia_i=1$ the gauge does not matter). On the shipping example, moving a little supply from W$_i$ to W$_j$ changes the cost at rate $f^\star_i-f^\star_j$: finite differences give $-2.000$, $1.000$, $3.000$ for $(i,j)=(1,2),(1,3),(2,3)$, exactly $1-3$, $1-0$, $3-0$. Backpropagation then only needs $\partial a_\theta/\partial\theta$. This is how Wasserstein losses for multi-label prediction (Frogner et al., NeurIPS 2015, with the entropic potentials of Lesson 7) and Wasserstein dictionary learning (2019 notes §9.1, p. 40) are trained; the convexity in $a$ recalled above is what makes those losses well behaved.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — reading prices in absolute terms</div>
+<p>Only <strong>differences</strong> of prices mean something: $f_i-f_{i'}$ (how much more expensive it is to ship from W$_i$ than from W$_{i'}$) and $f_i+g_j$. A negative price is not an error, and two solvers can return prices that differ by a constant.</p>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>To prove a <strong>lower bound</strong> on a transport cost → exhibit admissible prices ($f_i+g_j\le C_{ij}$) and compute their bill. (Upper bound → exhibit a plan.)</li>
+<li>To <strong>certify</strong> an optimal plan → find prices that are admissible and equal to the cost on the plan’s support (walk along the tree).</li>
+<li>To <strong>refute</strong> optimality → solve $f_i+g_j=C_{ij}$ on the support; if some unused route gets a negative slack, the plan is not optimal (and that route should enter).</li>
+</ul>
+</div>
+<div class="quiz"><p>Without solving anything, give a lower bound on $\mathrm L_C(a,b)$ for any problem, using $f=0$.</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>With $f=0$ the best admissible $g$ is $g_j=\min_iC_{ij}$ (each factory is billed the cheapest way to reach it), so $\mathrm L_C(a,b)\ge\sum_jb_j\min_iC_{ij}$. Symmetrically $\mathrm L_C(a,b)\ge\sum_ia_i\min_jC_{ij}$. On the example: $3.6$ and $0.5\cdot2+0.3\cdot6+0.2\cdot3=3.4$, both below $4.4$.</p>
+</div></details></div>
+<div class="quiz"><p>The vendor proposes $f=(2,3,0)$, $g=(3,4,1)$. Accept?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>No: route W₁→F₁ is billed $2+3=5>C_{11}=4$, and route W₁→F₃ is billed $2+1=3>C_{13}=2$. The operator would ship along these routes himself. (The bill would be $4.9>4.4$: an inadmissible price list can “beat” the optimal cost, which is why the check matters.)</p>
+</div></details></div>

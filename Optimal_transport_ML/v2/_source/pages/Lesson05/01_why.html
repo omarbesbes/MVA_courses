@@ -1,0 +1,93 @@
+<h2 id="why">1. Why slice: the price of exact transport <span class="ref">slides, frames 3/12–7/12</span></h2>
+<p class="tldr">Machine learning wants a transport <em>loss</em>, evaluated on mini-batches at every training step; exactly, it costs about $n^3$ operations per evaluation, and when the clouds are samples it approaches the true value only like $n^{-1/d}$ — slicing is designed to remove both obstacles.</p>
+
+<h3 id="why-ml">Transport as a loss between a model and data</h3>
+<p>The lecture starts from an application. A <em>generative model</em> is a machine that produces new samples looking like the data: images, molecules, point clouds. In the version drawn on the slides, it is a neural network that turns random noise into samples, and training it means moving the distribution of its outputs towards the distribution of the data. Optimal transport gives a natural way to measure how far apart the two distributions are.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">slides, frame 3/12 (p. 8)</span></div>
+<p><strong>OT for Machine Learning.</strong> [drawing: $\N(0,\mathrm{Id})$ → a neural network $T(w)$ → a distribution $\mu(w)$, compared with the data $\hat\mu_n$ (crosses); below: $\min_w\mathrm D\big(\mu(w),\hat\mu_n\big)$] <em>Generative models.</em></p>
+<p><strong>Some OT-based deep generative models:</strong></p>
+<ul>
+<li>Wasserstein GANs [Arjovsky et al., 2017]: GANs with objective function based on the dual of $\mathbf W_1(\mu(w),\hat\mu_n)$</li>
+<li>Wasserstein Auto-Encoders [Tolstikhin et al., 2018]: Auto-encoders trained by minimizing a regularized $\mathbf W_1(\mu(w),\hat\mu_n)$</li>
+</ul>
+</div>
+<dl class="decode">
+<dt>$\N(0,\mathrm{Id})$</dt><dd>The <em>latent</em> noise: a standard Gaussian vector $z$ in some $\R^k$, easy to sample.</dd>
+<dt>$T(w)$</dt><dd>A neural network with weights $w$ (the drawing shows convolution layers). It maps a noise vector $z$ to a sample $x=T(w)(z)\in\R^d$, for instance an image.</dd>
+<dt>$\mu(w)$</dt><dd>The distribution of the generated samples: the push-forward $\pf{T(w)}{\N(0,\mathrm{Id})}$. It depends on $w$.</dd>
+<dt>$\hat\mu_n$</dt><dd>The data, seen as the empirical measure $\frac1n\sum_{i=1}^n\delta_{y_i}$ of $n$ training examples (the red crosses).</dd>
+<dt>$\min_w\mathrm D(\mu(w),\hat\mu_n)$</dt><dd>Training: choose the weights so that a discrepancy $\mathrm D$ between model and data is as small as possible. With $\mathrm D=W_p$, this is “minimum Wasserstein estimation”.</dd>
+<dt>WGAN, WAE</dt><dd>Two famous ways to use $W_1$: through its dual formula (a second network, the critic, plays the role of the dual potential — Lesson 4), or through a relaxed primal problem (auto-encoders).</dd>
+</dl>
+
+<div class="box ml"><div class="box-h">In machine learning — what one training step needs</div>
+<p>Take a generator of $32\times32$ colour images, so samples live in $\R^d$ with $d=3\,072$, and mini-batches of $n=256$. At each step: draw $256$ noise vectors $z_i$, generate $x_i=T(w)(z_i)$, take $256$ real images $y_j$, and evaluate the loss $W_2^2\big(\frac1n\sum_i\delta_{x_i},\frac1n\sum_j\delta_{y_j}\big)$. With equal weights the optimal plan is a permutation $\sigma^\star$, and the gradient with respect to $x_i$ is $\frac2n\big(x_i-y_{\sigma^\star(i)}\big)$ (the optimal assignment is frozen when differentiating: Danskin’s theorem), which is then back-propagated into $w$. So <strong>each step solves a new assignment problem</strong>: about $n^2d\approx2.0\times10^{8}$ operations to build the cost matrix and $n^3\approx1.7\times10^{7}$ for the Hungarian algorithm — over tens of thousands of steps. This is the setting the whole lecture has in mind.</p>
+</div>
+
+<h3 id="why-lp">The cost of exact transport</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">slides, frame 5/12 (p. 10)</span></div>
+<p><strong>OT in Multi-Dimensions.</strong> Now, $\mu,\nu$ are distributions on $\R^d$.</p>
+<p><strong>Discrete measures.</strong> Let $\mu_n=\sum_{i=1}^na_i\delta_{x_i}$ and $\nu_n=\sum_{j=1}^nb_j\delta_{y_j}$.</p>
+$$\mathbf W_2^2(\mu_n,\nu_n)=\min_{\pi\in\Pi(a,b)}\Big\{\langle C,\pi\rangle\triangleq\sum_{i=1}^n\sum_{j=1}^nC_{ij}\pi_{ij}\Big\}$$
+<p>with $C\in\R^{n\times n}$ the cost matrix s.t. $C_{ij}=c(x_i,y_j)$, and $\Pi(a,b)\triangleq\{\pi\in\R_+^{n\times n}\ \text{s.t.}\ \pi\ind_n=a,\ \pi\T\ind_n=b\}$.</p>
+<p><strong>OT is a linear program.</strong> Linear program with $n^2$ variables and $2n$ constraints. Classical solvers: Hungarian algorithm, interior-point method. Computational complexity $\mathcal O(n^3)$.</p>
+</div>
+<div class="box course"><div class="box-h">In the course <span class="ref">slides, frame 6/12 (p. 11)</span></div>
+<p><strong>Standard OT: Too Costly in ML.</strong> Computational bottleneck: Computing $\mathbf W_2(\mu_n,\nu_n)$ costs $\mathcal O(n^3)$ $\Rightarrow$ Expensive for modern ML pipelines.</p>
+<p><strong>Example: Training OT-based neural networks.</strong> Mini-batch $n=256$ $\Rightarrow$ 1 evaluation of $\mathbf W_2(\mu_n,\nu_n)\sim10^7$ operations. Needed at every training step, over thousands of iterations.</p>
+<p><strong>Standard OT is expensive</strong> $\Rightarrow$ Approximate/regularized OT: Entropy-regularized OT (Sinkhorn algorithm) [Cuturi, 2013]; Sliced OT [Rabin et al., 2011].</p>
+</div>
+<dl class="decode">
+<dt>$C_{ij}=c(x_i,y_j)$</dt><dd>The price of moving a unit of mass from $x_i$ to $y_j$; for $W_2^2$, $c(x,y)=\norm{x-y}^2$.</dd>
+<dt>$\Pi(a,b)$</dt><dd>The transport plans: non-negative matrices whose row sums are $a$ and column sums are $b$ ($\ind_n$ is the vector of ones). It is the set $\U(a,b)$ of <a href="Lesson03.html#kanto">Lesson 3 §1</a>.</dd>
+<dt>“$n^2$ variables, $2n$ constraints”</dt><dd>The unknowns are the $n^2$ entries $\pi_{ij}\ge0$; the equality constraints are the $n$ row sums and the $n$ column sums.</dd>
+<dt>$\mathcal O(n^3)$</dt><dd>The number of elementary operations grows like $n^3$. For equal weights, the problem is an assignment problem, and the Hungarian algorithm solves it in $O(n^3)$ operations (OT4ML Prop. 1.8, p. 18). For general weights, the network simplex has a bound of order $n^3\log n$ up to a logarithm of the costs (CompOT §3.5) — this is the “$O(n^3\log n)$” you will also meet.</dd>
+</dl>
+<div class="box recall"><div class="box-h">Reminder — transport between histograms is a linear program (Lesson 2)</div>
+<p>The objective $\ps{C}{\pi}=\sum_{ij}C_{ij}\pi_{ij}$ is linear in $\pi$, and the constraints are linear equalities and inequalities: the minimum is attained at a <em>vertex</em> of the polytope $\Pi(a,b)$, and for uniform weights $a=b=\frac1n\ind_n$ the vertices are the permutation matrices divided by $n$ (Birkhoff). This is why “optimal transport between two clouds of $n$ points” and “optimal assignment” are the same problem. See <a href="Lesson02.html">Lesson 2</a> and <a href="Reminders.html#lp">Reminders: linear programming</a>.</p>
+</div>
+<div class="box example"><div class="box-h">Worked example — orders of magnitude</div>
+<ul>
+<li>$n=256$: $n^3=16\,777\,216\approx1.7\times10^{7}$ — the “$\sim10^7$” of the slide. Sorting $256$ numbers costs about $n\log_2n=2\,048$ comparisons: $8\,000$ times fewer.</li>
+<li>$n=1\,000$ points in $\R^3$: $n^3=10^9$ operations for the exact plan, against $3n=3\,000$ multiplications to project the points on one line and about $n\log_2n\approx10^4$ comparisons to sort them.</li>
+<li>Memory: the cost matrix has $n^2$ entries; for $n=10^5$ points that is $10^{10}$ numbers, $40$ GB in single precision. Exact transport is simply out of reach.</li>
+</ul>
+</div>
+
+<h3 id="why-curse">The curse of dimensionality</h3>
+<p>Speed is not the only problem. In practice we never see the distributions themselves, only samples, and we compute the distance between the two <em>empirical</em> measures. Is that number close to the true distance?</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">slides, frame 7/12 (p. 12)</span></div>
+<p><strong>The Curse of Dimensionality.</strong> In practice, we only observe finite samples $(x_i)_{i=1}^n\overset{\text{i.i.d.}}\sim\mu$, $(y_i)_{i=1}^n\overset{\text{i.i.d.}}\sim\nu$: $\ \mathbf W_p(\mu_n,\nu_n)$ vs. $\mathbf W_p(\mu,\nu)$. How fast does $\mathbf W_p(\mu_n,\nu_n)\to\mathbf W_p(\mu,\nu)$ as $n\to+\infty$?</p>
+<p><strong>Sample complexity of $\mathbf W_p$</strong> [Dudley, 1969]. If $\mu,\nu$ are supported on a bounded domain of $\R^d$, $d>2$,</p>
+$$\E\big[\abs{\mathbf W_p(\mu_n,\nu_n)-\mathbf W_p(\mu,\nu)}\big]=\mathcal O\big(n^{-\frac1d}\big)$$
+<p>with $\E$ taken over $(x_i,y_i)_{i=1}^n$. <strong>Consequences:</strong> Higher dimension $d$ $\Rightarrow$ slower convergence. Accurate estimates may require prohibitively large $n$.</p>
+</div>
+<dl class="decode">
+<dt>$\mu_n,\nu_n$</dt><dd>The empirical measures $\frac1n\sum_i\delta_{x_i}$ and $\frac1n\sum_i\delta_{y_i}$: random measures, because the samples are random.</dd>
+<dt>$\E[\abs{\cdots}]$</dt><dd>The average error, over all possible draws of the samples, made by replacing the true distance by the computable one.</dd>
+<dt>$\mathcal O(n^{-1/d})$</dt><dd>The error is at most a constant times $n^{-1/d}$. In dimension $d=10$, it decreases like $n^{-0.1}$: almost not at all.</dd>
+<dt>“bounded domain”</dt><dd>Both measures live in a ball of $\R^d$. (Without such an assumption, mass far away can make things even worse.)</dd>
+</dl>
+<div class="box intu"><div class="box-h">Intuition — why samples are so far from their law in high dimension</div>
+<p>$n$ points cannot cover a $d$-dimensional region finely: to put a point within distance $\eps$ of every location of the unit cube, you need about $\eps^{-d}$ points. Conversely, with $n$ points, the typical distance from a location to the nearest sample is about $n^{-1/d}$ — and transporting the true law onto the samples costs about that much. The <a href="Lesson03.html#tv-riemann">Riemann sums of Lesson 3</a> are the case $d=1$: there $W_p=O(1/n)$ for a well-spread grid, and $O(n^{-1/2})$ for random samples.</p>
+</div>
+<div class="box example"><div class="box-h">Worked example — what $n^{-1/d}$ means</div>
+<p>If the error behaves like $c\,n^{-1/d}$, dividing it by $2$ requires multiplying $n$ by $2^d$: by $4$ in dimension $2$, by $1\,024$ in dimension $10$, by about $1.1\times10^{15}$ in dimension $50$. With a rate $n^{-1/2}$ — the rate we will get for sliced distances in <strong>every</strong> dimension (§9) — it always suffices to multiply $n$ by $4$.</p>
+</div>
+<div class="box remark"><div class="box-h">Note on the sources — the condition “$d>2$” is for $p=1$</div>
+<p>Dudley’s theorem (1969) is about $W_1$. For $W_p$ with $p>1$ the rate $n^{-1/d}$ holds only when $d>2p$; for $d<2p$ the worst-case rate is $n^{-1/(2p)}$ (StatOT, display (2.21), p. 89). For instance with $p=2$ and $d=3$ the rate is $n^{-1/4}$, not $n^{-1/3}$: two atoms at distance $1$ already give $\E\,W_2(\hat\al_n,\al)\approx0.58\,n^{-1/4}$ in any dimension (Exercise 11 of §13, checked by an exact binomial sum). The message of the slide — the rate degrades with the dimension — is unchanged.</p>
+</div>
+<p>You can see the curse on real numbers in <a href="#stat-rate">§9</a> (figure “rates”): between two independent samples of the <em>same</em> Gaussian, whose true distance is $0$, the computed $W_2$ is still $7.6$ in dimension $50$ with $1\,000$ points.</p>
+
+<h3 id="why-plan">Two ways out, and the idea of slicing</h3>
+<p>The slide lists two remedies. <strong>Entropic regularization</strong> (Lesson 7) smooths the linear program; it costs $O(n^2)$ per iteration. <strong>Slicing</strong>, the subject of this lecture, uses the only case where transport is trivial — the line — and builds everything from it:</p>
+<ol class="steps">
+<li>Pick a direction $\theta$ (a unit vector) and replace every point $x$ by the number $\ps{\theta}{x}$.<span class="why">This costs $d$ multiplications per point; the two clouds become two lists of numbers.</span></li>
+<li>Solve transport between the two lists by sorting them (§2).<span class="why">$O(n\log n)$ operations, instead of $O(n^3)$.</span></li>
+<li>Average the result over many directions $\theta$ (§4, §8).<span class="why">One direction sees only one “shadow” of the clouds; all directions together see everything (§5).</span></li>
+</ol>
+
+<div class="quiz"><p>With $n=10\,000$ points in $\R^{3}$ and $K=100$ directions, compare the number of operations of the exact assignment and of the sliced computation.</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>Exact: $n^3=10^{12}$ (plus $n^2d=3\times10^8$ for the cost matrix). Sliced: projections $Kdn=3\times10^6$, sorts about $Kn\log_2n\approx100\times10^4\times13.3\approx1.3\times10^7$, in total about $1.6\times10^7$. About $60\,000$ times fewer operations — and no $n\times n$ matrix in memory.</p>
+</div></details></div>

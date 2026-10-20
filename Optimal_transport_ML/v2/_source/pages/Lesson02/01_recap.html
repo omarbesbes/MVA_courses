@@ -1,0 +1,100 @@
+<h2 id="recap">1. Recap of Lesson 1: Monge’s problem, the line, Gaussians, Monge–Ampère</h2>
+<p class="tldr">Monge moves each point to one point; this works beautifully on the line (sort), for Gaussians (an affine map) and for densities with the quadratic cost (a convex gradient, solution of the Monge–Ampère equation) — but a map can never split an atom, which is what Kantorovich will fix.</p>
+
+<p>The lecture started with a recap of Lesson 1. It is short here: the statements, what they mean, one example each, and the point of the recap — what Monge’s formulation <em>cannot</em> do.</p>
+
+<h3 id="recap-monge">Monge’s problem and its weak points</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 2.14, p. 25</span></div>
+<p><strong>Definition 2.14 (Monge problem and Monge map).</strong> For $\al\in\M(\X)$, $\be\in\M(\Y)$ and measurable $c:\X\times\Y\to[0,+\infty]$, define</p>
+$$\mathcal M_c(\al,\be):=\inf_{T:\X\to\Y\text{ measurable}}\Big\{\int_\X c(x,T(x))\,\dd\al(x)\ ;\ \pf{T}{\al}=\be\Big\}.$$
+<p>A feasible $T$ is a Monge map; a minimizer is an optimal Monge map. The value is $+\infty$ if no feasible map exists.</p>
+</div>
+<dl class="decode">
+<dt>$\M(\X)$</dt><dd>Probability measures on $\X$ (positive, total mass $1$).</dd>
+<dt>$T:\X\to\Y$</dt><dd>A deterministic rule: the mass at $x$ goes, all of it, to the single point $T(x)$.</dd>
+<dt>$\pf{T}{\al}=\be$</dt><dd>The constraint: after moving, the mass is distributed exactly as $\be$.</dd>
+<dt>$\int c(x,T(x))\,\dd\al(x)$</dt><dd>The total cost: each unit of mass at $x$ pays $c(x,T(x))$.</dd>
+<dt>“$+\infty$ if no feasible map”</dt><dd>The constraint set can be empty — the first weak point below.</dd>
+</dl>
+<p>For $n$ points against $n$ points with weights $\frac1n$ (two data sets of the same size), a feasible map is a permutation $\sigma$ (OT4ML Prop. 2.15, p. 26), and Monge’s problem is the <em class="new">assignment problem</em> $\min_\sigma\frac1n\sum_ic(x_i,y_{\sigma(i)})$, solved in Lesson 1 by the Hungarian method.</p>
+
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Remark 2.17, p. 26</span></div>
+<p><strong>Remark 2.17 (Feasibility versus optimality).</strong> An optimal map solving (2.5) might fail to exist for two distinct reasons. First, the constraint set can be empty, for instance if $\al=\delta_x$ and $\be$ is not a single Dirac mass. […] Second, even when feasible maps exist, the infimum may fail to be attained because the class of maps is not closed under weak limits.</p>
+</div>
+<figure class="fig"><!-- include figures/L02/split.svg --><figcaption>Left: a map sends the whole Dirac $\delta_0$ to one point, so $\pf{T}{\delta_0}$ is a single Dirac and can never be $\be=\frac12\delta_{-1}+\frac12\delta_1$. Middle: a coupling simply sends half of the mass to each target. Right: the opposite direction is fine for a map (two atoms can merge) — Monge’s problem is not symmetric.</figcaption></figure>
+<p>Three weak points of Monge’s formulation, all visible on small discrete examples (OT4ML §3.1, p. 51):</p>
+<ul>
+<li><strong>It can be empty.</strong> $\delta_0\to\frac12\delta_{-1}+\frac12\delta_1$ has no feasible map; nor has a data set of $n$ points (weights $\frac1n$) sent to a data set of $m>n$ points (weights $\frac1m$): the image of $n$ atoms has at most $n$ atoms.</li>
+<li><strong>It is not symmetric.</strong> Merging is allowed, splitting is not.</li>
+<li><strong>It is not convex.</strong> The set of maps with $\pf{T}{\al}=\be$ is not convex (the average of two permutations is not a permutation), so the problem is combinatorial; and even when maps exist the infimum may not be attained (OT4ML Example 2.18, p. 26, revisited in §9).</li>
+</ul>
+
+<h3 id="recap-1d">The line: match equal quantile levels</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Thm. 2.41 and Prop. 2.44, p. 38</span></div>
+<p><strong>Theorem 2.41 (One-dimensional Monge solution).</strong> Let $\al,\be\in\M(\R)$, assume that $\al$ has no atoms, and let $h:\R\to[0,+\infty)$ be convex. Consider the cost $c(x,y)=h(x-y)$. […] Then $T=C_\be^{-1}\circ C_\al$ satisfies $\pf{T}{\al}=\be$ and minimizes $\min_{\pf{S}{\al}=\be}\int h(x-S(x))\,\dd\al(x)$.</p>
+<p><strong>Proposition 2.44 (One-dimensional Wasserstein formulas).</strong> Let $1\le p<+\infty$ and let $\al,\be\in\M(\R)$ have finite $p$-th moments. Then</p>
+$$\mathcal W_p^p(\al,\be)=\int_0^1\abs{C_\al^{-1}(r)-C_\be^{-1}(r)}^p\,\dd r=\norm{C_\al^{-1}-C_\be^{-1}}^p_{L^p([0,1])}.$$
+</div>
+<dl class="decode">
+<dt>$C_\al(x)=\al((-\infty,x])$</dt><dd>The cumulative distribution function (CDF): the mass to the left of $x$.</dd>
+<dt>$C_\al^{-1}(r)$</dt><dd>The quantile function: the point below which a fraction $r$ of the mass lies.</dd>
+<dt>$T=C_\be^{-1}\circ C_\al$</dt><dd>“Send the point at quantile level $r$ of $\al$ to the point at the same level $r$ of $\be$”: the increasing rearrangement. For two clouds of $n$ points, this is <strong>sorting</strong> both clouds and matching in order.</dd>
+<dt>“$\al$ has no atoms”</dt><dd>Needed for a <em>map</em>: an atom occupies a whole interval of levels, which may have to go to several places. Section 9 shows that with couplings the atoms are no longer a problem.</dd>
+</dl>
+<div class="box example"><div class="box-h">Worked example — two uniform laws</div>
+<p>$\al=\mathcal U[0,1]$, $\be=\mathcal U[2,4]$: $C_\al^{-1}(r)=r$, $C_\be^{-1}(r)=2+2r$, so $T(x)=2+2x$ (stretch by $2$, shift by $2$) and</p>
+$$W_2^2(\al,\be)=\int_0^1(2+2r-r)^2\,\dd r=\int_0^1(2+r)^2\,\dd r=\frac{27-8}{3}=\frac{19}3\approx6.33,\qquad W_1=\int_0^1(2+r)\,\dd r=2.5 .$$
+</div>
+
+<h3 id="recap-gauss">Gaussians in any dimension</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 2.55 and Prop. 2.56, p. 46</span></div>
+<p><strong>Definition 2.55 (Bures metric).</strong> For positive semidefinite covariance matrices $\Sigma$ and $\Lambda$, $\B(\Sigma,\Lambda)^2:=\tr\big(\Sigma+\Lambda-2(\Sigma^{1/2}\Lambda\Sigma^{1/2})^{1/2}\big)$.</p>
+<p><strong>Proposition 2.56 (Gaussian $\mathcal W_2$ formula and Bures covariance term).</strong> Assume that $\Sigma_\al$ and $\Sigma_\be$ are positive definite. The covariance equation and its unique symmetric positive-definite solution are</p>
+$$A\Sigma_\al A=\Sigma_\be,\ A\succ0\quad\iff\quad A=\Sigma_\al^{-1/2}\big(\Sigma_\al^{1/2}\Sigma_\be\Sigma_\al^{1/2}\big)^{1/2}\Sigma_\al^{-1/2}.$$
+<p>The affine map $T(x)=m_\be+A(x-m_\al)$ is the optimal quadratic-cost transport from $\N(m_\al,\Sigma_\al)$ to $\N(m_\be,\Sigma_\be)$, and $\mathcal W_2(\al,\be)^2=\norm{m_\al-m_\be}^2+\B(\Sigma_\al,\Sigma_\be)^2$.</p>
+</div>
+<dl class="decode">
+<dt>$M^{1/2}$</dt><dd>Matrix square root: diagonalise $M=UDU\T$ ($D\ge0$) and take $UD^{1/2}U\T$. <a href="Reminders.html#sqrtm">More</a>.</dd>
+<dt>$A\Sigma_\al A=\Sigma_\be$</dt><dd>“$T$ pushes $\N(m_\al,\Sigma_\al)$ to $\N(m_\be,\Sigma_\be)$”: an affine image of a Gaussian is Gaussian, with covariance $A\Sigma_\al A\T$.</dd>
+<dt>$A\succ0$ symmetric</dt><dd>Then $T$ is the gradient of the convex quadratic $\varphi(x)=\ps{m_\be}{x}+\frac12\ps{A(x-m_\al)}{x-m_\al}$, hence optimal by Brenier (below).</dd>
+<dt>two terms</dt><dd>The cost splits into “move the mean” and “reshape the covariance”.</dd>
+</dl>
+<div class="box example" id="recap-gauss-example"><div class="box-h">Worked example — a 2D Gaussian</div>
+<p>$\al=\N(0,I_2)$ and $\be=\N\big((1,1),\Sigma\big)$ with $\Sigma=\begin{pmatrix}2&1\\1&2\end{pmatrix}$ (eigenvalues $3$ and $1$, eigenvectors $(1,1)/\sqrt2$ and $(1,-1)/\sqrt2$).</p>
+<ol class="steps">
+<li>$$A=\Sigma^{1/2}=\frac12\begin{pmatrix}\sqrt3+1&\sqrt3-1\\\sqrt3-1&\sqrt3+1\end{pmatrix}\approx\begin{pmatrix}1.366&0.366\\0.366&1.366\end{pmatrix}.$$<span class="why">With $\Sigma_\al=I$ the formula reduces to $A=\Sigma_\be^{1/2}$; square roots of the eigenvalues: $\sqrt3$ and $1$.</span></li>
+<li>$$\B(I,\Sigma)^2=\tr\big(I+\Sigma-2\Sigma^{1/2}\big)=2+4-2(\sqrt3+1)=4-2\sqrt3\approx0.536 .$$<span class="why">$\tr I=2$, $\tr\Sigma=4$, $\tr\Sigma^{1/2}=\sqrt3+1$ (sum of the eigenvalues). Note $4-2\sqrt3=(\sqrt3-1)^2$.</span></li>
+<li>$$W_2^2(\al,\be)=\norm{(1,1)}^2+4-2\sqrt3=6-2\sqrt3\approx2.536,\qquad W_2\approx1.592 .$$<span class="why">Mean term $1^2+1^2=2$. (A Monte-Carlo estimate of $\E\norm{X-T(X)}^2$ with $4\times10^5$ samples gives $2.538$.)</span></li>
+</ol>
+</div>
+
+<h3 id="recap-ma">Brenier’s theorem and the Monge–Ampère equation</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Thm. 2.23, p. 29; eq. (2.7), p. 33</span></div>
+<p><strong>Theorem 2.23 (Brenier).</strong> Let $\al,\be\in\M(\R^d)$ have finite second moments, and assume that $\al$ is absolutely continuous with respect to Lebesgue measure. For the quadratic cost $c(x,y)=\norm{x-y}^2$, there exists a convex function $\varphi:\R^d\to\R\cup\{+\infty\}$ such that $T=\nabla\varphi$, $\pf{T}{\al}=\be$, and $T$ is the unique optimal Monge map $\al$-almost everywhere. The optimal Kantorovich plan is $\pf{(\Id,T)}{\al}$.</p>
+<p>For sufficiently smooth positive densities and a classical Brenier map, the change-of-variables formula (2.4) gives the Monge–Ampère equation</p>
+$$\det\big(\nabla^2\varphi(x)\big)\,\rho_\be\big(\nabla\varphi(x)\big)=\rho_\al(x).\qquad(2.7)$$
+</div>
+<dl class="decode">
+<dt>“absolutely continuous”</dt><dd>$\al$ has a density $\rho_\al$ (no atoms, no mass on curves or surfaces).</dd>
+<dt>$T=\nabla\varphi$, $\varphi$ convex</dt><dd>The multi-dimensional version of “increasing”: in 1D the derivative of a convex function is non-decreasing, i.e. the sorting map.</dd>
+<dt>“the optimal Kantorovich plan is $\pf{(\Id,T)}{\al}$”</dt><dd>A forward reference to this lesson: the relaxed problem of §8 has the same solution (§9).</dd>
+<dt>$\det(\nabla^2\varphi)$</dt><dd>The Jacobian determinant of $T=\nabla\varphi$: how much $T$ dilates volumes near $x$.</dd>
+<dt>(2.7)</dt><dd>Mass conservation, point by point: the mass $\rho_\al(x)\dd x$ of a small cell around $x$ equals the mass $\rho_\be(T(x))\times\det(\nabla^2\varphi(x))\dd x$ of its image. A fully non-linear PDE for $\varphi$.</dd>
+</dl>
+<div class="box recall"><div class="box-h">Reminder — change of variables</div>
+<p>If $T$ is a diffeomorphism and $Y=T(X)$ with $X$ of density $\rho_\al$, then $Y$ has a density $\rho_\be$ with $\rho_\al(x)=\rho_\be(T(x))\,\abs{\det\nabla T(x)}$. This is the identity behind (2.7), with $\nabla T=\nabla^2\varphi$ (symmetric, $\ge0$ by convexity, so the absolute value can be dropped). <a href="Reminders.html#jacobian">More</a>.</p>
+</div>
+<div class="box example"><div class="box-h">Worked example — checking Monge–Ampère on the two examples above</div>
+<ul>
+<li><strong>Line.</strong> $T(x)=2+2x$ from $\mathcal U[0,1]$ to $\mathcal U[2,4]$: $T'(x)\,\rho_\be(T(x))=2\times\frac12=1=\rho_\al(x)$. ✓</li>
+<li><strong>Gaussians.</strong> $\varphi(x)=\ps{m_\be}{x}+\frac12\ps{Ax}{x}$, $\nabla^2\varphi=A$, $\det A=\sqrt3$. Since $A\Sigma_\be^{-1}A=I$ (from $A^2=\Sigma_\be$),
+$\det A\cdot\rho_\be(Ax+m_\be)=\sqrt3\cdot\frac{e^{-\frac12\ps{x}{A\Sigma_\be^{-1}Ax}}}{2\pi\sqrt{\det\Sigma_\be}}=\frac{\sqrt3}{\sqrt3}\cdot\frac{e^{-\norm{x}^2/2}}{2\pi}=\rho_\al(x).$ ✓ (Checked numerically at three points.)</li>
+</ul>
+</div>
+<div class="box intu"><div class="box-h">The point of the recap</div>
+<p>Everything above produces a <strong>map</strong>, and needs hypotheses for it: no atoms on the line, a density for Brenier. For discrete data — histograms, point clouds with weights, data sets of different sizes — maps may not exist at all. Kantorovich’s idea is to stop asking <em>where each point goes</em> and to ask <em>how much mass goes from where to where</em>. Then (§9) we will see that under exactly the hypotheses of this section, nothing is lost.</p>
+</div>
+<div class="quiz"><p>Between $\al=\frac13(\delta_0+\delta_1+\delta_2)$ and $\be=\frac12(\delta_0+\delta_2)$, is there a Monge map? And from $\be$ to $\al$?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>From $\al$ to $\be$: a map sends each atom (mass $\frac13$) whole to $0$ or $2$; the mass arriving at $0$ is a multiple of $\frac13$, never $\frac12$. No map. From $\be$ to $\al$: each atom of mass $\frac12$ lands on one point, so $\pf{T}{\be}$ has atoms of mass $\frac12$ or $1$, never $\frac13$. No map either. Both directions need splitting.</p>
+</div></details></div>

@@ -1,0 +1,105 @@
+<h2 id="jko">2. The JKO scheme: an implicit step in $W_2$ <span class="ref">OT4ML Def. 15.1, p. 356</span></h2>
+<p class="tldr">A JKO step replaces the current measure by the best compromise between a lower energy and a small transport distance $W_2$; for a Dirac it is the Euclidean implicit step, for a Gaussian and the entropy it is one quadratic equation, and on the line it is a convex problem in the quantile function.</p>
+
+<h3 id="jko-why">Why measure the step with $W_2$</h3>
+<p>There are two natural ways to go from a measure $\al$ to a nearby one.</p>
+<div class="cols">
+<div class="card"><h4>Mixing (“vertical”)</h4><p>$(1-\vartheta)\al+\vartheta\be$: mass disappears here and reappears there, without travelling. It is the linear structure of measures.</p></div>
+<div class="card"><h4>Moving (“horizontal”)</h4><p>$\pf{(\Id+\tau v)}{\al}$: every bit of mass slides from $x$ to $x+\tau v(x)$. It is the transport structure, measured by $W_2$: $W_2^2\big(\al,\pf{(\Id+\tau v)}{\al}\big)\le\tau^2\int\norm{v}^2\dd\al$.</p></div>
+</div>
+<p>The energies of this lesson are decreased by <em>moving</em> mass: spreading a density (entropy), pulling samples towards data (MMD), sliding neurons towards useful features (§10). And $W_2$ heavily penalises mixing: from $\al=\delta_0$ to $(1-\vartheta)\delta_0+\vartheta\delta_1$ the distance is $\sqrt\vartheta$ (mass $\vartheta$ must travel a distance $1$), which is $0.1$ for $\vartheta=0.01$ — far more than the size $\vartheta$ of the change of weights. Measuring steps with $W_2$ therefore forces each step to be a <strong>small transport</strong>. (This is the phenomenon of <a href="Lesson03.html#geo-space">Lesson 3, §6</a>: the mixture path is infinitely long for $W_2$.)</p>
+
+<h3 id="jko-def">The JKO step</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 15.1, p. 356</span></div>
+<p><strong>Definition 15.1</strong> (JKO minimizing movement). Given $\tau>0$ and $\al^{(0)}$, define recursively</p>
+$$\al^{(\ell+1)}\in\argmin_{\al\in\Pc_2(\R^d)}\Big\{\frac1{2\tau}W_2(\al^{(\ell)},\al)^2+f(\al)\Big\}.\qquad(15.1)$$
+<p>The piecewise-constant interpolation $\al_\tau(t)=\al^{(\ell)}$ for $t\in[\ell\tau,(\ell+1)\tau)$ is called a minimizing movement.</p>
+</div>
+<dl class="decode">
+<dt>$f(\al)$</dt><dd>The energy on measures that we want to decrease: an entropy, a KL divergence, an MMD to data… It may take the value $+\infty$ (the entropy of a point cloud).</dd>
+<dt>$\al^{(\ell)}$</dt><dd>The current measure, after $\ell$ steps; it approximates the flow at time $t=\ell\tau$.</dd>
+<dt>$\frac1{2\tau}W_2(\al^{(\ell)},\al)^2$</dt><dd>The price of moving from $\al^{(\ell)}$ to $\al$: the cheapest way to move the mass, in squared distance, divided by $2\tau$.</dd>
+<dt>$\argmin$</dt><dd>Exactly the implicit Euler step of §1, with $\norm{x-y}$ replaced by $W_2$. When $f$ is convex along $W_2$ geodesics (§7) and $\tau$ is small, the minimiser exists and is unique; we use this freely.</dd>
+<dt>$\al_\tau(t)$</dt><dd>The staircase curve “stay at $\al^{(\ell)}$ during $[\ell\tau,(\ell+1)\tau)$”. As $\tau\to0$ it converges (under assumptions) to a curve $\al_t$, the <em class="new">Wasserstein gradient flow</em> of $f$ (§4).</dd>
+<dt>JKO</dt><dd>Jordan, Kinderlehrer and Otto (1998), who introduced the scheme to show that the Fokker–Planck equation is the gradient flow of the free energy for $W_2$ (cited in CompOT p. 154 and StatOT p. 183).</dd>
+</dl>
+<div class="box remark"><div class="box-h">Same step, three normalisations</div>
+<ul>
+<li><strong>OT4ML</strong> (above): $\frac1{2\tau}W_2^2+f$ — the step has length $\tau$ in time.</li>
+<li><strong>StatOT</strong> (6.14), p. 189: $\mathrm{prox}_{hH}(\mu)=\argmin_\nu\{hH(\nu)+\frac12W_2^2(\mu,\nu)\}$, “the proximal operator on the Wasserstein space” — the same step with $\tau=h$ (multiply OT4ML’s objective by $\tau$).</li>
+<li><strong>CompOT</strong> Remark 9.10, (9.27), p. 153: $\argmin_\al W_2(\al,\al^{(\ell)})^2+\tau F(\al)$ with “the time $t=\tau\ell$”. Dividing by $\tau$ gives $\frac1{2(\tau/2)}W_2^2+F$: a JKO step of size $\tau/2$, so the iterates follow the flow at time $\tau\ell/2$. See the note on the sources below.</li>
+</ul>
+</div>
+
+<h3 id="jko-dirac">First example: one Dirac and a potential energy</h3>
+<p>Take $f(\al)=\int V\,\dd\al$ (a <em class="new">potential energy</em>: each bit of mass pays $V$ where it sits) and start from a single Dirac $\al^{(\ell)}=\delta_x$.</p>
+<ol class="steps">
+<li>$$W_2^2(\delta_x,\al)=\int\norm{x-y}^2\dd\al(y).$$<span class="why">The only coupling of $\delta_x$ and $\al$ sends all of $\al$’s mass from $x$: it is $\delta_x\otimes\al$.</span></li>
+<li>$$\frac1{2\tau}W_2^2(\delta_x,\al)+f(\al)=\int\Big(\frac{\norm{y-x}^2}{2\tau}+V(y)\Big)\dd\al(y).$$<span class="why">Both terms are integrals against $\al$.</span></li>
+<li>The minimiser is $\delta_{y^\star}$ with $y^\star\in\argmin_y\frac{\norm{y-x}^2}{2\tau}+V(y)$.<span class="why">The average of a function against a probability measure is at least its minimum, with equality when all the mass sits at a minimiser.</span></li>
+</ol>
+<p>So from a Dirac, <strong>the JKO step is exactly the Euclidean implicit step</strong> of $h=V$ (this is the remark “restrict to $\al=\delta_x$” of OT4ML p. 356). With $V(y)=\frac12y^2$, $x=2$ and $\tau=0.5$: $y^\star=\frac{x}{1+\tau}=\frac43\approx1.333$, while the exact flow $\dot x=-x$ gives $2e^{-0.5}\approx1.213$ and the explicit step gives $1$ — the numbers of the quick check of §1. The mass does not spread: a potential energy moves each particle on its own (§4).</p>
+
+<h3 id="jko-gauss">Second example: the heat equation, one Gaussian step by hand</h3>
+<p>Now take the <em class="new">neg-entropy</em> $f(\al)=\int\rho\log\rho\,\dd x$ (and $+\infty$ if $\al$ has no density). It is small for spread-out densities, so its gradient flow should spread mass: we will see in §4 that it is the <strong>heat equation</strong> $\partial_t\rho=\Delta\rho$, whose solution from $\N(m,s^2)$ is $\N(m,s^2+2t)$. Let us run one JKO step from a Gaussian, on the line.</p>
+<div class="box thm"><div class="box-h">Proposition (JKO step of the entropy from a Gaussian; computed here)</div>
+<p>On $\R$, the JKO step (15.1) for $f(\al)=\int\rho\log\rho$ from $\al^{(\ell)}=\N(m,\sigma_\ell^2)$ is $\al^{(\ell+1)}=\N(m,\sigma_{\ell+1}^2)$ with</p>
+$$\sigma_{\ell+1}=\frac{\sigma_\ell+\sqrt{\sigma_\ell^2+4\tau}}{2}\qquad\text{(the positive root of }\sigma^2-\sigma_\ell\,\sigma-\tau=0).$$
+</div>
+<div class="box idea"><div class="box-h">Idea</div>
+<p>The minimiser is a Gaussian, and on Gaussians both terms are explicit: $W_2^2$ is the squared Euclidean distance between the pairs $(m,\sigma)$, and the neg-entropy is $-\log\sigma$ plus a constant. One derivative in $\sigma$ finishes the job.</p>
+</div>
+<details class="fold proof" open><summary>Full derivation</summary><div class="fold-body">
+<ol class="steps">
+<li>The minimiser is a Gaussian.<span class="why">Replacing a candidate $\al$ by the Gaussian $\mathrm{Gauss}(\al)$ with the same mean and variance does not increase $W_2^2(\al^{(\ell)},\cdot)$ (Gelbrich’s theorem, OT4ML Thm. 16.30, p. 439: equality between Gaussians, inequality in general) and does not increase the neg-entropy (the Gaussian has the largest entropy at given variance). This is the “Gaussian-preservation criterion” of OT4ML Thm. 16.31, p. 439. With a unique minimiser, it is Gaussian.</span></li>
+<li>$$\begin{aligned}&\frac1{2\tau}W_2^2\big(\N(m,\sigma_\ell^2),\N(m',\sigma^2)\big)+f\big(\N(m',\sigma^2)\big)\\&\qquad=\frac{(m'-m)^2+(\sigma-\sigma_\ell)^2}{2\tau}-\log\sigma-\tfrac12\log(2\pi e).\end{aligned}$$<span class="why">The 1D Gaussian formula $W_2^2=(m-m')^2+(\sigma-\sigma')^2$ (<a href="#recall-w2">refresher</a>) and $\int\rho\log\rho=-\log\sigma-\frac12\log(2\pi e)$ (<a href="#recall-entropy">refresher</a>).</span></li>
+<li>$m'=m$: the mean does not move.<span class="why">Only the first term depends on $m'$.</span></li>
+<li>$$\frac{\sigma-\sigma_\ell}{\tau}-\frac1\sigma=0\iff\sigma^2-\sigma_\ell\,\sigma-\tau=0.$$<span class="why">Derivative in $\sigma$; the function of $\sigma$ is strictly convex on $(0,\infty)$ (a parabola plus $-\log$), so the zero of the derivative is the minimiser.</span></li>
+<li>$$\sigma_{\ell+1}=\tfrac12\big(\sigma_\ell+\sqrt{\sigma_\ell^2+4\tau}\big)=\sigma_\ell+\frac\tau{\sigma_\ell}+O(\tau^2).$$<span class="why">Positive root. Expanding $\sqrt{\sigma^2+4\tau}=\sigma\big(1+\frac{2\tau}{\sigma^2}-\frac{2\tau^2}{\sigma^4}+\dots\big)$.</span></li>
+<li>$\dfrac{\sigma_{\ell+1}-\sigma_\ell}{\tau}\to\dfrac1\sigma$, i.e. $\dfrac{\dd}{\dd t}\sigma^2=2$: the limit is $\sigma(t)^2=\sigma_0^2+2t$, the heat flow.<span class="why">$\frac{\dd}{\dd t}\sigma^2=2\sigma\dot\sigma=2$. Consistency of the scheme with the exact solution.</span></li>
+</ol>
+</div></details>
+<div class="box example"><div class="box-h">Worked example — $\sigma_0=0.5$, $\tau=0.25$, four steps</div>
+<div class="table-wrap"><table>
+<thead><tr><th>time $t=\ell\tau$</th><th>$0.25$</th><th>$0.5$</th><th>$0.75$</th><th>$1$</th></tr></thead>
+<tbody>
+<tr><td>JKO $\sigma_\ell$</td><td>$0.8090$</td><td>$1.0476$</td><td>$1.2480$</td><td>$1.4236$</td></tr>
+<tr><td>exact $\sqrt{0.25+2t}$</td><td>$0.8660$</td><td>$1.1180$</td><td>$1.3229$</td><td>$1.5$</td></tr>
+<tr><td>error $=W_2$ between the two</td><td>$0.0570$</td><td>$0.0704$</td><td>$0.0749$</td><td>$0.0764$</td></tr>
+</tbody></table></div>
+<p>First step: $\sigma_1=\frac12(0.5+\sqrt{0.25+1})=\frac12(0.5+1.1180)=0.8090$. Halving the step halves the error at $t=1$: $0.0764$, $0.0414$, $0.0217$, $0.0111$ for $\tau=0.25$, $0.125$, $0.0625$, $0.03125$ — a <strong>first-order</strong> scheme, like the implicit Euler step. The implicit step underestimates the spreading (as the implicit step of §1 underestimated the decay). Independent check: the particle solver of the next subsection, with 400 particles, gives $\sigma\approx0.8092$ after the first step.</p>
+</div>
+<figure class="fig"><!-- include figures/L08/jko_heat.svg --><figcaption>Left: the heat flow from $\N(0,0.5^2)$ (orange-red) at $t=0.25$ and $t=1$: exact (green) and JKO with $\tau=0.25$ (purple, dashed). Right: the standard deviation along the flow; the JKO iterates (dots) stay below the exact curve and approach it as $\tau$ decreases.</figcaption></figure>
+<div class="quiz"><p>Do the same computation for the Fokker–Planck energy $f(\al)=\KL\big(\al\,|\,\N(0,1)\big)=\int\rho\log\rho+\int\frac{x^2}2\dd\al+\mathrm{const}$, from $\N(2,0.5^2)$ with $\tau=0.25$.</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>On $\N(m',\sigma^2)$ the potential term is $\frac12(m'^2+\sigma^2)$. Mean: $\frac{m'-m}{\tau}+m'=0$, so $m'=\frac{m}{1+\tau}=1.6$. Standard deviation: $\frac{\sigma-\sigma_\ell}\tau+\sigma-\frac1\sigma=0$, i.e. $(1+\tau)\sigma^2-\sigma_\ell\sigma-\tau=0$, so $\sigma=\frac{\sigma_\ell+\sqrt{\sigma_\ell^2+4\tau(1+\tau)}}{2(1+\tau)}=\frac{0.5+\sqrt{1.5}}{2.5}=0.6899$. The exact flow (§4) is at $\big(2e^{-0.25},\sqrt{1-0.75e^{-0.5}}\big)=(1.5576,\,0.7383)$.</p>
+</div></details></div>
+
+<h3 id="jko-1d">On the line: a convex problem in the quantile function</h3>
+<p>For non-Gaussian data there is no closed form, but in one dimension the JKO step becomes a <strong>convex</strong> problem once the measure is described by its quantile function $Q=C^{-1}$ (<a href="Lesson03.html#recall-1d">Lesson 3 refresher</a>).</p>
+<ol class="steps">
+<li>$$W_2^2(\al,\al^{(\ell)})=\int_0^1\big(Q(s)-Q_\ell(s)\big)^2\dd s.$$<span class="why">The 1D formula: the optimal plan matches quantiles.</span></li>
+<li>$$\rho\big(Q(s)\big)\,Q'(s)=1\qquad(0<s<1).$$<span class="why">Differentiate $C(Q(s))=s$: $C'=\rho$. Mass $\dd s$ between the levels $s$ and $s+\dd s$ is spread over a length $Q'(s)\dd s$.</span></li>
+<li>$$\int\rho\log\rho\,\dd x=\int_0^1\log\rho\big(Q(s)\big)\,\dd s=-\int_0^1\log Q'(s)\,\dd s.$$<span class="why">Change of variables $x=Q(s)$, $\dd x=Q'(s)\dd s$, and $\rho(Q)Q'=1$; then line 2 again.</span></li>
+<li>$$\min_Q\ \int_0^1\Big(\frac{(Q-Q_\ell)^2}{2\tau}-\log Q'\Big)\dd s .$$<span class="why">The JKO step written in $Q$. It is strictly convex: $Q\mapsto Q'$ is linear and $-\log$ is convex; the constraint “$Q$ increasing” is enforced by the logarithm.</span></li>
+</ol>
+<p><strong>Particles.</strong> Put $N$ particles $x_1<\dots<x_N$ at the levels $s_j=(j-\frac12)/N$, each carrying mass $\frac1N$, and give each gap the density $\frac{1/N}{x_{i+1}-x_i}$. Multiplying the discretised objective by $N$, a JKO step minimises</p>
+$$G(x)=\sum_{i=1}^N\frac{\big(x_i-x_i^{(\ell)}\big)^2}{2\tau}-\sum_{i=1}^{N-1}\log\big(x_{i+1}-x_i\big)\qquad\Big(+\sum_iV(x_i)\ \text{for Fokker–Planck}\Big).$$
+<p>Its optimality condition, $\frac{x_i-x_i^{(\ell)}}{\tau}=\frac1{x_i-x_{i-1}}-\frac1{x_{i+1}-x_i}$, is the implicit Euler step of the particle system $\dot x_i=\frac1{x_i-x_{i-1}}-\frac1{x_{i+1}-x_i}$: a particle is pushed away from the side where its neighbour is closer, i.e. away from high density — diffusion seen from the particles. The Hessian of $G$ is tridiagonal, so each Newton iteration costs $O(N)$, and the step is solved for any $\tau$.</p>
+<div class="widget" data-widget="l8jko"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p>What to look at: 160 particles start at the quantiles of a two-bump law (orange-red, dashed). Top: the exact flow at time $t$ (green) and the JKO iterate at the last step before $t$ (purple). Bottom: the motion of a few quantiles — exact curves (green) and JKO iterates (purple dots), a Lagrangian picture of the flow. Change the step $\tau$: at $t=1$, the $W_2$ error of the JKO iterates is $0.0537$, $0.0291$, $0.0150$, $0.0074$ for $\tau=0.2$, $0.1$, $0.05$, $0.025$ (the distance travelled by the heat flow is $0.875$): first order again. The last line of the readout runs the <em>explicit</em> scheme on the same particles: the smallest gap is $0.0065$, so it is only stable for $\tau\lesssim\frac12\cdot0.0065^2\approx2\times10^{-5}$; with $\tau=0.01$ the particles cross after 3 steps. Switch to Fokker–Planck: the mass drifts to the blue target and the errors are smaller ($0.016$ at $\tau=0.2$).</p>
+
+<div class="box ml"><div class="box-h">In machine learning — proximal steps on distributions</div>
+<p><strong>Sampling.</strong> To sample a posterior $\be\propto e^{-V}$, StatOT (§6.2.2, pp. 188–190) writes $\KL(\cdot|\be)=\int V\dd\al+\int\rho\log\rho+\mathrm{const}$ as “smooth + non-smooth” and proposes the proximal gradient algorithm on the Wasserstein space: a gradient step on the potential, then the JKO step (6.14) of the entropy. It converges fast but the JKO step is intractable in high dimension; the <em>proximal sampler</em> (StatOT §6.2.3, pp. 190–191) is an implementable cousin whose rates “exactly replicate the rates for the proximal point method from convex optimization”. <strong>Grids.</strong> On images or volumes, an <em>entropic</em> JKO step — $W_2^2$ replaced by its entropic version of Lesson 7 — is solved by generalised Sinkhorn iterations: “An entropic JKO step fixes the first marginal to the previous iterate and puts the energy on the second marginal” (OT4ML §8.6, p. 155, and Prop. 8.26).</p>
+</div>
+<div class="box remark"><div class="box-h">Note on the sources — CompOT’s clock</div>
+<p>CompOT Remark 9.10 (p. 153) uses the step $\argmin_\al W_2^2(\al,\al^{(\ell)})+\tau F(\al)$ and says that $\al^{(\ell)}$ approximates the flow at “the time $t=\tau\ell$”. For $p=2$ this step is the JKO step of size $\tau/2$, so the right time is $\tau\ell/2$. Check on one Dirac with $F(\al)=\int\frac{x^2}2\dd\al$: the step is $x\mapsto x/(1+\tau/2)$; with $\tau=0.01$ and $100$ steps, $x_{100}/x_0=1.005^{-100}=0.6073$, close to $e^{-1/2}=0.6065$ and far from $e^{-1}=0.3679$. The limit PDE (9.28) is right; only the clock is off by a factor 2.</p>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>JKO step from a Dirac and a potential energy → the Euclidean implicit step, and the mass stays a Dirac.</li>
+<li>JKO step with Gaussian data → restrict to Gaussians (when Gaussians are preserved) and minimise over $(m,\sigma)$: $W_2^2$ is Euclidean in $(m,\sigma)$ on the line.</li>
+<li>JKO step on the line → write it in quantiles: $W_2^2=\int(Q-Q_\ell)^2$, entropy $=-\int\log Q'$.</li>
+<li>Compare normalisations before comparing clocks: $\frac1{2\tau}W_2^2+f$ (step $\tau$) versus $W_2^2+\tau F$ (step $\tau/2$).</li>
+</ul>
+</div>

@@ -1,0 +1,105 @@
+<h2 id="euclid">1. The model: gradient flows in $\R^d$ <span class="ref">OT4ML p. 356 · CompOT p. 153</span></h2>
+<p class="tldr">The gradient flow $\dot x=-\nabla h(x)$ can be discretised explicitly (gradient descent: take the slope where you stand) or implicitly (take the slope where you land, by solving a small minimisation problem); the implicit step only needs a distance, which is why it is the one that will move measures.</p>
+
+<h3 id="euclid-why">Why start with points</h3>
+<p>The whole lesson answers one question: <strong>how do you run gradient descent when the unknown is a probability measure?</strong> Machine learning is full of such problems: fit a cloud of generated samples to a data set (minimise an MMD), sample a Bayesian posterior (minimise a KL divergence), train a wide neural network (minimise a risk that depends on the distribution of its neurons). For a vector $x\in\R^d$ the answer is gradient descent, $x-\tau\nabla h(x)$. For a measure $\al$ the same formula breaks down: “$\al-\tau g$” is a signed measure, whose mass can become negative. Before fixing this (§2), we look at the Euclidean scheme from the angle that will survive: <strong>a step is a minimisation problem that balances “decrease the energy” against “do not move too far”</strong>.</p>
+
+<h3 id="euclid-euler">Explicit and implicit Euler steps</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML §15.1, p. 356</span></div>
+<p><em>Euclidean gradient flows.</em> If we restrict (15.1) to finite dimensions and assume $\al_t=\delta_{x(t)}$ and $\al=\delta_x$ (single Dirac measures), this matches the implicit Euler scheme:</p>
+$$x(t+\tau)\in\argmin_x\Big\{\frac1{2\tau}\norm{x-x(t)}^2+h(x)\Big\},$$
+<p>where $h(x)=f(\delta_x)$. When $h$ is differentiable and the minimizer is unique, the solution is characterized by the implicit Euler formula $x(t+\tau)=(\Id+\tau\nabla h)^{-1}(x(t))$. In contrast, the explicit Euler scheme is: $x(t+\tau)=(\Id-\tau\nabla h)(x(t))=x(t)-\tau\nabla h(x(t))$. Both schemes converge as $\tau\to0$ to:</p>
+$$\dot x(t)=-\nabla h(x(t)).\qquad(15.2)$$
+</div>
+<div class="box course"><div class="box-h">In the course <span class="ref">CompOT (9.24)–(9.25), p. 153</span></div>
+<p>[(9.24), gradient descent] corresponds to a so-called “explicit” minimization scheme and only applies for smooth functions $F$. For nonsmooth functions, one can use instead an “implicit” scheme, which is also called the proximal-point algorithm […] $a^{(\ell+1)}=\mathrm{Prox}^{\norm{\cdot}}_{\tau F}(a^{(\ell)})=\argmin_a\frac12\norm{a-a^{(\ell)}}^2+\tau F(a)$. […] For convex $F$, iterations (9.25) always converge, for any value of $\tau>0$.</p>
+</div>
+<dl class="decode">
+<dt>(15.1)</dt><dd>The JKO step on measures, defined in §2. The book introduces the Euclidean schemes as its restriction to single Diracs; here we start from them.</dd>
+<dt>$h$</dt><dd>The energy to minimise, a function on $\R^d$ (the book writes $h(x)=f(\delta_x)$ because it will be the restriction to Diracs of an energy $f$ on measures, §2).</dd>
+<dt>$\tau$</dt><dd>The time step: $x(t+\tau)$ approximates the exact flow at time $t+\tau$.</dd>
+<dt>$\frac1{2\tau}\norm{x-x(t)}^2$</dt><dd>The price of moving from $x(t)$ to $x$. A small $\tau$ makes moving expensive: small steps.</dd>
+<dt>$\argmin\{\cdots\}$</dt><dd>The next point is the best compromise between the energy $h(x)$ and the cost of moving there. “$\in$” because there may be several minimisers.</dd>
+<dt>$(\Id+\tau\nabla h)^{-1}$</dt><dd>The <em class="new">resolvent</em>: $x(t+\tau)$ is the point $x$ such that $x+\tau\nabla h(x)=x(t)$. It is an <em>equation to solve</em>, not a formula to evaluate.</dd>
+<dt>$\mathrm{Prox}_{\tau F}$</dt><dd>The <em class="new">proximal operator</em>: the same minimisation, with CompOT’s normalisation (multiply the book’s objective by $\tau$). Same minimiser.</dd>
+<dt>(15.2)</dt><dd>The <em class="new">gradient flow</em>: the curve that always goes in the direction of steepest descent, at speed $\norm{\nabla h}$.</dd>
+</dl>
+<p><strong>Where the implicit formula comes from.</strong> If $h$ is differentiable, the objective $\frac1{2\tau}\norm{x-x_k}^2+h(x)$ has zero gradient at its minimiser $x_{k+1}$:</p>
+$$\frac{x_{k+1}-x_k}{\tau}+\nabla h(x_{k+1})=0\qquad\Longleftrightarrow\qquad x_{k+1}=x_k-\tau\,\nabla h(x_{k+1}).$$
+<p>So the implicit step is a gradient step <strong>with the slope taken where you land</strong>; the explicit step takes it where you stand. Both are first-order approximations of (15.2): $\frac{x_{k+1}-x_k}\tau\approx\dot x$.</p>
+
+<div class="box example" id="euclid-example"><div class="box-h">Worked example — a stiff quadratic, $h(x)=\frac L2x^2$ with $L=10$, $x_0=1$</div>
+<p>The exact flow is $\dot x=-Lx$, so $x(t)=e^{-Lt}$. Each scheme multiplies $x_k$ by a fixed factor:</p>
+<ul>
+<li>explicit: $x_{k+1}=x_k-\tau Lx_k=(1-\tau L)\,x_k$;</li>
+<li>implicit: $x_{k+1}+\tau Lx_{k+1}=x_k$, so $x_{k+1}=\dfrac{x_k}{1+\tau L}$.</li>
+</ul>
+<div class="table-wrap"><table>
+<thead><tr><th>step $\tau$</th><th>explicit factor</th><th>implicit factor</th><th>$x$ at $t=1$: explicit</th><th>implicit</th><th>exact $e^{-10}$</th></tr></thead>
+<tbody>
+<tr><td>$0.01$ (100 steps)</td><td>$0.9$</td><td>$0.9091$</td><td>$2.66\times10^{-5}$</td><td>$7.26\times10^{-5}$</td><td>$4.54\times10^{-5}$</td></tr>
+<tr><td>$0.25$ (4 steps)</td><td>$-1.5$</td><td>$0.2857$</td><td class="no">$5.06$</td><td>$6.66\times10^{-3}$</td><td>$4.54\times10^{-5}$</td></tr>
+</tbody></table></div>
+<p>With a small step both schemes are accurate (one undershoots, the other overshoots: first order). With $\tau=0.25>2/L$ the explicit factor has modulus $1.5>1$: the iterates oscillate and <strong>blow up</strong>, $(-1.5)^4=5.06$. The implicit factor $1/(1+\tau L)$ is in $(0,1)$ for <em>every</em> $\tau>0$: the iterates decrease towards the minimiser, whatever the step.</p>
+</div>
+<figure class="fig"><!-- include figures/L08/euler.svg --><figcaption>Left: the stiff quadratic of the worked example with $\tau=0.25$ ($\tau L=2.5$). The explicit iterates (purple) oscillate with growing amplitude; the implicit iterates (green) decay; the exact flow is the blue curve. Right: one implicit step for the non-smooth $h(x)=\abs{x}$, from $x_k=1.5$ with $\tau=0.5$: the next point minimises the sum (green) of the energy (grey) and the cost of moving (dashed); it is $x_{k+1}=1$, the soft-thresholding of $x_k$.</figcaption></figure>
+
+<div class="box remark"><div class="box-h">The implicit step does not need a gradient</div>
+<p>For $h(x)=\abs{x}$ on $\R$ (no derivative at $0$), the implicit step is perfectly defined: minimising $\frac1{2\tau}(x-y)^2+\abs{x}$ gives the <em>soft-thresholding</em> $x=\mathrm{sign}(y)\max(\abs{y}-\tau,0)$. With $\tau=0.3$: $y=0.7\mapsto0.4$, $y=0.2\mapsto0$, $y=-1\mapsto-0.7$. Small values are set exactly to zero — the mechanism behind sparsity in the Lasso. Keep this in mind: on measures, the entropy will play the role of a non-smooth energy (it is $+\infty$ on point clouds), and the implicit step will handle it.</p>
+</div>
+
+<h3 id="euclid-rates">What a gradient flow guarantees: dissipation and rates</h3>
+<p>Three facts about $\dot x=-\nabla h(x)$ will be lifted, one by one, to measures in §7. Their Euclidean proofs fit in a few lines.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML §15.2, p. 373</span></div>
+<p><em>Dissipation and finite metric length.</em> […] For the classical gradient flow of a smooth function $h:\R^d\to\R$, $\dot x_t=-\nabla h(x_t)$, the chain rule gives $\dfrac{\dd}{\dd t}h(x_t)=-\norm{\nabla h(x_t)}^2=-\norm{\dot x_t}^2.$</p>
+</div>
+<div class="box thm"><div class="box-h">Three facts (Euclidean model; the Wasserstein versions are OT4ML Prop. 15.26, Thm. 15.28 and Prop. 15.29, §7)</div>
+<ol>
+<li><strong>Dissipation.</strong> $\frac{\dd}{\dd t}h(x_t)=-\norm{\nabla h(x_t)}^2\le0$: the energy decreases, at the rate of the squared slope.</li>
+<li><strong>Convex case.</strong> If $h$ is convex with a minimiser $x^\star$: $h(x_t)-h(x^\star)\le\dfrac{\norm{x_0-x^\star}^2}{2t}$.</li>
+<li><strong>Strongly convex case.</strong> If $h$ is $\lambda$-strongly convex, it satisfies the <em class="new">Polyak–Łojasiewicz (PL) inequality</em> $\norm{\nabla h(x)}^2\ge2\lambda\big(h(x)-h^\star\big)$, and then $h(x_t)-h^\star\le e^{-2\lambda t}\big(h(x_0)-h^\star\big)$.</li>
+</ol>
+</div>
+<div class="box idea"><div class="box-h">Idea of the proofs</div>
+<p>(1) is the chain rule. (2): the distance to the minimiser decreases at a rate at least equal to the energy gap (convexity says the descent direction points towards $x^\star$); integrate. (3): PL turns the dissipation identity into a differential inequality $E'\le-2\lambda E$; Grönwall.</p>
+</div>
+<details class="fold proof"><summary>Full proofs</summary><div class="fold-body">
+<p><strong>(1)</strong> $\frac{\dd}{\dd t}h(x_t)=\ps{\nabla h(x_t)}{\dot x_t}=\ps{\nabla h(x_t)}{-\nabla h(x_t)}=-\norm{\nabla h(x_t)}^2$.</p>
+<p><strong>(2)</strong></p>
+<ol class="steps">
+<li>$$\frac{\dd}{\dd t}\tfrac12\norm{x_t-x^\star}^2=\ps{x_t-x^\star}{\dot x_t}=-\ps{\nabla h(x_t)}{x_t-x^\star}.$$<span class="why">Chain rule, and $\dot x_t=-\nabla h(x_t)$.</span></li>
+<li>$$-\ps{\nabla h(x_t)}{x_t-x^\star}\le-\big(h(x_t)-h(x^\star)\big).$$<span class="why">Convexity at $x_t$, evaluated at $y=x^\star$: $h(x^\star)\ge h(x_t)+\ps{\nabla h(x_t)}{x^\star-x_t}$.</span></li>
+<li>$$\int_0^t\big(h(x_s)-h^\star\big)\dd s\le\tfrac12\norm{x_0-x^\star}^2-\tfrac12\norm{x_t-x^\star}^2\le\tfrac12\norm{x_0-x^\star}^2.$$<span class="why">Integrate lines 1–2 from $0$ to $t$.</span></li>
+<li>$$t\,\big(h(x_t)-h^\star\big)\le\int_0^t\big(h(x_s)-h^\star\big)\dd s\le\tfrac12\norm{x_0-x^\star}^2.$$<span class="why">$s\mapsto h(x_s)$ is non-increasing by (1), so every value on $[0,t]$ is at least the last one. Divide by $t$.</span></li>
+</ol>
+<p><strong>(3)</strong></p>
+<ol class="steps">
+<li>$$h^\star=\min_yh(y)\ge\min_y\Big(h(x)+\ps{\nabla h(x)}{y-x}+\tfrac\lambda2\norm{y-x}^2\Big)=h(x)-\frac{\norm{\nabla h(x)}^2}{2\lambda}.$$<span class="why">Strong convexity gives a lower bound by a parabola in $y$; its minimum is at $y=x-\nabla h(x)/\lambda$ (complete the square). Rearranged: the PL inequality.</span></li>
+<li>With $E(t)=h(x_t)-h^\star$: $E'(t)=-\norm{\nabla h(x_t)}^2\le-2\lambda E(t)$.<span class="why">(1), then PL.</span></li>
+<li>$E(t)\le e^{-2\lambda t}E(0)$.<span class="why">Grönwall (<a href="#recall-gd">refresher</a>).</span></li>
+</ol>
+<p>For $h=\frac L2x^2$: $h(x_t)=\frac L2e^{-2Lt}x_0^2$, so (3) holds with equality and $\lambda=L$.</p>
+</div></details>
+
+<h3 id="euclid-movement">The implicit step as a “minimizing movement”</h3>
+<p>Look at the implicit step once more: it only uses <strong>the energy and the squared distance</strong>. Nothing in it requires a vector space. On any metric space $(\mathcal X,d)$ one can define</p>
+$$x^{(\ell+1)}\in\argmin_{x\in\mathcal X}\ \frac1{2\tau}d\big(x^{(\ell)},x\big)^2+h(x),$$
+<p>a <em class="new">minimizing movement</em>. CompOT writes it explicitly (Remark 9.11, (9.31), p. 154, with $d^2+\tau F$, the same minimiser for a step $\tau/2$) and adds: “The implicit step is always stable, is also defined for nonsmooth $F$, but is usually not accessible in closed form” (p. 155). The general theory of the limits $\tau\to0$ in metric spaces is due to Ambrosio, Gigli and Savaré (OT4ML Defs. 15.8–15.9, p. 359). <strong>The plan of the lesson</strong>: take $\mathcal X=\Pc_2(\R^d)$ and $d=W_2$.</p>
+
+<div class="box ml"><div class="box-h">In machine learning — step sizes and proximal steps</div>
+<p><strong>Training a model by gradient descent is the explicit scheme</strong> applied to the loss $h(\theta)$ of its parameters $\theta$: the learning rate is $\tau$, and the worked example is the reason why a learning rate above $2/L$ ($L$ the largest curvature of the loss) makes training diverge. <strong>Proximal steps</strong> are used when part of the objective is non-smooth: for the Lasso, $\min_\theta\frac12\norm{y-A\theta}^2+\mu\norm{\theta}_1$, the proximal gradient method (ISTA) alternates a gradient step on the smooth part and a soft-thresholding on the $\ell^1$ part. StatOT (§6.2.2, (6.12)–(6.14), pp. 188–189) uses exactly this split to explain sampling algorithms: the potential energy is the smooth part, the entropy the non-smooth part, and “the proximal operator on the Wasserstein space” is the JKO step of §2.</p>
+</div>
+
+<div class="box pitfall"><div class="box-h">Pitfall — “implicit” does not mean “free”</div>
+<p>The implicit step is stable for every $\tau$, but each step is an optimisation problem; it is cheap only when that problem has structure (a closed form, convexity, a sparse Hessian). On measures we will meet both cases: closed forms for Diracs and Gaussians (§2), a convex problem in one dimension (§2), and particle methods everywhere else (§5).</p>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>When you see $\argmin_x\frac1{2\tau}d(x,x_k)^2+h(x)$ → an implicit Euler (proximal) step of the gradient flow of $h$ for the distance $d$; first-order condition $\frac{x_{k+1}-x_k}{\tau}=-\nabla h(x_{k+1})$.</li>
+<li>To prove a rate for a gradient flow → differentiate the energy (dissipation), then find an inequality between the slope and the energy gap (convexity, PL) and integrate.</li>
+</ul>
+</div>
+<div class="quiz"><p>For $h(x)=\frac12x^2$ and $x_0=2$, compute one explicit and one implicit step with $\tau=0.5$, and the exact flow at $t=0.5$.</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>Explicit: $2-0.5\cdot2=1$. Implicit: $x+0.5x=2$, so $x=4/3\approx1.333$. Exact: $2e^{-0.5}\approx1.213$, in between. We will meet these three numbers again in §2: they are the JKO step of a Dirac.</p>
+</div></details></div>

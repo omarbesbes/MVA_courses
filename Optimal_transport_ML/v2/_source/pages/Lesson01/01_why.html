@@ -1,0 +1,62 @@
+<h2 id="why">1. Why transport? Comparing distributions with geometry <span class="ref">OT4ML ch. 1–2, pp. 9, 20</span></h2>
+<p class="tldr">Machine learning keeps comparing probability distributions; optimal transport compares them by the cost of moving one onto the other, so that the comparison inherits the geometry of the space where the data live.</p>
+
+<h3 id="why-problem">The problem: machine learning compares distributions</h3>
+<p>Many learning problems are, at their core, a comparison between two probability distributions:</p>
+<ul>
+<li>a <strong>generative model</strong> produces samples (images, molecules, sentences); training asks that the distribution of its samples be close to the distribution of the data;</li>
+<li>in <strong>domain adaptation</strong>, a classifier is trained on a labelled source domain (say, synthetic images) and must work on a target domain (real photos) whose feature distribution is shifted;</li>
+<li>a 3D scanner returns a <strong>point cloud</strong>; to compare it with a reference shape, you compare two clouds of points;</li>
+<li>two images are compared through their <strong>colour histograms</strong>, two documents through their word histograms.</li>
+</ul>
+<p>In each case we want a number $D(\al,\be)\ge0$ that says how different two distributions $\al$ and $\be$ are, so that learning becomes $\min_\theta D(\al_\theta,\be)$ over the parameters $\theta$ of a model $\al_\theta$. Two requirements are natural: $D$ should make sense for <strong>point clouds</strong> (finite samples) as well as for densities, and it should be <strong>small when the mass is moved a little</strong>: shifting every point by $\eps$ should change $D$ by about $\eps$.</p>
+
+<h3 id="why-blind">Pointwise comparisons are blind to geometry</h3>
+<p>The classical ways of comparing distributions compare them <em>point by point</em> — the density of $\al$ at $x$ against the density of $\be$ at the same $x$. They do not know how far apart two points are.</p>
+<div class="box recall"><div class="box-h">Reminder — two classical discrepancies</div>
+<p><strong>Kullback–Leibler divergence:</strong> $\KL(\al\,|\,\be)=\int\log\frac{\dd\al}{\dd\be}\,\dd\al$ if $\al$ has a density with respect to $\be$, and $+\infty$ otherwise (in particular as soon as $\al$ puts mass where $\be$ puts none). <strong>Total variation:</strong> the total mass by which the two distributions differ, $\sum_i\abs{a_i-b_i}$ for histograms on the same points, $\int\abs{\rho_\al-\rho_\be}$ for densities. Both are recalled in <a href="Reminders.html#entropy">Reminders — entropy and KL</a> and <a href="Reminders.html#f-divergences">f-divergences</a>; total variation is studied in <a href="Lesson03.html#tv">Lesson 3</a>.</p>
+</div>
+<div class="box example"><div class="box-h">Worked example — moving mass by $\eps$, or by $1000$</div>
+<ul>
+<li><strong>Two Diracs.</strong> $\al=\delta_0$ and $\be=\delta_\eps$ on $\R$, with $\eps\ne0$. The total variation is $\abs{1}+\abs{-1}=2$, the largest possible value, whatever $\eps$; $\KL(\delta_0\,|\,\delta_\eps)=+\infty$ because $\delta_0$ charges the point $0$ that $\delta_\eps$ ignores; neither has a density, so $\norm{\rho_\al-\rho_\be}_{L^2}$ is not even defined. Moving the unit of mass from $0$ to $\eps$ costs $\abs{\eps}$ for the cost $c(x,y)=\abs{x-y}$: it goes to $0$ with $\eps$, as we want.</li>
+<li><strong>Two bumps.</strong> $\al=\mathcal U[0,1]$ and $\be=\mathcal U[a,a+1]$ (uniform laws, density $1$ on their interval) with $a\ge1$. The supports do not overlap, so $\norm{\rho_\al-\rho_\be}_{L^2}=\sqrt{1+1}=\sqrt2\approx1.414$ for $a=1$, $a=10$ and $a=1000$ alike. Moving all the mass by $a$ costs $a$: $1$, $10$, $1000$.</li>
+</ul>
+</div>
+<p>The second example is typical of machine learning: a model whose samples land in the wrong place gets the same pointwise score whether it is slightly or badly wrong, so the score gives no direction in which to improve.</p>
+
+<h3 id="why-lift">The idea: lift a ground cost to distributions</h3>
+<p>Fix a <em class="new">ground cost</em> $c(x,y)\ge0$: the price of moving one unit of mass from the point $x$ to the point $y$ (for instance $\norm{x-y}$ or $\norm{x-y}^2$). The transport cost between $\al$ and $\be$ is the price of the <strong>cheapest way to move all the mass of $\al$ onto $\be$</strong>. For two Diracs there is only one way, so the cost of $\delta_x\to\delta_y$ is $c(x,y)$: the ground geometry is kept, without distortion, inside the space of distributions. This is what “lifting a ground distance to a distance between distributions” means.</p>
+<p>There are two ways to make “move the mass” precise. In <strong>Monge's</strong> formulation (1781, this lesson) each point is sent to one place: the unknown is a <strong>map</strong> $T$. In <strong>Kantorovich's</strong> formulation (1942, Lesson 2) the mass at a point may be split between several destinations: the unknown is a <strong>coupling</strong>. With $c=d^p$ the second one gives the Wasserstein distance $W_p$ (<a href="Lesson03.html#distance">Lesson 3</a>). The book starts with the simplest case of all:</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML ch. 1, opening, p. 9</span></div>
+<p>This opening chapter isolates the simplest form of optimal transport: pairing two finite, equally weighted point clouds of the same cardinality. The stakes are algorithmic and geometric at once: one sees the combinatorial nature of transport, the special simplicity of the line, and the limitations of permutations once cardinalities or weights differ.</p>
+</div>
+<p>This is the plan of §2–§3. Chapter 2 of the book (our §4–§10) then “passes from finite matching to transport between arbitrary probability laws” (OT4ML p. 20).</p>
+
+<div class="box ml"><div class="box-h">In machine learning — transport costs as losses between distributions</div>
+<ul>
+<li><strong>Generative models.</strong> A generator $g_\theta$ maps a Gaussian noise vector $z\in\R^{k}$ to an image $g_\theta(z)\in\R^d$. Its distribution has no density you can evaluate (§5), but you can sample it and compare the samples with data samples. Wasserstein GANs (Arjovsky, Chintala, Bottou, 2017) train $g_\theta$ by minimising an estimate of the transport cost $W_1$ between generated and real images (OT4ML §7.4 “GANs via duality”, p. 134; Lesson 4 explains the dual form they use).</li>
+<li><strong>Point clouds.</strong> To train a network that outputs a 3D point cloud of $n$ points, a classical loss is the cost of the optimal assignment between the predicted points and the $n$ ground-truth points — exactly the problem of §2 (the “Earth Mover's distance” loss of Fan, Su and Guibas, 2017).</li>
+<li><strong>Domain adaptation.</strong> Transporting the labelled source features onto the target features lets a classifier trained on the source be used on the target (Courty, Flamary, Tuia, Rakotomamonjy, 2017; OT4ML Example 3.22, p. 61). We return to it with Brenier's theorem in §7.</li>
+</ul>
+<p>In all three, the point is the one of the worked example above: the loss sees <em>how far</em> the mass is from where it should be, so its gradient tells the model where to move it.</p>
+</div>
+
+<h3 id="why-history">A short history</h3>
+<p>The outline of the course traces the following line; the dates are added here for orientation, and each name comes back in a later lesson.</p>
+<figure class="fig"><!-- include figures/L01/timeline.svg --><figcaption>From earthworks to machine learning. Above the axis: the mathematics of transport; below: algorithms and applications. The colour of each mark says where it is studied: this lesson (green), Lesson 2 (blue), Lessons 3–4 (purple), Lessons 6–8 (orange).</figcaption></figure>
+<ul>
+<li><strong>Monge (1781)</strong>, <em>Mémoire sur la théorie des déblais et des remblais</em>: move the earth dug from cuts to fill embankments, each particle going to one destination, at minimal total distance. <em>This lesson.</em></li>
+<li><strong>Kantorovich (1942)</strong> lets mass split and turns the problem into a linear program with a dual; <strong>Dantzig</strong>'s simplex method (1947) solves linear programs; <strong>Birkhoff (1946) and von Neumann (1953)</strong> explain why, for equal weights, splitting gains nothing (permutations are the extreme points of the doubly stochastic matrices). <em>Lesson 2.</em></li>
+<li><strong>Schrödinger (1931)</strong> asks for the most likely evolution of a cloud of particles — an entropic transport problem; <strong>Sinkhorn (1964)</strong> studies the matrix scaling that solves it. <em>Lesson 7.</em></li>
+<li><strong>Brenier (1987, 1991)</strong>: for the squared distance the optimal map is the gradient of a convex function (§7). <strong>McCann (1997)</strong>: displacement interpolation (§10). <strong>Jordan, Kinderlehrer and Otto (1998)</strong>: diffusion equations are gradient flows for $W_2$ (Lesson 8). <strong>Villani</strong>'s books (2003, 2009) and <strong>Figalli</strong>'s regularity theory (§7) made the field central in analysis (Fields Medals 2010 and 2018).</li>
+<li><strong>Cuturi (2013)</strong> computes entropic transport with Sinkhorn's algorithm on GPUs, fast enough for learning (Lesson 7); <strong>Wasserstein GANs (2017)</strong> bring transport to generative modelling.</li>
+</ul>
+
+<div class="quiz"><p>Why does every reasonable transport cost give $\mathrm{cost}(\delta_x,\delta_y)=c(x,y)$?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>All the mass of $\delta_x$ sits at $x$ and all of it must end at $y$: there is only one way to move it, sending the unit of mass from $x$ to $y$, at price $c(x,y)$. Diracs are the first test case of every statement of this course.</p>
+</div></details></div>
+<div class="quiz"><p>In the two-bump example, what is the transport cost for $c(x,y)=\abs{x-y}^2$, and why can no plan do better than moving everything by $a$?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>The translation $x\mapsto x+a$ moves each unit of mass by $a$, so it costs $a^2$ for the squared cost. No plan does better: whatever the plan, the mean position goes from $\frac12$ to $a+\frac12$, so the average displacement $\E[Y-X]$ is $a$, and $\E[(Y-X)^2]\ge\big(\E[Y-X]\big)^2=a^2$ (the variance is $\ge0$). We prove the general version in §8 (means separate from the rest).</p>
+</div></details></div>

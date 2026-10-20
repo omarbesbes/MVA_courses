@@ -1,0 +1,58 @@
+<h2 id="line">2. On the line, transport is a sort <span class="ref">slides, frame 4/12</span></h2>
+<p class="tldr">Between two clouds of $n$ points on the real line, the optimal plan matches the $i$-th smallest point of one cloud with the $i$-th smallest point of the other: one sort of each list, $O(n\log n)$ operations, gives $W_p$ exactly.</p>
+
+<h3 id="line-sort">Sort and match</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">slides, frame 4/12 (p. 9)</span></div>
+<p><strong>OT in One Dimension: Sort and Match.</strong> Let $\mu=\frac1n\sum_{i=1}^nx_i$ and $\nu=\frac1n\sum_{i=1}^ny_i$ with $x_i,y_i\in\R$. [drawing: red source points $x_1,\dots,x_4$ and blue target points $y_1,\dots,y_4$ on a line, in the order $x_1<y_1<y_2<x_2<y_3<x_3<x_4<y_4$, with arrows $x_1\to y_1$, $x_2\to y_2$, $x_3\to y_3$, $x_4\to y_4$]</p>
+$$\mathbf W_2^2(\mu,\nu)=\frac1n\sum_{i=1}^n\abs{x_{(i)}-y_{(i)}}^2\quad\text{with}\quad x_{(1)}\le x_{(2)}\le\dots\le x_{(n)},\ \text{and}\ y_{(1)}\le y_{(2)}\le\dots\le y_{(n)}.$$
+<p><strong>Fast to compute:</strong> Just sort $\to\mathcal O(n\log(n))$.</p>
+</div>
+<dl class="decode">
+<dt>$\mu=\frac1n\sum_ix_i$</dt><dd>Read $\frac1n\sum_i\delta_{x_i}$: the uniform measure on the points $x_1,\dots,x_n$ (the $\delta$ is missing on the slide, a typo).</dd>
+<dt>$x_{(i)}$</dt><dd>The $i$-th smallest of the $x$’s (an <em>order statistic</em>): sort the list, read the $i$-th entry. The parentheses in the index mean “after sorting”.</dd>
+<dt>$\frac1n\sum_i\abs{x_{(i)}-y_{(i)}}^2$</dt><dd>The cost of the plan that sends the $i$-th smallest $x$ to the $i$-th smallest $y$, each unit carrying mass $\frac1n$. The statement is that this <em>monotone</em> plan is optimal.</dd>
+<dt>$\mathcal O(n\log n)$</dt><dd>Sorting $n$ numbers takes about $n\log_2n$ comparisons (merge sort); matching and summing then take $O(n)$.</dd>
+</dl>
+<figure class="fig"><!-- include figures/L05/sort1d.svg --><figcaption>Left: four source points (orange-red) and four target points (blue) in the order of the slide; the optimal plan matches them by rank. Right: the same computation with quantile functions, which are staircases here; the green area between them is $W_1$.</figcaption></figure>
+
+<div class="box example"><div class="box-h">Worked example — the slide’s configuration with numbers</div>
+<p>Take $x=\{0,3,5,6\}$ and $y=\{1,2,4,9\}$: they are in the order of the slide’s drawing, $x_1<y_1<y_2<x_2<y_3<x_3<x_4<y_4$. Both lists are already sorted, so the optimal plan is $0\to1$, $3\to2$, $5\to4$, $6\to9$:</p>
+$$W_2^2=\frac{(0-1)^2+(3-2)^2+(5-4)^2+(6-9)^2}{4}=\frac{1+1+1+9}4=3,\qquad W_1=\frac{1+1+1+3}4=1.5 .$$
+<p>Checked by brute force over the $4!=24$ matchings: $3$ is the smallest value of the cost (the largest is $29$, for the reversed matching $0\to9$, $3\to4$, $5\to2$, $6\to1$), and an exact linear-program solver gives the same $W_2^2=3$. Note that $x_2=3$ is matched to $y_{(2)}=2$, to its <em>left</em>: monotone does not mean “each point moves right”.</p>
+</div>
+
+<h3 id="line-why">Why sorting is optimal</h3>
+<div class="box idea"><div class="box-h">Idea of the proof</div>
+<p>Look at two pairs of a plan. If they <em>cross</em> — the smaller source is sent to the larger target — uncrossing them never increases the cost, because the cost $h(x-y)$ is convex. Repeating the uncrossing until no pair crosses produces the sorted matching, so the sorted matching is at least as good as any other.</p>
+</div>
+<details class="fold proof"><summary>Proof for $p=2$ (and the general statement)</summary><div class="fold-body">
+<ol class="steps">
+<li>Let $x<x'$ be two sources and $y>y'$ two targets, and compare the crossed pairs $(x\to y,\ x'\to y')$ with the uncrossed pairs $(x\to y',\ x'\to y)$.<span class="why">“Crossed” means: the smaller source goes to the larger target.</span></li>
+<li>$$(x-y)^2+(x'-y')^2-\big[(x-y')^2+(x'-y)^2\big]=-2xy-2x'y'+2xy'+2x'y=2(x'-x)(y-y')>0.$$<span class="why">Expand the four squares: the terms $x^2,x'^2,y^2,y'^2$ appear on both sides and cancel. Then $x'-x>0$ and $y-y'>0$.</span></li>
+<li>So uncrossing strictly decreases the cost, and an optimal matching has no crossed pair: it is increasing, i.e. it is the sorted matching.<span class="why">Among the $n!$ matchings there is an optimal one (finite set); if it had a crossed pair, uncrossing it would give a cheaper matching, a contradiction. A matching without crossed pairs sends the $i$-th smallest $x$ to the $i$-th smallest $y$.</span></li>
+</ol>
+<p><strong>The general statement</strong> (OT4ML Prop. 1.2, p. 9): if the cost is $C_{ij}=h(x_i-y_j)$ with $h$ strictly convex (for instance $h(s)=\abs{s}^p$, $p>1$) and the points are distinct, the order-preserving matching is the <em>unique</em> optimum. For $p=1$ it is still optimal, but other matchings can tie. For measures that are not uniform on $n$ points, the same idea gives the quantile formula of the <a href="#recall-1d">refresher</a>: $W_p^p(\mu,\nu)=\int_0^1\abs{F_\mu^{-1}(t)-F_\nu^{-1}(t)}^p\,\dd t$ (OT4ML Prop. 2.44, p. 38).</p>
+</div></details>
+
+<div class="box recall"><div class="box-h">Reminder — the quantile formula (Lessons 1 and 3)</div>
+<p>For equal weights, the quantile function of $\frac1n\sum_i\delta_{x_i}$ is the staircase equal to $x_{(i)}$ on $\big(\frac{i-1}n,\frac in\big]$. Plugging two staircases into $\int_0^1\abs{F_\mu^{-1}-F_\nu^{-1}}^p$ gives back $\frac1n\sum_i\abs{x_{(i)}-y_{(i)}}^p$ — the right panel of the figure. The quantile formula also handles different numbers of points and unequal weights, and densities: for two Gaussians on the line it gives $W_2^2=(a-b)^2+(s-t)^2$ (<a href="#recall-gauss">refresher</a>). It even makes $W_2$ on the line a <strong>Hilbert</strong> distance: the $L^2(0,1)$ distance between quantile functions. We will use this in §5. More in <a href="Lesson03.html#oned">Lesson 3, §8</a> and <a href="Reminders.html#cdf-quantile">Reminders</a>.</p>
+</div>
+
+<h3 id="line-stat">On the line, samples are accurate</h3>
+<p>The line is also the easy case for statistics. On $\R$, $W_1$ is the area between the two CDFs, $W_1(\mu,\nu)=\int_\R\abs{F_\mu(s)-F_\nu(s)}\,\dd s$ (Lesson 1). For an empirical measure $\hat\mu_n$, $nF_{\hat\mu_n}(s)$ counts the samples below $s$: it is a binomial variable with parameters $n$ and $F_\mu(s)$. Hence $\E\abs{F_{\hat\mu_n}(s)-F_\mu(s)}\le\sqrt{F_\mu(s)(1-F_\mu(s))/n}$, and after integration in $s$: <strong>on the line, $\E\,W_1(\hat\mu_n,\mu)$ decreases like $n^{-1/2}$</strong> for measures with bounded support. This one-dimensional fact is the whole proof of the dimension-free rate of §9.</p>
+
+<div class="box pitfall"><div class="box-h">Pitfall — there is no “sorting” in dimension 2</div>
+<p>In $\R^d$ with $d\ge2$, no ordering of the points is compatible with the cost. Sorting both clouds by their first coordinate and matching by rank gives a coupling, hence an upper bound on $W_p^p$, but in general not the optimum. Example: $\al=\frac12(\delta_{(0,0)}+\delta_{(1,3)})$ and $\be=\frac12(\delta_{(1,0)}+\delta_{(0,3)})$. Sorting by the first coordinate matches $(0,0)\to(0,3)$ and $(1,3)\to(1,0)$, cost $9$, while the optimal plan $(0,0)\to(1,0)$, $(1,3)\to(0,3)$ costs $1$. We meet this pair again in §10 (lifted plans) and in Exercise 2 of the sheet.</p>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>Transport on the line → sort both lists and match by rank (or match quantiles).</li>
+<li>Transport in $\R^d$ is hard → find lines on which to solve easy problems: that is slicing.</li>
+<li>A statistical rate on the line → $W_1=\int\abs{F-G}$ and binomial counts: $n^{-1/2}$.</li>
+</ul>
+</div>
+
+<div class="quiz"><p>Compute $W_2^2$ between $\frac13(\delta_0+\delta_1+\delta_3)$ and $\frac13(\delta_0+\delta_2+\delta_3)$, and between $\frac13(\delta_0+\delta_2+\delta_3)$ and $\frac13(\delta_{0.6}+\delta_{1.6}+\delta_{4.2})$.</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>First pair, sorted matching $0\to0$, $1\to2$, $3\to3$: $W_2^2=\frac{0+1+0}3=\frac13$. Second pair, $0\to0.6$, $2\to1.6$, $3\to4.2$: $W_2^2=\frac{0.36+0.16+1.44}3=\frac{1.96}3=\frac{49}{75}\approx0.653$. (These are two slices of the clouds of Exercise 2 in §13.)</p>
+</div></details></div>

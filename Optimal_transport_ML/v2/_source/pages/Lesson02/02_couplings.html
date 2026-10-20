@@ -1,0 +1,139 @@
+<h2 id="couplings">2. Kantorovich’s relaxation: couplings and a linear program</h2>
+<p class="tldr">Instead of a map, record a matrix $P\ge0$ whose entry $P_{ij}$ is the mass sent from $x_i$ to $y_j$; the only constraints are mass conservation (row sums $a$, column sums $b$), and the cost $\ps{C}{P}$ is linear: transport becomes a linear program.</p>
+
+<h3 id="couplings-def">Couplings: a table of shipments</h3>
+<p><strong>The problem.</strong> We want to compare (and transport) two weighted point clouds $\al=\sum_{i=1}^na_i\delta_{x_i}$ and $\be=\sum_{j=1}^mb_j\delta_{y_j}$ with arbitrary weights and arbitrary sizes $n$, $m$ — two colour histograms, two data sets, two documents. A map cannot do it in general (§1). What can?</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML §3.1 and Def. 3.1, p. 51</span></div>
+<p>Kantorovich’s key idea is to relax the deterministic nature of transportation. Instead of requiring each source point $x_i$ to be sent to exactly one target, the mass at $x_i$ may be dispatched across several locations. […] The relaxation is encoded, in place of a permutation $\sigma$ or a map $T$, by a coupling matrix $P\in\R_+^{n\times m}$, where $P_{i,j}$ describes the amount of mass flowing from $x_i$ to $y_j$.</p>
+<p><strong>Definition 3.1 (Discrete couplings and mass conservation).</strong> Admissible couplings are only constrained to satisfy conservation of mass:</p>
+$$\U(a,b):=\big\{P\in\R_+^{n\times m}\ ;\ P\ind_m=a\ \text{ and }\ P\T\ind_n=b\big\}.\qquad(3.1)$$
+<p>Equivalently, $P\ind_m=\big(\sum_jP_{i,j}\big)_i\in\R^n$, $P\T\ind_n=\big(\sum_iP_{i,j}\big)_j\in\R^m$.</p>
+</div>
+<dl class="decode">
+<dt>$P\in\R_+^{n\times m}$</dt><dd>A table with one row per source and one column per target, with non-negative entries: you cannot ship a negative amount.</dd>
+<dt>$P_{i,j}$</dt><dd>The mass that leaves $x_i$ and arrives at $y_j$. Not a probability of going from $i$ to $j$: that would be $P_{i,j}/a_i$.</dd>
+<dt>$P\ind_m=a$</dt><dd>“Row $i$ sums to $a_i$”: everything at $x_i$ leaves, and no more.</dd>
+<dt>$P\T\ind_n=b$</dt><dd>“Column $j$ sums to $b_j$”: $y_j$ receives exactly its mass.</dd>
+<dt>“only constrained”</dt><dd>Nothing says that row $i$ has a single non-zero entry: <strong>mass splitting</strong> is allowed. Merging (several non-zero entries in a column) is allowed too.</dd>
+</dl>
+<div class="box intu"><div class="box-h">Intuition — warehouses and factories</div>
+<p>Peyré–Cuturi illustrate the problem with an operator who runs $n$ warehouses holding $a_i$ units of raw material and $m$ factories needing $b_j$ units; shipping one unit from $i$ to $j$ costs $C_{i,j}$, linearly in the amount (CompOT Remark 2.10, p. 18 — this is Hitchcock’s 1941 transportation problem). A coupling is a shipping schedule; the row and column sums are the stocks and the demands. Note what the constraint forces: $\sum_ia_i=\sum_i\sum_jP_{ij}=\sum_jb_j$. <strong>Both sides must have the same total mass</strong> (the sheet’s Exercise 3(c)).</p>
+</div>
+<p>Two remarks of the book make the gain concrete. The product $a\otimes b$ below is always a coupling, so $\U(a,b)$ is <strong>never empty</strong>. And the formulation is <strong>symmetric</strong>: $P\in\U(a,b)$ if and only if $P\T\in\U(b,a)$ — swapping roles transposes the table (OT4ML p. 53). Monge’s problem had neither property.</p>
+
+<h3 id="couplings-small">The smallest cases, and the product coupling</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Remark 3.2, p. 51</span></div>
+<p><strong>Remark 3.2 (Small transportation polytopes).</strong> […] If $n=m=1$, mass conservation fixes the only entry, so the feasible set is a singleton. The same happens for $(n,m)=(2,1)$, and by symmetry for $(n,m)=(1,2)$ […]. The first nontrivial case is $(n,m)=(2,2)$. Let $a=(p,1-p)$ and $b=(q,1-q)$ with $p,q\in[0,1]$. Once $s:=P_{1,1}$ is chosen, the marginal constraints force all other entries, hence every coupling has the form</p>
+$$P(s)=\begin{pmatrix}s&p-s\\q-s&1-p-q+s\end{pmatrix}.$$
+<p>The nonnegativity constraints are exactly $s\in[\max(0,p+q-1),\min(p,q)]$, so $\U(a,b)$ is a segment, possibly reduced to a point at the boundary. In general, when all marginal entries are positive, the transportation polytope has affine dimension $(n-1)(m-1)$ before the nonnegativity inequalities cut out its faces.</p>
+</div>
+<p><strong>Why $P(s)$ has this form.</strong> Row 1 sums to $p$, so $P_{1,2}=p-s$; column 1 sums to $q$, so $P_{2,1}=q-s$; then row 2 forces $P_{2,2}=1-p-(q-s)$. Each entry must be $\ge0$: $s\ge0$, $s\le p$, $s\le q$ and $s\ge p+q-1$. <strong>Why $(n-1)(m-1)$ in general:</strong> fill the first $n-1$ rows and $m-1$ columns freely; the last column and the last row are then forced by the marginals, and the last corner entry is forced twice — consistently, because both $a$ and $b$ sum to $1$. So $nm$ entries, $n+m$ equations, but only $n+m-1$ independent ones: $(n-1)(m-1)$ free parameters (proved in §5). For $2\times3$ that is a polygon (the widget of §5), for $10\times10$ already $81$ dimensions.</p>
+
+<div class="box example" id="couplings-ex22"><div class="box-h">Worked example — a $2\times2$ problem, solved by drawing a segment</div>
+<p>Sources $x=(0,2)$ with $a=(0.5,0.5)$; targets $y=(1,3)$ with $b=(0.3,0.7)$; cost $c(x,y)=\abs{x-y}^2$, so $C=\begin{pmatrix}1&9\\1&1\end{pmatrix}$ (row $i$, column $j$).</p>
+<ol class="steps">
+<li>$$P(s)=\begin{pmatrix}s&0.5-s\\0.3-s&0.2+s\end{pmatrix},\qquad s\in[\max(0,\,0.5+0.3-1),\ \min(0.5,0.3)]=[0,0.3].$$<span class="why">Remark 3.2 with $p=0.5$, $q=0.3$.</span></li>
+<li>$$\ps{C}{P(s)}=1\cdot s+9(0.5-s)+1\cdot(0.3-s)+1\cdot(0.2+s)=5-8s .$$<span class="why">Expand $\sum_{ij}C_{ij}P_{ij}$; the cost is <strong>linear</strong> in $s$.</span></li>
+<li>The minimum over $[0,0.3]$ is at the endpoint $s=0.3$: $P^\star=\begin{pmatrix}0.3&0.2\\0&0.5\end{pmatrix}$, cost $2.6$.<span class="why">A linear function on a segment is minimised at an endpoint (slope $-8<0$: the right one).</span></li>
+</ol>
+<p>Reading: the source at $0$ fills the near target $y=1$ (mass $0.3$) and sends its remaining $0.2$ to $y=3$; the source at $2$ sends everything to $y=3$. The source at $0$ <strong>splits</strong> its mass. The worst coupling ($s=0$) costs $5$, the product coupling ($s=0.15$) costs $3.8$. Checked with an exact LP solver: $2.6$.</p>
+</div>
+<figure class="fig"><!-- include figures/L02/segment.svg --><figcaption>The couplings of the $2\times2$ example form the segment $s\in[0,0.3]$; the cost $5-8s$ is linear along it, so the optimum is an endpoint — a “vertex”. The product coupling sits in the middle.</figcaption></figure>
+
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 3.3 and Prop. 3.4, p. 52</span></div>
+<p><strong>Definition 3.3 (Discrete product coupling).</strong> Given weights $a\in\Sigma_n$ and $b\in\Sigma_m$, the discrete product, or trivial, coupling is $(a\otimes b)_{i,j}:=a_ib_j$. It belongs to $\U(a,b)$ and corresponds to choosing the source and target labels independently.</p>
+<p><strong>Proposition 3.4 (Discrete product optimality is degenerate).</strong> Assume that the zero-mass rows and columns have been removed, so that $a_i>0$ and $b_j>0$, and let $C$ be a finite cost matrix. The product plan $a\otimes b$ minimizes $P\mapsto\ps{C}{P}$ over $\U(a,b)$ if and only if every coupling $P\in\U(a,b)$ minimizes it.</p>
+</div>
+<dl class="decode">
+<dt>$a\otimes b$</dt><dd>Row sums $\sum_ja_ib_j=a_i$, column sums $b_j$: always feasible. In probability: $X$ and $Y$ independent.</dd>
+<dt>“degenerate”</dt><dd>The product plan is optimal only in the dull case where all couplings cost the same. It is a <em>feasibility witness</em>, not a candidate solution.</dd>
+</dl>
+<div class="box idea"><div class="box-h">Idea of the proof of Prop. 3.4</div>
+<p>All entries of $a\otimes b$ are positive: it lies <em>inside</em> the polytope. From an interior point you can move a little in the direction of any coupling $Q$ and also a little in the opposite direction. A linear function minimised at an interior point must therefore be constant: going one way cannot increase it if going the other way does not decrease it.</p>
+</div>
+<details class="fold proof"><summary>Full proof (OT4ML p. 52)</summary><div class="fold-body">
+<p>If every coupling is optimal, so is $a\otimes b$. Conversely, assume $a\otimes b$ optimal and let $Q\in\U(a,b)$.</p>
+<ol class="steps">
+<li>For $t>0$ small enough, $R:=(1+t)(a\otimes b)-tQ$ has non-negative entries.<span class="why">$a_ib_j>0$ for all $(i,j)$ and $Q_{ij}\le1$; take $t\le\min_{ij}a_ib_j$.</span></li>
+<li>$R\ind_m=(1+t)a-ta=a$ and $R\T\ind_n=b$, so $R\in\U(a,b)$.<span class="why">Both $a\otimes b$ and $Q$ have marginals $(a,b)$, and the coefficients $(1+t)$ and $-t$ sum to $1$.</span></li>
+<li>$$a\otimes b=\tfrac1{1+t}R+\tfrac t{1+t}Q,\qquad\text{so}\qquad\ps{C}{a\otimes b}=\tfrac1{1+t}\ps{C}{R}+\tfrac t{1+t}\ps{C}{Q}.$$<span class="why">Solve step 1 for $a\otimes b$; then linearity of $P\mapsto\ps{C}{P}$.</span></li>
+<li>Both $\ps{C}{R}$ and $\ps{C}{Q}$ are $\ge\ps{C}{a\otimes b}$ (optimality); a convex average of two numbers $\ge v$ equals $v$ only if both equal $v$. So $\ps{C}{Q}=\ps{C}{a\otimes b}$: $Q$ is optimal.<span class="why">If one of them were $>v$, the average would be $>v$ (both weights are positive).</span></li>
+</ol>
+<p><strong>On the numbers of the $2\times2$ example</strong>, with $Q=P^\star$ and $t=0.5$: $R=1.5\,(a\otimes b)-0.5\,P^\star=\begin{pmatrix}0.075&0.425\\0.225&0.275\end{pmatrix}\ge0$, and $a\otimes b=\frac23R+\frac13P^\star$. Costs: $\ps{C}{R}=5-8(0.075)=4.4$, $\ps{C}{P^\star}=2.6$, and $\frac23\cdot4.4+\frac13\cdot2.6=3.8=\ps{C}{a\otimes b}$. Here the two costs differ, so $a\otimes b$ is <em>not</em> optimal — as expected, since this cost is not “flat”.</p>
+</div></details>
+
+<h3 id="couplings-lp">The discrete Kantorovich problem</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 3.5, p. 53</span></div>
+<p>Kantorovich, aiming for economic planning, made a strong simplifying assumption: the cost of transportation should be linear in the amount of transported mass.</p>
+<p><strong>Definition 3.5 (Discrete Kantorovich problem).</strong> For $a\in\Sigma_n$, $b\in\Sigma_m$, and $C\in\R^{n\times m}$, define</p>
+$$\mathrm L_C(a,b):=\min_{P\in\U(a,b)}\ps{C}{P}=\min_{P\in\U(a,b)}\sum_{i,j}C_{i,j}P_{i,j}.\qquad(3.2)$$
+<p>A minimizer $P$ is an optimal coupling, or optimal transport plan. Here $C_{i,j}$ is the cost of moving one unit of mass from $x_i$ to $y_j$. This is a linear program, and its solutions need not be unique.</p>
+</div>
+<dl class="decode">
+<dt>$\Sigma_n$</dt><dd>The probability simplex: $a\ge0$, $\sum_ia_i=1$.</dd>
+<dt>$\ps{C}{P}$</dt><dd>Total bill of the schedule $P$: “mass times unit price”, summed over all pairs.</dd>
+<dt>“linear program”</dt><dd>Unknowns $P_{ij}$ ($nm$ numbers), a linear objective, linear equality constraints ($n+m$ marginals) and sign constraints $P_{ij}\ge0$.</dd>
+<dt>“min”, not “inf”</dt><dd>The minimum is attained: a continuous (linear) function on a non-empty compact set ($\U(a,b)$ is closed and bounded, entries in $[0,1]$).</dd>
+<dt>“need not be unique”</dt><dd>Ties happen: a whole edge of the polytope can be optimal (§5, and Exercise 13.3).</dd>
+</dl>
+<p>For measures, CompOT writes $\Lc(\al,\be):=\mathrm L_C(a,b)$ with $C_{ij}=c(x_i,y_j)$ (Remark 2.11, p. 20): the points only enter through the cost matrix; the weights only through the marginals.</p>
+
+<h4>Monge is a special case: maps are couplings</h4>
+<p>If a map $T$ satisfies $\pf{T}{\al}=\be$ (with distinct $y_j$), define $P_{ij}=a_i$ if $T(x_i)=y_j$ and $0$ otherwise.</p>
+<ol class="steps">
+<li>Row $i$: exactly one $j$ has $T(x_i)=y_j$, so $\sum_jP_{ij}=a_i$.<span class="why">$T(x_i)$ is one of the targets, because $\pf{T}{\al}$ only charges the support of $\be$.</span></li>
+<li>Column $j$: $\sum_iP_{ij}=\sum_{i:\,T(x_i)=y_j}a_i=\pf{T}{\al}(\{y_j\})=b_j$.<span class="why">Definition of the push-forward: the mass arriving at $y_j$ is the total mass of the atoms sent there.</span></li>
+<li>$\ps{C}{P}=\sum_ia_ic(x_i,T(x_i))=\int c(x,T(x))\,\dd\al(x)$.<span class="why">Only the entries $P_{i,j}$ with $y_j=T(x_i)$ are non-zero.</span></li>
+</ol>
+<p>So every Monge competitor is a Kantorovich competitor with the same cost, and</p>
+$$\mathrm L_C(a,b)\ \le\ \mathcal M_c(\al,\be)\qquad(\text{with }\mathcal M_c=+\infty\text{ when no map exists}).$$
+<p>Kantorovich minimises over a bigger set: its value can only be smaller. When are they equal? That is the question of §6 and §9.</p>
+
+<figure class="fig"><!-- include figures/L02/matrix.svg --><figcaption>Two couplings of the same histograms ($n=5$ sources, $m=6$ targets on the line), drawn as matrices with their marginals on the left (rows, $a$) and on top (columns, $b$). The product plan is full ($30$ entries); the optimal plan for $\abs{x-y}^2$ is a sparse “staircase” with $10=n+m-1$ entries (§4–§5), and costs $0.226$ instead of $2.851$.</figcaption></figure>
+
+<div class="box ml"><div class="box-h">In machine learning — the Earth Mover’s Distance for image retrieval</div>
+<p><strong>Problem.</strong> Find, in a database, the images whose colours look like those of a query image. <strong>Representation</strong> (Rubner, Tomasi, Guibas, <em>The Earth Mover’s Distance as a metric for image retrieval</em>, IJCV 2000): cluster the pixel colours of each image (in the perceptual CIE-Lab space); the image becomes a <em>signature</em>, i.e. a discrete measure $\sum_ia_i\delta_{x_i}$ where $x_i$ is a cluster colour and $a_i$ the fraction of pixels in the cluster. <strong>Ground distance</strong>: $C_{ij}=\norm{x_i-y_j}$ in Lab. <strong>Distance between images</strong>: the transport cost $\mathrm L_C(a,b)$ (Rubner et al. also allow unequal total weights by partial matching). Retrieval ranks the database by this distance.</p>
+<p><strong>Why transport.</strong> Bin-by-bin comparisons ignore colour proximity. On three lightness levels $1,2,3$ with $d(i,j)=\abs{i-j}$: an all-dark image $\delta_1$ against $\delta_2$ or against $\delta_3$ gives the same $\ell^1$ distance $2$, but transport costs $1$ and $2$ — the slightly lighter image is closer. The course book lists this application (OT4ML Example 3.23, p. 61); its practical point: “moving a small amount of mass to a nearby color or pixel is cheaper than moving it far away”.</p>
+</div>
+
+<h3 id="couplings-convex">Convex in the marginals, concave in the cost</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 3.6, p. 53</span></div>
+<p><strong>Proposition 3.6 (Convexity in the marginals and concavity in the cost).</strong> For every fixed cost matrix $C\in\R^{n\times m}$, the map $(a,b)\mapsto\mathrm L_C(a,b)$ is jointly convex on $\Sigma_n\times\Sigma_m$. For every fixed $(a,b)\in\Sigma_n\times\Sigma_m$, the map $C\mapsto\mathrm L_C(a,b)$ is concave on $\R^{n\times m}$.</p>
+</div>
+<div class="box idea"><div class="box-h">Idea</div>
+<p>Convexity: mixing two optimal plans gives a plan for the mixed marginals — maybe not optimal, so the value at the mix is at most the mix of the values. Concavity: $\mathrm L_C$ is a minimum of the linear functions $C\mapsto\ps{C}{P}$, and a minimum of linear functions is concave.</p>
+</div>
+<details class="fold proof"><summary>Full proof (OT4ML p. 53)</summary><div class="fold-body">
+<ol class="steps">
+<li>Let $P_r$ be optimal between $a_r$ and $b_r$ ($r=0,1$) and $P_t=(1-t)P_0+tP_1$. Then $P_t\in\U\big((1-t)a_0+ta_1,(1-t)b_0+tb_1\big)$.<span class="why">$P_t\ge0$, and $P_t\ind=(1-t)a_0+ta_1$, $P_t\T\ind=(1-t)b_0+tb_1$ by linearity.</span></li>
+<li>$$\mathrm L_C\big((1-t)a_0+ta_1,(1-t)b_0+tb_1\big)\le\ps{C}{P_t}=(1-t)\mathrm L_C(a_0,b_0)+t\,\mathrm L_C(a_1,b_1).$$<span class="why">$\mathrm L_C$ is a minimum over couplings, $P_t$ is one of them; then linearity of $\ps{C}{\cdot}$ and optimality of $P_0,P_1$.</span></li>
+<li>For fixed $(a,b)$ and any $P\in\U(a,b)$: $\ps{(1-t)C_0+tC_1}{P}=(1-t)\ps{C_0}{P}+t\ps{C_1}{P}\ge(1-t)\mathrm L_{C_0}(a,b)+t\,\mathrm L_{C_1}(a,b)$. Minimising over $P$ gives $\mathrm L_{(1-t)C_0+tC_1}(a,b)\ge(1-t)\mathrm L_{C_0}(a,b)+t\,\mathrm L_{C_1}(a,b)$: concavity.<span class="why">Each $\ps{C_r}{P}$ is at least its minimum $\mathrm L_{C_r}(a,b)$.</span></li>
+</ol>
+</div></details>
+<div class="box recall"><div class="box-h">Reminder — convex and concave functions</div>
+<p>$F$ is convex if $F((1-t)u+tv)\le(1-t)F(u)+tF(v)$ for $t\in[0,1]$; concave if the reverse holds. A supremum of linear (or convex) functions is convex; an infimum of linear functions is concave. <a href="Reminders.html#convex-functions">More</a>.</p>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — a transport loss between label histograms</div>
+<p>Frogner, Zhang, Mobahi, Araya-Polo and Poggio (<em>Learning with a Wasserstein loss</em>, NeurIPS 2015) train multi-label classifiers (for instance image tagging on Flickr) whose output is a histogram $h_\theta(x)\in\Sigma_K$ over $K$ labels. The loss compares it with the histogram $y$ of the true labels through $\mathrm L_C(h_\theta(x),y)$, where the ground cost $C_{kl}$ is a distance between labels $k$ and $l$ — for instance between word embeddings of the tag names. Predicting “kitten” when the truth is “cat” then costs little, predicting “truck” a lot; a bin-by-bin loss such as cross-entropy cannot tell the two mistakes apart. Proposition 3.6 says that this loss is <strong>convex in the prediction</strong> $h$ (not in the network weights $\theta$); its gradient with respect to $h$ is given by the optimal dual potential (Lesson 4), and in practice the entropic version of Lesson 7 is used to compute it fast.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — couplings need equal masses</div>
+<p>$\U(a,b)$ is empty if $\sum_ia_i\ne\sum_jb_j$ (sum all the entries of $P$ in two ways). Before calling a solver, normalise both histograms — or use unbalanced transport (Lesson 7), which is designed for unequal masses.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — $P_{ij}$ is a mass, not a transition probability</div>
+<p>The fraction of the mass of $x_i$ that goes to $y_j$ is $P_{ij}/a_i$ (the rows of $P$ divided by their sums). Mixing up the two gives wrong barycentric projections (§11) and wrong transition matrices in single-cell analysis.</p>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>To write a discrete transport problem → list the points, their weights $a,b$, the cost matrix $C$; the unknown is $P\ge0$ with row sums $a$, column sums $b$.</li>
+<li>To bound $\mathrm L_C(a,b)$ from above → exhibit <em>one</em> coupling: the product $a\otimes b$, the north-west corner plan (§4), a map if there is one.</li>
+<li>When you see a $2\times2$ problem → one parameter $s=P_{11}$; the cost is affine in $s$; look at the endpoints.</li>
+</ul>
+</div>
+<div class="quiz"><p>What is $\U(a,b)$ when $n=1$? Compute $\mathrm L_C(a,b)$.</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>$a=(1)$ and $P$ is a single row with sums $b$: $P=b\T$, the only coupling (all the mass of the single source is split according to $b$). So $\mathrm L_C(a,b)=\sum_jC_{1j}b_j=\int c(x_1,y)\,\dd\be(y)$.</p>
+</div></details></div>
+<div class="quiz"><p>In the $2\times2$ example, replace the cost by $c(x,y)=\abs{x-y}$. Is the optimum still unique?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>$C=\begin{pmatrix}1&3\\1&1\end{pmatrix}$ and $\ps{C}{P(s)}=s+3(0.5-s)+(0.3-s)+(0.2+s)=2-2s$: still minimised only at $s=0.3$, value $1.4$. (Ties appear when the slope vanishes, i.e. when $C_{11}+C_{22}=C_{12}+C_{21}$: see Exercise 13.3.)</p>
+</div></details></div>
