@@ -112,15 +112,20 @@ function processChunk(chunk, file, src, offset) {
   chunk = chunk.replace(/\\\$/g, DOLLAR);
   chunk = chunk.replace(/\$\$([\s\S]+?)\$\$/g, (m, tex, i) =>
     `<div class="math-display">${renderMath(tex.trim(), true, file, src, offset + i)}</div>`);
-  chunk = chunk.replace(/\$((?:[^$\\]|\\[\s\S])+?)\$/g, (m, tex, i, whole) => {
+  chunk = chunk.replace(/\$((?:[^$\\]|\\[\s\S])+?)\$( [;:!?»]|[.,;:!?)\]%]+)?/g, (m, tex, punct, i) => {
     if (/\n\s*\n/.test(tex)) {
       errors.push(`${file}:${lineOf(src, offset + i)}  $ non fermé (formule en ligne sur un paragraphe vide)`);
       return m;
     }
-    // Une ponctuation collée à la formule ne doit pas passer seule à la ligne : on insère un
-    // « word joiner » (U+2060), qui interdit la coupure entre la formule et le signe qui suit.
-    const next = whole[i + m.length] || "";
-    return renderMath(tex, false, file, src, offset + i) + (/[.,;:!?)\]»%]/.test(next) ? "\u2060" : "");
+    const html = renderMath(tex, false, file, src, offset + i);
+    if (!punct) return html;
+    // Une ponctuation collée à la formule ne doit pas passer seule à la ligne. Le navigateur peut
+    // couper après le dernier bloc d'une formule KaTeX (un inline-block) : on place donc le signe
+    // DANS ce dernier bloc, juste avant ses trois fermetures (bloc, katex-html, katex).
+    const tail = "</span></span></span>";
+    // « $x$ ; » : l'espace devant ; : ! ? » devient une espace fine insécable, collée elle aussi.
+    const glued = punct.replace(/^ /, "\u202F");
+    return html.endsWith(tail) ? html.slice(0, -tail.length) + `<span class="kp">${glued}</span>` + tail : html + punct;
   });
   return chunk.replace(new RegExp(DOLLAR, "g"), "$");
 }
