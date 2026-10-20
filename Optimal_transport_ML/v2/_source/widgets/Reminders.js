@@ -18,7 +18,7 @@
   var REM_EMP = [-1.2, -0.3, 0.4, 0.9, 2.1];
   var REM_LAWS = {
     mixed: {
-      label: "¼δ₀ + ½𝒰[1,2] + ¼δ₃", L: -0.8, R: 3.8, xt: [0, 1, 2, 3],
+      label: "¼δ₀ + ½𝒰[1,2] + ¼δ₃", L: -0.8, R: 3.8, lx: 0, xt: [0, 1, 2, 3],
       atoms: [[0, 0.25], [3, 0.25]], qjumps: [0.25, 0.75],
       C: function (x) { var v = 0; if (x >= 0) v += 0.25; if (x >= 1) v += 0.5 * Math.min(1, x - 1); if (x >= 3) v += 0.25; return v; },
       Q: function (t) { return t <= 0.25 ? 0 : (t <= 0.75 ? 1 + 2 * (t - 0.25) : 3); }
@@ -36,7 +36,7 @@
       Q: function (t) { return REM_EMP[Math.min(4, Math.max(0, Math.ceil(5 * t - 1e-9) - 1))]; }
     },
     expo: {
-      label: "exponential law, density e⁻ˣ on [0, ∞)", L: -0.5, R: 5, xt: [0, 1, 2, 3, 4, 5],
+      label: "exponential law, density e⁻ˣ on [0, ∞)", L: -0.5, R: 5, lx: 0, xt: [0, 1, 2, 3, 4, 5],
       atoms: [], qjumps: [],
       C: function (x) { return x < 0 ? 0 : 1 - Math.exp(-x); },
       Q: function (t) { return -Math.log(1 - t); }
@@ -97,7 +97,7 @@
       top.dot(q, t, 5, "f3");
       top.text(q, 0, "C⁻¹(t) = " + fmt(q, 2), "tx-s t3", "start", 4, -6);
       top.text(D.L, t, "t", "tx-s t3", "start", 4, -5);
-      top.text(D.L, 1.08, "α = " + D.label, "tx-s t2", "start", 6, 10);
+      top.text(D.lx != null ? D.lx : D.L, 1.08, "α = " + D.label, "tx-s t2", "start", 6, 10);
       // ---- bottom: the quantile function
       var lo = Infinity, hi = -Infinity;
       for (i = 1; i < 200; i++) { var v = D.Q(i / 200); lo = Math.min(lo, v); hi = Math.max(hi, v); }

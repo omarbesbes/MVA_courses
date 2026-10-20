@@ -1,0 +1,134 @@
+<h2 id="fm">6. Flow matching: learn the velocity by regression <span class="ref">OT4ML §16.1, pp. 407–410</span></h2>
+<p class="tldr">Choose a path between noise and data by interpolating random pairs $(X_0,X_1)$; the velocity field that moves the distribution along this path is the conditional expectation $\E[X_1-X_0\mid X_t=x]$, so it can be learned by plain least squares on samples — and integrating it from noise produces data.</p>
+
+<h3 id="fm-idea">The idea: fix the path first</h3>
+<p>Training a continuous normalizing flow by maximum likelihood (§1) needs to simulate the ODE and its Jacobian traces at every step. Flow matching avoids this in two moves:</p>
+<ol>
+<li><strong>Choose the path $(\al_t)$ in advance</strong>, in a way that is trivial to sample: draw a pair $(X_0,X_1)$ (noise, data) and put $X_t$ on the segment between them.</li>
+<li><strong>Find a velocity that moves this path.</strong> By §1 such a velocity exists (many, in fact); flow matching takes a specific one, an average of the velocities of the segments, which can be fitted by regression.</li>
+</ol>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 16.1, p. 407, and Example 16.2, p. 408</span></div>
+<p><strong>Definition 16.1 (Deterministic interpolant).</strong> Let $\pi\in\U(\al_0,\al_1)$. A deterministic interpolant is a measurable family $I_t:\R^d\times\R^d\to\R^d$, differentiable in $t$, satisfying $I_0(x,y)=x$, $I_1(x,y)=y$. It induces $\al_t=\pf{(I_t)}{\pi}$ and has pathwise velocity $\partial_tI_t(x,y)$.</p>
+<p><strong>Example 16.2 (Linear two-endpoint deterministic interpolants).</strong> […] The simplest choices are the independent, or trivial, coupling $\pi=\al_0\otimes\al_1$ and the straight path $I_t(x,y)=(1-t)x+ty$. With this linear path and an arbitrary coupling $\pi$, the regression below is the common core of flow matching and rectified flow: Lipman et al. emphasize conditional probability paths and simulation-free training of continuous normalizing flows, while rectified flow emphasizes straight couplings, reflow, and the possibility of reducing transport costs and discretization error. […] If $\pi=\al\otimes\be$ and $\al=\frac1n\sum_i\delta_{x_i}$, $\be=\frac1m\sum_j\delta_{y_j}$, then $\al_t$ consists of $n\times m$ Dirac masses, $\al_t=\frac1{nm}\sum_{i,j}\delta_{I_t(x_i,y_j)}$. If $\pi=\pf{(\Id,T)}{\al}$ is a Brenier-type coupling, then $\al_t=\pf{((1-t)\Id+tT)}{\al}$ is the so-called McCann OT interpolation.</p>
+</div>
+<dl class="decode">
+<dt>$\pi\in\U(\al_0,\al_1)$</dt><dd>A coupling of noise and data: how the pairs $(X_0,X_1)$ are drawn. The default is <em>independent</em>: draw a noise vector and, separately, a data point.</dd>
+<dt>$I_t(x,y)$</dt><dd>A path from $x$ (at $t=0$) to $y$ (at $t=1$) for each pair. The linear one is the segment $(1-t)x+ty$.</dd>
+<dt>$\al_t=\pf{(I_t)}{\pi}$</dt><dd>The law of $X_t=I_t(X_0,X_1)$: “where the pairs are at time $t$”. It starts at $\al_0$ and ends at $\al_1$, whatever the coupling.</dd>
+<dt>$\partial_tI_t(x,y)$</dt><dd>The velocity of the pair’s own path; for the segment, the constant $y-x$.</dd>
+<dt>$n\times m$ Diracs</dt><dd>With independent pairs, every source point is joined to every target point: $nm$ moving atoms of mass $\frac1{nm}$, whose paths cross. With the optimal coupling one gets McCann’s interpolation (Lesson 3), whose paths do not cross.</dd>
+</dl>
+<figure class="fig"><!-- include figures/L06/couplings.svg --><figcaption>Fourteen noise points (orange) and fourteen data points (blue). Left: independent pairs, joined by straight segments that cross. Middle: the trajectories of the flow-matching field for the independent coupling (computed in closed form for the Gaussian source and the two-cluster Gaussian target of this example): curved, never crossing, ending at new places. Right: optimal-transport pairs, straight and non-crossing.</figcaption></figure>
+<p>The independent coupling leaves a problem: the segments cross, so at a point $x$ and time $t$ several pairs pass, with different velocities $X_1-X_0$. A particle at $x$ cannot follow all of them. The natural answer — average them — is the content of the next proposition.</p>
+
+<h3 id="fm-field">The velocity is a conditional expectation</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 16.3, pp. 408–409</span></div>
+<p><strong>Proposition 16.3 (Flow matching vector field).</strong> Assume that $t\mapsto I_t(u)$ is absolutely continuous for $\pi$-almost every $u$, that its derivative $(t,u)\mapsto\partial_tI_t(u)$ is jointly measurable, and that $\int_0^1\!\int\norm{\partial_tI_t(u)}^2\dd\pi(u)\,\dd t<+\infty$. For almost every $t$, consider the flow-matching problem over measurable fields $v_t:\R^d\to\R^d$</p>
+$$\min_{v_t}\int\norm{v_t(I_t(u))-[\partial_tI_t](u)}^2\,\dd\pi(u).\qquad(16.2)$$
+<p>Its minimizer is characterized $\al_t$-almost everywhere by the conditional expectation</p>
+$$v_t(z)=\E_{u\sim\pi}\big([\partial_tI_t](u)\ \big|\ z=I_t(u)\big).\qquad(16.3)$$
+<p>Then $v_t\in L^2(\al_t;\R^d)$ for almost every $t$, and the pair $(\al_t,v_t)$ satisfies the continuity equation (14.2) in the distributional sense on $(0,1)\times\R^d$.</p>
+</div>
+<dl class="decode">
+<dt>$u$</dt><dd>The latent pair $(x,y)$, drawn from $\pi$ (OT4ML allows more general latent variables).</dd>
+<dt>(16.2)</dt><dd>A <strong>regression</strong>: predict the pathwise velocity $\partial_tI_t$ (for segments, $X_1-X_0$) from the position $I_t(u)=X_t$ only. No ODE, no density, no constraint: an ordinary least-squares problem.</dd>
+<dt>(16.3)</dt><dd>The best predictor is the average velocity of all the pairs passing through $z$ at time $t$. OT4ML p. 410: “intuitively, $v_t(z)$ is the average velocity of all trajectories passing through $z$”.</dd>
+<dt>last sentence</dt><dd>The averaged field moves the distribution exactly along the chosen path $(\al_t)$: it is a valid velocity of the curve in the sense of §1.</dd>
+</dl>
+<p>For the linear interpolant $X_t=tX_1+(1-t)X_0$, the exercise sheet writes the field in three equivalent ways:</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">exercise sheet, Exercise 1, (1)</span></div>
+$$v_t(x)=\E[X_1-X_0\mid X_t=x]=\frac1{1-t}\E[X_1-X_t\mid X_t=x]=\frac1{1-t}\big(\E[X_1\mid X_t=x]-x\big).\qquad(1)$$
+</div>
+<p>The second form uses $X_1-X_t=(1-t)(X_1-X_0)$; the third uses $\E[X_t\mid X_t=x]=x$. Reading: <strong>the particle at $x$ heads for its expected destination $\E[X_1\mid X_t=x]$, at the speed needed to arrive at $t=1$</strong>.</p>
+
+<div class="box recall"><div class="box-h">Reminder — conditional expectation = best least-squares predictor</div>
+<p>$\E[Y\mid X]$ minimizes $\E\norm{Y-g(X)}^2$ over measurable $g$, and $\E[\ps{Y-\E[Y\mid X]}{h(X)}]=0$ for every $h$ (orthogonality). Hence Pythagoras and conditional Jensen, $\norm{\E[Y\mid X]}^2\le\E[\norm Y^2\mid X]$. See the <a href="#recall-cond">refresher</a> and <a href="Reminders.html#conditional">Reminders — conditional laws</a>.</p>
+</div>
+<div class="box idea"><div class="box-h">Idea of the proof</div>
+<p>(16.2) is a least-squares problem on the functions of $X_t$, so its solution is the projection: the conditional expectation. To check the continuity equation, differentiate $\E[\varphi(X_t)]$: the chain rule gives $\E[\ps{\nabla\varphi(X_t)}{\partial_tI_t}]$, and since $\nabla\varphi(X_t)$ is a function of $X_t$, the pathwise velocity can be replaced by its conditional mean.</p>
+</div>
+<details class="fold proof"><summary>Full proof (linear interpolant, random-variable notation)</summary><div class="fold-body">
+<p>Let $(X_0,X_1)\sim\pi$, $X_t=(1-t)X_0+tX_1$, $D=X_1-X_0$ (with $\E\norm D^2<\infty$), and $v_t(x)=\E[D\mid X_t=x]$.</p>
+<ol class="steps">
+<li>For every measurable $g$: $\E\norm{g(X_t)-D}^2\ge\E\norm{v_t(X_t)-D}^2$, with equality iff $g=v_t$ $\al_t$-a.e.<span class="why">The conditional expectation is the orthogonal projection of $D$ onto the closed subspace of $L^2$ of the functions of $X_t$ (reminder above). This is (16.3).</span></li>
+<li>$$\int\norm{v_t}^2\dd\al_t=\E\norm{\E[D\mid X_t]}^2\le\E\norm{D}^2<\infty .$$<span class="why">Conditional Jensen. So $v_t\in L^2(\al_t)$.</span></li>
+<li>For a smooth compactly supported $\varphi$: $\ \dfrac{\dd}{\dd t}\E[\varphi(X_t)]=\E\big[\ps{\nabla\varphi(X_t)}{D}\big]$.<span class="why">Chain rule, $\frac{\dd}{\dd t}X_t=X_1-X_0=D$, and differentiation under $\E$ (bounded $\nabla\varphi$, integrable $D$).</span></li>
+<li>$$\E\big[\ps{\nabla\varphi(X_t)}{D}\big]=\E\big[\ps{\nabla\varphi(X_t)}{\E[D\mid X_t]}\big]=\int\ps{\nabla\varphi}{v_t}\,\dd\al_t .$$<span class="why">Orthogonality with $h=\nabla\varphi$ (the “tower property”), then the definition of $v_t$ and $X_t\sim\al_t$.</span></li>
+<li>$\frac{\dd}{\dd t}\int\varphi\,\dd\al_t=\int\ps{\nabla\varphi}{v_t}\,\dd\al_t$: the weak continuity equation for $(\al_t,v_t)$. $\square$<span class="why">Steps 3–4; this is the probabilistic form of (14.3) (§1).</span></li>
+</ol>
+</div></details>
+
+<div class="box example"><div class="box-h">Worked example — noise to two atoms on the line</div>
+<p>$X_0\sim\N(0,1)$ and $X_1=\pm1$ with probability $\frac12$ each, independent; $X_t=(1-t)X_0+tX_1$.</p>
+<ol class="steps">
+<li>Given $X_1=y$, $X_t\sim\N\big(ty,(1-t)^2\big)$.<span class="why">$X_t=ty+(1-t)X_0$ with $X_0$ standard normal.</span></li>
+<li>$$\P(X_1=1\mid X_t=x)=\frac{e^{-(x-t)^2/2(1-t)^2}}{e^{-(x-t)^2/2(1-t)^2}+e^{-(x+t)^2/2(1-t)^2}}=\frac{1}{1+e^{-2tx/(1-t)^2}}.$$<span class="why">Bayes’ rule with equal priors; expand the squares: $(x+t)^2-(x-t)^2=4tx$.</span></li>
+<li>$$\E[X_1\mid X_t=x]=2\P(X_1=1\mid X_t=x)-1=\tanh\Big(\frac{tx}{(1-t)^2}\Big),\qquad v_t(x)=\frac{\tanh\big(tx/(1-t)^2\big)-x}{1-t}.$$<span class="why">$\frac{2}{1+e^{-2s}}-1=\tanh s$; then formula (1).</span></li>
+</ol>
+<p>Numbers: $v_{1/2}(0.2)=\frac{\tanh(0.4)-0.2}{0.5}=0.3599$. Monte Carlo check: among $2\times10^8$ simulated pairs, the $1.9\times10^6$ with $X_{1/2}\in[0.19,0.21]$ have average $X_1-X_0=0.3615$ (standard error $0.0013$). At $t=0$: $v_0(x)=\E[X_1]-x=-x$ — every particle first heads to the mean of the data. Near $t=1$, $\tanh$ saturates: the particle has “decided” its atom and rushes to it at speed $\approx\frac{\pm1-x}{1-t}$ ($v_{0.9}(0.5)=5.000$).</p>
+</div>
+
+<h3 id="fm-cfm">Training: the loss, and why it never reaches zero</h3>
+<p>In practice the regression is done for all times at once with a network $v_\theta(t,x)$:</p>
+$$\mathcal L(\theta)=\E_{t\sim\mathcal U[0,1]}\ \E_{(X_0,X_1)\sim\pi}\big\lVert v_\theta(t,X_t)-(X_1-X_0)\big\rVert^2,\qquad X_t=(1-t)X_0+tX_1 .$$
+<p>This is often called <em class="new">conditional flow matching</em>: the target $X_1-X_0$ is the velocity of the path <em>conditioned</em> on the pair, which is known, while the “true” target $v_t(X_t)$ is not. The two give the same minimizer:</p>
+<div class="box thm"><div class="box-h">Proposition (conditional and marginal losses differ by a constant) — derived here, as in Lipman et al. (2023)</div>
+<p>$\mathcal L(\theta)=\E_t\E\norm{v_\theta(t,X_t)-v_t(X_t)}^2+C$, where $C=\E_t\E\norm{X_1-X_0-v_t(X_t)}^2$ does not depend on $\theta$.</p>
+</div>
+<details class="fold proof"><summary>Proof (Pythagoras)</summary><div class="fold-body">
+<ol class="steps">
+<li>$v_\theta(t,X_t)-D=\big(v_\theta(t,X_t)-v_t(X_t)\big)+\big(v_t(X_t)-D\big)$, with $D=X_1-X_0$.<span class="why">Add and subtract $v_t(X_t)$.</span></li>
+<li>$\E\big[\ps{v_\theta(t,X_t)-v_t(X_t)}{v_t(X_t)-D}\big]=0$.<span class="why">The first factor is a function of $X_t$; orthogonality of $D-\E[D\mid X_t]$ to such functions.</span></li>
+<li>Expand the square, average over $t$: $\mathcal L(\theta)=\E_t\E\norm{v_\theta-v_t}^2+\E_t\E\norm{v_t(X_t)-D}^2$. $\square$<span class="why">Steps 1–2.</span></li>
+</ol>
+</div></details>
+<p>So stochastic gradient descent on the tractable loss $\mathcal L$ is stochastic gradient descent on the distance to the true field. But the minimum value $C$ is <strong>not zero</strong>: it is the average conditional variance of $X_1-X_0$ given $X_t$. In the two-atom example, $C(t)=\E\norm{D}^2-\E\norm{v_t(X_t)}^2$ equals $1$ at $t=0$, $1.80$ at $t=\frac12$ and is $\approx0$ for $t\ge0.9$ (the atom is then known from $X_t$); averaged over $t$, $C=1.018$. A training loss that plateaus at a positive value is normal.</p>
+<div class="box method"><div class="box-h">Algorithm — flow matching in practice</div>
+<p><strong>Training.</strong> Repeat: draw a batch of noise $x_0^{(b)}\sim\N(0,\Id)$, a batch of data $x_1^{(b)}$, times $t^{(b)}\sim\mathcal U[0,1]$; form $x_t^{(b)}=(1-t^{(b)})x_0^{(b)}+t^{(b)}x_1^{(b)}$; take a gradient step on $\frac1B\sum_b\norm{v_\theta(t^{(b)},x_t^{(b)})-(x_1^{(b)}-x_0^{(b)})}^2$.</p>
+<p><strong>Sampling.</strong> Draw $x\sim\N(0,\Id)$; for $k=0,\dots,K-1$: $x\leftarrow x+\frac1Kv_\theta(\frac kK,x)$ (Euler; higher-order ODE solvers are common). Output $x$. The cost of a sample is $K$ evaluations of the network.</p>
+</div>
+<div class="box recall"><div class="box-h">Reminder — stochastic gradient descent</div>
+<p>To minimize an expectation $\E_\xi[\ell(\theta,\xi)]$, step along $-\nabla_\theta\ell(\theta,\xi)$ for random draws $\xi$ (here $\xi=(t,X_0,X_1)$): an unbiased estimate of the gradient. The flow-matching loss is an expectation of a squared error, so SGD applies directly — unlike OT losses computed on minibatches, whose gradients are biased (OT4ML p. 416). More: <a href="Reminders.html#gradient-descent">Reminders — gradient descent and SGD</a>.</p>
+</div>
+
+<h3 id="fm-guarantee">What the regression guarantees</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML p. 410</span></div>
+<p>For the exact field $v_t$, integrating the ODE $\dot x=v_t(x)$ defines a transport map $T_t$. If $v_t$ is regular enough, or more generally if the continuity equation has a unique solution for this velocity, then $\pf{(T_t)}{\al_0}=\al_t$. […] The sampling procedure first draws $X_0\sim\al$ and then integrates the ODE $\dot X_t=v_t(X_t)$ starting with $X_{t=0}=X_0$. In the ideal exact-field limit, the resulting $X_{t=1}$ is distributed according to $\al_1=\be$.</p>
+</div>
+<p>So the flow map $T_1$ is a valid transport from noise to data. How good is it? Combining §2 with the conditional Jensen inequality gives a chain (derived here), for any coupling $\pi$ and the linear interpolant, when the flow is well defined:</p>
+$$W_2^2(\al_0,\al_1)\ \le\ \int\norm{T_1(x)-x}^2\dd\al_0\ \le\ \int_0^1\!\!\int\norm{v_t}^2\dd\al_t\,\dd t\ \le\ \E_\pi\norm{X_1-X_0}^2 .$$
+<ol class="steps">
+<li>First inequality: $(X_0,T_1(X_0))$ is a coupling of $\al_0$ and $\al_1$.<span class="why">$\pf{(T_1)}{\al_0}=\al_1$ (OT4ML p. 410).</span></li>
+<li>Second: Jensen in time along each trajectory, then the push-forward relation.<span class="why">Part 1 of the proof of Benamou–Brenier (§2).</span></li>
+<li>Third: $\int\norm{v_t}^2\dd\al_t=\E\norm{\E[X_1-X_0\mid X_t]}^2\le\E\norm{X_1-X_0}^2$ for each $t$.<span class="why">Conditional Jensen.</span></li>
+</ol>
+<p><strong>The flow never costs more than the coupling it was trained on</strong>, but it may cost more than $W_2^2$. In the two-atom example: $W_2^2=2-2\sqrt{2/\pi}=0.4042$ (the optimal map is $x\mapsto\mathrm{sign}(x)$); the flow map is also $\mathrm{sign}(x)$ (numerically, $T_1(-0.01)=-1$, $T_1(0.01)=1$: on the line the flow is monotone, Exercise 3), so the first inequality is an equality, $0.4042$; the action of the path is $0.9824$; the independent coupling costs $\E\abs{X_1-X_0}^2=2$. The particles arrive at the optimal places, but along curved paths at varying speed.</p>
+<div class="box example"><div class="box-h">Worked example — few Euler steps</div>
+<p>Same example, Euler with $K$ steps from the points $-1.5,-0.3,0.4,2.0$ (exact field): $K=1$ sends all of them to $0$ ($=\E[X_1]$, since $v_0(x)=-x$); $K=2$ gives $(-0.905,-0.291,0.380,0.964)$; $K=4$ gives $(-1.000,-0.997,1.000,1.000)$; $K=10$ lands on $\pm1$. Curved paths need several steps; §8 shows how better couplings straighten them.</p>
+</div>
+
+<div class="box ml"><div class="box-h">In machine learning — flow matching for image generation</div>
+<p><strong>Data:</strong> $10^6$ images (often compressed to latent codes by an autoencoder). <strong>Model:</strong> a U-Net or a transformer $v_\theta(t,x)$ (with a text embedding $c$ as extra input for text-to-image). <strong>Loss:</strong> the regression above, with independent pairs (noise, image) and the straight interpolant. <strong>Sampling:</strong> an ODE solver from Gaussian noise. This is the recipe of Lipman, Chen, Ben-Hamu, Nickel and Le (<em>Flow matching for generative modeling</em>, ICLR 2023), of Liu, Gong and Liu (<em>Flow straight and fast</em>, rectified flow, ICLR 2023), and of Albergo, Boffi and Vanden-Eijnden (stochastic interpolants), all cited in OT4ML p. 407; it is used at scale in Stable Diffusion 3 (§5). The appeal: a simple, stable regression loss (no adversarial game, no ODE and no likelihood during training), and a transport from noise to data that is exact in the ideal limit.</p>
+</div>
+<div class="box remark"><div class="box-h">Note on the sources — “the least-squares formula (14.8)”</div>
+<p>OT4ML p. 407 says that in flow matching the vector field “is obtained by constructing an interpolation $\al_t$ and then finding $v_t$ using the least-squares formula (14.8)”. Proposition 16.3 shows that the conditional expectation (16.3) <em>moves</em> the path, but it is the least-energy field of Prop. 14.3 only when it is a gradient. That holds when one endpoint is a standard Gaussian and the coupling is independent (OT4ML Prop. 16.7 and p. 411, see §7), not in general. Check: between independent $\N(0,\mathrm{diag}(4,1))$ and $\N\big(0,\begin{pmatrix}2&1\\1&2\end{pmatrix}\big)$ the flow-matching field is linear with a non-symmetric matrix (§8); its action is $2.6394$, while the least-energy field of the same Gaussian path (obtained from the Lyapunov equation $S\Sigma_t+\Sigma_tS=\dot\Sigma_t$) has action $2.5414$.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — the trajectories of the flow are not the training segments</div>
+<p>Training uses straight segments between pairs; sampling follows the <em>averaged</em> field, whose trajectories are curved and never cross (an ODE with a regular field has non-crossing trajectories). A sample does not travel to “its” training partner: the flow builds its own pairing (middle panel of the figure above).</p>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>Velocity of an interpolant path → $v_t(x)=\E[\partial_tI_t\mid X_t=x]$; for segments $=\frac{\E[X_1\mid X_t=x]-x}{1-t}$.</li>
+<li>Conditional expectation in a Gaussian or mixture model → Bayes’ rule, posterior weights, softmax.</li>
+<li>To compare losses with unknown targets → Pythagoras with the conditional expectation.</li>
+<li>Cost of the generated map → between $W_2^2$ and the cost of the training coupling.</li>
+</ul>
+</div>
+<div class="quiz"><p>If the data distribution is a single atom, $X_1=y$ almost surely, what is the flow-matching velocity, and where does each particle go?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>$\E[X_1\mid X_t=x]=y$, so $v_t(x)=\frac{y-x}{1-t}$. The solution of $\dot x=\frac{y-x}{1-t}$ is $x(t)=(1-t)x_0+ty$: every particle goes straight to $y$ at constant speed. All the trajectories meet at $t=1$ — allowed, since the field blows up at $t=1$.</p>
+</div></details></div>
+<div class="quiz"><p>With the independent coupling, why does a single Euler step from $t=0$ send every sample to $\E[X_1]$?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>At $t=0$, $X_t=X_0$ is independent of $X_1$, so $v_0(x)=\E[X_1-X_0\mid X_0=x]=\E[X_1]-x$ and $x+v_0(x)=\E[X_1]$. One Euler step averages all the data: a single blurry image.</p>
+</div></details></div>

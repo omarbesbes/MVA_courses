@@ -1,0 +1,132 @@
+<h2 id="diffusion">7. Diffusion models and the probability-flow ODE <span class="ref">OT4ML §16.1, pp. 410–415; compact notes Prop. 16.6, p. 127</span></h2>
+<p class="tldr">Diffusion models noise the data with an Ornstein–Uhlenbeck process and learn to denoise; Tweedie’s formula turns the denoiser into the score $\nabla\log\rho_t$, and the score into the flow-matching velocity — so sampling a diffusion model with its probability-flow ODE is a flow-matching ODE from Gaussian noise.</p>
+
+<h3 id="diff-why">The problem: the other road to the same flows</h3>
+<p>Diffusion models were developed independently of flow matching, from a stochastic point of view: destroy the data by adding noise little by little (a diffusion), then learn to reverse the destruction. They use a different vocabulary — scores, denoisers, SDEs — but when one endpoint is Gaussian and the coupling is independent, both constructions describe the same curve of distributions (OT4ML p. 411). This section builds the dictionary.</p>
+
+<h3 id="diff-noise">Noising: the Ornstein–Uhlenbeck process</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">compact notes Prop. 16.6, p. 127</span></div>
+<p><strong>Proposition 16.6 (Static Gaussian interpolants and Ornstein–Uhlenbeck noising).</strong> Let $\al\in\Pc_2(\R^d)$ and $\sigma>0$. Let $X_0\sim\al$ and $Z\sim\N(0,\sigma^2\Id)$ be independent, and set $X_t=a_tX_0+b_tZ$ on an open time interval where the differentiable scalar functions satisfy $a_t>0$ and $b_t>0$. If $\rho_t$ is the density of $X_t$, then its flow-matching velocity is</p>
+$$v_t(x)=\frac{\dot a_t}{a_t}x+\Big(\frac{\dot a_tb_t^2}{a_t}-\dot b_tb_t\Big)\sigma^2\nabla\log\rho_t(x).\qquad(16.12)$$
+<p>For the variance-preserving coefficients $a_\tau=e^{-\tau}$ and $b_\tau=\sqrt{1-e^{-2\tau}}$, with $\tau>0$, these marginals are exactly those of the Ornstein–Uhlenbeck diffusion</p>
+$$\dd X^{\mathrm{OU}}_\tau=-X^{\mathrm{OU}}_\tau\,\dd\tau+\sqrt2\,\sigma\,\dd B_\tau,\qquad X^{\mathrm{OU}}_0\sim\al,\qquad(16.13)$$
+<p>and (16.12) reduces to $v_\tau(x)=-x-\sigma^2\nabla\log\rho_\tau(x)$. Moreover, the finite-time coefficients $a_t=\cos(\pi t/2)$ and $b_t=\sin(\pi t/2)$ describe the same marginal curve after the time change $\tau=-\log\cos(\pi t/2)$.</p>
+</div>
+<dl class="decode">
+<dt>direction of time</dt><dd>Here <strong>the data are at time $0$</strong> ($X_0\sim\al$ is the data) and the noise grows with $t$ or $\tau$: the <em>noising</em> direction. Sampling runs it backwards.</dd>
+<dt>$a_t,b_t$</dt><dd>The <em>schedule</em>: how much signal and how much noise are in $X_t$.</dd>
+<dt>$\nabla\log\rho_t$</dt><dd>The <em class="new">score</em> of the noised density: the direction in which the density increases fastest, divided by the density.</dd>
+<dt>(16.13)</dt><dd>The Ornstein–Uhlenbeck SDE: a pull $-X$ towards the origin plus Brownian kicks. Its law converges to $\N(0,\sigma^2\Id)$ whatever the data: it forgets the data.</dd>
+<dt>“same marginals”</dt><dd>The random path of the SDE is not the static interpolant $a_\tau X_0+b_\tau Z$ (one Gaussian draw for all times), but at each fixed $\tau$ the two have the same law. Only the laws matter for the curve $(\rho_\tau)$.</dd>
+<dt>$\cos/\sin$ schedule</dt><dd>$e^{-\tau}=\cos(\pi t/2)$ gives $\sqrt{1-e^{-2\tau}}=\sin(\pi t/2)$: the same curve run with another clock.</dd>
+</dl>
+<details class="fold proof"><summary>Why the OU process has these marginals</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\dd\big(e^\tau X_\tau\big)=e^\tau\big(\dd X_\tau+X_\tau\,\dd\tau\big)=\sqrt2\,\sigma\,e^\tau\,\dd B_\tau .$$<span class="why">Product rule (no Itô correction: $e^\tau$ is deterministic), then the SDE (16.13).</span></li>
+<li>$$X_\tau=e^{-\tau}X_0+\sqrt2\,\sigma\int_0^\tau e^{-(\tau-s)}\,\dd B_s .$$<span class="why">Integrate from $0$ to $\tau$ and multiply by $e^{-\tau}$.</span></li>
+<li>The stochastic integral is independent of $X_0$, Gaussian, centred, with covariance $2\sigma^2\int_0^\tau e^{-2(\tau-s)}\dd s\,\Id=\sigma^2(1-e^{-2\tau})\Id$.<span class="why">Itô isometry: a deterministic integrand gives a Gaussian integral with variance $\int(\text{integrand})^2$.</span></li>
+<li>So $X_\tau$ has the law of $a_\tau X_0+b_\tau Z$ with $a_\tau=e^{-\tau}$, $b_\tau=\sqrt{1-e^{-2\tau}}$, $Z\sim\N(0,\sigma^2\Id)$ independent of $X_0$.<span class="why">Steps 2–3: $b_\tau^2\sigma^2=\sigma^2(1-e^{-2\tau})$. “Variance preserving”: if $X_0$ has covariance $\sigma^2\Id$, so does every $X_\tau$ ($a^2+b^2=1$).</span></li>
+</ol>
+</div></details>
+
+<h3 id="tweedie">Tweedie’s formula: denoising = score</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 16.6, p. 411</span></div>
+<p><strong>Proposition 16.6 (Tweedie identity).</strong> Let $W$ be a random vector in $\R^d$ with law $\be\in\Pc_1(\R^d)$. For $\sigma>0$, observe $Z=W+\sigma\eps$, where $\eps\sim\N(0,\Id)$ is independent of $W$. Denote by $\rho_\sigma$ the smooth positive density of $\be_\sigma=\be*\N(0,\sigma^2\Id)$, which is the law of $Z$. Then the conditional mean admits the following everywhere-defined version:</p>
+$$\E[W\mid Z=z]=z+\sigma^2\nabla\log\rho_\sigma(z)\qquad\text{for all }z\in\R^d .$$
+</div>
+<dl class="decode">
+<dt>$W$, $Z$</dt><dd>A clean signal $W$ and its noisy observation $Z$ (noise of standard deviation $\sigma$).</dd>
+<dt>$\be*\N(0,\sigma^2\Id)$</dt><dd>Convolution: the law of a sum of independent variables. Its density is smooth even if $\be$ is a sum of Diracs.</dd>
+<dt>$\E[W\mid Z=z]$</dt><dd>The best denoiser in mean square (the posterior mean).</dd>
+<dt>the formula</dt><dd>To denoise $z$, take one gradient step of size $\sigma^2$ uphill on $\log\rho_\sigma$: <strong>the optimal denoiser is known from the score of the noisy density, and conversely</strong>. No knowledge of $\be$ beyond $\rho_\sigma$ is needed.</dd>
+</dl>
+<div class="box idea"><div class="box-h">Idea of the proof</div>
+<p>The noisy density is an average of Gaussian bumps centred at the possible signals. Differentiating a Gaussian bump brings down a factor $-(z-w)/\sigma^2$; averaging over the posterior turns $w$ into $\E[W\mid Z=z]$.</p>
+</div>
+<details class="fold proof"><summary>Full proof</summary><div class="fold-body">
+<p>Let $\varphi_\sigma(u)=(2\pi\sigma^2)^{-d/2}e^{-\norm u^2/2\sigma^2}$, so $\nabla\varphi_\sigma(u)=-\sigma^{-2}u\,\varphi_\sigma(u)$.</p>
+<ol class="steps">
+<li>$$\rho_\sigma(z)=\int\varphi_\sigma(z-w)\,\dd\be(w),\qquad\E[W\mid Z=z]=\frac{1}{\rho_\sigma(z)}\int w\,\varphi_\sigma(z-w)\,\dd\be(w).$$<span class="why">The density of $W+\sigma\eps$ is the average of the Gaussian densities centred at $w$; Bayes’ rule gives the posterior $\varphi_\sigma(z-w)\dd\be(w)/\rho_\sigma(z)$.</span></li>
+<li>$$\nabla\rho_\sigma(z)=\int\nabla_z\varphi_\sigma(z-w)\,\dd\be(w)=-\frac1{\sigma^2}\int(z-w)\,\varphi_\sigma(z-w)\,\dd\be(w).$$<span class="why">Differentiation under the integral (the Gaussian and its derivatives are bounded; $\be\in\Pc_1$ makes $\int\norm w\varphi_\sigma\dd\be$ finite).</span></li>
+<li>$$\nabla\rho_\sigma(z)=-\frac1{\sigma^2}\Big(z\,\rho_\sigma(z)-\rho_\sigma(z)\,\E[W\mid Z=z]\Big).$$<span class="why">Split $z-w$ and use the two formulas of step 1.</span></li>
+<li>$$\E[W\mid Z=z]=z+\sigma^2\frac{\nabla\rho_\sigma(z)}{\rho_\sigma(z)}=z+\sigma^2\nabla\log\rho_\sigma(z).\qquad\square$$<span class="why">Divide by $\rho_\sigma(z)>0$ and rearrange.</span></li>
+</ol>
+</div></details>
+<div class="box example"><div class="box-h">Worked example — two atoms, and a Gaussian</div>
+<ul>
+<li><strong>Atoms.</strong> $W=\pm1$ with probability $\frac12$, $\sigma=0.5$. As in §6, $\E[W\mid Z=z]=\tanh(z/\sigma^2)$. At $z=0.3$: the score is $(\log\rho_\sigma)'(0.3)=2.1346$, and $z+\sigma^2\times2.1346=0.8337=\tanh(1.2)$ ✓ (also at $z=1$ and $z=-0.6$: $0.99933$ and $-0.98368$ both ways).</li>
+<li><strong>Gaussian signal.</strong> $W\sim\N(m,s^2)$: $Z\sim\N(m,s^2+\sigma^2)$, score $-\frac{z-m}{s^2+\sigma^2}$, so Tweedie gives $\E[W\mid Z=z]=m+\frac{s^2}{s^2+\sigma^2}(z-m)$: the classical shrinkage towards the mean (Gaussian conditioning formula). With $m=1$, $s=2$, $\sigma=1$, $z=3$: $2.6$ both ways.</li>
+</ul>
+</div>
+<figure class="fig"><!-- include figures/L06/tweedie.svg --><figcaption>Left: data at $\pm1$ and the density of the noisy observation $Z=W+0.5\,\eps$. Right: the optimal denoiser $z\mapsto\tanh(z/\sigma^2)$ against the identity; at $z=0.3$ the denoised value $0.834$ is $z$ plus $\sigma^2$ times the score (vertical segment).</figcaption></figure>
+
+<h3 id="diff-velocity">From the score to the velocity</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML p. 411 and Prop. 16.7, p. 412</span></div>
+<p>[…] The next two propositions are written in the noising direction, from a data law $\al$ to a Gaussian; reversing time gives the corresponding sampling flow. They also give an explicit closed form for $v_t$ and show that it is a gradient field. In this setting, $v_t$ is also the solution of the constrained least-squares problem (14.8).</p>
+<p><strong>Proposition 16.7 (Gaussian-endpoint flow-matching field).</strong> Let $X\sim\al$ and $Y\sim\N(0,\Id)$ be independent. For $t\in(0,1)$ set $Z_t=(1-t)X+tY$, $\al_t=\mathrm{Law}(Z_t)=\rho_t\,\dd x$. The regression minimizer $v^\star:\R^d\times(0,1)\to\R^d$ of</p>
+$$\min_v\int_0^1\!\!\iint\big\lVert y-x-v\big((1-t)x+ty,t\big)\big\rVert^2\,\dd\al(x)\,\dd\N(y)\,\dd t$$
+<p>is $\displaystyle v^\star(x,t)=-\frac{1}{1-t}x-\frac{t}{1-t}\nabla\log\rho_t(x)$. In particular, for each $t\in(0,1)$ this field is a gradient field, $v^\star(\cdot,t)=-\nabla\Big(\frac{\norm\cdot^2}{2(1-t)}+\frac{t}{1-t}\log\rho_t\Big)$.</p>
+</div>
+<p><strong>In the sampling direction</strong> (noise $X_0\sim\N(0,\Id)$ at $t=0$, data $X_1$ at $t=1$, as in the sheet), the same computation reads:</p>
+<ol class="steps">
+<li>$$X_t=tX_1+(1-t)X_0:\qquad\E[tX_1\mid X_t=x]=x+(1-t)^2\nabla\log\rho_t(x).$$<span class="why">Tweedie with $W=tX_1$ (the signal) and $\sigma=1-t$ (the noise level).</span></li>
+<li>$$v_t(x)=\frac{\E[X_1\mid X_t=x]-x}{1-t}=\frac{1}{1-t}\Big(\frac{x+(1-t)^2\nabla\log\rho_t(x)}{t}-x\Big)=\frac xt+\frac{1-t}t\nabla\log\rho_t(x).$$<span class="why">Formula (1) of the sheet, then simplify: $\frac{x}{t(1-t)}-\frac{x}{1-t}=\frac{x}{t}$.</span></li>
+<li>$v_t=\nabla\big(\frac{\norm x^2}{2t}+\frac{1-t}{t}\log\rho_t\big)$ is a gradient, so by Prop. 14.3 (§1) it is the <strong>least-energy</strong> velocity of the path $(\al_t)$.<span class="why">This is OT4ML’s remark “in this setting, $v_t$ is also the solution of (14.8)”; it is Prop. 16.7 with $t\mapsto1-t$ and the velocity reversed.</span></li>
+</ol>
+<p>Check on the two-atom example of §6 at $t=0.5$, $x=0.2$: $\frac xt+\frac{1-t}t(\log\rho_t)'(x)=0.359898$, equal to the closed form $\frac{\tanh(0.4)-0.2}{0.5}$ ✓. <strong>Learning the score, learning the denoiser and learning the velocity are the same task</strong>: each one is an affine function of the others at fixed $(t,x)$.</p>
+<p>For a general schedule $X=a_t\cdot\text{data}+b_t\cdot\text{noise}$, (16.12) gives the velocity; for the variance-preserving OU coefficients the factor of $x$ is $\dot a/a=-1$ and the factor of the score is $\frac{\dot ab^2}a-\dot bb=-1$ (we checked both at $\tau=0.1,0.7,2$), hence $v_\tau=-x-\sigma^2\nabla\log\rho_\tau$.</p>
+
+<h3 id="diff-pf">The probability-flow ODE and the reverse SDE</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Remark 16.5, pp. 410–411</span></div>
+<p>[…] Thus the natural noisy analogue of (16.2) regresses the instantaneous drift […] and learns the drift term of a Fokker–Planck equation, not a pure continuity equation unless the diffusion tensor vanishes. When $\al_t=\rho_t\,\dd x$ has a smooth positive density, the same marginal curve can be represented, at least formally, by a probability-flow ODE […]. In the scalar spatially homogeneous case $D_t=\sigma_t^2\Id$, this reduces to</p>
+$$\bar v_t=v_t-\frac{\sigma_t^2}2\nabla\log\rho_t,$$
+<p>which is the familiar score correction relating diffusion SDEs to probability-flow ODEs.</p>
+</div>
+<p>The mechanism is one line of calculus. An SDE $\dd X_t=v_t(X_t)\dd t+\sigma_t\dd B_t$ has densities solving the Fokker–Planck equation $\partial_t\rho_t+\dv(\rho_tv_t)=\frac{\sigma_t^2}2\Delta\rho_t$ (<a href="#recall-brownian">refresher</a>). Since $\Delta\rho=\dv(\rho\nabla\log\rho)$,</p>
+$$\partial_t\rho_t+\dv\Big(\rho_t\Big(v_t-\frac{\sigma_t^2}2\nabla\log\rho_t\Big)\Big)=0:$$
+<p>the same densities solve a <em>continuity</em> equation with the velocity $\bar v_t$ — the <em class="new">probability-flow ODE</em> $\dot x=\bar v_t(x)$. Conversely, from an ODE one can build SDEs with the same marginals for any noise level $g_t$: $\dd X=\big(\bar v_t+\frac{g_t^2}2\nabla\log\rho_t\big)\dd t+g_t\dd B_t$. Check on OU: drift $-x$, noise $\sqrt2\sigma$, so $\bar v=-x-\sigma^2\nabla\log\rho$, the velocity of the compact notes’ Prop. 16.6 ✓.</p>
+<div class="box intu"><div class="box-h">Intuition — two ways to sample from a diffusion model</div>
+<p><strong>Stochastic</strong> (DDPM-style): start from noise and run the reverse-time SDE, which adds fresh noise at every step; the endpoint of a given noise vector is random. <strong>Deterministic</strong> (probability-flow ODE, DDIM-style): integrate the ODE backwards; each noise vector has one image, the map noise → data is a well-defined transport map, and fewer, larger steps are possible. Both have the same marginal distributions at every time.</p>
+</div>
+
+<h3 id="diff-schedules">Schedules change the paths, not the map</h3>
+<p>OT4ML p. 414 notes that a monotone time change of the linear bridge “only changes the speed of the flow” and “leaves the spatial integral curves unchanged”, while “diffusion models use a genuinely different family of noising paths”: the variance-preserving schedule bends the trajectories differently (OT4ML Figs. 16.3–16.5). Yet the <em>terminal map</em> does not depend on the schedule. OT4ML states this for Gaussians (Remark 16.9, §8); here is the general argument (derived here).</p>
+<div class="box thm"><div class="box-h">Proposition (schedule-free form of the flow) — derived here</div>
+<p>Let $X_t=a_tX+b_tZ$ with data $X$, noise $Z\sim\N(0,\Id)$ independent, $(a_0,b_0)=(0,1)$, $(a_1,b_1)=(1,0)$, $b_t>0$ on $[0,1)$ and $\lambda_t=a_t/b_t$ increasing from $0$ to $+\infty$. Along a trajectory of the flow-matching field, $y=x/b_t$ solves</p>
+$$\frac{\dd y}{\dd\lambda}=\E\big[X\ \big|\ \lambda X+Z=y\big],\qquad y(0)=x_0\ \text{(the noise sample)},$$
+<p>an ODE that does not involve the schedule; the endpoint is $x_1=\lim_{\lambda\to\infty}y(\lambda)/\lambda$. Hence all such schedules define the same map noise $\to$ data.</p>
+</div>
+<details class="fold proof"><summary>Proof</summary><div class="fold-body">
+<ol class="steps">
+<li>$v_t(x)=\E[\dot a_tX+\dot b_tZ\mid X_t=x]$ and $x=a_t\E[X\mid X_t=x]+b_t\E[Z\mid X_t=x]$.<span class="why">Prop. 16.3 with the pathwise velocity $\dot a_tX+\dot b_tZ$; and $\E[X_t\mid X_t=x]=x$.</span></li>
+<li>$$\frac{\dd}{\dd t}\frac{x}{b_t}=\frac{v_t(x)}{b_t}-\frac{\dot b_tx}{b_t^2}=\frac{\dot a_tb_t-a_t\dot b_t}{b_t^2}\,\E[X\mid X_t=x]=\dot\lambda_t\,\E[X\mid X_t=x].$$<span class="why">Quotient rule; replace $\E[Z\mid\cdot]$ by $(x-a_t\E[X\mid\cdot])/b_t$ from step 1: the $x$ terms cancel.</span></li>
+<li>$\{X_t=x\}=\{\lambda_tX+Z=x/b_t\}$, so $\E[X\mid X_t=x]=\E[X\mid\lambda X+Z=y]$ at $\lambda=\lambda_t$, $y=x/b_t$.<span class="why">Divide $a_tX+b_tZ=x$ by $b_t>0$.</span></li>
+<li>Change variable $t\to\lambda$ (allowed since $\dot\lambda_t>0$): $\frac{\dd y}{\dd\lambda}=\E[X\mid\lambda X+Z=y]$. At $t=0$, $b_0=1$ and $y=x_0$; as $t\to1$, $x_t=b_ty=a_t\,y/\lambda_t\to\lim y/\lambda$ since $a_t\to1$.<span class="why">Steps 2–3; $b_t=a_t/\lambda_t$.</span></li>
+</ol>
+</div></details>
+<figure class="fig"><!-- include figures/L06/schedules.svg --><figcaption>From $\N(0,1)$ (bottom) to $0.3\,\delta_{-2}+0.7\,\delta_1$ (top), 16 noise quantiles. Left and middle: probability-flow trajectories for the linear schedule and for the variance-preserving $\sin/\cos$ schedule — different curves. Right: straight rays of the optimal (monotone) map. All three send exactly the same points to the same atoms: the boundary is $\Phi^{-1}(0.3)=-0.5244$ (found by bisection on the flow: $-0.524401$).</figcaption></figure>
+
+<div class="widget" data-widget="l6diffusion"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p>What to look at: time runs upward from Gaussian noise ($t=0$) to the data ($t=1$); the purple curves are the densities of $X_t$ at nine times (closed form: a Gaussian mixture), the green curves the probability-flow trajectories of 24 noise quantiles. Switch the schedule: the trajectories change, the landing points do not. The readout compares where the flow lands with the optimal (monotone) map: in 1D the boundaries coincide, $\Phi^{-1}(\text{cumulative weights})$. Tick “stochastic sampler”: the reverse SDE with the same densities produces random paths, and a given noise value no longer has a fixed destination.</p>
+
+<div class="box ml"><div class="box-h">In machine learning — denoising diffusion models</div>
+<p><strong>Data:</strong> images $x$. <strong>Noising:</strong> $x_t=a_tx+b_t\eps$ with $\eps\sim\N(0,\Id)$ and a fixed schedule (variance preserving in DDPM: Ho, Jain, Abbeel, NeurIPS 2020). <strong>Model:</strong> a U-Net $\eps_\theta(x_t,t)$ trained by the regression $\E\norm{\eps_\theta(x_t,t)-\eps}^2$ — by Tweedie, $\eps_\theta\approx\E[\eps\mid x_t]=-b_t\nabla\log\rho_t(x_t)$, a <em>denoising score matching</em> estimator of the score (Hyvärinen 2005; Vincent 2011). <strong>Sampling:</strong> DDPM runs a stochastic reverse chain with about $1000$ steps; Song et al. (<em>Score-based generative modeling through SDEs</em>, ICLR 2021) introduced the probability-flow ODE, and the deterministic DDIM sampler (Song, Meng, Ermon, ICLR 2021) can be read as its discretization, producing good images in tens of steps; Karras et al. (NeurIPS 2022) reorganized the design space around this ODE view. Pointers: OT4ML p. 407 cites score matching, DDPM and score SDEs.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — which way does time run?</div>
+<p>OT4ML’s Props. 16.6–16.7 and the compact notes’ Props. 16.4 and 16.6 put the data at $t=0$ (noising); the exercise sheet puts the noise at $t=0$ (sampling). Translating changes $t$ into $1-t$ and the sign of the velocity: OT4ML’s $-\frac{x}{1-t}-\frac{t}{1-t}\nabla\log\rho_t$ becomes $\frac xt+\frac{1-t}t\nabla\log\rho_t$. Always check which endpoint is the Gaussian.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — the score is singular at the data</div>
+<p>For data made of atoms (or concentrated near a low-dimensional set), $\nabla\log\rho_t$ blows up like $1/b_t^2$ as the noise vanishes. Samplers stop at a small positive noise level (OT4ML p. 414: “the integration is stopped at a small positive noising time before the Dirac endpoint”).</p>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>Denoiser ↔ score: $\E[W\mid Z=z]=z+\sigma^2\nabla\log\rho_\sigma(z)$.</li>
+<li>Score ↔ velocity (noise at $0$, linear bridge): $v_t=\frac xt+\frac{1-t}t\nabla\log\rho_t$; general schedule: (16.12).</li>
+<li>SDE ↔ ODE with the same marginals: subtract $\frac{\sigma^2}2\nabla\log\rho$ from the drift.</li>
+<li>Change of schedule with the same endpoints → same terminal map (schedule-free variables $y=x/b$, $\lambda=a/b$).</li>
+</ul>
+</div>
+<div class="quiz"><p>For Gaussian data $X_1\sim\N(m,s^2)$ on the line and noise $X_0\sim\N(0,1)$ (linear bridge, independent), what is $\E[X_1\mid X_t=x]$?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>$X_t\sim\N(tm,\sigma_t^2)$ with $\sigma_t^2=(1-t)^2+t^2s^2$, and $\mathrm{Cov}(X_1,X_t)=ts^2$. Gaussian conditioning: $\E[X_1\mid X_t=x]=m+\frac{ts^2}{\sigma_t^2}(x-tm)$. (Tweedie with $W=tX_1$, $\sigma=1-t$ gives the same.)</p>
+</div></details></div>

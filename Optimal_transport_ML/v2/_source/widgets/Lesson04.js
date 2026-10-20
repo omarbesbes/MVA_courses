@@ -14,6 +14,34 @@
   function l4sign(v, tol) { return v > tol ? 1 : (v < -tol ? -1 : 0); }
   function l4clear(svg) { while (svg.firstChild) svg.removeChild(svg.firstChild); return el("g", {}, svg); }
   function l4txt(g, x, y, s, cls, anchor) { var t = el("text", { x: x, y: y, "class": cls || "tx-s", "text-anchor": anchor || "start" }, g); t.textContent = s; return t; }
+  // Tiny markup for labels: ^{..} superscript, _{..} subscript, ~{..} overline (as in the page's notation).
+  function l4esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function l4html(s) {
+    return l4esc(s).replace(/\^\{([^}]*)\}/g, "<sup>$1</sup>").replace(/_\{([^}]*)\}/g, "<sub>$1</sub>")
+      .replace(/~\{([^}]*)\}/g, '<i style="font-style:normal;text-decoration:overline">$1</i>'); // not a span: .legend span::before draws a swatch
+  }
+  function l4legend(box, items) { // like legend(), with the markup above
+    box.innerHTML = "";
+    items.forEach(function (it) { var sp = document.createElement("span"); sp.style.setProperty("--lc", "var(" + it[0] + ")"); sp.innerHTML = l4html(it[1]); box.appendChild(sp); });
+  }
+  function l4svgText(g, x, y, s, cls, anchor, bg) { // SVG text with the markup above (tspans), optionally on a background plate
+    var t = el("text", { x: x, y: y, "class": cls || "tx-s", "text-anchor": anchor || "start" }, g), re = /(\^|_|~)\{([^}]*)\}/g, last = 0, m;
+    function plain(str) { if (str) { var ts = el("tspan", {}, t); ts.textContent = str; } }
+    while ((m = re.exec(s))) {
+      plain(s.slice(last, m.index));
+      var a = m[1] === "^" ? { "baseline-shift": "super", "font-size": "75%" } : (m[1] === "_" ? { "baseline-shift": "sub", "font-size": "75%" } : { "text-decoration": "overline" });
+      el("tspan", a, t).textContent = m[2];
+      last = re.lastIndex;
+    }
+    plain(s.slice(last));
+    if (bg) {
+      var bb = null; try { bb = t.getBBox(); } catch (err) { bb = null; }
+      if (!bb || !bb.width) bb = { x: anchor === "end" ? x - 5.6 * s.length : x, y: y - 10, width: 5.6 * s.length, height: 13 };
+      var r = el("rect", { x: (bb.x - 3).toFixed(1), y: (bb.y - 1).toFixed(1), width: (bb.width + 6).toFixed(1), height: (bb.height + 2).toFixed(1), rx: 3, "class": "fs", "fill-opacity": 0.88 }, g);
+      g.insertBefore(r, t);
+    }
+    return t;
+  }
 
   /* =====================================================================================
      1. The discrete dual: prices, admissibility, complementary slackness (section 1)
@@ -29,7 +57,7 @@
       degen: { C: [[1, 3], [2, 5]], a: [0.5, 0.5], b: [0.5, 0.5], P: [[0, 0.5], [0.5, 0]], L: 2.5, f: [0, 1.5], g: [0.5, 3] }
     };
     var exSel = select(s.controls, "Example", [["ship", "shipping (3 × 3)"], ["degen", "degenerate (2 × 2)"]], "ship", function () { setEx(); });
-    var modeSel = select(s.controls, "Delivery prices g", [["best", "best response g = f^C"], ["free", "free (sliders)"]], "best", function () { showSliders(); draw(); });
+    var modeSel = select(s.controls, "Delivery prices g", [["best", "best response gⱼ = minᵢ (Cᵢⱼ − fᵢ)"], ["free", "free (sliders)"]], "best", function () { showSliders(); draw(); });
     var fS = [], gS = [], k;
     for (k = 0; k < 3; k++) fS.push(slider(s.controls, "f<sub>" + (k + 1) + "</sub>", -2, 6, 0.1, 0, draw));
     for (k = 0; k < 3; k++) gS.push(slider(s.controls, "g<sub>" + (k + 1) + "</sub>", -2, 8, 0.1, 0, draw));
@@ -105,7 +133,7 @@
       l4txt(gg, gx + gw + 12, Yg(E.L) + 4, "optimal cost " + fmt(E.L, 1), "tx-s", "start");
       l4txt(gg, gx + gw + 12, Math.min(Yg(bill), gy0 + gh - 8) + (Math.abs(Yg(bill) - Yg(E.L)) < 16 ? 18 : 4), "bill " + fmt(bill, 2), feas ? "tx-s t3" : "tx-s t2", "start");
       l4txt(gg, gx + gw / 2, gy0 + gh + 18, "bill", "tx-s", "middle");
-      var txt = "bill ⟨f,a⟩ + ⟨g,b⟩ = " + fmt(bill, 2) + "   ·   optimal cost L_C = " + fmt(E.L, 1);
+      var txt = "bill ⟨f,a⟩ + ⟨g,b⟩ = " + fmt(bill, 2) + "   ·   optimal cost L_{C} = " + fmt(E.L, 1);
       if (feas) {
         txt += "\nadmissible prices (every slack ≥ 0): the bill is a lower bound, " + fmt(bill, 2) + " ≤ " + fmt(E.L, 1) +
           ".  Gap Σ P*ᵢⱼ·slackᵢⱼ = " + fmt(gap, 2) + (onContacts && Math.abs(gap) < 1e-9 ? "  → zero gap: the plan lives on contacts, both are optimal ✓" : "  → the optimal plan uses routes with positive slack");
@@ -113,7 +141,7 @@
         txt += "\nNOT admissible: " + bad.join(", ") + " billed above cost. The operator refuses; such a bill proves nothing.";
       }
       txt += "\ncontacts: " + contacts + " of " + (n * m) + " routes";
-      ro.textContent = txt;
+      ro.innerHTML = l4html(txt);
     }
     setEx(); redrawers.push(draw);
   };
@@ -125,14 +153,14 @@
     var s = scaffold(box, "c-transforms in 1D: drag the prices f(xₖ); the transform is the lower envelope, the double transform raises useless prices");
     var top = new Plot(s.svg, { x: [-2.2, 2.2], y: [-1.8, 2.8], w: 680, h: 230, pad: { l: 40, r: 16, t: 16, b: 26 }, label: "Source side: prices f at seven points and the double transform" });
     var botSvg = addSvg(box, s.svg);
-    var bot = new Plot(botSvg, { x: [-2.2, 2.2], y: [-2.8, 2.6], w: 680, h: 230, pad: { l: 40, r: 16, t: 16, b: 26 }, label: "Target side: sections and their lower envelope f^c" });
+    var bot = new Plot(botSvg, { x: [-2.2, 2.2], y: [-2.8, 2.6], w: 680, h: 230, pad: { l: 40, r: 16, t: 16, b: 26 }, label: "Target side: sections and their lower envelope, the c-transform of f" });
     var costSel = select(s.controls, "Cost", [["sq", "c = |x − y|²"], ["abs", "c = |x − y|"], ["bil", "c = −x·y"]], "sq", draw);
     var secChk = checkbox(s.controls, "show the sections", true, draw);
-    button(s.controls, "Replace f by f^cc̄", function () { var r = compute(); for (var k = 0; k < K; k++) F[k] = Math.round(r.fccAt[k] * 1000) / 1000; draw(); });
+    button(s.controls, "Replace f by its double transform", function () { var r = compute(); for (var k = 0; k < K; k++) F[k] = Math.round(r.fccAt[k] * 1000) / 1000; draw(); });
     button(s.controls, "Random f", function () { var rng = mulberry32(seed++); for (var k = 0; k < K; k++) F[k] = Math.round((-1 + 2.6 * rng()) * 100) / 100; draw(); });
     button(s.controls, "Reset", function () { F = F0.slice(); draw(); });
     var ro = readout(s.controls);
-    legend(s.legend, [["--s2", "prices f(xₖ) (drag)"], ["--muted", "sections y ↦ c(xₖ, y) − f(xₖ)"], ["--s1", "f^c (lower envelope)"], ["--s3", "f^cc̄ (double transform)"]]);
+    l4legend(s.legend, [["--s2", "prices f(xₖ) (drag)"], ["--muted", "sections y ↦ c(xₖ, y) − f(xₖ)"], ["--s1", "f^{c} (lower envelope)"], ["--s3", "f^{cc̄} (double transform)"]]);
     var K = 7, XK = [], k, seed = 5;
     for (k = 0; k < K; k++) XK.push(-1.8 + 3.6 * k / (K - 1));
     var F0 = [0.2, 1.1, -0.3, 0.9, 0.4, 1.6, -0.1], F = F0.slice();
@@ -180,7 +208,7 @@
         el("circle", { cx: top.tx(XK[kk]), cy: top.ty(r.fccAt[kk]), r: 4.5, "class": "ln c3 thin nofill" }, top.g);
         top.dot(XK[kk], F[kk], 6.5, "f2 drag");
       }
-      top.text(-2.15, 2.5, "source side: f (dots) and f^cc̄ (green), on 𝒳", "tx-s", "start");
+      l4svgText(top.g, top.tx(-2.15), top.ty(2.5), "source side: f (dots) and f^{cc̄} (green), on 𝒳", "tx-s", "start", true);
       // bottom: target side
       bot.clear();
       bot.axes({ xticks: [-2, -1, 0, 1, 2], yticks: [-2, -1, 0, 1, 2], xfmt: function (v) { return fmt(v, 0); }, yfmt: function (v) { return fmt(v, 0); } });
@@ -190,16 +218,16 @@
       bot.poly(pts, "ln c1");
       bot.unclip();
       if (costSel.value !== "bil") for (kk = 0; kk < K; kk++) bot.dot(XK[kk], -F[kk], 4, "f2");
-      bot.text(-2.15, 2.25, "target side: f^c(y) = minₖ c(xₖ, y) − f(xₖ), on 𝒴", "tx-s", "start");
+      l4svgText(bot.g, bot.tx(-2.15), bot.ty(2.25), "target side: f^{c}(y) = minₖ c(xₖ, y) − f(xₖ), on 𝒴", "tx-s", "start", true);
       var maxId = 0, minGap = Infinity;
       for (i = 0; i < N; i++) maxId = Math.max(maxId, Math.abs(r.fccc[i] - r.fc[i]));
       for (kk = 0; kk < K; kk++) minGap = Math.min(minGap, r.fccAt[kk] - F[kk]);
-      var t = "min over the seven points of f^cc̄ − f = " + fmt(minGap, 3) + "  (≥ 0: identity (ii))";
-      t += "\nraised prices: " + (raised.length ? raised.join(", ") + " — these values of f were not c-concave" : "none — f is c-concave (f = f^cc̄ on the seven points)");
-      t += "\nmax over y of |f^cc̄c − f^c| = " + (maxId < 5e-4 ? "0.000" : fmt(maxId, 3)) + "  (identity (iv); computed on a grid of " + N + " points)";
-      if (costSel.value === "abs") t += "\nwith c = |x − y|: f^c is 1-Lipschitz and f^cc̄ = −f^c";
-      if (costSel.value === "bil") t += "\nwith c = −xy: f^c is concave, piecewise linear (an infimum of lines)";
-      ro.textContent = t;
+      var t = "min over the seven points of f^{cc̄} − f = " + fmt(minGap, 3) + "  (≥ 0: identity (ii))";
+      t += "\nraised prices: " + (raised.length ? raised.join(", ") + " — these values of f were not c\u2011concave" : "none — f is c\u2011concave (f = f^{cc̄} on the seven points)");
+      t += "\nmax over y of |f^{cc̄c} − f^{c}| = " + (maxId < 5e-4 ? "0.000" : fmt(maxId, 3)) + "  (identity (iv); computed on a grid of " + N + " points)";
+      if (costSel.value === "abs") t += "\nwith c = |x − y|: f^{c} is 1-Lipschitz and f^{cc̄} = −f^{c}";
+      if (costSel.value === "bil") t += "\nwith c = −xy: f^{c} is concave, piecewise linear (an infimum of lines)";
+      ro.innerHTML = l4html(t);
     }
     draw(); redrawers.push(draw);
   };
@@ -249,12 +277,12 @@
     var preSel = select(s.controls, "Pair", [["atoms", "½δ₀ + ½δ₃ vs 𝒰[1,2]"], ["gauss", "two Gaussians"], ["bimodal", "two bumps vs one"]], "atoms", function () { tS.set(0); draw(); });
     var tS = slider(s.controls, "shift β by", -3, 3, 0.05, 0, draw);
     var ro = readout(s.controls);
-    legend(s.legend, [["--s2", "α, C_α"], ["--s1", "β (shifted), C_β"], ["--s3", "area |C_α − C_β|, witness f"]]);
+    l4legend(s.legend, [["--s2", "α and its CDF C_{α}"], ["--s1", "β (shifted) and its CDF C_{β}"], ["--s3", "area |C_{α} − C_{β}|; witness f"]]);
     function ticks(L, R) { var t = [], v; for (v = Math.ceil(L); v <= R; v++) t.push(v); return t; }
     function draw() {
       var P = PRE[preSel.value], t = tS.get(), A = P.a, B = l4shift(P.b, t), i;
       tS.out.textContent = fmt(t, 2);
-      var N = 2400, L = P.L, R = P.R, h = (R - L) / N, xs = [], Fa = [], Fb = [];
+      var N = 9600, ST = 16, L = P.L, R = P.R, h = (R - L) / N, xs = [], Fa = [], Fb = [];
       for (i = 0; i <= N; i++) { var x = L + i * h; xs.push(x); Fa.push(l4cdfComp(A, x)); Fb.push(l4cdfComp(B, x)); }
       var W1 = 0, f = [0], changes = 0, prevS = 0;
       for (i = 0; i < N; i++) {
@@ -286,21 +314,21 @@
       mid.clear();
       mid.axes({ xticks: ticks(L, R), yticks: [0, 0.5, 1], yfmt: function (v) { return fmt(v, 1); }, nogrid: true });
       var up = [], dn = [];
-      for (i = 0; i <= N; i += 4) { up.push([xs[i], Math.max(Fa[i], Fb[i])]); dn.push([xs[i], Math.min(Fa[i], Fb[i])]); }
+      for (i = 0; i <= N; i += ST) { up.push([xs[i], Math.max(Fa[i], Fb[i])]); dn.push([xs[i], Math.min(Fa[i], Fb[i])]); }
       mid.poly(up.concat(dn.reverse()), "a3");
       var pa = [], pb = [];
-      for (i = 0; i <= N; i += 2) { pa.push([xs[i], Fa[i]]); pb.push([xs[i], Fb[i]]); }
+      for (i = 0; i <= N; i += ST / 2) { pa.push([xs[i], Fa[i]]); pb.push([xs[i], Fb[i]]); }
       mid.poly(pa, "ln c2"); mid.poly(pb, "ln c1");
       // bottom: witness, centred
-      var fmin = Math.min.apply(null, f), fmax = Math.max.apply(null, f), c0 = (fmin + fmax) / 2, span = Math.max((fmax - fmin) / 2, 0.5) * 1.15;
-      bot.o.x = [L, R]; bot.o.y = [-span, span];
+      var fmin = Math.min.apply(null, f), fmax = Math.max.apply(null, f), c0 = (fmin + fmax) / 2, half = Math.max((fmax - fmin) / 2, 0.5);
+      bot.o.x = [L, R]; bot.o.y = [-1.12 * half, 1.6 * half];
       bot.clear();
       bot.axes({ xticks: ticks(L, R), yticks: [], nogrid: true });
-      var wp = []; for (i = 0; i <= N; i += 2) wp.push([xs[i], f[i] - c0]);
+      var wp = []; for (i = 0; i <= N; i += ST / 2) wp.push([xs[i], f[i] - c0]);
       bot.poly(wp, "ln c3");
-      bot.text(L + 0.1, span * 0.78, "witness f (slope ±1), shifted to be centred", "tx-s", "start");
-      ro.textContent = "W₁ = ∫ |C_α − C_β| dx = " + fmt(W1, 3) + "      ∫ f d(α − β) = " + fmt(check, 3) + "  (equal: the witness certifies W₁)" +
-        "\nsign changes of C_α − C_β: " + changes + (changes === 0 ? "  → the witness is a single line of slope ±1: every unit of mass moves the same way" : "  → the witness bends where the CDFs cross");
+      bot.text(L + 0.1, 1.33 * half, "witness f (slope ±1), shifted to be centred", "tx-s", "start");
+      ro.innerHTML = l4html("W₁ = ∫ |C_{α} − C_{β}| dx = " + fmt(W1, 3) + "      ∫ f d(α − β) = " + fmt(check, 3) + "  (equal: the witness certifies W₁)" +
+        "\nsign changes of C_{α} − C_{β}: " + changes + (changes === 0 ? "  → the witness is a single line of slope ±1: every unit of mass moves the same way" : "  → the witness bends where the CDFs cross"));
     }
     draw(); redrawers.push(draw);
   };
@@ -316,7 +344,7 @@
     var famSel = select(s.controls, "Family", [["unif", "two uniform laws"], ["gauss", "two Gaussians"], ["dirac", "two Diracs"]], "unif", setup);
     var tS = slider(s.controls, "shift t", -3, 3, 0.01, 1.5, draw);
     var ro = readout(s.controls);
-    legend(s.legend, [["--s3", "W₁"], ["--muted", "‖·‖_TV"], ["--s5", "JS²"], ["--s6", "KL(model | data)"], ["--s4", "MMD (Gaussian kernel, σ = 1)"]]);
+    l4legend(s.legend, [["--s3", "W₁"], ["--muted", "‖α − β‖_{TV}"], ["--s5", "JS²"], ["--s6", "KL(model | data)"], ["--s4", "MMD (Gaussian kernel, σ = 1)"]]);
     var LN2 = Math.log(2);
     function vals(fam, t) {
       var a = Math.abs(t), v = { w1: a };
@@ -426,7 +454,7 @@
     s.svg.setAttribute("viewBox", "0 0 " + W + " " + H);
     s.svg.setAttribute("role", "img");
     s.svg.setAttribute("aria-label", "Power diagram of six atoms in the unit square, with bars comparing captured and prescribed masses");
-    var denSel = select(s.controls, "Source α", [["unif", "uniform on the square"], ["blobs", "two Gaussian blobs"]], "unif", function () { stop(); g = zeros(); hist = []; mode = "ot"; draw(); });
+    var denSel = select(s.controls, "Source α", [["unif", "uniform on the square"], ["blobs", "two Gaussian blobs"]], "unif", function () { stop(); buildGrid(); g = zeros(); hist = []; mode = "ot"; draw(); });
     var bSel = select(s.controls, "Target masses b", [["eq", "equal (1/6 each)"], ["uneq", "unequal"]], "uneq", function () { stop(); g = zeros(); hist = []; mode = "ot"; draw(); });
     button(s.controls, "Gradient step", function () { stop(); mode = "ot"; gradStep(); draw(); });
     button(s.controls, "Run", function () { stop(); mode = "ot"; runGrad(); });
@@ -435,7 +463,7 @@
     button(s.controls, "Lloyd step", function () { stop(); lloydStep(); });
     button(s.controls, "New atoms", function () { stop(); newSites(); });
     var ro = readout(s.controls);
-    legend(s.legend, [["--text", "atoms yⱼ (drag)"], ["--s3", "captured mass α(Lⱼ)"], ["--muted", "prescribed mass bⱼ (outline)"]]);
+    legend(s.legend, [["--text", "atoms yⱼ (drag)"], ["--muted", "bars: filled = captured mass α(Lⱼ), outline = prescribed mass bⱼ"]]);
     var M = 6, seedS = 21, timer = null, busy = false;
     var Y0 = [[0.22, 0.25], [0.7, 0.18], [0.5, 0.5], [0.2, 0.75], [0.78, 0.72], [0.48, 0.88]];
     var Y = Y0.map(function (p) { return p.slice(); });
@@ -605,7 +633,7 @@
       // history of the dual value (or energy)
       var hx = 440, hy = 205, hw = 210, hh = 150;
       el("rect", { x: hx, y: hy, width: hw, height: hh, "class": "ln cm hair nofill" }, gg);
-      l4txt(gg, hx, hy - 8, mode === "ot" ? "dual value 𝓔₀(g) along the iterations" : "Lloyd: positions only (weights 0)", "tx-s", "start");
+      l4txt(gg, hx, hy - 8, mode === "ot" ? "dual value ℰ₀(g) along the iterations" : "Lloyd: positions only (weights 0)", "tx-s", "start");
       if (mode === "ot" && hist.length > 1) {
         var lo = Math.min.apply(null, hist), hi = Math.max.apply(null, hist), span = Math.max(hi - lo, 1e-6), n = Math.max(hist.length - 1, 4);
         var d2 = hist.map(function (v, k) { return (k ? "L" : "M") + (hx + 4 + k / n * (hw - 8)).toFixed(1) + " " + (hy + hh - 8 - (v - lo) / span * (hh - 16)).toFixed(1); }).join("");
@@ -616,9 +644,9 @@
       var err = maxErr(r);
       var txt;
       if (mode === "ot") {
-        txt = "dual value 𝓔₀(g) = ∫ minⱼ(|x − yⱼ|² − gⱼ) dα + ⟨g, b⟩ = " + fmt(r.E, 5) + "    max |α(Lⱼ) − bⱼ| = " + fmt(err, 4) +
-          "\nweights g = (" + g.map(function (v) { return fmt(v, 3); }).join(", ") + ")" + (err < 1e-3 ? "   — balanced: the map Lⱼ → yⱼ is optimal and 𝓔₀(g) = W₂²" : "");
-        if (gbar) txt += "\nstochastic ascent: " + stoCount + " samples, step 0.08/√(1 + ℓ/30); averaged weights give 𝓔₀(ḡ) = " + fmt(evalAt(gbar).E, 5);
+        txt = "dual value ℰ₀(g) = ∫ minⱼ(|x − yⱼ|² − gⱼ) dα + ⟨g, b⟩ = " + fmt(r.E, 5) + "    max |α(Lⱼ) − bⱼ| = " + fmt(err, 4) +
+          "\nweights g = (" + g.map(function (v) { return fmt(v, 3); }).join(", ") + ")" + (err < 1e-3 ? "   — balanced: the map Lⱼ → yⱼ is optimal and ℰ₀(g) = W₂²" : "");
+        if (gbar) txt += "\nstochastic ascent: " + stoCount + " samples, step 0.08/√(1 + ℓ/30); averaged weights give ℰ₀(ḡ) = " + fmt(evalAt(gbar).E, 5);
       } else {
         var en = 0;
         if (denSel.value === "unif") r.cells.forEach(function (P, jj) { en += l4polySq(P, Y[jj]); });
@@ -629,7 +657,6 @@
       ro.textContent = txt;
     }
     buildGrid();
-    denSel.addEventListener("change", function () { buildGrid(); draw(); });
     draw(); redrawers.push(draw);
   };
 
@@ -640,14 +667,14 @@
     var s = scaffold(box, "Two Gaussian mixtures: transporting components (MW₂) versus transporting the densities (W₂)");
     var plot = new Plot(s.svg, { x: [-4.5, 4.5], y: [0, 1], w: 680, h: 300, pad: { l: 40, r: 16, t: 16, b: 28 }, label: "Interpolations between two Gaussian mixtures" });
     var PRE = {
-      one: { A: [[1, 0, 1]], B: [[0.5, -1, 0.5], [0.5, 1, 0.5]], P: [[0.5, 0.5]], L: -4.5, R: 4.5, ymax: 0.9 },
-      two: { A: [[0.5, -2, 0.5], [0.5, 2, 0.5]], B: [[0.25, -1, 0.5], [0.75, 1.5, 1]], P: [[0.25, 0.25], [0, 0.5]], L: -5, R: 6, ymax: 0.6 },
-      three: { A: [[0.2, -2, 0.3], [0.6, 0, 0.8], [0.2, 2, 0.3]], B: [[0.45, -2.2, 0.3], [0.1, 0, 0.25], [0.45, 2.2, 0.3]], P: [[0.2, 0, 0], [0.25, 0.1, 0.25], [0, 0, 0.2]], L: -4.5, R: 4.5, ymax: 0.85 }
+      one: { A: [[1, 0, 1]], B: [[0.5, -1, 0.5], [0.5, 1, 0.5]], P: [[0.5, 0.5]], L: -4.5, R: 4.5 },
+      two: { A: [[0.5, -2, 0.5], [0.5, 2, 0.5]], B: [[0.25, -1, 0.5], [0.75, 1.5, 1]], P: [[0.25, 0.25], [0, 0.5]], L: -5, R: 6 },
+      three: { A: [[0.2, -2, 0.3], [0.6, 0, 0.8], [0.2, 2, 0.3]], B: [[0.45, -2.2, 0.3], [0.1, 0, 0.25], [0.45, 2.2, 0.3]], P: [[0.2, 0, 0], [0.25, 0.1, 0.25], [0, 0, 0.2]], L: -4.5, R: 4.5 }
     };
     var preSel = select(s.controls, "Mixtures", [["one", "𝒩(0,1) vs two bumps"], ["two", "two vs two components"], ["three", "three vs three"]], "one", setup);
     var tS = slider(s.controls, "t", 0, 1, 0.01, 0.5, draw);
     var ro = readout(s.controls);
-    legend(s.legend, [["--s2", "ᾱ (t = 0)"], ["--s1", "β̄ (t = 1)"], ["--s3", "MW₂ path (components travel)"], ["--s5", "W₂ path (densities)"], ["--muted", "mixture (1 − t)ᾱ + tβ̄"]]);
+    l4legend(s.legend, [["--s2", "~{α} (t = 0)"], ["--s1", "~{β} (t = 1)"], ["--s3", "MW₂ path (components travel)"], ["--s5", "W₂ path (densities)"], ["--muted", "mixture (1 − t)~{α} + t~{β}"]]);
     var D = null;
     function mixPdf(M, x) { var v = 0; M.forEach(function (c) { v += c[0] * gpdf(x, c[1], c[2]); }); return v; }
     function setup() {
@@ -658,12 +685,27 @@
       var mw = 0;
       P.A.forEach(function (ca, i) { P.B.forEach(function (cb, j) { mw += P.P[i][j] * ((ca[1] - cb[1]) * (ca[1] - cb[1]) + (ca[2] - cb[2]) * (ca[2] - cb[2])); }); });
       D = { P: P, qa: qa, qb: qb, w2: Math.pow(w2q(qa, qb), 2), mw2: mw };
+      // a fixed vertical range per preset: the highest point of every curve over t in [0, 1]
+      var top = 0, k, x, t;
+      for (k = 0; k <= 20; k++) {
+        t = k / 20;
+        var cp = paths(t);
+        for (x = P.L; x <= P.R; x += 0.02) top = Math.max(top, mixPdf(P.A, x), mixPdf(P.B, x), mixPdf(cp.comps, x));
+        cp.dens.forEach(function (q) { if (isFinite(q[1])) top = Math.max(top, q[1]); });
+      }
+      D.ymax = 1.08 * top;
       draw();
+    }
+    function paths(t) { // the MW2 path (components) and the W2 path (density from averaged quantiles) at time t
+      var P = D.P, qt = new Float64Array(MQ), comps = [], i;
+      for (i = 0; i < MQ; i++) qt[i] = (1 - t) * D.qa[i] + t * D.qb[i];
+      P.A.forEach(function (ca, ii) { P.B.forEach(function (cb, jj) { var w = P.P[ii][jj]; if (w > 1e-12) comps.push([w, (1 - t) * ca[1] + t * cb[1], (1 - t) * ca[2] + t * cb[2]]); }); });
+      return { comps: comps, dens: densityFromQ(qt) };
     }
     function draw() {
       var P = D.P, t = tS.get(), i;
       tS.out.textContent = fmt(t, 2);
-      plot.o.x = [P.L, P.R]; plot.o.y = [0, P.ymax];
+      plot.o.x = [P.L, P.R]; plot.o.y = [0, D.ymax];
       plot.clear();
       var ticks = []; for (i = Math.ceil(P.L); i <= P.R; i++) ticks.push(i);
       plot.axes({ xticks: ticks, yticks: [], nogrid: true, noyaxis: true });
@@ -671,17 +713,14 @@
       plot.fn(function (x) { return mixPdf(P.A, x); }, "ln c2 thin dash", 400);
       plot.fn(function (x) { return mixPdf(P.B, x); }, "ln c1 thin dash", 400);
       plot.fn(function (x) { return (1 - t) * mixPdf(P.A, x) + t * mixPdf(P.B, x); }, "ln cm", 400);
-      var qt = new Float64Array(MQ);
-      for (i = 0; i < MQ; i++) qt[i] = (1 - t) * D.qa[i] + t * D.qb[i];
-      plot.poly(densityFromQ(qt), "ln c5 dash");
-      var comps = [];
-      P.A.forEach(function (ca, ii) { P.B.forEach(function (cb, jj) { var w = P.P[ii][jj]; if (w > 1e-12) comps.push([w, (1 - t) * ca[1] + t * cb[1], (1 - t) * ca[2] + t * cb[2]]); }); });
+      var cp = paths(t), comps = cp.comps;
+      plot.poly(cp.dens, "ln c5 dash");
       plot.fn(function (x) { return mixPdf(comps, x); }, "ln c3", 500);
       plot.unclip();
       var plan = "[" + P.P.map(function (r) { return "[" + r.map(frac).join(", ") + "]"; }).join(", ") + "]";
-      ro.textContent = "MW₂² = Σ Pᵢⱼ [(mᵢ − nⱼ)² + (σᵢ − τⱼ)²] = " + fmt(D.mw2, 4) + "   ≥   W₂²(ᾱ, β̄) = " + fmt(D.w2, 4) + "   (ratio " + fmt(D.mw2 / D.w2, 1) + ")" +
-        "\noptimal component plan P* (rows: components of ᾱ) = " + plan +
-        "\nthe green path is a mixture of at most " + comps.length + " Gaussians at every t; the purple one may split a component.";
+      ro.innerHTML = l4html("MW₂² = Σ Pᵢⱼ [(mᵢ − nⱼ)² + (σᵢ − τⱼ)²] = " + fmt(D.mw2, 4) + "   ≥   W₂²(~{α}, ~{β}) = " + fmt(D.w2, 4) + "   (ratio " + fmt(D.mw2 / D.w2, 1) + ")" +
+        "\noptimal component plan P* (rows: components of ~{α}) = " + plan +
+        "\nthe green path is a mixture of at most " + comps.length + " Gaussians at every t; the purple one may split a component.");
     }
     setup(); redrawers.push(draw);
   };

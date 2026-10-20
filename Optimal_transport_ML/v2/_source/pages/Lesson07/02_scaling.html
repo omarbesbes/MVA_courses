@@ -1,0 +1,88 @@
+<h2 id="scaling">2. The Gibbs kernel and the scaling form <span class="ref">OT4ML §8.2, pp. 138–139</span></h2>
+<p class="tldr">The entropic plan is the Gibbs kernel $K=e^{-C/\eps}$ with its rows and columns rescaled: $P_\eps=\operatorname{diag}(u)K\operatorname{diag}(v)$. Finding it means finding two positive vectors, $n+m$ numbers instead of $nm$.</p>
+
+<h3 id="scaling-why">The problem: $nm$ unknowns, $n+m$ constraints</h3>
+<p>A coupling of $n$ source points and $m$ target points has $nm$ entries, but only $n+m-1$ independent marginal constraints act on it. For the linear program this mismatch is what makes the solution set large (a whole face of minimizers can exist). For the entropic problem, the strictly convex penalty removes this freedom, and the first-order optimality conditions turn out to have a remarkable product structure: the optimal plan is determined by one number per row and one number per column.</p>
+
+<h3 id="scaling-statement">The scaling form</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 8.5, (8.3)–(8.4), pp. 138–139 · compact Prop. 8.4, p. 34</span></div>
+<p><strong>Proposition 8.5</strong> (Scaling form of entropic OT). P is the unique solution to (8.1) if and only if there exists $(u,v)\in\R^n_+\times\R^m_+$ such that</p>
+$$\forall(i,j)\in[\![n]\!]\times[\![m]\!],\qquad P_{i,j}=u_iK_{i,j}v_j\qquad\text{where}\qquad K_{i,j}:=e^{-\frac{C_{i,j}}{\eps}},\qquad(8.2)$$
+<p>and $P\in\U(a,b)$.</p>
+<p>[…] The factorization in (8.2) can be written compactly as $P=\operatorname{diag}(u)K\operatorname{diag}(v)$. $u,v$ must therefore satisfy the nonlinear mass-conservation equations</p>
+$$\operatorname{diag}(u)K\operatorname{diag}(v)\ind_m=a,\qquad\text{and}\qquad\operatorname{diag}(v)K\T\operatorname{diag}(u)\ind_n=b,\qquad(8.3)$$
+<p>Using entrywise multiplication, these equations reduce to</p>
+$$u\odot(Kv)=a\qquad\text{and}\qquad v\odot(K\T u)=b\qquad(8.4)$$
+<p>[…] Proposition 8.3 guarantees a unique scaled matrix P, although the two scaling vectors retain one multiplicative gauge degree of freedom.</p>
+</div>
+<dl class="decode">
+<dt>$K=e^{-C/\eps}$</dt><dd>The <em class="new">Gibbs kernel</em>: the cost matrix turned into a similarity matrix, entry by entry. $K_{ij}=1$ for a free trip, and $K_{ij}$ decays exponentially with the cost, on the scale $\eps$. (Not the matrix exponential: $\exp$ acts on each entry.)</dd>
+<dt>$\operatorname{diag}(u)K\operatorname{diag}(v)$</dt><dd>Multiply row $i$ of $K$ by $u_i$ and column $j$ by $v_j$: $P_{ij}=u_iK_{ij}v_j$. The <em>pattern</em> of $P$ (ratios such as $\frac{P_{ij}P_{kl}}{P_{il}P_{kj}}=\frac{K_{ij}K_{kl}}{K_{il}K_{kj}}$) is the pattern of $K$; only row and column “volumes” change.</dd>
+<dt>(8.3)–(8.4)</dt><dd>The row sums of $P$ are $u_i(Kv)_i$ and must equal $a_i$; the column sums are $v_j(K\T u)_j$ and must equal $b_j$. A system of $n+m$ nonlinear equations in $n+m$ unknowns: the <em class="new">matrix scaling problem</em>.</dd>
+<dt>$(u,v)\in\R^n_+\times\R^m_+$</dt><dd>The scalings are positive: when $a,b>0$, the constraint $P\in\U(a,b)$ forces $u_i>0$ and $v_j>0$ (a zero $u_i$ would empty row $i$).</dd>
+<dt>“gauge degree of freedom”</dt><dd>$(\lambda u,\ v/\lambda)$ gives the same $P$ for every $\lambda>0$: the scalings are unique only up to this rescaling.</dd>
+</dl>
+
+<div class="box idea"><div class="box-h">Idea of the proof</div>
+<p>“Only if”: the minimizer is positive (Prop. 8.3), so the constraints $P\ge0$ are inactive and the Lagrange conditions hold with one multiplier per row ($f_i$) and per column ($g_j$). The derivative of $P_{ij}\log P_{ij}$ is $\log P_{ij}+1$, so the condition reads $\log P_{ij}=(f_i+g_j-C_{ij})/\eps+\text{const}$: exponentiate, and $e^{f_i/\eps}$, $e^{g_j/\eps}$ are the scalings. “If”: for a plan of the form (8.2), the objective of any other coupling $Q$ equals a constant plus $\eps\KL(Q|P)$, which is minimal exactly at $Q=P$.</p>
+</div>
+<details class="fold proof"><summary>Full proof (both directions, and uniqueness of the scalings)</summary><div class="fold-body">
+<p>We work with the normalized objective $E(P)=\ps{P}{C}+\eps\KL(P|a\otimes b)$ of (8.8), which has the same minimizer as (8.1) (§1), and assume $a,b>0$ (rows or columns with zero mass are removed: their entries are $0$ in every coupling).</p>
+<p><strong>Only if.</strong></p>
+<ol class="steps">
+<li>The minimizer $P_\eps$ has all entries positive, so near $P_\eps$ the only active constraints are the linear equalities $P\ind_m=a$, $P\T\ind_n=b$.<span class="why">Prop. 8.3.</span></li>
+<li>$$\frac{\partial E}{\partial P_{ij}}=C_{ij}+\eps\log\frac{P_{ij}}{a_ib_j}.$$<span class="why">On positive matrices $\KL(P|a\otimes b)=\sum_{ij}\big(P_{ij}\log P_{ij}-P_{ij}\log(a_ib_j)-P_{ij}+a_ib_j\big)$, and $\frac{\dd}{\dd t}(t\log t-t\log c-t)=\log t-\log c$.</span></li>
+<li>$$C_{ij}+\eps\log\frac{P_{ij}}{a_ib_j}=f_i+g_j\quad\text{for all }i,j,\ \text{for some }f\in\R^n,\ g\in\R^m.$$<span class="why">Lagrange: at a minimizer of a smooth convex function under linear equality constraints, the gradient is a combination of the gradients of the constraints (<a href="#recall-convex">refresher</a>). The constraint “row sum $i$” has gradient $\big(\ind_{k=i}\big)_{kl}$, the constraint “column sum $j$” has gradient $\big(\ind_{l=j}\big)_{kl}$; their multipliers are $f_i$ and $g_j$.</span></li>
+<li>$$P_{ij}=a_ib_j\,e^{(f_i+g_j-C_{ij})/\eps}=\underbrace{a_ie^{f_i/\eps}}_{u_i}\ \underbrace{e^{-C_{ij}/\eps}}_{K_{ij}}\ \underbrace{b_je^{g_j/\eps}}_{v_j}.$$<span class="why">Solve step 3 for $P_{ij}$. This is (8.2), with positive $u,v$.</span></li>
+</ol>
+<p><strong>If (and uniqueness again).</strong> Let $P=\operatorname{diag}(u)K\operatorname{diag}(v)\in\U(a,b)$ with $u,v>0$, and set $f_i=\eps\log(u_i/a_i)$, $g_j=\eps\log(v_j/b_j)$, so that step 4 holds, i.e. $C_{ij}=f_i+g_j-\eps\log\frac{P_{ij}}{a_ib_j}$. Take any $Q\in\U(a,b)$.</p>
+<ol class="steps">
+<li>$$\ps{Q}{C}=\sum_{ij}Q_{ij}(f_i+g_j)-\eps\sum_{ij}Q_{ij}\log\frac{P_{ij}}{a_ib_j}=\ps{f}{a}+\ps{g}{b}-\eps\sum_{ij}Q_{ij}\log\frac{P_{ij}}{a_ib_j}.$$<span class="why">Insert the expression of $C_{ij}$; then $\sum_jQ_{ij}=a_i$ and $\sum_iQ_{ij}=b_j$.</span></li>
+<li>$$\eps\KL(Q|a\otimes b)=\eps\sum_{ij}Q_{ij}\log\frac{Q_{ij}}{a_ib_j}.$$<span class="why">$Q$ and $a\otimes b$ both have mass $1$, so the terms $-Q_{ij}+a_ib_j$ sum to $0$.</span></li>
+<li>$$E(Q)=\ps{f}{a}+\ps{g}{b}+\eps\sum_{ij}Q_{ij}\log\frac{Q_{ij}}{P_{ij}}=\ps{f}{a}+\ps{g}{b}+\eps\KL(Q|P).$$<span class="why">Add steps 1 and 2: $\log\frac{Q_{ij}}{a_ib_j}-\log\frac{P_{ij}}{a_ib_j}=\log\frac{Q_{ij}}{P_{ij}}$; $Q$ and $P$ both have mass $1$.</span></li>
+<li>$E(Q)\ge\ps{f}{a}+\ps{g}{b}=E(P)$, with equality if and only if $Q=P$.<span class="why">$\KL(Q|P)\ge0$ with equality iff $Q=P$ (<a href="#recall-kl">refresher</a>); take $Q=P$ in step 3 for the value of $E(P)$.</span></li>
+</ol>
+<p><strong>The scalings are unique up to the gauge.</strong> If $u_iK_{ij}v_j=u'_iK_{ij}v'_j$ for all $i,j$, then $u'_i/u_i=v_j/v'_j$ for all $i,j$ (divide by $K_{ij}>0$). The left side does not depend on $j$ and the right side does not depend on $i$, so both equal a constant $\lambda>0$: $(u',v')=(\lambda u,v/\lambda)$. In potentials, $(f',g')=(f+\eps\log\lambda,\ g-\eps\log\lambda)$. $\square$</p>
+</div></details>
+<p>Step 3 of the “if” part is worth keeping in mind: <strong>on the couplings, the entropic objective is $\eps$ times the KL divergence to the solution, plus a constant</strong>. It is the same mechanism as for least squares, where the objective is the squared distance to the solution plus a constant; it returns in §5 as a projection.</p>
+<div class="box remark"><div class="box-h">Note on the sources — which direction is proved, and which potentials</div>
+<p>OT4ML Prop. 8.5 is stated as an equivalence, but the printed proof (p. 139) only derives the form (8.2) from the Lagrange conditions (“only if”). The converse is the identity $E(Q)=E(P)+\eps\KL(Q|P)$ above. The book works with (8.1), whose Lagrange condition is $C_{ij}+\eps(\log P_{ij}+1)=f_i+g_j$, hence $u_i=e^{f_i/\eps-1}$, $v_j=e^{g_j/\eps}$; with the normalized objective (8.8) one gets instead $u_i=a_ie^{f_i/\eps}$, $v_j=b_je^{g_j/\eps}$, which is the book’s (8.21) and the convention of this page. The plan is the same; only the labels of the potentials change.</p>
+</div>
+
+<h3 id="scaling-example">The running example in scaling form</h3>
+<div class="box example"><div class="box-h">Worked example — $u$, $v$, $f$, $g$ at $\eps=0.5$</div>
+<p>With $C=\begin{pmatrix}0&1\\1&0\end{pmatrix}$ and $\eps=0.5$: $K=\begin{pmatrix}1&e^{-2}\\e^{-2}&1\end{pmatrix}=\begin{pmatrix}1&0.135335\\0.135335&1\end{pmatrix}$. Sinkhorn’s algorithm (§4), started from $v=\ind$, returns</p>
+$$u=(0.150664,\ 0.820337),\qquad v=(1.910696,\ 0.594723).$$
+<ol class="steps">
+<li>$$P_{11}=u_1K_{11}v_1=0.150664\times1\times1.910696=0.287873,\qquad P_{12}=u_1K_{12}v_2=0.150664\times0.135335\times0.594723=0.012127.$$<span class="why">(8.2). The same computation for the second row gives $P_{21}=0.212127$, $P_{22}=0.487873$: the plan $P_{0.5}$ of §1.</span></li>
+<li>$$f=\eps\log\frac ua=(-0.344364,\ 0.079317),\qquad g=\eps\log\frac vb=(0.670307,\ 0.086744).$$<span class="why">$u=a\odot e^{f/\eps}$, $v=b\odot e^{g/\eps}$; e.g. $f_1=0.5\log(0.150664/0.3)$.</span></li>
+<li>$$f\oplus g-C=\begin{pmatrix}0.325943&-1.257620\\-0.250375&0.166061\end{pmatrix},\qquad a_ib_j\,e^{(f_i+g_j-C_{ij})/\eps}=\begin{pmatrix}0.287873&0.012127\\0.212127&0.487873\end{pmatrix}.$$<span class="why">Step 4 of the proof, read backwards. Note that $f_i+g_j-C_{ij}$ is positive on some entries: the hard constraint $f_i+g_j\le C_{ij}$ of the Kantorovich dual is <em>not</em> required here (§6).</span></li>
+<li>$$\ps{f}{a}+\ps{g}{b}=0.3\times(-0.344364)+0.7\times0.079317+0.5\times(0.670307+0.086744)=0.330739=L^{0.5}_C(a,b).$$<span class="why">Step 4 of the “if” part: $E(P_\eps)=\ps{f}{a}+\ps{g}{b}$. It matches the value $0.3307$ found in §1.</span></li>
+</ol>
+<p>Replacing $(u,v)$ by $(2u,v/2)$, or $(f,g)$ by $(f+1,g-1)$, changes none of these results (the last line changes by $\ps{\ind}{a}-\ps{\ind}{b}=0$).</p>
+</div>
+
+<div class="box intu"><div class="box-h">Intuition — a similarity matrix, corrected by prices</div>
+<p>Without marginal constraints, the best “soft” matching would just be proportional to $K_{ij}=e^{-C_{ij}/\eps}$: much mass on cheap pairs, little on expensive ones, like a softmax over costs. But $K$ has the wrong row and column sums. The scalings correct this: $u_i=a_ie^{f_i/\eps}$ raises or lowers the whole output of source $i$, $v_j=b_je^{g_j/\eps}$ the whole input of target $j$. In economic terms, $f_i$ and $g_j$ are prices (§6), adjusted until supply $a$ and demand $b$ are met.</p>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — plans with $10^{10}$ entries, stored as $n+m$ numbers</div>
+<p>For two point clouds of $n=m=10^5$ points (a medium-size 3D scan, or a large mini-batch of image features), a transport plan has $10^{10}$ entries: 80 GB in double precision. The scaling form means that the plan never needs to be stored: keep $u$, $v$ (or $f$, $g$) and recompute $K_{ij}=e^{-c(x_i,y_j)/\eps}$ on the fly when a product $Kv$ is needed. This is how GPU libraries such as GeomLoss (Feydy et al., AISTATS 2019, built on the KeOps library) compute Sinkhorn losses between large clouds with a memory cost linear in $n$. Any quantity you need from the plan — a cost $\ps{P}{C}$, a barycentric projection $\sum_jP_{ij}y_j$ (§11) — is a reduction of the same kind.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — “$P=\operatorname{diag}(u)K\operatorname{diag}(v)$ for some $u,v$, so $P$ is optimal”</div>
+<p>Only if $P$ also has the right marginals. Every positive matrix with the pattern of $K$ (for instance $K$ itself) is of the form (8.2); the marginal equations (8.4) are what select the solution. Conversely, a plan with the right marginals but not of the form (8.2) is not optimal for <em>this</em> $\eps$.</p>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>Entropic OT → $P=\operatorname{diag}(u)K\operatorname{diag}(v)$, $K=e^{-C/\eps}$: solve $u\odot Kv=a$, $v\odot K\T u=b$.</li>
+<li>Scalings → potentials: $f=\eps\log(u/a)$, $g=\eps\log(v/b)$; value $L^\eps_C=\ps{f}{a}+\ps{g}{b}$.</li>
+<li>Two pairs of scalings give the same plan → they differ by $(\lambda u,v/\lambda)$, i.e. $(f+c,g-c)$.</li>
+</ul>
+</div>
+<div class="quiz"><p>For $n=m=1000$, how many unknowns does the scaling form have, and how many entries does the plan have? What does one evaluation of the row sums of $\operatorname{diag}(u)K\operatorname{diag}(v)$ cost?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>$2000$ unknowns (minus one for the gauge) against $10^6$ entries. The row sums are $u\odot(Kv)$: one matrix–vector product, about $nm=10^6$ multiplications and additions.</p>
+</div></details></div>
+<div class="quiz"><p>Show that the cross-ratios of $P_\eps$ do not depend on the marginals: $\dfrac{P_{ij}P_{kl}}{P_{il}P_{kj}}=e^{-(C_{ij}+C_{kl}-C_{il}-C_{kj})/\eps}$. Check it on the running example.</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>The factors $u_iu_kv_jv_l$ appear in the numerator and in the denominator. Running example ($i=j=1$, $k=l=2$): $\frac{0.287873\times0.487873}{0.012127\times0.212127}=54.6=e^{4}=e^{-(0+0-1-1)/0.5}$. The cross-ratio measures how much the plan prefers “$1\to1$ and $2\to2$” to “$1\to2$ and $2\to1$”; it is fixed by the costs, while the marginals only set the volumes.</p>
+</div></details></div>

@@ -525,8 +525,8 @@
     var runBtn = button(s.controls, "Run", function () { running = !running; runBtn.textContent = running ? "Pause" : "Run"; if (running) loop(); });
     button(s.controls, "Reset", reset);
     var ro = readout(s.controls);
-    legend(s.legend, [["--s3", "tokens"], ["--s2", "initial tokens"], ["--muted", "number of clusters (right panel, top)"]]);
-    var th, th0, t, eps, n, hist, events, running = false, TMAX = 1e4, LT0 = -2, LT1 = 4;
+    legend(s.legend, [["--s3", "tokens now (inside the circle) and their angles over time"], ["--s2", "initial tokens"]]);
+    var th, th0, t, eps, n, hist, events, pairT, running = false, TMAX = 1e4, LT0 = -2, LT1 = 4;
     function speeds() {
       var v = new Float64Array(n), i, j;
       for (i = 0; i < n; i++) {
@@ -543,6 +543,13 @@
       th = new Float64Array(n); for (var i = 0; i < n; i++) th[i] = 2 * Math.PI * r();
       th0 = Float64Array.from(th); t = 0;
       hist = [[0.01, Float64Array.from(th)]]; events = [[0, l8clusters(th, 0.05)]];
+      // two lone tokens at angle pi/2: time for their gap to shrink to 0.01 rad, T = int (1 + e^{(1 - cos a)/eps}) / (2 sin a) da
+      var M = 400, u0 = Math.log(0.01), u1 = Math.log(Math.PI / 2), hu = (u1 - u0) / M, acc = 0;
+      for (var k = 0; k <= M; k++) {
+        var a = Math.exp(u0 + k * hu), fv = (1 + Math.exp((1 - Math.cos(a)) / eps)) * a / (2 * Math.sin(a));
+        acc += fv * (k === 0 || k === M ? 1 : (k % 2 ? 4 : 2));
+      }
+      pairT = acc * hu / 3;
       draw();
     }
     function loop() {
@@ -579,8 +586,11 @@
         el("line", { x1: TX(Math.pow(10, e)), x2: TX(Math.pow(10, e)), y1: y0, y2: y0 + h, "class": "gr" }, g);
         var tl = el("text", { x: TX(Math.pow(10, e)), y: y0 + h + 14, "class": "tx-s", "text-anchor": "middle" }, g); tl.textContent = e === 0 ? "1" : "10" + (e < 0 ? "⁻" : "") + "⁰¹²³⁴"[Math.abs(e)];
       }
-      var xl = el("text", { x: x0 + w, y: y0 + h + 28, "class": "tx-s", "text-anchor": "end" }, g); xl.textContent = "time t (log scale)";
-      var yl = el("text", { x: x0, y: y0 - 6, "class": "tx-s" }, g); yl.textContent = "angle of each token (0 to 2π)";
+      var xl = el("text", { x: x0 + w, y: y0 - 6, "class": "tx-s", "text-anchor": "end" }, g); xl.textContent = "time t (log scale) →";
+      var yl = el("text", { x: x0, y: y0 - 6, "class": "tx-s" }, g); yl.textContent = "angle of each token";
+      [[0, "0"], [Math.PI, "π"], [2 * Math.PI - 1e-9, "2π"]].forEach(function (q) {
+        var ty = el("text", { x: x0 - 4, y: AY(q[0]) + 4, "class": "tx-s", "text-anchor": "end" }, g); ty.textContent = q[1];
+      });
       for (i = 0; i < n; i++) {
         var d = "", prev = null;
         hist.forEach(function (hh) {
@@ -590,15 +600,18 @@
         });
         el("path", { d: d, "class": "ln c3 hair" }, g);
       }
-      events.forEach(function (ev) {
-        if (ev[0] <= 0) return;
-        var X = TX(ev[0]);
-        el("line", { x1: X, x2: X, y1: y0, y2: y0 + 10, "class": "ln cm thin" }, g);
-        var tt = el("text", { x: X, y: y0 + 22, "class": "tx-s", "text-anchor": "middle" }, g); tt.textContent = ev[1];
-      });
-      var cnow = l8clusters(th, 0.05);
-      ro.textContent = "ε = " + eps + ", n = " + n + "   t = " + (t < 10 ? fmt(t, 2) : t.toExponential(2)) + "   clusters (gaps > 0.05 rad): " + cnow +
-        "\nchanges of the number of clusters at t ≈ " + events.slice(1).map(function (ev) { return (ev[0] < 10 ? fmt(ev[0], 2) : ev[0].toExponential(1)) + " → " + ev[1]; }).join(",  ");
+      // number of clusters at each decade already reached
+      var cl = el("text", { x: x0 - 16, y: y0 + h + 30, "class": "tx-s", "text-anchor": "end" }, g); cl.textContent = "clusters";
+      for (var e2 = LT0; e2 <= LT1; e2++) {
+        var td = Math.pow(10, e2), hh = null;
+        for (var q = 0; q < hist.length; q++) if (hist[q][0] >= td * (1 - 1e-9)) { hh = hist[q]; break; }
+        if (!hh) break;
+        var tc = el("text", { x: TX(td), y: y0 + h + 30, "class": "tx-s", "text-anchor": "middle" }, g); tc.textContent = l8clusters(hh[1], 0.05);
+      }
+      var cnow = l8clusters(th, 0.05), last = events[events.length - 1], prevc = events.length > 1 ? events[events.length - 2][1] : null;
+      ro.textContent = "ε = " + eps + ", n = " + n + "   t = " + (t < 10 ? fmt(t, 2) : t.toExponential(2)) + "   clusters now (gaps > 0.05 rad): " + cnow +
+        (prevc !== null ? "   last change at t ≈ " + (last[0] < 10 ? fmt(last[0], 2) : last[0].toExponential(1)) + " (" + prevc + " → " + last[1] + ")" : "") +
+        "\ncompare: two lone tokens at angle π/2 come within 0.01 rad of each other at t ≈ " + (pairT < 1e4 ? fmt(pairT, pairT < 100 ? 2 : 0) : pairT.toExponential(2)) + " for this ε";
     }
     reset();
     redrawers.push(draw);

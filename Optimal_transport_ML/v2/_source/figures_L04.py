@@ -21,6 +21,36 @@ def label_bg(c, x, y, s, cls="tx-s", anchor="middle", pad=3, cw=6.0, h=13):
     c.add(f'<text x="{x0 + w / 2:.1f}" y="{y:.1f}" class="{cls}" text-anchor="middle">{esc(s)}</text>')
 
 
+def simplify(F, pts, tol=0.15):
+    """Ramer-Douglas-Peucker in pixel units: drops points that move the drawn polyline by less than tol px."""
+    pts = list(pts)
+    P = np.array([(F.X(x), F.Y(y)) for x, y in pts])
+    keep = np.zeros(len(P), bool)
+    keep[0] = keep[-1] = True
+    stack = [(0, len(P) - 1)]
+    while stack:
+        i, j = stack.pop()
+        if j <= i + 1:
+            continue
+        a, d = P[i], P[j] - P[i]
+        seg = P[i + 1:j]
+        n = math.hypot(d[0], d[1])
+        dist = np.hypot(*(seg - a).T) if n == 0 else np.abs(d[0] * (seg[:, 1] - a[1]) - d[1] * (seg[:, 0] - a[0])) / n
+        k = int(np.argmax(dist))
+        if dist[k] > tol:
+            m = i + 1 + k
+            keep[m] = True
+            stack += [(i, m), (m, j)]
+    return [q for q, kp in zip(pts, keep) if kp]
+
+
+def sfn(F, f, cls, x0=None, x1=None, n=600):
+    """Like Fig.fn, sampled finely, then simplified."""
+    x0 = F.xr[0] if x0 is None else x0
+    x1 = F.xr[1] if x1 is None else x1
+    F.path(simplify(F, [(x, f(x)) for x in np.linspace(x0, x1, n + 1)]), cls)
+
+
 # ---------------------------------------------------------------------------------------------
 def fig_prices():
     """The shipping example of section 1: optimal plan on the contact routes, with the prices."""
@@ -154,8 +184,8 @@ def fig_envelope():
         assert active == [0, 1, 2, 3], active
         c.add(f'<g clip-path="url(#{cid})">')
         for i in range(4):
-            F.path(list(zip(yy, secs[i])), "ln cm thin dash")
-        F.path(list(zip(yy, env)), "ln c1")
+            F.path(simplify(F, zip(yy, secs[i])), "ln cm thin dash")
+        F.path(simplify(F, zip(yy, env)), "ln c1")
         c.add("</g>")
         for i in range(4):
             F.circle(xs[i], -fs[i], 4.5, "f2")
@@ -337,9 +367,9 @@ def fig_witness():
         F = Fig(c, (16 + k * 216, 36, 196, 150), (-3.2, 3.2), yr)
         F.line(-3.2, 0, 3.2, 0, "ax")
         sc = 0.9 * yr[1] / max(ra.max(), rb.max())
-        F.path([(-3.2, 0)] + list(zip(xs[::20], sc * ra[::20])) + [(3.2, 0)], "a2", close=True)
-        F.path([(-3.2, 0)] + list(zip(xs[::20], sc * rb[::20])) + [(3.2, 0)], "a1", close=True)
-        F.path(list(zip(xs[::8], wv[::8])), "ln c5")
+        F.path(simplify(F, [(-3.2, 0)] + list(zip(xs[::4], sc * ra[::4])) + [(3.2, 0)]), "a2", close=True)
+        F.path(simplify(F, [(-3.2, 0)] + list(zip(xs[::4], sc * rb[::4])) + [(3.2, 0)]), "a1", close=True)
+        F.path(simplify(F, zip(xs, wv)), "ln c5")
         c.text(16 + k * 216 + 98, 24, f"{name} = {val:.3f}", "tx-b", "middle")
         for v in [-2, 0, 2]:
             F.text(v, yr[0], f"{v:g}".replace("-", "−"), "tx-s", "middle", dy=14)
@@ -484,20 +514,20 @@ def fig_vi():
     Q = lambda u: optimize.brentq(lambda t: sum(wk * stats.norm.cdf(t, mk, sk) for wk, mk, sk in zip(w, mu, sd)) - u, -20, 20, xtol=1e-13)
     sW = integrate.quad(lambda u: (Q(u) - mean) * stats.norm.ppf(u), 0, 1, limit=400, points=[0.3])[0]
     assert abs(sW - 1.7036) < 1e-3, sW
-    c = Canvas("vi", 600, 260, "Fitting one Gaussian to a bimodal target with forward KL, reverse KL and W2", sub=SUB)
-    F = Fig(c, (40, 30, 520, 180), (-4.5, 5.5), (0, 0.62))
+    c = Canvas("vi", 600, 290, "Fitting one Gaussian to a bimodal target with forward KL, reverse KL and W2", sub=SUB)
+    F = Fig(c, (40, 20, 520, 220), (-4.5, 5.5), (0, 0.84))
     F.axes(xticks=[-4, -2, 0, 2, 4], yticks=[], xfmt=lambda v: f"{v:g}".replace("-", "−"), grid=False, yaxis=False)
     xs = np.linspace(-4.5, 5.5, 801)
-    F.path([(-4.5, 0)] + [(x, pi(x)) for x in xs] + [(5.5, 0)], "a1", close=True)
-    F.fn(pi, "ln c1 thin", n=800)
-    F.fn(lambda x: stats.norm.pdf(x, mean, math.sqrt(var)), "ln c4", n=600)
-    F.fn(lambda x: stats.norm.pdf(x, 2.0, 0.5003), "ln c5", n=600)
-    F.fn(lambda x: stats.norm.pdf(x, -2.0, 0.5006), "ln c5 dot", n=600)
-    F.fn(lambda x: stats.norm.pdf(x, mean, sW), "ln c3 dash", n=600)
-    F.text(2.55, 0.56, "π = 0.3 𝒩(−2, 0.5²) + 0.7 𝒩(2, 0.5²)", "tx-s t1", "start")
-    F.text(2.35, 0.79, "", "tx-s", "start")
-    c.text(300, 236, "gold: forward KL / maximum likelihood  𝒩(0.8, 1.9²)   ·   green dashed: W₂ fit  𝒩(0.8, 1.70²)", "tx-s", "middle")
-    c.text(300, 252, "purple: reverse KL (VI), best local minimum 𝒩(2, 0.5²); dotted: the other one 𝒩(−2, 0.5²)", "tx-s", "middle")
+    F.path(simplify(F, [(-4.5, 0)] + [(x, pi(x)) for x in xs] + [(5.5, 0)]), "a1", close=True)
+    sfn(F, pi, "ln c1 thin", n=800)
+    sfn(F, lambda x: stats.norm.pdf(x, mean, math.sqrt(var)), "ln c4")
+    sfn(F, lambda x: stats.norm.pdf(x, 2.0, 0.5003), "ln c5")
+    sfn(F, lambda x: stats.norm.pdf(x, -2.0, 0.5006), "ln c5 dot")
+    sfn(F, lambda x: stats.norm.pdf(x, mean, sW), "ln c3 dash")
+    assert stats.norm.pdf(2.0, 2.0, 0.5003) < 0.84 and stats.norm.pdf(-2.0, -2.0, 0.5006) < 0.84
+    F.text(2.6, 0.62, "π = 0.3 𝒩(−2, 0.5²) + 0.7 𝒩(2, 0.5²)", "tx-s t1", "start")
+    c.text(300, 266, "gold: forward KL / maximum likelihood  𝒩(0.8, 1.9²)   ·   green dashed: W₂ fit  𝒩(0.8, 1.70²)", "tx-s", "middle")
+    c.text(300, 282, "purple: reverse KL (VI), best local minimum 𝒩(2, 0.5²); dotted: the other one 𝒩(−2, 0.5²)", "tx-s", "middle")
     c.save()
 
 
@@ -528,7 +558,7 @@ def fig_gmm():
         else:
             ys = [QB(stats.norm.cdf(x)) for x in xs[1:-1]]
             F.path(list(zip(xs[1:-1], ys)), "ln c3")
-            F.text(-2.9, 2.5, "T = Q_β ∘ C_α", "tx-s t3", "start")
+            c.add(f'<text x="{F.X(-2.9):.1f}" y="{F.Y(2.5):.1f}" class="tx-s t3" text-anchor="start">T = Q<tspan baseline-shift="sub" font-size="9">β</tspan> ∘ C<tspan baseline-shift="sub" font-size="9">α</tspan></text>')
         c.text(X0 + 110, 20, title, "tx-b", "middle")
     c.text(330, 292, "orange-red (bottom): α = 𝒩(0,1);  blue (left): β = ½𝒩(−1, 0.25) + ½𝒩(1, 0.25)", "tx-s", "middle")
     c.save()

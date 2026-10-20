@@ -267,7 +267,7 @@
       runs.forEach(function (r, k) {
         var last = Math.min(r.errs.length, Hz) - 1, y = Math.log10(Math.max(r.errs[last], 1e-16));
         var yy = Math.max(-12.6, Math.min(0.2, y));
-        plot.text(Hz, yy, "ε = " + r.eps, "tx-s t" + (COLS[k] === "c4" ? "2" : COLS[k].slice(1)), "start", 6, 4 + (k - 2) * 2);
+        plot.text(Hz, yy, "ε = " + r.eps, "tx-s" + (COLS[k] === "c4" ? "" : " t" + COLS[k].slice(1)), "start", 6, 4 + (k - 2) * 2);
       });
       var lines = runs.map(function (r) {
         return "ε = " + (r.eps + "      ").slice(0, 6) + "  cycles to 1e−9: " + (r.hit > 0 ? r.hit : "> 3000") + "   measured rate per cycle: " + fmt(r.rate, 4) +
@@ -330,8 +330,8 @@
         for (i = 0; i < n; i++) { var r2 = 0; for (j = 0; j < n; j++) r2 = R(r2 + R(Math.exp(R(2 * la + (f[i] + g[j] - C[i][j]) / eps)))); e2 += Math.abs(r2 - a[i]); }
         logd.push(Math.max(e2, 1e-16));
       }
-      // draw: kernel on the left
-      while (s.svg.firstChild) s.svg.removeChild(s.svg.firstChild);
+      // the Plot of the errors clears the svg when it is created: create it first, then draw the kernel on the left
+      var P = new Plot(s.svg, { x: [0, ITER], y: [-16, 1], w: W, h: H, pad: { l: 360, r: 16, t: 34, b: 36 } });
       var gr = el("g", {}, s.svg), X0 = 40, Y0 = 34, S = 240, cw = S / n;
       var floorLog = f32 ? 45.2 : 323.3; // -log10 of the smallest positive (subnormal) number
       for (i = 0; i < n; i++) for (j = 0; j < n; j++) {
@@ -346,7 +346,6 @@
       var tk2 = el("text", { x: X0 + S / 2, y: Y0 + S + 16, "class": "tx-s", "text-anchor": "middle" }, gr); tk2.textContent = "rows: x in [0, 0.35] · columns: y in [0.55, 1]";
       var tk3 = el("text", { x: X0 + S / 2, y: Y0 + S + 30, "class": "tx-s", "text-anchor": "middle" }, gr); tk3.textContent = "grey level ∝ log K (darker = larger)";
       // errors on the right
-      var P = new Plot(s.svg, { x: [0, ITER], y: [-16, 1], w: W, h: H, pad: { l: 360, r: 16, t: 34, b: 36 } });
       P.g = el("g", {}, s.svg);
       P.axes({ xticks: [0, 50, 100, 150], yticks: [0, -4, -8, -12, -16], yfmt: function (v) { return v === 0 ? "1" : "1e" + v; }, xlabel: "cycles" });
       P.clip();

@@ -188,7 +188,7 @@
         el("line", { x1: PP.x, x2: PP.x + PP.w, y1: QY(v), y2: QY(v), "class": "gr" }, g);
         l5text(g, PP.x - 5, QY(v) + 4, fmt(v, v < 1 ? 2 : 1), "tx-s", "end");
       });
-      var lines = [[w2, "ln cm", "W₂²"], [w2 / 2, "ln cm dash", "W₂²/2 (bound)"], [sw, "ln c3 dash", "average SW₂²"], [mx, "ln c4 dot", "max MaxSW₂²"]];
+      var lines = [[w2, "ln cm", "W₂²"], [w2 / 2, "ln cm dash", "W₂²/2"], [sw, "ln c3 dash", "SW₂²"], [mx, "ln c4 dot", "max"]];
       lines.forEach(function (L) { el("line", { x1: PP.x, x2: PP.x + PP.w, y1: QY(L[0]), y2: QY(L[0]), "class": L[1] }, g); });
       var d = "";
       for (i = 0; i <= NP; i++) d += (i ? "L" : "M") + QX(i * 180 / NP).toFixed(1) + " " + QY(prof[i % NP]).toFixed(1);
@@ -261,9 +261,10 @@
       top.unclip();
       top.dot(d, W2, 5, "fm"); top.dot(d, SW2, 5, "f3");
       var last = grid[grid.length - 1];
-      top.text(1000, last[1], "W₂", "tx-b", "start", 8, 4);
-      top.text(1000, last[2], "SW₂", "tx-b t3", "start", 8, -2);
-      top.text(1000, last[1] / Math.sqrt(1000), "W₂/√d (dotted)", "tx-s", "start", 8, 16);
+      var labs = [[last[1], "W₂", "tx-b"], [last[2], "SW₂", "tx-b t3"], [last[1] / Math.sqrt(1000), "W₂/√d (dotted)", "tx-s"]].map(function (L) { return { y: top.ty(L[0]) + 4, t: L[1], c: L[2] }; });
+      labs.sort(function (a, b) { return a.y - b.y; });
+      for (i = 1; i < labs.length; i++) if (labs[i].y - labs[i - 1].y < 14) labs[i].y = labs[i - 1].y + 14;
+      labs.forEach(function (L) { l5text(top.g, top.tx(1000) + 8, L.y, L.t, L.c, "start"); });
       // histogram of the per-direction costs at this dimension
       if (!cache[d]) {
         var rng = mulberry32(17 + d), vals = [];
@@ -363,7 +364,8 @@
       pts.forEach(function (p) { bot.dot(p[0], p[1], 3.5, "f2"); });
       bot.dot(K, mae[kk], 6, "ln c2 nofill");
       bot.text(4096, Math.sqrt(P.vr / 4096), "√(Var/K)", "tx-s t3", "end", -2, -8);
-      bot.text(4096, P.vr / 4096, "Var/K (slide)", "tx-s", "end", -2, 14);
+      var K0 = P.vr / 64 >= 5e-6 ? 64 : 16;   // label below the dashed line, ending at K0
+      bot.text(K0, P.vr / K0, "Var/K, as on the slide", "tx-s", "end", -2, 14);
       ro.textContent = "K = " + K + ":   mean |error| over " + runs + " runs = " + l5exp(mae[kk]) + "    √(Var/K) = " + l5exp(Math.sqrt(P.vr / K)) + "    Var/K (slide 12/12) = " + l5exp(P.vr / K) +
         "\nexact SW₂² = " + fmt(P.mean, 4) + ",  Var of the cost of one random direction = " + l5exp(P.vr) + ",  ratio mean|error| / √(Var/K) = " + fmt(mae[kk] / Math.sqrt(P.vr / K), 2) + "  (√(2/π) ≈ 0.80)";
     }
@@ -378,9 +380,9 @@
     s.svg.setAttribute("role", "img");
     s.svg.setAttribute("aria-label", "A moving point cloud, a target cloud, the paths of the points and the decrease of the sliced and Wasserstein distances");
     var dataSel = select(s.controls, "Clouds", [["ring", "blob → ring"], ["crescent", "two clusters → crescent"]], "ring", reset);
-    var modeSel = select(s.controls, "Each step", [["idt", "2 orthogonal directions (IDT)"], ["rand", "16 random directions"]], "idt", function () { tauS.set(modeSel.value === "idt" ? 1 : 0.3); tauS.out.textContent = fmt(tauS.get(), 2); });
-    var tauS = slider(s.controls, "step τ", 0.05, 1, 0.05, 1, function () { tauS.out.textContent = fmt(tauS.get(), 2); });
-    tauS.out.textContent = "1.00";
+    var modeSel = select(s.controls, "Each step", [["rand", "16 random directions"], ["idt", "2 orthogonal directions (IDT)"]], "rand", function () { tauS.set(modeSel.value === "idt" ? 1 : 0.3); tauS.out.textContent = fmt(tauS.get(), 2); });
+    var tauS = slider(s.controls, "step τ", 0.05, 1, 0.05, 0.3, function () { tauS.out.textContent = fmt(tauS.get(), 2); });
+    tauS.out.textContent = "0.30";
     button(s.controls, "Step", function () { if (!busy) { doStep(); draw(); } });
     button(s.controls, "Run 40 steps", function () { if (!busy) run(40); });
     button(s.controls, "Reset", reset);

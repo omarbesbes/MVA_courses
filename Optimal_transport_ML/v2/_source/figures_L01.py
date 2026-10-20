@@ -24,18 +24,6 @@ def gauss(x, m, s):
 
 # ---------------------------------------------------------------------------------------------
 def fig_timeline():
-    c = Canvas("timeline", 660, 318, "A timeline of optimal transport from Monge (1781) to Wasserstein GANs (2017)", sub=SUB)
-    y0 = 150  # axis
-
-    def X(year):
-        if year < 1800:
-            return 44 + (year - 1781) * 1.2
-        return 122 + (year - 1925) * (600 - 122) / (2020 - 1925)
-
-    c.add(f'<line x1="30" y1="{y0}" x2="92" y2="{y0}" class="ax"/>')
-    c.add(f'<line x1="108" y1="{y0}" x2="630" y2="{y0}" class="ax"/>')
-    for xb in (96, 104):
-        c.add(f'<line x1="{xb - 3}" y1="{y0 + 6}" x2="{xb + 3}" y2="{y0 - 6}" class="ax"/>')
     # (year, label, side, colour)  side: +1 above (mathematics), -1 below (algorithms and applications)
     ev = [
         (1781, "Monge", 1, "3"), (1931, "Schrödinger", 1, "4"), (1942, "Kantorovich", 1, "1"),
@@ -45,47 +33,55 @@ def fig_timeline():
         (1947, "Dantzig (simplex)", -1, "1"), (1955, "Kuhn (Hungarian)", -1, "3"), (1964, "Sinkhorn", -1, "4"),
         (2013, "Cuturi (fast Sinkhorn)", -1, "4"), (2017, "Wasserstein GAN", -1, "5"),
     ]
-    placed = []  # (side, row, a0, a1, x)
+
+    def X(year):
+        if year < 1800:
+            return 44 + (year - 1781) * 1.2
+        return 122 + (year - 1925) * (600 - 122) / (2020 - 1925)
+
+    # Staircase layout: each label is a flag to the left of its leader (to the right for Monge),
+    # placed one row above every leader its text covers, so that no leader crosses a label.
+    placed = []  # (side, row, a0, a1, x, ...)
     for yr, lab, side, col in sorted(ev, key=lambda e: e[0]):
         x = X(yr)
         text = f"{lab} {yr}"
-        w = 6.1 * len(text)
-        if x > 420:
-            a0, a1, anchor, tx = x + 4 - w, x + 4, "end", x + 4
+        w = 6.0 * len(text)
+        if yr < 1800:
+            a0, a1, anchor, tx = x + 6, x + 6 + w, "start", x + 6
         else:
-            a0, a1, anchor, tx = x - 4, x - 4 + w, "start", x - 4
-        r = 0
-        while True:
-            ok = True
-            for (sd, rr, b0, b1, bx) in placed:
-                if sd != side:
-                    continue
-                if rr == r and not (a1 + 8 < b0 or a0 - 8 > b1):
-                    ok = False  # labels overlap in the same row
-                if rr < r and b0 - 3 <= x <= b1 + 3:
-                    ok = False  # our leader would cross a lower label
-                if rr > r and a0 - 3 <= bx <= a1 + 3:
-                    ok = False  # a higher leader would cross our label
-            if ok:
-                break
+            a0, a1, anchor, tx = x - 6 - w, x - 6, "end", x - 6
+        r = 1 + max([p[1] for p in placed if p[0] == side and a0 - 4 <= p[4] <= a1 + 4], default=-1)
+        while any(p[0] == side and p[1] == r and not (a1 + 8 < p[2] or a0 - 8 > p[3]) for p in placed):
             r += 1
-        placed.append((side, r, a0, a1, x))
-        ylab = y0 - side * (30 + 22 * r)
-        ytxt = ylab - 5 if side == 1 else ylab + 13
+        placed.append((side, r, a0, a1, x, tx, anchor, text, col))
+    top = max(p[1] for p in placed if p[0] == 1)
+    bot = max(p[1] for p in placed if p[0] == -1)
+    dy0, step = 26, 21
+    y0 = 34 + dy0 + step * top + 8          # axis: title, then the highest row
+    ybot = y0 + dy0 + step * bot + 6         # lowest label
+    H = int(ybot + 58)
+    c = Canvas("timeline", 660, H, "A timeline of optimal transport from Monge (1781) to Wasserstein GANs (2017)", sub=SUB)
+    c.add(f'<line x1="30" y1="{y0}" x2="92" y2="{y0}" class="ax"/>')
+    c.add(f'<line x1="108" y1="{y0}" x2="630" y2="{y0}" class="ax"/>')
+    for xb in (96, 104):
+        c.add(f'<line x1="{xb - 3}" y1="{y0 + 6}" x2="{xb + 3}" y2="{y0 - 6}" class="ax"/>')
+    for side, r, a0, a1, x, tx, anchor, text, col in placed:
+        ylab = y0 - side * (dy0 + step * r)
         cls = "ln cm hair" if col == "m" else f"ln c{col} hair"
         c.add(f'<line x1="{x:.1f}" y1="{y0}" x2="{x:.1f}" y2="{ylab:.1f}" class="{cls}"/>')
         c.add(f'<circle cx="{x:.1f}" cy="{y0}" r="4" class="f{col}"/>')
-        c.add(f'<circle cx="{x:.1f}" cy="{ylab:.1f}" r="2.2" class="f{col}"/>')
-        c.text(tx, ytxt, text, "tx-s", anchor)
-    c.text(30, 18, "mathematics of transport", "tx-b")
-    c.text(30, 286, "algorithms and machine learning", "tx-b")
+        c.add(f'<circle cx="{x:.1f}" cy="{ylab:.1f}" r="2.4" class="f{col}"/>')
+        c.text(tx, ylab + 4, text, "tx-s", anchor)
+    c.text(30, 20, "mathematics of transport", "tx-b")
+    c.text(30, ybot + 24, "algorithms and machine learning", "tx-b")
     leg = [("3", "this lesson"), ("1", "Lesson 2"), ("5", "Lessons 3–5"), ("4", "Lessons 6–8"), ("m", "background")]
     xl = 36
     for col, lab in leg:
-        c.add(f'<circle cx="{xl}" cy="306" r="4" class="f{col}"/>')
-        c.text(xl + 8, 310, lab, "tx-s")
-        xl += 26 + 6.1 * len(lab)
+        c.add(f'<circle cx="{xl}" cy="{ybot + 44}" r="4" class="f{col}"/>')
+        c.text(xl + 8, ybot + 48, lab, "tx-s")
+        xl += 26 + 6.0 * len(lab)
     c.save()
+    return placed
 
 
 # ---------------------------------------------------------------------------------------------
@@ -247,7 +243,7 @@ def fig_pushforward():
     S.line(0, 0, 1, 0, "ax")
     c.text(350, 390, "source α = 𝒰[0,1] (density 1)", "tx-s t2", "middle")
     # target density on the left (drawn leftwards from the y axis of G)
-    xs_right = 188
+    xs_right = 170
     scale = 70  # pixels per unit density
     ys = np.linspace(0, 1, 201)
     pts = [(xs_right - scale * rho_b(y), G.Y(y)) for y in ys]
@@ -265,8 +261,7 @@ def fig_pushforward():
         xv = xs_right - scale * val
         c.add(f'<line x1="{xv:.1f}" y1="{G.Y(0) + 4:.1f}" x2="{xv:.1f}" y2="{G.Y(0) + 8:.1f}" class="ax"/>')
         c.text(xv, G.Y(0) + 20, str(val), "tx-s", "middle")
-    c.text(108, 22, "target β: ρβ(y) = 2/√(1+8y)", "tx-s t1", "middle")
-    c.text(350, 312, "", "tx-s")
+    c.text(100, 22, "target β: ρβ(y) = 2/√(1+8y)", "tx-s t1", "middle")
     # equality of masses
     mass_src = dx * 1.0
     mass_tgt = (math.sqrt(1 + 8 * y_hi) - math.sqrt(1 + 8 * y_lo)) / 2
@@ -373,7 +368,7 @@ def fig_monotone():
     th = math.radians(30)
     R30 = np.array([[math.cos(th), -math.sin(th)], [math.sin(th), math.cos(th)]])
     B = R30 @ np.diag([1.6, 0.6]) @ R30.T
-    angles = np.linspace(0, 2 * math.pi, 16, endpoint=False)
+    angles = np.linspace(0, 2 * math.pi, 12, endpoint=False)  # every 30°: four points on the eigen-axes
     P = np.c_[np.cos(angles), np.sin(angles)]
     circ = np.linspace(0, 2 * math.pi, 200)
     for k, (M, title, sub) in enumerate([(B, "T(x) = Bx, B symmetric positive definite", "the gradient of ½⟨Bx, x⟩: optimal"),
@@ -452,7 +447,6 @@ def fig_tearing():
             if row == 0:
                 c.text(40 + k * 205 + 90, 16, f"t = {t:g}" if t != 0.5 else "t = ½", "tx-b", "middle")
         lab = "to an ellipse (convex)" if row == 0 else "to a dumbbell (not convex)"
-        c.text(8, 22 + row * 160 + 64, "", "tx-s")
         c.text(640 - 8, 22 + row * 160 + 135, lab, "tx-s", "end")
     c.save()
     return costs

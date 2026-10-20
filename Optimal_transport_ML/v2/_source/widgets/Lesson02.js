@@ -173,9 +173,9 @@
         var inB = basis.some(function (c) { return c[0] === i && c[1] === j; });
         if (!inB && red[i][j] < -1e-12 && (!best || red[i][j] < best.r)) best = { i: i, j: j, r: red[i][j] };
       }
-      var head = "potentials u = (" + u.map(function (z) { return l2n(z); }).join(", ") + "), v = (" + v.map(function (z) { return l2n(z); }).join(", ") +
-        ");  reduced costs r = C − u − v = [[" + red[0].map(function (z) { return l2n(z); }).join(", ") + "], [" + red[1].map(function (z) { return l2n(z); }).join(", ") + "]]";
-      if (!best) { msg = head + "\nAll reduced costs ≥ 0: the potentials certify that this vertex is optimal (complementary slackness, §7). Cost " + l2n(costOf(P), 4) + "."; draw(); return; }
+      var head = "prices f = (" + u.map(function (z) { return l2n(z); }).join(", ") + "), g = (" + v.map(function (z) { return l2n(z); }).join(", ") +
+        ");  reduced costs r = C − f − g = [[" + red[0].map(function (z) { return l2n(z); }).join(", ") + "], [" + red[1].map(function (z) { return l2n(z); }).join(", ") + "]]";
+      if (!best) { msg = head + "\nAll reduced costs ≥ 0: the prices certify that this vertex is optimal (complementary slackness, §7). Cost " + l2n(costOf(P), 4) + "."; draw(); return; }
       // the cycle closed by the entering cell: path in the tree from row best.i to column best.j
       var adj = {}, key = function (t, k) { return t + k; };
       basis.forEach(function (c) { (adj[key("r", c[0])] = adj[key("r", c[0])] || []).push(["c", c[1]]); (adj[key("c", c[1])] = adj[key("c", c[1])] || []).push(["r", c[0]]); });
