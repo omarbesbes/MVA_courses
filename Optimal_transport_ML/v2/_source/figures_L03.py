@@ -15,7 +15,7 @@ SUB = "L03"
 def fig_wpq():
     c = Canvas("wpq", 560, 300, "W_p of a small moved mass: epsilon to the power 1/p for p = 1, 2, 4", sub=SUB)
     f = Fig(c, (52, 18, 470, 236), (0, 1), (0, 1))
-    f.axes(xticks=[0, 0.25, 0.5, 0.75, 1], yticks=[0, 0.25, 0.5, 0.75, 1], xlabel="ε (mass moved by a distance 1)", ylabel="W_p")
+    f.axes(xticks=[0, 0.25, 0.5, 0.75, 1], yticks=[0, 0.25, 0.5, 0.75, 1], xlabel="ε (mass moved by a distance 1)", ylabel="Wₚ")
     for p, k in [(1, 2), (2, 1), (4, 5)]:
         f.fn(lambda e: e ** (1 / p), f"ln c{k}", 0, 1, 400)
     e0 = 0.04
@@ -31,19 +31,22 @@ def fig_wpq():
 
 def fig_testfn():
     c = Canvas("testfn", 660, 190, "Three classes of test functions: compact support, vanishing at infinity, bounded", sub=SUB)
+    # subscripts c, 0, b as SVG tspans (no Unicode subscript exists for c and b)
+    def sub(letter):
+        return f'C<tspan baseline-shift="sub" font-size="75%">{letter}</tspan>'
     panels = [
-        ("C_c : zero outside a bounded set", lambda x: max(0.0, 1 - abs(x) / 2), "ln c3"),
-        ("C_0 : tends to 0 at infinity", lambda x: 1 / (1 + x * x), "ln c1"),
-        ("C_b : only bounded", lambda x: math.atan(x) / (math.pi / 2) * 0.9, "ln c2"),
+        ("c", " : zero outside a bounded set", lambda x: max(0.0, 1 - abs(x) / 2), "ln c3"),
+        ("0", " : tends to 0 at infinity", lambda x: 1 / (1 + x * x), "ln c1"),
+        ("b", " : only bounded", lambda x: math.atan(x) / (math.pi / 2) * 0.9, "ln c2"),
     ]
-    for i, (title, fn, cls) in enumerate(panels):
+    for i, (letter, title, fn, cls) in enumerate(panels):
         f = Fig(c, (14 + i * 218, 30, 196, 120), (-7, 7), (-1.1, 1.1))
         f.line(-7, 0, 7, 0, "ax")
         f.line(-7, 1, 7, 1, "gr")
         f.line(-7, -1, 7, -1, "gr")
         f.fn(fn, cls, -7, 7, 400)
-        c.text(14 + i * 218 + 98, 20, title, "tx-b", "middle")
-    c.text(330, 182, "fewer test functions  ⇐   C_c ⊂ C_0 ⊂ C_b   ⇒   more demanding convergence", "tx-s", "middle")
+        c.add(f'<text x="{14 + i * 218 + 98:.1f}" y="20.0" class="tx-b" text-anchor="middle">{sub(letter)}{title}</text>')
+    c.add(f'<text x="330.0" y="182.0" class="tx-s" text-anchor="middle">fewer test functions  ⇐   {sub("c")} ⊂ {sub("0")} ⊂ {sub("b")}   ⇒   more demanding convergence</text>')
     c.save()
 
 
@@ -320,9 +323,9 @@ def fig_kcsplit():
     g.axes(xticks=(0, 0.5, 1), yticks=(0, 1), xfmt=lambda v: {0: "0", 0.5: "½", 1: "1"}[v], yfmt=lambda v: str(v), grid=False)
     g.line(0, 0, 0.5, 0, "ln c3")
     g.line(0.5, 1, 1, 1, "ln c3")
-    g.line(0.3, -0.25, 0.3, 1.25, "ln cm thin dash")
-    g.circle(0.3, 0, 4.5, "f3")
-    g.text(0.3, 1.25, "one point", "tx-s", "middle", dy=-6)
+    g.line(0.75, -0.25, 0.75, 1.25, "ln cm thin dash")  # a vertical line, away from the label of the lower segment
+    g.circle(0.75, 1, 4.5, "f3")
+    g.text(0.75, 1.25, "one point", "tx-s", "middle", dy=-6)
     g.text(0.5, 1, "graph of T", "tx-s t3", "end", dx=-6, dy=4)
     g.text(0.25, 0, "a whole segment", "tx-s", "middle", dy=-9)
     g.text(1.1, -0.25, "s (point of α)", "tx-s", "end", dy=30)
