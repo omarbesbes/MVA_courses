@@ -1,0 +1,101 @@
+<!--
+title: Lesson 2 — Kantorovich's relaxation: couplings, linear programs and permutations
+short: L2 · Kantorovich (v2)
+description: Step-by-step study guide of the second lecture of the MVA course Optimal Transport for ML (G. Peyré, 7 Oct 2026): recap of Monge, couplings and the discrete Kantorovich linear program, the north-west corner rule and the line, vertices and sparsity, Birkhoff–von Neumann, solving the LP, the general Kantorovich problem, Monge = Kantorovich, cyclical monotonicity, using a plan; exercise sheet solved.
+subtitle: The lecture of 7 October 2026 (Gabriel Peyré), rebuilt from the course resources: every statement is quoted with its reference, decoded symbol by symbol, motivated, proved line by line, tried on small numbers — and connected to what it is used for in machine learning.
+kicker: Optimal Transport for ML · Lesson 2 · study guide v2
+footer: Optimal Transport for Machine Learning (MVA / IASD, J. Delon &amp; G. Peyré) — study guide, version 2. No class notes were available for this lecture: the page is built from the course resources in <code>ressources/</code> and the exercise sheet in <code>course material exercices and one slides/</code>. “OT4ML Thm. 3.17, p. 57” means statement 3.17 of <code>ressources/OT4ML.pdf</code>, on page 57 of the PDF file.
+-->
+
+<div class="box objectives">
+<div class="box-h">What you will be able to do after this page</div>
+<ol>
+<li>Explain why Monge’s problem (move each point to <em>one</em> point) can fail, and how Kantorovich’s <strong>couplings</strong> repair it: mass may split, the feasible set is never empty and becomes convex.</li>
+<li>Write the discrete transport problem as a <strong>linear program</strong> $\min_{P\in\U(a,b)}\ps{C}{P}$, describe its feasible set (a polytope of dimension $(n-1)(m-1)$) and prove that it has an optimal solution with at most $n+m-1$ non-zero entries.</li>
+<li>Run the <strong>north-west corner rule</strong> by hand, and prove that on the line, after sorting, it gives an optimal plan for every convex cost $h(x-y)$ (and why it fails for concave costs).</li>
+<li>State and prove the <strong>Birkhoff–von Neumann theorem</strong>, deduce that Monge = Kantorovich for uniform weights (the assignment problem is a linear program), and decompose a bistochastic matrix into permutations.</li>
+<li>Certify that a plan is optimal with <strong>dual prices</strong> (complementary slackness), and follow the network simplex on a small example.</li>
+<li>Define the <strong>general Kantorovich problem</strong> between arbitrary measures, prove that an optimal plan exists, and say exactly when the relaxation loses nothing (uniform weights, densities, the line) and when it does (atoms).</li>
+<li>Check <strong>$c$-cyclical monotonicity</strong>, and <strong>use a plan</strong>: interpolate along it, project it to a map, transfer labels — as in domain adaptation, single-cell trajectories, image and document retrieval.</li>
+</ol>
+</div>
+
+<h2 id="start">0. Before you start</h2>
+
+<h3 id="howto">How to read this page</h3>
+<p>The lecture of 7 October 2026 has taken place, but no handwritten notes of it are available. The page therefore follows the <strong>outline given by the teachers</strong> (recap of Lesson 1; Kantorovich’s relaxation in the discrete case, a linear program; permutations as couplings; the discrete problem on the line and the north-west corner rule; Birkhoff–von Neumann and Monge = Kantorovich for uniform weights) and completes it with chapter 3 of the course book (vertices and sparsity, algorithms, the general problem, existence, cyclical monotonicity, using a plan). Every statement of the course is quoted from the resources in a box like this one, with its exact reference:</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. N.M, p. P</span></div>
+<p>A faithful quote of the book <em>Optimal Transport for Machine Learners</em> (or of the compact notes, the 2019 notes, Peyré–Cuturi, Chewi–Niles-Weed–Rigollet, or the exercise sheet), in the notation of the source. “p. P” is the page of the PDF file in <code>ressources/</code>.</p>
+</div>
+<p>Each quote is followed by a <strong>decoding</strong> (each symbol in words), the <strong>problem it solves</strong>, a <strong>small example with numbers</strong>, the <strong>idea of the proof</strong>, and the <strong>full proof</strong>, folded (click to open; “Open all proofs” at the top opens everything). Other boxes:</p>
+<div class="cols">
+<div class="box recall"><div class="box-h">Reminder — a prerequisite</div><p>What is used, exactly, with a link to the <a href="Reminders.html">Reminders</a> page or to an earlier lesson.</p></div>
+<div class="box ml"><div class="box-h">In machine learning — an application</div><p>Where the notion is used, on which data, with which loss.</p></div>
+<div class="box intu"><div class="box-h">Intuition</div><p>The picture to keep in mind.</p></div>
+<div class="box example"><div class="box-h">Worked example</div><p>Numbers you can check by hand.</p></div>
+<div class="box pitfall"><div class="box-h">Pitfall</div><p>A classical mistake.</p></div>
+<div class="box reflex"><div class="box-h">Reflex</div><p>“When you see … → think …”.</p></div>
+</div>
+<p>What is added for pedagogy (intuitions, remarks, applications, “going further”) is presented as such. All the numbers of the page were computed by a script before being written (exact linear programs with POT and SciPy, brute force over all maps, closed forms); the interactive figures compute their numbers live, with an exact solver.</p>
+
+<h3 id="story">The story of the lecture in seven steps</h3>
+<p class="tldr">Let mass split: the transport problem becomes a linear program over “couplings”, always solvable, with sparse solutions — and in many cases (uniform weights, densities, the line) no worse than moving points by a map.</p>
+<ol class="chain">
+<li><strong>Recap (§1).</strong> Monge looks for a map $T$ moving $\al$ onto $\be$ at least cost. On the line, sort; for Gaussians, an affine map; in general, Brenier’s map $\nabla\varphi$, solution of the Monge–Ampère equation. But a map cannot split a Dirac: the problem can be empty, and it is not convex.</li>
+<li><strong>Couplings (§2).</strong> Record <em>how much mass goes from $x_i$ to $y_j$</em>: a matrix $P\ge0$ with row sums $a$ and column sums $b$. Minimising the linear cost $\ps{C}{P}$ over these matrices is a <em>linear program</em>.</li>
+<li><strong>Permutations (§3).</strong> For $n$ points against $n$ points with equal weights, Monge’s problem is an assignment problem over permutation matrices; Kantorovich’s relaxation replaces them by bistochastic matrices. Is anything lost?</li>
+<li><strong>The line (§4).</strong> Fill the table from its top-left corner: the <em>north-west corner rule</em> builds a plan in $n+m-1$ steps; on sorted points and for convex costs it is optimal.</li>
+<li><strong>Vertices and Birkhoff–von Neumann (§5–§6).</strong> A linear program is minimised at a vertex; vertices of the transport polytope are sparse (at most $n+m-1$ entries); for uniform weights they are permutations — so Monge = Kantorovich.</li>
+<li><strong>Solving, and the general problem (§7–§9).</strong> Network simplex and dual prices; couplings between arbitrary measures; an optimal plan always exists; it is a map for densities with the quadratic cost (Brenier), on the line, or for uniform discrete weights — not with atoms.</li>
+<li><strong>Structure and use (§10–§11).</strong> Optimal plans cannot be improved by exchanging targets along cycles ($c$-cyclical monotonicity). A plan can be used to interpolate, to build a map (barycentric projection) and to transfer information between data sets.</li>
+</ol>
+
+<h3 id="toolbox">What you need</h3>
+<p>Open only the refreshers you need; each one says what is used on this page. The <a href="Reminders.html">Reminders</a> page collects them for the whole course.</p>
+
+<details class="fold more" id="recall-measures"><summary>Refresher — discrete measures, histograms and push-forward</summary><div class="fold-body">
+<p>A <em class="new">histogram</em> is a vector of weights $a=(a_1,\dots,a_n)$ with $a_i\ge0$ and $\sum_ia_i=1$; the set of histograms is the <em>probability simplex</em> $\Sigma_n$. Attached to points $x_1,\dots,x_n$ it defines the <em>discrete measure</em> $\al=\sum_ia_i\delta_{x_i}$: mass $a_i$ at $x_i$, and $\int f\,\dd\al=\sum_ia_if(x_i)$. An <em>empirical measure</em> is the case $a_i=\frac1n$ (a data set of $n$ points).</p>
+<p>The <em class="new">push-forward</em> of $\al$ by a map $T$ moves each bit of mass from $x$ to $T(x)$: $\pf{T}{\al}(B)=\al(T^{-1}(B))$, and for a discrete measure $\pf{T}{\Big(\sum_ia_i\delta_{x_i}\Big)}=\sum_ia_i\delta_{T(x_i)}$: the weights travel with their points, and two atoms sent to the same point merge. In the language of random variables, if $X\sim\al$ then $T(X)\sim\pf{T}{\al}$. <strong>Used</strong> in §1 (Monge), §8 (marginals are push-forwards by projections) and §11 (interpolation). <a href="Reminders.html#pushforward">More</a>.</p>
+</div></details>
+
+<details class="fold more" id="recall-lp"><summary>Refresher — convex sets, polytopes, extreme points, linear programs</summary><div class="fold-body">
+<p>A set $\mathcal C$ is <em>convex</em> if it contains the segment between any two of its points. A <em class="new">polytope</em> is a bounded set defined by finitely many linear equalities and inequalities; it is convex and compact. An <em class="new">extreme point</em> (or vertex) of a convex set is a point that is not the midpoint of two other points of the set: the corners of a polygon, the endpoints of a segment; a disk has all the points of its circle as extreme points, an open half-plane none.</p>
+<p>A <em class="new">linear program</em> (LP) minimises a linear function $\ps{c}{p}$ under linear equalities and inequalities. Two facts are used: (i) a linear function on a non-empty polytope attains its minimum, and among the minimisers there is a vertex; (ii) every LP has a <em>dual</em> LP whose value is the same (strong duality), and an optimal primal–dual pair satisfies <em>complementary slackness</em>. Both are proved on this page in the case we need (§5 and §7). <a href="Reminders.html#lp">More</a>.</p>
+</div></details>
+
+<details class="fold more" id="recall-graphs"><summary>Refresher — bipartite graphs, cycles, trees and forests</summary><div class="fold-body">
+<p>A <em>bipartite graph</em> has two families of vertices (here: the $n$ sources and the $m$ targets) and edges only between the families. A <em>cycle</em> is a closed path that uses each vertex at most once; in a bipartite graph it alternates source, target, source, target… and has an even number of edges. A graph without cycles is a <em class="new">forest</em>; a connected forest is a <em>tree</em>.</p>
+<p><strong>The counting fact used in §5:</strong> a forest with $k$ vertices has at most $k-1$ edges. Proof: a tree with $k_c$ vertices has exactly $k_c-1$ edges (remove a leaf and its edge, and induct); a forest is a disjoint union of trees, so its number of edges is $\sum_c(k_c-1)=k-(\text{number of trees})\le k-1$.</p>
+</div></details>
+
+<details class="fold more" id="recall-perm"><summary>Refresher — permutations and permutation matrices</summary><div class="fold-body">
+<p>A <em>permutation</em> $\sigma$ of $\{1,\dots,n\}$ is a bijection; there are $n!$ of them ($3!=6$, $10!\approx3.6\times10^6$, $20!\approx2.4\times10^{18}$). Its <em class="new">permutation matrix</em> $P_\sigma$ has a $1$ in position $(i,\sigma(i))$ and $0$ elsewhere: exactly one $1$ in each row and each column. In the figures we write a permutation in one line, $\sigma=[\sigma(1),\dots,\sigma(n)]$. <strong>Used</strong> in §3 and §6. <a href="Reminders.html#permutations">More</a>.</p>
+</div></details>
+
+<details class="fold more" id="recall-monge"><summary>Refresher — what Lesson 1 established (summary of §1)</summary><div class="fold-body">
+<p>Monge’s problem: $\min\{\int c(x,T(x))\,\dd\al(x):\ \pf{T}{\al}=\be\}$. Between $n$ points and $n$ points with equal weights it is the <em>assignment problem</em> $\min_\sigma\frac1n\sum_iC_{i,\sigma(i)}$. On the line with a convex cost, sorting is optimal; between Gaussians, the optimal map is affine; on $\R^d$ with $\norm{x-y}^2$ and a source with a density, the optimal map is $\nabla\varphi$ with $\varphi$ convex (Brenier). Section 1 recalls these statements with their references. <a href="Reminders.html#ot-monge">More</a>; first companion: <a href="../companion/Lesson01.html#monge">Lesson 1</a>.</p>
+</div></details>
+
+<h3 id="notation">Notation decoder</h3>
+<p>The page uses the notation of the course book (OT4ML). The other resources use other letters; the table says how to translate.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Symbol</th><th>Read</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td>$a\in\Sigma_n$, $b\in\Sigma_m$</td><td>“histograms”</td><td>Weights of the source points $x_1,\dots,x_n$ and of the target points $y_1,\dots,y_m$.</td></tr>
+<tr><td>$\ind_n$</td><td>“the all-ones vector”</td><td>$(1,\dots,1)\in\R^n$. So $P\ind_m$ is the vector of row sums of $P$, $P\T\ind_n$ the vector of column sums.</td></tr>
+<tr><td>$\U(a,b)$</td><td>“couplings of $a$ and $b$”</td><td>Matrices $P\ge0$ with row sums $a$ and column sums $b$ (§2). The sheet writes $\Pi(\al,\be)$, StatOT $\Gamma_{\mu,\nu}$.</td></tr>
+<tr><td>$P_{ij}$</td><td>“mass from $i$ to $j$”</td><td>How much of the mass at $x_i$ is sent to $y_j$.</td></tr>
+<tr><td>$C$, $C_{ij}=c(x_i,y_j)$</td><td>“cost matrix”</td><td>Price of moving one unit of mass from $x_i$ to $y_j$.</td></tr>
+<tr><td>$\ps{C}{P}$</td><td>“total cost of $P$”</td><td>$\sum_{i,j}C_{ij}P_{ij}$.</td></tr>
+<tr><td>$\mathrm L_C(a,b)$</td><td>“Kantorovich value”</td><td>$\min_{P\in\U(a,b)}\ps{C}{P}$ (discrete problem, §2).</td></tr>
+<tr><td>$a\otimes b$</td><td>“product coupling”</td><td>$(a\otimes b)_{ij}=a_ib_j$: source and target chosen independently.</td></tr>
+<tr><td>$P_\sigma$; $\mathcal B_n$</td><td>“permutation matrix”; “Birkhoff polytope”</td><td>§3: the $0/1$ matrix of $\sigma$; the set of bistochastic matrices (row and column sums $1$). Peyré–Cuturi put $\frac1n$ instead of $1$ in $P_\sigma$.</td></tr>
+<tr><td>$\mathrm{Extr}(\mathcal C)$</td><td>“extreme points”</td><td>Points of $\mathcal C$ that are not midpoints of two other points of $\mathcal C$ (§5).</td></tr>
+<tr><td>$\pi\in\U(\al,\be)$</td><td>“coupling of measures”</td><td>A probability on pairs $(x,y)$ with marginals $\al$ and $\be$ (§8).</td></tr>
+<tr><td>$P_\X$, $P_\Y$</td><td>“projections”</td><td>$P_\X(x,y)=x$, $P_\Y(x,y)=y$; the marginals of $\pi$ are $\pf{(P_\X)}{\pi}$ and $\pf{(P_\Y)}{\pi}$.</td></tr>
+<tr><td>$\Lc(\al,\be)$</td><td>“OT cost for $c$”</td><td>$\inf_{\pi\in\U(\al,\be)}\int c\,\dd\pi$ (general problem, §8).</td></tr>
+<tr><td>$(\Id,T)_\#\al$</td><td>“graph coupling of $T$”</td><td>The coupling of the map $T$: “$Y=T(X)$”.</td></tr>
+<tr><td>$C_\al$, $C_\al^{-1}$</td><td>“CDF”, “quantile function”</td><td>$C_\al(x)=\al((-\infty,x])$ and its generalized inverse (§1, §9). The book writes $\mathcal C_\al$.</td></tr>
+<tr><td>$f,g$ or $u,v$</td><td>“dual potentials, prices”</td><td>Numbers attached to sources and targets with $f_i+g_j\le C_{ij}$ (§7; Lesson 4).</td></tr>
+</tbody></table></div>
+<p>Colour code of the figures: <span class="al">sources, $\al$, $a$ (orange-red)</span>, <span class="be">targets, $\be$, $b$ (blue)</span>, <span class="bar">plans, maps, interpolations (green)</span>; grey for the product plan and for level lines.</p>

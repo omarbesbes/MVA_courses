@@ -1,0 +1,125 @@
+<!--
+title: Lesson 5 — Sliced optimal transport: project, sort, average
+short: L5 · Sliced optimal transport
+description: Step-by-step study guide for the fifth lecture of the MVA course Optimal Transport for ML (Kimia Nadjahi, 28 Oct 2026): slices and the Radon transform, the sliced Wasserstein distance, its metric properties, comparison with W_p, Gaussians, Monte Carlo over directions, dimension-free statistics, variants, sliced flows and barycenters, applications in machine learning, and the exercise sheet solved.
+subtitle: The lecture of 28 October 2026 (Kimia Nadjahi), prepared before it takes place from her lecture notes, her slides and the exercise sheet, with the book for the rest. Project both measures on a line, sort, average over all directions: every statement is quoted, decoded symbol by symbol, motivated, proved line by line, tried on small numbers, and connected to what it is used for in machine learning.
+kicker: Optimal Transport for ML · Lesson 5 · study guide v2
+footer: Optimal Transport for Machine Learning (MVA / IASD, J. Delon &amp; G. Peyré) — study guide, version 2. Lesson 5 was prepared before the lecture from K. Nadjahi's notes, slides and exercise sheet (<code>course material exercices and one slides/sliced_o_t_*.pdf</code>, read from the page images) and from the book <em>Optimal Transport for Machine Learners</em> (<code>ressources/OT4ML.pdf</code>). Page numbers are PDF page numbers.
+-->
+
+<div class="box objectives">
+<div class="box-h">What you will be able to do after this page</div>
+<ol>
+<li>Explain why exact optimal transport is a poor <strong>loss</strong> for machine learning — about $n^3$ operations per evaluation, and an estimation error that decays like $n^{-1/d}$ — and why the real line is the exception: there, transport is a <strong>sort</strong>.</li>
+<li><strong>Slice</strong> a measure: compute $(P_\theta)_\#\al$ for point clouds, Gaussians and densities, and relate the family of all slices to the <strong>Radon transform</strong> and to tomography.</li>
+<li>Define the <strong>sliced Wasserstein distance</strong> $SW_p$, explain why one averages over the sphere with the uniform law, and compute it by hand on small examples (Diracs, translations, a “cross”).</li>
+<li>Prove that $SW_p$ is a <strong>distance</strong> (Minkowski, then the Fourier slice identity and Cramér–Wold), and compare it with $W_p$: $SW_p^p\le\kappa_{d,p}W_p^p$ with $\kappa_{d,2}=1/d$, and only a dimension-dependent reverse bound.</li>
+<li>Compute $SW_p$ in practice by <strong>Monte Carlo over directions</strong> (normalized Gaussian vectors), with cost $O(Kdn+Kn\log n)$ and error $\sqrt{\mathrm{Var}/K}$, and prove the <strong>dimension-free</strong> statistical rate $n^{-1/2}$ of $SW_1$.</li>
+<li>Know the variants (max-sliced, subspace, Min-SW and lifted plans, generalized), the <strong>sliced gradient flow</strong> and <strong>Radon barycenters</strong>, what all this is used for in machine learning, and solve the three exercises of the sheet.</li>
+</ol>
+</div>
+
+<h2 id="start">0. Before you start</h2>
+
+<h3 id="howto">How to read this page</h3>
+<p><strong>This page was written before the lecture</strong> (28 October 2026, Kimia Nadjahi). It is built from the three documents she prepared for it — her <em>lecture notes</em> (5 pages), her <em>slides</em> (27 pages: 12 numbered frames, 8 pages of references and one extra frame) and the <em>exercise sheet</em> (1 page) — and from the book <em>Optimal Transport for Machine Learners</em> (OT4ML) for what the notes only mention. The page follows the order of the notes and slides. After the lecture, compare with what was said in class: if they disagree, trust the lecture.</p>
+<p>Each statement of the course resources appears in a box like this one, with its exact reference (statement number and PDF page; for the slides, the frame number and the page of the PDF):</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">Nadjahi notes, Def. 1, p. 1</span></div>
+<p>A faithful quote, in the notation of the source.</p>
+</div>
+<p>It is always followed by a <strong>decoding</strong> (what each symbol means, in words), the <strong>problem it solves</strong>, a <strong>small example with numbers</strong>, the <strong>idea of the proof</strong>, and then the <strong>full proof</strong>, folded (click to open; the button “Open all proofs” at the top opens everything). Other boxes:</p>
+<div class="cols">
+<div class="box def"><div class="box-h">Definition</div><p>A new object, stated precisely.</p></div>
+<div class="box intu"><div class="box-h">Intuition</div><p>The picture to keep in mind.</p></div>
+<div class="box example"><div class="box-h">Worked example</div><p>Numbers you can check by hand.</p></div>
+<div class="box recall"><div class="box-h">Reminder — …</div><p>A prerequisite, recalled where it is used.</p></div>
+<div class="box ml"><div class="box-h">In machine learning — …</div><p>What the notion is used for, concretely.</p></div>
+<div class="box pitfall"><div class="box-h">Pitfall</div><p>A classical mistake.</p></div>
+</div>
+<p>Interactive figures have sliders and buttons: move them, the text under each figure says what to look for. <strong>All the numbers on this page were computed by scripts</strong> (Python with NumPy, SciPy and POT: exact assignments, quadratures over the circle, Monte Carlo with fixed seeds) before being written.</p>
+
+<h3 id="story">The story of the lecture in seven steps</h3>
+<p class="tldr">Optimal transport in dimension $d$ is slow and data-hungry, but on the line it is a sort; so project both distributions on many lines, sort, and average: the result is a true distance, cheap to compute and estimated at the same rate in every dimension — at the price of a weaker geometry.</p>
+<ol class="chain">
+<li><strong>The obstacle (§1).</strong> Machine learning uses transport as a <em>loss</em> between a model and data, at every training step. Exactly, it is a linear program with $n^2$ unknowns, solved in $O(n^3)$; and from samples it converges like $n^{-1/d}$: the <em>curse of dimensionality</em>.</li>
+<li><strong>The exception (§2).</strong> On the line, the optimal plan matches the $i$-th smallest point of one cloud with the $i$-th smallest of the other: one sort, $O(n\log n)$.</li>
+<li><strong>Slicing (§3–§4).</strong> Project both measures on a direction $\theta$ (push-forward by $x\mapsto\ps{\theta}{x}$), solve the one-dimensional problem, and average over all directions of the sphere: this is $SW_p$. The family of all slices is the Radon transform, the mathematics of the CT scanner.</li>
+<li><strong>Is it a good distance? (§5–§7).</strong> Yes: it is a distance (Minkowski, then Fourier and Cramér–Wold), with the same convergent sequences as $W_p$. But it is smaller — $SW_2\le W_2/\sqrt d$ — and the reverse comparison loses a power that depends on $d$. Gaussians give closed forms.</li>
+<li><strong>Computation and statistics (§8–§9).</strong> Replace the average over the sphere by $K$ random directions (normalized Gaussian vectors): cost $O(Kdn+Kn\log n)$, error of order $K^{-1/2}$; from $n$ samples, the error is of order $n^{-1/2}$ whatever the dimension.</li>
+<li><strong>Variants (§10).</strong> Keep the best direction (max-sliced), project on subspaces, lift one slice to a transport plan (Min-SW), bend the projections (generalized slicing).</li>
+<li><strong>Moving and averaging (§11).</strong> Move particles by sorting along random directions (the sliced flow: colour transfer, sampling), average slices direction by direction (Radon barycenters). Then the exercise sheet (§12) and more exercises (§13).</li>
+</ol>
+
+<h3 id="toolbox">What you need from earlier lessons</h3>
+<p>Open only the refreshers you need. Each one says exactly what is used on this page.</p>
+
+<details class="fold more" id="recall-1d"><summary>Refresher — optimal transport on the line: sort, or match quantiles (Lesson 1)</summary><div class="fold-body">
+<p>For a probability $\mu$ on $\R$, the <em>cumulative distribution function</em> is $F_\mu(x)=\mu\big((-\infty,x]\big)$ and the <em>quantile function</em> is its generalized inverse $F_\mu^{-1}(t)=\inf\{x:\ F_\mu(x)\ge t\}$, $t\in(0,1)$. For a cost $\abs{x-y}^p$ with $p\ge1$, the optimal plan on the line is the <strong>monotone</strong> one (the $t$-th quantile goes to the $t$-th quantile), and</p>
+$$W_p^p(\mu,\nu)=\int_0^1\abs{F_\mu^{-1}(t)-F_\nu^{-1}(t)}^p\,\dd t .$$
+<p>For two clouds of $n$ points with equal weights $\frac1n$, this reads: <strong>sort both lists and match by rank</strong>, $W_p^p=\frac1n\sum_{i=1}^n\abs{x_{(i)}-y_{(i)}}^p$, where $x_{(1)}\le\dots\le x_{(n)}$ are the sorted points. <strong>Used here</strong> in every slice. See <a href="Lesson01.html">Lesson 1</a>, <a href="Lesson03.html#recall-1d">Lesson 3</a>, and <a href="Reminders.html#cdf-quantile">Reminders: CDF and quantiles</a>, <a href="Reminders.html#sorting">sorting</a>.</p>
+</div></details>
+
+<details class="fold more" id="recall-push"><summary>Refresher — push-forward and the change of variables</summary><div class="fold-body">
+<p>If $T:\X\to\Y$ is a map and $\al$ a measure on $\X$, the <em>push-forward</em> $\pf{T}{\al}$ moves the mass at $x$ to $T(x)$: $(\pf{T}{\al})(B)=\al\big(T^{-1}(B)\big)$. Two equivalent ways to use it:</p>
+$$\int g\,\dd(\pf{T}{\al})=\int g\big(T(x)\big)\,\dd\al(x)\quad\text{for every bounded }g,\qquad X\sim\al\ \Longrightarrow\ T(X)\sim\pf{T}{\al}.$$
+<p>Discrete measures: $\pf{T}{\big(\sum_ia_i\delta_{x_i}\big)}=\sum_ia_i\delta_{T(x_i)}$ — the weights travel with their points (and add up if two points land on the same image). <strong>Used here</strong> to define the slices $(P_\theta)_\#\al$ (§3) and to project couplings (§6, Exercise 2 of the sheet). See <a href="Reminders.html#pushforward">Reminders: push-forward</a>.</p>
+</div></details>
+
+<details class="fold more" id="recall-wp"><summary>Refresher — couplings, $W_p$, and Minkowski’s inequality (Lessons 2–3)</summary><div class="fold-body">
+<p>A <em>coupling</em> of $\al$ and $\be$ is a joint law $\pi$ of a pair $(X,Y)$ with $X\sim\al$ and $Y\sim\be$; the set of couplings is $\U(\al,\be)$. For $p\ge1$,</p>
+$$W_p(\al,\be)=\Big(\min_{\pi\in\U(\al,\be)}\int\norm{x-y}^p\,\dd\pi(x,y)\Big)^{1/p}$$
+<p>is a distance (<a href="Lesson03.html#distance">Lesson 3 §2</a>). Two reflexes: <strong>any coupling gives an upper bound</strong> on $W_p^p$; and the $p$-th root is what makes the triangle inequality true, through <strong>Minkowski’s inequality</strong> $\E\big[\abs{U+V}^p\big]^{1/p}\le\E\big[\abs{U}^p\big]^{1/p}+\E\big[\abs{V}^p\big]^{1/p}$, valid for $p\ge1$ (<a href="Lesson03.html#recall-minkowski">refresher in Lesson 3</a>, <a href="Reminders.html#norms">Reminders: norms and inequalities</a>). <strong>Used here</strong> in §5 (triangle inequality of $SW_p$) and §6 (comparison with $W_p$).</p>
+</div></details>
+
+<details class="fold more" id="recall-gauss"><summary>Refresher — Gaussians: affine images and $W_2$ (Lesson 1)</summary><div class="fold-body">
+<p>If $X\sim\N(m,\Sigma)$ in $\R^d$ and $\theta\in\R^d$, then $\ps{\theta}{X}$ is a real Gaussian with mean $\ps{\theta}{m}$ and variance $\theta\T\Sigma\theta$: $\ps{\theta}{X}\sim\N\big(\ps{\theta}{m},\,\theta\T\Sigma\theta\big)$ (a linear image of a Gaussian vector is Gaussian; mean and variance by linearity). On the line,</p>
+$$W_2^2\big(\N(a,s^2),\N(b,t^2)\big)=(a-b)^2+(s-t)^2,$$
+<p>the optimal map being $x\mapsto b+\frac ts(x-a)$. In $\R^d$: $W_2^2=\norm{m_\al-m_\be}^2+\B(\Sigma_\al,\Sigma_\be)^2$ with the Bures term $\B(\Sigma,\Lambda)^2=\tr\big(\Sigma+\Lambda-2(\Lambda^{1/2}\Sigma\Lambda^{1/2})^{1/2}\big)$. <strong>Used here</strong> in §7 and in Exercise 1 of the sheet. See <a href="Lesson03.html#recall-brenier">Lesson 3’s refresher</a>, <a href="Reminders.html#gaussians">Reminders: Gaussian vectors</a>, <a href="Reminders.html#ot-closed-forms">closed forms</a>.</p>
+</div></details>
+
+<details class="fold more" id="recall-sphere"><summary>Refresher — the sphere, polar coordinates and the Gamma function</summary><div class="fold-body">
+<p>The unit sphere of $\R^d$ is $\mathbb S^{d-1}=\{u\in\R^d:\ \norm{u}=1\}$ (it has dimension $d-1$: a circle in $\R^2$, the usual sphere in $\R^3$). Every $x\ne0$ is written $x=r\theta$ with $r=\norm{x}>0$ and $\theta=x/\norm{x}\in\mathbb S^{d-1}$, and Lebesgue measure splits as $\dd x=r^{d-1}\,\dd r\,\dd\tilde\sigma(\theta)$, where $\tilde\sigma$ is the <em>surface measure</em> of the sphere (in $\R^2$: $\dd x=r\,\dd r\,\dd\varphi$). Its total mass is the surface area</p>
+$$\abs{\mathbb S^{d-1}}=\frac{2\pi^{d/2}}{\Gamma(d/2)},\qquad\Gamma(s)=\int_0^{\infty}e^{-t}t^{s-1}\,\dd t,$$
+<p>with $\Gamma(1)=1$, $\Gamma(\frac12)=\sqrt\pi$, $\Gamma(s+1)=s\,\Gamma(s)$. Checks: $d=2$ gives $2\pi/\Gamma(1)=2\pi$ (the length of the unit circle), $d=3$ gives $2\pi^{3/2}/(\frac{\sqrt\pi}2)=4\pi$. The <strong>uniform probability</strong> on the sphere is $\sigma=\tilde\sigma/\abs{\mathbb S^{d-1}}$; in $\R^2$ it is $\theta=(\cos\varphi,\sin\varphi)$ with $\varphi$ uniform on $[0,2\pi)$. Two facts are used again and again:</p>
+<ul>
+<li><strong>Rotation invariance:</strong> if $\theta\sim\sigma$ and $O$ is an orthogonal matrix, then $O\theta\sim\sigma$. Consequence: for a fixed unit vector $e$, $\ps{\theta}{e}$ has the same law as the first coordinate $\theta_1$.</li>
+<li><strong>Second moments:</strong> $\E[\theta\theta\T]=\frac1d\Id$, i.e. $\E[\theta_i\theta_j]=0$ for $i\ne j$ and $\E[\theta_i^2]=\frac1d$. Proof: flipping the sign of the $i$-th coordinate is orthogonal, so $\E[\theta_i\theta_j]=-\E[\theta_i\theta_j]=0$; permuting coordinates is orthogonal, so all $\E[\theta_i^2]$ are equal; and they sum to $\E\norm{\theta}^2=1$.</li>
+</ul>
+<p>See <a href="Reminders.html#jacobian">Reminders: change of variables</a>.</p>
+</div></details>
+
+<details class="fold more" id="recall-fourier"><summary>Refresher — the Fourier transform of a probability measure</summary><div class="fold-body">
+<p>With the convention of the notes, the <em>Fourier transform</em> of a probability measure $\mu$ on $\R^d$ is the function</p>
+$$\mathcal F\mu(\xi)=\int_{\R^d}e^{-2i\pi\ps{\xi}{x}}\,\dd\mu(x),\qquad\xi\in\R^d .$$
+<p>(Probabilists use the <em>characteristic function</em> $\phi_X(t)=\E\big[e^{i\ps{t}{X}}\big]$ of $X\sim\mu$: the same object, $\phi_X(t)=\mathcal F\mu(-t/2\pi)$.) Three facts: $\abs{\mathcal F\mu}\le1$; $\mathcal F\mu$ is continuous (dominated convergence: the integrand is continuous in $\xi$ and bounded by $1$); and <strong>it determines the measure</strong>: $\mathcal F\mu=\mathcal F\nu$ everywhere implies $\mu=\nu$ (injectivity). Example: for $\N(m,s^2)$ on $\R$, $\mathcal F\mu(\omega)=e^{-2i\pi\omega m-2\pi^2s^2\omega^2}$. <strong>Used here</strong> in §5 to prove that $SW_p(\al,\be)=0$ forces $\al=\be$.</p>
+</div></details>
+
+<details class="fold more" id="recall-mc"><summary>Refresher — Monte Carlo averages: mean, variance, error</summary><div class="fold-body">
+<p>Let $V_1,\dots,V_K$ be independent copies of a random variable $V$ with mean $m$ and variance $v$. The average $\bar V=\frac1K\sum_kV_k$ satisfies</p>
+$$\E\bar V=m,\qquad\mathrm{Var}\,\bar V=\frac vK,\qquad\E\abs{\bar V-m}\le\big(\E\abs{\bar V-m}^2\big)^{1/2}=\sqrt{\frac vK}.$$
+<p>The inequality is Cauchy–Schwarz (or Jensen for the convex function $s\mapsto s^2$). By the central limit theorem, $\sqrt K(\bar V-m)$ is approximately $\N(0,v)$ for large $K$, so $\E\abs{\bar V-m}\approx\sqrt{2/\pi}\,\sqrt{v/K}\approx0.80\sqrt{v/K}$. <strong>Used here</strong> in §8 (random directions) and §9 (random samples). See <a href="Reminders.html#convergence">Reminders: laws of large numbers</a>.</p>
+</div></details>
+
+<h3 id="notation">Notation decoder</h3>
+<p>The notes and the sheet write $\mu,\nu$ for the two measures; this page writes $\al,\be$ like the rest of the course and the book. Here is how to read every symbol.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Notes, slides, sheet</th><th>This page (and OT4ML)</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td>$\mu,\nu$; $\xi$</td><td>$\al,\be$; $\ga$</td><td>Probability measures on $\R^d$ (a third one in the triangle inequality).</td></tr>
+<tr><td>$\mathcal P_p(\R^d)$</td><td>$\Pc_p(\R^d)$</td><td>Measures with a finite $p$-th moment $\int\norm{x}^p\,\dd\al<\infty$.</td></tr>
+<tr><td>$p_u(x)=\ps{x}{u}$, “slicing operator”</td><td>$P_\theta(x)=\ps{\theta}{x}$</td><td>Projection on the direction $\theta$ (the coordinate of $x$ along $\theta$).</td></tr>
+<tr><td>$(p_\theta)_\sharp\mu$; $\mu^\theta$ (slides)</td><td>$\al_\theta=\pf{(P_\theta)}{\al}$</td><td>The <em>slice</em> of $\al$ in the direction $\theta$: a measure on $\R$ (§3).</td></tr>
+<tr><td>$\mathcal U_{\mathbb S^{d-1}}$</td><td>$\sigma$</td><td>The uniform <strong>probability</strong> on the sphere $\mathbb S^{d-1}$.</td></tr>
+<tr><td>$\sigma$ (notes, Remark 1 and Prop. 2)</td><td>$\tilde\sigma$</td><td>The <strong>surface measure</strong> of the sphere (total mass $\abs{\mathbb S^{d-1}}$). Careful: the notes’ $\sigma$ is not normalized.</td></tr>
+<tr><td>$\mathcal A(\mathbb S^{d-1})$</td><td>$\abs{\mathbb S^{d-1}}$</td><td>Surface area of the sphere, $2\pi^{d/2}/\Gamma(d/2)$.</td></tr>
+<tr><td>$\mathbf W_c$, $\mathbf{SW}_c$</td><td>$\mathcal L_c$ on $\R$, $SW_c$</td><td>Transport cost for a cost $c$ on $\R\times\R$ (no root), and its average over directions.</td></tr>
+<tr><td>$\mathbf W_p$, $\mathbf{SW}_p$</td><td>$W_p$, $SW_p$</td><td>Wasserstein and sliced Wasserstein distances (with the $p$-th root).</td></tr>
+<tr><td>$\gamma\in\Gamma(\mu,\nu)$; $\Pi(a,b)$</td><td>$\pi\in\U(\al,\be)$</td><td>Couplings (transport plans).</td></tr>
+<tr><td>$c_{d,p}$</td><td>$\kappa_{d,p}$</td><td>The constant of the comparison $SW_p^p\le\kappa_{d,p}W_p^p$ (§6).</td></tr>
+<tr><td>$K$ (notes), $k$ (slides)</td><td>$K$ ($L$ in OT4ML)</td><td>Number of random directions in the Monte Carlo estimate (§8).</td></tr>
+<tr><td>$\widehat{\mathbf{SW}}_p$</td><td>$\widehat{SW}_p$</td><td>Monte Carlo estimate with $K$ directions.</td></tr>
+<tr><td>$\mu_n,\nu_n$; $\hat\mu_n$</td><td>$\hat\al_n,\hat\be_n$</td><td>Empirical measures of $n$ samples (§1, §9).</td></tr>
+<tr><td>$\mathcal F\mu$</td><td>$\mathcal F\al$</td><td>Fourier transform of a measure (§5).</td></tr>
+<tr><td>$T_w(x)=x+w$ (sheet)</td><td>$\tau_w$</td><td>Translation by the vector $w$ (sheet, Exercise 3).</td></tr>
+</tbody></table></div>
+<p>Colour code of the figures: <span class="al">$\al$ (source, orange-red)</span>, <span class="be">$\be$ (target, blue)</span>, <span class="ga">$\ga$ (third measure, purple)</span>, <span class="bar">projections, matchings, flows and barycenters (green)</span>.</p>

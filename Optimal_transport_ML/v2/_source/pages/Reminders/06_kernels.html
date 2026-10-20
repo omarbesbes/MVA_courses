@@ -1,0 +1,51 @@
+
+<h2 id="kernels">7. Kernels</h2>
+<p class="tldr">A positive definite kernel is an inner product between feature vectors; averaging the features of a distribution embeds it in a Hilbert space, and the distance between two embeddings — the MMD — is a cheap, sample-friendly discrepancy that complements optimal transport.</p>
+
+<h3 id="mmd">Positive definite kernels, MMD and the energy distance</h3>
+<p class="small muted"><strong>Used in</strong> <a href="Lesson04.html">Lesson 4</a> (integral probability metrics; MMD versus $W_1$ in GANs), <a href="Lesson05.html">Lesson 5</a> (energy distance and sliced distances), <a href="Lesson07.html">Lesson 7</a> (Sinkhorn divergences interpolate between OT and an MMD; sample complexity), <a href="Lesson08.html">Lesson 8</a> (MMD and interaction-energy gradient flows).</p>
+<p>A kernel $k(x,y)$ is a similarity between points. It is <em class="new">positive definite</em> when all its Gram matrices are PSD; then $k(x,y)=\ps{\Phi(x)}{\Phi(y)}$ for some feature map $\Phi$ into a Hilbert space $\mathcal H$ (the RKHS). Represent a distribution by its mean feature $m_\al=\int\Phi\,\dd\al$; the <em class="new">maximum mean discrepancy</em> is the distance between two mean features.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 7.7 and Ex. 7.8, p. 127;</span> <span class="ref">Def. 7.9 and Prop. 7.10–7.11, p. 128;</span> <span class="ref">eq. (7.5), p. 129</span></div>
+<ul>
+<li>$k$ is positive definite if $\sum_{i,j}r_ir_jk(x_i,x_j)\ge0$ for all points $x_1,\dots,x_n$ and all $r\in\R^n$; <em>conditionally</em> positive definite if this holds for $\sum_ir_i=0$.</li>
+<li>$\mathrm{MMD}_k(\al,\be)=\norm{\al-\be}_k$ with $\norm\xi_k^2=\iint k\,\dd\xi\,\dd\xi$. For discrete measures:
+$$\mathrm{MMD}_k^2(\al,\be)=\sum_{i,i'}a_ia_{i'}k(x_i,x_{i'})+\sum_{j,j'}b_jb_{j'}k(y_j,y_{j'})-2\sum_{i,j}a_ib_jk(x_i,y_j).$$</li>
+<li>Dual form: $\mathrm{MMD}_k(\al,\be)=\sup_{\norm h_{\mathcal H}\le1}\int h\,\dd(\al-\be)$. For a continuous kernel whose RKHS is dense in $C(\X)$ (universal kernel) on a compact $\X$, $\mathrm{MMD}_k(\al_n,\al)\to0\iff\al_n\wto\al$.</li>
+<li><strong>Energy distance:</strong> the conditionally positive kernel $-\norm{x-y}$ gives $\mathrm{ED}^2(\al,\be)=2\E\norm{X-Y}-\E\norm{X-X'}-\E\norm{Y-Y'}$ ($X,X'\sim\al$, $Y,Y'\sim\be$ independent).</li>
+</ul>
+</div>
+<div class="table-wrap"><table>
+<thead><tr><th>kernel $k(x,y)$</th><th>what $\mathrm{MMD}_k$ sees</th></tr></thead>
+<tbody>
+<tr><td>linear $\ps xy$</td><td>only the means: $\mathrm{MMD}=\norm{m_\al-m_\be}$</td></tr>
+<tr><td>polynomial $(1+\ps xy)^p$</td><td>the moments up to order $p$ (not a distance between laws)</td></tr>
+<tr><td>Gaussian $e^{-\norm{x-y}^2/(2\sigma^2)}$, Laplace $e^{-\norm{x-y}/\sigma}$</td><td>everything (characteristic kernels): $\mathrm{MMD}=0\iff\al=\be$; scale set by $\sigma$</td></tr>
+<tr><td>energy $-\norm{x-y}$</td><td>everything, with no scale parameter; in 1D $\mathrm{ED}^2=2\int(C_\al-C_\be)^2$</td></tr>
+</tbody></table></div>
+<div class="box example"><div class="box-h">Worked example — $\al=\frac12\delta_0+\frac12\delta_2$ against $\be=\delta_1$</div>
+<ul>
+<li>Same mean ($1$): the linear kernel gives $\mathrm{MMD}=0$, it cannot tell them apart.</li>
+<li>Gaussian kernel, $\sigma=1$: $\E k(X,X')=\frac12\cdot1+\frac12e^{-2}$ (same atom with probability $\frac12$, distance $2$ otherwise), $\E k(Y,Y')=1$, $\E k(X,Y)=e^{-1/2}$. So $\mathrm{MMD}^2=0.568+1-1.213\approx0.355$, $\mathrm{MMD}\approx0.595$.</li>
+<li>Bandwidth: $\sigma=0.1$ gives $\mathrm{MMD}^2\approx1.5$ (points look all far apart), $\sigma=10$ gives $\approx7\times10^{-5}$ (the kernel is almost quadratic at this scale and nearly sees the means only).</li>
+<li>Energy distance: $\E\abs{X-Y}=1$, $\E\abs{X-X'}=\frac12\cdot2=1$, $\E\abs{Y-Y'}=0$, so $\mathrm{ED}^2=2-1-0=1$. With CDFs: $C_\al-C_\be=\frac12$ on $[0,1)$ and $-\frac12$ on $[1,2)$, and $2\int(C_\al-C_\be)^2=2\cdot\frac12=1$. (And $W_1=1$.)</li>
+<li>Gram matrix of the Gaussian kernel at the points $0,1,2$: eigenvalues $0.21$, $0.86$, $1.93$, all positive, as positive definiteness requires.</li>
+</ul>
+</div>
+<details class="fold proof"><summary>Why the MMD formula and the dual form agree</summary><div class="fold-body">
+<p>With $k(x,y)=\ps{\Phi(x)}{\Phi(y)}_{\mathcal H}$ and $m_\al=\int\Phi\,\dd\al$: $\norm{m_\al-m_\be}^2=\ps{m_\al}{m_\al}-2\ps{m_\al}{m_\be}+\ps{m_\be}{m_\be}=\E k(X,X')-2\E k(X,Y)+\E k(Y,Y')$, the formula above. For the dual form, the reproducing property $h(x)=\ps{h}{\Phi(x)}$ gives $\int h\,\dd(\al-\be)=\ps{h}{m_\al-m_\be}\le\norm{h}\,\norm{m_\al-m_\be}$ (Cauchy–Schwarz), with equality for $h$ proportional to $m_\al-m_\be$ (OT4ML Prop. 7.10, p. 128).</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul>
+<li>The bandwidth matters: too small and every pair of distinct samples looks maximally different, too large and only low moments are compared.</li>
+<li>Gaussian MMD saturates with distance: for two Diracs at distance $d$ ($\sigma=1$), $\mathrm{MMD}^2=2-2e^{-d^2/2}$ is $0.79$ for $d=1$, $1.98$ for $d=3$, $2.00$ for $d=10$ — far away, it no longer sees how far. The energy distance $\mathrm{ED}^2=2d$ keeps growing, like transport distances.</li>
+<li>The plug-in estimator with all pairs (including $i=i'$) is biased; the unbiased U-statistic drops the diagonal terms.</li>
+<li>“Positive definite kernel” means PSD Gram matrices, not strictly positive ones.</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — two-sample tests, kernel GAN losses, KID</div>
+<p>Given samples from two distributions, the empirical MMD is a test statistic for “same distribution?”, calibrated by permuting the labels of the pooled samples (kernel two-sample test). As a training loss, MMD gives MMD-GANs and generative moment matching networks; as an evaluation metric, the Kernel Inception Distance is an MMD with a polynomial kernel on network features (OT4ML Example 7.14, p. 129). Its main advantage over OT is statistical: the empirical MMD converges at the rate $n^{-1/2}$ in any dimension (OT4ML Prop. 10.11, p. 203), whereas $W_p$ suffers from the curse of dimensionality (<a href="#convergence">§1</a>). Sinkhorn divergences interpolate between the two: OT when $\eps\to0$, an MMD with kernel $-c$ when $\eps\to\infty$ (OT4ML Prop. 8.40, p. 168; <a href="Lesson07.html">Lesson 7</a>).</p>
+</div>
+<div class="quiz"><p>With the linear kernel $k(x,y)=xy$ on $\R$, show that $\mathrm{MMD}_k(\al,\be)=\abs{m_\al-m_\be}$, the difference of the means.</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>For independent $X,X'\sim\al$ and $Y,Y'\sim\be$: $\E[XX']=m_\al^2$, $\E[YY']=m_\be^2$, $\E[XY]=m_\al m_\be$. So $\mathrm{MMD}^2=m_\al^2+m_\be^2-2m_\al m_\be=(m_\al-m_\be)^2$. Two laws with the same mean are at MMD $0$ for this kernel: it is not characteristic.</p>
+</div></details></div>

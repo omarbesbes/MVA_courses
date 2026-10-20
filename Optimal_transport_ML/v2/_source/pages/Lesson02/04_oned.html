@@ -1,0 +1,110 @@
+<h2 id="oned">4. The discrete problem on the line: the north-west corner rule</h2>
+<p class="tldr">Fill the transport table greedily from its top-left corner, exhausting a row or a column at each step: this “north-west corner rule” always gives a sparse coupling, and when the points are sorted on the line and the cost is a convex function of $x-y$, it gives an optimal one.</p>
+
+<h3 id="nw-rule">The north-west corner rule</h3>
+<p><strong>The problem.</strong> Before optimising, we need <em>some</em> coupling — a starting point for algorithms, an upper bound for proofs. The product $a\otimes b$ is one, but it is full ($nm$ entries). Can we build a sparse one cheaply?</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 3.9 and Alg. 3.1, p. 55</span></div>
+<p><strong>Proposition 3.9 (North-west corner feasible plan).</strong> Let $a\in\R_+^n$ and $b\in\R_+^m$ have the same positive total mass. The following greedy sweep constructs a coupling $P\in\U(a,b)$ with at most $n+m-1$ positive entries and an acyclic positive support. Starting from $(i,j)=(1,1)$ with residual masses $r_i=a_i$ and $s_j=b_j$, skip zero residuals, set $P_{i,j}=\min(r_i,s_j)$, subtract this value from both residuals, and advance every index whose residual has become zero. Repeat until all residual masses are exhausted.</p>
+<p><strong>Algorithm 3.1 (North-west corner coupling).</strong> Initialize $P=0$, $r=a$, $s=b$, $(i,j)=(1,1)$. While $i\le n$ and $j\le m$: $\eta=\min(r_i,s_j)$, $P_{i,j}\leftarrow\eta$; $r_i\leftarrow r_i-\eta$, $s_j\leftarrow s_j-\eta$; if $r_i=0$ then $i\leftarrow i+1$; if $s_j=0$ then $j\leftarrow j+1$. Return $P$.</p>
+<p>The north-west corner rule […] does not use the cost matrix and is therefore not meant to solve (3.2). Its role is algorithmic […]. This gives a cheap initialization for the pivoting methods discussed in Section 3.2.</p>
+</div>
+<dl class="decode">
+<dt>“north-west”</dt><dd>The top-left cell $(1,1)$ of the table, as on a map.</dd>
+<dt>$r_i$, $s_j$</dt><dd>What row $i$ still has to send, what column $j$ still has to receive.</dd>
+<dt>$\min(r_i,s_j)$</dt><dd>Ship as much as possible in the current cell: this exhausts the row, or the column, or both.</dd>
+<dt>“advance every index whose residual has become zero”</dt><dd>Row exhausted: go down; column exhausted: go right; both: go diagonally.</dd>
+<dt>“acyclic positive support”</dt><dd>The graph “source $i$ — target $j$ whenever $P_{ij}>0$” has no cycle: §5 shows this is exactly what makes $P$ a <em>vertex</em> of $\U(a,b)$.</dd>
+<dt>“does not use the cost matrix”</dt><dd>It is a feasible plan, not an optimal one — except in the case of §4.2 below.</dd>
+</dl>
+<div class="box example" id="nw-example"><div class="box-h">Worked example — the example of Peyré–Cuturi (CompOT §3.4.2, p. 48)</div>
+<p>$a=(0.2,0.5,0.3)$, $b=(0.5,0.1,0.4)$.</p>
+<ol class="steps">
+<li>Cell $(1,1)$: $\min(0.2,0.5)=0.2$. Row 1 exhausted ($r_1=0$), column 1 still needs $0.3$: go down.<span class="why">$r=(0,0.5,0.3)$, $s=(0.3,0.1,0.4)$.</span></li>
+<li>Cell $(2,1)$: $\min(0.5,0.3)=0.3$. Column 1 exhausted: go right.<span class="why">$r=(0,0.2,0.3)$, $s=(0,0.1,0.4)$.</span></li>
+<li>Cell $(2,2)$: $\min(0.2,0.1)=0.1$. Column 2 exhausted: go right.<span class="why">$r=(0,0.1,0.3)$, $s=(0,0,0.4)$.</span></li>
+<li>Cell $(2,3)$: $\min(0.1,0.4)=0.1$. Row 2 exhausted: go down.<span class="why">$r=(0,0,0.3)$, $s=(0,0,0.3)$.</span></li>
+<li>Cell $(3,3)$: $\min(0.3,0.3)=0.3$. Both exhausted: stop.<span class="why">All residuals are $0$.</span></li>
+</ol>
+$$P=\begin{pmatrix}0.2&0&0\\0.3&0.1&0.1\\0&0&0.3\end{pmatrix}:\qquad 5=n+m-1\ \text{ non-zero entries, as in CompOT.}$$
+</div>
+<figure class="fig"><!-- include figures/L02/nw.svg --><figcaption>Left: the five steps of the rule on the example, a staircase from the top-left to the bottom-right corner. Right: the same plan when the sources sit at $x=0,1,2$ and the targets at $y=0.5,1.5,2.5$ on the line: sorted mass is sent to sorted mass, and the arrows never cross.</figcaption></figure>
+<div class="box idea"><div class="box-h">Idea of the proof of Prop. 3.9</div>
+<p>Every step fills one cell and kills at least one row or one column; there are $n$ rows and $m$ columns, and the last step kills both the last row and the last column: at most $n+m-1$ steps. The path only moves right or down, so it never comes back to close a cycle.</p>
+</div>
+<details class="fold proof"><summary>Full proof (OT4ML p. 55)</summary><div class="fold-body">
+<ol class="steps">
+<li><strong>Feasible.</strong> Every assigned value is $\ge0$; the value put in cell $(i,j)$ is subtracted from the residual of row $i$ and of column $j$, so no row or column receives more than prescribed. An index is advanced only when its residual is $0$. When the loop stops, the total assigned mass is $\sum_ia_i=\sum_jb_j$, so every row sum equals $a_i$ and every column sum $b_j$.<span class="why">If some residual were still positive at the end, the total assigned would be smaller than the total mass, but the loop stops only when row $n$ or column $m$ is exhausted, which (by equal totals) means both are.</span></li>
+<li><strong>At most $n+m-1$ entries.</strong> Each positive assignment exhausts at least one current row or column. Before the final assignment, at most $n-1$ row advances and $m-1$ column advances can occur; hence at most $(n-1)+(m-1)+1$ positive entries.<span class="why">The final assignment exhausts row $n$ and column $m$ together.</span></li>
+<li><strong>Acyclic.</strong> View the positive support as a bipartite graph. Once a row or column index is advanced, it never appears again, so each new edge either starts a new component or attaches at least one new vertex to the component being built. An edge between two old vertices of the same component — the only way to close a cycle — never occurs.<span class="why">The current cell $(i,j)$ always involves the current row and the current column, at least one of which is new.</span></li>
+</ol>
+</div></details>
+
+<div class="widget" data-widget="l2nw"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p>What to look at: press <strong>Step</strong> and follow the dashed cell: it receives the minimum of what is left in its row and in its column, then the rule moves down (row exhausted) or right (column exhausted). On the right, the same mass is drawn on the real line. At the end, the readout compares the cost of the plan with the exact optimum (computed by an assignment between duplicated atoms, Prop. 3.21 of §6). For $p=2$ or $p=1$ on sorted points the rule is optimal; switch to $p=\frac12$ or shuffle the targets and it is not. The sheet’s Exercise 1 is one of the examples.</p>
+
+<h3 id="oned-sweep">On the line, the sweep is optimal</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 3.10, p. 55</span></div>
+<p>In one dimension, the transportation polytope has a canonical monotone optimizer. This is the weighted version of the sorting rule from Section 1.1.</p>
+<p><strong>Proposition 3.10 (One-dimensional weighted sweep).</strong> Let $x_1\le\dots\le x_n$ and $y_1\le\dots\le y_m$ be points on the line, and let $c(x,y)=h(x-y)$ with $h$ convex. The north-west corner plan between the sorted weighted atoms is optimal for (3.2). Consequently, for unsorted one-dimensional inputs, an optimal plan is obtained in $O(n\log n+m\log m)$ time by sorting and then sweeping the masses once from left to right.</p>
+</div>
+<dl class="decode">
+<dt>$x_1\le\dots\le x_n$</dt><dd>The rows of the table are the sources from left to right; same for the columns.</dd>
+<dt>$h$ convex</dt><dd>$h(t)=\abs{t}^p$ with $p\ge1$, $t^2$, $\abs t$, … Not $\sqrt{\abs t}$ (concave on each side).</dd>
+<dt>“weighted version of sorting”</dt><dd>With $n=m$ and equal weights the NW plan is the identity matching between the sorted lists: Lesson 1’s “sort and match”.</dd>
+<dt>$O(n\log n+m\log m)$</dt><dd>Sorting dominates; the sweep itself takes at most $n+m-1$ steps. Compare with a general LP.</dd>
+</dl>
+<div class="box recall"><div class="box-h">Reminder — a convex function has increasing increments</div>
+<p>If $h$ is convex, the slope of the chord $\frac{h(t)-h(s)}{t-s}$ is non-decreasing in $s$ and in $t$ (the “three chords” lemma). Hence, for $\delta,\eta\ge0$ and every $u$,</p>
+$$h(u+\eta)-h(u)\ \le\ h(u+\delta+\eta)-h(u+\delta):$$
+<p>the same step $\eta$, taken further to the right, increases $h$ more. (Increase the right end first: slope$[u,u+\eta]\le$ slope$[u,u+\eta+\delta]$; then the left end: $\le$ slope$[u+\delta,u+\eta+\delta]$.) <a href="Reminders.html#convex-functions">More</a>.</p>
+</div>
+<figure class="fig"><!-- include figures/L02/uncross.svg --><figcaption>Left: two crossed arrows $x\to y$, $x'\to y'$ with $x<x'$ and $y>y'$ (dashed) cost more than the uncrossed ones (green) for a convex cost: with $h(z)=z^2$, $4+0$ against $1+1$. Right: the reason — a convex function increases more over the same step when the step is further right.</figcaption></figure>
+<div class="box idea"><div class="box-h">Idea of the proof of Prop. 3.10</div>
+<p>Take any plan. If it does not put the maximal possible mass in the top-left cell, it sends mass from $x_1$ to some later $y_j$ and to $y_1$ from some later $x_i$: two crossed arrows. Uncross them (send that mass $x_1\to y_1$ and $x_i\to y_j$): the marginals do not change and, by convexity, the cost does not increase. Repeat until the top-left cell is full, remove the exhausted row or column, and continue on the smaller problem: you arrive at the north-west plan without ever paying more.</p>
+</div>
+<details class="fold proof"><summary>Full proof (OT4ML p. 55–56)</summary><div class="fold-body">
+<p><strong>Step 0 — the Monge inequality.</strong> For $x_1\le x_i$ and $y_1\le y_j$:
+$$h(x_1-y_j)+h(x_i-y_1)\ \ge\ h(x_1-y_1)+h(x_i-y_j).$$
+Indeed, put $u=x_1-y_j$, $\eta=y_j-y_1\ge0$, $\delta=x_i-x_1\ge0$. Then $x_1-y_1=u+\eta$, $x_i-y_j=u+\delta$, $x_i-y_1=u+\delta+\eta$, and the inequality reads $h(u)+h(u+\delta+\eta)\ge h(u+\eta)+h(u+\delta)$, i.e. the increasing-increments inequality of the reminder.</p>
+<ol class="steps">
+<li>Let $P\in\U(a,b)$ with $P_{1,1}<\min(a_1,b_1)$. Then some $j>1$ has $P_{1,j}>0$ and some $i>1$ has $P_{i,1}>0$.<span class="why">Row 1 sums to $a_1>P_{1,1}$, so another entry of row 1 is positive; column 1 sums to $b_1>P_{1,1}$, likewise.</span></li>
+<li>Move $\eta=\min(P_{1,j},P_{i,1})$: add $\eta$ to $P_{1,1}$ and $P_{i,j}$, subtract it from $P_{1,j}$ and $P_{i,1}$. The new matrix is in $\U(a,b)$.<span class="why">Row 1 and row $i$ each gain and lose $\eta$; so do column 1 and column $j$. Entries stay $\ge0$ by the choice of $\eta$.</span></li>
+<li>The cost changes by $\eta\big[h(x_1-y_1)+h(x_i-y_j)-h(x_1-y_j)-h(x_i-y_1)\big]\le0$.<span class="why">Step 0.</span></li>
+<li>Each move sets $P_{1,j}$ or $P_{i,1}$ to $0$, and entries of row 1 (beyond column 1) and of column 1 (beyond row 1) only decrease. So after at most $(n-1)+(m-1)$ moves, $P_{1,1}=\min(a_1,b_1)$ — the first north-west assignment.<span class="why">Otherwise step 1 would still apply.</span></li>
+<li>Now row 1 or column 1 is exhausted (all its other entries are $0$). Remove it and lower the other marginal accordingly ($b_1\leftarrow b_1-a_1$ or $a_1\leftarrow a_1-b_1$): what remains is a coupling of a smaller ordered problem, whose north-west plan is exactly the continuation of the north-west plan of the full problem. By induction on $n+m$, the remaining part can be turned into its north-west plan without increasing the cost.<span class="why">The north-west rule is recursive: after its first assignment it runs on the residual problem. The base case $n=1$ or $m=1$ has a single coupling.</span></li>
+<li>Conclusion: $\mathrm{cost}(P_{\mathrm{NW}})\le\mathrm{cost}(P)$ for every $P\in\U(a,b)$: the north-west plan is optimal.<span class="why">We transformed an arbitrary $P$ into $P_{\mathrm{NW}}$ by moves that never increase the cost.</span></li>
+</ol>
+</div></details>
+
+<div class="box example"><div class="box-h">Worked example — the costs of the north-west plan</div>
+<p>On the example above with $x=(0,1,2)$, $y=(0.5,1.5,2.5)$: for $\abs{x-y}^2$ the north-west plan costs $0.45$ and for $\abs{x-y}$ it costs $0.6$; an exact LP solver gives the same values. If instead the targets are processed in the wrong order ($2.5,1.5,0.5$), the rule still returns a coupling (columns permuted), but it costs $2.45$ for $\abs{x-y}^2$ against the optimum $0.45$: the rule ignores the cost, it is the <em>sorting</em> that makes it optimal.</p>
+</div>
+
+<div class="box remark"><div class="box-h">The north-west plan is the quantile coupling (a remark added for this page)</div>
+<p>Write $A_i=a_1+\dots+a_i$ and $B_j=b_1+\dots+b_j$ (cumulative masses, $A_0=B_0=0$). Then the north-west plan is</p>
+$$P_{ij}=\text{length of }(A_{i-1},A_i]\cap(B_{j-1},B_j].$$
+<p>In words: cut $[0,1]$ into the intervals of quantile levels of the sources and of the targets; the mass sent from $x_i$ to $y_j$ is the overlap of their intervals. On the example, $A=(0,0.2,0.7,1)$ and $B=(0,0.5,0.6,1)$: the overlaps are $0.2,0.3,0.1,0.1,0.3$ — exactly the five entries found above. This is the discrete form of “match equal quantile levels” (§1), and it gives the formula $\sum_{ij}P_{ij}h(x_i-y_j)=\int_0^1h\big(C_\al^{-1}(r)-C_\be^{-1}(r)\big)\dd r$, which §9 extends to arbitrary measures (OT4ML Thm. 3.39).</p>
+</div>
+
+<h3 id="oned-concave">When the cost is concave, sorting is not enough</h3>
+<p>The proof used convexity once, in the Monge inequality. For a concave cost it fails, and so does the result.</p>
+<div class="box example"><div class="box-h">Worked example — $h(t)=\sqrt{\abs t}$</div>
+<p>Sources $\{0,1\}$, targets $\{1,2\}$, all weights $\frac12$. Sorted plan $0\to1$, $1\to2$: cost $\frac12(1+1)=1$. Nested plan $0\to2$, $1\to1$: cost $\frac12(\sqrt2+0)\approx0.707$, which is the exact optimum. A concave cost rewards one long trip plus a trip of length $0$ over two medium trips — the opposite of the convex case. (In the widget, set $p=\frac12$.)</p>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — sorting, the cheapest transport there is</div>
+<p>On the line, optimal transport costs a sort: $O(n\log n)$, against $O(n^3)$ for a general assignment. Machine learning exploits this through <strong>sliced</strong> transport (Lesson 5): to compare two point clouds of $n$ points in $\R^d$ — a generated batch and a data batch in a generative model, two 3D scans — project both on random directions $\theta$, sort the two lists of $n$ numbers, and average the matched squared differences over the directions. Each direction is a one-dimensional problem solved exactly by Prop. 3.10, and the result is differentiable almost everywhere with respect to the points, so it can be used as a training loss.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — the rule is not an optimiser</div>
+<p>Run on unsorted points, or with a concave or non-translation-invariant cost, the north-west rule returns a vertex of the polytope that has nothing to do with the cost. It is a <strong>starting point</strong> (§7), optimal only in the setting of Prop. 3.10.</p>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>Discrete transport on the line with $\abs{x-y}^p$, $p\ge1$ → sort both supports and sweep from the left (north-west corner); no LP needed.</li>
+<li>Want to know how much mass goes from $x_i$ to $y_j$ on the line → overlap of the quantile intervals $(A_{i-1},A_i]$ and $(B_{j-1},B_j]$.</li>
+<li>Concave cost → expect nested, not sorted, matchings.</li>
+</ul>
+</div>
+<div class="quiz"><p>Run the north-west rule on $a=(0.5,0.5)$, $b=(0.5,0.5)$. How many non-zero entries? Is that $n+m-1$?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>$P_{11}=0.5$ exhausts row 1 and column 1 at the same time: the rule moves diagonally, $P_{22}=0.5$. Two entries, fewer than $n+m-1=3$: a <em>degenerate</em> vertex. Prop. 3.9 says “at most”, and here the bound is not attained (the implementations of the simplex add a zero entry to get a spanning tree, OT4ML p. 55).</p>
+</div></details></div>

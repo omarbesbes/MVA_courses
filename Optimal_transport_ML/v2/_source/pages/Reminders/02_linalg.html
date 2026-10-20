@@ -1,0 +1,141 @@
+
+<h2 id="linalg">3. Linear algebra</h2>
+<p class="tldr">Symmetric positive matrices are stretchings along orthogonal axes; they have square roots, they are the covariances of Gaussian vectors, and permutation matrices are the corners of the set of doubly stochastic matrices.</p>
+
+<h3 id="spd">Symmetric matrices, spectral theorem, positive (semi-)definite matrices</h3>
+<p class="small muted"><strong>Used in</strong> <a href="Lesson01.html">Lesson 1</a> (covariances; the Brenier map between Gaussians is a symmetric positive matrix), <a href="Lesson03.html#gauss">Lesson 3</a> (Gaussian barycenters; the sheet’s Gaussian couplings need block matrices $\succeq0$), <a href="Lesson04.html">Lesson 4</a> (Hessians of convex potentials), <a href="Lesson07.html">Lesson 7</a> (Gram matrices of kernels), <a href="Lesson08.html">Lesson 8</a> (strong convexity).</p>
+<p>A symmetric matrix acts as a stretching along orthogonal axes: along each axis it multiplies lengths by an eigenvalue. It is <em class="new">positive semi-definite</em> (PSD, $S\succeq0$) when no axis is reversed, i.e. all the stretching factors are $\ge0$.</p>
+<div class="box thm"><div class="box-h">Spectral theorem and positivity (standard)</div>
+<ul>
+<li><strong>Spectral theorem.</strong> If $S\in\R^{d\times d}$ is symmetric ($S\T=S$), then $S=UDU\T$ with $U$ orthogonal ($U\T U=\mathrm I$, columns = orthonormal eigenvectors) and $D=\mathrm{diag}(\lambda_1,\dots,\lambda_d)$ real.</li>
+<li><strong>PSD.</strong> The following are equivalent: $x\T Sx\ge0$ for all $x$; all $\lambda_i\ge0$; $S=A\T A$ for some matrix $A$. <strong>Positive definite</strong> ($S\succ0$): $x\T Sx>0$ for $x\ne0$, i.e. all $\lambda_i>0$, i.e. $S$ PSD and invertible.</li>
+<li><strong>Rayleigh bounds.</strong> $\lambda_{\min}\norm{x}^2\le x\T Sx\le\lambda_{\max}\norm{x}^2$. <strong>Loewner order:</strong> $A\preceq B$ iff $B-A\succeq0$.</li>
+<li><strong>$2\times2$ test.</strong> $\begin{pmatrix}a&b\\b&c\end{pmatrix}\succ0$ iff $a>0$ and $ac-b^2>0$. In particular a covariance $\begin{pmatrix}\sigma_1^2&c\\c&\sigma_2^2\end{pmatrix}$ is PSD iff $\abs{c}\le\sigma_1\sigma_2$.</li>
+<li><strong>Schur complement.</strong> If $A\succ0$, then $\begin{pmatrix}A&B\\B\T&C\end{pmatrix}\succeq0$ iff $C-B\T A^{-1}B\succeq0$.</li>
+</ul>
+<p>Covariance matrices $\E[(X-m)(X-m)\T]$ and Gram matrices $(\ps{x_i}{x_j})_{ij}$ are PSD: $x\T\E[(X-m)(X-m)\T]x=\E\big[\ps{x}{X-m}^2\big]\ge0$.</p>
+</div>
+<div class="box example"><div class="box-h">Worked example</div>
+<ul>
+<li>$S=\begin{pmatrix}2&1\\1&2\end{pmatrix}$: eigenvalues $3$ (eigenvector $(1,1)/\sqrt2$) and $1$ (eigenvector $(1,-1)/\sqrt2$). Directly: $x\T Sx=2x_1^2+2x_1x_2+2x_2^2=(x_1+x_2)^2+x_1^2+x_2^2>0$ for $x\ne0$.</li>
+<li>$\begin{pmatrix}1&2\\2&1\end{pmatrix}$ has only positive entries but eigenvalues $3$ and $-1$: with $x=(1,-1)$, $x\T Sx=1-4+1=-2$. Not PSD.</li>
+<li>$\begin{pmatrix}1&-1\\-1&1\end{pmatrix}$ has negative entries but eigenvalues $0$ and $2$: PSD (and singular).</li>
+<li>Schur: $\begin{pmatrix}1&0.8\\0.8&1\end{pmatrix}\succeq0$ because $1-0.8\cdot1^{-1}\cdot0.8=0.36\ge0$ (its eigenvalues are $0.2$ and $1.8$).</li>
+</ul>
+</div>
+<details class="fold proof"><summary>Proof of the equivalences</summary><div class="fold-body">
+<p>Write $x=Uz$ (any $x$ is of this form since $U$ is invertible). Then $x\T Sx=z\T U\T UDU\T Uz=z\T Dz=\sum_i\lambda_iz_i^2$. This is $\ge0$ for all $z$ iff all $\lambda_i\ge0$ (take $z$ = a basis vector), and $>0$ for all $z\ne0$ iff all $\lambda_i>0$. If all $\lambda_i\ge0$, then $S=A\T A$ with $A=D^{1/2}U\T$; conversely $x\T A\T Ax=\norm{Ax}^2\ge0$. The Rayleigh bounds follow from $\lambda_{\min}\sum z_i^2\le\sum\lambda_iz_i^2\le\lambda_{\max}\sum z_i^2$ and $\norm{z}=\norm{x}$.</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul>
+<li>The signs of the entries say nothing about definiteness (examples above).</li>
+<li>The product of two symmetric positive matrices is in general not symmetric: $\mathrm{diag}(2,1)\begin{pmatrix}2&1\\1&2\end{pmatrix}=\begin{pmatrix}4&2\\1&2\end{pmatrix}$. This is why compositions of Brenier maps between Gaussians are in general not Brenier maps (OT4ML Example 2.43, p. 38), and why formulas such as the Bures distance use “sandwiches” $A^{1/2}BA^{1/2}$.</li>
+<li>In kernel theory, “positive definite kernel” means that the Gram matrices are PSD (OT4ML p. 127).</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — PCA and curvature</div>
+<p>Principal component analysis diagonalises the empirical covariance $\hat\Sigma=U D U\T$: the columns of $U$ are the principal axes and the eigenvalues the variances along them; keeping the $k$ largest gives the best $k$-dimensional linear summary of the data. At a minimum of a smooth loss the Hessian is PSD, and the ratio $\lambda_{\max}/\lambda_{\min}$ of its eigenvalues (the condition number) governs the speed of gradient descent (<a href="#gradient-descent">§5</a>).</p>
+</div>
+
+<h3 id="sqrtm">Matrix square root, trace, determinant</h3>
+<p class="small muted"><strong>Used in</strong> <a href="Lesson01.html">Lesson 1</a> (Brenier map and $W_2$ between Gaussians, Bures distance), <a href="Lesson03.html#gauss">Lesson 3</a> (fixed-point equation of Gaussian barycenters), <a href="Lesson07.html">Lesson 7</a> (entropic OT between Gaussians), <a href="Lesson08.html">Lesson 8</a> (Gaussian flows).</p>
+<p>Functions of a symmetric matrix act on its eigenvalues and keep its eigenvectors: same axes, transformed stretching factors. The square root is the most useful one.</p>
+<div class="box thm"><div class="box-h">Square root, trace, determinant (standard)</div>
+<ul>
+<li>Every $S\succeq0$ has a <strong>unique</strong> PSD square root: $S^{1/2}=UD^{1/2}U\T$, the only $R\succeq0$ with $R^2=S$. More generally $f(S)=U\,\mathrm{diag}\big(f(\lambda_i)\big)\,U\T$ ($S^{-1/2}$, $\log S$, $e^S$…).</li>
+<li>$\tr S=\sum_i\lambda_i$, $\det S=\prod_i\lambda_i$. For any square $A,B$: $\tr(AB)=\tr(BA)$, $\det(AB)=\det A\det B$, and $AB$ and $BA$ have the same eigenvalues. $\ps{A}{B}=\tr(A\T B)=\sum_{ij}A_{ij}B_{ij}$ is the Frobenius inner product.</li>
+<li><strong>$2\times2$ formula.</strong> For $S\succeq0$ of size $2$, not zero: $S^{1/2}=\dfrac{S+\sqrt{\det S}\,\mathrm I}{\sqrt{\tr S+2\sqrt{\det S}}}$.</li>
+</ul>
+</div>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 2.55 and Prop. 2.56, p. 46</span></div>
+<p>The Bures metric between PSD matrices is $\B(\Sigma,\Lambda)^2=\tr\Big(\Sigma+\Lambda-2\big(\Sigma^{1/2}\Lambda\Sigma^{1/2}\big)^{1/2}\Big)$. For $\Sigma_\al,\Sigma_\be\succ0$ the optimal map from $\N(m_\al,\Sigma_\al)$ to $\N(m_\be,\Sigma_\be)$ is $T(x)=m_\be+A(x-m_\al)$ with $A=\Sigma_\al^{-1/2}\big(\Sigma_\al^{1/2}\Sigma_\be\Sigma_\al^{1/2}\big)^{1/2}\Sigma_\al^{-1/2}$, and $W_2^2=\norm{m_\al-m_\be}^2+\B(\Sigma_\al,\Sigma_\be)^2$.</p>
+</div>
+<div class="box example"><div class="box-h">Worked example</div>
+<ul>
+<li>$S=\begin{pmatrix}2&1\\1&2\end{pmatrix}$ ($\lambda=3,1$): $S^{1/2}=\frac12\begin{pmatrix}\sqrt3+1&\sqrt3-1\\\sqrt3-1&\sqrt3+1\end{pmatrix}\approx\begin{pmatrix}1.366&0.366\\0.366&1.366\end{pmatrix}$. The $2\times2$ formula gives the same: $\det S=3$, $\tr S=4$, $(S+\sqrt3\,\mathrm I)/\sqrt{4+2\sqrt3}$.</li>
+<li>The entrywise square root $\begin{pmatrix}\sqrt2&1\\1&\sqrt2\end{pmatrix}$ is wrong: its square is $\begin{pmatrix}3&2.83\\2.83&3\end{pmatrix}\ne S$.</li>
+<li>Bures: $\B(\mathrm I,S)^2=\tr(\mathrm I+S-2S^{1/2})=2+4-2(\sqrt3+1)\approx0.536$. So $W_2^2\big(\N(0,\mathrm I),\N(0,S)\big)\approx0.536$ (POT’s Gaussian solver agrees).</li>
+<li>Non-commuting pair $\Sigma=\mathrm{diag}(1,4)$, $\Lambda=S$: the two sandwiches differ, $\big(\Sigma^{1/2}\Lambda\Sigma^{1/2}\big)^{1/2}\approx\begin{pmatrix}1.328&0.486\\0.486&2.786\end{pmatrix}$ and $\big(\Lambda^{1/2}\Sigma\Lambda^{1/2}\big)^{1/2}\approx\begin{pmatrix}1.426&0.608\\0.608&2.689\end{pmatrix}$, but they have the same trace $4.114$. Hence $\B(\Sigma,\Lambda)^2\approx0.771$ whichever order you use (the book and the board of <a href="Lesson03.html#gauss">Lesson 3</a> write the two orders).</li>
+</ul>
+</div>
+<details class="fold proof"><summary>Why the square root is unique, and where the $2\times2$ formula comes from</summary><div class="fold-body">
+<p><strong>Uniqueness.</strong> Let $R\succeq0$ with $R^2=S$. If $Rv=\mu v$ then $Sv=\mu^2v$: each eigenspace of $R$ (eigenvalue $\mu\ge0$) lies in the eigenspace of $S$ for $\mu^2$. Since $\mu\mapsto\mu^2$ is injective on $[0,\infty)$ and the eigenspaces of $R$ fill the space, $R$ acts as $\sqrt\lambda$ on the eigenspace of $S$ for $\lambda$: $R=UD^{1/2}U\T$.</p>
+<p><strong>$2\times2$ formula.</strong> Cayley–Hamilton for $R=S^{1/2}$: $R^2-(\tr R)R+(\det R)\mathrm I=0$, i.e. $S+\sqrt{\det S}\,\mathrm I=(\tr R)\,R$. And $(\tr R)^2=(\sqrt{\lambda_1}+\sqrt{\lambda_2})^2=\tr S+2\sqrt{\det S}$. Divide.</p>
+<p><strong>Same trace for the two sandwiches.</strong> $\Sigma^{1/2}\Lambda\Sigma^{1/2}$ and $\Lambda^{1/2}\Sigma\Lambda^{1/2}$ are of the form $XX\T$ and $X\T X$ with $X=\Sigma^{1/2}\Lambda^{1/2}$: they have the same eigenvalues, hence their square roots have the same eigenvalues and the same trace.</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul>
+<li>$(AB)^{1/2}\ne A^{1/2}B^{1/2}$ unless $A$ and $B$ commute. “Average the square roots” is right for commuting covariances only (<a href="Lesson03.html#gauss">Lesson 3</a>).</li>
+<li>Square roots are not unique without the condition $R\succeq0$: $-S^{1/2}$ and $U\,\mathrm{diag}(\pm\sqrt{\lambda_i})\,U\T$ also square to $S$.</li>
+<li>Some codes compute $\tr\big((\Sigma\Lambda)^{1/2}\big)$ with a general matrix square root of the non-symmetric matrix $\Sigma\Lambda$. The trace is right ($\Sigma\Lambda$ is similar to $\Sigma^{1/2}\Lambda\Sigma^{1/2}$), but the computation can return small imaginary parts that must be discarded.</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — the Fréchet Inception Distance</div>
+<p>The FID used to evaluate image generators (GANs, diffusion models) embeds real and generated images with a fixed network, fits a Gaussian $\N(m,\Sigma)$ to each cloud of features, and reports $W_2^2$ between the two Gaussians: $\norm{m_1-m_2}^2+\tr\big(\Sigma_1+\Sigma_2-2(\Sigma_1^{1/2}\Sigma_2\Sigma_1^{1/2})^{1/2}\big)$, exactly the formula above (OT4ML Example 7.14, p. 129).</p>
+</div>
+
+<div class="quiz"><p>Compute $W_2^2\big(\N(0,\mathrm{diag}(1,4)),\ \N(0,\mathrm{diag}(4,1))\big)$.</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>Diagonal matrices commute, so the Bures term is computed eigenvalue by eigenvalue: $\B^2=\sum_i\big(\sqrt{\lambda_i}-\sqrt{\mu_i}\big)^2=(1-2)^2+(2-1)^2=2$. The means are equal, so $W_2^2=2$. (The optimal map is $\mathrm{diag}(2,\frac12)$: stretch the first axis, shrink the second.)</p>
+</div></details></div>
+
+<h3 id="gaussians">Gaussian vectors: densities, affine maps, covariances</h3>
+<p class="small muted"><strong>Used in</strong> <a href="Lesson01.html">Lesson 1</a> (OT between Gaussians), <a href="Lesson03.html#gauss">Lesson 3</a> (Gaussian barycenters, Gaussian couplings), <a href="Lesson05.html">Lesson 5</a> (projections of Gaussians), <a href="Lesson06.html">Lesson 6</a> (Gaussian noise as the source of generative flows), <a href="Lesson07.html">Lesson 7</a> (entropic OT between Gaussians), <a href="Lesson08.html">Lesson 8</a> (Ornstein–Uhlenbeck, diffusion models, linear dynamics).</p>
+<p>A Gaussian vector is a standard Gaussian cloud $Z\sim\N(0,\mathrm I)$, stretched by a matrix and shifted: $X=m+AZ$. Its level sets are ellipsoids, and everything about it is determined by its mean $m$ and its covariance $\Sigma=AA\T$.</p>
+<div class="box thm"><div class="box-h">Facts about $\N(m,\Sigma)$ <span class="ref">affine maps: OT4ML Prop. 2.54, p. 46</span></div>
+<ul>
+<li><strong>Density</strong> (if $\Sigma\succ0$): $\rho(x)=(2\pi)^{-d/2}(\det\Sigma)^{-1/2}\exp\big(-\frac12(x-m)\T\Sigma^{-1}(x-m)\big)$. The quantity $(x-m)\T\Sigma^{-1}(x-m)$ is the squared <em>Mahalanobis distance</em>.</li>
+<li><strong>Construction:</strong> $X=m+\Sigma^{1/2}Z$ with $Z\sim\N(0,\mathrm I)$ (any $A$ with $AA\T=\Sigma$ works).</li>
+<li><strong>Affine maps:</strong> if $X\sim\N(m,\Sigma)$ then $BX+c\sim\N(Bm+c,\,B\Sigma B\T)$. In particular every projection $\ps{\theta}{X}\sim\N(\ps{\theta}{m},\theta\T\Sigma\theta)$.</li>
+<li><strong>Sums:</strong> independent $\N(m_1,\Sigma_1)$ and $\N(m_2,\Sigma_2)$ add up to $\N(m_1+m_2,\Sigma_1+\Sigma_2)$. <strong>Second moment:</strong> $\E\norm{X}^2=\norm{m}^2+\tr\Sigma$.</li>
+<li>For a <strong>jointly</strong> Gaussian vector, uncorrelated components are independent.</li>
+</ul>
+</div>
+<figure class="fig"><!-- include figures/REM/gaussian.svg --><figcaption>Left: $160$ samples of $\N(0,\Sigma)$ with $\Sigma=\begin{pmatrix}2&1\\1&2\end{pmatrix}$, the one- and two-standard-deviation ellipses, and the eigenvectors scaled by $\sqrt{\lambda}$. Right: the laws of three projections $\ps{\theta}{x}$, Gaussians with variances $\theta\T\Sigma\theta=1,2,3$.</figcaption></figure>
+<div class="box example"><div class="box-h">Worked example — $\Sigma=\begin{pmatrix}2&1\\1&2\end{pmatrix}$, $m=0$</div>
+<ul>
+<li>The ellipse $\{x\T\Sigma^{-1}x=1\}$ has half-axes $\sqrt3\approx1.73$ along $(1,1)/\sqrt2$ and $1$ along $(1,-1)/\sqrt2$. The density at $0$ is $1/(2\pi\sqrt3)\approx0.0919$.</li>
+<li>$\Sigma^{-1}=\frac13\begin{pmatrix}2&-1\\-1&2\end{pmatrix}$: the point $(1,1)$ has squared Mahalanobis distance $\frac23$, the point $(1,-1)$ has $2$. Same Euclidean norm, but the first lies along the long axis: it is “closer” for the Gaussian.</li>
+<li>Projections: variance $2$ along $(1,0)$, $3$ along $(1,1)/\sqrt2$, $1$ along $(1,-1)/\sqrt2$ — the eigenvalues are the extreme projected variances.</li>
+<li>With mean $m=(1,2)$: $\E\norm{X}^2=5+4=9$.</li>
+</ul>
+</div>
+<details class="fold proof"><summary>Mean and covariance of an affine image</summary><div class="fold-body">
+<p>$\E[BX+c]=B\E[X]+c$ by linearity. $\mathrm{Cov}(BX+c)=\E\big[B(X-m)(X-m)\T B\T\big]=B\Sigma B\T$. That $BX+c$ is again Gaussian follows from the construction: $BX+c=(Bm+c)+(BA)Z$ is an affine image of a standard Gaussian. If $B$ is invertible you can also check it with the push-forward density formula (<a href="#pushforward">§1</a>).</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul>
+<li>Gaussian marginals do not make a Gaussian vector: if $X\sim\N(0,1)$ and $Y=SX$ with an independent random sign $S$, then $Y\sim\N(0,1)$ and $\mathrm{Cov}(X,Y)=0$, but $X+Y=0$ with probability $\frac12$ — not Gaussian, and $X,Y$ are not independent.</li>
+<li>Notation: $\N(m,\sigma^2)$ is written with the <em>variance</em> in this course; some codes take the standard deviation.</li>
+<li>If $\Sigma$ is singular the Gaussian has no density: it lives on an affine subspace.</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — the reparametrization trick of VAEs</div>
+<p>A variational auto-encoder outputs, for an input $x$, a mean $\mu_\phi(x)$ and standard deviations $\sigma_\phi(x)$, and samples the code as $z=\mu_\phi(x)+\sigma_\phi(x)\odot\eps$ with $\eps\sim\N(0,\mathrm I)$. This is the affine push-forward above: $z\sim\N\big(\mu_\phi(x),\mathrm{diag}(\sigma_\phi(x)^2)\big)$, and since the randomness sits in $\eps$, the gradient of the loss with respect to $\phi$ passes through the sampling step. The KL term of the VAE loss is the Gaussian KL of <a href="#entropy">§6</a>.</p>
+</div>
+
+<h3 id="permutations">Permutation matrices and doubly stochastic matrices</h3>
+<p class="small muted"><strong>Used in</strong> <a href="Lesson01.html">Lesson 1</a> (the assignment problem), <a href="Lesson02.html">Lesson 2</a> (Birkhoff–von Neumann: for uniform weights the Kantorovich LP has a permutation among its solutions), <a href="Lesson07.html">Lesson 7</a> (Sinkhorn scales a positive matrix to prescribed row and column sums).</p>
+<p>A permutation matrix has exactly one $1$ in each row and each column: it pairs indices. A doubly stochastic matrix is a “fractional pairing”: rows and columns sum to $1$. The second notion is the convex relaxation of the first, and the relaxation is exact.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 3.11–3.12, p. 56;</span> <span class="ref">Thm. 3.17, p. 57;</span> <span class="ref">Cor. 3.20, p. 58</span></div>
+<p>For $\sigma\in\mathrm{Perm}(n)$, $(P_\sigma)_{ij}=1$ if $j=\sigma(i)$ and $0$ otherwise. The Birkhoff polytope is $\mathcal B_n=\{P\in\R_+^{n\times n}:\ P\ind_n=\ind_n,\ P\T\ind_n=\ind_n\}$, and $\U(\ind_n/n,\ind_n/n)=\mathcal B_n/n$.</p>
+<p><strong>Birkhoff–von Neumann:</strong> the extreme points of $\mathcal B_n$ are exactly the permutation matrices. Every $P\in\mathcal B_n$ is a convex combination of at most $(n-1)^2+1$ permutation matrices.</p>
+</div>
+<div class="box example"><div class="box-h">Worked example — decomposing a doubly stochastic matrix</div>
+<p>Let $C$ be the cyclic shift ($C_{12}=C_{23}=C_{31}=1$). Then</p>
+$$D=\begin{pmatrix}0.5&0.3&0.2\\0.2&0.5&0.3\\0.3&0.2&0.5\end{pmatrix}=0.5\,\mathrm I+0.3\,C+0.2\,C^2 .$$
+<p>Greedy algorithm: find a permutation inside the support of $D$ (here $\mathrm I$), subtract the smallest of its entries ($0.5$) times it, repeat: it finds the three terms. For $n=3$ the polytope has dimension $(n-1)^2=4$, hence at most $5$ terms. The decomposition is not unique: the matrix with all entries $\frac13$ equals $\frac13(\mathrm I+C+C^2)$ and also $\frac13$ times the sum of the three transpositions.</p>
+</div>
+<details class="fold proof"><summary>Idea of the proof of Birkhoff–von Neumann</summary><div class="fold-body">
+<p><strong>Permutations are extreme:</strong> entries of a doubly stochastic matrix lie in $[0,1]$; if $P_\sigma=\frac12(Q+R)$ with $Q,R\in\mathcal B_n$, every entry $0$ or $1$ of $P_\sigma$ forces the same entry in $Q$ and $R$, so $Q=R=P_\sigma$.</p>
+<p><strong>Nothing else is extreme:</strong> if $P$ has a fractional entry, its row and its column contain another fractional entry; following fractional entries alternately along rows and columns gives a cycle. Adding $\pm\eps$ alternately along the cycle keeps all row and column sums and writes $P$ as the midpoint of two different doubly stochastic matrices (OT4ML p. 57–58).</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul>
+<li>Doubly stochastic is not symmetric ($D$ above is not), and a coupling between uniform measures is $P/n$, not $P$.</li>
+<li>Birkhoff’s theorem is about <em>uniform</em> weights and $n=m$. For general histograms an optimal plan need not be a permutation (mass may have to split); one can only guarantee a solution with at most $n+m-1$ nonzero entries (<a href="#lp">§5</a>).</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — matchings inside models</div>
+<p>Set-prediction models such as the DETR object detector compare a set of predicted boxes with the set of ground-truth boxes by first solving an assignment problem (Hungarian algorithm), then applying the loss to matched pairs. When a differentiable relaxation is needed, the permutation is replaced by a doubly stochastic matrix obtained by Sinkhorn scaling of $e^{-C/\eps}$ (<a href="Lesson07.html">Lesson 7</a>), which tends to an optimal permutation (divided by $n$; the optimal one when it is unique) as $\eps\to0$.</p>
+</div>

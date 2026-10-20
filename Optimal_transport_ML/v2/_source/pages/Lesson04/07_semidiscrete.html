@@ -1,0 +1,157 @@
+<h2 id="semi">7. Semi-discrete transport and quantization <span class="ref">OT4ML §6.3–6.4, pp. 110–119</span></h2>
+<p class="tldr">When the target has $m$ atoms, the dual collapses to $m$ weights: the source space splits into Laguerre cells, the semi-dual is concave with gradient “prescribed mass minus captured mass”, and gradient ascent balances the cells. Freeing the masses gives Voronoi cells; moving the atoms as well gives k-means.</p>
+
+<h3 id="sd-why">One continuous measure, one discrete measure</h3>
+<p>Many problems pair a continuous distribution with finitely many points: customers spread over a city and $m$ warehouses with capacities $b_j$; the colours of a photograph and a palette of $m$ colours; a Gaussian latent space and $n$ training images; data and a codebook. The optimal map is <strong>piecewise constant</strong>: each atom $y_j$ receives a region of the source, of mass $b_j$. How do we find these regions? Through the dual — which now has only $m$ unknowns, one weight per atom.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML (6.12)–(6.13), Def. 6.7, p. 110</span></div>
+<p>A case of particular interest is when $\be=\sum_{j=1}^mb_j\delta_{y_j}$ has distinct atoms and positive weights. […] One can adapt Definition 5.8 of the $\bar c$-transform to this setting by restricting the minimization to the finite support $\{y_j\}_{j=1}^m$ of $\be$ […]:</p>
+$$\forall g\in\R^m,\ \forall x\in\X,\qquad g^{\bar c}(x):=\min_{j\in[\![m]\!]}c(x,y_j)-g_j.\qquad(6.12)$$
+<p>Crucially, using the discrete $\bar c$-transform, when $\be$ is a discrete measure, yields a finite-dimensional optimization,</p>
+$$\Lc(\al,\be)=\max_{g\in\R^m}\ \mathcal E_0(g):=\mathcal D_0(g^{\bar c},g)=\int_\X g^{\bar c}(x)\,\dd\al(x)+\sum_jg_jb_j.\qquad(6.13)$$
+<p><strong>Definition 6.7 (Laguerre cells and power diagrams).</strong> For sites $(y_j)_{j=1}^m$ and weights $g\in\R^m$, the Laguerre cell associated with $y_j$ is</p>
+$$\mathrm L_j(g):=\big\{x\in\X\ ;\ \forall j'\ne j,\ c(x,y_j)-g_j\le c(x,y_{j'})-g_{j'}\big\}.\qquad(6.14)$$
+<p>The cells cover $\X$; after arbitrary tie-breaking on common boundaries, they induce a disjoint partition. When $c(x,y)=\norm{x-y}^2$, this Laguerre decomposition is also called a power diagram. If $g$ is constant, it reduces to the ordinary Voronoi diagram.</p>
+</div>
+<dl class="decode">
+<dt>$g_j$</dt><dd>The price (weight) of atom $y_j$. A large $g_j$ makes $y_j$ “cheaper to reach”: the corrected cost $c(x,y_j)-g_j$ is lower.</dd>
+<dt>$g^{\bar c}(x)$</dt><dd>For each source point, the best corrected cost over the $m$ atoms: a lower envelope of $m$ functions of $x$ (§3).</dd>
+<dt>$\mathcal E_0(g)$</dt><dd>The semi-dual of §3, now a concave function on $\R^m$ — even though $\al$ may have a density. Invariant under $g\mapsto g+s\ind$ (the gauge).</dd>
+<dt>$\mathrm L_j(g)$</dt><dd>The points of the source that “choose” atom $j$ for the corrected cost. With $g=0$: the points nearest to $y_j$ (Voronoi cell).</dd>
+<dt>power diagram</dt><dd>For $c=\norm{x-y}^2$, $\norm{x-y_j}^2-g_j\le\norm{x-y_k}^2-g_k\iff2\ps{x}{y_k-y_j}\le\norm{y_k}^2-\norm{y_j}^2-g_k+g_j$: a half-plane. Cells are convex polygons; changing the weights <strong>translates the walls parallel to themselves</strong>; raising $g_j$ pushes the walls of cell $j$ outwards.</dd>
+</dl>
+
+<h3 id="sd-grad">The gradient is a mass mismatch</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML (6.17), Prop. 6.9, pp. 111–112</span></div>
+<p>[…] one has $g^{\bar c}(x)=c(x,y_j)-g_j$ on each tie-broken cell $\mathrm L_j(g)$. Splitting the integral in the semi-dual objective (6.13) over this partition gives</p>
+$$\mathcal E_0(g)=\sum_{j=1}^m\int_{\mathrm L_j(g)}\big(c(x,y_j)-g_j\big)\,\dd\al(x)+\ps{g}{b}.\qquad(6.17)$$
+<p><strong>Proposition 6.9 (Gradient of the semi-discrete dual).</strong> If the minimizing index in (6.12) is unique for $\al$-almost every $x$, then $\mathcal E_0$ is differentiable at $g$ and</p>
+$$\forall j\in[\![m]\!],\qquad\nabla\mathcal E_0(g)_j=b_j-\int_{\mathrm L_j(g)}\dd\al .$$
+<p>[p. 112] At a differentiable maximizer, first-order optimality gives $\al(\mathrm L_j(g))=b_j$ for every $j$. Conversely, if these identities hold, the piecewise-constant map $T(x)=y_j$ on $\mathrm L_j(g)$ pushes $\al$ onto $\be$. Its graph lies in the contact set $g^{\bar c}(x)+g_j=c(x,y_j)$, so complementary slackness, Proposition 5.7, proves that $T$ and $g$ are optimal.</p>
+</div>
+<dl class="decode">
+<dt>$b_j-\al(\mathrm L_j(g))$</dt><dd>Prescribed mass minus captured mass. Positive: cell $j$ is too small, increase $g_j$ (it grows). Negative: too large, decrease $g_j$. The components sum to $0$, so the gauge is preserved.</dd>
+<dt>“unique minimising index”</dt><dd>The cell boundaries have $\al$-measure zero — true when $\al$ has a density and $c=\norm{x-y}^2$ (boundaries are hyperplanes).</dd>
+<dt>optimality</dt><dd>The maximiser is the weight vector for which <strong>every cell captures exactly its mass</strong>; then “send each cell to its atom” is the optimal transport map — and, by §4, it is the gradient of the convex function $\varphi(x)=\max_j\big(\ps{x}{y_j}-\frac12\norm{y_j}^2+\frac{g_j}2\big)$ (for $c=\norm{x-y}^2$).</dd>
+</dl>
+<div class="box idea"><div class="box-h">Idea of the proof</div>
+<p>For a fixed $x$ inside cell $j(x)$, the function $g\mapsto\min_j\big(c(x,y_j)-g_j\big)$ equals $c(x,y_{j(x)})-g_{j(x)}$ near $g$: its derivative is $-e_{j(x)}$. Average over $x\sim\al$: the derivative of $\int g^{\bar c}\,\dd\al$ is minus the vector of cell masses. Add the derivative $b$ of $\ps{g}{b}$.</p>
+</div>
+<details class="fold proof"><summary>Full proof (OT4ML p. 111)</summary><div class="fold-body">
+<ol class="steps">
+<li>For $\al$-a.e. $x$ the minimising index $j(x)$ in $\min_j c(x,y_j)-g_j$ is unique, and then, for any direction $h\in\R^m$, $$\frac{\dd}{\dd t}\Big|_{t=0}\min_j\big(c(x,y_j)-g_j-th_j\big)=-h_{j(x)}.$$<span class="why">The minimum is strict, so for $\abs{t}$ small the same index stays the minimiser: the function of $t$ is $c(x,y_{j(x)})-g_{j(x)}-th_{j(x)}$ near $0$.</span></li>
+<li>The difference quotients $\frac1t\big[(g+th)^{\bar c}(x)-g^{\bar c}(x)\big]$ are bounded by $\norm{h}_\infty$.<span class="why">Changing every $g_j$ by at most $\abs{t}\norm{h}_\infty$ changes their minimum by at most that much.</span></li>
+<li>$$\dd\mathcal E_0(g)[h]=-\sum_jh_j\int_{\mathrm L_j(g)}\dd\al+\sum_jh_jb_j .$$<span class="why">Dominated convergence (bounded quotients, $\al$ a probability) to pass the limit inside $\int\cdot\,\dd\al$; the $x$ with $j(x)=j$ form $\mathrm L_j(g)$ up to a null set; and $\ps{g+th}{b}$ has derivative $\ps{h}{b}$.</span></li>
+</ol>
+<p><strong>Concavity</strong>, for completeness: for each $x$, $g\mapsto g^{\bar c}(x)$ is a minimum of $m$ affine functions of $g$, hence concave; integrating and adding a linear term keeps it concave. So any $g$ with zero gradient is a global maximiser.</p>
+</div></details>
+
+<h3 id="sd-1d">A complete example on the line</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML (6.15), p. 111</span></div>
+<p>In one dimension […] consider the quadratic cost $c(x,y)=\abs{x-y}^2$, assume that $\al$ has a density and that $y_1<\cdots<y_m$, and set $B_0=0$ and $B_j=\sum_{k=1}^jb_k$. […] the nonempty Laguerre cells are intervals ordered like the sites. If $g^\star$ maximizes the semi-dual problem (6.13), its induced map pushes $\al$ to $\be$. Consequently, the optimal cells agree, up to $\al$-null sets, with the quantile intervals $\big[C_\al^{-1}(B_{j-1}),C_\al^{-1}(B_j)\big]$.</p>
+</div>
+<p>Take $\al=\mathcal U[0,1]$, $\be=\frac12\delta_{0.2}+\frac12\delta_{0.9}$, $c=\abs{x-y}^2$.</p>
+<ol class="steps">
+<li>Two cells, $[0,x^\star]$ for $y_1=0.2$ and $[x^\star,1]$ for $y_2=0.9$, with the wall where the corrected costs are equal: $$(x-0.2)^2-g_1=(x-0.9)^2-g_2\iff x^\star(g)=\frac{0.77-g_2+g_1}{1.4}.$$<span class="why">Expand both squares; the $x^2$ cancel: $1.4\,x=0.81-0.04-g_2+g_1$.</span></li>
+<li>At $g=0$ (Voronoi): $x^\star=0.55$, masses $(0.55,0.45)$, gradient $b-\text{masses}=(-0.05,+0.05)$.<span class="why">The wall is the midpoint of $0.2$ and $0.9$; $\al$ is uniform. Cell 1 is too big: lower $g_1$, raise $g_2$.</span></li>
+<li>Optimum: $x^\star=0.5$ (the median, as (6.15) predicts), i.e. $g_2-g_1=0.07$; with the gauge $g_1+g_2=0$: $g^\star=(-0.035,\,0.035)$.<span class="why">$B_1=\frac12$ and $C_\al^{-1}(\frac12)=0.5$.</span></li>
+<li>$$W_2^2(\al,\be)=\int_0^{0.5}(x-0.2)^2\,\dd x+\int_{0.5}^1(x-0.9)^2\,\dd x=\frac{0.035+0.065}{3}=\frac1{30}=\mathcal E_0(g^\star).$$<span class="why">The cost of the map “cell → atom”; strong duality gives the same value for the semi-dual (computed by quadrature: $0.033333$).</span></li>
+<li>Gradient ascent $g\leftarrow g+\tau\big(b-\al(\mathrm L(g))\big)$ with $\tau=1$ from $g=0$: the dual values are $0.031583$, $0.033012$, $0.033274$, $0.033322$, $0.033331$, $0.033333$; the masses $(0.55,0.45)$, $(0.479,0.521)$, $(0.509,0.491)$, $(0.496,0.504)$, $(0.502,0.498)$, $(0.499,0.501)$.<span class="why">The mass of cell 1 is $x^\star(g)$, affine in $g$ with slope $\frac1{1.4}$ in $g_1-g_2$; one step changes the mass error $e$ into $e-\frac{2\tau}{1.4}e=-\frac37e$: it overshoots and the error shrinks by a factor $\frac37$ (computed).</span></li>
+</ol>
+<p>Notice the starting value: $\mathcal E_0(0)=\int\min_j\abs{x-y_j}^2\,\dd\al=0.031583<\frac1{30}$. With zero weights the semi-dual is the cost of sending each point to its <em>nearest</em> atom, ignoring the masses — the free-mass quantization energy of the next subsection.</p>
+
+<h3 id="sd-algo">Algorithms: gradient ascent and stochastic ascent</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Alg. 6.3, (6.18)–(6.20), Prop. 6.10, pp. 112–113</span></div>
+<p><strong>Algorithm 6.3 (Semi-discrete Laguerre ascent):</strong> from $g^{(0)}=0$, compute the cells and their masses $m^{(\ell)}_j=\int_{\mathrm L_j}\dd\al$; stop if $\max_j\abs{m^{(\ell)}_j-b_j}\le\mathrm{tol}$; update $g^{(\ell+1)}=g^{(\ell)}+\tau^{(\ell)}\big(b-m^{(\ell)}\big)$.</p>
+<p><em>Stochastic optimization.</em> The semi-discrete formulation (6.17) is useful because the objective is an expectation with respect to $\al$,</p>
+$$\mathcal E_0(g)=\int_\X E(g,x)\,\dd\al(x)=\E_X\big(E(g,X)\big),\qquad E(g,x):=g^{\bar c}(x)+\ps{g}{b}.\qquad(6.18)$$
+<p>Here $X\sim\al$. Away from cell boundaries, the stochastic gradient of the integrand is $\nabla_gE(g,x)=\big(b_j-\ind_{\mathrm L_j(g)}(x)\big)_{j=1}^m$ […] Starting from $g^{(0)}=0$, stochastic gradient ascent draws $x^{(\ell)}\sim\al$ and performs $g^{(\ell+1)}:=g^{(\ell)}+\tau^{(\ell)}\nabla_gE(g^{(\ell)},x^{(\ell)})$ (6.19) […] For almost-sure stochastic-approximation convergence, one typically chooses $\sum_\ell\tau^{(\ell)}=+\infty$, $\sum_\ell(\tau^{(\ell)})^2<+\infty$ (6.20).</p>
+<p><strong>Proposition 6.10 (Averaged stochastic semi-dual rate).</strong> […] with the constant step $\tau=R/(G\sqrt L)$ and the average $\bar g_L=L^{-1}\sum_{\ell=0}^{L-1}g^{(\ell)}$, $\ \mathcal E_0(g^\star)-\E\big[\mathcal E_0(\bar g_L)\big]\le\frac{RG}{\sqrt L}$.</p>
+</div>
+<dl class="decode">
+<dt>$b_j-\ind_{\mathrm L_j(g)}(x)$</dt><dd>One sample $x$ is a “vote”: the cell that contains it gets $b_j-1$ (it is told to shrink), all others get $+b_j$ (grow). Its average over $x\sim\al$ is the true gradient.</dd>
+<dt>no grid</dt><dd>“The measure is used as a black box from which independent samples are drawn” (p. 113): no need to compute cells or integrals — the method works in high dimension, where power diagrams cannot be computed.</dd>
+<dt>$R$, $G$</dt><dd>$R=\norm{g^{(0)}-g^\star}$, $G$ a bound on the stochastic gradients ($G\le2$ here, since $\norm{b-e_j}_2\le2$). The error of the averaged iterate decays like $1/\sqrt L$.</dd>
+</dl>
+<div class="box example"><div class="box-h">Worked example — stochastic ascent on the line example</div>
+<p>Samples $x^{(\ell)}\sim\mathcal U[0,1]$, steps $\tau^{(\ell)}=0.2/\sqrt{1+\ell}$, averaged iterate $\bar g$: the semi-dual values $\mathcal E_0(\bar g)$ are $0.02268$, $0.031271$, $0.033323$, $0.033333$ after $30$, $300$, $3000$, $30000$ samples, and $\bar g\to(-0.0349,\,0.0349)$, close to $g^\star=(-0.035,0.035)$. (One run of a simulation with a fixed seed.)</p>
+</div>
+<div class="box remark"><div class="box-h">Note on the sources — the sign of the stochastic gradient</div>
+<p>CompOT §5.4 (p. 96) and the 2019 notes (p. 26) write the integrand as $E(g,x)=g^{\bar c}(x)-\ps{g}{b}$ and its gradient as $\big(\ind_{\mathrm L_j(g)}(x)-b_j\big)_j$: both signs are flipped with respect to their own semi-dual (CompOT (5.7)–(5.8), with $+\ps{g}{b}$) and to OT4ML (6.18). <strong>Check:</strong> on the example above, the ascent with the printed gradient sends the dual value to $-0.112$ after 30 samples, $-2.47$ after 300 and $-9.96$ after 3000: it enlarges the cells that already captured the samples. Use $g_j\leftarrow g_j+\tau\big(b_j-\ind_{j=j(x)}\big)$.</p>
+</div>
+<div class="widget" data-widget="l4laguerre"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p>What to look at: the square carries the source $\al$ (uniform, or a mixture of two blobs, shaded); the dots are the atoms $y_j$, with their target masses $b_j$. At start the weights are $0$ and the cells are Voronoi cells; the bars on the right compare captured and prescribed masses. Press <strong>Gradient step</strong> (or <strong>Run</strong>): the walls slide parallel to themselves until every bar is balanced, and the dual value (bottom right) increases to $W_2^2$. <strong>Stochastic</strong> does the same with one random sample at a time — noisier, but no cell masses are ever computed. <strong>Drag an atom</strong> to see the cells move. <strong>Lloyd step</strong> switches to quantization: masses become free (weights $0$, Voronoi cells) and each atom jumps to the centroid of its cell; the energy readout decreases.</p>
+<figure class="fig"><!-- include figures/L04/laguerre.svg --><figcaption>Five atoms (dots) with prescribed masses $b=(0.10,0.15,0.35,0.20,0.20)$ and the uniform law on the square. Left: zero weights, Voronoi cells; the captured masses (printed in the cells) are wrong. Right: the optimal weights $g^\star$ (gradient ascent, step $0.3$, exact polygon areas); every power cell has exactly its mass, the walls are parallel to the Voronoi ones, and $W_2^2=0.05068$ (checked against an exact LP on a $300\times300$ grid: $0.05068$).</figcaption></figure>
+<div class="box ml"><div class="box-h">In machine learning — assigning samples to cells, and semi-discrete generative models</div>
+<p><strong>Assignment with prescribed proportions.</strong> Nearest-centroid assignment (Voronoi) ignores how many points each centroid receives. When the proportions are prescribed — warehouses with capacities, clusters that must be balanced, a classifier whose label proportions on a new dataset are known — the right assignment is the Laguerre one: compute the weights $g$ by (stochastic) ascent, then send each sample $x$ to $\argmin_j\big(\norm{x-y_j}^2-g_j\big)$. Self-supervised methods that must avoid all images collapsing into one cluster (SwAV, Caron et al. 2020) enforce equal cluster sizes with the entropic version of this problem (Lesson 7). <strong>Generative modelling.</strong> Take $\al$ a simple continuous latent law (uniform on a cube) and $\be$ the $n$ training points (or their codes in the latent space of an autoencoder). The semi-discrete map $T$ sends each latent cell to one training point: sampling $z\sim\al$ and outputting $T(z)$ reproduces the training set exactly — a perfect but memorising generator, with no mode collapse. AE-OT (An et al., ICLR 2020) computes this map in an autoencoder’s latent space, using the convex Brenier potential, and extends it piecewise linearly between neighbouring cells to produce new codes.</p>
+</div>
+
+<h3 id="sd-quant">Optimal quantization: free masses give Voronoi cells</h3>
+<p>Now forget the prescribed masses: what is the best approximation of $\al$ by $m$ atoms, choosing their positions <em>and</em> their masses? This is <em class="new">quantization</em>, the problem of compression and of clustering.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 6.11, Props. 6.12–6.13, pp. 114–115</span></div>
+<p><strong>Definition 6.11 (Optimal quantization problem).</strong> For $\al\in\Pc_p(\R^d)$ and $m\in\N\setminus\{0\}$, define $\ \mathcal Q_m(\al):=\min_{Y=(y_j)_{j=1}^m,\ b\in\Sigma_m}W_p\big(\al,\sum_{j=1}^mb_j\delta_{y_j}\big)$ (6.21). Zero weights and coincident codepoints are allowed […]</p>
+<p><strong>Proposition 6.12 (Quantization rate and curse of dimensionality).</strong> Let $\al$ be supported in a bounded subset $\Omega\subset\R^d$ and assume that $\al=\rho\,\dd x$ with $\rho\le\rho_+<+\infty$. Then, for fixed $p\ge1$, there exist constants $0<c\le C<+\infty$ such that $c\,m^{-1/d}\le\mathcal Q_m(\al)\le C\,m^{-1/d}$.</p>
+<p><strong>Proposition 6.13 (Free masses give Voronoi cells).</strong> For the cost $c(x,y)=d(x,y)^p$, fix distinct codepoints $Y=(y_j)_{j=1}^m$. […] Minimizing over the weights $b\in\Sigma_m$ gives</p>
+$$\min_{b\in\Sigma_m}W_p^p\Big(\al,\sum_jb_j\delta_{y_j}\Big)=\int_\X\min_{1\le j\le m}c(x,y_j)\,\dd\al(x).$$
+<p>An optimal coupling is induced by sending each $x$ to a nearest codepoint. The corresponding cells are the Voronoi cells $\mathrm V_j(Y):=\{x\ ;\ \forall j',\ c(x,y_j)\le c(x,y_{j'})\}$ […]</p>
+<p>[p. 115] Lloyd’s algorithm, also known as the k-means algorithm, iterates this fixed point: assign points to nearest sites, then replace each site by the centroid of its cell. The assignment step minimizes the cost for fixed sites, and the centroid step minimizes it for the resulting fixed partition; hence the objective cannot increase. Since the problem is non-convex in $Y$, this descent does not guarantee a global minimizer and may stop at a stationary configuration or local minimum.</p>
+</div>
+<dl class="decode">
+<dt>$\Sigma_m$</dt><dd>The simplex of weight vectors $b\ge0$, $\sum_jb_j=1$.</dd>
+<dt>$m^{-1/d}$</dt><dd>The <strong>curse of dimensionality</strong>: $m$ atoms cover a $d$-dimensional set at spacing $\approx m^{-1/d}$. Halving the error needs $2^d$ times more atoms ($1024$ times more in dimension 10).</dd>
+<dt>Prop. 6.13</dt><dd>With free masses, every point simply goes to its nearest codepoint, and each atom receives the mass of its Voronoi cell. In semi-discrete language: free masses mean <strong>zero weights</strong> $g=0$.</dd>
+<dt>centroid</dt><dd>For $c=\norm{x-y}^2$, the best single point for a cell $\mathrm V_j$ is its $\al$-mean $\int_{\mathrm V_j}x\,\dd\al/\al(\mathrm V_j)$ (the mean minimises the expected squared distance).</dd>
+</dl>
+<details class="fold proof"><summary>Proof of Prop. 6.13</summary><div class="fold-body">
+<ol class="steps">
+<li>For any coupling $\pi$ of $\al$ with a measure supported on $Y$: $\int c\,\dd\pi\ge\int\min_jc(x,y_j)\,\dd\al(x)$.<span class="why">Each point $x$ is sent somewhere in $Y$, at cost at least $\min_jc(x,y_j)$; integrate (the first marginal is $\al$).</span></li>
+<li>The nearest-codepoint map $T_Y$ (ties broken measurably) with $b_j=\al(T_Y^{-1}(y_j))$ attains the bound.<span class="why">$\pf{(T_Y)}{\al}=\sum_jb_j\delta_{y_j}$ by construction, and its cost is exactly $\int\min_jc(x,y_j)\,\dd\al$.</span></li>
+</ol>
+</div></details>
+<div class="box example"><div class="box-h">Worked example — Lloyd’s algorithm on $\mathcal U[0,1]$ with two codepoints</div>
+<p>Start from $y=(0.1,\,0.3)$. Voronoi wall at the midpoint, then each codepoint moves to the centroid of its interval:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>step</th><th>codepoints $(y_1,y_2)$</th><th>wall</th><th>energy $\int\min_j\abs{x-y_j}^2\,\dd x$</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>$(0.1,\ 0.3)$</td><td>0.2</td><td>0.115333</td></tr>
+<tr><td>1</td><td>$(0.1,\ 0.6)$</td><td>0.35</td><td>0.032083</td></tr>
+<tr><td>2</td><td>$(0.175,\ 0.675)$</td><td>0.425</td><td>0.023646</td></tr>
+<tr><td>3</td><td>$(0.2125,\ 0.7125)$</td><td>0.4625</td><td>0.021536</td></tr>
+<tr><td>4</td><td>$(0.23125,\ 0.73125)$</td><td>0.48125</td><td>0.021009</td></tr>
+<tr><td>$\infty$</td><td>$(0.25,\ 0.75)$</td><td>0.5</td><td>$\frac1{48}=0.020833$</td></tr>
+</tbody></table></div>
+<p>The energy decreases at every step, as the book proves, and the distance to the limit is halved at each step after the first. For $m$ codepoints the optimum is the midpoints $\frac{2j-1}{2m}$, with energy $\frac1{12m^2}$: the error $\mathcal Q_m=\frac1{\sqrt{12}\,m}$ decays like $m^{-1/d}$ with $d=1$.</p>
+</div>
+<figure class="fig"><!-- include figures/L04/lloyd.svg --><figcaption>Lloyd’s iterations of the worked example: at each step the wall (dashed) is the midpoint of the two codepoints (green), and each codepoint jumps to the centre of its interval. The configuration converges to $(\frac14,\frac34)$, where the energy is $\frac1{48}$.</figcaption></figure>
+<div class="box ml"><div class="box-h">In machine learning — k-means and vector quantization</div>
+<p><strong>k-means is optimal quantization of the empirical measure</strong>: with $\al=\frac1N\sum_i\delta_{x_i}$ the data, Lloyd’s algorithm alternates “assign each point to its nearest centre” (Voronoi cells, Prop. 6.13) and “move each centre to the mean of its points”. Concrete uses: <strong>colour quantization</strong> (the pixels of an image as points of $\R^3$; $k=16$ centres become the palette, each pixel is replaced by its centre); <strong>codebooks</strong> for compression and retrieval; and the discrete latent spaces of <strong>VQ-VAE</strong> models, where each encoder output is replaced by its nearest codebook vector (a Voronoi assignment) and the codebook is updated by moving each vector towards the mean of the outputs assigned to it — an online Lloyd step. The book recalls (p. 115) that the result depends on the initialisation, and that k-means++ seeding gives an expected $O(\log m)$ approximation guarantee.</p>
+</div>
+
+<h3 id="sd-line">Equal weights on the line: placement beats sampling</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Props. 6.14–6.15, pp. 118–119</span></div>
+<p><strong>Proposition 6.14 (One-dimensional equal-weight quantization).</strong> Let $\al\in\M(\R)$ have finite second moment and quantile function $Q=C_\al^{-1}$. For $\mathcal Q_m^{\mathrm{eq}}(\al)^2:=\min_{y_1\le\cdots\le y_m}W_2^2\big(\al,\frac1m\sum_{i=1}^m\delta_{y_i}\big)$, set $I_i=((i-1)/m,i/m]$. Then the sorted minimizer is unique and its $i$th atom is $y_i^\star=m\int_{I_i}Q(u)\,\dd u$, and $\mathcal Q_m^{\mathrm{eq}}(\al)^2=\sum_{i=1}^m\int_{I_i}\abs{Q(u)-y_i^\star}^2\dd u$. If $Q\in C^1([0,1])$, then $m^2\mathcal Q_m^{\mathrm{eq}}(\al)^2\to\frac1{12}\int_0^1\abs{Q'(u)}^2\dd u$.</p>
+<p><strong>Proposition 6.15 (Quantile-process asymptotics for random placement).</strong> Let $\al$ have quantile $Q\in C^1([0,1])$, and let $\hat\al_m=m^{-1}\sum_{i=1}^m\delta_{X_i}$ with $X_i$ i.i.d. with law $\al$. Then $m\,\E\big[W_2^2(\al,\hat\al_m)\big]\to\int_0^1u(1-u)\abs{Q'(u)}^2\dd u$.</p>
+</div>
+<dl class="decode">
+<dt>$y_i^\star$</dt><dd>The average of the quantile function over the $i$-th bin of mass $\frac1m$: the centroid of the $i$-th quantile interval of $\al$. (Midpoint quantiles $Q(\frac{i-1/2}m)$ are asymptotically as good, but not optimal.)</dd>
+<dt>$m^{-2}$ versus $m^{-1}$</dt><dd>Placing the atoms well gives $W_2^2\approx\frac{C}{m^2}$, i.e. $W_2\approx\frac{c}{m}$; drawing them at random gives $\E W_2^2\approx\frac{C'}{m}$, i.e. an error $\approx m^{-1/2}$. Sampling is much worse than quantizing.</dd>
+</dl>
+<p><strong>On $\mathcal U[0,1]$</strong> ($Q(u)=u$, $Q'=1$): the bin averages are the midpoints $\frac{2i-1}{2m}$ and $m^2\mathcal Q_m^2=\frac1{12}$ <em>exactly</em> for every $m$; for i.i.d. points $m\,\E W_2^2\to\int_0^1u(1-u)\,\dd u=\frac16$ (a simulation with 20000 draws gives $0.1655\pm0.0011$ at $m=64$). The deterministic squared error is $2m$ times smaller.</p>
+<div class="box remark"><div class="box-h">Note on the sources — the 2019 notes on 1D quantization</div>
+<p>The 2019 notes (p. 27) state that “in the 1-D case […] the optimal sampling is simply $y_j=C_\al^{-1}(j/m)$ [ToDo: see where this is proved]”. This is not right: for equal weights the optimum is the bin average of Prop. 6.14. <strong>Check</strong> on $\mathcal U[0,1]$: the printed rule puts the atoms at the right ends $\frac jm$ of the bins, with $W_2^2=\frac1{3m^2}$, four times the optimum $\frac1{12m^2}$ (computed for $m=2,4,8$); for free weights the optimum is also the midpoints here, so the rule is 4 times worse in both versions. The same page writes the Voronoi cell with the inequality reversed ($c(x,y_{j'})\le c(x,y_j)$ is where $y_j$ is the <em>farthest</em> codepoint; OT4ML Prop. 6.13 has the correct one).</p>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>One measure discrete → semi-dual in $\R^m$: concave, gradient $=b-$ cell masses; ascent balances the cells.</li>
+<li>Prescribed masses → Laguerre (power) cells; free masses → Voronoi cells ($g=0$).</li>
+<li>Moving the atoms too → Lloyd / k-means: monotone energy, local minima, initialisation matters.</li>
+<li>Many samples needed? → in $d$ dimensions, $m$ atoms give an error $\approx m^{-1/d}$; random samples are worse than well-placed atoms.</li>
+</ul>
+</div>
+<div class="quiz"><p>In the line example, what happens to the cells if you add the same constant to $g_1$ and $g_2$? And if you increase $g_1$ only?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>Adding a constant changes nothing ($x^\star$ depends on $g_1-g_2$ only): the gauge. Increasing $g_1$ by $\delta$ moves the wall to $x^\star+\frac{\delta}{1.4}$: cell 1 grows (atom $0.2$ becomes “cheaper”).</p>
+</div></details></div>
+<div class="quiz"><p>Why does Lloyd’s algorithm never increase the energy $\int\min_j\norm{x-y_j}^2\,\dd\al$?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>Write the energy as $F(Y,\text{partition})=\sum_j\int_{\text{cell}_j}\norm{x-y_j}^2\,\dd\al$. The assignment step minimises $F$ over partitions for fixed $Y$ (nearest site), the centroid step minimises it over $Y$ for the fixed partition (the mean minimises a sum of squared distances). Two exact block minimisations: $F$ can only go down. Unlike the alternation of §3, here each step <em>does</em> decrease the joint objective until a fixed point — but the problem is non-convex, so the fixed point may be a local minimum (exercise 11 of §10).</p>
+</div></details></div>

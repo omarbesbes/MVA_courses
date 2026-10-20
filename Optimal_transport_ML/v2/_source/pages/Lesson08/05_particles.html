@@ -1,0 +1,67 @@
+<h2 id="particles">5. Particles and densities: Lagrangian and Eulerian flows <span class="ref">OT4ML (15.5), p. 360</span></h2>
+<p class="tldr">Started from $n$ Diracs, a Wasserstein gradient flow stays a sum of $n$ Diracs whose positions solve $\dot x_i=-\nabla_Wf(\al_t)(x_i)=-n\nabla_{x_i}F(X)$: plain gradient descent on the positions, $n$ times faster; densities on a grid (Eulerian) and moving particles (Lagrangian) are two discretisations of the same equation, and only the second one is dimension-free — provided the energy makes sense on a point cloud.</p>
+
+<h3 id="particles-flow">Particles follow the Wasserstein gradient</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML §15.1, (15.5), p. 360</span></div>
+<p><em>Discrete evolutions.</em> If $f$ admits a first variation whose spatial gradient is well defined at empirical measures, the characteristic form of (15.4) preserves the number and weights of the atoms. For equal weights, write $\al_t=\frac1n\sum_i\delta_{x_i(t)}$. The particles $X(t):=(x_i(t))_i$ evolve according to the coupled ODEs</p>
+$$\dot x_i(t)=-n\nabla_{x_i}F(X(t)),\qquad(15.5)$$
+<p>where $F(X):=f\big(\frac1n\sum_i\delta_{x_i}\big)$ and the factor $n$ comes from the empirical Wasserstein metric $\frac1n\sum_i\norm{\dot x_i}^2$.</p>
+</div>
+<dl class="decode">
+<dt>“characteristic form”</dt><dd>The continuity equation moves mass along the curves $\dot x=v_t(x)$ (its characteristics). Starting from atoms, each atom simply follows its own characteristic: the number of atoms and their weights never change.</dd>
+<dt>$F(X)$</dt><dd>The energy, seen as an ordinary function of the $nd$ coordinates of the particles. Example: $f=\int V\dd\al$ gives $F(X)=\frac1n\sum_iV(x_i)$.</dd>
+<dt>$-n\nabla_{x_i}F$</dt><dd>The usual gradient of $F$ with respect to the position of particle $i$, multiplied by $n$.</dd>
+<dt>$\frac1n\sum_i\norm{\dot x_i}^2$</dt><dd>The kinetic energy $\int\norm{v}^2\dd\al$ of the motion when each particle carries mass $\frac1n$: the Wasserstein metric on configurations. A gradient for the metric $\frac1n\norm{\cdot}^2$ is $n$ times the Euclidean gradient.</dd>
+</dl>
+<p><strong>Why $n\nabla_{x_i}F(X)=\nabla_Wf(\al)(x_i)$.</strong> Move particle $i$ alone by $\eps u$. This moves the mass $\frac1n$ sitting at $x_i$ with velocity $u$, so by Proposition 15.7 the energy changes at the rate $\int\ps{\nabla_Wf}{v}\dd\al=\frac1n\ps{\nabla_Wf(\al)(x_i)}{u}$. Hence $\nabla_{x_i}F(X)=\frac1n\nabla_Wf(\al)(x_i)$, and (15.5) is the Wasserstein flow evaluated at the particles. Check on the example of §3, $f=\frac12\mathrm{Var}$ and $X=(0,1,5)$: $F(X)=\frac12\cdot\frac13\sum_i(x_i-\bar x)^2$, so $\nabla_{x_i}F=\frac13(x_i-\bar x)$ and $3\nabla_{x_i}F=x_i-\bar x=(-2,-1,3)$, the Wasserstein gradient found in §3. ✓</p>
+<div class="box pitfall"><div class="box-h">Pitfall — gradient descent on positions has a different clock</div>
+<p>Automatic differentiation of a loss $F(X)$ written as a function of the positions returns $\nabla_{x_i}F=\frac1n\nabla_Wf(x_i)$. Gradient descent $X\leftarrow X-\tau\nabla F(X)$ therefore follows the Wasserstein flow with the time step $\tau/n$: same trajectories, $n$ times slower. To compare runs with different numbers of particles, multiply the learning rate by $n$ (equivalently, differentiate $nF$ instead of $F$).</p>
+</div>
+
+<h3 id="particles-two">Two ways to discretise a flow</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">CompOT Rem. 9.12, pp. 155–156</span></div>
+<p><strong>Remark 9.12</strong> (Lagrangian discretization using particles systems). The finite-dimensional problem in (9.26) can be interpreted as the Eulerian discretization of a flow over the space of measures (9.27). An alternative way to discretize the problem, using the so-called Lagrangian method using particles systems, is to parameterize instead the solution as a (discrete) empirical measure moving with time, where the locations of that measure (and not its weights) become the variables of interest. […] If the energy $F$ is finite for discrete measures, then one can simply define $\mathcal F(X)=F(\frac1n\sum_{i=1}^n\delta_{x_i})$. […] For functions such as generalized entropy, which are only finite for measures having densities, one should apply a density estimator to convert the point cloud into a density […].</p>
+</div>
+<div class="table-wrap"><table>
+<thead><tr><th></th><th>Eulerian (densities on a grid)</th><th>Lagrangian (moving particles)</th></tr></thead>
+<tbody>
+<tr><td>unknowns</td><td>the mass in each fixed cell</td><td>the positions of $n$ atoms of fixed mass</td></tr>
+<tr><td>equation</td><td>the PDE $\partial_t\rho=\dv(\rho\nabla\frac{\delta f}{\delta\al})$</td><td>the ODEs $\dot x_i=-\nabla\frac{\delta f}{\delta\al}(\al_t)(x_i)$</td></tr>
+<tr><td>cost</td><td>grows like $h^{-d}$ for a mesh size $h$: hopeless beyond $d=3$</td><td>$n$ particles in any dimension; $O(n^2)$ for pairwise interactions</td></tr>
+<tr><td>entropy, KL, Fisher</td><td>natural (densities are available)</td><td>$+\infty$ on point clouds: needs noise (§6), a density estimate, or a kernel (§9)</td></tr>
+<tr><td>potential, interaction, MMD, $W_2$, Sinkhorn</td><td>possible</td><td>exact: the particle flow <em>is</em> the Wasserstein flow of the empirical measure</td></tr>
+</tbody></table></div>
+<p>Machine learning lives in high dimension, so it uses the Lagrangian picture almost exclusively: the particles are samples, neurons or tokens (§8–§11). The JKO widget of §2 was already Lagrangian (particles at quantile levels), in one dimension where the entropy can be written with the gaps between neighbours.</p>
+<div class="box remark"><div class="box-h">Mean-field limit</div>
+<p>When the velocity of each particle depends on the empirical measure of all of them, the system is a <em class="new">mean-field</em> interacting particle system (StatOT §5.8, p. 165: “each particle interacts with the others only through the effect of their distribution, and these interactions have the same form for all the particles”). If the initial empirical measures converge to a density $\al_0$, the particle flows converge to the solution of the PDE started at $\al_0$: $n$ particles are a Monte Carlo approximation of the flow. With noise, this is <em>propagation of chaos</em> and the limit is the McKean–Vlasov equation (OT4ML p. 364).</p>
+</div>
+
+<h3 id="particles-patterns">Interacting particles: aggregation and patterns</h3>
+<p>Interaction energies $f(\al)=\frac12\iint W(x-y)\dd\al(x)\dd\al(y)$ (StatOT’s normalisation, gradient $\int\nabla W(x-y)\dd\al(y)$) are finite on point clouds, so their particle flows $\dot x_i=-\frac1n\sum_{j\ne i}\nabla W(x_i-x_j)$ are exact. Attraction at long range and repulsion at short range produce stable shapes.</p>
+<div class="box example" id="particles-disk"><div class="box-h">Worked example — attraction and Coulomb repulsion make a uniform disk</div>
+<p>In $\R^2$, let $W(z)=\frac12\norm{z}^2-\log\norm{z}$: quadratic attraction, logarithmic (Coulomb) repulsion. <strong>Claim:</strong> the equilibrium is the uniform probability on a disk of radius $1$ (density $\frac1\pi$).</p>
+<ol class="steps">
+<li>At an equilibrium, $\nabla_Wf=0$ on the support, so $\frac{\delta f}{\delta\al}(x)=\int W(x-y)\dd\al(y)$ is constant there.<span class="why">Stationary states of a gradient flow (§4 reflex).</span></li>
+<li>$\Delta_x\frac12\norm{x-y}^2=2$ and $\Delta_x\big(-\log\norm{x-y}\big)=-2\pi\,\delta_y$ in $\R^2$.<span class="why">$\Delta\frac12\norm{x}^2=d=2$; $-\frac1{2\pi}\log\norm{x}$ is the fundamental solution of $-\Delta$ in the plane.</span></li>
+<li>$0=\Delta\frac{\delta f}{\delta\al}(x)=\int\big(2-2\pi\delta_y(x)\big)\dd\al(y)=2-2\pi\rho(x)$ inside the support.<span class="why">Apply the Laplacian to the constant of line 1, inside the support; line 2.</span></li>
+<li>$\rho=\frac1\pi$ on the support, which has area $\pi$ since the mass is $1$: a disk of radius $1$ (centred at the conserved mean).<span class="why">Rotation invariance of the problem; uniqueness of the equilibrium is admitted.</span></li>
+</ol>
+<p><strong>Check with particles.</strong> With $300$ particles and explicit steps $0.01$ (the widget below, energy “attraction + Coulomb”), at $t\approx10$ the largest distance to the mean is $0.96$, and the fractions of particles within $0.5$ and $0.75$ of the mean are $0.25$ and $0.55$; the uniform unit disk gives $0.25$ and $0.5625$. (An independent run with another random start, in Python, gives $0.97$, $0.25$ and $0.56$.)</p>
+</div>
+<div class="widget" data-widget="l8particles"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p>What to look at: press <strong>Run</strong>. The orange-red dots are the initial cloud, the green dots the particles at time $t$, the black circle their mean (conserved by every interaction energy: the forces between two particles are opposite). The curve on the right is the energy $f(\al_t)$, which can only decrease (§4). “attraction” ($W=\frac12\norm{z}^2$): the cloud collapses onto its mean (aggregation; the energy $\frac12\mathrm{Var}$ decays like $e^{-2t}$). “attraction + Coulomb”: it settles into the uniform unit disk of the worked example (compare the radial fractions with $0.25$ and $0.5625$). “attraction + Gaussian” ($W=\frac12\norm{z}^2+3e^{-\norm{z}^2/0.18}$): short-range repulsion and quadratic attraction balance into a flat disk with a denser rim. “ring potential + repulsion” ($V=\frac14(\norm{x}^2-1)^2$, $W=e^{-\norm{z}^2/0.08}$): an external potential pulls the particles onto the unit circle and the repulsion spreads them evenly around it.</p>
+
+<div class="box ml"><div class="box-h">In machine learning — particles are the parameters</div>
+<p>Every system of this lesson where “the loss depends on a population” is an interacting particle system: generated samples fitted to data by an MMD (§8), <strong>neurons</strong> of a wide network (§10: the risk is a quadratic interaction between neurons plus a potential), <strong>tokens</strong> in a transformer (§11: attention is a normalised interaction), sampling particles in SVGD (§9). Equation (15.5) says that training such a system by gradient descent on the particles is, up to the factor $n$, a Wasserstein gradient flow of the population — which is what allows one to analyse it as a PDE when $n$ is large (the “mean-field limit”).</p>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>Particles of mass $\frac1n$ → $\dot x_i=-\nabla_Wf(x_i)=-n\nabla_{x_i}F(X)$.</li>
+<li>Energy infinite on point clouds (entropy) → add noise (Langevin), estimate a density, or kernelise (SVGD).</li>
+<li>Interaction energies conserve the mean of the particles (action = reaction).</li>
+</ul>
+</div>
+<div class="quiz"><p>Two particles on $\R$ at $x_1=-1$, $x_2=1$, with $W(z)=\frac12z^2$ (so $f=\frac14\iint(x-y)^2\dd\al\dd\al$). Write their ODEs and solve them.</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>$\dot x_1=-\frac12(x_1-x_2)$, $\dot x_2=-\frac12(x_2-x_1)$ (the sum over $j\ne i$ has one term, divided by $n=2$). The mean $0$ is conserved and the gap $g=x_2-x_1$ solves $\dot g=-g$, so $x_{1,2}(t)=\mp e^{-t}$. Same as the Wasserstein flow of §4: $\dot x=-(x-m)$.</p>
+</div></details></div>

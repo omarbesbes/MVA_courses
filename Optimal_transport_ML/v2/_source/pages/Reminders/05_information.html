@@ -1,0 +1,133 @@
+
+<h2 id="information">6. Information theory</h2>
+<p class="tldr">Entropy measures spread, the Kullback–Leibler divergence measures how badly one law explains another; both compare densities point by point, which makes them blind to geometry — the opposite of optimal transport — and exactly what entropic regularization adds to it.</p>
+
+<h3 id="entropy">Entropy and the Kullback–Leibler divergence</h3>
+<p class="small muted"><strong>Used in</strong> <a href="Lesson04.html">Lesson 4</a> (variational inference and the comparison of KL with $W_2$), <a href="Lesson06.html">Lesson 6</a> (Schrödinger bridges), <a href="Lesson07.html">Lesson 7</a> (entropic OT: $H(P)$, $\KL(P|a\otimes b)$, mutual information; Sinkhorn = KL projections), <a href="Lesson08.html">Lesson 8</a> (entropy and KL as energies of gradient flows).</p>
+<p>The <em class="new">entropy</em> of a histogram measures how spread out it is: $0$ for a Dirac, $\log n$ for the uniform law on $n$ points. The <em class="new">Kullback–Leibler divergence</em> $\KL(\al|\be)$ is the average log-ratio $\log\frac{\dd\al}{\dd\be}$ under $\al$: how surprised you are, on average, when data from $\al$ are explained by the model $\be$.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 8.1, p. 136;</span> <span class="ref">Def. 8.7 and Prop. 8.8, p. 142;</span> <span class="ref">Def. 8.11 and Def. 8.13, p. 145</span></div>
+<ul>
+<li>Entropy of a nonnegative matrix (or vector): $H(P)=-\sum_{ij}P_{ij}\log P_{ij}$, with $0\log0=0$.</li>
+<li>Relative entropy (generalized KL): $\KL(P|Q)=\sum_{ij}P_{ij}\log\frac{P_{ij}}{Q_{ij}}-P_{ij}+Q_{ij}$, and $+\infty$ if some $Q_{ij}=0<P_{ij}$. For two probability vectors it reduces to $\sum_{ij}P_{ij}\log\frac{P_{ij}}{Q_{ij}}$. Always $\KL(P|Q)\ge0$, with equality iff $P=Q$.</li>
+<li>For measures: $\KL(\pi|\xi)=\int\log\frac{\dd\pi}{\dd\xi}\,\dd\pi+\xi(\X)-\pi(\X)$ if $\pi\ll\xi$, $+\infty$ otherwise.</li>
+<li>Mutual information of $(X,Y)\sim\pi$ with marginals $\al,\be$: $\mathcal I(X,Y)=\KL(\pi|\al\otimes\be)\ge0$, zero iff $X$ and $Y$ are independent.</li>
+</ul>
+</div>
+<div class="box thm"><div class="box-h">Useful facts (standard)</div>
+<ul>
+<li>$0\le H(a)\le\log n$ on $\Sigma_n$, maximal for the uniform law. In bits, use $\log_2$ ($1$ bit $=\log2$ nats).</li>
+<li><strong>Cross-entropy:</strong> $-\sum_ia_i\log b_i=H(a)+\KL(a|b)$.</li>
+<li><strong>Gaussians:</strong> $\KL\big(\N(m_1,\Sigma_1)|\N(m_2,\Sigma_2)\big)=\frac12\Big[\tr(\Sigma_2^{-1}\Sigma_1)+(m_2-m_1)\T\Sigma_2^{-1}(m_2-m_1)-d+\log\frac{\det\Sigma_2}{\det\Sigma_1}\Big]$; differential entropy $-\int\rho\log\rho=\frac12\log\big((2\pi e)^d\det\Sigma\big)$.</li>
+</ul>
+</div>
+<div class="box example"><div class="box-h">Worked example</div>
+<ul>
+<li>$a=(\frac12,\frac14,\frac14)$: $H(a)=\frac32\log2\approx1.040$ nats $=1.5$ bits; uniform $b=(\frac13,\frac13,\frac13)$: $H(b)=\log3\approx1.099$.</li>
+<li>$\KL(a|b)=\log3-H(a)\approx0.0589$ but $\KL(b|a)\approx0.0566$: <strong>not symmetric</strong>.</li>
+<li>$a'=(\frac12,\frac12,0)$: $\KL(a'|b)=\log\frac32\approx0.405$ is finite, $\KL(b|a')=+\infty$ ($b$ charges a point where $a'$ has no mass).</li>
+<li>VAE term: $\KL\big(\N(\mu,\sigma^2)|\N(0,1)\big)=\frac12\big(\sigma^2+\mu^2-1-\log\sigma^2\big)$; for $\mu=1$, $\sigma=0.5$: $\approx0.818$ (numerical integration agrees).</li>
+<li>The glued plan $\begin{pmatrix}3/8&1/8\\1/8&3/8\end{pmatrix}$ of <a href="Lesson03.html#gluing-example">Lesson 3</a> has mutual information $\approx0.131$ nats: its two coordinates are dependent, but far from deterministic ($\log2\approx0.693$ would be).</li>
+</ul>
+</div>
+<details class="fold proof"><summary>Proof that $\KL\ge0$ (Gibbs’ inequality)</summary><div class="fold-body">
+<p>For probability vectors with $a\ll b$, Jensen with the convex function $-\log$ and the weights $a_i$:</p>
+$$\KL(a|b)=\sum_ia_i\Big(-\log\frac{b_i}{a_i}\Big)\ \ge\ -\log\sum_ia_i\frac{b_i}{a_i}=-\log\sum_{i:\,a_i>0}b_i\ \ge\ -\log1=0.$$
+<p>Equality in Jensen for the strictly convex $-\log$ forces $b_i/a_i$ to be constant on the support of $a$, and the last inequality forces $b$ to have no mass outside it: $a=b$. (The book’s proof uses $\varphi(s)=s\log s-s+1\ge0$ instead.)</p>
+</div></details>
+<figure class="fig"><!-- include figures/REM/kl_reverse.svg --><figcaption>The best Gaussian approximation $q$ of a two-mode law $p$ depends on the direction of the KL divergence. $\min_q\KL(p|q)$ matches the mean and variance of $p$ ($\N(0,2.06^2)$, value $0.724$) and puts mass between the modes. $\min_q\KL(q|p)$ sits on one mode ($\N(2,0.50^2)$, value $0.693\approx\log2$); for this direction the centred Gaussian $\N(0,1.74^2)$ is only a poor stationary point (value $1.87$).</figcaption></figure>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul>
+<li>$\KL$ is not symmetric and not a distance.</li>
+<li>$\KL(\al|\be)=+\infty$ as soon as $\al$ charges a set that $\be$ does not. In particular the KL divergence between an empirical measure and a density is $+\infty$: it cannot compare samples with a model directly.</li>
+<li>Differential entropy can be negative ($\N(0,0.01)$: $\approx-0.884$) and changes under a change of coordinates; the discrete entropy cannot.</li>
+<li>The book uses the generalized KL with the mass terms $-P+Q$, which matters for unnormalized measures (unbalanced OT) and vanishes for probabilities.</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — maximum likelihood is forward KL, variational inference is reverse KL</div>
+<p><strong>Maximum likelihood</strong>: $\E_{x\sim p_{\text{data}}}[-\log p_\theta(x)]=H(p_{\text{data}})+\KL(p_{\text{data}}|p_\theta)$, so maximising the expected log-likelihood (or minimising the cross-entropy loss of a classifier) minimises the forward KL. It is <em>mass-covering</em>: $p_\theta$ is heavily penalised wherever it misses data. <strong>Variational inference</strong> (and the ELBO of VAEs, <a href="#norms">§4</a>) minimises the reverse $\KL(q|p(\cdot|x))$, which is <em>mode-seeking</em>: $q$ is penalised wherever it puts mass that $p$ does not have. The figure shows the difference on a single Gaussian fitted to two modes.</p>
+</div>
+
+<div class="quiz"><p>Compute $\KL\big(\mathrm{Bern}(\frac12)\,|\,\mathrm{Bern}(\frac14)\big)$ and $\KL\big(\mathrm{Bern}(\frac14)\,|\,\mathrm{Bern}(\frac12)\big)$.</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>$\frac12\log\frac{1/2}{1/4}+\frac12\log\frac{1/2}{3/4}=\frac12\log\frac43\approx0.144$, and $\frac14\log\frac{1/4}{1/2}+\frac34\log\frac{3/4}{1/2}\approx-0.173+0.304=0.131$. Two different numbers: KL is not symmetric.</p>
+</div></details></div>
+
+<h3 id="f-divergences">$f$-divergences: KL, total variation, Hellinger, $\chi^2$</h3>
+<p class="small muted"><strong>Used in</strong> <a href="Lesson03.html#tv">Lesson 3</a> (total variation), <a href="Lesson04.html">Lesson 4</a> (GANs; comparison with Wasserstein distances), <a href="Lesson07.html">Lesson 7</a> (KL is both a $\varphi$-divergence and a Bregman divergence; marginal penalties of unbalanced OT), <a href="Lesson08.html">Lesson 8</a> (gradient flows of $\varphi$-divergences, Exercise 1 of the sheet).</p>
+<p>All these divergences compare two laws <em>point by point</em> through the ratio of their densities $s=\frac{\dd\al}{\dd\be}$, penalised by a convex function $\varphi$ with $\varphi(1)=0$. They do not look at distances between points.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 7.16, p. 130;</span> <span class="ref">Prop. 7.18 and Ex. 7.19–7.20, p. 130–131;</span> <span class="ref">Thm. 7.21, p. 131</span></div>
+<p>For a convex $\varphi$ with $\varphi(1)=0$ (an <em>entropy function</em>) and $\al=\frac{\dd\al}{\dd\be}\be+\al^\perp$ (Lebesgue decomposition),</p>
+$$\mathcal D_\varphi(\al|\be)=\int\varphi\Big(\frac{\dd\al}{\dd\be}\Big)\dd\be+\varphi'_\infty\,\al^\perp(\X),\qquad\text{discrete: }\ D_\varphi(a|b)=\sum_{i:\,b_i>0}b_i\,\varphi\Big(\frac{a_i}{b_i}\Big)+\varphi'_\infty\!\!\sum_{i:\,b_i=0}a_i,$$
+<p>with $\varphi'_\infty=\lim_{s\to\infty}\varphi(s)/s$. For probability measures $\mathcal D_\varphi\ge0$, with equality iff $\al=\be$ when $\varphi$ is strictly convex. KL: $\varphi(s)=s\log s-s+1$. Total variation: $\varphi(s)=\abs{s-1}$, giving $\norm{\al-\be}_\TV$ (full variation, no factor $\frac12$). <strong>Pinsker:</strong> $\norm{\al-\be}_\TV^2\le2\KL(\al|\be)$.</p>
+</div>
+<div class="table-wrap"><table>
+<thead><tr><th>divergence</th><th>$\varphi(s)$</th><th>for densities</th><th>range</th></tr></thead>
+<tbody>
+<tr><td>Kullback–Leibler</td><td>$s\log s-s+1$</td><td>$\int\rho_\al\log\frac{\rho_\al}{\rho_\be}$</td><td>$[0,\infty]$</td></tr>
+<tr><td>reverse KL</td><td>$s-1-\log s$</td><td>$\KL(\be|\al)$</td><td>$[0,\infty]$</td></tr>
+<tr><td>total variation</td><td>$\abs{s-1}$</td><td>$\int\abs{\rho_\al-\rho_\be}$</td><td>$[0,2]$</td></tr>
+<tr><td>Hellinger (squared)</td><td>$(\sqrt s-1)^2$</td><td>$\int\big(\sqrt{\rho_\al}-\sqrt{\rho_\be}\big)^2$</td><td>$[0,2]$</td></tr>
+<tr><td>Pearson $\chi^2$</td><td>$(s-1)^2$</td><td>$\int\frac{(\rho_\al-\rho_\be)^2}{\rho_\be}$</td><td>$[0,\infty]$</td></tr>
+<tr><td>Jensen–Shannon</td><td>—</td><td>$\frac12\KL\big(\al|\frac{\al+\be}2\big)+\frac12\KL\big(\be|\frac{\al+\be}2\big)$</td><td>$[0,\log2]$</td></tr>
+</tbody></table></div>
+<p>Other classical inequalities: $\mathrm{H}^2\le\norm{\al-\be}_\TV\le2\,\mathrm{H}$ (with $\mathrm H^2$ the squared Hellinger distance of the table), and $\KL\le\log(1+\chi^2)\le\chi^2$. <strong>Data processing:</strong> $\mathcal D_\varphi(\pf{T}{\al}|\pf{T}{\be})\le\mathcal D_\varphi(\al|\be)$ — merging or transforming states can only lose information.</p>
+<figure class="fig"><!-- include figures/REM/fdiv.svg --><figcaption>The generators $\varphi$ of the classical divergences, as functions of the density ratio $s$. All are convex and vanish at $s=1$; they differ in how they punish $s\to0$ (missing mass) and $s\to\infty$ (extra mass).</figcaption></figure>
+<div class="box example"><div class="box-h">Worked example — the histograms of Lesson 3</div>
+<p>$a=(0.5,0.3,0.2)$ and $b=(0.2,0.3,0.5)$ (the <a href="Lesson03.html#tv-def">total-variation example of Lesson 3</a>):</p>
+<ul>
+<li>$\norm{a-b}_\TV=0.6$, $\KL(a|b)\approx0.275$ (here $\KL(b|a)$ is the same, only because $b$ is $a$ reversed), $\mathrm H^2\approx0.135$, $\chi^2(a|b)=0.63$, $\mathrm{JS}\approx0.066$.</li>
+<li>Pinsker: $0.6^2=0.36\le2\times0.275=0.55$. Hellinger: $0.135\le0.6\le2\times0.368=0.735$. $\chi^2$: $0.275\le\log1.63=0.489\le0.63$.</li>
+<li>Data processing: merging the last two states gives $(0.5,0.5)$ and $(0.2,0.8)$; KL drops to $0.223$, TV stays $0.6$.</li>
+</ul>
+<p><strong>Blind to geometry.</strong> For two Diracs $\delta_0$ and $\delta_\eps$ with $\eps\ne0$: $\norm{\cdot}_\TV=2$, $\mathrm H^2=2$, $\mathrm{JS}=\log2$ and $\KL=\chi^2=+\infty$, however small $\eps$ is — while $W_p(\delta_0,\delta_\eps)=\abs\eps$ (<a href="Lesson03.html#tv-diracs">Lesson 3</a>).</p>
+</div>
+<details class="fold proof"><summary>Why $\mathcal D_\varphi\ge0$</summary><div class="fold-body">
+<p>For probability vectors with $a\ll b$: by Jensen with the weights $b_i$ and the convex $\varphi$, $\sum_ib_i\varphi(a_i/b_i)\ge\varphi\big(\sum_ib_i\,a_i/b_i\big)=\varphi\big(\sum_ia_i\big)=\varphi(1)=0$. Mass of $a$ where $b_i=0$ adds $\varphi'_\infty a_i\ge0$ (for these entropy functions). The book’s proof handles general measures with the perspective function $b\,\varphi(a/b)$ (OT4ML Prop. 7.18, p. 130).</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pitfalls — conventions</div>
+<ul>
+<li>Total variation is sometimes defined with a factor $\frac12$ (values in $[0,1]$), and Hellinger too. This course uses the full variation (<a href="Lesson03.html#tv">Lesson 3</a>, OT4ML Ex. 7.20).</li>
+<li>$\chi^2(\al|\be)$ has $\rho_\be$ in the denominator: it is not symmetric. The book’s power family normalises the generators differently (OT4ML p. 132).</li>
+<li>On a continuous space $\varphi$-divergences do not metrize weak convergence: Riemann sums never converge to the uniform law for any of them.</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — why GAN losses saturate</div>
+<p>With an optimal discriminator, the original GAN objective equals $2\,\mathrm{JS}(p_{\text{data}},p_\theta)-\log4$. When generated and real images live on different low-dimensional sets (the usual situation early in training), $\mathrm{JS}=\log2$ whatever the distance between these sets: the loss is flat and its gradient carries no information. Wasserstein GANs replace JS by $W_1$, which decreases as the generated distribution moves towards the data (OT4ML §7.4, p. 134; <a href="Lesson04.html">Lesson 4</a>).</p>
+</div>
+
+<h3 id="bregman">Bregman divergences</h3>
+<p class="small muted"><strong>Used in</strong> <a href="Lesson07.html">Lesson 7</a> (Sinkhorn as alternating KL projections and its convergence; Bregman-regularized OT), <a href="Lesson08.html">Lesson 8</a> (mirror descent, gradient flows in other geometries).</p>
+<p>Take a strictly convex function $\Phi$ and its tangent at $y$. The gap between $\Phi(x)$ and the tangent, measured at $x$, is the <em class="new">Bregman divergence</em> $B_\Phi(x|y)$: it is $\ge0$, zero only at $x=y$, and it adapts the notion of “distance” to the geometry of $\Phi$.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 9.1–9.2, p. 172;</span> <span class="ref">Remark 7.23, p. 132;</span> <span class="ref">Prop. 8.34, p. 163</span></div>
+<p>For a strictly convex differentiable (Legendre) function $\Phi$: $\ B_\Phi(P|Q)=\Phi(P)-\Phi(Q)-\ps{\nabla\Phi(Q)}{P-Q}$. The quadratic $\Phi=\frac12\norm{\cdot}^2$ gives $\frac12\norm{P-Q}^2$; the negative entropy $\Phi(P)=\sum P_{ij}\log P_{ij}$ gives $\KL(P|Q)$ (generalized). The Bregman projection of $Q$ on a convex set $\mathcal C$ is $\argmin_{P\in\mathcal C}B_\Phi(P|Q)$. Except for KL, Bregman divergences and $\varphi$-divergences are different families; KL is their common case (OT4ML Prop. 8.34, p. 163).</p>
+</div>
+<div class="box thm"><div class="box-h">Properties (standard)</div>
+<ul>
+<li>$B_\Phi(x|y)\ge0$ with equality iff $x=y$; convex in $x$; in general not symmetric and no triangle inequality.</li>
+<li><strong>Three-point identity:</strong> $B_\Phi(x|y)+B_\Phi(y|z)-B_\Phi(x|z)=\ps{\nabla\Phi(z)-\nabla\Phi(y)}{x-y}$. It gives a Pythagorean inequality for Bregman projections, the engine of the convergence proof of Sinkhorn’s algorithm.</li>
+<li><strong>Centroid:</strong> $\argmin_c\sum_iw_iB_\Phi(x_i|c)=\sum_iw_ix_i$ (weights summing to $1$): the arithmetic mean, for every $\Phi$.</li>
+<li><strong>Mirror descent:</strong> $\nabla\Phi(x_{k+1})=\nabla\Phi(x_k)-\tau\nabla f(x_k)$. With the entropy on the simplex: $x_{k+1}\propto x_k\odot e^{-\tau\nabla f(x_k)}$ (exponentiated gradient).</li>
+</ul>
+</div>
+<div class="box example"><div class="box-h">Worked example</div>
+<ul>
+<li>$\Phi(x)=x\log x$ on $(0,\infty)$: $B_\Phi(2|1)=2\log2-1\approx0.386$ and $B_\Phi(1|2)=1-\log2\approx0.307$: not symmetric. These are the generalized KL values $x\log\frac xy-x+y$.</li>
+<li>Burg entropy $\Phi(x)=-\log x$ gives the Itakura–Saito divergence $\frac xy-\log\frac xy-1$: $B(2|1)\approx0.307$, $B(1|2)\approx0.193$.</li>
+<li>Exponentiated gradient from the uniform $x=(\frac13,\frac13,\frac13)$ with $\nabla f=(1,0,-1)$ and $\tau=1$: $x\propto(e^{-1},1,e)$, i.e. $(0.090,0.245,0.665)$ — the softmax of $-\nabla f$.</li>
+<li>Centroid: for seven random positive vectors, the minimiser of $\sum_i\KL(x_i|c)$ (generalized KL), found numerically, coincides with their arithmetic mean to six digits.</li>
+</ul>
+</div>
+<details class="fold proof"><summary>Proof of the centroid property</summary><div class="fold-body">
+<p>Let $\bar x=\sum_iw_ix_i$. Expanding the definition,</p>
+$$\sum_iw_iB_\Phi(x_i|c)-\sum_iw_iB_\Phi(x_i|\bar x)=\Phi(\bar x)-\Phi(c)-\ps{\nabla\Phi(c)}{\bar x-c}=B_\Phi(\bar x|c)\ge0,$$
+<p>because the terms $\Phi(x_i)$ cancel and $\sum_iw_i(x_i-\bar x)=0$. Equality iff $c=\bar x$.</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul>
+<li>The order of the arguments matters: the centroid in the <em>second</em> argument is the arithmetic mean; in the first argument it is a “mirror” mean (for the generalized KL, the weighted geometric mean $\prod_ix_i^{w_i}$).</li>
+<li>Bregman divergences are not $\varphi$-divergences (except KL), and not distances.</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — mirror descent, clustering, Sinkhorn</div>
+<p>Exponentiated-gradient (multiplicative-weights) updates are mirror descent with the entropy: they keep iterates on the simplex without projections and are standard in online learning and boosting. Because the best centroid is the mean for every Bregman divergence, $k$-means works unchanged with KL (e.g. to cluster word-count histograms). And Sinkhorn’s algorithm alternates KL projections on the row-sum and column-sum constraints (OT4ML Prop. 9.5, p. 175; <a href="Lesson07.html">Lesson 7</a>).</p>
+</div>

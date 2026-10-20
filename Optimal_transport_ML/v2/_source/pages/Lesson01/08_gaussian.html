@@ -1,0 +1,145 @@
+<h2 id="gaussian">8. Gaussians: an affine Brenier map and the Bures metric <span class="ref">OT4ML §2.7, pp. 44–50</span></h2>
+<p class="tldr">Between two Gaussians the optimal map is affine, with a symmetric positive matrix, and the transport cost splits into the squared distance between the means plus a distance between the covariance matrices — the Bures metric.</p>
+
+<h3 id="gauss-1d">One dimension: a Euclidean half-plane</h3>
+<p>Brenier's theorem tells us what to look for: a gradient of a convex function that pushes $\al$ to $\be$. For Gaussians, the simplest candidates — affine maps — already work.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML §2.7 “One-dimensional Gaussians”, p. 44</span></div>
+<p>Let $\al=\N(m_\al,\sigma_\al^2)$ and $\be=\N(m_\be,\sigma_\be^2)$ be two nondegenerate Gaussians on $\R$. Then</p>
+$$T(x)=\frac{\sigma_\be}{\sigma_\al}(x-m_\al)+m_\be$$
+<p>satisfies $\pf{T}{\al}=\be$. It is the derivative of the convex function $\varphi(x)=\frac{\sigma_\be}{2\sigma_\al}(x-m_\al)^2+m_\be x$, so Brenier's theorem shows that it is the optimal quadratic transport. The associated distance is</p>
+$$\mathcal W_2^2(\al,\be)=\int_\R\Big(\frac{\sigma_\be}{\sigma_\al}(x-m_\al)+m_\be-x\Big)^2\dd\al(x)=(m_\al-m_\be)^2+(\sigma_\al-\sigma_\be)^2 .$$
+<p>The formula extends by continuity to Dirac masses, although the affine Monge map itself only pushes a Dirac source to another Dirac. Thus the OT geometry of one-dimensional Gaussians is the Euclidean geometry of the closed half-plane $(m,\sigma)\in\R\times\R_+$.</p>
+</div>
+<dl class="decode">
+<dt>nondegenerate</dt><dd>$\sigma_\al,\sigma_\be>0$ (not Diracs).</dd>
+<dt>$T$</dt><dd>Standardise ($z=\frac{x-m_\al}{\sigma_\al}$ is $\N(0,1)$), then rescale and shift to $\be$ ($m_\be+\sigma_\be z$). Increasing, since $\frac{\sigma_\be}{\sigma_\al}>0$.</dd>
+<dt>$\varphi$</dt><dd>$\varphi'(x)=\frac{\sigma_\be}{\sigma_\al}(x-m_\al)+m_\be=T(x)$ and $\varphi''=\frac{\sigma_\be}{\sigma_\al}>0$: convex. The easy half of Brenier (§7) then gives optimality.</dd>
+<dt>$\mathcal W_2^2$</dt><dd>The optimal cost. It equals the Kantorovich $W_2^2$ of Lessons 2–3 (no splitting can do better, §7).</dd>
+<dt>half-plane $(m,\sigma)$</dt><dd>Represent $\N(m,\sigma^2)$ by the point $(m,\sigma)$: the transport distance between two Gaussians is the ordinary Euclidean distance between their points. Straight segments in this plane are the shortest paths (§10).</dd>
+</dl>
+<p><strong>The computation.</strong> Write $X=m_\al+\sigma_\al Z$ with $Z\sim\N(0,1)$. Then $T(X)=m_\be+\sigma_\be Z$, so $T(X)-X=(m_\be-m_\al)+(\sigma_\be-\sigma_\al)Z$, and</p>
+$$\E\big[(T(X)-X)^2\big]=(m_\be-m_\al)^2+2(m_\be-m_\al)(\sigma_\be-\sigma_\al)\,\E[Z]+(\sigma_\be-\sigma_\al)^2\,\E[Z^2]=(m_\al-m_\be)^2+(\sigma_\al-\sigma_\be)^2,$$
+<p>because $\E[Z]=0$ and $\E[Z^2]=1$.</p>
+<div class="box example"><div class="box-h">Worked example</div>
+<p>$\al=\N(0,1)$, $\be=\N(3,4)$, i.e. $\sigma_\be=2$. The map is $T(x)=2x+3$, the potential $\varphi(x)=x^2+3x$, and the cost $(0-3)^2+(1-2)^2=10$: the mean costs $9$, the spread $1$. In the $(m,\sigma)$ half-plane, the points $(0,1)$ and $(3,2)$ are at distance $\sqrt{10}\approx3.162$.</p>
+</div>
+<figure class="fig"><!-- include figures/L01/gauss1d.svg --><figcaption>Left: Gaussians on the line as points $(m,\sigma)$ of a half-plane; $W_2$ is the Euclidean distance, and the segment is the path of the displacement interpolation (§10). Right: the map $T(x)=2x+3$ from $\N(0,1)$ to $\N(3,4)$ joins equal quantile levels ($5\%,15\%,\dots,95\%$) of the two densities: the mass is translated and spread out, never mixed.</figcaption></figure>
+<div class="box remark"><div class="box-h">Remark — Diracs, and another geometry</div>
+<p><strong>Diracs.</strong> With $\sigma_\be=0$ the formula still gives the cost of the constant map to $m_\be$; with $\sigma_\al=0<\sigma_\be$ no map exists (§6), and the value $(m_\al-m_\be)^2+\sigma_\be^2$ is only reached by couplings (Lesson 2): this is what “extends by continuity” means above. <strong>Fisher–Rao.</strong> The geometry induced by the KL divergence on the same half-plane is hyperbolic: the boundary $\sigma=0$ is infinitely far, and geodesics bend upwards (OT4ML Remark 2.53, pp. 44–45). Transport sees degenerate Gaussians at finite distance; information geometry does not.</p>
+</div>
+
+<h3 id="gauss-affine">Dimension $d$: look for an affine map</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML eq. (2.18) and Prop. 2.54, p. 46</span></div>
+<p>As in the scalar case, a natural approach is to seek the optimal transport map within the class of affine maps. If</p>
+$$\al=\N(m_\al,\Sigma_\al),\qquad\be=\N(m_\be,\Sigma_\be),\qquad T(x)=m_\be+A(x-m_\al),\qquad(2.18)$$
+<p>then $T$ is the gradient of the convex quadratic potential $\varphi(x)=\ps{m_\be}{x}+\ps{A(x-m_\al)}{x-m_\al}/2$ if and only if $A$ is symmetric positive semidefinite.</p>
+<p><strong>Proposition 2.54 (Affine push-forward of Gaussians).</strong> One has $\pf{T}{\al}=\be$ if and only if $A\Sigma_\al A\T=\Sigma_\be$. (2.19)</p>
+<p>The covariance equation is quadratic in $A$. Under the symmetry constraint imposed by Brenier's theorem, it becomes $A\Sigma_\al A=\Sigma_\be$.</p>
+</div>
+<dl class="decode">
+<dt>$A\in\R^{d\times d}$</dt><dd>The linear part of the candidate map. It must be symmetric positive semi-definite for $T$ to be a convex gradient (§7).</dd>
+<dt>(2.19)</dt><dd>“The covariance of $T(X)$ is $\Sigma_\be$.” The mean is automatically right: $\E[T(X)]=m_\be+A\,\E[X-m_\al]=m_\be$.</dd>
+</dl>
+<details class="fold proof"><summary>Proof of Proposition 2.54</summary><div class="fold-body">
+<ol class="steps">
+<li>If $X\sim\al$, then $T(X)=m_\be+A(X-m_\al)$ is Gaussian.<span class="why">An affine image of a Gaussian vector is Gaussian (<a href="#recall-gaussian">refresher</a>).</span></li>
+<li>Its mean is $m_\be$ and its covariance $\E\big[A(X-m_\al)(X-m_\al)\T A\T\big]=A\Sigma_\al A\T$.<span class="why">Linearity of expectation; $\E[(X-m_\al)(X-m_\al)\T]=\Sigma_\al$.</span></li>
+<li>A Gaussian law is determined by its mean and covariance, so $\pf{T}{\al}=\be$ iff $A\Sigma_\al A\T=\Sigma_\be$. $\square$<span class="why">Both laws are Gaussian with the same mean $m_\be$.</span></li>
+</ol>
+</div></details>
+
+<h3 id="gauss-bures">The Brenier map and the Bures metric</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 2.55 and Prop. 2.56, p. 46</span></div>
+<p><strong>Definition 2.55 (Bures metric).</strong> For positive semidefinite covariance matrices $\Sigma$ and $\Lambda$, the Bures metric is</p>
+$$\B(\Sigma,\Lambda)^2=\tr\Big(\Sigma+\Lambda-2\big(\Sigma^{1/2}\Lambda\Sigma^{1/2}\big)^{1/2}\Big).\qquad(2.20)$$
+<p><strong>Proposition 2.56 (Gaussian $\mathcal W_2$ formula and Bures covariance term).</strong> Assume that $\Sigma_\al$ and $\Sigma_\be$ are positive definite. The covariance equation and its unique symmetric positive-definite solution are</p>
+$$A\Sigma_\al A=\Sigma_\be,\ \ A\succ0\quad\iff\quad A=\Sigma_\al^{-1/2}\big(\Sigma_\al^{1/2}\Sigma_\be\Sigma_\al^{1/2}\big)^{1/2}\Sigma_\al^{-1/2}.\qquad(2.21)$$
+<p>The affine map $T(x)=m_\be+A(x-m_\al)$ is the optimal quadratic-cost transport from $\N(m_\al,\Sigma_\al)$ to $\N(m_\be,\Sigma_\be)$, and</p>
+$$\mathcal W_2(\al,\be)^2=\norm{m_\al-m_\be}^2+\B(\Sigma_\al,\Sigma_\be)^2.\qquad(2.22)$$
+</div>
+<dl class="decode">
+<dt>$\Sigma^{1/2}$</dt><dd>The symmetric positive square root (<a href="#recall-matrices">refresher</a>): diagonalise $\Sigma=UDU\T$, take $UD^{1/2}U\T$.</dd>
+<dt>$\Sigma_\al^{1/2}\Sigma_\be\Sigma_\al^{1/2}$</dt><dd>A symmetric positive matrix built from both covariances (“$\Sigma_\be$ seen through $\Sigma_\al$”); it has a square root. The product $\Sigma_\al\Sigma_\be$ itself is usually not symmetric, which is why this sandwich is used.</dd>
+<dt>$A\Sigma_\al A=\Sigma_\be$</dt><dd>A quadratic matrix equation (an algebraic Riccati equation). It has many symmetric solutions; exactly one is positive definite — the one Brenier selects.</dd>
+<dt>$\B(\Sigma_\al,\Sigma_\be)$</dt><dd>The covariance part of the cost: how much it costs to reshape the ellipse of $\Sigma_\al$ into that of $\Sigma_\be$ once the centres are aligned. In 1D, $\B(\sigma_\al^2,\sigma_\be^2)^2=\sigma_\al^2+\sigma_\be^2-2\sigma_\al\sigma_\be=(\sigma_\al-\sigma_\be)^2$: the formula of the previous paragraph.</dd>
+<dt>(2.22)</dt><dd>The cost separates: means and covariances do not interact.</dd>
+</dl>
+<div class="box idea"><div class="box-h">Idea of the proof</div>
+<p>Sandwich the equation between two $\Sigma_\al^{1/2}$: it becomes “a symmetric positive matrix squared equals a given symmetric positive matrix”, which has exactly one solution, a square root. The map is a convex gradient that does the transport, so it is optimal (§7). The cost is a mean term plus a trace computation.</p>
+</div>
+<details class="fold proof"><summary>Full proof</summary><div class="fold-body">
+<p><strong>Solving the equation.</strong></p>
+<ol class="steps">
+<li>If $A\Sigma_\al A=\Sigma_\be$, then $\big(\Sigma_\al^{1/2}A\Sigma_\al^{1/2}\big)^2=\Sigma_\al^{1/2}A\Sigma_\al A\Sigma_\al^{1/2}=\Sigma_\al^{1/2}\Sigma_\be\Sigma_\al^{1/2}$.<span class="why">Multiply the equation on the left and on the right by $\Sigma_\al^{1/2}$; $\Sigma_\al^{1/2}\Sigma_\al^{1/2}=\Sigma_\al$.</span></li>
+<li>If moreover $A\succ0$, then $M=\Sigma_\al^{1/2}A\Sigma_\al^{1/2}$ is symmetric positive definite, so $M=\big(\Sigma_\al^{1/2}\Sigma_\be\Sigma_\al^{1/2}\big)^{1/2}$.<span class="why">$\ps{Mv}v=\ps{A\Sigma_\al^{1/2}v}{\Sigma_\al^{1/2}v}>0$ for $v\ne0$; and a positive semi-definite matrix has a <em>unique</em> positive semi-definite square root.</span></li>
+<li>$A=\Sigma_\al^{-1/2}M\Sigma_\al^{-1/2}$, which is (2.21). Conversely this $A$ is symmetric positive definite and satisfies $A\Sigma_\al A=\Sigma_\al^{-1/2}M^2\Sigma_\al^{-1/2}=\Sigma_\be$.<span class="why">$\Sigma_\al$ is invertible; $\ps{Av}v=\ps{M w}{w}$ with $w=\Sigma_\al^{-1/2}v$.</span></li>
+</ol>
+<p><strong>Optimality.</strong></p>
+<ol class="steps">
+<li>$\pf{T}{\al}=\be$.<span class="why">Proposition 2.54, since $A$ is symmetric and $A\Sigma_\al A=\Sigma_\be$.</span></li>
+<li>$T=\nabla\varphi$ with $\varphi(x)=\ps{m_\be}x+\frac12\ps{A(x-m_\al)}{x-m_\al}$, convex because $A\succ0$; $\al$ has a density. So $T$ is the optimal (Brenier) map.<span class="why">The proposition of §7 (“convex gradients are optimal”), and the uniqueness in Brenier's theorem.</span></li>
+</ol>
+<p><strong>The cost.</strong> Let $X\sim\al$ and $Y=X-m_\al$ ($\E Y=0$, $\E[YY\T]=\Sigma_\al$).</p>
+<ol class="steps">
+<li>$X-T(X)=(m_\al-m_\be)+(\Id-A)Y$, so $\E\norm{X-T(X)}^2=\norm{m_\al-m_\be}^2+\E\norm{(\Id-A)Y}^2$.<span class="why">Expand the square: the cross term $2\ps{m_\al-m_\be}{(\Id-A)\E Y}$ vanishes.</span></li>
+<li>$\E\norm{(\Id-A)Y}^2=\tr\big((\Id-A)\Sigma_\al(\Id-A)\big)=\tr\Sigma_\al+\tr(A\Sigma_\al A)-2\tr(A\Sigma_\al)$.<span class="why">$\E\norm{BY}^2=\E\tr(BYY\T B\T)=\tr(B\Sigma_\al B\T)$; expand, use $A=A\T$ and $\tr(\Sigma_\al A)=\tr(A\Sigma_\al)$.</span></li>
+<li>$\tr(A\Sigma_\al A)=\tr\Sigma_\be$.<span class="why">The covariance equation.</span></li>
+<li>$\tr(A\Sigma_\al)=\tr\big(\Sigma_\al^{-1/2}M\Sigma_\al^{1/2}\big)=\tr M=\tr\big((\Sigma_\al^{1/2}\Sigma_\be\Sigma_\al^{1/2})^{1/2}\big)$.<span class="why">$A\Sigma_\al=\Sigma_\al^{-1/2}M\Sigma_\al^{-1/2}\Sigma_\al=\Sigma_\al^{-1/2}M\Sigma_\al^{1/2}$ is similar to $M$; similar matrices have the same trace.</span></li>
+<li>$\E\norm{X-T(X)}^2=\norm{m_\al-m_\be}^2+\tr\Sigma_\al+\tr\Sigma_\be-2\tr\big((\Sigma_\al^{1/2}\Sigma_\be\Sigma_\al^{1/2})^{1/2}\big)$, which is (2.22). $\square$<span class="why">Steps 1–4 and Definition 2.55. (For singular covariances, the book adds $\eta\Id$ and lets $\eta\to0$.)</span></li>
+</ol>
+</div></details>
+
+<div class="box example" id="gauss-example"><div class="box-h">Worked examples — two pairs of Gaussians in the plane</div>
+<p><strong>Commuting covariances.</strong> $\Sigma_\al=\mathrm{diag}(1,4)$, $\Sigma_\be=\mathrm{diag}(9,1)$. Everything is diagonal, so square roots act entry by entry: $\Sigma_\al^{1/2}\Sigma_\be\Sigma_\al^{1/2}=\mathrm{diag}(9,4)$, $A=\mathrm{diag}(\frac31,\frac12)=\mathrm{diag}(3,\frac12)$ — each axis is rescaled by the ratio of standard deviations — and</p>
+$$\B^2=1+4+9+1-2(3+2)=5=(1-3)^2+(2-1)^2 .$$
+<p>For commuting (for instance diagonal) covariances, $\B(\Sigma_\al,\Sigma_\be)=\norm{\Sigma_\al^{1/2}-\Sigma_\be^{1/2}}_F$: compare the standard deviations axis by axis (OT4ML Remark 2.62, p. 49, calls it a Hellinger distance).</p>
+<p><strong>Non-commuting covariances.</strong> $m_\al=(0,0)$, $\Sigma_\al=\begin{pmatrix}2&1\\1&2\end{pmatrix}$ (eigenvalues $1$ and $3$, ellipse tilted at $45°$); $m_\be=(2,1)$, $\Sigma_\be=\mathrm{diag}(1,4)$ (axis-aligned). Numerically:</p>
+$$\Sigma_\al^{1/2}=\begin{pmatrix}1.366&0.366\\0.366&1.366\end{pmatrix},\quad\Sigma_\al^{1/2}\Sigma_\be\Sigma_\al^{1/2}=\begin{pmatrix}2.402&2.5\\2.5&7.598\end{pmatrix},\quad A=\begin{pmatrix}0.804&-0.281\\-0.281&1.534\end{pmatrix}.$$
+<p>$A$ is symmetric with eigenvalues $0.709$ and $1.629$ (positive), and $A\Sigma_\al A=\Sigma_\be$ up to rounding. The trace of the square root is $4.114$, so $\B^2=2+2+1+4-2\times4.114=0.771$, and $\mathcal W_2^2=\norm{(2,1)}^2+0.771=5+0.771=5.771$. (Checked with POT's <code>ot.gaussian.bures_wasserstein_distance</code>, and by a Monte Carlo average of $\norm{X-T(X)}^2$ over $4\times10^5$ samples: $5.776$.) Here the means account for most of the cost.</p>
+</div>
+
+<div class="box pitfall"><div class="box-h">Pitfall — three tempting wrong maps (on the non-commuting example)</div>
+<ul>
+<li><strong>The naive guess</strong> $A=\Sigma_\al^{-1/2}\Sigma_\be^{1/2}$ “works when $\Sigma_1$ and $\Sigma_2$ commute, but in general this choice of $A$ is not even symmetric” (StatOT, Example 1.19, p. 45). Here it is $\begin{pmatrix}0.789&-0.423\\-0.211&1.577\end{pmatrix}$, and it does not even transport: $A\Sigma_\al A\T=\begin{pmatrix}0.935&-0.333\\-0.333&4.399\end{pmatrix}\ne\Sigma_\be$.</li>
+<li><strong>An admissible but non-optimal map:</strong> $A'=\Sigma_\be^{1/2}\Sigma_\al^{-1/2}$ satisfies $A'\Sigma_\al A'^{\top}=\Sigma_\be$, so it pushes $\al$ to $\be$; it is not symmetric, hence not a convex gradient, and indeed it costs $5.804>5.771$.</li>
+<li><strong>Other symmetric solutions.</strong> $A\Sigma_\al A=\Sigma_\be$ has four symmetric solutions here (change the signs of the eigenvalues of the inner square root): costs $5.771$, $10.495$, $17.505$ and $22.229$ (the last one is $-A$). Only the positive definite one — the gradient of a <em>convex</em> function — is optimal.</li>
+</ul>
+</div>
+
+<div class="widget" data-widget="l1gauss"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p>What to look at: the orange ellipse is $\al$ and the blue one $\be$ (one standard deviation); green arrows show $x\mapsto T(x)$ for points of $\al$'s ellipses at $0.5$ and $1$ standard deviation. Change the shape and orientation of $\be$ with the sliders: the readout gives $A$, its eigenvalues (always positive), $\norm{m_\al-m_\be}^2$, $\B^2$ and $\mathcal W_2^2$. Tick “compare” to see the admissible map $A'=\Sigma_\be^{1/2}\Sigma_\al^{-1/2}$ (grey dashed arrows), which twists the mass and costs more. The slider $t$ moves along McCann's interpolation (§10): the green ellipse $\N(m_t,\Sigma_t)$.</p>
+
+<h3 id="gauss-faces">Other faces of the Bures metric (going further)</h3>
+<ul>
+<li><strong>A Procrustes distance</strong> (OT4ML Prop. 2.60, p. 48): $\B(\Sigma,\Lambda)^2=\min_{R\in O(d)}\norm{\Sigma^{1/2}-\Lambda^{1/2}R}_F^2$ — compare the square roots up to a rotation (or reflection) $R$. On the non-commuting example the minimum over rotations is $0.771=\B^2$, while $R=\Id$ gives $0.804$: exactly the extra cost of the map $A'$ above, which corresponds to the choice $R=\Id$.</li>
+<li><strong>Gaussians are the cheapest laws with given moments</strong> (OT4ML Prop. 2.59, p. 48; Gelbrich's bound): among all pairs of laws with prescribed second moments, the transport cost is at least the Bures term, with equality for Gaussians. So $\norm{m_\al-m_\be}^2+\B(\Sigma_\al,\Sigma_\be)^2$ is a lower bound for $W_2^2$ between <em>any</em> two laws with these means and covariances.</li>
+<li><strong>A distance with a convex square</strong> (OT4ML Prop. 2.61, p. 49): $\B$ is a distance on positive semi-definite matrices and $\B^2$ is jointly convex.</li>
+<li><strong>Bures versus Fisher–Rao</strong> (OT4ML pp. 49–50): rank-deficient covariances are at finite Bures distance ($\B(\Sigma,0)^2=\tr\Sigma$) but at infinite Fisher–Rao distance.</li>
+</ul>
+
+<div class="box ml"><div class="box-h">In machine learning — the Fréchet Inception Distance is a Gaussian $W_2^2$</div>
+<p>The most used score to evaluate image generators is exactly formula (2.22). In the words of the book:</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Example 7.14, p. 129</span></div>
+<p>In generative-model evaluation, the Fréchet Inception Distance embeds the data in a neural feature space, fits a Gaussian to each empirical feature distribution, and computes the squared $\mathcal W_2$ distance between these Gaussian laws: the squared distance between their empirical means plus the Bures covariance term of Definition 2.55. Empirical covariances are merely positive semidefinite; the Gaussian distance formula extends to this closed cone by continuity, although the optimal affine-map formula (2.21) requires positive-definite covariances.</p>
+</div>
+<p><strong>Concretely</strong> (Heusel et al., 2017): pass, say, $50\,000$ real and $50\,000$ generated images through a fixed Inception-v3 network and keep the $d=2048$ features of its last pooling layer; compute the means $m_r,m_g$ and covariances $\Sigma_r,\Sigma_g$; then</p>
+$$\mathrm{FID}=\norm{m_r-m_g}^2+\tr\Big(\Sigma_r+\Sigma_g-2\big(\Sigma_r\Sigma_g\big)^{1/2}\Big).$$
+<p>Implementations write $(\Sigma_r\Sigma_g)^{1/2}$, a square root of a non-symmetric product. Its trace is the Bures trace, because $\Sigma_r\Sigma_g$ is similar to $\Sigma_r^{1/2}\Sigma_g\Sigma_r^{1/2}$ (conjugate by $\Sigma_r^{1/2}$) and so has the same nonnegative eigenvalues; on the non-commuting example above both give $4.114$. Lower is better, and $\mathrm{FID}=0$ only says that the two feature distributions have the same mean and covariance — not that they are equal (two laws with the same first two moments are at Bures distance $0$). Being estimated from samples, it is biased for small sample sizes (OT4ML §10.2–10.3).</p>
+<p><strong>Two more uses of the Gaussian map.</strong> <em>Linear colour transfer</em> (Pitié and Kokaram, 2007): fit Gaussians to the RGB values of a source and a target image and apply $x\mapsto m_\be+A(x-m_\al)$ to every pixel — the closed-form version of the colour transfer of §7. <em>Gaussian embeddings</em>: representing words or data points by Gaussians instead of points, and comparing them with (2.22), is used to encode uncertainty (Muzellec and Cuturi, 2018; CompOT Remark 2.31, p. 38).</p>
+</div>
+
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>Gaussians, quadratic cost → affine map $m_\be+A(x-m_\al)$ with $A$ from (2.21); $W_2^2=\norm{\Delta m}^2+\B^2$.</li>
+<li>In 1D, or for commuting covariances → compare standard deviations: $(\sigma_\al-\sigma_\be)^2$, $\norm{\Sigma_\al^{1/2}-\Sigma_\be^{1/2}}_F^2$.</li>
+<li>Check a Gaussian computation → $A$ symmetric with positive eigenvalues, and $A\Sigma_\al A=\Sigma_\be$.</li>
+</ul>
+</div>
+<div class="quiz"><p>Compute $W_2^2\big(\N(0,I_d),\N(0,4I_d)\big)$ and the optimal map.</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>The covariances commute: $A=(4I)^{1/2}(I)^{-1/2}=2I$, so $T(x)=2x$ (a dilation, the gradient of $\norm x^2$). $\B^2=\norm{I-2I}_F^2=d$, so $W_2^2=d$: each of the $d$ coordinates pays $(1-2)^2=1$.</p>
+</div></details></div>
+<div class="quiz"><p>$\al=\N(0,\mathrm{diag}(4,1))$ and $\be=\N(0,\mathrm{diag}(1,4))$ (the same ellipse turned by $90°$). The rotation by $90°$ pushes $\al$ to $\be$: is it optimal?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>No — it is not symmetric. The Brenier map is $A=\mathrm{diag}(\frac12,2)$ (squeeze one axis, stretch the other), with cost $\B^2=(2-1)^2+(1-2)^2=2$, while the rotation costs $\tr\big((I-R)\Sigma_\al(I-R)\T\big)=10$. (Extra Exercise 5 in §12.)</p>
+</div></details></div>

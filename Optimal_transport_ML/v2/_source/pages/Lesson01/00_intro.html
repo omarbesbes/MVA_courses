@@ -1,0 +1,108 @@
+<!--
+title: Lesson 1 — Monge's problem: moving mass with a map
+short: L1 · Monge's problem (v2)
+description: Step-by-step study guide for the first lecture of the MVA course Optimal Transport for ML (G. Peyré, 30 Sept 2026): optimal assignment and sorting, measures and push-forward, Monge's problem and its failures, Brenier's theorem, Gaussians and the Bures metric, quantile maps, McCann interpolation and the Monge–Ampère equation, with the exercise sheet fully solved.
+subtitle: The lecture of 30 September 2026 (Gabriel Peyré), rebuilt from the course resources. Every statement is quoted with its reference, decoded symbol by symbol, motivated, proved line by line, tried on small numbers, and connected to machine learning.
+kicker: Optimal Transport for ML · Lesson 1 · study guide v2
+footer: Optimal Transport for Machine Learning (MVA / IASD, J. Delon &amp; G. Peyré) — study guide, version 2. This lesson was rebuilt from the course resources in <code>ressources/</code> and from the exercise sheet <code>exo-monge-uncorrected.pdf</code>; “OT4ML Thm. 2.23, p. 29” means statement 2.23 of the book <em>Optimal Transport for Machine Learners</em>, page 29 of the PDF file.
+-->
+
+<div class="box objectives">
+<div class="box-h">What you will be able to do after this page</div>
+<ol>
+<li>Explain what it means to compare two distributions <strong>geometrically</strong> — by the cost of moving one onto the other — and why pointwise comparisons of densities miss it.</li>
+<li>State the <strong>optimal assignment problem</strong>, explain why trying the $n!$ permutations is hopeless, solve it on the line by <strong>sorting</strong>, and certify an optimum with dual potentials (the idea behind the Hungarian method).</li>
+<li>Work with <strong>probability measures</strong> (Diracs, densities, mixtures) and with the <strong>push-forward</strong> $\pf{T}{\al}$, including the Jacobian formula for densities.</li>
+<li>State <strong>Monge's problem</strong> between measures and exhibit its three failures: no admissible map, an infimum that is not attained, several optimal maps.</li>
+<li>State <strong>Brenier's theorem</strong> with all its hypotheses, prove its “easy half”, and explain why gradients of convex functions are the right multi-dimensional version of nondecreasing maps.</li>
+<li>Compute the optimal map and the transport cost between <strong>Gaussians</strong> (affine map, Bures metric) and between measures <strong>on the line</strong> (quantile functions).</li>
+<li>Describe <strong>McCann's displacement interpolation</strong> and derive the <strong>Monge–Ampère equation</strong>.</li>
+<li>Solve the 13 exercises of the sheet <em>Monge formulation</em>, and recognise these objects in machine learning: assignment losses, histogram equalization, generative models, colour transfer, domain adaptation, the FID score.</li>
+</ol>
+</div>
+
+<h2 id="start">0. Before you start</h2>
+
+<h3 id="howto">How to read this page</h3>
+<p>The lecture of 30 September 2026 took place, but no handwritten notes of it are available. This page is therefore <strong>built from the course resources</strong>, in the order of the outline given by the teachers: the book <em>Optimal Transport for Machine Learners</em> (“OT4ML”, chapters 1–2), its compact teaching notes, the 2019 course notes, Peyré–Cuturi's <em>Computational Optimal Transport</em> (“CompOT”) and Chewi–Niles-Weed–Rigollet's <em>Statistical Optimal Transport</em> (“StatOT”). Each statement of the course appears in a box like this one, with its reference — statement number and <strong>page of the PDF file</strong>:</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. N, p. P</span></div>
+<p>A faithful quote of the resource. The notation is harmonised with this page: the book writes $T_\sharp\al$ and $\mathcal C_\al$, we write $\pf{T}{\al}$ and $C_\al$ (see the <a href="#notation">notation decoder</a>).</p>
+</div>
+<p>It is always followed by a <strong>decoding</strong> (what each symbol means, in words), the <strong>problem it solves</strong>, a <strong>small example with numbers</strong>, the <strong>idea of the proof</strong>, and then the <strong>full proof</strong>, folded (click to open; “Open all proofs” at the top opens everything). Other boxes:</p>
+<div class="cols">
+<div class="box def"><div class="box-h">Definition</div><p>A new object, stated precisely.</p></div>
+<div class="box thm"><div class="box-h">Proposition</div><p>A result, with its hypotheses.</p></div>
+<div class="box intu"><div class="box-h">Intuition</div><p>The picture to keep in mind.</p></div>
+<div class="box example"><div class="box-h">Worked example</div><p>Numbers you can check by hand.</p></div>
+<div class="box recall"><div class="box-h">Reminder</div><p>A prerequisite, recalled where it is used.</p></div>
+<div class="box ml"><div class="box-h">In machine learning</div><p>Where the notion is used, on a concrete case.</p></div>
+<div class="box pitfall"><div class="box-h">Pitfall</div><p>A classical mistake.</p></div>
+<div class="box reflex"><div class="box-h">Reflex</div><p>“When you see … → think …”.</p></div>
+</div>
+<p>What is added for pedagogy (intuitions, remarks, applications, the history dates) is presented as such and is not attributed to the course. Interactive figures have sliders, buttons and points you can drag: the text under each says what to look for. <strong>Every number on this page was computed by a script</strong> (exact fractions, quadrature, Monte Carlo, the Hungarian method, POT) before being written.</p>
+
+<h3 id="story">The story of the lecture in seven steps</h3>
+<p class="tldr">To compare two distributions, measure the cheapest way to move one onto the other; Monge asks for a map that does it, and for the squared distance the best map is the gradient of a convex function.</p>
+<ol class="chain">
+<li><strong>Why (§1).</strong> Machine learning compares distributions all the time: a model with data, a source domain with a target domain, two point clouds. Optimal transport compares them through the geometry of the space where the data live, by <em>lifting</em> a ground cost $c(x,y)$ between points to a cost between distributions.</li>
+<li><strong>Points (§2–§3).</strong> $n$ sources and $n$ targets of equal mass: choose the cheapest pairing, a permutation. There are $n!$ of them; the Hungarian method finds the best one in $O(n^3)$ operations, with a certificate; on the line, <strong>sorting</strong> solves it in $O(n\log n)$.</li>
+<li><strong>Measures and push-forward (§4–§5).</strong> One language for point clouds, densities and mixtures. A map $T$ moves a measure $\al$ to $\pf{T}{\al}$; for densities, the Jacobian determinant appears.</li>
+<li><strong>Monge's problem (§6).</strong> Minimise $\int c(x,T(x))\,\dd\al(x)$ over maps $T$ with $\pf{T}{\al}=\be$. It can have no admissible map, no minimiser, or many minimisers — maps cannot split mass.</li>
+<li><strong>Brenier (§7).</strong> For $c(x,y)=\norm{x-y}^2$ and a source with a density, there is a unique optimal map, the <strong>gradient of a convex function</strong> — the multi-dimensional version of “nondecreasing”.</li>
+<li><strong>Closed forms (§8–§9).</strong> Between Gaussians the optimal map is affine and the cost involves the <strong>Bures metric</strong>; on the line it is the <strong>quantile map</strong> $C_\be^{-1}\circ C_\al$.</li>
+<li><strong>Previews (§10).</strong> Moving each particle along a straight line gives McCann's interpolation (developed in <a href="Lesson03.html#geo">Lesson 3</a>); the change of variables gives the Monge–Ampère equation.</li>
+</ol>
+
+<h3 id="toolbox">What you need</h3>
+<p>This is the first lesson: it reuses no earlier lesson, only undergraduate mathematics. Open only the refreshers you need; each one says exactly what is used on this page. The <a href="Reminders.html">Reminders page</a> goes deeper.</p>
+
+<details class="fold more" id="recall-proba"><summary>Refresher — random variables, laws, expectations</summary><div class="fold-body">
+<p>A random variable $X$ with values in $\R^d$ has a <em>law</em> (distribution) $\al$: $\al(A)=\P(X\in A)$ is the probability that $X$ falls in the set $A$. We write $X\sim\al$. Expectations are integrals against the law: $\E[f(X)]=\int f\,\dd\al$. Two random variables with the same law have the same expectations of all functions, and conversely. <strong>Used here</strong> in §4 (laws), §5 (“if $X\sim\al$ then $T(X)\sim\pf{T}{\al}$”) and in every cost $\E\norm{X-T(X)}^2$. More: <a href="Reminders.html#measures-basics">Reminders — measures</a>.</p>
+</div></details>
+
+<details class="fold more" id="recall-convex"><summary>Refresher — convex functions, gradients, subgradients</summary><div class="fold-body">
+<p>A function $\varphi:\R^d\to\R\cup\{+\infty\}$ is <em>convex</em> if $\varphi\big((1-t)x+tx'\big)\le(1-t)\varphi(x)+t\varphi(x')$ for $t\in[0,1]$. If $\varphi$ is differentiable, convexity is equivalent to the <strong>tangent inequality</strong></p>
+$$\varphi(x')\ \ge\ \varphi(x)+\ps{\nabla\varphi(x)}{x'-x}\qquad\text{for all }x,x' :$$
+<p>the graph lies above each tangent plane. A vector $v$ with $\varphi(x')\ge\varphi(x)+\ps{v}{x'-x}$ for all $x'$ is a <em>subgradient</em> at $x$; the set of them is $\partial\varphi(x)$ (it is $\{\nabla\varphi(x)\}$ where $\varphi$ is differentiable). On $\R$, a differentiable $\varphi$ is convex iff $\varphi'$ is nondecreasing; for a $C^2$ function on $\R^d$, iff the Hessian $\nabla^2\varphi(x)$ is positive semi-definite everywhere. <strong>Used here</strong> in §7 (Brenier), §8 (quadratic potentials) and §9 (nondecreasing maps are derivatives of convex functions). More: <a href="Reminders.html#convex-functions">Reminders — convex functions</a>.</p>
+</div></details>
+
+<details class="fold more" id="recall-jacobian"><summary>Refresher — change of variables and the Jacobian determinant</summary><div class="fold-body">
+<p>If $T:U\to V$ is a $C^1$ bijection between open sets of $\R^d$ with a $C^1$ inverse (a <em>diffeomorphism</em>), and $T'(x)$ is its Jacobian matrix (row $k$ = gradient of the $k$-th coordinate of $T$), then for every integrable $g$</p>
+$$\int_V g(y)\,\dd y=\int_U g\big(T(x)\big)\,\abs{\det T'(x)}\,\dd x .$$
+<p>Meaning: a tiny box of volume $\dd x$ around $x$ is sent to a tiny parallelepiped of volume $\abs{\det T'(x)}\,\dd x$ around $T(x)$. In 1D with $T$ increasing: $\int g(y)\,\dd y=\int g(T(x))\,T'(x)\,\dd x$, the usual substitution $y=T(x)$. <strong>Used here</strong> in §5 (density of a push-forward) and §10 (Monge–Ampère). More: <a href="Reminders.html#jacobian">Reminders — Jacobian</a>.</p>
+</div></details>
+
+<details class="fold more" id="recall-matrices"><summary>Refresher — symmetric positive matrices, square roots, trace</summary><div class="fold-body">
+<p>A symmetric matrix $S$ is diagonalisable in an orthonormal basis: $S=UDU\T$ with $U$ orthogonal and $D$ diagonal (spectral theorem). It is <em>positive semi-definite</em> ($S\succeq0$) if $\ps{Sx}{x}\ge0$ for all $x$, i.e. if its eigenvalues are $\ge0$; <em>positive definite</em> ($S\succ0$) if they are $>0$. Its <strong>square root</strong> $S^{1/2}=UD^{1/2}U\T$ is the <em>unique</em> symmetric positive semi-definite matrix whose square is $S$. Two trace facts: $\tr(AB)=\tr(BA)$, and similar matrices ($B=PAP^{-1}$) have the same trace and eigenvalues. <strong>Used here</strong> in §8 (Gaussian map and Bures metric). More: <a href="Reminders.html#spd">symmetric matrices</a>, <a href="Reminders.html#sqrtm">square roots</a>.</p>
+</div></details>
+
+<details class="fold more" id="recall-gaussian"><summary>Refresher — Gaussian vectors</summary><div class="fold-body">
+<p>$X\sim\N(m,\Sigma)$ with mean $m\in\R^d$ and covariance $\Sigma\succeq0$. If $\Sigma\succ0$ it has the density $\rho(x)=\det(2\pi\Sigma)^{-1/2}\exp\big(-\frac12\ps{x-m}{\Sigma^{-1}(x-m)}\big)$. Two facts are used: an <strong>affine image of a Gaussian vector is Gaussian</strong>, $AX+b\sim\N(Am+b,\,A\Sigma A\T)$; and a Gaussian law is <strong>determined by its mean and covariance</strong>. The level set at one standard deviation, $\{x:\ps{x-m}{\Sigma^{-1}(x-m)}=1\}$, is an ellipse with axes along the eigenvectors of $\Sigma$ and half-lengths the square roots of its eigenvalues. <strong>Used here</strong> in §8. More: <a href="Reminders.html#gaussians">Reminders — Gaussians</a>.</p>
+</div></details>
+
+<details class="fold more" id="recall-perm"><summary>Refresher — permutations</summary><div class="fold-body">
+<p>A permutation of $[\![n]\!]=\{1,\dots,n\}$ is a bijection $\sigma:[\![n]\!]\to[\![n]\!]$; there are $n!$ of them. We write it as the list $(\sigma(1),\dots,\sigma(n))$. A <em>transposition</em> (swap) exchanges two values; a <em>cycle</em> $(i_1\to i_2\to\dots\to i_k\to i_1)$ moves values around a loop; every permutation is a product of disjoint cycles. If $\sigma$ is a permutation, $\sum_i v_{\sigma(i)}=\sum_j v_j$ for any vector $v$ (each index appears exactly once). <strong>Used here</strong> in §2, §3 and §7. More: <a href="Reminders.html#permutations">Reminders — permutations</a>.</p>
+</div></details>
+
+<h3 id="notation">Notation decoder</h3>
+<p>How to read every symbol of this page.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Symbol</th><th>Read</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td>$\X,\Y$; $c(x,y)$</td><td>“source and target spaces”; “cost”</td><td>Where the points live; the price of moving one unit of mass from $x$ to $y$.</td></tr>
+<tr><td>$\mathrm{Perm}(n)$; $\sigma$</td><td>“permutations”</td><td>Bijections of $\{1,\dots,n\}$; source $i$ goes to target $\sigma(i)$ (§2).</td></tr>
+<tr><td>$C_{i,j}$</td><td>“cost matrix”</td><td>$c(x_i,y_j)$, the cost of pairing source $i$ with target $j$.</td></tr>
+<tr><td>$\delta_x$; $\sum_ia_i\delta_{x_i}$</td><td>“Dirac at $x$”; “discrete measure”</td><td>All the mass at $x$; mass $a_i$ at $x_i$ (§4).</td></tr>
+<tr><td>$\M(\X)$</td><td>“probability measures on $\X$”</td><td>Positive measures of total mass $1$ (the book's $\mathcal M_+^1(\X)$; StatOT writes $\mathcal P(\R^d)$).</td></tr>
+<tr><td>$\rho_\al$</td><td>“density of $\al$”</td><td>$\dd\al(x)=\rho_\al(x)\,\dd x$ (§4).</td></tr>
+<tr><td>$\pf{T}{\al}$</td><td>“$T$ push-forward $\al$”</td><td>The measure obtained by moving each bit of mass of $\al$ from $x$ to $T(x)$; the law of $T(X)$ when $X\sim\al$ (§5). The book writes $T_\sharp\al$.</td></tr>
+<tr><td>$\mathcal M_c(\al,\be)$</td><td>“Monge value”</td><td>$\inf\{\int c(x,T(x))\,\dd\al(x):\pf{T}{\al}=\be\}$ (§6). Not to be confused with $\M(\X)$, the set of probability measures.</td></tr>
+<tr><td>$\widetilde{\mathcal W}_p$</td><td>“directed Monge distance”</td><td>$\mathcal M_{d^p}^{1/p}$, the Monge value for the cost $d(x,y)^p$, to the power $1/p$ (§6).</td></tr>
+<tr><td>$W_p$</td><td>“Wasserstein distance”</td><td>The same with couplings instead of maps (Lessons 2–3); it coincides with $\widetilde{\mathcal W}_p$ in the cases computed here (§8, §9).</td></tr>
+<tr><td>$\nabla\varphi$, $\partial\varphi$, $\nabla^2\varphi$</td><td>“gradient, subdifferential, Hessian”</td><td>Of a convex potential $\varphi$; Brenier's map is $T=\nabla\varphi$ (§7).</td></tr>
+<tr><td>$\N(m,\Sigma)$; $\Sigma^{1/2}$; $\B$</td><td>“Gaussian”; “square root”; “Bures”</td><td>Mean $m$, covariance $\Sigma$; the matrix square root; the Bures metric between covariances (§8).</td></tr>
+<tr><td>$C_\al$, $C_\al^{-1}$</td><td>“CDF”, “quantile function”</td><td>$C_\al(x)=\al((-\infty,x])$ and its generalised inverse (§9). The book writes $\mathcal C_\al$; the sheet $C_\al$ or $F_\mu$; StatOT $F_\mu$ and $F_\mu^\dagger$.</td></tr>
+<tr><td>$T_t$, $\al_t$</td><td>“McCann interpolation”</td><td>$T_t=(1-t)\Id+tT$, $\al_t=\pf{(T_t)}{\al}$ (§10).</td></tr>
+</tbody></table></div>
+<p>StatOT names the source and target $\mu$ and $\nu$ (also used in some exercises); everything else is as above. The quadratic cost is $\norm{x-y}^2$ (without a factor $\frac12$) throughout this lesson, as in OT4ML chapter 2; later lessons sometimes use $\frac12\norm{x-y}^2$, which changes the cost by a factor 2 but not the optimal map.</p>
+<p>Colour code of the figures: <span class="al">$\al$ (source, orange-red)</span>, <span class="be">$\be$ (target, blue)</span>, <span class="bar">maps and interpolations (green)</span>; grey for mixtures and for what is not optimal.</p>

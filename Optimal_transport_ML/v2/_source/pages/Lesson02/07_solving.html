@@ -1,0 +1,102 @@
+<h2 id="solve">7. Solving the linear program</h2>
+<p class="tldr">Exact solvers walk from vertex to vertex of the transport polytope (network simplex) or approach it from inside (interior points); optimality is certified by “prices” $f_i,g_j$ with $f_i+g_j\le C_{ij}$, equality wherever mass moves — a first look at the duality of Lesson 4.</p>
+
+<h3 id="solve-algos">The algorithms</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML §3.2, pp. 62–63</span></div>
+<p>The discrete Kantorovich problem is a linear program with much more structure than a generic dense LP. Its variables are the arcs of a complete bipartite network, its equality constraints are flow-conservation constraints, and its extreme points are sparse tree-like couplings. […]</p>
+<p><strong>Transportation simplex and network simplex.</strong> The transportation simplex goes back to Dantzig’s formulation of the transportation problem. It works on basic feasible couplings, whose positive support is completed into a spanning tree of the bipartite supply-demand graph. Starting from a basis, for instance one produced by the north-west corner rule, reduced costs identify whether an unused arc can decrease the objective. Adding such an arc creates a unique cycle in the tree; one then pushes as much mass as possible around this cycle and removes the exhausted arc. […] Like the ordinary simplex method, its worst-case number of pivots can be exponential for adversarial instances, but the per-pivot operations exploit sparsity and are very efficient in practice. For theoretical polynomial guarantees, one can instead use strongly polynomial minimum-cost-flow algorithms, such as Orlin’s algorithm.</p>
+<p><strong>Interior-point methods.</strong> Generic interior-point methods approach the same LP through a smooth central path. […] The logarithmic-barrier problem on the resulting transport polytope is
+$P_\eps:=\argmin_{P\ind_m=a,\ P\T\ind_n=b,\ P_{i,j}>0}\ \ps{C}{P}-\eps\sum_{i,j}\log P_{i,j}$ (3.5), where $\eps>0$ is decreased along the algorithm. […] The comparison with Sinkhorn is therefore subtle. Both methods keep iterates positive, but […] Sinkhorn fixes an entropic temperature $\eps$ and solves a different, KL-regularized OT problem.</p>
+</div>
+<dl class="decode">
+<dt>basis, basic feasible coupling</dt><dd>A vertex of $\U(a,b)$ together with a spanning tree of $n+m-1$ cells containing its support (zero cells are added when the vertex is degenerate, as in the quiz of §4).</dd>
+<dt>reduced cost</dt><dd>$r_{ij}=C_{ij}-f_i-g_j$, where the prices $f,g$ are fitted so that $r_{ij}=0$ on the tree. It is the change of cost per unit of mass pushed into cell $(i,j)$ around the cycle it closes.</dd>
+<dt>pivot</dt><dd>Enter a cell with $r_{ij}<0$, push the largest amount $\theta$ around the cycle, remove the cell that drops to $0$: the plan moves to a neighbouring vertex, and the cost changes by $\theta\,r_{ij}\le0$.</dd>
+<dt>central path, barrier</dt><dd>$-\eps\sum\log P_{ij}$ keeps every entry positive, so interior-point iterates are dense; they reach a vertex only in the limit $\eps\to0$.</dd>
+</dl>
+
+<h3 id="solve-dual">Prices that certify optimality</h3>
+<p><strong>The problem.</strong> A solver returns a plan. How can you be sure it is optimal without trusting the solver? Lesson 1 certified an assignment with numbers $u_i,v_j$; the same works for couplings.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 5.1, Props. 5.2–5.3, p. 95</span></div>
+<p class="small muted">From the duality chapter (Lesson 4); the same facts in CompOT Props. 3.2–3.3, pp. 45–46.</p>
+<p><strong>Definition 5.1 (Admissible potentials).</strong> […] a pair $(f,g)\in\R^n\times\R^m$ is admissible if it lies below the cost: $\mathcal R(C):=\{(f,g):\ \forall(i,j),\ f_i+g_j\le C_{i,j}\}$.</p>
+<p><strong>Proposition 5.2 (Discrete Kantorovich duality).</strong> One has $\mathrm L_C(a,b)=\max_{(f,g)\in\mathcal R(C)}\ps{f}{a}+\ps{g}{b}$.</p>
+<p><strong>Proposition 5.3 (Discrete complementary slackness).</strong> For every $P\in\U(a,b)$ and $(f,g)\in\mathcal R(C)$,
+$\ps{C}{P}-\ps{f}{a}-\ps{g}{b}=\sum_{i,j}P_{i,j}\big(C_{i,j}-f_i-g_j\big)\ge0$. The plan and potentials are respectively primal and dual optimal if and only if $\mathrm{Supp}(P)\subset\{(i,j):\ f_i+g_j=C_{i,j}\}$.</p>
+</div>
+<dl class="decode">
+<dt>$f_i,g_j$</dt><dd>Prices: in CompOT’s economic reading, a carrier buys the goods at $x_i$ for $f_i$ and sells them at $y_j$ for $g_j$ (signs aside); admissibility means that no route is priced above its transport cost.</dd>
+<dt>$\ps{f}{a}+\ps{g}{b}$</dt><dd>The total revenue of the prices, a <strong>lower bound</strong> on every transport cost.</dd>
+<dt>complementary slackness</dt><dd>Mass may move only along routes where the price is “tight”, $f_i+g_j=C_{ij}$. Then cost and revenue are equal, and both are optimal.</dd>
+</dl>
+<div class="box idea"><div class="box-h">Idea</div>
+<p>Use the marginals to rewrite the revenue as a sum over the plan: $\ps{f}{a}+\ps{g}{b}=\sum_{ij}P_{ij}(f_i+g_j)$. Subtract from the cost: each term $P_{ij}(C_{ij}-f_i-g_j)$ is $\ge0$. So every revenue is below every cost (weak duality), and they are equal exactly when all the terms vanish.</p>
+</div>
+<details class="fold proof"><summary>Full proof of weak duality and of the certificate</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\ps{f}{a}+\ps{g}{b}=\sum_if_i\sum_jP_{ij}+\sum_jg_j\sum_iP_{ij}=\sum_{i,j}P_{ij}(f_i+g_j).$$<span class="why">$a_i=\sum_jP_{ij}$ and $b_j=\sum_iP_{ij}$ (marginals of $P$).</span></li>
+<li>$$\ps{C}{P}-\ps{f}{a}-\ps{g}{b}=\sum_{i,j}P_{ij}(C_{ij}-f_i-g_j)\ \ge\ 0 .$$<span class="why">Each term is a product of $P_{ij}\ge0$ and $C_{ij}-f_i-g_j\ge0$ (admissibility).</span></li>
+<li>If moreover $f_i+g_j=C_{ij}$ wherever $P_{ij}>0$, the sum is $0$: $\ps{C}{P}=\ps{f}{a}+\ps{g}{b}$. Then for any other coupling $Q$: $\ps{C}{Q}\ge\ps{f}{a}+\ps{g}{b}=\ps{C}{P}$. So $P$ is optimal (and $(f,g)$ maximises the revenue).<span class="why">Step 2 applied to $Q$.</span></li>
+</ol>
+<p>The converse — an optimal plan always comes with such prices, and the two values coincide (strong duality, Prop. 5.2) — is the duality theorem of linear programming; Lesson 4 proves it and studies the potentials.</p>
+</div></details>
+<div class="box example" id="solve-cert"><div class="box-h">Worked example — certifying the $3\times3$ assignment of §3</div>
+<p>$C=\begin{pmatrix}4&1&3\\2&0&5\\3&2&2\end{pmatrix}$, uniform weights $\frac13$, candidate plan $P=\frac13P_{[2,1,3]}$ (mass on $(1,2),(2,1),(3,3)$). Look for prices tight on these three cells: $f_1+g_2=1$, $f_2+g_1=2$, $f_3+g_3=2$. Take $f=(0,-1,0)$ and $g=(3,1,2)$:</p>
+$$C-f\oplus g=\begin{pmatrix}4-3&1-1&3-2\\2+1-3&0+1-1&5+1-2\\3-3&2-1&2-2\end{pmatrix}=\begin{pmatrix}1&0&1\\0&0&4\\0&1&0\end{pmatrix}\ \ge0 .$$
+<p>Admissible, and zero on the support of $P$: certificate. Revenue $\frac13(0-1+0)+\frac13(3+1+2)=\frac53=\ps{C}{P}$. So the assignment $[2,1,3]$ is optimal, without enumerating permutations. (Two further cells, $(2,2)$ and $(3,1)$, are also tight: this problem has several optimal dual solutions.)</p>
+</div>
+
+<h3 id="solve-simplex">The network simplex on an example</h3>
+<p>Take the $2\times3$ problem of §5, $a=(0.6,0.4)$, $b=(0.3,0.45,0.25)$, with the cost matrix $C=\begin{pmatrix}3&1&2\\1&2&4\end{pmatrix}$ (an arbitrary one: here the north-west corner is <em>not</em> optimal). On the pentagon, the cost is $1+4s+t$.</p>
+<ol class="steps">
+<li><strong>Start</strong> at the north-west vertex $P=\begin{pmatrix}0.3&0.3&0\\0&0.15&0.25\end{pmatrix}$, cost $2.5$. Its support $(1,1),(1,2),(2,2),(2,3)$ is a spanning tree.<span class="why">§4: the rule gives a vertex with $n+m-1=4$ cells.</span></li>
+<li><strong>Prices on the tree</strong>: $f_1=0$; then $g_1=C_{11}-f_1=3$, $g_2=1$, $f_2=C_{22}-g_2=1$, $g_3=C_{23}-f_2=3$. Reduced costs off the tree: $r_{13}=2-0-3=-1$, $r_{21}=1-1-3=-3$.<span class="why">Solve $f_i+g_j=C_{ij}$ along the tree, starting from an arbitrary $f_1=0$ (the system has one degree of freedom).</span></li>
+<li><strong>Pivot 1.</strong> Enter $(2,1)$ ($r=-3$, the most negative). The cycle is $(2,1)^+,(2,2)^-,(1,2)^+,(1,1)^-$; push $\theta=\min(P_{22},P_{11})=0.15$. New plan $\begin{pmatrix}0.15&0.45&0\\0.15&0&0.25\end{pmatrix}$, cost $2.5-0.15\times3=2.05$; cell $(2,2)$ leaves.<span class="why">Cells marked $-$ lose $\theta$, cells marked $+$ gain it: row and column sums are unchanged; the cost changes by $\theta\,r_{21}$.</span></li>
+<li><strong>Pivot 2.</strong> New prices $f=(0,-2)$, $g=(3,1,6)$; $r_{13}=-4$, $r_{22}=3$. Enter $(1,3)$, $\theta=0.15$ (cell $(1,1)$ leaves): plan $\begin{pmatrix}0&0.45&0.15\\0.3&0&0.1\end{pmatrix}$, cost $2.05-0.6=1.45$.<span class="why">Same recipe.</span></li>
+<li><strong>Pivot 3.</strong> Prices $f=(0,2)$, $g=(-1,1,2)$; $r_{11}=4$, $r_{22}=-1$. Enter $(2,2)$, $\theta=0.1$ (cell $(2,3)$ leaves): plan $P^\star=\begin{pmatrix}0&0.35&0.25\\0.3&0.1&0\end{pmatrix}$, cost $1.35$.<span class="why">Cost change $0.1\times(-1)$.</span></li>
+<li><strong>Stop.</strong> Prices $f=(0,1)$, $g=(0,1,2)$: reduced costs $r_{11}=3$, $r_{23}=1$, both $\ge0$. The prices are admissible and tight on the support: $P^\star$ is optimal, and the revenue $0\cdot0.6+1\cdot0.4+0\cdot0.3+1\cdot0.45+2\cdot0.25=1.35$ equals the cost.<span class="why">Prop. 5.3. An exact LP solver confirms $1.35$.</span></li>
+</ol>
+<figure class="fig"><!-- include figures/L02/simplex.svg --><figcaption>The same walk on the pentagon of couplings: from the north-west vertex (cost $2.50$) along three edges to the optimal vertex ($1.35$), each pivot lowering the cost. The dashed green line is the level line of the optimum, which touches the pentagon only there. In the widget of §5, choose the cost “the matrix $C$” and press “Simplex: one pivot” from the north-west corner to replay it.</figcaption></figure>
+<div class="box remark"><div class="box-h">Degenerate pivots</div>
+<p>When a vertex has fewer than $n+m-1$ positive entries, the tree contains zero cells, and a pivot may push $\theta=0$: the tree changes, the plan does not. Such <em>degenerate pivots</em> are the rule for assignment problems (permutations have only $n$ entries out of $2n-1$), and a careless choice of entering cells can cycle forever; anti-cycling rules (e.g. Bland’s) prevent it. In the widget, the weights $a=(\frac12,\frac12)$, $b=(\frac14,\frac12,\frac14)$ produce degenerate vertices.</p>
+</div>
+
+<h3 id="solve-code">In practice: the numerics session and POT</h3>
+<p>The numerics session of this lecture (notebook <code>1-linprog</code>) solves the transport LP with CVXPY, a modelling language that hands the problem to a generic solver. Written in CVXPY, the problem is literally its definition (our own transcription, in the notation of this page):</p>
+<pre><code>import cvxpy as cp
+P = cp.Variable((n, m))
+u, v = np.ones((m, 1)), np.ones((n, 1))
+constraints = [0 &lt;= P, P @ u == a, P.T @ v == b]
+objective = cp.Minimize(cp.sum(cp.multiply(P, C)))
+cp.Problem(objective, constraints).solve()</code></pre>
+<p>Interior-point solutions are dense up to rounding: to count the non-zero entries one thresholds them (say $P_{ij}>10^{-5}$), and the count depends on the threshold. A network-simplex solver returns an exact vertex. The library POT (<em>Python Optimal Transport</em>) provides one, <code>ot.emd</code>; with <code>log=True</code> it also returns dual potentials, so the certificate of Prop. 5.3 can be checked:</p>
+<pre><code>import numpy as np, ot
+rng = np.random.default_rng(0)
+n, m = 6, 8
+xs, ys = rng.random((n, 2)), rng.random((m, 2))          # two point clouds in the plane
+a = rng.random(n); a /= a.sum(); b = rng.random(m); b /= b.sum()
+M = ot.dist(xs, ys)                                       # squared Euclidean cost matrix
+P, log = ot.emd(a, b, M, log=True)                        # exact optimal plan (network simplex)
+print(ot.emd2(a, b, M))                                   # 0.07575528019451169
+print((P &gt; 1e-12).sum(), n + m - 1)                       # 13 13   (a vertex: n + m - 1 entries)
+f, g = log["u"], log["v"]                                 # dual potentials
+print((f[:, None] + g[None, :] - M).max())                # 3.1e-15  (admissible, up to rounding)
+print(f @ a + g @ b)                                      # 0.07575528019451207  (= the cost)</code></pre>
+<p>The outputs above are those of our run (POT 0.9.7); SciPy’s HiGHS LP solver gives the same value. With random weights the problem is non-degenerate and the optimal vertex has exactly $n+m-1=13$ entries.</p>
+<div class="box ml"><div class="box-h">In machine learning — the Word Mover’s Distance between documents</div>
+<p>Kusner, Sun, Kolkin and Weinberger (<em>From word embeddings to document distances</em>, ICML 2015) represent a document by the normalised frequencies $a_i$ of its words (stop words removed) and each word by its word2vec embedding $x_i\in\R^{300}$. The <strong>Word Mover’s Distance</strong> between two documents is $\mathrm L_C(a,b)$ with $C_{ij}=\norm{x_i-y_j}$: how far the words of one document must “travel” in embedding space to become the words of the other. Two sentences with no word in common — “Obama speaks to the media in Illinois” and “The President greets the press in Chicago”, the example of the paper — are close, because each word has a nearby partner. On eight document-classification data sets, the paper reports lower $k$-nearest-neighbour error rates with this distance than with seven competing document representations. Its weakness is cost: an exact LP per pair of documents. The paper therefore prunes with two cheap <strong>lower bounds</strong>: the distance between the mean embeddings, $\norm{\sum_ia_ix_i-\sum_jb_jy_j}$, and the “relaxed” WMD obtained by dropping one of the two marginal constraints, so that every word simply goes to its nearest word in the other document (Exercise 13.11).</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — exact transport does not scale</div>
+<p>A dense $n\times n$ problem has $n^2$ variables; network simplex codes handle a few thousand points, not millions. For large problems, use the structure (the line: §4; sliced transport: Lesson 5) or change the problem (entropic regularization and Sinkhorn: Lesson 7) — which also gives smooth, differentiable losses.</p>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>To prove a plan optimal → find prices $f,g$ with $f_i+g_j\le C_{ij}$ everywhere and $=$ on its support.</li>
+<li>To compute prices for a vertex → set one price to $0$ and solve $f_i+g_j=C_{ij}$ along the support tree.</li>
+<li>Negative reduced cost $r_{ij}$ → pushing mass into cell $(i,j)$ around its cycle lowers the cost by $\abs{r_{ij}}$ per unit.</li>
+</ul>
+</div>
+<div class="quiz"><p>For the $2\times2$ example of §2 ($C=\begin{pmatrix}1&9\\1&1\end{pmatrix}$, optimal plan $\begin{pmatrix}0.3&0.2\\0&0.5\end{pmatrix}$), find prices certifying optimality.</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>Tight on the support: $f_1+g_1=1$, $f_1+g_2=9$, $f_2+g_2=1$. With $f_1=0$: $g=(1,9)$, $f_2=-8$. Check the last cell: $f_2+g_1=-7\le C_{21}=1$ ✓ (reduced cost $8$). Revenue $0.5\cdot0+0.5\cdot(-8)+0.3\cdot1+0.7\cdot9=2.6=$ the cost. Optimal.</p>
+</div></details></div>

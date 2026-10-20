@@ -1,0 +1,104 @@
+<h2 id="gauss">9. Gaussian closures: Bures–Wasserstein flows <span class="ref">OT4ML §16.5 · StatOT §5.5, §6.1</span></h2>
+<p class="tldr">When the Wasserstein velocity is affine on Gaussians, a Gaussian start stays Gaussian and the PDE reduces to an ODE for the mean and the covariance; on the line the Gaussians form a flat half-plane of pairs $(m,\sigma)$ in which the flows of KL, $W_2^2$ and Fisher information are explicit; when the flow is not closed, projecting its velocity onto affine fields gives the Bures–Wasserstein flow of Gaussian variational inference.</p>
+
+<h3 id="gauss-affine">Affine velocities keep Gaussians Gaussian</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 16.22, p. 431</span></div>
+<p><strong>Proposition 16.22</strong> (Affine velocities preserve Gaussianity). <em>Let $\al_0=\N(m_0,\Sigma_0)$, with $\Sigma_0\succ0$. Let $b_t\in\R^d$ and $A_t\in\R^{d\times d}$ be locally integrable on a time interval, and let $(m_t,\Sigma_t)$ solve $\dot m_t=b_t$, $\dot\Sigma_t=A_t\Sigma_t+\Sigma_tA_t\T$, $(m_{t=0},\Sigma_{t=0})=(m_0,\Sigma_0)$. Then, as long as this matrix ODE is defined, $\Sigma_t\succ0$ and $\al_t=\N(m_t,\Sigma_t)$ is the solution of the continuity equation $\partial_t\al_t+\dv(\al_tv_t)=0$, $v_t(x)=b_t+A_t(x-m_t)$. In particular, if a smooth functional $f$ has a Wasserstein gradient on Gaussian measures of the affine form $\nabla_Wf(\N(m,\Sigma))(x)=b_f(m,\Sigma)+A_f(m,\Sigma)(x-m)$, with $A_f(m,\Sigma)$ symmetric, then the Wasserstein gradient flow of $f$, initialized from any non-degenerate Gaussian, stays Gaussian and satisfies $\dot m_t=h_f(m_t,\Sigma_t)$, $\dot\Sigma_t=H_f(m_t,\Sigma_t)$, where $h_f(m,\Sigma)=-b_f(m,\Sigma)$, $H_f(m,\Sigma)=-\big(A_f(m,\Sigma)\Sigma+\Sigma A_f(m,\Sigma)\big)$.</em></p>
+</div>
+<dl class="decode">
+<dt>$v_t(x)=b_t+A_t(x-m_t)$</dt><dd>An affine velocity field: a translation $b_t$ plus a linear deformation $A_t$ (rotation, shear, stretch) around the mean.</dd>
+<dt>$\dot\Sigma=A\Sigma+\Sigma A\T$</dt><dd>How a linear deformation changes a covariance (a matrix Lyapunov equation). In 1D with $A=a$: $\frac{\dd}{\dd t}\sigma^2=2a\sigma^2$.</dd>
+<dt>$\nabla_Wf$ affine on Gaussians</dt><dd>Happens when $\frac{\delta f}{\delta\al}$ is a quadratic polynomial in $x$ whenever $\al$ is Gaussian: potentials and interactions with quadratic kernels, KL to a Gaussian (the score of a Gaussian is affine), $W_2^2$ to a Gaussian (the Brenier map between Gaussians is affine), Fisher information to a Gaussian.</dd>
+</dl>
+<details class="fold proof"><summary>Proof (OT4ML p. 432)</summary><div class="fold-body">
+<ol class="steps">
+<li>The particles solve $\dot X_t=b_t+A_t(X_t-m_t)$; then $\tilde X_t=X_t-m_t$ solves $\dot{\tilde X}_t=A_t\tilde X_t$.<span class="why">Characteristics of the continuity equation, and $\dot m_t=b_t$.</span></li>
+<li>$\tilde X_t=\Phi_t\tilde X_0$ with $\dot\Phi_t=A_t\Phi_t$, $\Phi_0=\Id$.<span class="why">A linear ODE is solved by its fundamental matrix.</span></li>
+<li>$X_t=m_t+\Phi_t(X_0-m_0)$ is Gaussian with covariance $\Sigma_t=\Phi_t\Sigma_0\Phi_t\T\succ0$.<span class="why">An affine image of a Gaussian vector is Gaussian; $\Phi_t$ is invertible.</span></li>
+<li>$\dot\Sigma_t=\frac{\dd}{\dd t}\E[\tilde X_t\tilde X_t\T]=A_t\Sigma_t+\Sigma_tA_t\T$.<span class="why">Product rule and line 1. For a gradient flow, $v=-\nabla_Wf$ gives $b_t=-b_f$ and $A_t=-A_f$.</span></li>
+</ol>
+</div></details>
+<p><strong>Example — the Ornstein–Uhlenbeck flow again.</strong> For $f=\KL(\cdot|\N(0,1))$ and $\al=\N(m,s^2)$ on $\R$: $\nabla_Wf(x)=\nabla\log\rho+x=-\frac{x-m}{s^2}+x=m+\big(1-\frac1{s^2}\big)(x-m)$. So $b_f=m$, $A_f=1-\frac1{s^2}$, hence $\dot m=-m$ and $\frac{\dd}{\dd t}s^2=-2A_fs^2=2(1-s^2)$: the solution $\N(me^{-t},1+(s^2-1)e^{-2t})$ of §4.</p>
+
+<h3 id="gauss-catalogue">The catalogue, and the flat half-plane of 1D Gaussians</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 16.23, pp. 432–433</span></div>
+<p><strong>Proposition 16.23</strong> (Gaussian closure catalogue). <em>Let $\gamma=\N(\bar m,\bar\Sigma)$ on $\R^d$, with $\bar\Sigma\succ0$, and let the initial condition be $\al_0=\N(m_0,\Sigma_0)$, with $\Sigma_0\succ0$. […] Then the Gaussian family is invariant for these dynamics: as long as the solution exists and $\Sigma_t\succ0$, $\al_t=\N(m_t,\Sigma_t)$, and the mean and covariance satisfy $\dot m_t=h(m_t,\Sigma_t)$, $\dot\Sigma_t=H(m_t,\Sigma_t)$. Write $\delta_m=m-\bar m$, $A=\bar\Sigma^{-1}$, and $M_{\Sigma,\bar\Sigma}:=\Sigma^{-1/2}(\Sigma^{1/2}\bar\Sigma\Sigma^{1/2})^{1/2}\Sigma^{-1/2}$.</em> [Five rows of the table:]</p>
+<div class="table-wrap"><table>
+<thead><tr><th>functional $f(\al)$</th><th>$h(m,\Sigma)$</th><th>$H(m,\Sigma)$</th></tr></thead>
+<tbody>
+<tr><td>$\int\big(\frac12x\T Bx+\ps{\ell}{x}\big)\dd\al(x)$, $B=B\T$</td><td>$-(Bm+\ell)$</td><td>$-(\Sigma B+B\Sigma)$</td></tr>
+<tr><td>$\frac14\iint(x-y)\T G(x-y)\dd\al(x)\dd\al(y)$, $G=G\T$</td><td>$0$</td><td>$-(\Sigma G+G\Sigma)$</td></tr>
+<tr><td>$\KL(\al|\gamma)$</td><td>$-A\delta_m$</td><td>$2\Id-\Sigma A-A\Sigma$</td></tr>
+<tr><td>$\mathcal I(\al|\gamma)$</td><td>$-2A^2\delta_m$</td><td>$4\Sigma^{-1}-2\Sigma A^2-2A^2\Sigma$</td></tr>
+<tr><td>$W_2^2(\al,\gamma)$</td><td>$-2\delta_m$</td><td>$2(M_{\Sigma,\bar\Sigma}\Sigma+\Sigma M_{\Sigma,\bar\Sigma}-2\Sigma)$</td></tr>
+</tbody></table></div>
+</div>
+<p>On the line, $W_2^2\big(\N(m,\sigma^2),\N(m',\sigma'^2)\big)=(m-m')^2+(\sigma-\sigma')^2$: the 1D Gaussians form the Euclidean half-plane $\{(m,\sigma):\sigma>0\}$, and geodesics between Gaussians stay Gaussian. Hence (OT4ML p. 436) “every Gaussian-preserving functional in Proposition 16.23 is represented by the scalar restriction $g_f(m,\sigma):=f(\N(m,\sigma^2))$”, and the Wasserstein flow is the ordinary Euclidean gradient flow of $g_f$ in the $(m,\sigma)$ plane. With $\gamma=\N(0,1)$ and the book’s restrictions:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>$f$</th><th>$g_f(m,\sigma)$ (OT4ML p. 436, $\bar m=0$, $\bar\sigma=1$)</th><th>flow $\big(\dot m,\dot\sigma\big)=-\nabla g_f$</th><th>rates near $(0,1)$</th></tr></thead>
+<tbody>
+<tr><td>$\KL(\al|\gamma)$</td><td>$\log\frac1\sigma+\frac{\sigma^2+m^2}2-\frac12$</td><td>$\big(-m,\ \frac1\sigma-\sigma\big)$</td><td>mean $1$, std $2$</td></tr>
+<tr><td>$W_2^2(\al,\gamma)$</td><td>$m^2+(\sigma-1)^2$</td><td>$\big(-2m,\ -2(\sigma-1)\big)$</td><td>$2$ and $2$</td></tr>
+<tr><td>$\mathcal I(\al|\gamma)$</td><td>$m^2+\frac{(\sigma^2-1)^2}{\sigma^2}$</td><td>$\big(-2m,\ \frac2{\sigma^3}-2\sigma\big)$</td><td>$2$ and $8$</td></tr>
+</tbody></table></div>
+<div class="box example"><div class="box-h">Worked example — three energies, one target, three clocks</div>
+<p>Start from $\N(2,0.5^2)$, target $\N(0,1)$. At $t=1$ (ODE solver, $10^{-11}$ tolerance; the first two agree with the closed forms):</p>
+<ul>
+<li>KL: $(m,\sigma)=(0.7358,\ 0.9479)$ — the Ornstein–Uhlenbeck flow $\big(2e^{-1},\sqrt{1-0.75e^{-2}}\big)$;</li>
+<li>$W_2^2$: $(0.2707,\ 0.9323)=\big(2e^{-2},\ 1-0.5e^{-2}\big)$, on the straight segment towards $(0,1)$;</li>
+<li>Fisher: $(0.2707,\ 0.9999)$ — the standard deviation is fixed almost at once (rate $8$), the mean follows at rate $2$.</li>
+</ul>
+<p>They come within $10^{-3}$ of the target at $t=7.60$ (KL), $3.82$ ($W_2^2$) and $3.80$ (Fisher); the KL and Fisher paths are $1.4\%$ and $6.3\%$ longer than the straight segment followed by the $W_2^2$ flow. <strong>Same minimiser, different energies: different paths and different speeds.</strong></p>
+</div>
+<figure class="fig"><!-- include figures/L08/halfplane.svg --><figcaption>Exact Wasserstein gradient flows of three energies with the same minimiser $\N(0,1)$, drawn in the half-plane of 1D Gaussians (compare OT4ML Fig. 16.12, p. 436). The $W_2^2$ flow runs along straight rays (it is the squared Euclidean distance in this plane); the KL flow bends because the mean relaxes at rate $1$ and the standard deviation at rate $2$; the Fisher flow first fixes $\sigma$, then moves $m$.</figcaption></figure>
+
+<h3 id="gauss-bw">When the flow is not closed: the Bures–Wasserstein gradient flow</h3>
+<p>For most targets (a non-Gaussian posterior, say) the velocity is not affine and Gaussians do not stay Gaussian. One can still <em>constrain</em> the flow to Gaussians: replace the velocity by its best affine approximation in $L^2(\al)$ — the gradient for the metric that $W_2$ induces on the Gaussian family, called the <em class="new">Bures–Wasserstein</em> geometry.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">StatOT Thms. 5.21–5.22, pp. 156–158</span></div>
+<p><strong>Theorem 5.21.</strong> Let $\mathcal F:\Pc_{2,ac}(\R^d)\to\R$ be a functional with first variation $\delta\mathcal F(\mu)$ at $\mu$. Then, the Bures–Wasserstein gradient of $\mathcal F$ at $\mu\in\mathrm{BW}(\R^d)$ is the affine mapping $x\mapsto\big(\int\nabla^2\delta\mathcal F(\mu)\dd\mu\big)(x-m)+\int\nabla\delta\mathcal F(\mu)\dd\mu$, where $m=\int x\,\mu(\dd x)$ is the mean of $\mu$.</p>
+<p><strong>Theorem 5.22.</strong> The BW gradient flow of the functional $\mathcal F$ is the curve $(\mu_t=\N(m_t,\Sigma_t))_{t\ge0}$, where $\dot m_t=-\E\nabla\delta\mathcal F(\mu_t)(X_t)$, $\dot\Sigma_t=-\E\nabla^2\delta\mathcal F(\mu_t)(X_t)\,\Sigma_t-\Sigma_t\,\E\nabla^2\delta\mathcal F(\mu_t)(X_t)$, and $X_t\sim\mu_t$.</p>
+</div>
+<div class="box course"><div class="box-h">In the course <span class="ref">StatOT Prop. 6.7, Thm. 6.8, p. 178</span></div>
+<p><strong>Proposition 6.7.</strong> Suppose that $\pi\propto\exp(-V)$, where $V$ is $\al$-convex for some $\al>0$. Then, the unique minimizer $q^\star$ in (GVI) is characterized by the conditions $\int\nabla V\dd q^\star=0$ and $\int\nabla^2V\dd q^\star=\Sigma_{q^\star}^{-1}$.</p>
+<p><strong>Theorem 6.8.</strong> The BW gradient flow of the functional $\KL(\cdot\,\|\,\pi)$, where $\pi\propto\exp(-V)$, is the curve $(q_t=\N(m_t,\Sigma_t))_{t\ge0}$, where $\dot m_t=-\E\nabla V(X_t)$, $\dot\Sigma_t=-\E\nabla^2V(X_t)\,\Sigma_t-\Sigma_t\,\E\nabla^2V(X_t)+2I$, and $X_t\sim q_t$.</p>
+</div>
+<dl class="decode">
+<dt>(GVI)</dt><dd>Gaussian variational inference: $q^\star=\argmin_{q\in\mathrm{BW}(\R^d)}\KL(q\,\|\,\pi)$, the best Gaussian approximation of $\pi$ in this KL (StatOT p. 177).</dd>
+<dt>$+2I$</dt><dd>The entropy part: $\nabla^2\log q=-\Sigma^{-1}$ for a Gaussian $q$, so $-\big(\E\nabla^2\log q\big)\Sigma-\Sigma\big(\E\nabla^2\log q\big)=2I$: entropy inflates the covariance, the potential shrinks it.</dd>
+<dt>Prop. 6.7</dt><dd>At the optimum the average gradient of $V$ vanishes and the average Hessian equals the inverse covariance. Compare the <em>Laplace approximation</em>: $\nabla V=0$ and $\nabla^2V=\Sigma^{-1}$ at the single point $\arg\min V$.</dd>
+<dt>rate</dt><dd>The Gaussian family is geodesically convex, so the KL restricted to it is $\al$-convex and the BW flow converges like $e^{-2\al t}$ (StatOT Cor. 6.6).</dd>
+</dl>
+<div class="box example" id="gauss-vi-example"><div class="box-h">Worked example — the best Gaussian for a quartic posterior</div>
+<p>Let $\pi\propto e^{-V}$ on $\R$ with $V(x)=\frac{x^4}4+\frac{x^2}2$ ($1$-convex). For $X\sim\N(m,s^2)$: $\E V'(X)=\E[X^3+X]=m^3+3ms^2+m$ and $\E V''(X)=3(m^2+s^2)+1$. Proposition 6.7: $m=0$ and $\big(3s^2+1\big)s^2=1$, i.e. $3s^4+s^2-1=0$:</p>
+$$s_\star^2=\frac{\sqrt{13}-1}6=0.4343 .$$
+<p>Compare: the Laplace approximation is $\N(0,1/V''(0))=\N(0,1)$; the true variance of $\pi$ is $0.4679$ (quadrature). In KL, $\KL(\N(0,s_\star^2)\|\pi)=0.0169$, against $0.4913$ for the Laplace approximation and $0.0192$ for the Gaussian with the true variance — VI wins on its own criterion, as it must. Running Theorem 6.8 from $\N(1,1)$: $(m,\Sigma)=(0.0850,\ 0.4280)$ at $t=1$, $(0.0085,\ 0.4342)$ at $t=2$, and $(10^{-5},\ 0.43426)$ at $t=5$.</p>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — Gaussian variational inference as a Wasserstein flow</div>
+<p>Bayesian models (logistic regression, Gaussian-process classification, Bayesian neural networks) have posteriors $\pi\propto e^{-V}$ known only through $V$ and its derivatives. <strong>Gaussian VI</strong> approximates $\pi$ by $\N(m,\Sigma)$; following Lambert, Chewi, Bach, Bonnabel and Rigollet (2022), StatOT §6.1.2 (pp. 177–178) runs Theorem 6.8 with Monte Carlo estimates of $\E\nabla V$ and $\E\nabla^2V$ under the current Gaussian: a <strong>stochastic Bures–Wasserstein gradient descent</strong>, with the rate $e^{-2\al t}$ when $V$ is $\al$-convex. The output gives credible intervals at the cost of a few gradient evaluations per step, and it is more accurate than the Laplace approximation (the worked example). The same flow on mixtures of Gaussians, one Bures–Wasserstein particle per component, gives Gaussian-mixture VI (StatOT §5.8.3).</p>
+</div>
+
+<h3 id="gauss-svgd">A related method: Stein variational gradient descent</h3>
+<p>The Wasserstein flow of $\KL(\cdot|\be)$ moves particles with $-\nabla V-\nabla\log\al_t$, and the second term is not defined for a point cloud (§5). Langevin replaces it by noise (§6); <em class="new">SVGD</em> replaces it by a kernel average that <em>is</em> defined for particles.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML §16.2, (16.22)–(16.24), pp. 418–419</span></div>
+<p>Stein variational gradient descent (SVGD) is another deterministic particle flow […]. Its original motivation is Bayesian sampling: given a target probability $\be=\rho_\be\dd x$ known through its score $\nabla\log\rho_\be=-\nabla V$, but not necessarily through its normalizing constant, drive a particle cloud toward $\be$ without estimating the score of the current empirical law. Geometrically, this replaces the Wasserstein gradient flow of $\KL(\al|\be)$, whose tangent norm is $L^2(\al)$, by the kernelized Benamou–Brenier geometry […], whose velocities live in a vector-valued RKHS. […] It is explicitly</p>
+$$v_\al^{\mathrm{SVGD}}(x)=\int\big(k(y,x)\nabla\log\rho_\be(y)+\nabla_yk(y,x)\big)\dd\al(y).\qquad(16.22)$$
+<p>[…] For particles $\al_n^\ell=n^{-1}\sum_i\delta_{X_i^\ell}$, this becomes the explicit update $X_i^{\ell+1}=X_i^\ell+\tau\frac1n\sum_{j=1}^n\big(k(X_j^\ell,X_i^\ell)\nabla\log\rho_\be(X_j^\ell)+\nabla_{X_j}k(X_j^\ell,X_i^\ell)\big)$. (16.24) The first term attracts particles toward increasing target log-density; the second term is a kernel repulsion that prevents immediate collapse.</p>
+</div>
+<p><strong>Where it comes from</strong> (StatOT (6.7)–(6.8), pp. 182–183). Smooth the Wasserstein velocity with the kernel: $v=-\int k(\cdot,y)\nabla\log\frac{\al}{\be}(y)\dd\al(y)$. The part with $\nabla\log\be=-\nabla V$ is already an average over $\al$; in the part with $\nabla\log\al$, integrate by parts: $\int k(x,y)\nabla\log\al(y)\,\al(y)\dd y=\int k(x,y)\nabla\al(y)\dd y=-\int\nabla_yk(x,y)\,\al(y)\dd y$. Both terms are now averages over $\al$, computable on particles — that is (16.22). At $\al=\be$ the velocity is $\int\nabla_y\big(k(x,y)\rho_\be(y)\big)\dd y=0$: the target is an exact stationary point. Unlike Langevin, SVGD is deterministic and needs no noise; but its convergence “theory remains underdeveloped” (StatOT p. 207).</p>
+<div class="box ml"><div class="box-h">In machine learning — SVGD for Bayesian inference</div>
+<p>SVGD (Liu and Wang, 2016, cited in OT4ML and StatOT) approximates a posterior by $n$ deterministic particles (for example $n=100$ weight vectors of a small Bayesian neural network): each step moves every particle along the kernel-weighted average of the posterior scores of all particles (pull towards high posterior), plus the gradient of the kernel (push away from the others). With $n=1$ it reduces to gradient ascent on $\log\pi$ (MAP estimation); with many particles it spreads them to represent uncertainty.</p>
+</div>
+<div class="box remark"><div class="box-h">Note on the sources — a missing table</div>
+<p>The compact notes state the Gaussian closure catalogue as Proposition 16.14 (p. 131): “the mean vector field $h$ and covariance vector field $H$ are listed in the following table”, followed by the caption “Exact Gaussian solutions of ambient Wasserstein gradient equations” — and no table. The table is in the book, OT4ML Prop. 16.23, p. 433 (five of its rows are quoted above, and checked on the 1D examples).</p>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>First variation quadratic on Gaussians → affine velocity → Gaussians preserved; write $\dot m=-b_f$, $\dot\Sigma=-(A_f\Sigma+\Sigma A_f)$.</li>
+<li>1D Gaussians → the half-plane $(m,\sigma)$ is flat for $W_2$: the Wasserstein flow is the Euclidean gradient flow of $f(\N(m,\sigma^2))$.</li>
+<li>Non-Gaussian target, Gaussian approximation → Bures–Wasserstein flow: $\dot m=-\E\nabla V$, $\dot\Sigma=-\E\nabla^2V\,\Sigma-\Sigma\,\E\nabla^2V+2I$.</li>
+</ul>
+</div>
+<div class="quiz"><p>For a Gaussian target $\pi=\N(\bar m,\bar\Sigma)$, check that Theorem 6.8 gives the KL row of Proposition 16.23.</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>$V(x)=\frac12(x-\bar m)\T A(x-\bar m)$ with $A=\bar\Sigma^{-1}$: $\nabla V(x)=A(x-\bar m)$, so $\E\nabla V(X)=A(m-\bar m)=A\delta_m$, and $\nabla^2V=A$. Theorem 6.8: $\dot m=-A\delta_m$ and $\dot\Sigma=-A\Sigma-\Sigma A+2I$ — the KL row. Here the constrained flow is the full flow, since Gaussians are preserved.</p>
+</div></details></div>

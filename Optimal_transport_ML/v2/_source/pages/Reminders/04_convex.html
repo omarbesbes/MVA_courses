@@ -1,0 +1,243 @@
+
+<h2 id="convex">5. Convexity and optimization</h2>
+<p class="tldr">Convex problems have no spurious local minima, convex functions are envelopes of their tangent lines (Legendre transform), constraints can be priced by multipliers (duality), linear programs are solved at vertices, gradient methods descend, and functionals of measures can be differentiated too.</p>
+
+<h3 id="convex-functions">Convex sets and functions, strict and strong convexity, subgradients</h3>
+<p class="small muted"><strong>Used in</strong> <a href="Lesson01.html">Lesson 1</a> (Brenier: optimal maps are gradients of convex functions; convex costs on the line), <a href="Lesson02.html">Lesson 2</a> (the set of couplings is convex), <a href="Lesson03.html#compare">Lesson 3</a> (Jensen), <a href="Lesson04.html">Lesson 4</a> (convex potentials, $c$-concavity), <a href="Lesson07.html">Lesson 7</a> (strict convexity of the entropic problem: a unique plan), <a href="Lesson08.html">Lesson 8</a> (convexity along geodesics, exponential convergence).</p>
+<p>A set is convex if it contains the segment between any two of its points. A function is convex if its graph lies below its chords — equivalently above its tangents. Then every local minimum is global, and “the gradient vanishes” is enough to certify a minimum.</p>
+<div class="box def"><div class="box-h">Definitions (standard)</div>
+<ul>
+<li>$f:\R^d\to\R\cup\{+\infty\}$ is <strong>convex</strong> if $f\big((1-t)x+ty\big)\le(1-t)f(x)+tf(y)$ for $t\in[0,1]$; <strong>strictly convex</strong> if the inequality is strict for $x\ne y$, $t\in(0,1)$.</li>
+<li><strong>$\mu$-strongly convex</strong>: $f-\frac\mu2\norm{\cdot}^2$ is convex. <strong>$L$-smooth</strong>: $\nabla f$ is $L$-Lipschitz. For $f\in C^2$: convex $\iff\nabla^2f\succeq0$; $\mu$-strongly convex $\iff\nabla^2f\succeq\mu\mathrm I$; $L$-smooth $\iff-L\mathrm I\preceq\nabla^2f\preceq L\mathrm I$.</li>
+<li><strong>Subgradients</strong>: $\partial f(x)=\{s:\ f(y)\ge f(x)+\ps{s}{y-x}\ \forall y\}$, the slopes of the lines that touch the graph at $x$ from below. For differentiable convex $f$, $\partial f(x)=\{\nabla f(x)\}$.</li>
+</ul>
+</div>
+<div class="box thm"><div class="box-h">What convexity buys (standard)</div>
+<ol>
+<li>First-order characterisation (differentiable $f$): $f$ convex $\iff f(y)\ge f(x)+\ps{\nabla f(x)}{y-x}$ for all $x,y$.</li>
+<li>Every local minimum is global, and $x^\star$ is a minimiser $\iff0\in\partial f(x^\star)$.</li>
+<li>Strictly convex: at most one minimiser. Strongly convex (and lower semi-continuous): exactly one, and $f(x)-f(x^\star)\ge\frac\mu2\norm{x-x^\star}^2$.</li>
+<li>Gradients of convex functions are monotone: $\ps{\nabla f(x)-\nabla f(y)}{x-y}\ge0$ (in 1D: $f'$ is non-decreasing).</li>
+<li>Sums with nonnegative weights, suprema of convex functions, and compositions with affine maps are convex.</li>
+</ol>
+</div>
+<figure class="fig"><!-- include figures/REM/convexity.svg --><figcaption>Left: a convex function lies below its chords and above its tangents. Middle: a double well is not convex — a chord passes below the graph, and a local minimum is not global. Right: $x^2$ is strongly convex; $x^4$ is strictly convex but too flat at $0$ to be strongly convex.</figcaption></figure>
+<div class="box example"><div class="box-h">Worked example</div>
+<ul>
+<li>$f(x)=\abs x$: $\partial f(0)=[-1,1]$ (all the lines through the origin with slope in $[-1,1]$ stay below the graph), $\partial f(x)=\{\mathrm{sign}(x)\}$ otherwise; $0\in\partial f(0)$ certifies the minimum.</li>
+<li>$f(x_1,x_2)=x_1^2+x_1x_2+x_2^2$: $\nabla^2f=\begin{pmatrix}2&1\\1&2\end{pmatrix}$ with eigenvalues $1$ and $3$, so $f$ is $1$-strongly convex and $3$-smooth.</li>
+<li>$x^4$: strictly convex, not strongly ($f''(0)=0$). $e^x$: strictly convex with no minimiser (infimum $0$, not attained). $\max(x^2,(x-2)^2)$ is convex; $\min(x^2,(x-2)^2)$ is not (two minimisers $0$ and $2$, and the chord between them lies below the bump at $1$).</li>
+</ul>
+</div>
+<details class="fold proof"><summary>Proof that a local minimum of a convex function is global</summary><div class="fold-body">
+<p>Let $x^\star$ be a local minimum and $y$ any point. For small $t>0$, $x_t=(1-t)x^\star+ty$ is close to $x^\star$, so $f(x^\star)\le f(x_t)\le(1-t)f(x^\star)+tf(y)$. Subtract $(1-t)f(x^\star)$ and divide by $t>0$: $f(x^\star)\le f(y)$.</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul>
+<li>Strictly convex is not strongly convex ($x^4$); strict convexity gives uniqueness, not existence ($e^x$).</li>
+<li>Convexity along straight lines (“flat” convexity) is not convexity along Wasserstein geodesics (“displacement” convexity), which <a href="Lesson08.html">Lesson 8</a> uses: a functional of measures can have one without the other.</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — convex losses, non-convex models</div>
+<p>Least squares, logistic regression and support vector machines minimise convex losses in their parameters: any local minimum found by gradient descent is global. Neural networks are not convex in their weights. But the output of a two-layer network is linear in the <em>distribution</em> of its neurons, so the loss is convex as a function of that distribution — the starting point of the mean-field analysis of training as a Wasserstein gradient flow (OT4ML §15.4, p. 386; <a href="Lesson08.html">Lesson 8</a>).</p>
+</div>
+
+<h3 id="legendre">The Legendre–Fenchel transform (convex conjugate)</h3>
+<p class="small muted"><strong>Used in</strong> <a href="Lesson01.html">Lesson 1</a> and <a href="Lesson04.html">Lesson 4</a> (Brenier: the quadratic $c$-transform is a Legendre transform; the inverse of $\nabla\varphi$ is $\nabla\varphi^*$; proof of Brenier’s theorem), <a href="Lesson04.html">Lesson 4</a> (dual formula of $f$-divergences, GANs), <a href="Lesson07.html">Lesson 7</a> (log-sum-exp and entropy are conjugate: soft $c$-transforms).</p>
+<p>A convex function is the upper envelope of the lines below it. So it can be described by its <em>supporting lines</em>: for each slope $y$, keep the highest line of slope $y$ that stays below the graph. Its intercept is $-f^*(y)$, and $f^*$ is the <em class="new">convex conjugate</em> (Legendre–Fenchel transform).</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 5.11, p. 100; p. 101</span></div>
+<p>For $h:\R^d\to\R\cup\{+\infty\}$: $\ h^*(y)=\sup_{x\in\R^d}\big(\ps{x}{y}-h(x)\big)$ and $h^{**}=(h^*)^*$. If $h$ is proper with an affine minorant, the Fenchel–Moreau theorem identifies $h^{**}$ with the greatest lower semi-continuous convex function below $h$. For the cost $c(x,y)=\frac12\norm{x-y}^2$ and $\varphi(x)=\frac12\norm x^2-f(x)$, the $c$-transform is $f^c(y)=\frac12\norm y^2-\varphi^*(y)$.</p>
+</div>
+<div class="box thm"><div class="box-h">Properties (standard)</div>
+<ul>
+<li>$f^*$ is always convex and lower semi-continuous (a supremum of affine functions of $y$), even if $f$ is not.</li>
+<li><strong>Fenchel–Young:</strong> $f(x)+f^*(y)\ge\ps{x}{y}$ for all $x,y$, with equality iff $y\in\partial f(x)$ — iff the line of slope $y$ touches the graph at $x$.</li>
+<li>For $f$ convex and lower semi-continuous: $f^{**}=f$. For $f$ smooth and strictly convex: $\nabla f^*=(\nabla f)^{-1}$.</li>
+</ul>
+</div>
+<div class="table-wrap"><table>
+<thead><tr><th>$f(x)$</th><th>$f^*(y)$</th><th>remark</th></tr></thead>
+<tbody>
+<tr><td>$\frac12\norm x^2$</td><td>$\frac12\norm y^2$</td><td>the only self-conjugate function</td></tr>
+<tr><td>$\frac12x\T Ax$, $A\succ0$</td><td>$\frac12y\T A^{-1}y$</td><td>$\nabla f^*=A^{-1}=(\nabla f)^{-1}$</td></tr>
+<tr><td>$\frac1p\abs x^p$</td><td>$\frac1q\abs y^q$, $\ \frac1p+\frac1q=1$</td><td>Fenchel–Young = Young’s inequality</td></tr>
+<tr><td>$\abs x$</td><td>$0$ on $[-1,1]$, $+\infty$ outside</td><td>a norm ↔ the indicator of the dual ball</td></tr>
+<tr><td>$e^x$</td><td>$y\log y-y$ ($y>0$), $0$ at $0$, $+\infty$ for $y<0$</td><td>exponential ↔ entropy</td></tr>
+<tr><td>$\log\sum_ie^{x_i}$</td><td>$\sum_iy_i\log y_i$ on the simplex, $+\infty$ off it</td><td>soft-max ↔ negative entropy (<a href="Lesson07.html">Lesson 7</a>)</td></tr>
+</tbody></table></div>
+<figure class="fig"><!-- include figures/REM/legendre.svg --><figcaption>Left: $f(x)=e^x$ and its tangent lines of slopes $0.5$, $1$, $2$; each touches at $x=\log y$ and crosses the vertical axis at $-f^*(y)$ (open dots). The dashed line has slope $2$ but is not the highest one below the graph. Right: the conjugate $f^*(y)=y\log y-y$, with the three slopes marked.</figcaption></figure>
+<div class="box example"><div class="box-h">Worked example — $f(x)=e^x$</div>
+<ol class="steps">
+<li>For $y>0$, maximise $g(x)=xy-e^x$: $g'(x)=y-e^x=0$ at $x^\star=\log y$, so $f^*(y)=y\log y-y$.<span class="why">$g$ is concave, so the critical point is the maximum.</span></li>
+<li>$y=2$: $x^\star=\log2\approx0.693$ and $f^*(2)=2\log2-2\approx-0.614$. The tangent at $x^\star$ is $\ell(x)=2x+0.614$: intercept $-f^*(2)$.<span class="why">$\ell(x^\star)=2\log2+2-2\log2=2=e^{x^\star}$: it touches.</span></li>
+<li>Fenchel–Young: at $(x,y)=(1,e)$, $f(1)+f^*(e)=e+(e-e)=e=1\cdot e$ (equality: $e=f'(1)$). At $(0,2)$: $1-0.614=0.386\ge0$ (strict: $2\ne f'(0)$).<span class="why">Equality exactly at contact points.</span></li>
+<li>$y<0$: $xy-e^x\to+\infty$ as $x\to-\infty$, so $f^*(y)=+\infty$. $y=0$: $\sup_x(-e^x)=0$, approached but not attained.<span class="why">No line of negative slope stays below $e^x$.</span></li>
+</ol>
+<p><strong>A non-convex example.</strong> For the double well $f(x)=(x^2-1)^2$, $f^{**}$ is its convex envelope: $0$ on $[-1,1]$ and $f$ outside. At $x=0$: $f(0)=1$ but $f^{**}(0)=0$.</p>
+</div>
+<div class="widget" data-widget="remLegendre"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p>What to look at: choose a function and move the slope $y$. The green line is the highest line of slope $y$ below the graph; the green dot is where it touches ($x^\star$, the maximiser in the definition of $f^*$), and its intercept (open dot) is $-f^*(y)$. The bottom panel plots $f^*$, and the readout checks Fenchel–Young at the contact point. For $e^x$, negative slopes give $+\infty$; for $\abs x$, every slope in $(-1,1)$ touches at the corner $0$ — the subdifferential $[-1,1]$ — and $f^*$ is $0$ there; for the non-convex double well, slopes near $0$ touch the graph at two points and the line bridges the bump: $f^*$ only sees the convex envelope $f^{**}$ (dashed).</p>
+<details class="fold proof"><summary>Proofs of Fenchel–Young and of $\nabla f^*=(\nabla f)^{-1}$</summary><div class="fold-body">
+<p><strong>Fenchel–Young.</strong> $f^*(y)\ge\ps{x}{y}-f(x)$ for every $x$, by definition of a supremum. Equality holds iff $x$ attains the supremum, i.e. $\ps{x'}{y}-f(x')\le\ps{x}{y}-f(x)$ for all $x'$, i.e. $f(x')\ge f(x)+\ps{y}{x'-x}$: $y\in\partial f(x)$.</p>
+<p><strong>Inverse gradients.</strong> For smooth strictly convex $f$, the supremum defining $f^*(y)$ is attained at the unique $x$ with $\nabla f(x)=y$. By the envelope theorem (<a href="#lagrange">below</a>), $\nabla f^*(y)=x=(\nabla f)^{-1}(y)$. This is why the inverse of a Brenier map $\nabla\varphi$ is $\nabla\varphi^*$.</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul>
+<li>Sign conventions: $f^*$ uses a $\sup$ of $\ps{x}{y}-f$; the $c$-transform of optimal transport uses an $\inf$ of $c-f$ (<a href="#ot-duality">§9</a>). Track the signs when you switch.</li>
+<li>Infinite values are part of the transform ($\abs x\mapsto$ indicator of $[-1,1]$): do not drop them.</li>
+<li>For a non-convex $f$, $f^{**}\ne f$: the conjugate forgets everything that is not in the convex envelope.</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — critics as dual variables</div>
+<p>Convex duality turns a divergence between distributions into a maximisation over test functions, which a neural network can approximate. For $\KL$, whose generator $\varphi(s)=s\log s-s+1$ has conjugate $\varphi^*(u)=e^u-1$ (OT4ML Prop. 7.24, p. 133):</p>
+$$\KL(\al|\be)=\sup_f\ \int f\,\dd\al-\int\big(e^{f}-1\big)\,\dd\be ,\qquad\text{attained at }f=\log\frac{\dd\al}{\dd\be}.$$
+<p>On $a=(0.5,0.3,0.2)$, $b=(0.2,0.3,0.5)$: the optimal $f$ gives $0.2749=\KL(a|b)$, while $f=(1,0,-1)$ gives the lower bound $0.2724$. With $f$ a network evaluated on samples, this is the $f$-GAN discriminator and a neural estimator of KL or of mutual information. The Wasserstein-GAN critic is the analogous dual variable for $W_1$ (<a href="#lipschitz">§4</a>).</p>
+</div>
+
+<div class="quiz"><p>Compute the conjugate of $f(x)=\frac a2x^2$ ($a>0$) and check Fenchel–Young at $x=1$.</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>$xy-\frac a2x^2$ is maximal at $x=y/a$, so $f^*(y)=\frac{y^2}{2a}$. Then $\nabla f^*(y)=y/a$ is the inverse of $\nabla f(x)=ax$. At $x=1$ the contact slope is $y=f'(1)=a$, and $f(1)+f^*(a)=\frac a2+\frac a2=a=1\cdot a$: equality, as it should be at a contact point.</p>
+</div></details></div>
+
+<h3 id="lagrange">Lagrangian duality and KKT conditions</h3>
+<p class="small muted"><strong>Used in</strong> <a href="Lesson02.html">Lesson 2</a> and <a href="Lesson04.html">Lesson 4</a> (the dual of the transport LP: the potentials are the multipliers of the marginal constraints), <a href="Lesson06.html">Lesson 6</a> (Benamou–Brenier: the multiplier of the continuity equation gives $v=\nabla\varphi$), <a href="Lesson07.html">Lesson 7</a> (entropic OT: the KKT conditions give $P=\mathrm{diag}(u)K\mathrm{diag}(v)$; the sheet uses the Lagrangian and the envelope theorem).</p>
+<p>Replace hard constraints by prices: violating a constraint costs its multiplier times the violation. For each choice of prices, minimising the penalised objective gives a lower bound on the true minimum; the best lower bound is the dual problem. For convex problems the bound is tight, and the optimal prices certify optimality.</p>
+<div class="box def"><div class="box-h">Lagrangian and dual (standard)</div>
+<p>Primal problem: $p^\star=\min f(x)$ subject to $g_i(x)\le0$ and $h_j(x)=0$. Lagrangian, with $\lambda\ge0$ and $\mu$ free:</p>
+$$\mathcal L(x,\lambda,\mu)=f(x)+\sum_i\lambda_ig_i(x)+\sum_j\mu_jh_j(x),\qquad q(\lambda,\mu)=\inf_x\mathcal L(x,\lambda,\mu),\qquad d^\star=\sup_{\lambda\ge0,\mu}q(\lambda,\mu).$$
+</div>
+<div class="box thm"><div class="box-h">Duality theorems (standard)</div>
+<ul>
+<li><strong>Weak duality:</strong> $d^\star\le p^\star$ always.</li>
+<li><strong>Strong duality</strong> $d^\star=p^\star$ for convex problems ($f,g_i$ convex, $h_j$ affine) as soon as some point satisfies all the inequalities strictly (Slater); for linear programs, as soon as the primal is feasible with a finite value.</li>
+<li><strong>KKT conditions</strong>: stationarity $\nabla f+\sum\lambda_i\nabla g_i+\sum\mu_j\nabla h_j=0$; primal feasibility; $\lambda\ge0$; complementary slackness $\lambda_ig_i(x)=0$. For convex problems with strong duality, $x$ is optimal iff there are multipliers satisfying KKT.</li>
+<li><strong>Envelope theorem:</strong> if $V(\theta)=\min_zF(z,\theta)$ with a unique smooth minimiser $z^\star(\theta)$, then $V'(\theta)=\partial_\theta F\big(z^\star(\theta),\theta\big)$ — no need to differentiate $z^\star$. In particular the multiplier of a constraint is the derivative of the optimal value with respect to its level.</li>
+</ul>
+</div>
+<div class="box example"><div class="box-h">Worked examples</div>
+<ol>
+<li><strong>Equality constraint.</strong> $\min x_1^2+x_2^2$ s.t. $x_1+x_2=1$. $\mathcal L=x_1^2+x_2^2+\mu(1-x_1-x_2)$; stationarity gives $x_1=x_2=\mu/2$, the constraint $\mu=1$: $x^\star=(\frac12,\frac12)$, $p^\star=\frac12$. Dual function $q(\mu)=\mu-\frac{\mu^2}2$, maximal at $\mu=1$: $d^\star=\frac12=p^\star$. Sensitivity: with $x_1+x_2=c$, $p^\star(c)=\frac{c^2}2$, whose derivative at $c=1$ is $1=\mu$.</li>
+<li><strong>Active inequality.</strong> $\min(x-2)^2$ s.t. $x\le1$: KKT gives $2(x-2)+\lambda=0$, $\lambda(x-1)=0$, $\lambda\ge0$, hence $x=1$, $\lambda=2>0$ (the constraint is active and has a positive price).</li>
+<li><strong>Gibbs distribution — the softmax.</strong> $\min_{p\in\Sigma_n}\ps{c}{p}-\eps H(p)$ with $H(p)=-\sum_ip_i\log p_i$. The multiplier of $\sum_ip_i=1$ gives $c_i+\eps(\log p_i+1)+\mu=0$, so $p_i=e^{-c_i/\eps}/\sum_je^{-c_j/\eps}$, and the optimal value is the soft-min $-\eps\log\sum_ie^{-c_i/\eps}$. For $c=(0,1,2)$, $\eps=1$: $p\approx(0.665,0.245,0.090)$, value $\approx-0.408$; for $\eps=0.1$ the value is $\approx-4.5\times10^{-6}$, close to $\min_ic_i=0$.</li>
+<li><strong>Envelope.</strong> $V(\theta)=\min_z(z^2-2\theta z)=-\theta^2$ with $z^\star=\theta$; $V'(1)=-2=\partial_\theta(z^2-2\theta z)|_{z=z^\star}=-2z^\star$.</li>
+</ol>
+</div>
+<details class="fold proof"><summary>Proof of weak duality</summary><div class="fold-body">
+<p>Let $x$ be feasible and $\lambda\ge0$. Then $\lambda_ig_i(x)\le0$ and $h_j(x)=0$, so $q(\lambda,\mu)\le\mathcal L(x,\lambda,\mu)\le f(x)$. Take the infimum over feasible $x$ and the supremum over $(\lambda,\mu)$: $d^\star\le p^\star$. Equality, with optimal $x^\star$ and $(\lambda^\star,\mu^\star)$, forces both inequalities to be equalities: $x^\star$ minimises $\mathcal L(\cdot,\lambda^\star,\mu^\star)$ (stationarity) and $\sum\lambda_i^\star g_i(x^\star)=0$ (complementary slackness).</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul>
+<li>Multipliers of inequality constraints $g\le0$ must be $\ge0$ (with the convention $+\lambda g$); multipliers of equalities have no sign.</li>
+<li>Without convexity there can be a duality gap $d^\star<p^\star$.</li>
+<li>In entropic OT the constraint $P\ge0$ needs no multiplier: the entropy keeps the solution positive automatically.</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — softmax and attention are Lagrangian solutions</div>
+<p>Example 3 says that $\mathrm{softmax}(s/\eps)$ is the distribution that maximises $\ps{s}{p}+\eps H(p)$ over the simplex: an entropy-regularised argmax. Attention weights in transformers are such Gibbs distributions over keys, and Sinkhorn’s algorithm (<a href="Lesson07.html">Lesson 7</a>) alternates two such normalisations so that both marginals of a plan are matched. Duality also explains support vector machines: only training points with a positive multiplier (the support vectors) enter the solution — complementary slackness.</p>
+</div>
+
+<h3 id="lp">Linear programming: polytopes, vertices, duality, complementary slackness</h3>
+<p class="small muted"><strong>Used in</strong> <a href="Lesson02.html">Lesson 2</a> (discrete Kantorovich is a linear program; sparse optimal plans), <a href="Lesson03.html#bary-lp">Lesson 3</a> (barycenters on a fixed grid), <a href="Lesson04.html">Lesson 4</a> (the dual LP, potentials, complementary slackness).</p>
+<p>A linear program minimises a linear function over a polytope (a set cut out by finitely many linear inequalities). The level sets of a linear function are parallel hyperplanes: sliding them until they last touch the polytope, the contact happens at a vertex — or along a whole face.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 3.16, p. 57;</span> <span class="ref">Remark 3.19, p. 58;</span> <span class="ref">Prop. 5.2–5.3, p. 95</span></div>
+<ul>
+<li>A linear form on a non-empty compact convex set has a minimiser that is an extreme point.</li>
+<li>For general histograms one can choose an optimal plan whose support has no cycle, hence at most $n+m-1$ nonzero entries.</li>
+<li><strong>Discrete Kantorovich duality:</strong> $\displaystyle\Lc(a,b)=\min_{P\in\U(a,b)}\ps{C}{P}=\max_{f_i+g_j\le C_{ij}}\ps{f}{a}+\ps{g}{b}$.</li>
+<li><strong>Complementary slackness:</strong> for $P\in\U(a,b)$ and admissible $(f,g)$, $\ps{C}{P}-\ps{f}{a}-\ps{g}{b}=\sum_{ij}P_{ij}(C_{ij}-f_i-g_j)\ge0$, and both are optimal iff $P_{ij}>0\Rightarrow f_i+g_j=C_{ij}$.</li>
+</ul>
+</div>
+<figure class="fig"><!-- include figures/REM/lp.svg --><figcaption>A linear program in the plane: the level lines of the objective slide in the direction $c$; the last contact with the polygon is the vertex $(1.5,2.5)$, value $6.5$.</figcaption></figure>
+<div class="box example"><div class="box-h">Worked example — the $2\times2$ transport problem of §1</div>
+<p>$a=(\frac12,\frac12)$, $b=(\frac14,\frac34)$ on $\{0,1\}$, $C=\begin{pmatrix}0&1\\1&0\end{pmatrix}$ (cost $\abs{x-y}$). The couplings form the segment $P(p)$, $p\in[0,\frac14]$ (<a href="#couplings">§1</a>), and the cost $\frac34-2p$ is minimal at the vertex $p=\frac14$:</p>
+$$P^\star=\begin{pmatrix}1/4&1/4\\0&1/2\end{pmatrix},\qquad\ps{C}{P^\star}=\tfrac14,\qquad 3=n+m-1\text{ nonzero entries.}$$
+<p><strong>Dual certificate.</strong> Complementary slackness on the support: $f_1+g_1=0$, $f_1+g_2=1$, $f_2+g_2=0$. Choosing $f_1=0$ gives $g=(0,1)$, $f=(0,-1)$. The last constraint holds: $f_2+g_1=-1\le C_{21}=1$. Dual value $\ps{f}{a}+\ps{g}{b}=-\frac12+\frac34=\frac14$: equal to the primal value, so both are optimal. POT’s exact solver <code>ot.emd</code> returns the same plan and the potentials $(0.625,-0.375)$, $(-0.625,0.375)$: the same up to the shift $(f+t,g-t)$. On random $6\times5$ problems it returns plans with exactly $10=n+m-1$ nonzero entries.</p>
+</div>
+<details class="fold proof"><summary>Proof of weak duality and of complementary slackness</summary><div class="fold-body">
+<p>Use the marginal constraints: $\ps{f}{a}+\ps{g}{b}=\sum_if_i\sum_jP_{ij}+\sum_jg_j\sum_iP_{ij}=\sum_{ij}P_{ij}(f_i+g_j)$. Hence the gap $\ps{C}{P}-\ps{f}{a}-\ps{g}{b}=\sum_{ij}P_{ij}(C_{ij}-f_i-g_j)$ is a sum of nonnegative terms ($P\ge0$, $f_i+g_j\le C_{ij}$). It is zero iff every term is zero, i.e. iff $P$ only charges the entries where the constraint is tight. A zero gap proves optimality of both: no plan costs less than a dual value, no dual value exceeds a plan’s cost.</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul>
+<li>The optimum can be a whole face (non-unique solutions; e.g. $\abs{x-y}$ on the line, <a href="#sorting">§2</a>). Solvers return a vertex.</li>
+<li>Dual potentials are never unique: $(f+t\ind,g-t\ind)$ has the same value.</li>
+<li>Size: $n\times m$ unknowns. Exact network-simplex solvers cost roughly $O(n^3\log n)$ for $n=m$, which is what motivates entropic regularization (<a href="Lesson07.html">Lesson 7</a>).</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — earth mover’s distances</div>
+<p>Comparing two histograms with a ground cost by this LP is the “earth mover’s distance” of image retrieval; comparing two documents seen as weighted clouds of word embeddings is the word mover’s distance (OT4ML Example 4.11, p. 78). In Python, <code>ot.emd(a, b, M)</code> from the POT library solves the LP exactly and returns a sparse plan.</p>
+</div>
+
+<h3 id="gradient-descent">Gradient descent and stochastic gradient descent</h3>
+<p class="small muted"><strong>Used in</strong> <a href="Lesson03.html#algo-descent">Lesson 3</a> (the barycenter fixed-point algorithm is a descent method), <a href="Lesson04.html">Lesson 4</a> (semi-discrete OT by stochastic gradient ascent on the dual, OT4ML Prop. 6.9–6.10, p. 111–113), <a href="Lesson06.html">Lesson 6</a> (training flow matching), <a href="Lesson07.html">Lesson 7</a> (gradients of Sinkhorn losses), <a href="Lesson08.html">Lesson 8</a> (gradient flows; JKO = implicit Euler).</p>
+<p>Walk downhill by small steps: $x_{k+1}=x_k-\tau\nabla f(x_k)$. With small steps you follow the gradient flow $\dot x=-\nabla f(x)$ (<a href="#ode">§4</a>); with a noisy but unbiased estimate of the gradient you get stochastic gradient descent.</p>
+<div class="box thm"><div class="box-h">Convergence (standard)</div>
+<ul>
+<li><strong>Descent lemma.</strong> If $f$ is $L$-smooth and $\tau\le1/L$: $f(x_{k+1})\le f(x_k)-\frac\tau2\norm{\nabla f(x_k)}^2$.</li>
+<li><strong>Convex:</strong> $f(x_k)-f^\star\le\dfrac{\norm{x_0-x^\star}^2}{2\tau k}$. <strong>$\mu$-strongly convex</strong>, $\tau=1/L$: $\norm{x_k-x^\star}^2\le\big(1-\frac\mu L\big)^k\norm{x_0-x^\star}^2$ — linear convergence, slow when the condition number $L/\mu$ is large.</li>
+<li><strong>Quadratics</strong> $f=\frac12x\T Hx$: each eigen-direction is multiplied by $1-\tau\lambda_i$ per step; convergence iff $0<\tau<2/\lambda_{\max}$.</li>
+<li><strong>SGD:</strong> $x_{k+1}=x_k-\tau_kg_k$ with $\E[g_k\mid x_k]=\nabla f(x_k)$. With steps $\sum\tau_k=\infty$, $\sum\tau_k^2<\infty$ (Robbins–Monro) it converges for convex problems with bounded noise; with a constant step it oscillates in a region whose size grows with $\tau$ and the noise.</li>
+<li><strong>Implicit Euler (proximal point):</strong> $x_{k+1}=\argmin_x f(x)+\frac1{2\tau}\norm{x-x_k}^2$. The JKO scheme of <a href="Lesson08.html">Lesson 8</a> is this step with $\norm{\cdot}^2$ replaced by $W_2^2$ (OT4ML Def. 15.1, p. 356).</li>
+</ul>
+</div>
+<figure class="fig"><!-- include figures/REM/gd.svg --><figcaption>Gradient descent on $f(x)=\frac12(x_1^2+10x_2^2)$ from $(1,1)$. Green: $\tau=0.1=1/L$. Orange: $\tau=0.19$, close to the limit $2/L$: the steep coordinate overshoots and zigzags.</figcaption></figure>
+<div class="box example"><div class="box-h">Worked example</div>
+<ul>
+<li>$f(x)=\frac12(x_1^2+10x_2^2)$: $L=10$, $\mu=1$. With $\tau=0.1$: $x_2$ is multiplied by $0$ (killed in one step) and $x_1$ by $0.9$; after $10$ steps $x=(0.349,0)$. With $\tau=0.19$: factors $0.81$ and $-0.9$ (zigzag); after $10$ steps $(0.122,0.349)$. With $\tau=0.21$: the factor $-1.1$ on $x_2$ makes it diverge ($2.59$ after $10$ steps).</li>
+<li>SGD computing a mean: minimise $f(x)=\frac12\E(x-Y)^2$ with the stochastic gradient $x_k-y_k$ and steps $\tau_k=\frac1{k+1}$. Then $x_{k+1}=x_k-\frac{x_k-y_k}{k+1}$ is exactly the running average: on the samples $2,4,3,7$ the iterates are $2,3,3,4$ whatever $x_0$.</li>
+</ul>
+</div>
+<details class="fold proof"><summary>Proof of the descent lemma</summary><div class="fold-body">
+<p>$L$-smoothness gives the quadratic upper bound $f(y)\le f(x)+\ps{\nabla f(x)}{y-x}+\frac L2\norm{y-x}^2$ (integrate $\nabla f$ along the segment and use the Lipschitz bound). With $y=x-\tau\nabla f(x)$: $f(y)\le f(x)-\tau\big(1-\frac{L\tau}2\big)\norm{\nabla f(x)}^2\le f(x)-\frac\tau2\norm{\nabla f(x)}^2$ when $\tau\le1/L$.</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul>
+<li>Too large a step diverges ($\tau>2/L$ on quadratics); ill-conditioning ($L/\mu$ large) makes small steps very slow.</li>
+<li>On non-convex problems gradient descent finds stationary points, not necessarily global minima.</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — training is SGD, and SGD on neurons is a transport</div>
+<p>Networks are trained by SGD and its variants (momentum, Adam) on minibatch losses; learning-rate decay schedules play the role of the Robbins–Monro conditions. For a wide two-layer network, gradient descent moves each neuron’s parameters as a particle; in the limit of infinitely many neurons, their distribution follows a Wasserstein gradient flow (OT4ML §15.4, p. 386; <a href="Lesson08.html">Lesson 8</a>).</p>
+</div>
+
+<h3 id="first-variation">Derivatives of functionals of measures: the first variation</h3>
+<p class="small muted"><strong>Used in</strong> <a href="Lesson08.html">Lesson 8</a> (Wasserstein gradient flows and the JKO scheme; the exercise sheet computes first variations of $\varphi$-divergences, Dirichlet energies and interaction energies), <a href="Lesson03.html#algo-optimal">Lesson 3</a> (optimality of barycenters), <a href="Lesson07.html">Lesson 7</a> (gradients of OT losses are dual potentials).</p>
+<p>How does $F(\al)$ change when $\al$ changes a little? There are two ways to perturb a measure. <strong>Vertically</strong>: re-weight the mass, $\al\to(1-\eps)\al+\eps\be$; the derivative is a function of $x$, the <em class="new">first variation</em> $\frac{\delta F}{\delta\al}$. <strong>Horizontally</strong>: move the mass, $\al\to\pf{(\Id+\eps v)}{\al}$; the derivative involves the spatial gradient $\nabla\frac{\delta F}{\delta\al}$, the Wasserstein gradient.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 15.2, p. 356;</span> <span class="ref">Def. 15.5 and Prop. 15.7, p. 358</span></div>
+<p>A function $\frac{\delta F}{\delta\al}(\al)$ is the first variation of $F$ at $\al$ if, for $\al_\eps=(1-\eps)\al+\eps\be$,</p>
+$$F(\al_\eps)=F(\al)+\eps\int\frac{\delta F}{\delta\al}(\al)\,\dd(\be-\al)+o(\eps).$$
+<p>It is defined up to an additive constant ($\be-\al$ has zero mass). The Wasserstein gradient is $\nabla_x\frac{\delta F}{\delta\al}(\al)$, and $\frac{\dd}{\dd\tau}F\big(\pf{(\Id+\tau v)}{\al}\big)\big|_{\tau=0}=\int\ps{\nabla\frac{\delta F}{\delta\al}}{v}\,\dd\al$. The gradient flow is $\partial_t\al_t-\dv\big(\al_t\nabla\frac{\delta F}{\delta\al}(\al_t)\big)=0$.</p>
+</div>
+<div class="table-wrap"><table>
+<thead><tr><th>$F(\al)$</th><th>$\frac{\delta F}{\delta\al}(\al)(x)$</th><th>gradient flow</th></tr></thead>
+<tbody>
+<tr><td>potential energy $\int V\dd\al$</td><td>$V(x)$</td><td>each particle follows $-\nabla V$</td></tr>
+<tr><td>interaction $\iint W(x,y)\,\dd\al(x)\dd\al(y)$</td><td>$\int\big(W(x,y)+W(y,x)\big)\dd\al(y)$ ($=2\int W(x,y)\dd\al(y)$ if $W$ is symmetric)</td><td>particles attract or repel each other</td></tr>
+<tr><td>entropy $\int\rho\log\rho\,\dd x$</td><td>$\log\rho(x)+1$</td><td>heat equation (OT4ML Ex. 15.13, p. 361)</td></tr>
+<tr><td>$\KL(\al|\be)$</td><td>$\log\frac{\dd\al}{\dd\be}(x)$ (+ const)</td><td>Fokker–Planck (<a href="#fokker-planck">§8</a>)</td></tr>
+<tr><td>$\frac12\mathrm{MMD}_k^2(\al,\be)$</td><td>$\int k(x,y)\,\dd(\al-\be)(y)$</td><td>MMD particle flow (OT4ML p. 362)</td></tr>
+<tr><td>OT cost $\Lc(\al,\be)$</td><td>a Kantorovich potential $f$ (when unique)</td><td>OT4ML Prop. 12.29, p. 277</td></tr>
+<tr><td>Dirichlet energy $\frac12\int\norm{\nabla\rho}^2$</td><td>$-\Delta\rho$</td><td>OT4ML Remark 15.14, p. 361</td></tr>
+</tbody></table></div>
+<div class="box example"><div class="box-h">Worked example — vertical and horizontal derivatives of an interaction energy</div>
+<p>$\al=\frac12\delta_0+\frac12\delta_2$ and $F(\al)=\iint\abs{x-y}^2\dd\al\,\dd\al$, so $F(\al)=2\cdot\frac14\cdot4=2$ and $\frac{\delta F}{\delta\al}(x)=2\int\abs{x-y}^2\dd\al(y)=x^2+(x-2)^2$.</p>
+<ul>
+<li><strong>Vertical</strong>, towards $\be=\delta_1$: the formula predicts $F(\al_\eps)-F(\al)\approx\eps\big(\frac{\delta F}{\delta\al}(1)-\int\frac{\delta F}{\delta\al}\dd\al\big)=\eps(2-4)=-2\eps$. Direct computation: $F(\al_\eps)=2(1-\eps)$, exactly.</li>
+<li><strong>Horizontal</strong>, moving the two atoms towards each other ($v(0)=1$, $v(2)=-1$): $F=2(1-\eps)^2$, derivative $-4$ at $\eps=0$. Formula: $\nabla\frac{\delta F}{\delta\al}(x)=4x-4$, so $\int\ps{\nabla\frac{\delta F}{\delta\al}}{v}\dd\al=\frac12(-4)(1)+\frac12(4)(-1)=-4$.</li>
+<li>Non-symmetric kernel $W(x,y)=xy^2$: $F(\al)=\E[X]\,\E[X^2]$ and $\frac{\delta F}{\delta\al}(x)=x\,\E[X^2]+\E[X]\,x^2$; the derivative towards $\delta_1$ is $-1$, both by the formula and numerically.</li>
+</ul>
+</div>
+<details class="fold proof"><summary>From the vertical to the horizontal derivative</summary><div class="fold-body">
+<p>Moving the mass by $\Id+\tau v$ changes the measure, to first order, by $-\tau\,\dv(\al v)$ (the continuity equation, <a href="#continuity-eq">§4</a>). Plug this zero-mass perturbation into the first variation and integrate by parts:</p>
+$$F\big(\pf{(\Id+\tau v)}{\al}\big)=F(\al)-\tau\int\frac{\delta F}{\delta\al}\,\dv(\al v)+o(\tau)=F(\al)+\tau\int\ps{\nabla\frac{\delta F}{\delta\al}}{v}\,\dd\al+o(\tau).$$
+<p>The steepest descent direction for the metric $\int\norm v^2\dd\al$ is $v=-\nabla\frac{\delta F}{\delta\al}$, which gives the gradient flow (OT4ML Prop. 15.7, p. 358).</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul>
+<li>The first variation is defined only up to a constant: never compare two of them pointwise without fixing it.</li>
+<li>Vertical and horizontal derivatives are different objects: for $\int V\dd\al$ the first is $V$, the second $\nabla V$.</li>
+<li>For particles $\al=\frac1n\sum_i\delta_{x_i}$, the ordinary gradient of $F$ with respect to $x_i$ is $\frac1n\nabla\frac{\delta F}{\delta\al}(x_i)$: the Wasserstein flow moves each particle with speed $n\,\nabla_{x_i}F$ (OT4ML eq. (15.5), p. 360).</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — gradients of losses between distributions</div>
+<p>To train a model with a loss between distributions, you need its derivative with respect to the model’s samples or weights. The table gives it: for an MMD loss, each generated sample moves along $-\nabla_x\int k(x,y)\,\dd(\al-\be)(y)$; for an OT loss, the derivative with respect to the weights of $\al$ is a dual potential, which Sinkhorn computes for free (<a href="Lesson07.html">Lesson 7</a>).</p>
+</div>

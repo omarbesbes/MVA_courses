@@ -1,0 +1,80 @@
+
+<h2 id="stochastic">8. Stochastic processes</h2>
+<p class="tldr">Brownian motion is the continuous random walk; adding it to an ODE gives a stochastic differential equation, whose law evolves by the Fokker–Planck equation — a continuity equation whose velocity contains the score $\nabla\log\rho$. Only what the course needs is recalled here.</p>
+
+<h3 id="brownian">Brownian motion and stochastic differential equations</h3>
+<p class="small muted"><strong>Used in</strong> <a href="Lesson06.html">Lesson 6</a> (stochastic interpolants, Schrödinger bridges, diffusion models), <a href="Lesson07.html">Lesson 7</a> (entropic OT is a static Schrödinger problem; its Gibbs kernel is a Gaussian heat kernel), <a href="Lesson08.html">Lesson 8</a> (Langevin dynamics, diffusion models, noisy particle systems).</p>
+<p>A Brownian motion is the limit of a random walk with many tiny independent steps. Its displacement over a time $t$ is Gaussian with variance $t$: it spreads like $\sqrt t$, not like $t$. A <em class="new">stochastic differential equation</em> adds such noise to an ODE: a deterministic drift plus random kicks.</p>
+<div class="box def"><div class="box-h">Definitions and rules (standard, informal)</div>
+<ul>
+<li><strong>Brownian motion</strong> $(B_t)_{t\ge0}$ in $\R^d$: $B_0=0$, continuous paths, independent increments, $B_t-B_s\sim\N\big(0,(t-s)\mathrm I\big)$. Its paths are nowhere differentiable: “$\dd B_t/\dd t$” does not exist.</li>
+<li><strong>SDE</strong> $\dd X_t=b(X_t)\,\dd t+\sigma\,\dd B_t$, made rigorous as an Itô integral equation and simulated by <strong>Euler–Maruyama</strong>: $X_{k+1}=X_k+h\,b(X_k)+\sigma\sqrt h\,\xi_k$, $\xi_k\sim\N(0,\mathrm I)$ independent.</li>
+<li><strong>Itô’s formula</strong> (1D): $\dd f(X_t)=f'(X_t)\,\dd X_t+\frac12\sigma^2f''(X_t)\,\dd t$. The extra second-order term comes from $(\dd B_t)^2=\dd t$. Taking expectations: $\frac{\dd}{\dd t}\E f(X_t)=\E\big[b(X_t)f'(X_t)+\frac{\sigma^2}2f''(X_t)\big]$.</li>
+<li><strong>Langevin dynamics</strong> $\dd X_t=-\nabla V(X_t)\,\dd t+\sqrt2\,\dd B_t$: its law converges (under mild conditions) to the density $\propto e^{-V}$.</li>
+</ul>
+</div>
+<figure class="fig"><!-- include figures/REM/brownian.svg --><figcaption>Five Brownian paths on $[0,1]$ with the envelopes $\pm\sqrt t$ and $\pm2\sqrt t$; on the right, the law $\N(0,1)$ of $B_1$. About $68\%$ of the paths end within $\pm1$, $95\%$ within $\pm2$.</figcaption></figure>
+<div class="box example"><div class="box-h">Worked example</div>
+<ul>
+<li>$\P(\abs{B_1}\le1)\approx0.683$ and $\P(\abs{B_1}\le2)\approx0.954$: the envelopes of the figure.</li>
+<li>Itô with $f(x)=x^2$ and $X=B$ ($b=0$, $\sigma=1$): $\dd(B_t^2)=2B_t\,\dd B_t+\dd t$, so $\E B_t^2=t$. The ordinary chain rule would miss the $\dd t$.</li>
+<li>Euler–Maruyama for $\dd X=-X\,\dd t+\sqrt2\,\dd B$ (an Ornstein–Uhlenbeck process, stationary law $\N(0,1)$): $X_{k+1}=(1-h)X_k+\sqrt{2h}\,\xi_k$. Its stationary variance $v$ solves $v=(1-h)^2v+2h$, so $v=\frac2{2-h}$: $1.053$ for $h=0.1$ (a simulation with $200\,000$ chains gives $1.048$), $1.005$ for $h=0.01$. The discretisation bias vanishes like $h$.</li>
+</ul>
+</div>
+<details class="fold proof"><summary>Where the $\frac12\sigma^2f''$ comes from</summary><div class="fold-body">
+<p>Over a small time step $h$, $\Delta X\approx b\,h+\sigma\,\Delta B$ with $\Delta B\sim\N(0,h)$. Taylor: $f(X+\Delta X)-f(X)\approx f'(X)\Delta X+\frac12f''(X)(\Delta X)^2$. Now $(\Delta X)^2\approx\sigma^2(\Delta B)^2$ has mean $\sigma^2h$ — the same order as the drift term, not smaller — while its fluctuations are of order $h$ times a centred variable and average out over many steps. Summing over steps gives $\int\frac12\sigma^2f''\,\dd t$. For a smooth path, $(\Delta X)^2=O(h^2)$ and the term disappears: this is the difference between stochastic and ordinary calculus.</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul>
+<li>Noise scales like $\sqrt{h}$, drift like $h$: in Euler–Maruyama the noise term is $\sigma\sqrt h\,\xi$, not $\sigma h\,\xi$.</li>
+<li>Conventions for the noise level differ: $\sqrt2\,\dd B$ (this page), $\sigma\,\dd B$, or $\sqrt{2\sigma}\,\dd B$. With noise $\sqrt2\,s\,\dd B$ the Laplacian term of Fokker–Planck is $s^2\Delta$ (OT4ML p. 363 writes it this way). Check before reusing a formula.</li>
+<li>Itô calculus is not ordinary calculus (previous example); another convention (Stratonovich) keeps the ordinary chain rule but changes the drift.</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — Langevin sampling and diffusion models</div>
+<p>The unadjusted Langevin algorithm $x_{k+1}=x_k+h\nabla\log p(x_k)+\sqrt{2h}\,\xi_k$ samples approximately from $p$ using only its score $\nabla\log p$ (no normalising constant). Score-based diffusion models learn the score of noised data with a network and run a reverse-time SDE (or an ODE with the same marginals, <a href="#fokker-planck">next</a>) from noise to data (OT4ML §16.1, p. 407; Remark 16.5, p. 410). The noise of SGD is sometimes modelled the same way (OT4ML Remark 15.60, p. 397).</p>
+</div>
+
+<h3 id="fokker-planck">The heat equation, Fokker–Planck and Ornstein–Uhlenbeck</h3>
+<p class="small muted"><strong>Used in</strong> <a href="Lesson08.html">Lesson 8</a> (Fokker–Planck is the Wasserstein gradient flow of a free energy; the heat equation that of the entropy; convergence rates), <a href="Lesson06.html">Lesson 6</a> (probability-flow ODEs of diffusion models), <a href="Lesson07.html">Lesson 7</a> (heat kernels and Gibbs kernels).</p>
+<p>Follow not one noisy particle but the density $\rho_t$ of a whole cloud. The drift transports it (a continuity equation, <a href="#continuity-eq">§4</a>), the noise spreads it (a Laplacian). The resulting PDE is the <em class="new">Fokker–Planck equation</em>.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML p. 363 and Example 15.15;</span> <span class="ref">Example 15.13, p. 361</span></div>
+<p>If $\dd X_t=b(X_t)\,\dd t+\sqrt2\,s\,\dd B_t$, the density of $X_t$ solves $\ \partial_t\rho_t=-\dv(b\rho_t)+s^2\Delta\rho_t$. For $b=-\nabla V$ this is the $W_2$ gradient flow of the free energy $\rho\mapsto\int V\rho\,\dd x+s^2\int\rho\log\rho\,\dd x$. Without drift ($V=0$, $s=1$), the entropy flow is the heat equation $\partial_t\rho=\Delta\rho$.</p>
+</div>
+<div class="box thm"><div class="box-h">Three ways to read Fokker–Planck ($s=1$, standard)</div>
+<ul>
+<li><strong>As a continuity equation:</strong> $\partial_t\rho+\dv(\rho v)=0$ with $v=b-\nabla\log\rho$ (because $\Delta\rho=\dv(\rho\nabla\log\rho)$). Particles moving with this deterministic velocity have the same laws $\rho_t$ as the SDE.</li>
+<li><strong>As relaxation to equilibrium:</strong> for $b=-\nabla V$ and $\rho_\infty\propto e^{-V}$, $\partial_t\rho=\dv\big(\rho\,\nabla\log\frac{\rho}{\rho_\infty}\big)$, and $\KL(\rho_t|\rho_\infty)$ decreases; under a logarithmic Sobolev inequality with constant $\lambda$ it decays like $e^{-2\lambda t}$ (OT4ML Prop. 15.42, p. 381).</li>
+<li><strong>Heat equation</strong> ($b=0$): $\rho_t=\rho_0*\N(0,2t\,\mathrm I)$, convolution with a Gaussian of variance $2t$.</li>
+</ul>
+<p><strong>Ornstein–Uhlenbeck</strong> ($V(x)=\frac12\norm x^2$): $X_t=e^{-t}X_0+\sqrt{1-e^{-2t}}\,Z$ with $Z\sim\N(0,\mathrm I)$ independent of $X_0$. Gaussians stay Gaussian: $\N(m,\sigma^2)\mapsto\N\big(e^{-t}m,\ e^{-2t}\sigma^2+1-e^{-2t}\big)\to\N(0,1)$. Here $\lambda=1$.</p>
+</div>
+<figure class="fig"><!-- include figures/REM/ou.svg --><figcaption>The Ornstein–Uhlenbeck flow started from $\N(3,0.25)$: the density (left, labelled by the time $t$) drifts to $0$ and widens towards $\N(0,1)$ (blue, dashed). Right: the mean $3e^{-t}$ and the standard deviation, which goes from $0.5$ to $1$.</figcaption></figure>
+<div class="box example"><div class="box-h">Worked example — OU from $\N(3,0.25)$</div>
+<ul>
+<li>At $t=1$: mean $3e^{-1}\approx1.104$, variance $0.25e^{-2}+1-e^{-2}\approx0.898$.</li>
+<li>$\KL(\rho_t|\N(0,1))=\frac12\big(v+m^2-1-\log v\big)$: $4.818$ at $t=0$, $0.612$ at $t=1$, $0.082$ at $t=2$ — below the log-Sobolev bound $4.818\,e^{-2t}$, which gives $0.652$ and $0.088$.</li>
+<li>The heat equation is checked by finite differences on $\rho_t=\N(0,0.5+2t)$ at $(t,x)=(0.4,0.7)$: $\partial_t\rho=-0.13890=\partial_{xx}\rho$.</li>
+</ul>
+</div>
+<details class="fold proof"><summary>From Itô’s formula to Fokker–Planck</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\frac{\dd}{\dd t}\int f\rho_t=\frac{\dd}{\dd t}\E f(X_t)=\E\big[\ps{b(X_t)}{\nabla f(X_t)}+\Delta f(X_t)\big]=\int\big(\ps{b}{\nabla f}+\Delta f\big)\rho_t .$$<span class="why">Itô’s formula in $\R^d$ with noise $\sqrt2\,\dd B$: the second-order term is $\frac12\cdot2\,\Delta f$.</span></li>
+<li>$$=\int f\,\big(-\dv(b\rho_t)+\Delta\rho_t\big).$$<span class="why">Integrate by parts once in the first term, twice in the second (<a href="#divergence">§4</a>).</span></li>
+<li>This holds for every test function $f$, hence $\partial_t\rho_t=-\dv(b\rho_t)+\Delta\rho_t$.<span class="why">Two densities with the same integrals against all test functions are equal.</span></li>
+</ol>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul>
+<li>The factor in front of $\Delta$ depends on the noise convention (previous reminder).</li>
+<li>The stationary density is $\propto e^{-V}$ only for gradient drifts $b=-\nabla V$; a rotating drift has a different equilibrium.</li>
+<li>The equation is linear in $\rho$, but its velocity $b-\nabla\log\rho$ depends on $\rho$: the deterministic particle picture needs the score of the current density.</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — diffusion models run an Ornstein–Uhlenbeck process backwards</div>
+<p>The forward noising process of a variance-preserving diffusion model is an OU process: $X_t=e^{-t}X_0+\sqrt{1-e^{-2t}}\,Z$ turns any data distribution into nearly $\N(0,\mathrm I)$. A network $s_\theta(t,x)$ is trained to approximate the score $\nabla\log\rho_t$ (denoising score matching). Generation integrates the reverse-time SDE, or the <em>probability-flow ODE</em> $\dot x=-x-\nabla\log\rho_t(x)$ backwards from noise: it is the velocity $b-\nabla\log\rho$ above, so its particles have the same marginals $\rho_t$ (OT4ML Remark 16.5, p. 410–411).</p>
+</div>
+<div class="quiz"><p>Start the Ornstein–Uhlenbeck process $\dd X=-X\,\dd t+\sqrt2\,\dd B$ at the point $X_0=3$. What is the law of $X_1$, and its $W_2$ distance to $\N(0,1)$?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>$X_1=3e^{-1}+\sqrt{1-e^{-2}}\,Z\sim\N(1.104,\,0.930^2)$. By the 1D Gaussian formula (<a href="#ot-closed-forms">§9</a>), $W_2^2=1.104^2+(0.930-1)^2\approx1.223$, so $W_2\approx1.106$: after one unit of time the Dirac has become a nearly standard Gaussian, only shifted.</p>
+</div></details></div>

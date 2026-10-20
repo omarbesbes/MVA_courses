@@ -1,0 +1,81 @@
+<h2 id="langevin">6. Noise instead of entropy: Langevin dynamics <span class="ref">StatOT §6.2 · OT4ML p. 364</span></h2>
+<p class="tldr">The Fokker–Planck flow of $\KL(\cdot|e^{-V})$ is also the law of the Langevin diffusion $\dd X_t=-\nabla V(X_t)\dd t+\sqrt2\,\dd B_t$: independent noisy particles replace the entropy term that point clouds cannot evaluate; discretised by Euler–Maruyama it is the basic sampling algorithm (with a bias of order $h$), and the same flow, run backwards with a learned score, is a diffusion model.</p>
+
+<h3 id="langevin-why">Why noise</h3>
+<p>The entropy is $+\infty$ on a point cloud, so the particle method of §5 cannot run the heat or Fokker–Planck flows. But there is another way to make a cloud spread exactly like the heat equation: shake each point independently. The law of $\sqrt2B_t$ is $\N(0,2t\Id)$, the heat kernel of $\partial_t\rho=\Delta\rho$. Adding a drift $-\nabla V$ gives the Fokker–Planck equation. The course notes of 2019 summarise the trade-off in one line:</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">CourseOT (2019), §10.4, p. 42</span></div>
+<p><strong>Langevin Flows.</strong> 1 random particles as opposed to many deterministic particles. Crucial in high dimension.</p>
+</div>
+<p>Read it as: to follow a Fokker–Planck flow, either move many particles <em>together</em> with a velocity that depends on their density (deterministic, but the density must be estimated — impossible in high dimension), or move each particle <em>alone</em> with noise (no density needed; the law of a single particle is the solution).</p>
+
+<h3 id="langevin-thm">The Langevin diffusion follows the Wasserstein gradient flow of KL</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">StatOT Thm. 6.11, Cors. 6.12–6.14, p. 186</span></div>
+<p><strong>Theorem 6.11</strong> (Fokker–Planck equation). The marginal law $\mu_t:=\mathrm{law}(X_t)$ of the Langevin diffusion with potential $V$ is given by the solution to the Fokker–Planck equation $\partial_t\mu_t=\Delta\mu_t+\dv(\mu_t\nabla V)$.</p>
+<p><strong>Corollary 6.12.</strong> The marginal law of the Langevin diffusion with potential $V$ is the Wasserstein gradient flow of $\KL(\cdot\,\|\,\pi)$, where $\pi$ has density proportional to $\exp(-V)$.</p>
+<p><strong>Corollary 6.13.</strong> If $(\mu_t)_{t\ge0}$ is the marginal law of a (rescaled) Brownian motion $(\sqrt2B_t)_{t\ge0}$, then $(\mu_t)_{t\ge0}$ solves the heat equation $\partial_t\mu_t=\Delta\mu_t$, and it is the Wasserstein gradient flow of the entropy functional $\mathcal H$.</p>
+<p><strong>Corollary 6.14.</strong> Let $\pi$ be an $\al$-strongly log-concave measure, and let $(\mu_t)_{t\ge0}$ denote the marginal law of the Langevin diffusion with stationary distribution $\pi$. Then, $\KL(\mu_t\,\|\,\pi)\le e^{-2\al t}\KL(\mu_0\,\|\,\pi)$.</p>
+</div>
+<dl class="decode">
+<dt>Langevin diffusion</dt><dd>The SDE $\dd X_t=-\nabla V(X_t)\dd t+\sqrt2\,\dd B_t$ (StatOT p. 184): gradient descent on $V$ plus Brownian noise of variance $2\,\dd t$ per unit time.</dd>
+<dt>$\mu_t$</dt><dd>The law of the random position $X_t$: what you would see by running many independent copies and making a histogram.</dd>
+<dt>$\pi\propto\exp(-V)$</dt><dd>The target (the Gibbs measure $\be$ of §4). StatOT’s $\al$ in Corollary 6.14 is a <em>number</em>, the strong log-concavity constant ($\nabla^2V\succeq\al\Id$) — our $\lambda$.</dd>
+<dt>Cor. 6.14</dt><dd>Exponential convergence in KL, at a rate fixed by the curvature of $V$; proved in §7 (it is the log-Sobolev inequality).</dd>
+</dl>
+<div class="box idea"><div class="box-h">Idea of the proof</div>
+<p>Follow the expectation of a test function. Over a short time $t$, the noise moves $X$ by $O(\sqrt t)$, so a second-order Taylor expansion is needed; the second-order term of the noise has a deterministic mean, $t\,\Delta\varphi$. This gives the <em>generator</em> $\varphi\mapsto\Delta\varphi-\ps{\nabla\varphi}{\nabla V}$; two integrations by parts move it onto the law: Fokker–Planck. Then §4 identifies Fokker–Planck with the gradient flow of KL.</p>
+</div>
+<details class="fold proof"><summary>Proof (StatOT’s informal argument, pp. 184–186)</summary><div class="fold-body">
+<ol class="steps">
+<li>Condition on $X_0=x_0$: $X_t=x_0-\int_0^t\nabla V(X_s)\dd s+\sqrt2B_t$, with $\int_0^t\nabla V=O(t)$ and $B_t=O(\sqrt t)$.<span class="why">Integral form of the SDE; $B_t\sim\N(0,t\Id)$ (<a href="#recall-sde">refresher</a>).</span></li>
+<li>$$\varphi(X_t)=\varphi(x_0)+\Big\langle\nabla\varphi(x_0),-t\nabla V(x_0)+\sqrt2B_t\Big\rangle+\ps{\nabla^2\varphi(x_0)B_t}{B_t}+O(t^{3/2}).$$<span class="why">Taylor expansion of $\varphi$ to second order; in the quadratic term only $\sqrt2B_t$ is large enough to matter: $\frac12\ps{\nabla^2\varphi\,\sqrt2B_t}{\sqrt2B_t}=\ps{\nabla^2\varphi\,B_t}{B_t}$.</span></li>
+<li>$$\E\varphi(X_t)=\varphi(x_0)+t\big(\Delta\varphi(x_0)-\ps{\nabla\varphi(x_0)}{\nabla V(x_0)}\big)+O(t^{3/2}).$$<span class="why">$\E B_t=0$ and $\E[B_tB_t\T]=t\Id$, so $\E\ps{\nabla^2\varphi B_t}{B_t}=t\tr\nabla^2\varphi=t\Delta\varphi$.</span></li>
+<li>$\partial_t\E\varphi(X_t)=\E[\mathcal L\varphi(X_t)]$ with $\mathcal L\varphi=\Delta\varphi-\ps{\nabla\varphi}{\nabla V}$, i.e. $\int\varphi\,\partial_t\mu_t=\int(\Delta\varphi-\ps{\nabla\varphi}{\nabla V})\dd\mu_t$.<span class="why">Line 3 at every time, by the Markov property (restart from $X_t$).</span></li>
+<li>$$\int(\Delta\varphi-\ps{\nabla\varphi}{\nabla V})\,\mu_t\,\dd x=\int\varphi\,\big(\Delta\mu_t+\dv(\mu_t\nabla V)\big)\dd x .$$<span class="why">Integrate by parts twice in the first term, once in the second (<a href="#recall-div">refresher</a>).</span></li>
+<li>Since this holds for every $\varphi$: $\partial_t\mu_t=\Delta\mu_t+\dv(\mu_t\nabla V)$, which is the Wasserstein gradient flow of $\KL(\cdot|\pi)$ (§4). With $V=0$: the heat equation, flow of the entropy. $\square$<span class="why">Comparison with (6.9) in StatOT, our §4.</span></li>
+</ol>
+</div></details>
+
+<h3 id="langevin-three">One flow, three representations</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">StatOT §6.2.1, p. 187</span></div>
+<p>Ultimately, we have the equivalence (FP) $\Leftrightarrow$ (LD) $\Leftrightarrow$ (WGF) in the sense that they correspond to the same curve on the space of probability measures — clearly at the particle level, they are different — but these three differing perspectives provide new avenues for algorithm design and theoretical study.</p>
+</div>
+<p>(FP) is the PDE, (LD) the Langevin diffusion, (WGF) the deterministic particles $\dot x=-\nabla\log\frac{\mu_t}{\pi}(x)=-\nabla V(x)-\nabla\log\mu_t(x)$ — the third form of OT4ML (15.10). They agree as <em>curves of measures</em> but not as particles: Langevin paths are rough and cross each other; deterministic particles are smooth and, in one dimension, keep their order (each follows a quantile of $\mu_t$). Only (LD) needs no knowledge of $\mu_t$.</p>
+<figure class="fig"><!-- include figures/L08/three_reps.svg --><figcaption>The Ornstein–Uhlenbeck flow ($V=\frac12x^2$) from two bumps. Left: six Langevin paths (Euler–Maruyama, $h=0.005$). Middle: ten deterministic particles, which are the quantile curves of $\al_t$ (the exact law is a Gaussian mixture, so the score is explicit). Right: the density at four times, converging to the blue $\N(0,1)$.</figcaption></figure>
+
+<h3 id="langevin-em">Euler–Maruyama, and why it is biased</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">StatOT §6.2.2, (6.11), p. 188</span></div>
+<p>[…] non-asymptotic convergence guarantees can be established for the Euler–Maruyama scheme</p>
+$$X_{k+1}=X_k-h\nabla V(X_k)+\N(0,2h\Id),\qquad k=0,1,2,\dots,\qquad(6.11)$$
+<p>which parallels the complexity theory for optimization. Unlike the situation in optimization, however, the discretization (6.11) is asymptotically biased: the stationary distribution of the Markov chain (6.11) does not equal the target $\pi$.</p>
+</div>
+<div class="box example"><div class="box-h">Worked example — the bias of Euler–Maruyama on the Ornstein–Uhlenbeck target</div>
+<p>Target $\N(0,1)$, $V=\frac12x^2$: the chain is $X_{k+1}=(1-h)X_k+\sqrt{2h}\,\xi_k$. If $X_k\sim\N(m_k,v_k)$, then $X_{k+1}$ is Gaussian with $m_{k+1}=(1-h)m_k$ and $v_{k+1}=(1-h)^2v_k+2h$. The fixed point solves $v=(1-h)^2v+2h$:</p>
+$$v_\infty=\frac{2h}{1-(1-h)^2}=\frac{2h}{2h-h^2}=\frac1{1-h/2}.$$
+<p>For $h=0.01,\ 0.05,\ 0.1,\ 0.2,\ 0.4$: $v_\infty=1.0050,\ 1.0256,\ 1.0526,\ 1.1111,\ 1.2500$ instead of $1$. The bias is of order $h/2$, <strong>whatever the number of particles</strong>: more particles reduce the Monte Carlo noise, not the bias. StatOT (p. 189) explains it as a mismatched splitting: the step is a gradient step on $V$ followed by the <em>exact</em> heat flow of the entropy, and “the combination of gradient descent and gradient flow does not produce an unbiased splitting scheme” — a JKO (proximal) step on the entropy would remove the bias, but it is intractable.</p>
+</div>
+<div class="widget" data-widget="l8langevin"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p>What to look at: press <strong>Run</strong>. Top: the histogram of 2000 Langevin particles (purple) and the Fokker–Planck density computed on a grid (green; an implicit finite-volume scheme for which $e^{-V}$ is exactly stationary). Bottom: six Langevin paths (rough) and seven quantile curves of the density (smooth) — the noisy and the deterministic particle pictures of the same flow. With the Gaussian target, compare the variance of the particles with that of the density at large $t$: with $h=0.4$ the particles settle near $1.25$ instead of $1$ (the bias above); with $h=0.01$ the difference is within the Monte Carlo noise ($\approx0.02$). With the double well, the mass must cross the barrier at $0$: the Fokker–Planck solution has $0.22$ of the mass on the left at $t=1$, $0.47$ at $t=4$ and $0.497$ at $t=8$ (equilibrium $0.5$) — a slow, barrier-limited convergence, the situation where the constants of §7 are poor.</p>
+
+<div class="box ml"><div class="box-h">In machine learning — sampling a posterior with Langevin dynamics</div>
+<p>In Bayesian learning, the posterior over parameters $\theta$ is $\pi(\theta)\propto e^{-V(\theta)}$ with $V(\theta)=-\log p(\text{data}|\theta)-\log p(\theta)$: known up to its normalising constant, which is all Langevin needs. The Euler–Maruyama chain $\theta_{k+1}=\theta_k-h\nabla V(\theta_k)+\sqrt{2h}\,\xi_k$ (the <em>unadjusted Langevin algorithm</em>) is gradient descent on the negative log-posterior plus calibrated noise; by Corollary 6.12 its law follows the Wasserstein gradient flow of $\KL(\cdot|\pi)$, and by Corollary 6.14 it converges exponentially fast when $V$ is strongly convex — up to the $O(h)$ bias of the worked example. StatOT §6.2 (pp. 183–193) develops this “sampling as optimization” view: proximal samplers, mirror and Newton Langevin, underdamped (kinetic) Langevin as the analogue of Nesterov acceleration. (Going further: with minibatch gradients instead of $\nabla V$, the same chain is stochastic gradient Langevin dynamics, Welling and Teh, 2011.)</p>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — diffusion models run a Fokker–Planck flow backwards</div>
+<p><strong>Noising is a Wasserstein gradient flow.</strong> Score-based diffusion models (Song et al., 2021, cited in OT4ML §16.1) push the data distribution $\al_0$ towards $\N(0,\Id)$ by an Ornstein–Uhlenbeck process, $\dd X_t=-X_t\dd t+\sqrt2\dd B_t$ (up to a choice of time scale): by Corollary 6.12, the laws $\al_t$ follow the Wasserstein gradient flow of $\KL(\cdot|\N(0,\Id))$, and converge exponentially (§7). <strong>Generating runs it backwards.</strong> The deterministic representation (15.10) of this flow is $\dot x=-x-\nabla\log\rho_t(x)$ — the <em>probability-flow ODE</em>; integrated backwards in time from Gaussian noise, $\dot y=y+\nabla\log\rho_{T-s}(y)$, it transports $\N(0,\Id)$ back to the data (OT4ML p. 411 calls $\frac{\sigma_t^2}2\nabla\log\rho_t$ “the familiar score correction relating diffusion SDEs to probability-flow ODEs”). The only unknown is the score $\nabla\log\rho_t$, learned by denoising score matching (§4). Concretely, for images: $x$ is an image, $\rho_0$ the data distribution, a network $s_\theta(x,t)$ is trained to predict $\nabla\log\rho_t(x)$ from noisy images, and sampling integrates the backward ODE (or the backward SDE) with $s_\theta$.</p>
+</div>
+<div class="box remark"><div class="box-h">Note on the sources — a stray “+” in StatOT</div>
+<p>In the Taylor expansion of StatOT p. 185, the line “$\varphi(X_t)=\varphi(x_0)-t\ps{\nabla\varphi(x_0)}{\nabla V(x_0)}++\sqrt2\ps{\nabla\varphi(x_0)}{B_t}$” has one “+” too many. Harmless: the two lines around it are correct (line 2 of the proof above).</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — same law, different particles</div>
+<p>“Langevin particles follow the Wasserstein gradient flow” is a statement about <em>laws</em>. A single Langevin path is not a gradient-flow trajectory of anything (it is not even differentiable); the deterministic particles $\dot x=-\nabla V-\nabla\log\mu_t$ are, but they need the density $\mu_t$. Do not mix the two pictures when you compute a velocity.</p>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>Entropy in the energy, particles in the algorithm → replace $-\nabla\log\rho$ by Brownian noise: $\dd X=-\nabla V\dd t+\sqrt2\dd B$.</li>
+<li>Euler–Maruyama on a Gaussian target → track $(m_k,v_k)$ exactly; stationary variance $\frac1{1-h/2}$.</li>
+<li>Diffusion model → forward: Fokker–Planck flow of $\KL(\cdot|\N(0,\Id))$; backward: probability-flow ODE with a learned score.</li>
+</ul>
+</div>
+<div class="quiz"><p>Langevin from $X_0\sim\N(2,0.5^2)$ towards $\N(0,1)$: what is the law at $t=1$, and what does Corollary 6.14 guarantee for the KL at $t=1$?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>$X_t=e^{-t}X_0+\sqrt{1-e^{-2t}}\,Z$, so $X_1\sim\N\big(2e^{-1},\ 0.25e^{-2}+1-e^{-2}\big)=\N(0.7358,\ 0.8985)$. Its KL to $\N(0,1)$ is $0.2734$; the guarantee ($\lambda=1$) is $e^{-2}\KL(\al_0|\pi)=e^{-2}\cdot2.3181=0.3137$. ✓</p>
+</div></details></div>

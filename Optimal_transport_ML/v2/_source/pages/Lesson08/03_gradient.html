@@ -1,0 +1,118 @@
+<h2 id="grad">3. First variation and Wasserstein gradient <span class="ref">OT4ML pp. 356–359</span></h2>
+<p class="tldr">Perturbing a measure by mixing gives the first variation $\frac{\delta f}{\delta\al}$, a function (the value of adding a bit of mass at $x$); perturbing it by moving gives the Wasserstein gradient $\nabla_Wf=\nabla\frac{\delta f}{\delta\al}$, a vector field (the direction in which moving mass increases $f$ fastest).</p>
+
+<h3 id="grad-why">Two ways to differentiate a function of a measure</h3>
+<p>For $h:\R^d\to\R$, the derivative answers “how does $h$ change when $x$ moves a little?”. For $f(\al)$ there are two ways to change $\al$ a little, the two moves of §2, and they give two derivatives:</p>
+<figure class="fig"><!-- include figures/L08/vert_horiz.svg --><figcaption>Left: a <em>vertical</em> perturbation $(1-\vartheta)\al+\vartheta\be$ lowers $\al$ everywhere a little and adds mass $\vartheta$ where $\be$ lives; its effect on $f$ is read by the first variation, a function of the position. Right: a <em>horizontal</em> perturbation $\pf{(\Id+\tau v)}{\al}$ moves the mass along a vector field $v$ (arrows); its effect on $f$ is read by the Wasserstein gradient, a vector field.</figcaption></figure>
+
+<h3 id="grad-fv">The first variation</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 15.2, pp. 356–357</span></div>
+<p><strong>Definition 15.2</strong> (First variation). Assume that $f(\al)<+\infty$. A measurable function $\delta f(\al)$ is a first variation of $f$ at $\al$ if, for every $\be\in\Pc(\R^d)$ such that $\delta f(\al)$ is integrable with respect to $\abs{\be-\al}$ and the mixture $\al_\vartheta$ remains in the domain of $f$ for small $\vartheta>0$,</p>
+$$f(\al_\vartheta)=f(\al)+\vartheta\int_{\R^d}[\delta f(\al)](x)\,\dd(\be-\al)(x)+o(\vartheta)\qquad(\vartheta\downarrow0).$$
+<p>Because $\be-\al$ has zero mass, $\delta f(\al)$ is determined only up to an additive constant.</p>
+</div>
+<dl class="decode">
+<dt>$\al_\vartheta$</dt><dd>The mixture $(1-\vartheta)\al+\vartheta\be$ (defined just before, p. 356): remove a fraction $\vartheta$ of $\al$ everywhere and put it where $\be$ is.</dd>
+<dt>$\delta f(\al)$</dt><dd>A <strong>function</strong> of $x\in\R^d$ (the sheet writes $\frac{\delta f}{\delta\al}(\al)(x)$). Read $\delta f(\al)(x)$ as “the marginal value of a unit of mass placed at $x$”: adding mass where $\delta f(\al)$ is large increases $f$.</dd>
+<dt>$\int\delta f(\al)\,\dd(\be-\al)$</dt><dd>The directional derivative of $f$ at $\al$ in the direction $\be-\al$. In $\R^d$ the analogue is $h(x+\vartheta u)=h(x)+\vartheta\ps{\nabla h(x)}{u}+o(\vartheta)$: $\delta f(\al)$ plays the role of $\nabla h(x)$ and the integral plays the role of the inner product.</dd>
+<dt>“up to a constant”</dt><dd>Since $\int c\,\dd(\be-\al)=c-c=0$, adding a constant to $\delta f(\al)$ changes nothing. Only differences of values, or the gradient $\nabla\delta f(\al)$, are meaningful.</dd>
+</dl>
+<p><strong>How to compute it.</strong> Write $\al_\vartheta=\al+\vartheta\eta$ with $\eta=\be-\al$ (zero mass), expand $f(\al+\vartheta\eta)$ to first order in $\vartheta$, and read the coefficient of $\vartheta$ as $\int(\cdots)\,\dd\eta$. Four examples, each one line:</p>
+<ol class="steps">
+<li><strong>Potential energy</strong> $f(\al)=\int V\dd\al$: $f(\al+\vartheta\eta)=f(\al)+\vartheta\int V\dd\eta$ exactly. So $\frac{\delta f}{\delta\al}=V$.<span class="why">$f$ is linear in $\al$; its derivative is itself (OT4ML Ex. 15.11, p. 360).</span></li>
+<li><strong>Interaction energy</strong> $f(\al)=\iint k(x,y)\dd\al(x)\dd\al(y)$, $k$ symmetric: $f(\al+\vartheta\eta)=f(\al)+2\vartheta\iint k(x,y)\dd\al(y)\dd\eta(x)+\vartheta^2\iint k\,\dd\eta\dd\eta$. So $\frac{\delta f}{\delta\al}(x)=2\int k(x,y)\dd\al(y)$.<span class="why">Expand the product $(\al+\vartheta\eta)\otimes(\al+\vartheta\eta)$; the two cross terms are equal because $k$ is symmetric (OT4ML (15.9), p. 361).</span></li>
+<li><strong>Neg-entropy</strong> $f(\al)=\int\rho\log\rho$, with $\eta$ of density $\zeta$: $\frac{\dd}{\dd\vartheta}\big[(\rho+\vartheta\zeta)\log(\rho+\vartheta\zeta)\big]_{\vartheta=0}=\zeta(\log\rho+1)$. So $\frac{\delta f}{\delta\al}=\log\rho+1$.<span class="why">Derivative of $s\log s$ is $\log s+1$; differentiate under the integral (OT4ML Ex. 15.13, p. 361). The constant $1$ can be dropped.</span></li>
+<li><strong>Relative entropy</strong> $f(\al)=\KL(\al|\be)$ with $\be=Z^{-1}e^{-V}\dd x$: $\KL(\al|\be)=\int\rho\log\rho+\int V\dd\al+\log Z$, so $\frac{\delta f}{\delta\al}=\log\rho+V+1=\log\frac{\rho}{\rho_\be}+\mathrm{const}$.<span class="why">Sum of lines 1 and 3; $\log\rho_\be=-V-\log Z$.</span></li>
+</ol>
+<div class="box example" id="grad-example"><div class="box-h">Worked example — three points and the variance</div>
+<p>Let $f(\al)=\frac14\iint(x-y)^2\dd\al(x)\dd\al(y)$ on $\R$. Expanding the square, $f(\al)=\frac12\mathrm{Var}(\al)$. By line 2 with $k=\frac14(x-y)^2$:</p>
+$$\frac{\delta f}{\delta\al}(x)=\frac12\int(x-y)^2\dd\al(y)=\frac12(x-m)^2+\frac12\mathrm{Var}(\al),\qquad m=\int y\,\dd\al(y).$$
+<p>Take $\al=\frac13(\delta_0+\delta_1+\delta_5)$: $m=2$, $\mathrm{Var}=\frac{4+1+9}3=\frac{14}3$, $f(\al)=\frac73$. Mix towards $\be=\delta_3$. The definition predicts</p>
+$$\frac{\dd}{\dd\vartheta}f(\al_\vartheta)\Big|_{0}=\int\tfrac12(x-m)^2\dd(\delta_3-\al)=\tfrac12(3-2)^2-\tfrac12\mathrm{Var}(\al)=\tfrac12-\tfrac73=-\tfrac{11}6\approx-1.8333 .$$
+<p>Numerically, $\big(f(\al_\vartheta)-f(\al)\big)/\vartheta=-1.83338$ for $\vartheta=10^{-5}$. ✓ Adding mass at $3$, close to the mean, lowers the variance: $\frac{\delta f}{\delta\al}(3)=\frac12+\frac73$ is below the average value $\int\frac{\delta f}{\delta\al}\dd\al=\frac73+\frac73$.</p>
+</div>
+
+<h3 id="grad-wgrad">The Wasserstein gradient</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 15.5, (15.4), p. 358</span></div>
+<p><strong>Definition 15.5</strong> (Wasserstein gradient). Assume that $f$ admits a smooth first variation $\delta f(\al)$. In the smooth formal calculus on $\Pc_2(\R^d)$, the Wasserstein gradient of $f$ at $\al$ is the gradient vector field $\nabla_Wf(\al)=\nabla_x\delta f(\al)$. […] The associated formal gradient flow is the continuity equation</p>
+$$\frac{\partial\al_t}{\partial t}+\dv\big(-\nabla_Wf(\al_t)\,\al_t\big)=0.\qquad(15.4)$$
+</div>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 15.7, p. 358</span></div>
+<p><strong>Proposition 15.7</strong> (Formal Wasserstein gradient). <em>Assume that $f$ admits a smooth first variation $\delta f(\al)$ and that $\al$ has a smooth positive density. Let $v$ be a sufficiently regular velocity field, compactly supported or satisfying a no-flux boundary condition. For perturbations generated by $\pf{(\Id+\tau v)}{\al}$, the differential of $f$ is</em></p>
+$$\frac{\dd}{\dd\tau}\Big|_{\tau=0}f\big(\pf{(\Id+\tau v)}{\al}\big)=\int\ps{\nabla\delta f(\al)(x)}{v(x)}\,\dd\al(x).$$
+<p><em>Hence, for the Riemannian metric $\norm{v}_{L^2(\al)}^2=\int\norm{v}^2\dd\al$, the Wasserstein gradient is the vector field $\nabla_Wf(\al)=\nabla\delta f(\al)$.</em></p>
+</div>
+<dl class="decode">
+<dt>$\nabla_x\delta f(\al)$</dt><dd>The ordinary gradient, in $x$, of the function $\delta f(\al)$: a vector field on $\R^d$. The additive constant disappears. (OT4ML and StatOT write it with a double-struck nabla; the sheet writes $\nabla_{\mathsf W}f$.)</dd>
+<dt>$\pf{(\Id+\tau v)}{\al}$</dt><dd>Move every bit of mass from $x$ to $x+\tau v(x)$: a horizontal perturbation in the direction $v$.</dd>
+<dt>$\norm{v}^2_{L^2(\al)}$</dt><dd>The size of a velocity field, weighted by the mass that moves: the kinetic energy of the motion. It is the metric hidden in $W_2$: $W_2^2\big(\al,\pf{(\Id+\tau v)}{\al}\big)=\tau^2\norm{v}^2_{L^2(\al)}$ when the displacement is optimal (OT4ML p. 359; StatOT §5.3).</dd>
+<dt>“Riemannian gradient”</dt><dd>The derivative in the direction $v$ is the inner product $\ps{\nabla_Wf}{v}_{L^2(\al)}$: exactly how $\ps{\nabla h(x)}{u}$ represents $Dh(x)[u]$ in $\R^d$. Among unit velocities, $\ps{\nabla_Wf}{v}_{L^2(\al)}$ is most negative for $v=-\nabla_Wf/\norm{\nabla_Wf}$ (Cauchy–Schwarz): $-\nabla_Wf$ is the direction of steepest descent.</dd>
+<dt>(15.4)</dt><dd>The gradient flow: every bit of mass moves with velocity $-\nabla_Wf(\al_t)$ at its current position; the continuity equation (<a href="#recall-ce">refresher</a>) turns this into a PDE for $\al_t$. §4 derives it from the JKO step.</dd>
+</dl>
+<div class="box idea"><div class="box-h">Idea of the proof</div>
+<p>Moving mass by $\tau v$ is, to first order, the zero-mass perturbation $-\tau\dv(\al v)$ (mass leaves where $v$ diverges). Plug it into the first variation, then integrate by parts to move the derivative from $\al v$ to $\delta f(\al)$.</p>
+</div>
+<details class="fold proof"><summary>Full proof (formal, as in the book)</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\int\psi\,\dd\big(\pf{(\Id+\tau v)}{\al}\big)=\int\psi\big(x+\tau v(x)\big)\dd\al(x)=\int\psi\,\dd\al+\tau\int\ps{\nabla\psi}{v}\dd\al+o(\tau)$$<span class="why">Definition of the push-forward, then a first-order Taylor expansion of the test function $\psi$.</span></li>
+<li>$$\tau\int\ps{\nabla\psi}{v}\,\rho\,\dd x=-\tau\int\psi\,\dv(\rho v)\,\dd x .$$<span class="why">Integration by parts (<a href="#recall-div">refresher</a>); no boundary term because $v$ is compactly supported.</span></li>
+<li>So, as measures (tested against every $\psi$): $\pf{(\Id+\tau v)}{\al}=\al-\tau\dv(\al v)+o(\tau)$.<span class="why">Lines 1–2. The perturbation $-\tau\dv(\al v)$ has zero mass: $\int\dv(\al v)=0$.</span></li>
+<li>$$f\big(\pf{(\Id+\tau v)}{\al}\big)=f(\al)-\tau\int\delta f(\al)\,\dv(\al v)\,\dd x+o(\tau).$$<span class="why">First variation applied to the zero-mass perturbation of line 3 (formal: Definition 15.2 is stated for mixtures; the smooth calculus extends it to such perturbations).</span></li>
+<li>$$-\int\delta f(\al)\,\dv(\al v)\,\dd x=\int\ps{\nabla\delta f(\al)}{v}\,\dd\al .$$<span class="why">Integration by parts again, now with $\varphi=\delta f(\al)$ and $w=\al v$.</span></li>
+<li>The derivative is the $L^2(\al)$ inner product of $v$ with $\nabla\delta f(\al)$, which is therefore the Riesz representative — the gradient for that metric. $\square$<span class="why">Lines 4–5. This is OT4ML’s proof, p. 358–359; StatOT Prop. 5.10 (p. 152) does the same along a curve $\mu_t$.</span></li>
+</ol>
+</div></details>
+<div class="box example"><div class="box-h">Worked example, continued — the gradient pulls points to the mean</div>
+<p>For $f=\frac12\mathrm{Var}$: $\nabla_Wf(\al)(x)=\frac{\dd}{\dd x}\frac12(x-m)^2=x-m$. On $\al=\frac13(\delta_0+\delta_1+\delta_5)$ it equals $(-2,-1,3)$ at the three points: the descent velocities $-\nabla_Wf=(2,1,-3)$ pull every point towards the mean $m=2$. Check of Proposition 15.7 with the dilation $v(x)=x$: the prediction is $\int(x-m)\,x\,\dd\al=\mathrm{Var}(\al)=\frac{14}3\approx4.6667$; numerically $\frac1\tau\big(f(\pf{(1+\tau)\Id}{\al})-f(\al)\big)=4.666669$ for $\tau=10^{-6}$. ✓ (Indeed $f$ of a dilation by $1+\tau$ is $(1+\tau)^2f$, whose derivative is $2f=\frac{14}3$.)</p>
+</div>
+
+<h3 id="grad-table">The table of Wasserstein gradients</h3>
+<p>Combining the four computations above with the definition gives the gradients of all the energies of this lesson. The last column says what the mass does along the flow $\dot x=-\nabla_Wf(\al)(x)$.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>energy $f(\al)$</th><th>first variation $\frac{\delta f}{\delta\al}$</th><th>Wasserstein gradient $\nabla_Wf$</th><th>along the flow, mass at $x$…</th></tr></thead>
+<tbody>
+<tr><td>potential $\int V\dd\al$</td><td>$V$</td><td>$\nabla V$</td><td>slides down $V$, ignoring the rest</td></tr>
+<tr><td>neg-entropy $\int\rho\log\rho$</td><td>$\log\rho+1$</td><td>$\nabla\log\rho$ (the <em class="new">score</em>)</td><td>leaves high density (diffusion)</td></tr>
+<tr><td>internal energy $\int g(\rho)$</td><td>$g'(\rho)$</td><td>$g''(\rho)\nabla\rho$</td><td>nonlinear diffusion</td></tr>
+<tr><td>$\KL(\al|\be)$, $\be\propto e^{-V}$</td><td>$\log\frac\rho{\rho_\be}$</td><td>$\nabla V+\nabla\log\rho$</td><td>slides down $V$ and diffuses</td></tr>
+<tr><td>interaction $\iint k\,\dd\al\dd\al$</td><td>$2\int k(\cdot,y)\dd\al(y)$</td><td>$2\int\nabla_xk(x,y)\dd\al(y)$</td><td>is attracted / repelled by the rest</td></tr>
+<tr><td>$\mathrm{MMD}_k^2(\al,\be)$</td><td>$2\int k(\cdot,y)\dd(\al-\be)(y)$</td><td>$2\int\nabla_xk(x,y)\dd(\al-\be)(y)$</td><td>repels the cloud, is attracted by $\be$</td></tr>
+<tr><td>$\frac12W_2^2(\al,\be)$</td><td>$\varphi$ (Kantorovich potential)</td><td>$x-T(x)$ ($T$ Brenier map to $\be$)</td><td>slides straight towards $T(x)$</td></tr>
+</tbody></table></div>
+<p class="small muted">Sources: OT4ML Ex. 15.11, Ex. 15.13, (15.9) and p. 362 (pp. 360–362); StatOT Examples 5.11–5.13 (pp. 152–153), which use $\frac12\iint W(x-y)$ and get no factor 2; StatOT (5.30) (p. 170) for $W_2^2$; exercise sheet, Exercises 1, 4 and 6.</p>
+
+<h3 id="grad-w2">The gradient of $\frac12W_2^2$, and the barycenter algorithm of Lesson 3</h3>
+<p>The last row of the table deserves a derivation: it connects this lesson to <a href="Lesson03.html#algo">Lesson 3, §9</a>.</p>
+<ol class="steps">
+<li>$$\tfrac12W_2^2(\al,\be)=\max_{\varphi(x)+\psi(y)\le\frac12\norm{x-y}^2}\ \int\varphi\,\dd\al+\int\psi\,\dd\be .$$<span class="why">Kantorovich duality for the cost $\frac12\norm{x-y}^2$ (<a href="#recall-dual">refresher</a>).</span></li>
+<li>$$\frac{\delta}{\delta\al}\Big(\tfrac12W_2^2(\cdot,\be)\Big)(\al)=\varphi_\al\quad\text{(an optimal potential).}$$<span class="why">“Envelope theorem”: the derivative of a maximum of functions that are linear in $\al$ is the derivative of the maximised one, $\int\varphi_\al\dd\eta$ (formal; this is the solution of Exercise 6 of the sheet, §13).</span></li>
+<li>$$\nabla_W\Big(\tfrac12W_2^2(\cdot,\be)\Big)(\al)=\nabla\varphi_\al=\Id-T,$$ where $T$ is the Brenier map from $\al$ to $\be$.<span class="why">For the quadratic cost, $\frac12\norm{x}^2-\varphi_\al$ is convex with gradient $T$ (Lesson 4).</span></li>
+<li>An explicit gradient step of size $\tau$ moves $x$ to $x-\tau(x-T(x))=(1-\tau)x+\tau T(x)$: it lands on the McCann geodesic from $\al$ to $\be$, at the fraction $\tau$.<span class="why">Push $\al$ by $\Id-\tau\nabla_Wf$. With $\tau=1$ it lands on $\be$ in one step.</span></li>
+</ol>
+<p>Now take the <strong>barycenter energy</strong> of Lesson 3, $F(\al)=\sum_k\lambda_k\frac12W_2^2(\al,\be_k)$. By linearity, $\nabla_WF(\al)=\sum_k\lambda_k(\Id-T_k)=\Id-\sum_k\lambda_kT_k$, where $T_k$ is the Brenier map from $\al$ to $\be_k$. A gradient step of size $1$ is</p>
+$$\al\ \longmapsto\ \pf{\big(\Id-\nabla_WF(\al)\big)}{\al}=\pf{\Big(\sum_k\lambda_kT_k\Big)}{\al},$$
+<p>which is <strong>exactly the fixed-point algorithm of Lesson 3</strong> (“average the optimal maps, push the measure”). Its descent inequality ($F$ decreases by at least $W_2^2$ of the step, <a href="Lesson03.html#algo-descent">Lesson 3</a>) is the descent property of a gradient step, and its fixed points, $\sum_k\lambda_kT_k=\Id$, are the zeros of the Wasserstein gradient. This is the interpretation of Zemel and Panaretos (2019) quoted in Lesson 3. Example: for $\be_1=\N(0,1)$, $\be_2=\N(4,9)$, $\lambda=(\frac12,\frac12)$, from any $\N(m,\sigma^2)$ the averaged map is $x\mapsto2+\frac2\sigma(x-m)$, and one step lands on the barycenter $\N(2,4)$.</p>
+
+<div class="box ml"><div class="box-h">In machine learning — the Wasserstein gradient is the training signal of a generator</div>
+<p>A generative model produces samples $x=G_\theta(z)$ from noise $z\sim\zeta$; its law is $\al_\theta=\pf{(G_\theta)}{\zeta}$. To train it, one minimises a loss of the generated distribution, $f(\al_\theta)$, for instance $\mathrm{MMD}^2(\al_\theta,\be_{\text{data}})$ or a Sinkhorn divergence (Lesson 7). Changing $\theta$ in a direction $u$ moves each sample by $\partial_\theta G_\theta(z)\,u$, so Proposition 15.7 (with this displacement field) gives the chain rule</p>
+$$\nabla_\theta f(\al_\theta)=\int\big(\partial_\theta G_\theta(z)\big)^{\!\top}\,\nabla_Wf(\al_\theta)\big(G_\theta(z)\big)\,\dd\zeta(z).$$
+<p>In words: <strong>the Wasserstein gradient tells each generated sample where to move</strong>, and backpropagation pulls these per-sample directions back to the parameters. With the MMD loss, the direction at a sample $x$ is $2\int\nabla_xk(x,y)\dd(\al_\theta-\be)(y)$: away from the other generated samples, towards the data. This is what automatic differentiation computes when a loss is written as a function of a minibatch of generated samples (with the factor $n$ of §5). Generators trained this way with an MMD loss were proposed by Dziugaite, Roy and Ghahramani (2015), with Sinkhorn losses by Genevay, Peyré and Cuturi (2018). OT4ML (§16.2, (16.15)–(16.17), pp. 415–416) calls this a <em>parameter-domain discrepancy flow</em> and adds a warning: the motion it induces on the samples is the Wasserstein velocity only in special cases, because the per-sample directions are filtered through the Jacobian of the generator.</p>
+</div>
+
+<div class="box pitfall"><div class="box-h">Pitfall — a function is not a vector field</div>
+<p>$\frac{\delta f}{\delta\al}$ is a scalar function defined up to a constant; $\nabla_Wf$ is a vector field. The flow is driven by the <em>gradient</em> of the first variation: a first variation that is constant on the support of $\al$ produces no motion at all, even if it is very large. This is what happens at a stationary point (§10).</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — the factor 2 of interaction energies</div>
+<p>$\iint k\,\dd\al\dd\al$ has first variation $2\int k(\cdot,y)\dd\al(y)$, not $\int k(\cdot,y)\dd\al(y)$: $\al$ appears twice. StatOT puts a $\frac12$ in front ($\frac12\iint W(x-y)$) precisely to remove it. Missing this factor does not change the trajectories, only the clock.</p>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>To compute $\nabla_Wf$: replace $\al$ by $\al+\vartheta\eta$, keep the term in $\vartheta$, write it $\int(\cdots)\dd\eta$, take the gradient in $x$ of $(\cdots)$.</li>
+<li>Entropy → the score $\nabla\log\rho$; potential → $\nabla V$; interaction → a kernel average of $\nabla k$; $\frac12W_2^2(\cdot,\be)$ → $\Id-T$.</li>
+<li>A sum of energies → a sum of gradients (KL $=$ potential $+$ entropy).</li>
+</ul>
+</div>
+<div class="quiz"><p>Compute $\frac{\delta f}{\delta\al}$ and $\nabla_Wf$ for $f(\al)=\big(\int x\,\dd\al\big)^2$ on $\R$ (the squared mean). What does the flow do?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>With $m=\int x\dd\al$: $f(\al+\vartheta\eta)=\big(m+\vartheta\int x\dd\eta\big)^2=m^2+2\vartheta m\int x\,\dd\eta+O(\vartheta^2)$, so $\frac{\delta f}{\delta\al}(x)=2mx$ and $\nabla_Wf=2m$, the same vector at every point. The flow translates the whole measure rigidly with velocity $-2m$: $\dot m=-2m$, $m(t)=m_0e^{-2t}$, and the shape never changes. (This is Exercise 4 (1) of the sheet with $A=1$.)</p>
+</div></details></div>

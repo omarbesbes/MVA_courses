@@ -1,0 +1,106 @@
+<h2 id="line">3. The line: sorting solves the problem <span class="ref">OT4ML §1.1, pp. 9–13</span></h2>
+<p class="tldr">On the real line, for a convex cost of the displacement, the optimal pairing matches equal ranks — smallest with smallest, second with second — so sorting solves the problem in $O(n\log n)$; strict convexity makes this the only optimum, the distance cost $\abs{x-y}$ has ties, and concave costs break the rule.</p>
+
+<h3 id="line-thm">Monotone matching</h3>
+<p>Points on a line can be ordered. Draw the sources on one horizontal line and the targets on a parallel line below. The natural guess is to pair the leftmost source with the leftmost target, the second with the second, and so on: this is the only pairing whose segments do not cross. For a convex cost, the guess is right.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 1.2, pp. 9–10</span></div>
+<p><strong>Proposition 1.2 (Monotone matching on the line).</strong> Assume that $x_1,\dots,x_n$ are pairwise distinct and that $y_1,\dots,y_n$ are pairwise distinct. If $C_{i,j}=h(x_i-y_j)$ for a strictly convex function $h:\R\to\R$, then the unique optimizer is the order-preserving permutation, characterized by</p>
+$$(x_i-x_{i'})(y_{\sigma(i)}-y_{\sigma(i')})>0\qquad\text{for every }i\ne i'.$$
+<p>In particular, the result applies to $h(s)=\abs{s}^p$ for $p>1$.</p>
+<p>If $h$ is convex but not strictly convex, the same exchange inequality is non-strict. The equal-rank matching remains optimal, but other, non-monotone optimizers can coexist.</p>
+</div>
+<dl class="decode">
+<dt>$C_{i,j}=h(x_i-y_j)$</dt><dd>The cost only depends on the displacement $y-x$ (the same function $h$ everywhere on the line): a <em>translation-invariant</em> cost.</dd>
+<dt>$h$ strictly convex</dt><dd>Its slopes strictly increase. Examples: $s^2$, $\abs{s}^p$ with $p>1$. Not strictly: $\abs{s}$ (two straight pieces). Not convex: $\abs{s}^{1/2}$.</dd>
+<dt>order-preserving</dt><dd>$x_i<x_{i'}$ implies $y_{\sigma(i)}<y_{\sigma(i')}$: the product of the two differences is positive. Equivalently: the $k$-th smallest source goes to the $k$-th smallest target.</dd>
+<dt>“other optimizers can coexist”</dt><dd>For $h(s)=\abs{s}$ the sorted pairing is still optimal, but possibly not alone (see the book-shifting example below).</dd>
+</dl>
+<div class="box recall"><div class="box-h">Reminder — a convex function has increasing slopes</div>
+<p>If $h$ is convex on $\R$, the slope of a chord, $\frac{h(b)-h(a)}{b-a}$, is nondecreasing in each endpoint $a$ and $b$ (draw the graph: moving an endpoint of the chord to the right along a convex graph can only make it steeper). For a fixed length $d>0$ the slope over $[s-d,s]$,</p>
+$$D(s)=\frac{h(s)-h(s-d)}{d},$$
+<p>is therefore nondecreasing in $s$ (both endpoints move right), and <strong>strictly increasing</strong> if $h$ is strictly convex. Example: $h(s)=s^2$ gives $D(s)=2s-d$. More: <a href="Reminders.html#convex-functions">Reminders — convex functions</a>.</p>
+</div>
+<div class="box idea"><div class="box-h">Idea of the proof</div>
+<p>A non-sorted pairing contains an <em>inversion</em>: two sources $x<x'$ sent to targets $y'>y$ (their segments cross). Uncrossing them changes the cost by a difference of slopes of $h$ over two intervals of the same length, one to the right of the other; convexity says the right one is steeper, so uncrossing helps. Repeat until no inversion is left: what remains is the sorted pairing.</p>
+</div>
+<details class="fold proof"><summary>Full proof</summary><div class="fold-body">
+<ol class="steps">
+<li>Suppose $\sigma$ is not order-preserving: there are sources $x<x'$ matched to targets $y'$ and $y$ with $y'>y$ ($x\to y'$, $x'\to y$).<span class="why">That is what “not order-preserving” means, after naming the points.</span></li>
+<li>Put $d=y'-y>0$ and $D(s)=\frac{h(s)-h(s-d)}d$. Then
+$$\underbrace{h(x-y')+h(x'-y)}_{\text{crossed}}-\underbrace{\big(h(x-y)+h(x'-y')\big)}_{\text{uncrossed}}=d\,\big(D(x'-y)-D(x-y)\big).$$<span class="why">Since $x-y'=(x-y)-d$ and $x'-y'=(x'-y)-d$, the left side is $\big[h(x'-y)-h(x'-y-d)\big]-\big[h(x-y)-h(x-y-d)\big]$, which is $d\,D(x'-y)-d\,D(x-y)$.</span></li>
+<li>This is $>0$.<span class="why">$x'-y>x-y$ (because $x'>x$), and $D$ is strictly increasing for strictly convex $h$ (reminder above).</span></li>
+<li>So swapping the targets of $x$ and $x'$ strictly lowers the cost: an optimal $\sigma$ has no inversion.<span class="why">All other pairs are unchanged.</span></li>
+<li>A bijection between two sets of $n$ distinct numbers without inversion pairs the $k$-th smallest source with the $k$-th smallest target. Since an optimal permutation exists (finite set), it is this one, and it is unique. $\square$<span class="why">If the $k$-th smallest source went to a target of rank $\ne k$, some smaller source would go to a larger target, or a larger source to a smaller one: an inversion.</span></li>
+</ol>
+<p><strong>If $h$ is only convex</strong>, $D$ is nondecreasing, step 3 gives $\ge0$: uncrossing never hurts. Starting from an optimal $\sigma$ and uncrossing inversions one at a time (each swap reduces the number of inversions, so this stops) gives a sorted pairing of no larger cost: the sorted pairing is optimal, possibly not alone.</p>
+</div></details>
+<div class="box example"><div class="box-h">Worked example — two sources, two targets, three exponents</div>
+<p>Sources $\{0,1\}$, targets $\{1,2\}$, cost $\abs{x-y}^p$. The sorted pairing $0\to1$, $1\to2$ moves each point by $1$: cost $1+1=2$ for every $p$. The other pairing $0\to2$, $1\to1$ moves one point by $2$ and the other by $0$: cost $2^p$.</p>
+<ul>
+<li>$p=2$ (strictly convex): $2<4$. Sorting wins, and is the unique optimum.</li>
+<li>$p=1$ (convex, not strictly): $2=2$. A tie: both pairings are optimal.</li>
+<li>$p=\frac12$ (concave): $2>\sqrt2\approx1.414$. The <em>nested</em> pairing wins: one long move and one null move beat two medium moves.</li>
+</ul>
+</div>
+<figure class="fig"><!-- include figures/L01/regimes.svg --><figcaption>The worked example: sources $\{0,1\}$ (top, orange), targets $\{1,2\}$ (bottom, blue). The sorted pairing (green) costs $2$ for every exponent; the nested pairing (grey) costs $2^p$. Below the costs: which one wins.</figcaption></figure>
+
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Alg. 1.1, p. 10</span></div>
+<p><strong>Algorithm 1.1: One-dimensional sorting assignment.</strong> Input: equal-weight point clouds $(x_i)_{i=1}^n$, $(y_j)_{j=1}^n$ on $\R$; convex cost $h(x-y)$. Output: optimal permutation $\sigma$. Sort source and target points: $x_{\sigma_X(1)}\le\dots\le x_{\sigma_X(n)}$, $y_{\sigma_Y(1)}\le\dots\le y_{\sigma_Y(n)}$. For $k=1,\dots,n$: match $x_{\sigma_X(k)}$ with $y_{\sigma_Y(k)}$. Return $\sigma=\sigma_Y\circ\sigma_X^{-1}$.</p>
+</div>
+<p><strong>Decoding.</strong> $\sigma_X(k)$ is the index of the $k$-th smallest source, so $\sigma_X^{-1}(i)$ is the <em>rank</em> of $x_i$; $\sigma(i)=\sigma_Y(\text{rank of }x_i)$ is the index of the target with the same rank. Cost: two sorts, $O(n\log n)$ comparisons with mergesort or heapsort, against $O(n^3)$ for the Hungarian method. For $n=10^6$ points, $n\log_2n\approx2\times10^7$ against $n^3=10^{18}$. This is why one-dimensional transport is so cheap — the engine of sliced transport (Lesson 5).</p>
+
+<h3 id="line-flat">The distance cost: ties and book-shifting</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Example 1.3, pp. 12–13</span></div>
+<p><strong>Example 1.3 (Discrete book-shifting and non-uniqueness for $\mathcal W_1$).</strong> Fix $m\ge1$ and consider the two equal-cardinality point clouds $X=\{1,\dots,2m\}$ and $Y=\{m+1,\dots,3m\}$ with uniform weights. The monotone assignment sends $i$ to $i+m$ and has average cost $m$ for $c(x,y)=\abs{x-y}$. It is not unique. The discrete book-shifting assignment</p>
+$$T_{\mathrm{book}}(i)=\begin{cases}i+2m,&1\le i\le m,\\ i,&m<i\le2m,\end{cases}$$
+<p>is also a bijection from $X$ to $Y$ and has the same average cost: $\frac1{2m}\sum_{i=1}^{2m}\abs{T_{\mathrm{book}}(i)-i}=\frac1{2m}\sum_{i=1}^m2m=m$. Optimality follows from the lower bound $\frac1{2m}\sum_{i=1}^{2m}\abs{y_{\sigma(i)}-i}\ge\frac1{2m}\sum_{i=1}^{2m}(y_{\sigma(i)}-i)=m$, which holds for every assignment because the target sum is fixed. […] For $\abs{x-y}^p$ with $p>1$, this degeneracy disappears: the monotone assignment has average cost $m^p$, whereas the book-shifting assignment has average cost $2^{p-1}m^p>m^p$.</p>
+</div>
+<p><strong>Why the name.</strong> To shift a row of $2m$ books by $m$ places to the right, you can slide each book by $m$ (monotone), or move the first $m$ books to the end in one go, by $2m$ each, leaving the others in place (book-shifting). For the cost “total distance travelled” both cost the same.</p>
+<div class="box example"><div class="box-h">Worked example — $m=2$</div>
+<p>$X=\{1,2,3,4\}$, $Y=\{3,4,5,6\}$. Monotone: $1\to3$, $2\to4$, $3\to5$, $4\to6$, each move has length $2$: average $2$. Book-shifting: $1\to5$, $2\to6$, $3\to3$, $4\to4$: average $\frac{4+4+0+0}4=2$. The lower bound: the targets sum to $18$, the sources to $10$, so every pairing has average displacement $\frac{18-10}4=2$, and $\abs{y-x}\ge y-x$. With $p=2$: monotone $\frac{4\cdot4}4=4$, book-shifting $\frac{16+16}4=8=2^{p-1}m^p$.</p>
+</div>
+<p>The continuous version of this example is Exercise 5 of the sheet (§11), and it will show that Monge's problem for $\abs{x-y}$ can have many optimal maps (§6).</p>
+
+<h3 id="line-concave">Concave costs: sorting fails</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML §1.1, p. 10</span></div>
+<p><strong>Concave costs on the line.</strong> Concavity reverses the exchange preference: one long and one short displacement can cost less than two displacements of intermediate length. Thus costs $c(x,y)=g(\abs{x-y})$ with $g$ strictly concave and nondecreasing, such as $g(r)=r^p$ for $0<p<1$, favor nested or crossing assignments rather than equal ranks; see Figure 1.1.</p>
+</div>
+<p>The worked example above ($p=\frac12$) is the smallest instance. The line still helps — the book describes an exact $O(n^2)$ algorithm by Delon, Salomon and Sobolevski (Algorithm 1.2, p. 11), beyond this course — but the answer is no longer “sort”. Concave costs model situations where moving far is not much worse than moving a little (shipping costs with a fixed fee, for instance).</p>
+<div class="widget" data-widget="l1line"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p>What to look at: sources on the top line, targets on the bottom line. The green segments are the optimal pairing for $\abs{x-y}^p$ (Hungarian method); the readout compares its cost with the cost of the sorted pairing. For $p\ge1$ the two costs are equal (at $p=1$ the solver may return a different pairing with the same cost — a tie); for $p<1$ sorting becomes suboptimal and the optimum shows nested and crossing segments. The presets reproduce the two worked examples.</p>
+
+<h3 id="line-histeq">Application: histogram equalization</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML §1.1 “Histogram equalization”, p. 12</span></div>
+<p>Order preservation survives any strictly increasing change of coordinates. In particular, if $\varphi:\R\to\R$ is strictly increasing and $h:\R_+\to\R$ is convex and nondecreasing, sorting solves the assignment problem for the cost $h(\abs{\varphi(x)-\varphi(y)})$ after applying $\varphi$ to both clouds.</p>
+<p>A typical application is grayscale histogram equalization. Let $I_\ell$, $\ell\in[\![N]\!]$, be the labeled pixel intensities, write $\al_N=N^{-1}\sum_{\ell=1}^N\delta_{I_\ell}$, and choose a stable sorting permutation $\iota$ such that $I_{\iota(1)}\le\dots\le I_{\iota(N)}$. For a prescribed target law $\be$, set $u_k=(k-1/2)/N$ and assign pixel $\iota(k)$ the target intensity $C_\be^{-1}(u_k)$. […] With repeated digital intensities, however, $\pi_N$ is not the graph of a function of intensity alone: it splits the tied atom.</p>
+</div>
+<dl class="decode">
+<dt>$\al_N$</dt><dd>The histogram of the image, seen as a measure: one Dirac of mass $\frac1N$ per pixel, at its grey level.</dd>
+<dt>stable sort $\iota$</dt><dd>$\iota(k)$ is the pixel of rank $k$; “stable” means that pixels with equal intensities keep their original (reading) order.</dd>
+<dt>$C_\be^{-1}(u_k)$</dt><dd>The quantile of level $u_k$ of the target law (§9): the grey level below which a fraction $u_k$ of the target mass lies. The levels $u_k=\frac{k-1/2}N$ are the midpoints of $N$ equal slices of $[0,1]$.</dd>
+<dt>splits the tied atom</dt><dd>Two pixels with the same grey level receive different new grey levels: the new image is not a function of the old grey level. In transport language, mass at one point is sent to two places — a coupling, not a map (§6).</dd>
+</dl>
+<div class="box example"><div class="box-h">Worked example — equalizing six pixels</div>
+<p>Intensities $I=(0.2,\,0.9,\,0.2,\,0.5,\,0.1,\,0.7)$ for pixels $1,\dots,6$; target: the uniform law on $[0,1]$, whose quantile function is $C_\be^{-1}(u)=u$. The stable order is $\iota=(5,1,3,4,6,2)$ (pixel 5 is the darkest; pixels 1 and 3 tie at $0.2$ and keep their order). The levels are $u_k=\frac1{12},\frac3{12},\frac5{12},\frac7{12},\frac9{12},\frac{11}{12}$, so the equalized image is</p>
+$$\big(\tfrac14,\ \tfrac{11}{12},\ \tfrac5{12},\ \tfrac7{12},\ \tfrac1{12},\ \tfrac34\big)\quad\text{for pixels }1,\dots,6.$$
+<p>Its six grey levels are evenly spread: the histogram is flat. The two pixels at $0.2$ went to $\frac14$ and $\frac5{12}$: the atom of mass $\frac26$ at $0.2$ was split.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — ties make it a coupling, not a map</div>
+<p>Real images have few grey levels (256 at most) and many pixels, so ties are the rule. Sending all the pixels of a grey level to the same new level would be a <em>map</em> of intensities, but then the new histogram cannot be exactly flat (a whole atom moves together). Exact equalization needs to split atoms, i.e. a coupling; the stable sort only decides <em>which</em> pixel of a tie gets which value.</p>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — histogram equalization and quantile normalization</div>
+<ul>
+<li><strong>Contrast normalization of images.</strong> Histogram equalization (and its local variants) is a standard preprocessing and data-augmentation step in computer vision and medical imaging: it maps the grey levels of every image to a common target histogram, so that the network sees comparable contrasts.</li>
+<li><strong>Feature-wise quantile transforms.</strong> scikit-learn's <code>QuantileTransformer</code> replaces each feature value $x$ by $C_\be^{-1}(\hat C(x))$, where $\hat C$ is the empirical CDF of that feature and $\be$ is the uniform or the standard normal law. This is exactly the one-dimensional monotone transport of this section (and of §9): it makes heavy-tailed or skewed features Gaussian-looking, and is robust to outliers because only ranks matter.</li>
+<li><strong>Quantile normalization</strong> of gene-expression arrays (Bolstad et al., 2003) sends the $k$-th smallest value of every sample to the average of the $k$-th smallest values over all samples. In transport language: every sample is mapped by sorting onto the <em>Wasserstein barycenter</em> of the samples, which on the line averages quantiles (<a href="Lesson03.html#oned">Lesson 3, §8</a>).</li>
+</ul>
+</div>
+
+<div class="quiz"><p>For $h(s)=s^2$, compute the gain of uncrossing two pairs from the formula of the proof, and check it on sources $\{0,1\}$, targets $\{1,2\}$.</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>$D(s)=2s-d$, so the gain is $d\,\big(D(x'-y)-D(x-y)\big)=d\cdot2(x'-x)=2(x'-x)(y'-y)$: twice the product of the two gaps. With $x=0$, $x'=1$, $y=1$, $y'=2$: $2\cdot1\cdot1=2$, and indeed crossed $4$ minus uncrossed $2$ is $2$. It is the one-dimensional case of the formula $2\ps{x_i-x_j}{y_{\sigma(i)}-y_{\sigma(j)}}$ of §2.</p>
+</div></details></div>
+<div class="quiz"><p>Sources $\{0,3\}$, targets $\{1,2\}$, cost $\abs{x-y}$: list the optimal pairings. Same question with $\abs{x-y}^2$.</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>Sorted: $0\to1$, $3\to2$, cost $1+1=2$. Crossed: $0\to2$, $3\to1$, cost $2+2=4$. Only the sorted pairing is optimal for $\abs{x-y}$ here (ties are possible, not systematic). For $\abs{x-y}^2$: $2$ against $8$, sorted again.</p>
+</div></details></div>

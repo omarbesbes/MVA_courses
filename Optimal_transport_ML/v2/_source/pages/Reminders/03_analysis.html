@@ -1,0 +1,213 @@
+
+<h2 id="analysis">4. Analysis</h2>
+<p class="tldr">Inequalities to bound integrals, Lipschitz functions and compactness to guarantee that optimizers exist, the Jacobian to change variables, and the calculus of vector fields — divergence, ODE flows, continuity equation — to describe mass in motion.</p>
+
+<h3 id="norms">Norms and inequalities: Cauchy–Schwarz, Hölder, Minkowski, Jensen</h3>
+<p class="small muted"><strong>Used in</strong> <a href="Lesson03.html#recall-minkowski">Lesson 3</a> (Minkowski in the triangle inequality of $W_p$, <a href="Lesson03.html#recall-jensen">Jensen</a> in $W_p\le W_q$), <a href="Lesson04.html">Lesson 4</a> (duality bounds), <a href="Lesson07.html">Lesson 7</a> (Jensen gives $\KL\ge0$), <a href="Lesson08.html">Lesson 8</a> (Cauchy–Schwarz in energy estimates).</p>
+<p>A norm measures size; the $L^p$ norms of a function weigh its large values more and more as $p$ grows. Four inequalities do almost all the work: Cauchy–Schwarz and Hölder bound a product, Minkowski is the triangle inequality of $L^p$, and Jensen says that a convex function of an average is below the average of the function.</p>
+<div class="box thm"><div class="box-h">The four inequalities (standard)</div>
+<p>Let $\al$ be a measure, $\norm{f}_p=\big(\int\abs{f}^p\dd\al\big)^{1/p}$ for $1\le p<\infty$ and $\norm{f}_\infty=\sup\abs{f}$ (for vectors, $\al$ = counting measure).</p>
+<ul>
+<li><strong>Cauchy–Schwarz:</strong> $\abs{\ps{u}{v}}\le\norm{u}\,\norm{v}$, with equality iff $u$ and $v$ are collinear.</li>
+<li><strong>Hölder:</strong> $\int\abs{fg}\,\dd\al\le\norm{f}_p\norm{g}_q$ when $\frac1p+\frac1q=1$ ($p=q=2$ is Cauchy–Schwarz).</li>
+<li><strong>Minkowski</strong> ($p\ge1$): $\norm{f+g}_p\le\norm{f}_p+\norm{g}_p$.</li>
+<li><strong>Jensen:</strong> if $\al$ is a <em>probability</em> measure and $\varphi$ is convex, $\varphi\big(\int f\,\dd\al\big)\le\int\varphi\circ f\,\dd\al$, i.e. $\varphi(\E U)\le\E\varphi(U)$. Reversed for concave $\varphi$.</li>
+</ul>
+<p>Consequences: on a probability space $\norm{f}_p\le\norm{f}_q$ for $p\le q$ (Jensen with $\varphi(s)=s^{q/p}$); Young’s inequality $ab\le\frac{a^p}p+\frac{b^q}q$ for $a,b\ge0$.</p>
+</div>
+<figure class="fig"><!-- include figures/REM/jensen.svg --><figcaption>Jensen for a two-point variable: the average of $\varphi(U)$ lies on the chord (orange), $\varphi$ of the average lies on the graph (green), and a convex graph is below its chords. The tangent at $\E U$ (dashed) is the proof.</figcaption></figure>
+<div class="box example"><div class="box-h">Worked example</div>
+<ul>
+<li>$u=(1,2,3)$, $v=(4,-5,6)$: $\ps{u}{v}=12\le\norm{u}\norm{v}=\sqrt{14}\sqrt{77}\approx32.8$. Hölder with $(p,q)=(1,\infty)$: $\sum\abs{u_iv_i}=32\le\norm{u}_1\norm{v}_\infty=6\cdot6=36$. Minkowski: $\norm{u+v}\approx10.72\le\norm{u}+\norm{v}\approx12.52$.</li>
+<li>$U$ uniform on $\{1,2,3\}$, $\varphi(s)=s^2$: $\varphi(\E U)=4\le\E\varphi(U)=\frac{14}3\approx4.67$; the gap is $\mathrm{Var}(U)=\frac23$. The norms $\norm{U}_1=2$, $\norm{U}_2\approx2.16$, $\norm{U}_3\approx2.29$, $\norm{U}_\infty=3$ increase with $p$. With the concave $\log$: $\E\log U\approx0.597\le\log\E U\approx0.693$.</li>
+</ul>
+</div>
+<details class="fold proof"><summary>Proofs of Cauchy–Schwarz and Jensen</summary><div class="fold-body">
+<p><strong>Cauchy–Schwarz.</strong> For every real $t$, $0\le\norm{u+tv}^2=\norm{u}^2+2t\ps{u}{v}+t^2\norm{v}^2$. A quadratic polynomial in $t$ that never takes negative values has a non-positive discriminant: $4\ps{u}{v}^2-4\norm{u}^2\norm{v}^2\le0$.</p>
+<p><strong>Jensen.</strong> Let $m=\E U$. A convex $\varphi$ lies above a supporting line at $m$: $\varphi(u)\ge\varphi(m)+s\,(u-m)$ for all $u$, for some slope $s$ (the derivative if it exists). Take expectations: $\E\varphi(U)\ge\varphi(m)+s\,(\E U-m)=\varphi(m)$. This is the dashed tangent of the figure.</p>
+<p><strong>Hölder</strong> follows by integrating Young’s inequality $\abs{fg}\le\frac{\abs f^p}{p}+\frac{\abs g^q}{q}$ after normalising $\norm{f}_p=\norm{g}_q=1$; <strong>Minkowski</strong> by applying Hölder to $\abs{f+g}^p\le\abs f\abs{f+g}^{p-1}+\abs g\abs{f+g}^{p-1}$.</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul>
+<li>Minkowski is false for $p<1$ (<a href="Lesson03.html#recall-minkowski">counterexample in Lesson 3</a>): that is why $W_p$ needs $p\ge1$.</li>
+<li>Jensen needs weights summing to $1$, and its direction depends on convexity: $\E\log U\le\log\E U$, but $\E U^2\ge(\E U)^2$.</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — the evidence lower bound (ELBO)</div>
+<p>For a latent-variable model $p_\theta(x,z)$ and any distribution $q(z)$, Jensen with the concave $\log$ gives</p>
+$$\log p_\theta(x)=\log\E_{z\sim q}\Big[\frac{p_\theta(x,z)}{q(z)}\Big]\ \ge\ \E_{z\sim q}\big[\log p_\theta(x,z)-\log q(z)\big]=\mathrm{ELBO}(q,\theta).$$
+<p>VAEs and variational inference maximise this lower bound; the gap is exactly $\KL\big(q\,|\,p_\theta(\cdot|x)\big)$ (<a href="#entropy">§6</a>). Cauchy–Schwarz is also why cosine similarities $\ps{u}{v}/(\norm u\norm v)$ between embeddings lie in $[-1,1]$.</p>
+</div>
+
+<h3 id="lipschitz">Continuous and Lipschitz functions, compactness</h3>
+<p class="small muted"><strong>Used in</strong> <a href="Lesson03.html#conv-metrize">Lesson 3</a> (Lipschitz test functions; existence of optimal plans), <a href="Lesson04.html">Lesson 4</a> ($W_1$ as a supremum over $1$-Lipschitz functions; $c$-transforms inherit the regularity of the cost; Arzelà–Ascoli gives optimal potentials; Wasserstein GANs), <a href="Lesson06.html">Lessons 6</a> and <a href="Lesson08.html">8</a> (Lipschitz velocity fields give well-defined flows).</p>
+<p>A Lipschitz function cannot change faster than a fixed multiple of the distance travelled: its graph has bounded slopes. Compactness is the property that makes minimisation problems have solutions: every sequence has a convergent subsequence, so a minimising sequence has a limit.</p>
+<div class="box def"><div class="box-h">Definitions <span class="ref">Lipschitz constant: OT4ML Def. 6.16, p. 120</span></div>
+<ul>
+<li>$f$ is <em class="new">$L$-Lipschitz</em> if $\abs{f(x)-f(y)}\le L\,d(x,y)$ for all $x,y$. The smallest such $L$ is $\Lip(f)=\sup_{x\ne y}\frac{\abs{f(x)-f(y)}}{d(x,y)}$. For $f$ of class $C^1$ on a convex set, $\Lip(f)=\sup\norm{\nabla f}$.</li>
+<li>A metric space is <em class="new">compact</em> if every sequence has a convergent subsequence. In $\R^d$: closed and bounded.</li>
+</ul>
+</div>
+<div class="box thm"><div class="box-h">The facts used in the course (standard)</div>
+<ol>
+<li><strong>Weierstrass.</strong> A continuous (or just lower semi-continuous) function on a compact set attains its minimum. This is how the existence of optimal plans is proved: the set of couplings is compact for weak convergence and the cost is lower semi-continuous (OT4ML Prop. 3.34, p. 66).</li>
+<li><strong>Heine.</strong> A continuous function on a compact metric space is uniformly continuous.</li>
+<li><strong>Envelopes.</strong> An infimum (or supremum) of $L$-Lipschitz functions, if finite, is $L$-Lipschitz. This is why $c$-transforms are as regular as the cost (OT4ML Prop. 5.10, p. 99).</li>
+<li><strong>Arzelà–Ascoli.</strong> On a compact metric space, a family of functions that is uniformly bounded and equicontinuous (for instance: all $L$-Lipschitz functions with $\abs f\le M$) is relatively compact for the sup norm: every sequence has a uniformly convergent subsequence.</li>
+<li><strong>The same for measures (Prokhorov).</strong> On a compact space every sequence of probability measures has a weakly convergent subsequence (OT4ML Remark 7.22, p. 132).</li>
+</ol>
+</div>
+<div class="box example"><div class="box-h">Worked example</div>
+<ul>
+<li>$\abs x$ and $\sin x$ are $1$-Lipschitz on $\R$. $x^2$ is $4$-Lipschitz on $[-2,2]$ but not Lipschitz on $\R$. $\sqrt x$ is continuous on $[0,1]$ but not Lipschitz: $\frac{\sqrt{0.01}-0}{0.01}=10$, and the ratio blows up near $0$.</li>
+<li>Envelope: with $x=(0,1,3)$ and $f=(0,0.5,1)$, the lower envelope $g(y)=\min_i\big(\abs{y-x_i}-f_i\big)$ takes the values $0,-0.5,0,-1,0$ at $y=0,1,2,3,4$ — a $1$-Lipschitz zigzag, as fact 3 predicts. (It is a discrete $c$-transform for $c=\abs{x-y}$, <a href="#ot-duality">§9</a>.)</li>
+<li>No compactness, no convergent subsequence: $f_n(x)=\sin(nx)$ on $[0,\pi]$ are bounded by $1$ but $\Lip(f_n)=n$; no subsequence converges uniformly. Normalised $1$-Lipschitz functions on $[0,1]$ ($f(0)=0$), on the contrary, form a compact family.</li>
+</ul>
+</div>
+<details class="fold proof"><summary>Proof of fact 3 (envelopes of Lipschitz functions)</summary><div class="fold-body">
+<p>Let $g=\inf_k f_k$ with each $f_k$ $L$-Lipschitz. For all $x,y$ and $k$: $g(x)\le f_k(x)\le f_k(y)+L\,d(x,y)$. Take the infimum over $k$: $g(x)\le g(y)+L\,d(x,y)$. Exchange $x$ and $y$: $\abs{g(x)-g(y)}\le L\,d(x,y)$.</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul>
+<li>Without compactness a minimum may not exist: $e^{-x}$ on $\R$ has infimum $0$, never attained.</li>
+<li>Arzelà–Ascoli needs a uniform bound. Kantorovich potentials are defined up to an additive constant, so one normalises them, e.g. $f(x_0)=0$, before extracting a subsequence (OT4ML Cor. 7.6, p. 127).</li>
+<li>The Lipschitz constant depends on the distance used on the space.</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — Lipschitz critics in Wasserstein GANs</div>
+<p>By Kantorovich–Rubinstein duality (<a href="Lesson04.html">Lesson 4</a>), $W_1(\al,\be)=\sup_{\Lip(f)\le1}\int f\,\dd(\al-\be)$: a Wasserstein GAN trains a critic network $f$ to maximise $\E f(\text{real})-\E f(\text{generated})$ under a Lipschitz constraint. In practice: weight clipping (a crude proxy, OT4ML Remark 7.26, p. 135), a gradient penalty $\big(\norm{\nabla f}-1\big)^2$ at random points, or spectral normalisation, which uses that a linear layer $x\mapsto Wx$ has Lipschitz constant $\norm{W}_{\mathrm{op}}$ (largest singular value), ReLU is $1$-Lipschitz, and Lipschitz constants multiply under composition.</p>
+</div>
+
+<h3 id="jacobian">Change of variables in integrals, Jacobian determinant</h3>
+<p class="small muted"><strong>Used in</strong> <a href="Lesson01.html">Lesson 1</a> (densities of push-forwards; the Monge–Ampère equation), <a href="Lesson06.html">Lesson 6</a> (densities along a flow), <a href="Lesson08.html">Lesson 8</a> (entropy along a flow), and normalizing flows.</p>
+<p>A smooth map distorts volumes: near $x$ it acts like its Jacobian matrix $J_T(x)=T'(x)$, which sends a small cube of volume $h^d$ to a small parallelepiped of volume $\abs{\det J_T(x)}\,h^d$. Integrals change accordingly.</p>
+<div class="box thm"><div class="box-h">Change of variables (standard)</div>
+<p>If $T:U\to V$ is a $C^1$ diffeomorphism between open sets of $\R^d$ and $g\ge0$ (or integrable),</p>
+$$\int_V g(y)\,\dd y=\int_U g\big(T(x)\big)\,\abs{\det J_T(x)}\,\dd x .$$
+<p>Linear case: $T(x)=Ax$ multiplies all volumes by $\abs{\det A}$. Applied to densities this gives the push-forward formula of <a href="#pushforward">§1</a>; for a Brenier map $T=\nabla\varphi$ (so $J_T=\nabla^2\varphi\succeq0$) it gives the <strong>Monge–Ampère equation</strong> $\rho_\al(x)=\det\big(\nabla^2\varphi(x)\big)\,\rho_\be\big(\nabla\varphi(x)\big)$.</p>
+</div>
+<div class="box example"><div class="box-h">Worked example</div>
+<ul>
+<li>Polar coordinates $T(r,\theta)=(r\cos\theta,r\sin\theta)$ have $\det J_T=r$, so $\int_{\R^2}e^{-\norm x^2/2}\dd x=\int_0^{2\pi}\int_0^\infty e^{-r^2/2}\,r\,\dd r\,\dd\theta=2\pi$: the normalising constant of the 2D Gaussian.</li>
+<li>$A=\begin{pmatrix}2&1\\0&1\end{pmatrix}$ has $\det A=2$: the unit square becomes a parallelogram of area $2$, and the uniform law on the square is pushed to the uniform law on the parallelogram, with density $\frac12$.</li>
+<li>Log-normal: if $X\sim\N(0,1)$, $Y=e^X$ has density $\phi(\log y)/y$ (here $T^{-1}(y)=\log y$, $(T^{-1})'(y)=1/y$); at $y=2$: $\approx0.157$.</li>
+</ul>
+</div>
+<details class="fold proof"><summary>Why $\abs{\det J}$</summary><div class="fold-body">
+<p>Cut $U$ into small cubes of side $h$. On the cube at $x$, $T(x+u)\approx T(x)+J_T(x)u$: the cube is mapped to (almost) the parallelepiped spanned by the columns of $h\,J_T(x)$, whose volume is $\abs{\det J_T(x)}\,h^d$. Summing $g(T(x))\times$volume over the image cubes gives a Riemann sum of $\int_V g$ on one side and of $\int_U g\circ T\,\abs{\det J_T}$ on the other. The rigorous proof controls the error of the linear approximation uniformly.</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul>
+<li>Do not forget the absolute value: a reflection has $\det=-1$ but preserves volumes.</li>
+<li>In the target density, the Jacobian is evaluated at the preimage: $\rho_\be(y)=\rho_\al(T^{-1}y)/\abs{\det J_T(T^{-1}y)}$, not at $y$.</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — normalizing flows</div>
+<p>A normalizing flow is an invertible network $f_\theta$ sending data $x$ to a latent $z=f_\theta(x)\sim\N(0,\mathrm I)$. Its likelihood is computed by the change of variables, $\log p_\theta(x)=\log\phi\big(f_\theta(x)\big)+\log\abs{\det J_{f_\theta}(x)}$, and the model is trained by maximum likelihood. Layers are designed so that the determinant is cheap (triangular Jacobians: $\log\abs{\det}$ is a sum of logs of diagonal entries). One-dimensional check: for $x=1+2z$, $\log p(3)=\log\phi(1)-\log2\approx-1.419-0.693=-2.112$, which is indeed $\log$ of the $\N(1,4)$ density at $3$. Continuous-time flows replace $\log\det$ by an integral of the divergence (<a href="#continuity-eq">below</a>).</p>
+</div>
+
+<h3 id="divergence">Gradient, divergence, Laplacian, integration by parts</h3>
+<p class="small muted"><strong>Used in</strong> <a href="Lesson06.html">Lesson 6</a> (the continuity equation; Benamou–Brenier velocities are gradients), <a href="Lesson08.html">Lesson 8</a> (Wasserstein gradient flows $\partial_t\rho=\dv(\rho\nabla\frac{\delta F}{\delta\rho})$, Fokker–Planck), score matching.</p>
+<p>The gradient points uphill. The <em class="new">divergence</em> of a vector field measures how much it spreads out from a point: positive at a source, negative at a sink, zero for a rotation. The Laplacian is the divergence of the gradient: it compares a function with its local averages. Integration by parts moves a derivative from one factor to the other, at the price of a sign and a boundary term.</p>
+<div class="box def"><div class="box-h">Definitions and formulas (standard)</div>
+<p>For $f:\R^d\to\R$ and a vector field $v:\R^d\to\R^d$:</p>
+$$\begin{aligned}&\nabla f=(\partial_1f,\dots,\partial_df),\qquad\dv v=\sum_{i=1}^d\partial_iv_i,\qquad\Delta f=\dv\nabla f=\sum_{i=1}^d\partial_{ii}f,\\&\dv(fv)=\ps{\nabla f}{v}+f\,\dv v\quad\text{(product rule)}.\end{aligned}$$
+<p><strong>Divergence theorem:</strong> $\int_\Omega\dv v=\int_{\partial\Omega}\ps{v}{n}$ (outward normal $n$): total spreading inside = flux through the boundary. <strong>Integration by parts:</strong></p>
+$$\int_\Omega f\,\dv v=-\int_\Omega\ps{\nabla f}{v}+\int_{\partial\Omega}f\,\ps{v}{n},\qquad\int f\,\Delta g=-\int\ps{\nabla f}{\nabla g}\quad\text{on }\R^d,$$
+<p>where on $\R^d$ the boundary terms vanish when the functions decay at infinity. In 1D: $\int fg'=[fg]-\int f'g$.</p>
+</div>
+<div class="box example"><div class="box-h">Worked example</div>
+<ul>
+<li>$v(x)=x$ in $\R^2$ (uniform expansion): $\dv v=2$. On the disk of radius $r$: $\int\dv v=2\pi r^2$, and the flux through the circle is $\ps{v}{n}=r$ times the length $2\pi r$. Equal.</li>
+<li>The rotation $v(x)=(-x_2,x_1)$ has $\dv v=0$: it moves mass without compressing it.</li>
+<li>Standard Gaussian density $\rho$ in $\R^d$: $\nabla\rho=-x\rho$ and $\Delta\rho=(\norm x^2-d)\rho$ (at $x=(1,0.5)$ in 2D: $\approx-0.0639$, confirmed by finite differences).</li>
+<li><strong>Stein’s identity</strong> $\E[Zf(Z)]=\E[f'(Z)]$ for $Z\sim\N(0,1)$: integrate by parts with $\rho'=-x\rho$. With $f(z)=z^3$: $\E[Z^4]=3=\E[3Z^2]$.</li>
+</ul>
+</div>
+<details class="fold proof"><summary>Integration by parts from the divergence theorem</summary><div class="fold-body">
+<p>Apply the divergence theorem to the field $fv$ and use the product rule $\dv(fv)=\ps{\nabla f}{v}+f\,\dv v$: $\int_\Omega\ps{\nabla f}{v}+\int_\Omega f\,\dv v=\int_{\partial\Omega}f\ps{v}{n}$. With $v=\nabla g$ you get Green’s formula. For Stein: $\E[f'(Z)]=\int f'\rho=-\int f\rho'=\int f(z)\,z\,\rho(z)\,\dd z=\E[Zf(Z)]$.</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul>
+<li>Signs: $-\Delta$ is the positive operator ($\int f(-\Delta f)=\int\norm{\nabla f}^2\ge0$).</li>
+<li>On a bounded domain the boundary terms do not vanish by themselves; in dynamic OT one imposes no flux through the boundary, $\ps{\rho v}{n}=0$ (OT4ML Def. 14.1, p. 328–329).</li>
+<li>The divergence of a matrix field is taken row by row.</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — score matching</div>
+<p>Diffusion models need the score $\nabla\log p$ of the data law, which is unknown. Integration by parts removes it: $\E_p\norm{s_\theta(X)-\nabla\log p(X)}^2=\E_p\big[\norm{s_\theta(X)}^2+2\,\dv s_\theta(X)\big]+\text{const}$ (Hyvärinen’s score matching), a loss that only needs samples of $p$. Its denoising variant is the training loss of diffusion models (OT4ML §16.1, p. 407).</p>
+</div>
+
+<h3 id="ode">Ordinary differential equations and flows of vector fields</h3>
+<p class="small muted"><strong>Used in</strong> <a href="Lesson03.html#geo">Lesson 3</a> (particles moving along straight lines), <a href="Lesson06.html">Lesson 6</a> (dynamic OT; flow matching samples by integrating an ODE), <a href="Lesson08.html">Lesson 8</a> (gradient flows, particle systems, training of two-layer networks).</p>
+<p>A vector field $v_t(x)$ prescribes a velocity at each point and time. A particle released at $x_0$ follows it; the <em class="new">flow map</em> $T_t$ sends each starting point to its position at time $t$. Moving all the particles of a measure $\al_0$ gives the measures $\al_t=\pf{(T_t)}{\al_0}$.</p>
+<div class="box thm"><div class="box-h">Cauchy–Lipschitz (Picard–Lindelöf) and consequences (standard)</div>
+<p>If $(t,x)\mapsto v_t(x)$ is continuous and $L$-Lipschitz in $x$, then for every $x_0$ the problem $\dot x(t)=v_t\big(x(t)\big)$, $x(0)=x_0$ has a unique solution for all $t\in[0,1]$. Consequently:</p>
+<ul>
+<li>the flow map $T_t$ is a bijection (a diffeomorphism if $v$ is $C^1$); trajectories never cross;</li>
+<li>Grönwall: $\norm{T_t(x)-T_t(y)}\le e^{Lt}\norm{x-y}$;</li>
+<li>linear fields: $\dot x=Ax$ gives $x(t)=e^{tA}x_0$;</li>
+<li>gradient flows $\dot x=-\nabla f(x)$ decrease $f$: $\frac{\dd}{\dd t}f(x(t))=-\norm{\nabla f(x(t))}^2\le0$;</li>
+<li>Euler’s scheme $x_{k+1}=x_k+h\,v_{t_k}(x_k)$ converges with an error $O(h)$ (gradient descent is Euler’s scheme for the gradient flow).</li>
+</ul>
+</div>
+<figure class="fig"><!-- include figures/REM/ode_flow.svg --><figcaption>The linear field $v(x)=Ax$ with $A=\begin{pmatrix}-0.5&-1\\1&-0.5\end{pmatrix}$ (eigenvalues $-0.5\pm i$): trajectories spiral into $0$. Right: a small square of particles and its image by the flow map at $t=1$, rotated by one radian and shrunk by $e^{-0.5}$.</figcaption></figure>
+<div class="box example"><div class="box-h">Worked example</div>
+<ul>
+<li>$\dot x=-x$, $x(0)=1$: $x(1)=e^{-1}\approx0.368$. Euler with step $h$ gives $(1-h)^{1/h}$: $0.25$ for $h=0.5$, $0.349$ for $h=0.1$, $0.366$ for $h=0.01$; the errors $0.118$, $0.019$, $0.0018$ shrink like $h$.</li>
+<li>The flow map of $\dot x=-x$ is $T_t(x)=e^{-t}x$: it pushes $\N(0,1)$ to $\N(0,e^{-2t})$.</li>
+<li>Non-Lipschitz field: $\dot x=\sqrt{\abs x}$, $x(0)=0$ has two solutions, $x\equiv0$ and $x(t)=t^2/4$. Superlinear field: $\dot x=x^2$, $x(0)=1$ gives $x(t)=\frac1{1-t}$, which explodes at $t=1$.</li>
+<li>Stiffness: Euler on $\dot x=-10x$ multiplies $x$ by $1-10h$ at each step: by $-1.5$ for $h=0.25$ (divergence), $-0.5$ for $h=0.15$. It is stable only for $h<0.2$.</li>
+</ul>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul>
+<li>Without the Lipschitz condition, uniqueness fails and the flow map is not defined; without growth control, solutions can blow up in finite time.</li>
+<li>Explicit Euler needs small steps on stiff problems ($h<2/\lambda$ for $\dot x=-\lambda x$).</li>
+<li>For a time-dependent field, $v_t$ must be evaluated at the current time: the trajectory of $v_t$ is not a trajectory of any frozen $v_s$.</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — neural ODEs and flow matching</div>
+<p>A residual network $x_{k+1}=x_k+f_\theta(x_k)$ is Euler’s scheme for an ODE; neural ODEs take this literally. Flow matching (<a href="Lesson06.html">Lesson 6</a>, OT4ML §16.1) learns a field $v_\theta(t,x)$ by regression, then generates a sample by drawing $x_0\sim\N(0,\mathrm I)$ and integrating $\dot x=v_\theta(t,x)$ from $t=0$ to $1$ with a few Euler or Runge–Kutta steps. Straighter trajectories, as produced by optimal-transport couplings, need fewer steps.</p>
+</div>
+
+<h3 id="continuity-eq">The continuity equation</h3>
+<p class="small muted"><strong>Used in</strong> <a href="Lesson03.html#geo">Lesson 3</a> (displacement interpolation), <a href="Lesson06.html">Lesson 6</a> (Benamou–Brenier formula, flow matching), <a href="Lesson08.html">Lesson 8</a> (gradient flows: $\partial_t\al+\dv(\al v)=0$ with $v=-\nabla\frac{\delta F}{\delta\al}$).</p>
+<p>Mass is conserved: the mass in a region changes only by what flows through its boundary, and the flow of mass per unit time is density × velocity. Written for a density, this is a PDE; it is the Eulerian description (watch a fixed region) of particles moving along $v$ (the Lagrangian description, previous reminder).</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML §14.1, eq. (14.2)–(14.3), p. 328;</span> <span class="ref">Prop. 14.2, p. 329;</span> <span class="ref">Thm. 14.5, p. 330</span></div>
+<p>If particles follow $\dot x=v_t(x)$ with flow map $T_t$, then $\al_t=\pf{(T_t)}{\al_0}$ solves the continuity equation</p>
+$$\partial_t\al_t+\dv(\al_tv_t)=0,\qquad\text{i.e.}\qquad\int_0^1\!\!\int\big(\partial_t\varphi+\ps{v_t}{\nabla_x\varphi}\big)\,\dd\al_t\,\dd t=0$$
+<p>for all smooth compactly supported test functions $\varphi(t,x)$ (weak form, valid for discrete measures too). <strong>Benamou–Brenier:</strong> $W_2^2(\al_0,\al_1)=\inf\int_0^1\int\norm{v_t}^2\dd\al_t\,\dd t$ over all solutions $(\al_t,v_t)$ joining $\al_0$ to $\al_1$.</p>
+</div>
+<p><strong>Along a trajectory</strong> (smooth density): $\frac{\dd}{\dd t}\log\rho_t\big(x(t)\big)=-\dv v_t\big(x(t)\big)$ — the density decreases where the flow spreads out.</p>
+<figure class="fig"><!-- include figures/REM/continuity.svg --><figcaption>Left: the displacement interpolation from $\N(0,1)$ to $\N(4,4)$ at $t=0,\frac12,1$, with the velocity field at $t=\frac12$ (green arrows, faster on the right: the law moves and spreads). Right: the 1D mass balance behind the equation.</figcaption></figure>
+<div class="box example"><div class="box-h">Worked example — moving and spreading a Gaussian</div>
+<ol class="steps">
+<li>The optimal map from $\N(0,1)$ to $\N(4,4)$ is $T(x)=4+2x$ (<a href="#ot-closed-forms">§9</a>), so particles move as $x_t=(1-t)x+t(4+2x)=4t+(1+t)x$ and $\al_t=\N\big(4t,(1+t)^2\big)$.<span class="why">Affine image of a Gaussian (<a href="#gaussians">§3</a>).</span></li>
+<li>Velocity at the point $y=x_t$: $\dot x_t=4+x=4+\frac{y-4t}{1+t}=:v_t(y)$.<span class="why">Express the particle velocity in terms of its current position.</span></li>
+<li>$\partial_t\rho_t+\partial_y(\rho_tv_t)=0$: checked numerically at $(t,y)=(0.3,1.7)$, the residual is $2\times10^{-10}$.<span class="why">Finite differences on the explicit Gaussian density.</span></li>
+<li>Kinetic energy: $\int v_t^2\,\dd\al_t=\E\big[(4+X)^2\big]=16+1=17$ for every $t$, and $W_2^2=(0-4)^2+(1-2)^2=17$.<span class="why">This path attains the Benamou–Brenier minimum: it is the optimal one.</span></li>
+</ol>
+<p>Dilation: $v(x)=ax$ in 1D keeps Gaussians, $\N(0,1)\mapsto\N(0,e^{2at})$, and along a trajectory $\frac{\dd}{\dd t}\log\rho_t=-a=-\dv v$ (checked numerically for $a=0.5$).</p>
+</div>
+<details class="fold proof"><summary>From particles to the equation</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\frac{\dd}{\dd t}\int\varphi\,\dd\al_t=\frac{\dd}{\dd t}\int\varphi\big(T_t(x)\big)\,\dd\al_0(x)=\int\ps{\nabla\varphi\big(T_t(x)\big)}{\partial_tT_t(x)}\,\dd\al_0(x).$$<span class="why">Definition of the push-forward, then the chain rule.</span></li>
+<li>$$=\int\ps{\nabla\varphi\big(T_t(x)\big)}{v_t\big(T_t(x)\big)}\,\dd\al_0(x)=\int\ps{\nabla\varphi}{v_t}\,\dd\al_t .$$<span class="why">$\partial_tT_t(x)=v_t(T_t(x))$ (the particle follows the field), then the push-forward again.</span></li>
+<li>For a smooth density, $\int\ps{\nabla\varphi}{v_t}\rho_t=-\int\varphi\,\dv(\rho_tv_t)$, so $\int\varphi\,\big(\partial_t\rho_t+\dv(\rho_tv_t)\big)=0$ for every $\varphi$: $\partial_t\rho_t+\dv(\rho_tv_t)=0$.<span class="why">Integration by parts (previous reminders); a function orthogonal to all test functions is zero.</span></li>
+</ol>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul>
+<li>The velocity is not determined by the curve $(\al_t)$: adding a field $w$ with $\dv(\al_tw)=0$ (a rotation, for an isotropic Gaussian) gives the same $\al_t$ (OT4ML p. 329). Benamou–Brenier selects the one of least kinetic energy, which is a gradient (OT4ML Prop. 14.3, p. 330).</li>
+<li>The equation conserves mass; creating or destroying mass needs a source term (unbalanced OT).</li>
+<li>For Diracs only the weak form makes sense.</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — continuous normalizing flows</div>
+<p>For a learned field $v_\theta$, integrating the last formula along a trajectory gives the log-likelihood of a continuous normalizing flow: $\log\rho_1(x_1)=\log\rho_0(x_0)-\int_0^1\dv v_\theta(t,x_t)\,\dd t$ (the divergence is estimated with random projections, Hutchinson’s trick). Flow matching avoids this computation at training time: it regresses $v_\theta$ on the velocities of prescribed paths, and the continuity equation guarantees that the learned flow transports the noise to the data (OT4ML Prop. 16.3, p. 408).</p>
+</div>
+<div class="quiz"><p>Particles of $\mathcal U[0,2]$ follow $\dot x=-x$. What is the law at time $t$, and how does it agree with $\frac{\dd}{\dd t}\log\rho_t(x_t)=-\dv v$?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>The flow map is $T_t(x)=e^{-t}x$, so the law is $\mathcal U[0,2e^{-t}]$, with density $\frac{e^t}2$ ($\approx1.36$ at $t=1$). Here $\dv v=-1$, so the density along each trajectory must grow like $e^{t}$: it does, from $\frac12$ to $\frac{e^t}2$. The mass is squeezed into a shorter interval.</p>
+</div></details></div>

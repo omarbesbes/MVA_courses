@@ -1,0 +1,89 @@
+<h2 id="var">10. Variants: the best direction, subspaces, lifted plans, other projections <span class="ref">OT4ML Defs. 11.32–11.34, Props. 11.33–11.36</span></h2>
+<p class="tldr">Averaging over random directions dilutes differences that live in few directions and produces no transport plan; the variants keep the most informative direction (max-sliced), project on subspaces (between $SW_p$ and $W_p$), lift a sorted matching back to a plan (Min-SW), or bend the projections (generalized slicing).</p>
+<p>The notes stop at the Monte Carlo estimate; the slides’ references and the book list the main variants. This section is a guided tour: definitions, one example each, what they are used for.</p>
+
+<h3 id="var-max">Keep the best direction: max-sliced Wasserstein</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 11.32, p. 235 (case $k=1$)</span></div>
+<p><strong>Definition 11.32</strong> ($L^q$-sliced and subspace-sliced Wasserstein). […] extend the definition to $q=\infty$ by $\ \mathcal{SW}_{p,\infty,k}(\al,\be):=\sup_{U\in\mathrm{St}(d,k)}\mathcal W_p\big((U\T)_\sharp\al,(U\T)_\sharp\be\big)$. […] $\mathrm{MaxSW}_p=\mathcal{SW}_{p,\infty}$. […] Quadratic max-slicing is useful when only a small set of directions carries the discrepancy, for instance in generative modeling.</p>
+</div>
+<p>For $k=1$, $\mathrm{St}(d,1)$ is the sphere and $U\T x=\ps{\theta}{x}$, so</p>
+$$\mathrm{MaxSW}_p(\al,\be)=\max_{\theta\in\mathbb S^{d-1}}W_p(\al_\theta,\be_\theta):$$
+<p>the largest one-dimensional distance over all directions (Deshpande et al. 2019, in the slides’ references). The maximum is attained (the sphere is compact and the profile is continuous, §5).</p>
+<div class="box thm"><div class="box-h">Properties (OT4ML Prop. 11.33, p. 235)</div>
+<p>$\mathrm{MaxSW}_p$ is a distance with the same convergent sequences as $W_p$, and</p>
+$$SW_p\le\mathrm{MaxSW}_p\le W_p .$$
+</div>
+<details class="fold proof"><summary>Why (three lines)</summary><div class="fold-body">
+<ol class="steps">
+<li>$SW_p\le\mathrm{MaxSW}_p$.<span class="why">An average of the values $W_p^p(\al_\theta,\be_\theta)$ is at most their maximum; take $p$-th roots.</span></li>
+<li>$\mathrm{MaxSW}_p\le W_p$.<span class="why">For every $\theta$, $W_p(\al_\theta,\be_\theta)\le W_p(\al,\be)$: project an optimal plan, and $\abs{\ps{\theta}{x-y}}\le\norm{x-y}$ (§6).</span></li>
+<li>Triangle inequality: $W_p(\al_\theta,\ga_\theta)\le W_p(\al_\theta,\be_\theta)+W_p(\be_\theta,\ga_\theta)\le\mathrm{MaxSW}_p(\al,\be)+\mathrm{MaxSW}_p(\be,\ga)$; take the maximum over $\theta$ on the left. Separation: $\mathrm{MaxSW}_p=0$ makes <em>every</em> slice equal, and Cramér–Wold applies.<span class="why">No “almost every” subtlety here: a maximum equal to $0$ means all values are $0$.</span></li>
+</ol>
+</div></details>
+<div class="box example"><div class="box-h">Worked examples</div>
+<ul>
+<li><strong>Translation by $z$:</strong> the slice cost $\abs{\ps{\theta}{z}}^p$ is maximal for $\theta=z/\norm z$, so $\mathrm{MaxSW}_p=\norm z=W_p$: the max-sliced distance keeps the <em>full</em> size of a shift, which averaging divides by $\kappa_{d,p}^{1/p}$ ($\sqrt d$ for $p=2$).</li>
+<li><strong>The cross</strong> (§4): $\mathrm{MaxSW}_2^2=1$ (directions $e_1$, $e_2$), between $SW_2^2=0.363$ and $W_2^2=2$.</li>
+<li><strong>The two pairs</strong> $\al=\frac12(\delta_{(0,0)}+\delta_{(1,3)})$, $\be=\frac12(\delta_{(1,0)}+\delta_{(0,3)})$: $W_2^2=1$, $SW_2^2=0.364$, and $\mathrm{MaxSW}_2^2=0.9$, attained at $\theta=(3,1)/\sqrt{10}$ (angle $18.4°$), where both points of $\be$ project to $3/\sqrt{10}$ and $\al$ projects to $0$ and $6/\sqrt{10}$: $\frac12\big[(\frac3{\sqrt{10}})^2+(\frac3{\sqrt{10}})^2\big]=0.9$. (Checked on $36\,000$ angles.)</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — max-sliced Wasserstein GANs</div>
+<p>When a generator of $64\times64$ images is trained with a Monte Carlo sliced loss, almost all random directions of $\R^{12\,288}$ are nearly orthogonal to the few directions in which generated and real images differ (§7, concentration): thousands of directions are needed, and most of the gradient is noise. Deshpande et al. (CVPR 2019, “Max-sliced Wasserstein distance and its use for GANs”, slides’ references) replace the average by the <em>best</em> direction, found by gradient ascent on $\theta\mapsto W_2^2(\al_\theta,\be_\theta)$, computed in a feature space learned by a discriminator network. One well-chosen direction then does the work of many random ones. The price: an inner maximization at each step, and a non-convex problem in $\theta$.</p>
+</div>
+
+<h3 id="var-subspace">Project on subspaces: from $SW_p$ to $W_p$</h3>
+<p>Instead of lines, project on $k$-dimensional subspaces: $U\in\mathrm{St}(d,k)$ is a $d\times k$ matrix with orthonormal columns, $U\T x\in\R^k$, and $\mathcal{SW}_{p,p,k}$ averages $W_p^p\big((U\T)_\sharp\al,(U\T)_\sharp\be\big)$ over random subspaces (OT4ML Def. 11.32). For $k=1$ it is $SW_p$, for $k=d$ it is $W_p$; in between, OT4ML Prop. 11.33 gives $\mathcal{SW}_{2,2,k}^2\le\frac kdW_2^2$ — the constant $\frac1d$ becomes $\frac kd$. The price: each projected problem is now a $k$-dimensional transport problem, no longer a sort.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 11.48, p. 247</span></div>
+<p><strong>Definition 11.48</strong> (Projection- and subspace-robust Wasserstein). For $1\le k\le d$, let $\mathcal P_k=\{P:\ P^2=P=P\T,\ \tr(P)=k\}$. The Paty–Cuturi projection-robust and subspace-robust Wasserstein distances are respectively the max–min and min–max quantities</p>
+$$\mathrm{PRW}_{2,k}(\al,\be):=\sup_{U\T U=\Id_k}\mathcal W_2\big((U\T)_\sharp\al,(U\T)_\sharp\be\big),\qquad\mathrm{SRW}_{2,k}(\al,\be)^2:=\inf_{\pi\in\U(\al,\be)}\sup_{P\in\mathcal P_k}\tr(PM_\pi).$$
+</div>
+<dl class="decode">
+<dt>$\mathcal P_k$</dt><dd>The orthogonal projections of rank $k$ (onto $k$-dimensional subspaces).</dd>
+<dt>$\mathrm{PRW}_{2,k}$</dt><dd>The max-sliced idea with subspaces: the most discriminating $k$-dimensional subspace ($\mathrm{MaxSW}_2$ for $k=1$).</dd>
+<dt>$M_\pi$</dt><dd>The second-moment matrix of the displacements, $\int(x-y)(x-y)\T\,\dd\pi$; $\tr(PM_\pi)$ is the cost of $\pi$ measured only in the subspace of $P$.</dd>
+<dt>$\mathrm{SRW}_{2,k}$</dt><dd>“Choose the plan first, then the adversary chooses the subspace”: a convex relaxation of PRW (min–max instead of max–min), computable by alternating a transport step and an eigenvalue step (Paty and Cuturi, ICML 2019).</dd>
+</dl>
+
+<h3 id="var-minsw">From a number to a plan: lifted plans and Min-SW</h3>
+<p>$SW_p$ is a number; each slice has its own matching (§4), so no transport plan comes out of it. Yet a plan is often what we want (to move points, to match data). A simple idea: <strong>sort along one direction and use that matching in the original space</strong>.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML (11.36), p. 237</span></div>
+<p>Consider equal-weight empirical measures $\al=n^{-1}\sum_i\delta_{x_i}$ and $\be=n^{-1}\sum_i\delta_{y_i}$. For a direction $\theta$ along which both projected point families have distinct coordinates, let $\sigma_\theta,\tau_\theta\in\mathfrak S_n$ be their sorting permutations, $\ps{x_{\sigma_\theta(1)}}{\theta}<\dots<\ps{x_{\sigma_\theta(n)}}{\theta}$, $\ps{y_{\tau_\theta(1)}}{\theta}<\dots<\ps{y_{\tau_\theta(n)}}{\theta}$. Lifting the one-dimensional monotone matching gives</p>
+$$\pi_\theta=\frac1n\sum_{i=1}^n\delta_{(x_{\sigma_\theta(i)},\,y_{\tau_\theta(i)})}\in\U(\al,\be).\qquad(11.36)$$
+<p>The cost of (11.36) is an upper bound on $\mathcal W_2(\al,\be)^2$, and Min-SW minimizes this upper bound over $\theta$. This inexpensive feasible-plan construction was introduced by Mahey, Chapel, Gasso, Bonet and Courty.</p>
+</div>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Props. 11.35–11.36, pp. 238–239</span></div>
+<p><strong>Proposition 11.35</strong> (Min-SW lower bound, topology and metric status). For all $\al,\be\in\Pc_2(\R^d)$, $\ \mathcal W_2(\al,\be)\le\text{Min-SW}_2(\al,\be)$. Consequently, convergence for $\text{Min-SW}_2$ implies convergence for $\mathcal W_2$. The converse fails in every dimension $d\ge2$ […]. The function $\text{Min-SW}_2$ is non-negative, symmetric and separates measures, but it does not satisfy the triangle inequality in general. […] In dimension one, by contrast, $\text{Min-SW}_2=\mathcal W_2$.</p>
+<p><strong>Proposition 11.36</strong> (Min-SW between nondegenerate Gaussians). Let $\al=\N(m_\al,\Sigma_\al)$ and $\be=\N(m_\be,\Sigma_\be)$, where $\Sigma_\al,\Sigma_\be\succ0$. Then $\text{Min-SW}_2(\al,\be)^2=\mathcal W_2(\al,\be)^2$.</p>
+</div>
+<dl class="decode">
+<dt>$\mathfrak S_n$</dt><dd>The permutations of $\{1,\dots,n\}$.</dd>
+<dt>lifted plan $\pi_\theta$</dt><dd>The $i$-th point of $\al$ along $\theta$ is sent to the $i$-th point of $\be$ along $\theta$ — but the cost is measured in $\R^d$, $\frac1n\sum_i\norm{x_{\sigma_\theta(i)}-y_{\tau_\theta(i)}}^2$, not along $\theta$. It is a genuine coupling, so its cost is at least $W_2^2$.</dd>
+<dt>$\text{Min-SW}_2$</dt><dd>The cheapest lifted plan over all directions: $\text{Min-SW}_2^2=\min_\theta\frac1n\sum_i\norm{x_{\sigma_\theta(i)}-y_{\tau_\theta(i)}}^2$ for clouds without ties (Def. 11.34 handles ties by optimizing over all compatible lifts).</dd>
+<dt>Gaussians</dt><dd>Sorting along an eigenvector $\theta$ of the matrix $A$ of the Brenier map $x\mapsto m_\be+A(x-m_\al)$ gives back that map: $\ps{\theta}{T(x)-m_\be}=\lambda\ps{\theta}{x-m_\al}$ with $\lambda>0$, an increasing function of the projection.</dd>
+</dl>
+<figure class="fig"><!-- include figures/L05/lifted.svg --><figcaption>The two pairs: the optimal plan (left, cost $1$); the plan lifted from the sorted matching along $e_1$ (middle, cost $9$); along $e_2$ (right, cost $1$: it is the optimal plan, so $\text{Min-SW}_2^2=1=W_2^2$ here).</figcaption></figure>
+<div class="box example"><div class="box-h">Worked example — Min-SW is not a distance (OT4ML, p. 238)</div>
+<p>Let $\al_X,\al_Y,\al_Z$ be the uniform measures on the rows of</p>
+$$X=\begin{pmatrix}-4&-4\\0&3\\1&-2\\4&-4\end{pmatrix},\qquad Z=\begin{pmatrix}-3&2\\2&2\\0&0\\2&-4\end{pmatrix},\qquad Y=\frac{X+Z}2 .$$
+<p>The book finds $\text{Min-SW}_2^2(\al_X,\al_Y)=\text{Min-SW}_2^2(\al_Y,\al_Z)=\frac{51}{16}$ and $\text{Min-SW}_2^2(\al_X,\al_Z)=\frac{63}4$, so</p>
+$$\text{Min-SW}_2(\al_X,\al_Z)=\frac{\sqrt{63}}2\approx3.969\ >\ \frac{\sqrt{51}}4+\frac{\sqrt{51}}4=\frac{\sqrt{51}}2\approx3.571:$$
+<p>the triangle inequality fails. We recomputed all three values by sweeping $20\,000$ directions and checked them against the exact $W_2^2$ ($\frac{51}{16}$, $\frac{51}{16}$ and $12.75$ by enumerating the $4!$ assignments): for $(X,Z)$, the best lifted plan costs $15.75$, more than the optimal $12.75$ — no direction of the plane sorts $X$ and $Z$ consistently with the optimal assignment.</p>
+</div>
+
+<h3 id="var-generalized">Other projections: generalized slicing</h3>
+<p>Slicing integrates a measure along hyperplanes $\{\ps{\theta}{x}=s\}$. <strong>Generalized sliced Wasserstein</strong> distances (Kolouri et al., NeurIPS 2019, in the slides’ references) replace the linear function $\ps{\theta}{x}$ by a nonlinear one $g(x,\theta)$ — for instance an odd polynomial, or a small neural network — and integrate along the hypersurfaces $\{g(x,\theta)=s\}$ (a <em>generalized Radon transform</em>). Each slice is still a measure on the line, solved by sorting; when the generalized Radon transform is injective, the result is still a distance. Other variants change the <em>law of the directions</em> instead of the projections: distributional and energy-based sliced distances put more weight on directions where the slices differ (Nguyen et al. 2021, Nguyen and Ho 2023, slides’ references); spherical and manifold versions slice data that live on a sphere or a curved space (Bonet et al. 2023, 2025).</p>
+<div class="box ml"><div class="box-h">In machine learning — choosing a variant</div>
+<ul>
+<li><strong>A loss for a generative model</strong> in high dimension: max-sliced or a learned/distributional law of directions, so that the informative directions are found rather than sampled.</li>
+<li><strong>A kernel or an embedding</strong> of distributions: plain $SW_2$, whose Hilbert embedding (§5) is exactly what a kernel method needs.</li>
+<li><strong>A matching or a transport map</strong> between two clouds (registration, colour transfer with correspondences): lifted plans and Min-SW give a feasible plan at the cost of a few sorts; the sliced flow of §11 gives another.</li>
+<li><strong>A value close to $W_2$</strong>: subspace projections ($k>1$), or abandon slicing for entropic transport (Lesson 7).</li>
+</ul>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — “Min-SW” is not a minimum of sliced distances</div>
+<p>Despite its name, $\text{Min-SW}_2$ does not minimize $W_2(\al_\theta,\be_\theta)$ over $\theta$ (that minimum is often $0$: in the two pairs, the slices along $e_1$ coincide). It minimizes the <em>full</em> cost of a lifted plan, an upper bound on $W_2^2$. It lies <em>above</em> $W_2$, while $SW_2$ and $\mathrm{MaxSW}_2$ lie below.</p>
+</div>
+<div class="quiz"><p>Order the five numbers $SW_2$, $\mathrm{MaxSW}_2$, $W_2$, $\text{Min-SW}_2$, $W_2/\sqrt d$ for a general pair of clouds in $\R^d$.</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>$SW_2\le W_2/\sqrt d\le W_2\le\text{Min-SW}_2$ and $SW_2\le\mathrm{MaxSW}_2\le W_2$. $\mathrm{MaxSW}_2$ and $W_2/\sqrt d$ are not ordered in general: for a translation $\mathrm{MaxSW}_2=W_2>W_2/\sqrt d$; for the isotropic Gaussians of §7, every direction sees $\abs{s-t}$, so $\mathrm{MaxSW}_2=SW_2=W_2/\sqrt d$.</p>
+</div></details></div>

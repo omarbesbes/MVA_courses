@@ -1,0 +1,149 @@
+<h2 id="oned">9. One dimension: quantile functions solve Monge's problem <span class="ref">OT4ML §2.6, pp. 37–40</span></h2>
+<p class="tldr">On the line, send each point $x$ to the point of $\be$ that has the same fraction of mass to its left: $T=C_\be^{-1}\circ C_\al$. This “continuous sorting” is an optimal Monge map for every convex cost $h(x-y)$ as soon as $\al$ has no atoms, and its cost is an integral of differences of quantiles.</p>
+
+<h3 id="oned-cdf">Cumulative and quantile functions</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 2.39, p. 37</span></div>
+<p><strong>Definition 2.39 (Cumulative and quantile functions).</strong> For $\al\in\M(\R)$, its cumulative distribution function is</p>
+$$C_\al(x)=\al\big((-\infty,x]\big).\qquad(2.8)$$
+<p>Its generalized inverse, or quantile function, is</p>
+$$C_\al^{-1}(r)=\inf\{x\in\R:\ C_\al(x)\ge r\},\qquad r\in(0,1).\qquad(2.9)$$
+</div>
+<dl class="decode">
+<dt>$C_\al(x)$</dt><dd>The fraction of the mass of $\al$ lying at or to the left of $x$. It is nondecreasing, goes from $0$ (at $-\infty$) to $1$ (at $+\infty$), and is <em>right-continuous</em>. It jumps by $a$ at an atom of mass $a$, and is flat where $\al$ has no mass.</dd>
+<dt>$C_\al^{-1}(r)$</dt><dd>“The point below which a fraction $r$ of the mass lies”: the first $x$ where the CDF reaches the level $r$. For $r=\frac12$ it is the median. If $C_\al$ is a continuous increasing bijection, $C_\al^{-1}$ is its ordinary inverse.</dd>
+<dt>generalized</dt><dd>When $C_\al$ jumps (atom), several levels $r$ give the same point: $C_\al^{-1}$ has a flat step. When $C_\al$ is flat (gap in the support), $C_\al^{-1}$ jumps over the gap.</dd>
+</dl>
+<div class="box recall"><div class="box-h">Reminder — the one property of the quantile function you need</div>
+<p>For $r\in(0,1)$ and $x\in\R$ (StatOT eq. (1.5), p. 27):</p>
+$$C_\al^{-1}(r)\le x\quad\iff\quad r\le C_\al(x).$$
+<p><em>Proof.</em> ($\Leftarrow$) If $r\le C_\al(x)$, then $x$ belongs to the set $\{x':C_\al(x')\ge r\}$, so its infimum is $\le x$. ($\Rightarrow$) That set is an interval $[q,+\infty)$ <em>containing</em> its left end $q=C_\al^{-1}(r)$: take $x'_n\downarrow q$ in the set; right-continuity gives $C_\al(q)=\lim C_\al(x'_n)\ge r$. So if $q\le x$, monotonicity gives $C_\al(x)\ge C_\al(q)\ge r$. $\square$ More: <a href="Reminders.html#cdf-quantile">Reminders — CDF and quantiles</a>.</p>
+</div>
+<div class="box example"><div class="box-h">Worked examples — three CDFs and their quantile functions</div>
+<ul>
+<li>$\al=\frac12\delta_0+\frac12\delta_1$: $C_\al=0$ on $(-\infty,0)$, $\frac12$ on $[0,1)$, $1$ on $[1,\infty)$; $C_\al^{-1}(r)=0$ for $r\le\frac12$ and $1$ for $r>\frac12$. Two jumps of the CDF, two flat steps of the quantile function.</li>
+<li>$\al=\mathcal U[0,2]$: $C_\al(x)=\frac x2$ on $[0,2]$, $C_\al^{-1}(r)=2r$.</li>
+<li>$\al=\frac12\delta_0+\frac12\,\mathcal U[0,1]$ (§4): $C_\al(x)=\frac12+\frac x2$ on $[0,1]$ (jump of $\frac12$ at $0$); $C_\al^{-1}(r)=0$ for $r\le\frac12$ and $2r-1$ for $r>\frac12$.</li>
+</ul>
+</div>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 2.40, p. 37</span></div>
+<p><strong>Proposition 2.40 (Quantile push-forward).</strong> One has $\pf{(C_\al^{-1})}{\mathrm{Leb}_{(0,1)}}=\al$. If $\al$ has no atoms, then $\pf{(C_\al)}{\al}=\mathrm{Leb}_{(0,1)}$.</p>
+</div>
+<dl class="decode">
+<dt>$\mathrm{Leb}_{(0,1)}$</dt><dd>The uniform law on $(0,1)$.</dd>
+<dt>first claim</dt><dd>If $U$ is uniform, $C_\al^{-1}(U)\sim\al$: <strong>inverse transform sampling</strong>, the simplest generative model (§5).</dd>
+<dt>second claim</dt><dd>If $X\sim\al$ and $\al$ has no atom, $C_\al(X)$ is uniform: the <strong>probability integral transform</strong> (why p-values of continuous tests are uniform under the null). It fails with atoms (Exercise 11).</dd>
+</dl>
+<details class="fold proof"><summary>Full proof</summary><div class="fold-body">
+<ol class="steps">
+<li>For every $x$: $\P\big(C_\al^{-1}(U)\le x\big)=\P\big(U\le C_\al(x)\big)=C_\al(x)$.<span class="why">The equivalence of the reminder; $U$ is uniform on $(0,1)$ and $C_\al(x)\in[0,1]$.</span></li>
+<li>So $C_\al^{-1}(U)$ has the CDF of $\al$, hence the law $\al$.<span class="why">A probability on $\R$ is determined by its CDF.</span></li>
+<li>If $\al$ has no atom, $C_\al$ is continuous, and $C_\al\big(C_\al^{-1}(u)\big)=u$ for every $u\in(0,1)$.<span class="why">Right-continuity gives $\ge u$ (reminder). For $x<C_\al^{-1}(u)$ we have $C_\al(x)<u$ (otherwise $x$ would be in the set), and left-continuity gives $C_\al(C_\al^{-1}(u))\le u$.</span></li>
+<li>With $X=C_\al^{-1}(U)\sim\al$ (step 2), $C_\al(X)=C_\al(C_\al^{-1}(U))=U$ is uniform. $\square$<span class="why">Step 3. The law of $C_\al(X)$ only depends on the law of $X$.</span></li>
+</ol>
+</div></details>
+
+<h3 id="oned-thm">The one-dimensional Monge map</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Thm. 2.41, p. 38</span></div>
+<p>The quantile construction becomes a deterministic Monge map only when the source has no atoms, because the cumulative distribution function can then be used as a genuine change of variable.</p>
+<p><strong>Theorem 2.41 (One-dimensional Monge solution).</strong> Let $\al,\be\in\M(\R)$, assume that $\al$ has no atoms, and let $h:\R\to[0,+\infty)$ be convex. Consider the cost $c(x,y)=h(x-y)$. Write $q_\al=C_\al^{-1}$ and $q_\be=C_\be^{-1}$, and assume that $h(q_\al-q_\be)\in L^1(0,1)$. Then</p>
+$$T=q_\be\circ C_\al=C_\be^{-1}\circ C_\al\qquad(2.10)$$
+<p>satisfies $\pf{T}{\al}=\be$ and minimizes $\min_{\pf{S}{\al}=\be}\int h(x-S(x))\,\dd\al(x)$. In particular, for any $1\le p<+\infty$, if $\al$ and $\be$ have finite $p$th moments and $\al$ has no atoms, then $h(t)=\abs t^p$ gives the usual one-dimensional Monge optimizer.</p>
+</div>
+<dl class="decode">
+<dt>$T(x)=C_\be^{-1}(C_\al(x))$</dt><dd>Read it right to left: $C_\al(x)$ is the fraction $r$ of $\al$'s mass to the left of $x$; $C_\be^{-1}(r)$ is the point of $\be$ with the same fraction to its left. Equal ranks to equal ranks: sorting, for a continuum of points (§3).</dd>
+<dt>$\al$ has no atoms</dt><dd>So that $C_\al$ is continuous and $C_\al(X)$ uniform (Proposition 2.40); an atom would have to be split.</dd>
+<dt>$h$ convex</dt><dd>As in §3: $\abs t^p$ with $p\ge1$, but not $\abs t^{1/2}$.</dd>
+<dt>$h(q_\al-q_\be)\in L^1$</dt><dd>The optimal cost $\int_0^1h(q_\al(r)-q_\be(r))\,\dd r$ is finite.</dd>
+</dl>
+<div class="box intu"><div class="box-h">Intuition — a continuum of sorted points</div>
+<p>Cut both distributions into many thin slices of equal mass, from left to right. The $k$-th slice of $\al$ goes to the $k$-th slice of $\be$: this is the sorted matching of §3 between two clouds of equal-mass points, and $T$ is its limit. $T$ is nondecreasing, steep where $\be$ is spread out and flat where $\be$ is concentrated: $T'(x)=\rho_\al(x)/\rho_\be(T(x))$ (the Jacobian formula of §5).</p>
+</div>
+<figure class="fig"><!-- include figures/L01/quantilemap.svg --><figcaption>Building $T=C_\be^{-1}\circ C_\al$ between a two-mode law $\al$ (orange) and a three-mode law $\be$ (blue). Left: from $x$, go up to the level $r=C_\al(x)$, across to the CDF of $\be$, and down to $T(x)$ (dotted paths for $r=0.2$, $0.5$, $0.8$). Right: the graph of $T$; it is nondecreasing, steepest where $\be$ has a gap between modes.</figcaption></figure>
+<div class="box idea"><div class="box-h">Idea of the proof</div>
+<p>Admissibility: $C_\al$ turns $\al$ into a uniform law, $C_\be^{-1}$ turns the uniform law into $\be$. Optimality, for the quadratic cost: $T$ is nondecreasing, hence a “subgradient of a convex function”, and the easy half of Brenier's theorem (§7) applies. For a general convex $h$ the book uses the one-dimensional Kantorovich theorem (Theorem 3.39, Lesson 2).</p>
+</div>
+<details class="fold proof"><summary>Full proof (admissibility; optimality for the quadratic cost)</summary><div class="fold-body">
+<p><strong>Admissibility.</strong></p>
+<ol class="steps">
+<li>$\pf{(C_\al)}{\al}=\mathrm{Leb}_{(0,1)}$ and $\pf{(C_\be^{-1})}{\mathrm{Leb}_{(0,1)}}=\be$.<span class="why">Proposition 2.40; the first one uses that $\al$ has no atoms.</span></li>
+<li>$\pf{T}{\al}=\pf{(C_\be^{-1})}{\big(\pf{(C_\al)}{\al}\big)}=\pf{(C_\be^{-1})}{\mathrm{Leb}_{(0,1)}}=\be$.<span class="why">Composition rule of push-forwards (§5). ($T$ is defined $\al$-almost everywhere: the points where $C_\al(x)\in\{0,1\}$ carry no mass.)</span></li>
+</ol>
+<p><strong>Optimality for $h(t)=t^2$</strong> (with finite second moments).</p>
+<ol class="steps">
+<li>$T$ is nondecreasing.<span class="why">Composition of two nondecreasing functions.</span></li>
+<li>Let $\varphi(x)=\int_{x_0}^xT(s)\,\dd s$ (with $x_0$ any point where $T$ is finite). Then $\varphi$ is convex and $T(x)\in\partial\varphi(x)$ for every $x$.<span class="why">For $x'>x$: $\varphi(x')-\varphi(x)=\int_x^{x'}T\ge T(x)(x'-x)$ since $T(s)\ge T(x)$ for $s\ge x$; for $x'<x$: $\varphi(x)-\varphi(x')=\int_{x'}^xT\le T(x)(x-x')$. In both cases $\varphi(x')\ge\varphi(x)+T(x)(x'-x)$: the tangent inequality, which makes $\varphi$ convex (a supremum of affine functions) with $T(x)$ a subgradient.</span></li>
+<li>So $T$ is optimal among all admissible maps for $\abs{x-y}^2$.<span class="why">The proposition “convex gradients are optimal” of §7, in the version with subgradients $T(x)\in\partial\varphi(x)$ (its proof only uses the equality case of Fenchel–Young, which holds for subgradients). No density is needed.</span></li>
+</ol>
+<p><strong>For a general convex $h$</strong>, OT4ML proves optimality with the one-dimensional Kantorovich theorem (Theorem 3.39): the quantile coupling $\pf{(q_\al,q_\be)}{\mathrm{Leb}_{(0,1)}}$ is optimal among all couplings, and when $\al$ has no atoms it is the coupling $\pf{(\Id,T)}{\al}$ of the map $T$. For $h=\abs\cdot$, extra Exercise 3 (§12) gives a direct check, and StatOT Thm. 1.7 (p. 27) a complete proof through CDFs.</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pitfall — with an atom in the source, $C_\be^{-1}\circ C_\al$ is not admissible</div>
+<p>$\al=\delta_0$ and $\be=\mathcal U[0,1]$: $C_\al(0)=1$, so $T(0)=C_\be^{-1}(1)=1$ and $\pf{T}{\al}=\delta_1\ne\be$. Of course: no map splits an atom (§6). The quantile <em>coupling</em> $\pf{(C_\al^{-1},C_\be^{-1})}{\mathrm{Leb}_{(0,1)}}$ still describes the optimal way to move the mass (Lesson 2), but it is not a map. Peyré–Cuturi state (2.39) without the hypothesis (see the notes on the sources in §13).</p>
+</div>
+<div class="box example"><div class="box-h">Worked examples — the formula on familiar laws</div>
+<ul>
+<li><strong>Uniform to uniform.</strong> $\mathcal U[a,b]\to\mathcal U[c,d]$: $C_\al(x)=\frac{x-a}{b-a}$, $C_\be^{-1}(r)=c+(d-c)r$, so $T(x)=c+\frac{d-c}{b-a}(x-a)$, affine (Exercise 4 of the sheet).</li>
+<li><strong>Gaussians.</strong> With $\Phi$ the CDF of $\N(0,1)$: $C_\al(x)=\Phi\big(\frac{x-m_\al}{\sigma_\al}\big)$ and $C_\be^{-1}(r)=m_\be+\sigma_\be\Phi^{-1}(r)$, so $T(x)=m_\be+\frac{\sigma_\be}{\sigma_\al}(x-m_\al)$: the map of §8, recovered.</li>
+<li><strong>Uniform to exponential.</strong> $\mathcal U[0,1]\to\mathrm{Exp}(1)$: $C_\al(x)=x$, $C_\be^{-1}(r)=-\log(1-r)$, so $T(x)=-\log(1-x)$ — the inverse transform sampler of §5 is an <em>optimal</em> map.</li>
+</ul>
+</div>
+
+<h3 id="oned-cost">The cost: an integral of quantiles</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 2.44, pp. 38–39</span></div>
+<p><strong>Proposition 2.44 (One-dimensional Wasserstein formulas).</strong> Let $1\le p<+\infty$ and let $\al,\be\in\M(\R)$ have finite $p$-th moments. Then</p>
+$$\mathcal W_p^p(\al,\be)=\int_0^1\abs{C_\al^{-1}(r)-C_\be^{-1}(r)}^p\,\dd r=\norm{C_\al^{-1}-C_\be^{-1}}^p_{L^p([0,1])}.\qquad(2.11)$$
+<p>For $p=1$, this is equivalently</p>
+$$\mathcal W_1(\al,\be)=\norm{C_\al-C_\be}_{L^1(\R)}=\int_\R\abs{C_\al(x)-C_\be(x)}\,\dd x .\qquad(2.12)$$
+</div>
+<dl class="decode">
+<dt>$\mathcal W_p$</dt><dd>The Wasserstein distance of Lesson 3 (defined with couplings, so (2.11) holds even when $\al$ has atoms). When $\al$ has no atoms it is also the optimal Monge cost of Theorem 2.41.</dd>
+<dt>(2.11)</dt><dd>Pair the levels: the mass at level $r$ goes from $C_\al^{-1}(r)$ to $C_\be^{-1}(r)$, and the costs are averaged over $r$. Plugging the map into the cost: with $X=C_\al^{-1}(U)$, $T(X)=C_\be^{-1}(C_\al(C_\al^{-1}(U)))=C_\be^{-1}(U)$ (step 3 of the proof of Prop. 2.40), so $\int h(x-T(x))\,\dd\al=\int_0^1h\big(C_\al^{-1}(r)-C_\be^{-1}(r)\big)\dd r$.</dd>
+<dt>(2.12)</dt><dd>For $p=1$, the area between the two CDFs — the same area as between the two quantile functions, measured horizontally instead of vertically.</dd>
+</dl>
+<details class="fold proof"><summary>Why the two $p=1$ formulas agree (layer cake)</summary><div class="fold-body">
+<ol class="steps">
+<li>For two numbers $a,b$: $\abs{a-b}=\int_\R\abs{\ind_{a\le x}-\ind_{b\le x}}\,\dd x$.<span class="why">The integrand is $1$ exactly for $x$ between $a$ and $b$ (one end included).</span></li>
+<li>Take $a=C_\al^{-1}(r)$, $b=C_\be^{-1}(r)$ and integrate over $r\in(0,1)$; exchange the integrals (Fubini, everything is $\ge0$).<span class="why">The left side becomes $\int_0^1\abs{C_\al^{-1}-C_\be^{-1}}$.</span></li>
+<li>$\ind_{C_\al^{-1}(r)\le x}=\ind_{r\le C_\al(x)}$, so the inner integral is $\int_0^1\abs{\ind_{r\le C_\al(x)}-\ind_{r\le C_\be(x)}}\,\dd r=\abs{C_\al(x)-C_\be(x)}$. $\square$<span class="why">The key equivalence of the reminder; then the integrand is $1$ for $r$ between $C_\al(x)$ and $C_\be(x)$.</span></li>
+</ol>
+</div></details>
+<div class="box example"><div class="box-h">Worked example — uniform to exponential</div>
+<p>$\al=\mathcal U[0,1]$, $\be=\mathrm{Exp}(1)$, $T(x)=-\log(1-x)$.</p>
+<ul>
+<li>$\mathcal W_1=\int_0^1\big(-\log(1-x)-x\big)\,\dd x=1-\frac12=\frac12$ (note $-\log(1-x)\ge x$, so no absolute value is needed). With CDFs: $\int_0^1\big(x-(1-e^{-x})\big)\dd x+\int_1^\infty e^{-x}\,\dd x=\big(\frac12-e^{-1}\big)+e^{-1}=\frac12$. Same value.</li>
+<li>$\mathcal W_2^2=\E\big[(U+\log(1-U))^2\big]=\E U^2+\E[E^2]-2\E[UE]$ with $E=-\log(1-U)\sim\mathrm{Exp}(1)$: $\frac13+2-2\cdot\frac34=\frac56\approx0.833$, using $\E[E^2]=2$ and $\E[UE]=\int_0^1-u\log(1-u)\,\dd u=\frac34$. (Quadrature: $0.83333$.)</li>
+</ul>
+</div>
+
+<h3 id="oned-geometry">Geometry on the line: composition, flatness, interpolation</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Remark 2.42 and Example 2.43, p. 38; Remark 2.46, p. 39</span></div>
+<p><strong>Remark 2.42 (Composition is one-dimensional).</strong> In dimension one, optimal maps compose. Assume that $\al$ and $\be$ have no atoms; no atomlessness assumption is needed on $\ga$. Then the monotone rearrangements $T_{\al\to\be}=C_\be^{-1}\circ C_\al$, $T_{\be\to\ga}=C_\ga^{-1}\circ C_\be$ are well defined $\al$- and $\be$-almost everywhere. Then $T_{\be\to\ga}\circ T_{\al\to\be}=T_{\al\to\ga}$ $\al$-a.e. […]</p>
+<p><strong>Example 2.43 (Linear obstruction to composing Brenier maps)</strong>, in short: if $T_1(x)=A_1x$ and $T_2(x)=A_2x$ with $A_1,A_2$ symmetric positive definite, $T_2\circ T_1$ has matrix $A_2A_1$, a gradient field only when $A_1A_2=A_2A_1$.</p>
+<p><strong>Remark 2.46 (Quantiles linearize one-dimensional Wasserstein geometry).</strong> Formula (2.11) means that the map $\al\mapsto C_\al^{-1}$ embeds one-dimensional Wasserstein geometry isometrically into $L^p(0,1)$. Its image is the closed convex cone of almost-everywhere nondecreasing functions with finite $p$-th moment, not the whole linear space. For $p=2$, the Wasserstein metric on probability measures over the real line is therefore Hilbertian in the precise sense of being isometric to a convex subset of a Hilbert space.</p>
+</div>
+<ul>
+<li><strong>Composition.</strong> On the line, the optimal map from $\al$ to $\ga$ can be computed through any intermediate $\be$. Not in $\R^2$: $A_1=\mathrm{diag}(2,1)$ and $A_2=\begin{pmatrix}1&1\\1&2\end{pmatrix}$ are symmetric positive definite, but $A_2A_1=\begin{pmatrix}2&1\\2&2\end{pmatrix}$ is not symmetric — the composition of two Brenier maps is not a Brenier map.</li>
+<li><strong>Flatness.</strong> Through quantile functions, measures on the line become points of a convex set in $L^2(0,1)$, with the $L^2$ distance. Averages are easy there: the $W_2$ barycenter of measures on the line averages their quantile functions (<a href="Lesson03.html#oned">Lesson 3, §8</a>); and every projection of sliced transport (Lesson 5) is such a 1D problem.</li>
+<li><strong>Interpolation.</strong> The quantile function of McCann's interpolation (§10) is $C_{\al_t}^{-1}=(1-t)C_\al^{-1}+tC_\be^{-1}$: a straight line in the flat picture (OT4ML Fig. 2.11, p. 40).</li>
+</ul>
+<div class="widget" data-widget="l1quantile"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p>What to look at: choose a pair of laws and move the level $r$. In the middle panel, the dotted path goes from $x=C_\al^{-1}(r)$ up to the level $r$, across to the CDF of $\be$, and down to $T(x)=C_\be^{-1}(r)$; the right panel draws the graph of $T$ with the current point. The readout checks $T'(x)=\rho_\al(x)/\rho_\be(T(x))$ at that point and gives $W_1$ by both formulas (2.11) and (2.12), and $W_2$. Move $t$ to see McCann's interpolation (green) in the top panel: a single shape moving and deforming, unlike the mixture.</p>
+
+<div class="box ml"><div class="box-h">In machine learning — one-dimensional transport everywhere</div>
+<ul>
+<li><strong>Colour transfer, channel by channel.</strong> The cheapest colour transfer applies Theorem 2.41 to each colour channel separately: the red values of the source image are mapped by $C_{\be,R}^{-1}\circ C_{\al,R}$ onto those of the target image, and the same for green and blue (this is what <code>skimage.exposure.match_histograms</code> does on colour images). It ignores the correlations between channels, so it can create colours absent from the target palette; the 3D map of §7, the Gaussian map of §8, or sliced transport (Lesson 5, which iterates 1D maps along random directions) correct this.</li>
+<li><strong>Generators and flows in 1D.</strong> Inverse transform sampling $C_\be^{-1}(U)$ is a generator, and in 1D every invertible normalizing flow is a monotone map. In higher dimension, triangular (Knothe–Rosenblatt) maps transport one coordinate at a time with conditional 1D quantile maps (OT4ML Prop. 2.51, p. 42, beyond this course): this triangular structure is the one of autoregressive normalizing flows.</li>
+<li><strong>Cheap, differentiable losses.</strong> Because $W_p$ on the line only needs a sort, it is computed in $O(n\log n)$ on mini-batches and differentiated through the sort; the sliced Wasserstein distance (Lesson 5) averages it over many random 1D projections of high-dimensional data.</li>
+</ul>
+</div>
+
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>A transport problem on the line → write the CDFs and the quantile functions; the map is $C_\be^{-1}\circ C_\al$ (source without atoms), the cost $\int_0^1h(C_\al^{-1}-C_\be^{-1})$.</li>
+<li>$W_1$ on the line → area between the CDFs, often easier than the quantiles.</li>
+<li>To check a 1D map → nondecreasing, and $T'(x)\,\rho_\be(T(x))=\rho_\al(x)$.</li>
+</ul>
+</div>
+<div class="quiz"><p>Give the optimal map from $\mathcal U[0,1]$ to $\frac12\delta_0+\frac12\,\mathcal U[0,1]$ and its $W_1$ cost.</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>$C_\al(x)=x$ and $C_\be^{-1}(r)=0$ for $r\le\frac12$, $2r-1$ for $r>\frac12$ (worked example above). So $T(x)=0$ on $[0,\frac12]$ — the left half is crushed onto the atom — and $T(x)=2x-1$ on $(\frac12,1]$ — the right half is stretched over $[0,1]$. $W_1=\int_0^{1/2}x\,\dd x+\int_{1/2}^1\abs{x-(2x-1)}\,\dd x=\frac18+\int_{1/2}^1(1-x)\,\dd x=\frac18+\frac18=\frac14$.</p>
+</div></details></div>

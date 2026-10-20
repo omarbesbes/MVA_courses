@@ -1,0 +1,153 @@
+<h2 id="mc">8. Computing $SW_p$ in practice: Monte Carlo over directions <span class="ref">notes §2, p. 4; slides, frame 12/12</span></h2>
+<p class="tldr">Replace the average over the sphere by an average over $K$ random directions, each drawn by normalizing a standard Gaussian vector: the estimate of $SW_p^p$ is unbiased, costs $O(Kdn+Kn\log n)$, and its error decreases like $\sqrt{\mathrm{Var}/K}$ — whatever the dimension.</p>
+
+<h3 id="mc-estimator">An average over random directions</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">Nadjahi notes, §2, p. 4</span></div>
+<p><strong>2. Sliced Optimal Transport in Practice.</strong> Consider $\mu=\frac1n\sum_{i=1}^n\delta_{x_i}$ and $\nu=\frac1n\sum_{i=1}^n\delta_{y_i}$, with each $x_i,y_i\in\R^d$ (practical setting: we only observe data points).</p>
+$$\begin{aligned}\mathbf{SW}_p(\mu,\nu)^p&=\E_{\theta\sim\mathcal U_{\mathbb S^{d-1}}}\big[\mathbf W_p\big((p_\theta)_\sharp\mu,(p_\theta)_\sharp\nu\big)^p\big]&(22)\\&\approx\frac1K\sum_{j=1}^K\mathbf W_p\big((p_{\theta_j})_\sharp\mu,(p_{\theta_j})_\sharp\nu\big)^p&(23)\\&=\widehat{\mathbf{SW}}_p(\mu,\nu)^p&(24)\end{aligned}$$
+<p><strong>Main steps to compute SW in practice:</strong></p>
+<ol>
+<li><strong>Sample:</strong> $(\theta_j)_{j=1}^K$, which are $K$ independent and identically distributed samples from $\mathcal U_{\mathbb S^{d-1}}$</li>
+<li><strong>Project:</strong> For each $j\in\{1,\dots,K\}$, compute $(p_{\theta_j})_\sharp\mu$ and $(p_{\theta_j})_\sharp\nu$</li>
+<li><strong>Sort and average:</strong> Compute $\mathbf W_p\big((p_{\theta_j})_\sharp\mu,(p_{\theta_j})_\sharp\nu\big)$</li>
+</ol>
+</div>
+<dl class="decode">
+<dt>(22)</dt><dd>The definition, written as an expectation over a random direction (Remark 3).</dd>
+<dt>(23)</dt><dd>The expectation is replaced by the empirical average over $K$ random directions — <em>Monte Carlo integration</em>. The “$\approx$” is random: another draw of directions gives another number.</dd>
+<dt>$\widehat{\mathbf{SW}}_p$</dt><dd>The resulting <em>estimator</em>; its $p$-th power estimates $SW_p^p$. In OT4ML the number of directions is $L$, on the slides $k$.</dd>
+<dt>“Sort and average”</dt><dd>Each $\mathbf W_p$ between two uniform measures on $n$ numbers is computed by sorting (§2); then the $p$-th powers are averaged over the $K$ directions and the $p$-th root is taken.</dd>
+</dl>
+<div class="box method"><div class="box-h">Algorithm — Monte Carlo sliced Wasserstein between two clouds of $n$ points</div>
+<ol>
+<li>Draw $K$ standard Gaussian vectors $g_1,\dots,g_K\in\R^d$ and set $\theta_j=g_j/\norm{g_j}$. <em>Cost $O(Kd)$.</em></li>
+<li>Compute the $K\times n$ projections $\ps{\theta_j}{x_i}$ and $\ps{\theta_j}{y_i}$ (a matrix product). <em>Cost $O(Kdn)$.</em></li>
+<li>Sort each of the $2K$ rows. <em>Cost $O(Kn\log n)$.</em></li>
+<li>Return $\widehat{SW}_p^p=\frac1K\sum_{j=1}^K\frac1n\sum_{i=1}^n\abs{u_{j,(i)}-v_{j,(i)}}^p$, where $u_{j,(i)}$, $v_{j,(i)}$ are the sorted projections. <em>Cost $O(Kn)$.</em></li>
+</ol>
+<p>With unequal numbers of points or weights, step 4 uses the quantile formula of §2 instead. In POT: <code>ot.sliced_wasserstein_distance(X, Y, n_projections=K)</code> returns $\widehat{SW}_2$ (with the root).</p>
+</div>
+<div class="box example"><div class="box-h">Worked example — three directions on the cross</div>
+<p>For the cross of §4 the slice cost in the direction $\varphi$ is $1-\abs{\sin2\varphi}$. With the three directions $0°$, $30°$, $60°$ (as if they had been drawn at random):</p>
+$$\widehat{SW}_2^2=\frac13\Big[(1-0)+\big(1-\tfrac{\sqrt3}2\big)+\big(1-\tfrac{\sqrt3}2\big)\Big]=\frac{1+0.134+0.134}3\approx0.423,$$
+<p>against the exact $SW_2^2=1-\frac2\pi\approx0.363$. With the four directions $0°,45°,90°,135°$ one gets $0.5$; with $22.5°,67.5°,112.5°,157.5°$, $0.293$. A handful of directions gives a rough estimate; how rough is quantified below.</p>
+</div>
+
+<h3 id="mc-sphere">Drawing uniform directions: normalize a Gaussian vector</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">Nadjahi notes, Prop. 2 and its proof, p. 4</span></div>
+<p><strong>Proposition 2</strong> (How to uniformly sample on $\mathbb S^{d-1}$?). <em>Let $X_1,X_2,\dots,X_d\sim\N(0,1)$ and be independent. Then, the vector</em></p>
+$$\tilde X=\Big(\frac{X_1}Z,\frac{X_2}Z,\dots,\frac{X_d}Z\Big)$$
+<p><em>is a uniform random vector on $\mathbb S^{d-1}$, where $Z=\sqrt{\sum_{i=1}^dX_i^2}$.</em></p>
+<p><em>Proof.</em> Let $f:\mathbb S^{d-1}\to\R$ be a bounded, continuous function. We want to show that,</p>
+$$\E[f(\tilde X)]=\frac1{\mathcal A(\mathbb S^{d-1})}\int_{\mathbb S^{d-1}}f(\theta)\,\dd\sigma(\theta)\qquad(25)$$
+<p>where $\sigma$ is the surface measure on $\mathbb S^{d-1}$, and $\mathcal A(\mathbb S^{d-1})$ denotes the surface area of $\mathbb S^{d-1}$, <em>i.e.</em>, $\mathcal A(\mathbb S^{d-1})=\frac{2\pi^{d/2}}{\Gamma(d/2)}$ with $\Gamma(d/2)=\int_0^{+\infty}e^{-t}t^{\frac d2-1}\,\dd t$. Using the Gaussian density and switching to spherical coordinates $x=r\theta$ with $r\in(0,+\infty)$ and $\theta\in\mathbb S^{d-1}$, and using $\dd x=r^{d-1}\dd r\,\dd\sigma(\theta)$,</p>
+$$\begin{aligned}\E[f(\tilde X)]&=\int_{\R^d}f(x_1/z,x_2/z,\dots,x_d/z)\,(2\pi)^{-d/2}e^{-z^2/2}\,\dd x_1\dd x_2\dots\dd x_d&(26)\\&=(2\pi)^{-d/2}\int_0^{+\infty}\Big[\int_{\mathbb S^{d-1}}f(\theta)\,\dd\sigma(\theta)\Big]e^{-r^2/2}r^{d-1}\,\dd r&(27)\\&=c_d\int_{\mathbb S^{d-1}}f(\theta)\,\dd\sigma(\theta).&(28)\end{aligned}$$
+<p>where $c_d=(2\pi)^{-d/2}\int_0^{+\infty}e^{-r^2/2}r^{d-1}\,\dd r=\frac1{2\pi^{d/2}}\Gamma(d/2)$. Thus, $c_d=\frac1{\mathcal A(\mathbb S^{d-1})}$, and this concludes the proof. $\square$</p>
+</div>
+<dl class="decode">
+<dt>$\tilde X$</dt><dd>A standard Gaussian vector of $\R^d$ divided by its length: a point of the unit sphere.</dd>
+<dt>$z$ in (26)</dt><dd>Short for $\norm{x}=\sqrt{x_1^2+\dots+x_d^2}$, both inside $f$ and in the density $(2\pi)^{-d/2}e^{-\norm x^2/2}$.</dd>
+<dt>$\sigma$</dt><dd>Here, as in Remark 1, the <strong>surface measure</strong> ($\tilde\sigma$ on this page). (25) says: $\tilde X$ has the law $\tilde\sigma/\mathcal A(\mathbb S^{d-1})=\mathcal U_{\mathbb S^{d-1}}$.</dd>
+<dt>“bounded, continuous $f$”</dt><dd>Two probability measures that give the same expectation to all bounded continuous functions are equal; so (25) identifies the law of $\tilde X$.</dd>
+</dl>
+<div class="box idea"><div class="box-h">Idea of the proof</div>
+<p>The density of a standard Gaussian vector, $(2\pi)^{-d/2}e^{-\norm x^2/2}$, depends only on the radius $\norm x$: it gives the same weight to all directions. In polar coordinates the integral factorizes into (radius part) × (direction part), and the direction part is the uniform law. Equivalently: the Gaussian law is invariant under rotations, so the law of its direction is a rotation-invariant probability on the sphere — and the uniform law is the only one.</p>
+</div>
+<details class="fold proof"><summary>The proof, step by step (with the radius integral)</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\E[f(\tilde X)]=\int_{\R^d}f\Big(\frac x{\norm x}\Big)(2\pi)^{-d/2}e^{-\norm x^2/2}\,\dd x .$$<span class="why">Expectation of a function of a random vector with a density (the set $\{x=0\}$ has measure zero). This is (26).</span></li>
+<li>$$=(2\pi)^{-d/2}\int_0^\infty\int_{\mathbb S^{d-1}}f(\theta)\,e^{-r^2/2}r^{d-1}\,\dd\tilde\sigma(\theta)\,\dd r .$$<span class="why">Polar coordinates (Remark 1, formula (4)) with $x=r\theta$: $x/\norm x=\theta$ and $\norm x=r$. This is (27).</span></li>
+<li>$$\int_0^\infty e^{-r^2/2}r^{d-1}\,\dd r=2^{\frac d2-1}\Gamma\big(\tfrac d2\big).$$<span class="why">Substitute $t=r^2/2$, $r=\sqrt{2t}$, $\dd r=\dd t/\sqrt{2t}$: the integral becomes $\int_0^\infty e^{-t}(2t)^{\frac{d-1}2}(2t)^{-\frac12}\,\dd t=2^{\frac d2-1}\int_0^\infty e^{-t}t^{\frac d2-1}\,\dd t$.</span></li>
+<li>$$c_d=(2\pi)^{-d/2}\,2^{\frac d2-1}\Gamma\big(\tfrac d2\big)=\frac{\Gamma(d/2)}{2\pi^{d/2}}=\frac1{\mathcal A(\mathbb S^{d-1})}.$$<span class="why">$(2\pi)^{-d/2}2^{d/2}=\pi^{-d/2}$, and the formula of Remark 1 for the area. So $\E[f(\tilde X)]=\frac1{\mathcal A}\int f\,\dd\tilde\sigma$: (25)–(28). $\square$</span></li>
+</ol>
+<p><strong>Check.</strong> $d=2$: $c_2=\frac{\Gamma(1)}{2\pi}=\frac1{2\pi}$, the density of a uniform angle. $d=3$: $c_3=\frac{\sqrt\pi/2}{2\pi^{3/2}}=\frac1{4\pi}$. And the factorization shows more: <strong>the direction $\tilde X$ is independent of the radius $Z$</strong> (the joint density is a product). This is used in <a href="#ex-sphere">Exercise 4 of §13</a>.</p>
+</div></details>
+<figure class="fig"><!-- include figures/L05/sphere.svg --><figcaption>Left: in the plane, the angle of a normalized Gaussian vector is uniform (density $\frac1{2\pi}$, green); the angle of a normalized point of the square $[-1,1]^2$ is not (density $\frac1{8\cos^2\varphi}$ near each axis, red): diagonal directions are favoured by a factor $2$ over the axes. Right: in space, a uniform direction has a height $\theta_3$ uniform on $[-1,1]$ (Archimedes); drawing the polar angle uniformly in $[0,\pi]$ piles directions up near the poles.</figcaption></figure>
+<div class="box pitfall"><div class="box-h">Pitfall — two wrong ways to draw directions</div>
+<ul>
+<li><strong>Normalize a uniform point of the cube.</strong> $U/\norm U$ with $U$ uniform in $[-1,1]^d$ is not uniform: the corners of the cube stick out, so diagonal directions are too frequent. In the plane, the probability of falling within $5°$ of the diagonal direction $45°$ is $0.0402$, against $\frac{10}{360}=0.0278$ for the uniform law (exact formula $\frac14(1-\tan40°)$; Monte Carlo agrees).</li>
+<li><strong>Draw the spherical angles uniformly.</strong> In $\R^3$, taking the polar angle $\psi$ uniform on $[0,\pi]$ gives a height $\cos\psi$ with density $\frac1{\pi\sqrt{1-z^2}}$, not the uniform $\frac12$: $\P(\abs{\theta_3}>0.9)=\frac{2\arccos0.9}\pi\approx0.287$ instead of $0.1$.</li>
+</ul>
+<p>Both bias the estimate of $SW_p$ towards some directions. Normalized Gaussian vectors (Proposition 2) are exact, cheap, and work in every dimension. (In $\R^2$ only, a uniform angle $\varphi\in[0,2\pi)$ is also exact.)</p>
+</div>
+
+<h3 id="mc-cost">What it costs</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">Nadjahi notes, Remark 5, p. 4</span></div>
+<p><strong>Remark 5</strong> (Computational complexity).</p>
+<ul>
+<li><em>Computing $\widehat{\mathbf{SW}}_p(\mu,\nu)$ costs $O(Kdn+Kn\log n)$ operations (projecting + sorting).</em></li>
+<li><em>Recall that computing $\mathbf W_p(\mu,\nu)$ scales in $O(n^3)$ operations when $d>1$.</em></li>
+</ul>
+<p>$\Rightarrow$ <em>Computing $\widehat{\mathbf{SW}}_p$ is much cheaper than $\mathbf W_p$ for $n\gg d$ and moderate $K$</em></p>
+</div>
+<dl class="decode">
+<dt>$Kdn$</dt><dd>The projections: $K$ directions × $n$ points × $d$ multiplications each (times $2$ for the two clouds).</dd>
+<dt>$Kn\log n$</dt><dd>The sorts: $K$ directions, a sort of $n$ numbers each.</dd>
+<dt>“$n\gg d$ and moderate $K$”</dt><dd>The condition matters. Exact transport costs $O(n^2d)$ to build the cost matrix plus $O(n^3)$ to solve; slicing costs $O(Kdn)$ to project. When $n\gg d$ and $K$ is moderate, slicing wins by far.</dd>
+</dl>
+<div class="box example"><div class="box-h">Worked example — when is slicing cheaper?</div>
+<ul>
+<li><strong>Point clouds</strong> ($d=3$, $n=2\,048$ points per shape, $K=100$): exact $n^3\approx8.6\times10^9$; sliced: projections $Kdn\approx6.1\times10^5$, sorts $Kn\log_2n\approx2.3\times10^6$. About $3\,000$ times cheaper.</li>
+<li><strong>Small batches of images</strong> ($d=3\,072$, $n=256$, $K=1\,000$): exact: cost matrix $n^2d\approx2.0\times10^8$ and assignment $n^3\approx1.7\times10^7$; sliced: projections $Kdn\approx7.9\times10^8$, sorts $\approx2.0\times10^6$. Here $n<d$, and slicing is <em>not</em> cheaper in operation count — its advantages are elsewhere (no assignment to solve, a dense matrix product that runs well on a GPU, a gradient that is easy to back-propagate, the statistical rate of §9). This is the regime of the notes’ warning “for $n\gg d$”.</li>
+</ul>
+</div>
+
+<h3 id="mc-error">How many directions? The Monte Carlo error</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">slides, frame 12/12 (p. 18)</span></div>
+<p><strong>Still Some Practical Challenges!</strong> The previous rate applies to $\mathbf{SW}_p(\mu,\nu)=\big[\E_{\theta\sim\mathcal U(\mathbb S^{d-1})}\mathbf W_p^p(\mu^\theta,\nu^\theta)\big]^{1/p}$, which is intractable in practice. Practical approximation uses $k$ random projections:</p>
+$$\widehat{\mathbf{SW}}_p^p(\mu,\nu)=\frac1k\sum_{j=1}^k\mathbf W_p^p(\mu^{\theta_j},\nu^{\theta_j})$$
+<p><strong>Monte Carlo approximation error</strong></p>
+$$\E\big[\abs{\widehat{\mathbf{SW}}_p^p(\mu,\nu)-\mathbf{SW}_p^p(\mu,\nu)}\big]\le\frac1k\mathrm{Var}_\theta\big[\mathbf W_p^p(\mu^\theta,\nu^\theta)\big]$$
+<p><strong>Trade-off:</strong> more projections $\Rightarrow$ better accuracy, but higher computational cost.</p>
+</div>
+<dl class="decode">
+<dt>“the previous rate”</dt><dd>The statistical rate of frame 11/12 (§9 of this page): the slides discuss statistics before computation.</dd>
+<dt>$\mu^\theta$</dt><dd>The slice $(p_\theta)_\sharp\mu$.</dd>
+<dt>$\mathrm{Var}_\theta[\cdots]$</dt><dd>The variance of the slice cost $V(\theta)=W_p^p(\mu^\theta,\nu^\theta)$ when $\theta$ is a uniform random direction: how much the directions disagree.</dd>
+<dt>$\E[\abs{\cdots}]$</dt><dd>Average over the random directions (the measures are fixed).</dd>
+</dl>
+<div class="box thm"><div class="box-h">The correct statement</div>
+<p>$\widehat{SW}_p^p$ is an average of $K$ independent copies of $V(\theta)=W_p^p(\al_\theta,\be_\theta)$, whose mean is $SW_p^p$. Hence (<a href="#recall-mc">refresher</a>)</p>
+$$\E\big[\widehat{SW}_p^p\big]=SW_p^p,\qquad\E\big[\abs{\widehat{SW}_p^p-SW_p^p}^2\big]=\frac{\mathrm{Var}_\theta[V]}K,\qquad\E\big[\abs{\widehat{SW}_p^p-SW_p^p}\big]\le\sqrt{\frac{\mathrm{Var}_\theta[V]}K}.$$
+</div>
+<div class="box remark"><div class="box-h">Note on the sources — the square root is missing on the slide</div>
+<p>The slide bounds the mean <em>absolute</em> error by $\frac1k\mathrm{Var}_\theta$; that is the bound on the mean <em>squared</em> error. The correct bound on the mean absolute error is $\big(\mathrm{Var}_\theta/k\big)^{1/2}$, which is much larger when $k$ is large. Two checks:</p>
+<ul>
+<li><strong>Units.</strong> Multiply both clouds by $\lambda>0$: every slice cost is multiplied by $\lambda^p$, so the error is multiplied by $\lambda^p$ — and so is $\sqrt{\mathrm{Var}}$, while $\mathrm{Var}$ is multiplied by $\lambda^{2p}$. A bound “error $\le\mathrm{Var}/k$” cannot hold at all scales.</li>
+<li><strong>Numbers</strong> (the cross, $\mathrm{Var}=\frac12-\frac4{\pi^2}\approx0.0947$, $4\,000$ independent runs per $k$): the measured mean absolute error is $0.274$, $0.0617$, $0.0157$, $0.0077$ for $k=1,16,256,1024$, while $\mathrm{Var}/k=0.0947$, $0.0059$, $0.00037$, $0.00009$: the slide’s bound is violated by factors $3$ to $83$. The correct bound $\sqrt{\mathrm{Var}/k}=0.308$, $0.077$, $0.019$, $0.0096$ holds, and the ratio tends to $\sqrt{2/\pi}\approx0.80$ as the central limit theorem predicts.</li>
+</ul>
+<p>The book has the correct square root (OT4ML Remark 10.17 below).</p>
+</div>
+<figure class="fig"><!-- include figures/L05/mcerror.svg --><figcaption>Monte Carlo error of $\widehat{SW}_2^2$ for the cross of §4, against the number of directions $K$ (log–log). Dots: mean absolute error over $4\,000$ runs. Green: $\sqrt{\mathrm{Var}/K}$, slope $-\frac12$. Dashed: the slide’s $\mathrm{Var}/K$, slope $-1$, below the measured error.</figcaption></figure>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Remark 10.17, p. 207</span></div>
+<p><strong>Remark 10.17</strong> (Directions are another sample budget). […] In computation, draw i.i.d. directions $\theta_1,\dots,\theta_L$ with law $\sigma$, independently of the data, and use the random estimator $\mathcal{SW}_1^L(\hat\al_n,\hat\be_m):=\frac1L\sum_{r=1}^L\mathcal W_1\big((P_{\theta_r})_\sharp\hat\al_n,(P_{\theta_r})_\sharp\hat\be_m\big)$. Conditionally on the samples, the summands are i.i.d., take values in $[0,2R]$, and have mean $\mathcal{SW}_1(\hat\al_n,\hat\be_m)$. Their conditional variance is at most $R^2$, so their mean absolute Monte-Carlo error is at most $R/\sqrt L$.</p>
+</div>
+<dl class="decode">
+<dt>$[0,2R]$</dt><dd>Both measures live in the ball of radius $R$, so their slices live in $[-R,R]$, and no unit of mass moves by more than $2R$.</dd>
+<dt>variance $\le R^2$</dt><dd>A random variable with values in an interval of length $\ell$ has variance at most $\ell^2/4$; here $\ell=2R$.</dd>
+<dt>$R/\sqrt L$</dt><dd>$\sqrt{\mathrm{Var}/L}\le\sqrt{R^2/L}$: a bound that does not depend on the dimension, only on the size of the support.</dd>
+</dl>
+<div class="box example"><div class="box-h">Worked example — how many directions for 1%?</div>
+<p>For the cross, the slice costs have mean $0.3634$ and standard deviation $\sqrt{0.0947}=0.308$: individual directions disagree a lot. The root-mean-square error with $K$ directions is $0.308/\sqrt K$. For a relative error of $10\%$ ($0.0363$) one needs $K\ge(0.308/0.0363)^2\approx72$ directions; for $1\%$, about $7\,200$. Each factor $10$ in accuracy costs a factor $100$ in directions — the price of Monte Carlo, but independent of the dimension $d$.</p>
+</div>
+<div class="widget" data-widget="l5mc"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p>What to look at: each grey line is one run of the estimator, $\widehat{SW}_2^2$ after $K=1,2,\dots,4\,096$ random directions (log scale in $K$); the green line is the exact value and the green band is $\pm\sqrt{\mathrm{Var}/K}$; the dashed band is the slide’s $\pm\mathrm{Var}/K$. The runs leave the dashed band and stay in the green one. Choose the Gaussian pair in $\R^d$ and increase $d$: the relative spread of the runs does not decrease with $K$ any faster — the rate $K^{-1/2}$ does not depend on the dimension, only the variance does.</p>
+
+<div class="box pitfall"><div class="box-h">Pitfall — the root makes the estimator biased</div>
+<p>$\widehat{SW}_p^p$ is unbiased for $SW_p^p$, but $\widehat{SW}_p=\big(\widehat{SW}_p^p\big)^{1/p}$ underestimates $SW_p$ on average: $s\mapsto s^{1/p}$ is concave, so $\E\big[(\widehat{SW}_p^p)^{1/p}\big]\le\big(\E\widehat{SW}_p^p\big)^{1/p}$ (Jensen). For the cross: $\E\,\widehat{SW}_2=0.527$, $0.587$, $0.599$, $0.6026$ with $K=1,4,16,256$, against $SW_2=0.6028$ (simulation, $10^5$ runs). Average $p$-th powers, take the root at the end, and use many directions when the value itself matters.</p>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — sliced losses for generative models</div>
+<p>The Monte Carlo estimate is a differentiable loss. For a generator $x_i=T(w)(z_i)$ and a batch of data $y_i$: draw $K$ directions, project both batches, sort, and use $\mathcal L(w)=\frac1K\sum_j\frac1n\sum_i\big(\ps{\theta_j}{x}_{(i)}-\ps{\theta_j}{y}_{(i)}\big)^2$. The sort is a permutation that is constant almost everywhere, so the gradient simply flows through the sorted values: the point $x_i$ receives the gradient $\frac2{Kn}\sum_j\big(\ps{\theta_j}{x_i}-\text{its sorted partner along }\theta_j\big)\,\theta_j$, which is back-propagated into $w$. New directions are drawn at every step. This is the principle of <strong>sliced-Wasserstein generators and auto-encoders</strong> (slide 10/12: Deshpande et al. 2018; Wu et al. 2019; Kolouri et al. 2019b). In a sliced-Wasserstein auto-encoder, the sliced loss replaces the KL term of a variational auto-encoder: it pushes the batch of latent codes towards samples of the prior (a Gaussian, a circle…), with no adversarial network. On the slide, a progressive-growing GAN trained with a sliced loss reaches FID scores $5.5$ (CelebA-HQ faces) and $8.0$ (LSUN bedrooms), against $7.5$ and $8.4$ for its Wasserstein-GAN counterpart (Wu et al. 2019; lower is better). For <strong>3D point clouds</strong> ($d=3$, a few thousand points per shape) the sliced distance is a natural reconstruction loss, cheap compared with exact transport (first example above); Nguyen, Bariletto and Ho (2024, in the slides’ references) study better-than-random directions for exactly this case.</p>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>Uniform directions → normalize standard Gaussian vectors (never a cube, never uniform angles in $d\ge3$).</li>
+<li>Monte Carlo error → $\sqrt{\mathrm{Var}/K}$; $10\times$ more accuracy costs $100\times$ more directions.</li>
+<li>Unbiased → average $W_p^p$ over directions; take the root only at the end.</li>
+<li>Cost → $O(Kdn+Kn\log n)$; compare with $O(n^2d+n^3)$ before claiming a speed-up.</li>
+</ul>
+</div>
+<div class="quiz"><p>Two clouds live in the unit ball of $\R^{50}$. How many directions guarantee a mean absolute Monte Carlo error at most $0.01$ on $\widehat{SW}_1$?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>By OT4ML Remark 10.17 with $R=1$, the error is at most $1/\sqrt L$; $1/\sqrt L\le0.01$ requires $L\ge10\,000$ directions. The dimension $50$ plays no role in this bound (it only enters the cost of each projection). In practice the variance is often much smaller than $R^2$ and far fewer directions suffice.</p>
+</div></details></div>

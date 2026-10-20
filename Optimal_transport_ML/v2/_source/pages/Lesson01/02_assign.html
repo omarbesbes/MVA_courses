@@ -1,0 +1,146 @@
+<h2 id="assign">2. The discrete Monge problem: optimal assignment <span class="ref">OT4ML §1.1–1.2, pp. 9–18</span></h2>
+<p class="tldr">With $n$ sources and $n$ targets of equal mass, moving the mass means choosing a permutation; there are $n!$ of them, a local swap test is necessary but not sufficient, and the Hungarian method finds an optimal one in $O(n^3)$ operations together with a certificate of optimality.</p>
+
+<h3 id="assign-def">The problem</h3>
+<p>Take $n$ <strong>source</strong> points $x_1,\dots,x_n$ and $n$ <strong>target</strong> points $y_1,\dots,y_n$, each carrying the same mass $\frac1n$. Moving the mass without splitting it means sending each source to exactly one target, each target receiving exactly one source: a <em>pairing</em>. If moving a unit of mass from $x$ to $y$ costs $c(x,y)$, collect the costs in the <em class="new">cost matrix</em> $C_{i,j}=c(x_i,y_j)$.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 1.1, p. 9</span></div>
+<p><strong>Definition 1.1 (Optimal assignment problem).</strong> Let $n\ge1$. For a cost matrix $C\in\R^{n\times n}$ and the set $\mathrm{Perm}(n)$ of bijections of $[\![n]\!]=\{1,\dots,n\}$, the optimal assignment value is</p>
+$$\min_{\sigma\in\mathrm{Perm}(n)}\ \frac1n\sum_{i=1}^nC_{i,\sigma(i)}.\qquad(1.1)$$
+<p>A minimizer is an optimal assignment, or optimal permutation.</p>
+<p>The set $\mathrm{Perm}(n)$ is nonempty and finite, so a minimizer always exists […]. When $C_{i,j}=c(x_i,y_j)$, every permutation induces the empirical coupling $\pi_\sigma=n^{-1}\sum_{i=1}^n\delta_{(x_i,y_{\sigma(i)})}$ between $\al=n^{-1}\sum_{i=1}^n\delta_{x_i}$ and $\be=n^{-1}\sum_{j=1}^n\delta_{y_j}$. If the source locations are pairwise distinct, this coupling is the graph of the map $T_\sigma(x_i)=y_{\sigma(i)}$, and the assignment problem is exactly the Monge problem between $\al$ and $\be$.</p>
+</div>
+<dl class="decode">
+<dt>$C_{i,j}$</dt><dd>The price of pairing source $i$ with target $j$. Typical choices: $\norm{x_i-y_j}$ (Monge's own cost), $\norm{x_i-y_j}^2$, or $\norm{x_i-y_j}^p$.</dd>
+<dt>$\sigma\in\mathrm{Perm}(n)$</dt><dd>A pairing: source $i$ goes to target $\sigma(i)$. Bijective means that every target is used exactly once (no target receives two sources, none stays empty).</dd>
+<dt>$\frac1n\sum_iC_{i,\sigma(i)}$</dt><dd>The total cost, each pair carrying the mass $\frac1n$. The factor $\frac1n$ multiplies every candidate by the same number, so it does not change which $\sigma$ is best.</dd>
+<dt>“a minimizer always exists”</dt><dd>We minimise over a finite set: just take the smallest of $n!$ numbers. Existence is free here; it will <em>not</em> be free between general measures (§6).</dd>
+<dt>$\pi_\sigma$, $T_\sigma$</dt><dd>Two ways to record the pairing: as the list of pairs with their masses (a <em>coupling</em>, the object of Lesson 2) or as a map $x_i\mapsto y_{\sigma(i)}$ (the object of Monge's problem, §6).</dd>
+</dl>
+
+<div class="box example" id="assign-example"><div class="box-h">Worked example — three sources, three targets, two costs</div>
+<p>Sources $x_1=(0,0)$, $x_2=(0,1)$, $x_3=(1,0)$; targets $y_1=(2,0)$, $y_2=(2,3)$, $y_3=(0,2)$. For the squared cost $\norm{x-y}^2$ the cost matrix has integer entries (rows = sources, columns = targets):</p>
+$$C=\begin{pmatrix}4&13&4\\5&8&1\\1&10&5\end{pmatrix}.$$
+<p>Write a permutation as the list $(\sigma(1),\sigma(2),\sigma(3))$. The six total costs $\sum_iC_{i,\sigma(i)}$, and the same for the distance cost $\norm{x-y}$:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>$\sigma$</th><th>(1,2,3)</th><th>(1,3,2)</th><th>(2,1,3)</th><th>(2,3,1)</th><th>(3,1,2)</th><th>(3,2,1)</th></tr></thead>
+<tbody>
+<tr><td>$\norm{x-y}^2$</td><td>17</td><td>15</td><td>23</td><td>15</td><td>19</td><td class="yes">13</td></tr>
+<tr><td>$\norm{x-y}$</td><td>7.065</td><td>6.162</td><td>8.078</td><td class="yes">5.606</td><td>7.398</td><td>5.828</td></tr>
+</tbody></table></div>
+<p>For the squared cost the best pairing is $(3,2,1)$: $x_1\to y_3$, $x_2\to y_2$, $x_3\to y_1$, total $13$ (value $\frac{13}3\approx4.33$ with the factor $\frac1n$). For the distance cost it is $(2,3,1)$, total $5.606$. <strong>The optimal pairing depends on the cost</strong>: the square penalises long moves more, and prefers several medium moves to one long and two short ones.</p>
+</div>
+
+<h3 id="assign-size">Why brute force is hopeless</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">CompOT §2.2, p. 13</span></div>
+<p>One could naively evaluate the cost function above using all permutations in the set $\mathrm{Perm}(n)$. However, that set has size $n!$, which is gigantic even for small $n$. Consider, for instance, that such a set has more than $10^{100}$ elements [Dantzig, 1983] when $n$ is as small as 70.</p>
+</div>
+<p>Indeed $5!=120$ and $10!=3\,628\,800$, but $20!\approx2.43\times10^{18}$: at a billion permutations per second, trying them all takes about 77 years. And $70!\approx1.20\times10^{100}$. Worse, the set of permutations has no useful continuous structure (you cannot take “half of a permutation” and do gradient descent), and a small move of one point can reorganise the whole optimal pairing. Two kinds of ideas save us: <strong>geometry</strong> (on the line, §3) and <strong>duality</strong> (the Hungarian method, below).</p>
+<div class="box remark"><div class="box-h">Optimal assignments need not be unique</div>
+<p>Peyré–Cuturi (Remark 2.3, p. 13) give the simplest case: $n=2$, the four points at the corners of a unit square, sources on one diagonal and targets on the other. All four distances are equal, so both pairings are optimal. Exercise 1 of the sheet (§11) is another example.</p>
+</div>
+
+<h3 id="assign-swap">The elementary move: swapping two pairs</h3>
+<p>The one local move available is the <em>swap</em>: take two pairs $(x_i,y_{\sigma(i)})$ and $(x_j,y_{\sigma(j)})$ and exchange their targets. If $\sigma$ is optimal, no swap can lower the cost:</p>
+$$C_{i,\sigma(i)}+C_{j,\sigma(j)}\ \le\ C_{i,\sigma(j)}+C_{j,\sigma(i)}\qquad\text{for all }i\ne j.$$
+<p>For the squared cost, expanding the four squares turns this into a clean geometric condition (Exercise 2 of the sheet, solved in <a href="#ex2">§11</a>): the swap changes the cost by $2\ps{x_i-x_j}{y_{\sigma(i)}-y_{\sigma(j)}}$, so an optimal pairing satisfies</p>
+$$\ps{x_i-x_j}{\,y_{\sigma(i)}-y_{\sigma(j)}}\ \ge\ 0\qquad\text{for all }i,j :$$
+<p>two sources and their two targets are “in the same order” along every direction. This <strong>two-point monotonicity</strong> is the seed of Brenier's theorem (§7).</p>
+<div class="box example"><div class="box-h">Worked example — the test on the three-point example</div>
+<p>For the squared-cost optimum $(3,2,1)$ the three inner products $\ps{x_i-x_j}{y_{\sigma(i)}-y_{\sigma(j)}}$ are $1$, $2$ and $3$: all nonnegative. For $(2,3,1)$, the optimum of the distance cost, the pair $(x_1,x_2)$ gives $\ps{(0,-1)}{y_2-y_3}=\ps{(0,-1)}{(2,1)}=-1<0$: for the squared cost, swapping the targets of $x_1$ and $x_2$ changes the cost by $2\times(-1)=-2$, from $15$ to $13$ — which is the optimum.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — “no swap helps” does not mean “optimal”</div>
+<p>Sources $(0,0),(0,3),(3,0)$, targets $y_1=(0,2)$, $y_2=(3,3)$, $y_3=(1,0)$, squared cost. The identity pairing costs $4+9+4=17$; each of the three swaps costs $23$; yet the three-cycle $x_1\to y_3$, $x_2\to y_1$, $x_3\to y_2$ costs $1+1+9=11$. Exchanges along longer cycles are needed. Requiring that no <em>cycle</em> of exchanges helps is <strong>cyclical monotonicity</strong>, the exact characterisation of optimality (§7).</p>
+</div>
+
+<h3 id="assign-cross">In the plane: optimal segments do not cross (for the distance cost)</h3>
+<p>For Monge's own cost, the length of the move, a swap argument gives a clean picture.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 1.5, p. 15</span></div>
+<p><strong>Proposition 1.5 (No proper crossings in Euclidean-distance matchings).</strong> Let $x_1,\dots,x_n,y_1,\dots,y_n\in\R^2$ and let $c(x,y)=\norm{x-y}$. If $\sigma$ is optimal, then two matched segments cannot cross properly: their relative interiors cannot meet at a point where their supporting lines are distinct.</p>
+</div>
+<dl class="decode">
+<dt>matched segment</dt><dd>The straight segment $[x_i,y_{\sigma(i)}]$ from a source to its target: the path of that unit of mass.</dd>
+<dt>relative interior</dt><dd>The segment without its two endpoints.</dd>
+<dt>cross properly</dt><dd>Meet at one point inside both segments, the two segments not lying on the same line. Collinear overlaps are excluded on purpose: there a swap can cost exactly the same.</dd>
+</dl>
+<div class="box idea"><div class="box-h">Idea of the proof</div>
+<p>If two paths cross at $z$, re-wire them at $z$: go from $x_i$ to $z$ along the first path, then from $z$ to $y_{\sigma(j)}$ along the second. The total length of the re-wired paths is the same as before, and the straight segments $[x_i,y_{\sigma(j)}]$, $[x_j,y_{\sigma(i)}]$ are shorter than these broken lines. So the swap is strictly cheaper.</p>
+</div>
+<details class="fold proof"><summary>Full proof</summary><div class="fold-body">
+<ol class="steps">
+<li>Suppose $[x_i,y_{\sigma(i)}]$ and $[x_j,y_{\sigma(j)}]$ cross properly at a point $z$. Then
+$$\norm{x_i-y_{\sigma(i)}}=\norm{x_i-z}+\norm{z-y_{\sigma(i)}},\qquad\norm{x_j-y_{\sigma(j)}}=\norm{x_j-z}+\norm{z-y_{\sigma(j)}}.$$<span class="why">$z$ lies on each segment, and along a straight segment lengths add up.</span></li>
+<li>$$\norm{x_i-y_{\sigma(j)}}\le\norm{x_i-z}+\norm{z-y_{\sigma(j)}},\qquad\norm{x_j-y_{\sigma(i)}}\le\norm{x_j-z}+\norm{z-y_{\sigma(i)}}.$$<span class="why">Triangle inequality along the two re-wired paths.</span></li>
+<li>At least one of these two inequalities is strict.<span class="why">Equality in the triangle inequality $\norm{a-c}\le\norm{a-z}+\norm{z-c}$ holds only if $z$ lies on the segment $[a,c]$. If both were equalities, $z$ would lie on $[x_i,y_{\sigma(j)}]$ and on $[x_j,y_{\sigma(i)}]$; then $x_i$, $z$, $y_{\sigma(j)}$ would be aligned, and so would $x_j$, $z$, $y_{\sigma(i)}$ — together with the alignments of step 1, all four points would lie on one line, which a proper crossing excludes.</span></li>
+<li>Adding the two inequalities of step 2 and using step 1:
+$$\norm{x_i-y_{\sigma(j)}}+\norm{x_j-y_{\sigma(i)}}\ <\ \norm{x_i-y_{\sigma(i)}}+\norm{x_j-y_{\sigma(j)}}.$$<span class="why">The right-hand sides of step 2 add up to the two original lengths, rearranged; strictness comes from step 3.</span></li>
+<li>So swapping the targets of $i$ and $j$ strictly lowers the total cost, which contradicts the optimality of $\sigma$. $\square$<span class="why">All other pairs are unchanged.</span></li>
+</ol>
+</div></details>
+<figure class="fig"><!-- include figures/L01/crossing.svg --><figcaption>Left: for the distance cost, two crossing paths can be re-wired at the crossing point $z$; the dashed straight segments are shorter than the broken lines, so crossing is never optimal. Right: for the squared cost crossings do happen. With $x_1=(0,0)\to y_1=(3,1)$ and $x_2=(1,0)\to y_2=(4,2)$ the crossing pairing costs $10+13=23$, the swap (dashed) $20+5=25$; for the distance cost the swap wins, $6.708<6.768$.</figcaption></figure>
+<div class="box pitfall"><div class="box-h">Pitfall — “no crossing” is special to $p=1$, and it is not a certificate</div>
+<ul>
+<li><strong>Only the distance cost.</strong> The proof uses that lengths <em>add</em> along a segment. For $\norm{x-y}^p$ with $p\ne1$ this is false, and optimal matchings can cross — for $p=2$ in the figure above, and also for $p<1$. (For $p=2$ the right test is two-point monotonicity, above: here $\ps{x_1-x_2}{y_1-y_2}=\ps{(-1,0)}{(-1,-1)}=1\ge0$, and the swap costs $2\times1=2$ more.)</li>
+<li><strong>Not sufficient.</strong> Colour the $2n$ vertices of a convex polygon alternately red and blue: the number of non-crossing red–blue pairings is the Catalan number $C_n=\frac1{n+1}\binom{2n}{n}$ (OT4ML Remark 1.6, p. 15): $C_5=42$, $C_{10}=16\,796$, $C_{20}=6\,564\,120\,420$. Exponentially many pairings pass the test; it rules out bad pairings but does not find the good one.</li>
+</ul>
+</div>
+
+<div class="widget" data-widget="l1assign"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p>What to look at: orange dots are sources, blue dots targets; the green segments are the optimal pairing for the cost $\norm{x-y}^p$, computed exactly by the Hungarian method each time you change something. <strong>Drag any point.</strong> Move the exponent $p$: at $p=1$ the readout always finds 0 proper crossings (Proposition 1.5); for $p=2$ or $p=\frac12$ crossing pairs (highlighted) appear on most clouds. The readout also gives $n!$, the number of pairings the algorithm did <em>not</em> have to try.</p>
+
+<h3 id="assign-hungarian">Solving it exactly: dual potentials and the Hungarian method</h3>
+<p>How can you be sure that a pairing is optimal without trying the $n!$ others? With <strong>prices</strong>. Suppose each source $i$ pays a price $f_i$ and each target $j$ a price $g_j$, chosen so that no pair is “overpriced”: $f_i+g_j\le C_{i,j}$. Then every pairing costs at least the total of the prices — and a pairing that uses only pairs where the prices are exact is optimal.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML eq. (1.2) and Prop. 1.7, p. 16</span></div>
+<p>Since the factor $1/n$ in (1.1) does not affect the optimizer, work with the unnormalized total cost. Its dual problem is</p>
+$$\max_{(f,g)\in\R^n\times\R^n}\ \sum_{i=1}^nf_i+\sum_{j=1}^ng_j\quad\text{subject to}\quad f_i+g_j\le C_{i,j}\quad\forall i,j.\qquad(1.2)$$
+<p><strong>Proposition 1.7 (Dual certificate for an assignment).</strong> Let $(f,g)$ be feasible for (1.2). Then every permutation $\tau\in\mathrm{Perm}(n)$ satisfies</p>
+$$\sum_iC_{i,\tau(i)}\ \ge\ \sum_if_i+\sum_jg_j.\qquad(1.3)$$
+<p>If a permutation $\sigma$ uses only tight constraints, $f_i+g_{\sigma(i)}=C_{i,\sigma(i)}$ for every $i$ (1.4), then $\sigma$ is an optimal assignment and $(f,g)$ is dual optimal. Equivalently, for a feasible pair, equality in (1.3) at $\tau=\sigma$ holds if and only if every edge $(i,\sigma(i))$ is tight.</p>
+</div>
+<dl class="decode">
+<dt>$f_i$, $g_j$</dt><dd>Dual variables, or <em>potentials</em>: think of them as prices paid by source $i$ and by target $j$.</dd>
+<dt>$f_i+g_j\le C_{i,j}$</dt><dd>“Feasibility”: for every possible pair, the two prices together do not exceed the cost of the pair.</dd>
+<dt>tight</dt><dd>The pair $(i,j)$ is tight if $f_i+g_j=C_{i,j}$. The <em>slack</em> $C_{i,j}-f_i-g_j\ge0$ measures how far from tight it is.</dd>
+<dt>dual optimal</dt><dd>$(f,g)$ maximises $\sum f+\sum g$ among feasible prices. Lesson 2 shows that (1.2) is the dual of a linear program (reminder: <a href="Reminders.html#lp">linear programming duality</a>).</dd>
+</dl>
+<details class="fold proof" open><summary>Full proof</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\sum_iC_{i,\tau(i)}\ \ge\ \sum_i\big(f_i+g_{\tau(i)}\big)=\sum_if_i+\sum_jg_j .$$<span class="why">Feasibility applied to each pair $(i,\tau(i))$, summed over $i$; then $\sum_ig_{\tau(i)}=\sum_jg_j$ because $\tau$ is a bijection (each target index appears exactly once).</span></li>
+<li>If $\sigma$ uses only tight pairs, $\sum_iC_{i,\sigma(i)}=\sum_if_i+\sum_jg_j$.<span class="why">Sum the equalities (1.4).</span></li>
+<li>So $\sum_iC_{i,\sigma(i)}\le\sum_iC_{i,\tau(i)}$ for every $\tau$: $\sigma$ is optimal.<span class="why">Step 2 then step 1. Also, every feasible $(f',g')$ has $\sum f'+\sum g'\le\sum_iC_{i,\sigma(i)}=\sum f+\sum g$ by step 1 with $\tau=\sigma$: $(f,g)$ is dual optimal.</span></li>
+<li>For a feasible pair, $\sum_iC_{i,\sigma(i)}-\big(\sum f+\sum g\big)=\sum_i\big(C_{i,\sigma(i)}-f_i-g_{\sigma(i)}\big)$ is a sum of nonnegative slacks; it vanishes iff each slack vanishes. $\square$<span class="why">This is the “equivalently” of the statement.</span></li>
+</ol>
+</div></details>
+<div class="box example"><div class="box-h">Worked example — a certificate for the three-point example</div>
+<p>Take the prices $f=(0,-3,-3)$ and $g=(4,11,4)$. The slack matrix $C_{i,j}-f_i-g_j$ is</p>
+$$\begin{pmatrix}4-0-4&13-0-11&4-0-4\\5+3-4&8+3-11&1+3-4\\1+3-4&10+3-11&5+3-4\end{pmatrix}=\begin{pmatrix}0&2&0\\4&0&0\\0&2&4\end{pmatrix}\ \ge0 .$$
+<p>So the prices are feasible. The pairing $(3,2,1)$ uses the entries $(1,3)$, $(2,2)$, $(3,1)$, which are all $0$: tight. Hence $(3,2,1)$ is optimal, and indeed $\sum f+\sum g=-6+19=13$ is its cost. We proved optimality <strong>without listing the six permutations</strong>.</p>
+</div>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 1.8, p. 18</span></div>
+<p><strong>Proposition 1.8 (Correctness and complexity of the Hungarian primal-dual method).</strong> For every cost matrix $C\in\R^{n\times n}$, Algorithm 1.4 terminates after $n$ augmentation phases. It returns a permutation $\sigma\in\mathrm{Perm}(n)$ and feasible potentials $(f,g)$ such that $f_i+g_{\sigma(i)}=C_{i,\sigma(i)}$ for all $i$. Consequently, $\sigma$ solves (1.1). With the maintained slacks (1.7), the algorithm uses $O(n^3)$ arithmetic and comparison operations and $O(n^2)$ storage, including the cost matrix.</p>
+</div>
+<div class="box method"><div class="box-h">The Hungarian method in words (OT4ML Alg. 1.4, p. 17)</div>
+<ol>
+<li>Start with feasible prices, for instance $f_i=\min_jC_{i,j}$ and $g=0$, and an empty matching.</li>
+<li>Keep two invariants: the prices stay feasible, and every matched pair is tight.</li>
+<li>To match one more source, explore from it along tight pairs (and back along matched pairs). If you reach a free target, flip the matched/unmatched status along that path: the matching grows by one.</li>
+<li>If you get stuck, change the prices of the explored sources and targets by the smallest slack leaving the explored set: feasibility is kept, and a new tight pair appears.</li>
+<li>After $n$ augmentations every source is matched with tight pairs only: by Proposition 1.7, the matching is optimal.</li>
+</ol>
+<p>The interactive figure above uses exactly this method (the helper <code>hungarian</code> of these pages). In Python, <code>scipy.optimize.linear_sum_assignment(C)</code> does the same job.</p>
+</div>
+
+<div class="box ml"><div class="box-h">In machine learning — matching losses and alignments</div>
+<ul>
+<li><strong>Set prediction (DETR).</strong> The object detector DETR (Carion et al., 2020) outputs a fixed set of $N$ candidate boxes for an image, while the image contains some number $k\le N$ of true objects. The loss is computed after an <strong>optimal assignment</strong> between predictions and ground truth (padded with “no object”), with a cost mixing the predicted class probability and the box distance; the assignment is solved by the Hungarian algorithm at every training step. Without it, the loss would depend on the arbitrary order of the outputs.</li>
+<li><strong>Aligning word embeddings across languages.</strong> Let $x_1,\dots,x_n$ be the vectors of $n$ frequent English words and $y_1,\dots,y_n$ those of $n$ frequent French words. Wasserstein–Procrustes (Grave, Joulin and Berthet, 2019; OT4ML §11.3, p. 241) looks for an orthogonal matrix $Q$ and a permutation $\sigma$ minimising $\sum_i\norm{Qx_i-y_{\sigma(i)}}^2$; it alternates an assignment problem (fixed $Q$) and an orthogonal Procrustes problem (fixed $\sigma$, solved by an SVD). The permutation found is a bilingual dictionary learned without any translation pairs.</li>
+</ul>
+</div>
+
+<div class="quiz"><p>In the three-point example, can you find prices proving that $(2,3,1)$ is optimal for the <em>squared</em> cost?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>No: such prices would prove that $(2,3,1)$, of cost $15$, is optimal, but $(3,2,1)$ costs $13$. By (1.3), every feasible $(f,g)$ has $\sum f+\sum g\le13<15$, so the pairs of $(2,3,1)$ can never all be tight.</p>
+</div></details></div>
+<div class="quiz"><p>Why can you add a constant $u_i$ to row $i$ of $C$ (or $v_j$ to column $j$) without changing the optimal permutations?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>Every permutation uses each row exactly once and each column exactly once, so every $\sum_iC_{i,\tau(i)}$ increases by the same amount $\sum_iu_i+\sum_jv_j$. This is the discrete form of Exercise 9 of the sheet, and the reason why the Hungarian method can start by subtracting the row minima.</p>
+</div></details></div>

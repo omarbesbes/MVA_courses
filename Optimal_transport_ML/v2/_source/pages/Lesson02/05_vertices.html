@@ -1,0 +1,83 @@
+<h2 id="vertices">5. Vertices and sparse solutions</h2>
+<p class="tldr">A linear function on a polytope is minimised at a vertex; the vertices of the transport polytope are exactly the couplings whose support contains no cycle, so some optimal plan has at most $n+m-1$ non-zero entries — instead of $nm$.</p>
+
+<h3 id="vert-extreme">Extreme points, and where a linear program attains its minimum</h3>
+<p><strong>The problem.</strong> In the $2\times2$ example (§2) the optimum was an endpoint of the segment. Is that a coincidence? What do the “endpoints” of $\U(a,b)$ look like in general?</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 3.13–Prop. 3.16, pp. 56–57</span></div>
+<p><strong>Definition 3.13 (Extreme points).</strong> For a convex set $\mathcal C$ in a finite-dimensional vector space, $\mathrm{Extr}(\mathcal C):=\{x\in\mathcal C\ ;\ x=(y+z)/2,\ y,z\in\mathcal C\Rightarrow y=z=x\}$.</p>
+<p><strong>Proposition 3.14 (Existence of extreme points).</strong> If $\mathcal C$ is a non-empty compact convex subset of a finite-dimensional vector space, then $\mathrm{Extr}(\mathcal C)$ is non-empty.</p>
+<p><strong>Example 3.15 (An unbounded convex set without extreme points).</strong> Compactness cannot be dropped from Proposition 3.14. For instance, the affine line $\mathcal C=\R\times\{0\}\subset\R^2$ is closed, convex and unbounded, but it has no extreme point: every $(x,0)$ is the midpoint of the distinct points $(x-1,0)$ and $(x+1,0)$.</p>
+<p><strong>Proposition 3.16 (Linear programs have extreme minimizers).</strong> Let $\mathcal C$ be a non-empty compact convex set. For every linear form $\ell$, $\mathrm{Extr}(\mathcal C)\cap\argmin_{x\in\mathcal C}\ell(x)\ne\emptyset$.</p>
+</div>
+<dl class="decode">
+<dt>$\mathrm{Extr}(\mathcal C)$</dt><dd>The “corners”: points that are not in the middle of any segment of $\mathcal C$. For a polygon, its vertices; for a segment, its two endpoints; for a disk, its whole circle.</dd>
+<dt>compact</dt><dd>Closed and bounded (in finite dimension). $\U(a,b)$ is compact: closed (defined by equalities and $\ge$) and bounded (entries in $[0,1]$).</dd>
+<dt>Prop. 3.16</dt><dd>Among the minimisers of a linear function there is always a corner. So, to solve an LP, it suffices to look at the vertices — this is what the simplex method does.</dd>
+</dl>
+<div class="box idea"><div class="box-h">Idea of the proof of Prop. 3.16</div>
+<p>The set $S$ of minimisers is itself compact and convex, so it has a corner $x$ (Prop. 3.14). That corner of $S$ is a corner of $\mathcal C$: if $x$ were the midpoint of $y,z\in\mathcal C$, then $\ell(x)=\frac12\ell(y)+\frac12\ell(z)$ with $\ell(y),\ell(z)\ge\ell(x)$ forces $\ell(y)=\ell(z)=\ell(x)$, so $y,z\in S$ — and $x$ is a corner of $S$.</p>
+</div>
+<details class="fold proof"><summary>Full proofs (OT4ML pp. 56–57)</summary><div class="fold-body">
+<p><strong>Prop. 3.14.</strong> Among all non-empty faces of $\mathcal C$, choose one of minimal dimension. If it contained two distinct points, maximising a linear functional that is not constant on it would produce a non-empty proper subface, contradicting minimality. So the minimal face is a single point, which is extreme. (For a polytope you can also argue by hand: start from any point; if it is not extreme, move along a direction $\pm d$ that stays in $\mathcal C$ until a new inequality becomes tight; the number of tight inequalities increases, which can happen only finitely many times.)</p>
+<ol class="steps">
+<li>$S=\argmin_{x\in\mathcal C}\ell(x)$ is non-empty, compact and convex.<span class="why">$\ell$ is continuous on the compact $\mathcal C$, so its minimum is attained; $S=\mathcal C\cap\{\ell=\min\ell\}$ is an intersection of a compact convex set with a hyperplane.</span></li>
+<li>By Prop. 3.14, $S$ has an extreme point $x$.<span class="why">Apply it to $S$.</span></li>
+<li>If $x=(y+z)/2$ with $y,z\in\mathcal C$, then $\ell(x)=\frac12(\ell(y)+\ell(z))$ and $\ell(y),\ell(z)\ge\ell(x)$, so $\ell(y)=\ell(z)=\ell(x)$: $y,z\in S$.<span class="why">Linearity of $\ell$, and $x$ minimises $\ell$ on $\mathcal C$.</span></li>
+<li>Since $x$ is extreme in $S$, $y=z=x$. Hence $x\in\mathrm{Extr}(\mathcal C)\cap S$.<span class="why">Definition 3.13.</span></li>
+</ol>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pitfall — “a solution at a vertex” is not “every solution at a vertex”</div>
+<p>Prop. 3.16 says <em>some</em> minimiser is a vertex. When a whole edge (or face) is optimal, the points in the middle of it are optimal too and are not vertices — this happens for ties, e.g. $\abs{x-y}$ on the line (Exercise 13.3).</p>
+</div>
+
+<h3 id="vert-sparse">At most $n+m-1$ non-zero entries</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 3.8, pp. 54–55</span></div>
+<p class="small muted">The graph version: CompOT Prop. 3.4, pp. 46–48.</p>
+<p><strong>Proposition 3.8 (Sparse optimal plans).</strong> Assume $a_i>0$, $b_j>0$ and $\sum_ia_i=\sum_jb_j=1$. The linear program (3.2) admits an optimal coupling with at most $n+m-1$ nonzero entries.</p>
+<p>[OT4ML p. 55:] For transportation polytopes, this rank argument also has a graph interpretation. A cycle in the bipartite support produces an alternating nonzero perturbation with zero row and column sums, exactly the kernel direction used in the general proof. Consequently, the positive support of an extreme coupling is a forest.</p>
+<p>[CompOT Prop. 3.4:] Let $P$ be an extremal point of the polytope $\U(a,b)$. Let $S(P)$ be the subset of edges $\{(i,j'),\ i\in[\![n]\!],\ j\in[\![m]\!]\text{ such that }P_{ij}>0\}$. Then the graph $G(P)=(V\cup V',S(P))$ has no cycles. In particular, $P$ cannot have more than $n+m-1$ nonzero entries.</p>
+</div>
+<dl class="decode">
+<dt>support graph $G(P)$</dt><dd>Vertices: the $n$ sources and the $m$ targets ($V$ and $V'$; the prime distinguishes target $j'$ from source $j$). Edges: the pairs $(i,j)$ that carry mass, $P_{ij}>0$.</dd>
+<dt>“has no cycles”</dt><dd>It is a forest: you cannot go $x_{i_1}\to y_{j_1}\to x_{i_2}\to\dots\to x_{i_1}$ along edges carrying mass.</dd>
+<dt>$n+m-1$</dt><dd>A forest on $n+m$ vertices has at most $n+m-1$ edges (<a href="#recall-graphs">refresher</a>). Compare with $nm$ entries in total: for $n=m=100$, at most $199$ out of $10\,000$.</dd>
+</dl>
+<figure class="fig"><!-- include figures/L02/cycle.svg --><figcaption>Left: the product plan of $a=(0.6,0.4)$, $b=(0.3,0.45,0.25)$ uses all six edges and contains the cycle $x_1\,y_1\,x_2\,y_2$; adding $+\eps$ and $-\eps$ alternately along it changes no row or column sum. Right: a vertex of the same polytope; its four edges form a path — a tree, without any cycle.</figcaption></figure>
+<div class="box idea"><div class="box-h">Idea of the proof</div>
+<p>A cycle in the support is a <strong>direction of motion</strong>: put $+\eps$ and $-\eps$ alternately on its edges; every row and every column of the cycle gains and loses $\eps$, so the marginals do not change. For small $\eps$ both $P+\eps E$ and $P-\eps E$ are couplings, and $P$ is their midpoint: not a vertex. So a vertex has no cycle, hence at most $n+m-1$ edges; and by Prop. 3.16 some optimal plan is a vertex.</p>
+</div>
+<details class="fold proof"><summary>Full proof (CompOT Prop. 3.4; OT4ML p. 55)</summary><div class="fold-body">
+<ol class="steps">
+<li>Suppose the support of $P\in\U(a,b)$ contains a cycle $x_{i_1}\to y_{j_1}\to x_{i_2}\to y_{j_2}\to\dots\to x_{i_k}\to y_{j_k}\to x_{i_1}$, with distinct $i$’s, distinct $j$’s, and all the edges $(i_1,j_1),(i_2,j_1),(i_2,j_2),\dots,(i_k,j_k),(i_1,j_k)$ carrying positive mass.<span class="why">In a bipartite graph a cycle alternates sources and targets.</span></li>
+<li>Let $E$ be the matrix equal to $+1$ on $(i_1,j_1),(i_2,j_2),\dots,(i_k,j_k)$, to $-1$ on $(i_2,j_1),(i_3,j_2),\dots,(i_1,j_k)$, and $0$ elsewhere. Then $E\ind_m=0$ and $E\T\ind_n=0$.<span class="why">Each row $i_s$ of the cycle contains exactly one $+1$ (at $j_s$) and one $-1$ (at $j_{s-1}$); each column $j_s$ exactly one $+1$ (at $i_s$) and one $-1$ (at $i_{s+1}$); other rows and columns are $0$.</span></li>
+<li>For $0<\eps\le\min\{P_{ij}:(i,j)\text{ on the cycle}\}$, $P\pm\eps E\ge0$, hence $P\pm\eps E\in\U(a,b)$.<span class="why">$E$ is supported on the cycle, where $P\ge\eps$; and the marginals are unchanged by step 2.</span></li>
+<li>$P=\frac12\big((P+\eps E)+(P-\eps E)\big)$ with $P+\eps E\ne P-\eps E$: $P$ is not extreme.<span class="why">Definition 3.13.</span></li>
+<li>So the support graph of an extreme point is a forest on $n+m$ vertices, with at most $n+m-1$ edges; and by Prop. 3.16 the LP (3.2) has an extreme minimiser, hence an optimal plan with at most $n+m-1$ non-zero entries.<span class="why">Counting fact for forests (refresher).</span></li>
+</ol>
+<p><strong>The converse is also true</strong> (a remark added here): a coupling whose support is a forest is a vertex. A forest has a leaf, i.e. a row or column with a single support cell; its value is forced by the marginal (it equals the residual mass of that leaf); remove it and repeat. So the marginals and the support determine $P$ uniquely. If $P=\frac12(Q+R)$ with $Q,R\in\U(a,b)$, then $Q$ and $R$ vanish wherever $P$ does (non-negative entries averaging to $0$), so they have their support in the same forest and the same marginals: $Q=R=P$.</p>
+<p><strong>The book’s proof (Props. 3.7–3.8)</strong> is linear algebra: the marginal operator $\mathcal A(P)=(P\ind_m,P\T\ind_n)$ has rank $n+m-1$ (one relation: $\sum_i(P\ind_m)_i=\sum_j(P\T\ind_n)_j$; and it is the only one, since $\ps{u}{P\ind_m}+\ps{v}{P\T\ind_n}=0$ for all $P$ forces $u_i+v_j=0$ for all $i,j$). Among the minimisers take one with the smallest support $S$; if $\#S>n+m-1$, some non-zero $H$ supported on $S$ has $\mathcal A(H)=0$, and moving along $\pm H$ until an entry vanishes gives a minimiser with a smaller support — a contradiction. The matrix $E$ above is such an $H$. (The same rank count gives the dimension $nm-(n+m-1)=(n-1)(m-1)$ claimed in §2.)</p>
+</div></details>
+<div class="box example" id="vert-example"><div class="box-h">Worked example — the five vertices of a $2\times3$ polytope</div>
+<p>$a=(0.6,0.4)$, $b=(0.3,0.45,0.25)$. Parametrise a coupling by $s=P_{11}$ and $t=P_{12}$; the other entries follow from the marginals:</p>
+$$P(s,t)=\begin{pmatrix}s&t&0.6-s-t\\0.3-s&0.45-t&s+t-0.35\end{pmatrix}.$$
+<p>The six inequalities $P_{ij}\ge0$ cut out a pentagon in the $(s,t)$-plane, with vertices $(0,0.35)$, $(0,0.45)$, $(0.15,0.45)$, $(0.3,0.3)$, $(0.3,0.05)$. Each vertex has exactly $4=n+m-1$ non-zero entries; for instance $(0.3,0.3)$ is $\begin{pmatrix}0.3&0.3&0\\0&0.15&0.25\end{pmatrix}$ — the north-west plan. The product plan $(s,t)=(0.18,0.27)$ is inside, with $6$ entries. With $x=(0,1)$, $y=(0,1,2)$ and $\abs{x-y}^2$ the vertex costs are $1.65,1.45,0.85,0.55,1.05$: the optimum is the north-west vertex ($0.55$; the product plan costs $1.09$).</p>
+<p>With the uniform-ish weights $a=(\frac12,\frac12)$, $b=(\frac14,\frac12,\frac14)$ the polygon is a quadrilateral, and two of its four vertices have only $3$ non-zero entries ($\begin{pmatrix}0&0.5&0\\0.25&0&0.25\end{pmatrix}$ for example): <em>degenerate</em> vertices, where a row and a column are exhausted together.</p>
+</div>
+
+<h3 id="vert-polytope">The transport polytope of a $2\times3$ problem, live</h3>
+<div class="widget" data-widget="l2polytope"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p>What to look at: each point $(s,t)$ of the green polygon is a coupling; <strong>drag the orange point</strong> and watch the plan on the right (line widths are masses) and the matrix with its marginals. Inside the polygon the plan has $6$ non-zero entries, on an edge $5$, at a vertex $4$ (or $3$ for the degenerate weights). The dashed lines are level lines of the cost: it is linear, so its minimum is a vertex (green, where the lowest level line touches the polygon). Change the cost: the optimal vertex moves; with $\abs{x-y}$ on the line, try to find a cost for which a whole edge is optimal. The button <strong>Simplex: one pivot</strong> is explained in §7.</p>
+<div class="box ml"><div class="box-h">In machine learning — sparse plans are readable correspondences</div>
+<p>An optimal plan between $n$ and $m$ points has at most $n+m-1$ non-zero entries, i.e. on average fewer than two partners per point: an exact plan is an almost-matching that can be inspected, drawn and used (§11). This is why exact transport is used to <em>align</em> data — match cells between two time points, words between two documents, keypoints between two shapes — and why the entropic plans of Lesson 7, which are dense ($nm$ entries), are often thresholded or replaced by their barycentric projection before being interpreted.</p>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>Linear objective on a polytope → look at the vertices; for transport, vertices = couplings with a cycle-free support.</li>
+<li>To show a coupling is not a vertex → find a cycle in its support and move $\pm\eps$ alternately along it.</li>
+<li>Count: $nm$ unknowns, $n+m-1$ independent constraints, polytope of dimension $(n-1)(m-1)$, vertices with $\le n+m-1$ entries.</li>
+</ul>
+</div>
+<div class="quiz"><p>Can an optimal plan between $n=3$ and $m=4$ points have $7$ non-zero entries? $6$? Must it have at most $6$?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>$n+m-1=6$. An optimal <em>vertex</em> has at most $6$; but when several vertices are optimal, their average is optimal too and can have more entries (up to $12$). So: $7$ is possible for a non-vertex optimal plan, never for a vertex; Prop. 3.8 guarantees that <em>some</em> optimal plan has at most $6$.</p>
+</div></details></div>

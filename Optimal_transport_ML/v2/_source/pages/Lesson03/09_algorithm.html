@@ -14,14 +14,14 @@ $$\al^{(\ell+1)}:=\pf{T^{(\al^{(\ell)})}}{\al^{(\ell)}} .$$
 <dt>$T^{(\al)}=\sum_k\lambda_kT_k$</dt><dd>The <strong>averaged map</strong>: the point $x$ is sent to the weighted average of its $P$ destinations $T_1(x),\dots,T_P(x)$. The superscript $(\al)$ recalls that the maps depend on the current $\al$.</dd>
 <dt>$\al^{(\ell+1)}$</dt><dd>The new guess: move the mass of $\al^{(\ell)}$ with the averaged map.</dd>
 </dl>
-<figure class="fig"><!-- include figures/fixedpoint.svg --><figcaption>One step of the algorithm (the board’s drawing): from a point $x$ of the current measure, the three optimal maps give three destinations; $x$ moves to their weighted average $T(x)$, and the whole measure moves with it.</figcaption></figure>
+<figure class="fig"><!-- include figures/L03/fixedpoint.svg --><figcaption>One step of the algorithm (the board’s drawing): from a point $x$ of the current measure, the three optimal maps give three destinations; $x$ moves to their weighted average $T(x)$, and the whole measure moves with it.</figcaption></figure>
 
 <h3 id="algo-why">The idea, with points</h3>
 <p>For points, the barycenter is found in <strong>one step</strong>: wherever you start, move to $\sum_k\lambda_kx_k$. Here “where does $x$ go in each input” is the information carried by the maps $T_k(x)$, and moving to $\sum_k\lambda_kT_k(x)$ is the same move. The difference with points: once $\al$ has moved, the optimal maps from the new $\al$ are different, so we iterate. The algorithm stops moving when <strong>the averaged map is the identity</strong>: on average, every point is already where its destinations want it to be. That is the “no net displacement” condition we used for Gaussians in §8.</p>
 
 <h3 id="algo-optimal">Why $T^{(\al)}$ is an optimal map</h3>
 <ol class="steps">
-<li>By Brenier, $T_k=\nabla\varphi_k$ with $\varphi_k$ convex.<span class="why">$T_k$ is the optimal map for the quadratic cost from a measure with a density.</span></li>
+<li>By Brenier, $T_k=\nabla\varphi_k$ with $\varphi_k$ convex.<span class="why">$T_k$ is the optimal map for the quadratic cost from a measure with a density (refresher <a href="#recall-brenier">Brenier’s theorem</a>; more on the <a href="Reminders.html#ot-monge">Reminders page</a>).</span></li>
 <li>$$T^{(\al)}=\sum_k\lambda_k\nabla\varphi_k=\nabla\Big(\sum_k\lambda_k\varphi_k\Big).$$<span class="why">The gradient is linear.</span></li>
 <li>$\sum_k\lambda_k\varphi_k$ is convex, so $T^{(\al)}$ is the gradient of a convex function, hence the optimal map between $\al$ and $\pf{T^{(\al)}}{\al}$.<span class="why">A positive combination of convex functions is convex; and the converse part of Brenier: the gradient of <em>any</em> convex function is optimal between a measure and its push-forward.</span></li>
 </ol>
@@ -61,7 +61,7 @@ $$\sum_k\lambda_k\int\norm{x-T_k(x)}^2\dd\al=\int\norm{x-T(x)}^2\dd\al+\sum_k\la
 $$T(x)=m^\star+A(x-m),\qquad A=\sum_k\lambda_kA_k=\Sigma^{-1/2}\,\Psi(\Sigma)\,\Sigma^{-1/2},$$
 <p>with $m^\star=\sum_k\lambda_km_k$. An affine image of a Gaussian is Gaussian: $\pf{T}{\al}=\N\big(m^\star,A\Sigma A\big)$, and</p>
 $$A\Sigma A=\Sigma^{-1/2}\Psi(\Sigma)\,\Sigma^{-1/2}\,\Sigma\,\Sigma^{-1/2}\Psi(\Sigma)\Sigma^{-1/2}=\Sigma^{-1/2}\,\Psi(\Sigma)^2\,\Sigma^{-1/2}.$$
-<p>So the general algorithm, run on Gaussians, is exactly the provably convergent update of §8. The mean is right after one step; the covariance converges fast (in the widget of §8, about 5× closer at each step on the default example, against 2× for the board’s $\Psi$ iteration).</p>
+<p>So the general algorithm, run on Gaussians, is exactly the provably convergent update of §8. The mean is right after one step; the covariance converges fast (in the widget of §8, on the default example, about 5× closer at each step, against less than 2× for the board’s $\Psi$ iteration: 8 steps instead of 24 to reach a Bures distance $10^{-6}$).</p>
 <h4>Point clouds: average the matched partners</h4>
 <p>If the current guess and every input are clouds of $n$ points with equal weights $\frac1n$, optimal plans can be taken to be permutations (Lesson 2, Birkhoff–von Neumann): the optimal “map” $T_k$ sends the point $x_i$ to its partner $y^k_{\sigma_k(i)}$ in the optimal assignment. The step is then</p>
 $$x_i\ \leftarrow\ \sum_k\lambda_k\,y^k_{\sigma_k(i)}\qquad(\text{each point moves to the average of its partners}).$$
@@ -75,6 +75,11 @@ $$x_i\ \leftarrow\ \sum_k\lambda_k\,y^k_{\sigma_k(i)}\qquad(\text{each point mov
 <li>Free support: the fixed-point algorithm above, with barycentric projections when the clouds have different sizes (Cuturi–Doucet, 2014).</li>
 <li>Multi-marginal formulation: for the quadratic cost, the barycenter is the push-forward of an optimal multi-marginal plan by $(x_1,\dots,x_P)\mapsto\sum_k\lambda_kx_k$ (compact notes, Prop. 12.16).</li>
 </ul>
+</div>
+
+<div class="box ml"><div class="box-h">In machine learning — $k$-means is the same alternation, and the Hungarian algorithm trains object detectors</div>
+<p><strong>$k$-means.</strong> Clustering $n$ points into $k$ groups is <em>optimal quantization</em>: find the measure $\al$ with at most $k$ atoms (free weights) that is closest to the data $\hat\be_n$ in $W_2$ (OT4ML §6.4, p. 113). Lloyd’s algorithm alternates the two moves of this section: <em>assign</em> each data point to its nearest centre (with free weights, this is an optimal plan, and the cells are Voronoi cells: OT4ML Prop. 6.13, p. 115), then <em>average</em>: move each centre to the mean of its cell. As in the descent inequality, no step can increase the cost.</p>
+<p><strong>Set prediction.</strong> The Hungarian algorithm (OT4ML §1.2, p. 16) solves OT between two clouds of $n$ points with equal weights. The object detector DETR (Carion et al., 2020) predicts a set of $N$ boxes; before computing its loss, it matches the $N$ predictions to the ground-truth objects (completed by “no object” entries up to $N$) by an optimal assignment, so that the loss does not depend on the order in which the boxes are predicted.</p>
 </div>
 
 <div class="box reflex"><div class="box-h">Reflexes</div>

@@ -1,0 +1,123 @@
+<!--
+title: Lesson 8 — Wasserstein gradient flows: JKO steps, limit PDEs, particles, and learning
+short: L8 · Gradient flows
+description: Step-by-step study guide for the eighth lecture of the MVA course Optimal Transport for ML (G. Peyré, 9 Dec 2026), prepared from the course resources: gradient flows in R^d, the JKO scheme, first variation and Wasserstein gradient, the limit PDEs (transport, heat, aggregation, Fokker–Planck), particles and Langevin dynamics, displacement convexity and rates, MMD flows, Gaussian closures, two-layer networks, transformers and single-cell trajectories.
+subtitle: The lecture of 9 December 2026 (Gabriel Peyré), prepared before the lecture from the book, the notes, the exercise sheet and two other books of the bibliography. Each statement is quoted with its reference, decoded symbol by symbol, motivated, proved step by step, tried on small numbers — and then put to work on machine-learning problems.
+kicker: Optimal Transport for ML · Lesson 8 · study guide v2
+footer: Optimal Transport for Machine Learning (MVA / IASD, J. Delon &amp; G. Peyré) — study guide, version 2. This lesson was prepared before the lecture from the resources in <code>ressources/</code> and <code>course material exercices and one slides/</code>; “OT4ML … p. N” refers to the PDF page N of <code>ressources/OT4ML.pdf</code> (the printed page number is 8 less in Chapters 15–16).
+-->
+
+<div class="box objectives">
+<div class="box-h">What you will be able to do after this page</div>
+<ol>
+<li>Explain why “gradient descent on a probability measure” needs a <strong>distance</strong> rather than a subtraction, and write the <strong>JKO step</strong> $\al^{(\ell+1)}\in\argmin_\al\frac1{2\tau}W_2^2(\al^{(\ell)},\al)+f(\al)$ as the implicit Euler step of the Wasserstein geometry.</li>
+<li>Compute <strong>first variations</strong> $\frac{\delta f}{\delta\al}$ and <strong>Wasserstein gradients</strong> $\nabla_W f=\nabla\frac{\delta f}{\delta\al}$ of the usual energies (potential, entropy, interaction, KL, MMD, $W_2^2$), and write the limit PDE $\partial_t\al_t=\dv\big(\al_t\nabla\frac{\delta f}{\delta\al}(\al_t)\big)$.</li>
+<li>Recognise the classical equations as gradient flows: transport by $-\nabla V$, the <strong>heat equation</strong> (entropy), <strong>aggregation</strong> (interaction), <strong>Fokker–Planck</strong> (KL to a Gibbs measure) — and pass from densities (Eulerian) to particles (Lagrangian) and to the <strong>Langevin</strong> SDE.</li>
+<li>Prove the rates: energy dissipation, $O(1/t)$ for geodesically convex energies, $e^{-2\lambda t}$ under $\lambda$-convexity or a Polyak–Łojasiewicz inequality; state the log-Sobolev, Talagrand and HWI inequalities and check them on Gaussians.</li>
+<li>Run particle flows of discrepancies (MMD, energy distance, Sinkhorn) and Gaussian closures (Bures–Wasserstein flows), and say what they are used for: generative modelling, sampling, variational inference.</li>
+<li>Read the training of a <strong>two-layer network</strong> as a Wasserstein gradient flow of its neurons, the layers of a <strong>transformer</strong> as interacting tokens, and <strong>single-cell</strong> time courses as snapshots of a flow.</li>
+<li>Solve every exercise of the sheet <em>Gradient Flows — Exercises</em> (and twelve more), and know which statements of the resources contain slips.</li>
+</ol>
+</div>
+
+<h2 id="start">0. Before you start</h2>
+
+<h3 id="howto">How to read this page</h3>
+<p><strong>This lecture has not taken place yet</strong> (it is scheduled for 9 December 2026). The page was prepared from the course resources: the book <em>Optimal Transport for Machine Learners</em> (Chapter 15, §16.2, §16.4–16.5 and Example 3.24), the compact notes (§15–16), the exercise sheet <em>Gradient Flows — Exercises</em>, and the two other books of the bibliography that treat the topic (Peyré–Cuturi, <em>Computational OT</em>, §9.3; Chewi–Niles-Weed–Rigollet, <em>Statistical OT</em>, Chapters 5–6). It follows the order of the syllabus (“JKO scheme, limit PDE, training 2 layers MLPs, flow of tokens in transformers, application in genomics”). After the lecture, compare with your notes: the lecture is the reference.</p>
+<p>Every important statement of the resources appears in a box like this one, with its exact reference (statement number and PDF page):</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 15.1, p. 356</span></div>
+<p>A faithful quote, in the notation of the source.</p>
+</div>
+<p>Quotes keep the words and formulas of the source, with one change of notation: the Wasserstein gradient, written with a double-struck nabla in OT4ML and StatOT, is written $\nabla_W$ everywhere (as on the exercise sheet). It is followed by a <strong>decoding</strong> (each symbol in words), the <strong>problem it solves</strong>, a <strong>small example with numbers</strong>, the <strong>idea of the proof</strong>, then the <strong>full proof</strong>, folded (click to open; “Open all proofs” at the top opens everything). Most proofs of this lesson are <em>formal</em>, as in the book: they assume that densities are smooth and positive and that integrations by parts have no boundary terms; the page says so each time. Other boxes:</p>
+<div class="cols">
+<div class="box def"><div class="box-h">Definition</div><p>A new object, stated precisely.</p></div>
+<div class="box thm"><div class="box-h">Proposition</div><p>A result, with its hypotheses.</p></div>
+<div class="box intu"><div class="box-h">Intuition</div><p>The picture to keep in mind.</p></div>
+<div class="box example"><div class="box-h">Worked example</div><p>Numbers you can check by hand.</p></div>
+<div class="box recall"><div class="box-h">Reminder</div><p>A prerequisite, recalled where it is used.</p></div>
+<div class="box ml"><div class="box-h">In machine learning</div><p>What the notion is used for, concretely.</p></div>
+<div class="box pitfall"><div class="box-h">Pitfall</div><p>A classical mistake.</p></div>
+<div class="box reflex"><div class="box-h">Reflex</div><p>“When you see … → think …”.</p></div>
+</div>
+<p>Interactive figures have sliders and buttons: the paragraph under each one says what to look at. Every number written on this page was computed by a script (closed forms, ODE solvers, exact transport with POT), including the numbers read from the interactive figures.</p>
+
+<h3 id="story">The story of the lesson in seven steps</h3>
+<p class="tldr">To minimise an energy over probability measures, move the mass downhill in the transport geometry: implicit steps measured by $W_2$ (JKO) converge to a continuity equation whose velocity is minus the gradient of the first variation; this one equation describes diffusion, sampling, particle systems, wide neural networks and transformers.</p>
+<ol class="chain">
+<li><strong>The model (§1).</strong> In $\R^d$, the gradient flow $\dot x=-\nabla h(x)$ is discretised either explicitly (gradient descent) or implicitly (a proximal step, a small minimisation problem). Only the implicit step makes sense with nothing but a distance.</li>
+<li><strong>The JKO step (§2).</strong> Replace the Euclidean distance by $W_2$: each step finds a measure with lower energy that is close to the current one in transport distance. For a Dirac it is the proximal step; for the entropy and a Gaussian it can be computed by hand.</li>
+<li><strong>Derivatives on measures (§3–§4).</strong> The first variation $\frac{\delta f}{\delta\al}$ (perturb by mixing) is a function; its gradient $\nabla\frac{\delta f}{\delta\al}$ (perturb by moving) is the <em>Wasserstein gradient</em>. Letting $\tau\to0$ gives the PDE $\partial_t\al_t=\dv(\al_t\nabla\frac{\delta f}{\delta\al})$: transport, heat, aggregation, Fokker–Planck.</li>
+<li><strong>Particles and noise (§5–§6).</strong> Started from $n$ Diracs, the flow is an ODE for $n$ particles — exactly gradient descent on their positions, sped up by $n$. Energies with an entropy are not defined on particles: noise replaces them, and the Fokker–Planck flow becomes the Langevin diffusion, the engine of sampling and of diffusion models.</li>
+<li><strong>How fast (§7).</strong> Convexity along $W_2$ geodesics (displacement convexity) plays the role of convexity: $O(1/t)$ rates, and $e^{-2\lambda t}$ under $\lambda$-convexity. For KL, the rate is the log-Sobolev inequality.</li>
+<li><strong>Machine-learning energies (§8–§9).</strong> MMD, energy distance and Sinkhorn are defined on particle clouds and give generative particle flows; Gaussian families give finite-dimensional flows of means and covariances (Bures–Wasserstein), used in variational inference.</li>
+<li><strong>Learning systems as flows of measures (§10–§12).</strong> The neurons of a wide two-layer network, the tokens of a transformer, the cells of a developing organism: three populations moving by a velocity that depends on the whole population.</li>
+</ol>
+
+<h3 id="toolbox">What you need</h3>
+<p>Open only the refreshers you need. Each one says exactly what is used on this page. The Reminders page has the longer versions (links), and Lesson 3 has the Wasserstein geometry.</p>
+
+<details class="fold more" id="recall-gd"><summary>Refresher — gradient descent, convexity, strong convexity, Grönwall</summary><div class="fold-body">
+<p>A differentiable $h:\R^d\to\R$ is <em class="new">convex</em> if it lies above its tangents: $h(y)\ge h(x)+\ps{\nabla h(x)}{y-x}$ for all $x,y$. It is <em class="new">$\lambda$-strongly convex</em> ($\lambda>0$) if it lies above tangent parabolas: $h(y)\ge h(x)+\ps{\nabla h(x)}{y-x}+\frac\lambda2\norm{y-x}^2$; for a $C^2$ function this means $\nabla^2h\succeq\lambda\Id$. Example: $h(x)=\frac L2\norm{x}^2$ is $L$-strongly convex. <strong>Gradient descent</strong> $x_{k+1}=x_k-\tau\nabla h(x_k)$ is stable when $\nabla h$ is $L$-Lipschitz and $\tau<2/L$.</p>
+<p><strong>Grönwall’s lemma.</strong> If $E'(t)\le-cE(t)$ for $t\ge0$, then $E(t)\le E(0)e^{-ct}$. Proof: $\frac{\dd}{\dd t}\big(e^{ct}E(t)\big)=e^{ct}\big(E'+cE\big)\le0$, so $e^{ct}E(t)$ is non-increasing. <strong>Used in</strong> §1 and §7 (rates), §6 (Langevin). <a href="Reminders.html#gradient-descent">more</a> · <a href="Reminders.html#convex-functions">convexity</a></p>
+</div></details>
+
+<details class="fold more" id="recall-ce"><summary>Refresher — push-forward and the continuity equation</summary><div class="fold-body">
+<p>The push-forward $\pf{T}{\al}$ moves each bit of mass of $\al$ from $x$ to $T(x)$: $\int g\,\dd(\pf{T}{\al})=\int g(T(x))\,\dd\al(x)$; if $X\sim\al$ then $T(X)\sim\pf{T}{\al}$. Now let every point move along a velocity field: $\dot x(t)=v_t(x(t))$, and let $\al_t$ be the law of $x(t)$ when $x(0)\sim\al_0$. Then $\al_t$ solves the <em class="new">continuity equation</em></p>
+$$\partial_t\al_t+\dv(\al_tv_t)=0,$$
+<p>which means, in weak form, $\frac{\dd}{\dd t}\int\varphi\,\dd\al_t=\int\ps{\nabla\varphi}{v_t}\,\dd\al_t$ for all smooth test functions $\varphi$.</p>
+<p>Why: $\int\varphi\,\dd\al_t=\E[\varphi(x(t))]$ and $\frac{\dd}{\dd t}\varphi(x(t))=\ps{\nabla\varphi(x(t))}{v_t(x(t))}$ (chain rule). The strong form follows by one integration by parts. Mass is conserved: it is moved, never created. <strong>Particle (Lagrangian) and density (Eulerian) descriptions are the same object</strong>: the PDE for $\al_t$ is equivalent to the ODE $\dot x=v_t(x)$ for its particles. <strong>Used</strong> everywhere from §2 on. This is the language of Lesson 6 (dynamic OT, Benamou–Brenier). <a href="Reminders.html#continuity-eq">more</a> · <a href="Reminders.html#pushforward">push-forward</a></p>
+</div></details>
+
+<details class="fold more" id="recall-w2"><summary>Refresher — $W_2$, Brenier maps, McCann interpolation, quantiles (Lessons 1–3)</summary><div class="fold-body">
+<p>$W_2^2(\al,\be)=\min_{\pi\in\U(\al,\be)}\int\norm{x-y}^2\dd\pi$. <strong>Brenier:</strong> if $\al$ has a density, the optimal plan is a map $T=\nabla\varphi$ with $\varphi$ convex, and $W_2^2(\al,\be)=\int\norm{x-T(x)}^2\dd\al$. <strong>McCann interpolation:</strong> $\al_s=\pf{\big((1-s)\Id+sT\big)}{\al}$, $s\in[0,1]$, is a constant-speed geodesic: $W_2(\al_s,\al_r)=\abs{s-r}\,W_2(\al,\be)$ (<a href="Lesson03.html#geo">Lesson 3, §6</a>). <strong>On the line:</strong> $W_2^2(\al,\be)=\int_0^1\abs{Q_\al(s)-Q_\be(s)}^2\dd s$ with the quantile functions $Q=C^{-1}$ (<a href="Lesson03.html#recall-1d">Lesson 3 refresher</a>). <strong>Gaussians:</strong> $W_2^2\big(\N(m,\sigma^2),\N(m',\sigma'^2)\big)=(m-m')^2+(\sigma-\sigma')^2$ on $\R$, and $\norm{m-m'}^2+\B(\Sigma,\Sigma')^2$ in $\R^d$ (<a href="Lesson03.html#recall-brenier">Lesson 3 refresher</a>). <strong>Used in</strong> §2 (JKO), §3 (gradient of $W_2^2$), §7 (geodesic convexity), §9 (Gaussians). <a href="Reminders.html#ot-wasserstein">more</a></p>
+</div></details>
+
+<details class="fold more" id="recall-dual"><summary>Refresher — Kantorovich potentials for the quadratic cost (Lesson 4)</summary><div class="fold-body">
+<p>For the cost $c(x,y)=\frac12\norm{x-y}^2$, duality reads $\frac12W_2^2(\al,\be)=\max_{\varphi(x)+\psi(y)\le c(x,y)}\int\varphi\,\dd\al+\int\psi\,\dd\be$. At the optimum, $\frac12\norm{x}^2-\varphi(x)=u(x)$ is convex and its gradient is the Brenier map: $T=\nabla u=\Id-\nabla\varphi$, i.e. $\nabla\varphi(x)=x-T(x)$. <strong>Used in</strong> §3 (the first variation of $\frac12W_2^2(\cdot,\be)$ is $\varphi$) and in Exercise 6 of the sheet. <a href="Reminders.html#ot-duality">more</a></p>
+</div></details>
+
+<details class="fold more" id="recall-div"><summary>Refresher — divergence, Laplacian, integration by parts</summary><div class="fold-body">
+<p>For a vector field $w=(w_1,\dots,w_d)$, $\dv w=\sum_i\partial_iw_i$; the Laplacian is $\Delta g=\dv(\nabla g)=\sum_i\partial_i^2g$. <strong>Integration by parts</strong> (no boundary term when $w$ or $\varphi$ decays fast enough, or is compactly supported):</p>
+$$\int\varphi\,\dv w\,\dd x=-\int\ps{\nabla\varphi}{w}\,\dd x .$$
+<p>Two identities used again and again: $\dv(\rho\nabla\log\rho)=\dv(\nabla\rho)=\Delta\rho$ (because $\rho\nabla\log\rho=\nabla\rho$), and $\dv(\rho\,\nabla g)=\ps{\nabla\rho}{\nabla g}+\rho\,\Delta g$. <strong>Used in</strong> §3 (Proposition 15.7), §4 (heat and Fokker–Planck), §6 (Langevin). <a href="Reminders.html#divergence">more</a></p>
+</div></details>
+
+<details class="fold more" id="recall-entropy"><summary>Refresher — entropy, KL, Fisher information, with Gaussian formulas</summary><div class="fold-body">
+<p>For $\al=\rho\,\dd x$, the <em class="new">neg-entropy</em> is $\int\rho\log\rho\,\dd x$ (minus the Shannon entropy; it is small for spread-out densities). The <em class="new">relative entropy</em> is $\KL(\al|\be)=\int\log\frac{\dd\al}{\dd\be}\dd\al\ge0$ (Jensen), with equality iff $\al=\be$. The <em class="new">relative Fisher information</em> is $\mathcal I(\al|\be)=\int\norm{\nabla\log\frac{\dd\al}{\dd\be}}^2\dd\al$. Gaussian formulas on $\R$ (all used below):</p>
+$$\int\rho\log\rho=-\log\sigma-\tfrac12\log(2\pi e)\quad\text{for }\N(m,\sigma^2),$$
+$$\KL\big(\N(m,s^2)\,|\,\N(0,1)\big)=\tfrac12\big(s^2+m^2-1-\log s^2\big),\qquad\mathcal I\big(\N(m,s^2)\,|\,\N(0,1)\big)=m^2+\big(s-\tfrac1s\big)^2 .$$
+<p>(For the last one: $\nabla\log\frac{\rho}{\rho_\be}(x)=-\frac{x-m}{s^2}+x$; with $x=m+sZ$ this is $m+(s-\frac1s)Z$, whose mean square is $m^2+(s-\frac1s)^2$.) <a href="Reminders.html#entropy">more</a> · <a href="Reminders.html#f-divergences">$f$-divergences</a></p>
+</div></details>
+
+<details class="fold more" id="recall-sde"><summary>Refresher — Brownian motion and stochastic differential equations, just what is needed</summary><div class="fold-body">
+<p>A standard Brownian motion $B_t$ in $\R^d$ starts at $0$, has independent increments, and $B_t-B_s\sim\N(0,(t-s)\Id)$. The SDE $\dd X_t=b(X_t)\,\dd t+\sqrt2\,\dd B_t$ means $X_t=X_0+\int_0^tb(X_s)\dd s+\sqrt2B_t$; it is simulated by the <em class="new">Euler–Maruyama</em> scheme $X_{k+1}=X_k+h\,b(X_k)+\sqrt{2h}\,\xi_k$ with independent $\xi_k\sim\N(0,\Id)$. The one fact behind every computation of §6: over a short time $h$, the noise moves the point by $O(\sqrt h)$ (much more than the drift, $O(h)$), and its second-order effect is deterministic: $\E\big[\ps{\nabla^2\varphi\,\sqrt2B_h}{\sqrt2B_h}\big]=2h\,\Delta\varphi$. The law $\al_t$ of $X_t$ then solves the <em class="new">Fokker–Planck</em> equation $\partial_t\al_t=-\dv(\al_tb)+\Delta\al_t$. <a href="Reminders.html#brownian">more</a> · <a href="Reminders.html#fokker-planck">Fokker–Planck</a></p>
+</div></details>
+
+<details class="fold more" id="recall-mmd"><summary>Refresher — kernels and the maximum mean discrepancy</summary><div class="fold-body">
+<p>A symmetric kernel $k$ is <em class="new">positive definite</em> if $\sum_{i,j}c_ic_jk(x_i,x_j)\ge0$ for all points and coefficients. The <em class="new">MMD</em> between two measures is $\mathrm{MMD}_k^2(\al,\be)=\iint k\,\dd(\al-\be)\,\dd(\al-\be)=\iint k\,\dd\al\dd\al-2\iint k\,\dd\al\dd\be+\iint k\,\dd\be\dd\be$. Examples: the Gaussian kernel $e^{-\norm{x-y}^2/(2\sigma^2)}$ and the energy-distance kernel $k(x,y)=-\norm{x-y}$, which is only conditionally positive definite (non-negative on zero-mass signed measures), enough to make $\mathrm{MMD}^2\ge0$. MMD is defined for any measures, including point clouds. <strong>Used in</strong> §5 and §8. <a href="Reminders.html#mmd">more</a></p>
+</div></details>
+
+<h3 id="notation">Notation decoder</h3>
+<p>The resources use slightly different notation, and three of their conventions change the clock of a flow by a factor 2 (see the last rows). This page follows the book (OT4ML), except for the Wasserstein gradient, written $\nabla_W$ as on the exercise sheet.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Symbol</th><th>Read</th><th>Meaning, and other notations in the resources</th></tr></thead>
+<tbody>
+<tr><td>$\Pc_2(\R^d)$</td><td>“measures with finite second moment”</td><td>Probability measures with $\int\norm{x}^2\dd\al<\infty$; the space where $W_2$ is finite (the sheet writes $\mathsf W_2(\R^d)$).</td></tr>
+<tr><td>$\al,\ \al_t,\ \rho,\ \rho_t$</td><td>“the measure, at time $t$; its density”</td><td>$\al=\rho\,\dd x$ when $\al$ has a density. StatOT writes $\mu$, and often identifies $\mu$ with its density.</td></tr>
+<tr><td>$f(\al)$</td><td>“the energy”</td><td>A function of a measure, to be minimised (entropy, KL, MMD, risk of a network). The syllabus and many papers write $F(\rho)$, CompOT $F(\al)$, StatOT $\mathcal F(\mu)$.</td></tr>
+<tr><td>$\tau$, $\al^{(\ell)}$</td><td>“step size”, “$\ell$-th JKO iterate”</td><td>JKO time step; $\al^{(\ell)}$ approximates $\al_t$ at $t=\ell\tau$.</td></tr>
+<tr><td>$\frac{\delta f}{\delta\al}(\al)(x)$</td><td>“first variation of $f$ at $\al$”</td><td>A function of $x$, defined up to a constant (§3). OT4ML writes $\delta f(\al)$, CompOT $F'(\al)$, StatOT $\delta\mathcal F(\mu)$.</td></tr>
+<tr><td>$\nabla_Wf(\al)$</td><td>“Wasserstein gradient”</td><td>The vector field $\nabla_x\frac{\delta f}{\delta\al}(\al)$ (§3). The sheet writes $\nabla_{\mathsf W}f$; OT4ML and StatOT use a double-struck nabla.</td></tr>
+<tr><td>$\dv$, $\Delta$</td><td>“divergence”, “Laplacian”</td><td>See the refresher above.</td></tr>
+<tr><td>$V$, $\be=Z^{-1}e^{-V}\dd x$</td><td>“potential”, “Gibbs measure”</td><td>$\be$ is the target of the Fokker–Planck flow (StatOT calls it $\pi$). In §11, $V$ is also the <em>value matrix</em> of attention.</td></tr>
+<tr><td>$H,\ W,\ I$</td><td>“entropy, distance, Fisher information”</td><td>In §7: $H=\KL(\al|\be)$, $W=W_2(\al,\be)$, $I=\mathcal I(\al|\be)$.</td></tr>
+<tr><td>$\lambda$, $\kappa$</td><td>“convexity constant”, “PL constant”</td><td>$\lambda$-geodesic convexity; Polyak–Łojasiewicz inequality with constant $\kappa$ (§7).</td></tr>
+<tr><td>$n$, $X=(x_1,\dots,x_n)$, $F(X)$</td><td>“particles”</td><td>$F(X)=f\big(\frac1n\sum_i\delta_{x_i}\big)$: the energy seen as a function of the positions (§5).</td></tr>
+<tr><td>$k(x,y)$, $W(x-y)$</td><td>“interaction kernel”</td><td>Energies $\iint k\,\dd\al\dd\al$ (OT4ML) or $\frac12\iint W(x-y)\dd\al\dd\al$ (StatOT): the factor $\frac12$ removes a factor 2 from the gradient.</td></tr>
+<tr><td>$B_t$, $h$</td><td>“Brownian motion”, “time step”</td><td>Langevin dynamics and its Euler–Maruyama discretisation (§6).</td></tr>
+<tr><td>$\N(m,\Sigma)$, $\B$</td><td>“Gaussian”, “Bures”</td><td>Gaussian closures (§9); on $\R$ the Gaussians are the half-plane of pairs $(m,\sigma)$.</td></tr>
+<tr><td>$x=(u,v)$</td><td>“a neuron”</td><td>OT4ML §15.4: $u\in\R^d$ inner weights, $v$ outer weight, feature $v\,\sigma(\ps{u}{z})$. <strong>The sheet’s Exercise 5 swaps the roles</strong>: $u\in\R$ outer, $v\in\R^d$ inner.</td></tr>
+<tr><td>$Q,K,V$, $\eps$</td><td>“query, key, value”, “bandwidth”</td><td>Attention (§11); $\eps$ is the width of the Gaussian kernel $e^{-\norm{x-y}^2/(2\eps)}$ (Geshkovski et al. use $\be=1/\eps$).</td></tr>
+<tr><td>clock conventions</td><td>“factors of 2”</td><td>(1) CompOT’s step $\argmin W_2^2+\tau F$ is a JKO step of size $\tau/2$. (2) $\iint k\,\dd\al\dd\al$ has gradient $2\int\nabla_xk$, $\frac12\iint W$ has $\int\nabla W$. (3) Gradient descent on positions, $\dot x_i=-\nabla_{x_i}F$, runs the Wasserstein flow $n$ times slower. Same paths, different speeds.</td></tr>
+</tbody></table></div>
+<p>Colour code of the figures: <span class="al">initial measure $\al_0$ (orange-red)</span>, <span class="be">target or limit measure $\be$ (blue)</span>, <span class="bar">the flow $\al_t$, its particles and its velocity field (green)</span>, <span class="ga">a second scheme to compare with (JKO iterates, Langevin particles, explicit steps — purple)</span>; mixtures and reference curves are grey.</p>
