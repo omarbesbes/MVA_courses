@@ -1,13 +1,14 @@
 // build.mjs — assembles the pages of Optimal_transport_ML/v2.
 //
-// Each file of pages/ is an HTML fragment that starts with a header comment
-// (title, short, description, subtitle, kicker). Formulas are written $...$ (inline)
-// and $$...$$ (display); they are rendered here with KaTeX, so the produced pages
-// are self-contained: CSS, fonts and scripts are inlined, no connection is needed
-// to read them.
+// A page is a folder pages/<Name>/ whose *.html parts are concatenated in file-name order (or a single
+// file pages/<Name>.html). The first part starts with a header comment:
+//   title, short, description, subtitle, kicker, footer, widgets (comma-separated names of widgets/*.js files;
+//   default: the page name, e.g. Lesson05 -> widgets/Lesson05.js if it exists).
+// Formulas are written $...$ (inline) and $$...$$ (display); they are rendered here with KaTeX, so the produced
+// pages are self-contained: CSS, fonts and scripts are inlined, no connection is needed to read them.
 //
-// Usage: npm install && node build.mjs            (writes ../*.html)
-//        node build.mjs Lesson03.html             (one page; only its errors are reported)
+// Usage: npm install && node build.mjs            (writes ../*.html for every page that exists)
+//        node build.mjs Lesson05.html             (one page only: fast, and only its errors are reported)
 
 import fs from "node:fs";
 import path from "node:path";
@@ -18,18 +19,24 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const outDir = path.resolve(here, "..");
 const katexDir = path.join(here, "node_modules", "katex", "dist");
 
-// Reading order of the v2 pages: used by the navigation bar and the previous/next links.
+// Reading order of the v2 pages: navigation bar and previous/next links.
 const PAGES = [
-  { file: "Lesson03.html", nav: "Lesson 3 · v2" },
+  { file: "index.html", nav: "Home" },
+  { file: "Reminders.html", nav: "Reminders" },
+  { file: "Lesson01.html", nav: "L1 · Monge" },
+  { file: "Lesson02.html", nav: "L2 · Kantorovich" },
+  { file: "Lesson03.html", nav: "L3 · Wasserstein" },
+  { file: "Lesson04.html", nav: "L4 · Duality" },
+  { file: "Lesson05.html", nav: "L5 · Sliced" },
+  { file: "Lesson06.html", nav: "L6 · Dynamic OT" },
+  { file: "Lesson07.html", nav: "L7 · Entropic" },
+  { file: "Lesson08.html", nav: "L8 · Gradient flows" },
 ];
+// The first companion (v1), shown after the v2 pages in the navigation bar.
+const V1_LINKS = [{ href: "../companion/index.html", nav: "Companion v1" }];
 
-// Links to the first companion (v1), shown after the v2 pages in the navigation bar.
-const V1_LINKS = [
-  { href: "../companion/index.html", nav: "Companion v1 · home" },
-  { href: "../companion/Lesson02.html", nav: "L2 · Kantorovich (v1)" },
-  { href: "../companion/Lesson03.html", nav: "L3 · Metric (v1)" },
-  { href: "../companion/Lesson04.html", nav: "L4 · Duality (v1)" },
-];
+const DEFAULT_FOOTER = "Optimal Transport for Machine Learning (MVA / IASD, J. Delon &amp; G. Peyré) — study guide, version 2: " +
+  "step-by-step pages built from the course resources in <code>ressources/</code> and <code>course material exercices and one slides/</code>.";
 
 const MACROS = {
   "\\R": "\\mathbb{R}",
@@ -49,11 +56,13 @@ const MACROS = {
   "\\ga": "\\gamma",
   "\\eps": "\\varepsilon",
   "\\TV": "\\mathrm{TV}",
+  "\\KL": "\\mathrm{KL}",
   "\\Id": "\\mathrm{Id}",
   "\\tr": "\\operatorname{tr}",
   "\\diam": "\\operatorname{diam}",
   "\\supp": "\\operatorname{supp}",
   "\\Lip": "\\operatorname{Lip}",
+  "\\dv": "\\operatorname{div}",
   "\\argmin": "\\operatorname*{arg\\,min}",
   "\\argmax": "\\operatorname*{arg\\,max}",
   "\\T": "^{\\top}",
@@ -134,13 +143,6 @@ function parseFront(src) {
   return { meta, body: src.slice(m[0].length) };
 }
 
-function slugify(s) {
-  return s
-    .normalize("NFD").replace(/[̀-ͯ]/g, "")
-    .toLowerCase().replace(/<[^>]+>/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
-    .slice(0, 60) || "section";
-}
-
 // Tab title: strip the TeX syntax of formulas.
 function plainTitle(s) {
   return s.replace(/\$([^$]*)\$/g, (m, t) => t.replace(/\\[a-zA-Z]+/g, "").replace(/[{}^_\\]/g, ""));
@@ -150,19 +152,14 @@ function escapeHtml(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-// Adds an id to the h2/h3 without one and builds the table of contents of the page.
+// Every h2 and h3 must carry an explicit, stable id (other pages link to them).
+// Builds the table of contents and checks the internal anchors.
 function buildToc(html, file) {
   const used = new Set();
   const items = [];
   html = html.replace(/<h([23])((?:\s[^>]*)?)>([\s\S]*?)<\/h\1>/g, (m, lvl, attrs, inner) => {
-    let id = (attrs.match(/\sid="([^"]+)"/) || [])[1];
-    const text = inner.replace(/<[^>]+>/g, "");
-    if (!id) {
-      id = slugify(text);
-      let k = 2;
-      while (used.has(id)) id = `${slugify(text)}-${k++}`;
-      attrs = `${attrs} id="${id}"`;
-    }
+    const id = (attrs.match(/\sid="([^"]+)"/) || [])[1];
+    if (!id) { errors.push(`${file}: <h${lvl}> without an explicit id: ${inner.replace(/<[^>]+>/g, "").slice(0, 60)}`); return m; }
     if (used.has(id)) errors.push(`${file}: duplicate id "${id}"`);
     used.add(id);
     // The table of contents does not show references ("notes p. 2").
@@ -170,7 +167,6 @@ function buildToc(html, file) {
     if (!/\bdata-notoc\b/.test(attrs)) items.push({ lvl: Number(lvl), id, inner: tocInner });
     return `<h${lvl}${attrs}>${inner}<a class="anchor" href="#${id}" aria-label="Link to this section">#</a></h${lvl}>`;
   });
-  // Every id used once, every internal anchor has a target.
   const all = [...html.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]);
   const seen = new Set();
   for (const id of all) {
@@ -207,33 +203,50 @@ function katexCss() {
   return css;
 }
 
-function main() {
-  const template = fs.readFileSync(path.join(here, "template.html"), "utf8");
-  const css = katexCss() + "\n" + fs.readFileSync(path.join(here, "style.css"), "utf8");
-  const js = fs.readFileSync(path.join(here, "app.js"), "utf8");
-  const only = process.argv.slice(2);
-
-  // <!-- include figures/x.svg --> is replaced by the file (generated by figures.py), on one line
-  // so that the line numbers of the error messages stay exact.
-  const withIncludes = (src, name) => src.replace(/<!--\s*include\s+(\S+)\s*-->/g, (m, f) => {
+// <!-- include figures/L05/x.svg --> is replaced by the file (generated by figures_LNN.py), on one line
+// so that the line numbers of the error messages stay exact.
+function withIncludes(src, name) {
+  return src.replace(/<!--\s*include\s+(\S+)\s*-->/g, (m, f) => {
     const p = path.join(here, f);
     if (!fs.existsSync(p)) { errors.push(`${name}: include of missing file ${f}`); return ""; }
     return fs.readFileSync(p, "utf8").replace(/\s*\n\s*/g, " ").trim();
   });
-  // A page is either pages/X.html, or a folder pages/X/ whose *.html parts are concatenated
-  // in file-name order (the header comment lives in the first part).
-  const partsOf = (p) => {
-    const dir = path.join(here, "pages", p.file.replace(/\.html$/, ""));
-    if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) {
-      return fs.readdirSync(dir).filter((f) => f.endsWith(".html")).sort()
-        .map((f) => {
-          const name = `${path.basename(dir)}/${f}`;
-          return { name, src: withIncludes(fs.readFileSync(path.join(dir, f), "utf8"), name) };
-        });
-    }
-    const single = path.join(here, "pages", p.file);
-    return fs.existsSync(single) ? [{ name: p.file, src: withIncludes(fs.readFileSync(single, "utf8"), p.file) }] : [];
-  };
+}
+
+// The parts of a page, in order.
+function partsOf(p) {
+  const dir = path.join(here, "pages", p.file.replace(/\.html$/, ""));
+  if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) {
+    return fs.readdirSync(dir).filter((f) => f.endsWith(".html")).sort().map((f) => {
+      const name = `${path.basename(dir)}/${f}`;
+      return { name, src: withIncludes(fs.readFileSync(path.join(dir, f), "utf8"), name) };
+    });
+  }
+  const single = path.join(here, "pages", p.file);
+  return fs.existsSync(single) ? [{ name: p.file, src: withIncludes(fs.readFileSync(single, "utf8"), p.file) }] : [];
+}
+
+// The script of a page: app.js with the page's widget files inserted at its placeholder.
+function pageScript(page, meta, appJs) {
+  const base = page.file.replace(/\.html$/, "");
+  const names = (meta.widgets ? meta.widgets.split(",").map((s) => s.trim()).filter(Boolean) : [base]);
+  let code = "";
+  for (const n of names) {
+    const f = path.join(here, "widgets", `${n}.js`);
+    if (fs.existsSync(f)) code += `\n  /* ---- widgets/${n}.js ---- */\n` + fs.readFileSync(f, "utf8") + "\n";
+    else if (meta.widgets) errors.push(`${page.file}: widget file widgets/${n}.js not found`);
+  }
+  const js = appJs.replace("/* @@PAGE_WIDGETS@@ */", () => code);
+  try { new Function(js); } catch (e) { errors.push(`${page.file}: JavaScript syntax error in app.js + widgets (${names.join(", ")}): ${e.message}`); }
+  return js;
+}
+
+function main() {
+  const template = fs.readFileSync(path.join(here, "template.html"), "utf8");
+  const css = katexCss() + "\n" + fs.readFileSync(path.join(here, "style.css"), "utf8");
+  const appJs = fs.readFileSync(path.join(here, "app.js"), "utf8");
+  const only = process.argv.slice(2);
+
   const present = PAGES.filter((p) => partsOf(p).length);
   const allIds = {};
   const built = [];
@@ -241,9 +254,15 @@ function main() {
   for (const [i, page] of present.entries()) {
     const parts = partsOf(page);
     const { meta, body } = parseFront(parts[0].src);
+    if (only.length && !only.includes(page.file)) {
+      // Not built this time: only collect its ids, for the links between pages.
+      allIds[page.file] = new Set(parts.flatMap((pt) => [...pt.src.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1])));
+      built.push({ page, meta, i, skip: true });
+      continue;
+    }
     if (!meta.title) errors.push(`${parts[0].name}: no "title" in the header`);
-    // Formulas are rendered part by part, so that errors point to the right file and line.
-    // (the header comment is replaced by blank lines so that line numbers stay exact)
+    // Formulas are rendered part by part, so that errors point to the right file and line
+    // (the header comment is replaced by blank lines so that line numbers stay exact).
     const headerLines = parts[0].src.length - body.length ? parts[0].src.slice(0, parts[0].src.length - body.length).split("\n").length - 1 : 0;
     const html = [processMath("\n".repeat(headerLines) + body, parts[0].name), ...parts.slice(1).map((pt) => processMath(pt.src, pt.name))].join("\n");
     const t = buildToc(html, page.file);
@@ -253,7 +272,8 @@ function main() {
 
   // Links between v2 pages: file and anchor must exist.
   for (const b of built) {
-    for (const m of b.html.matchAll(/href="(Lesson\d\d\.html|index\.html)(?:#([^"]+))?"/g)) {
+    if (b.skip) continue;
+    for (const m of b.html.matchAll(/href="((?:Lesson\d\d|index|Reminders)\.html)(?:#([^"]+))?"/g)) {
       const ids = allIds[m[1]];
       if (!ids) { warnings.push(`${b.page.file}: link to ${m[1]} (page not written yet)`); continue; }
       if (m[2] && !ids.has(m[2])) errors.push(`${b.page.file}: link ${m[1]}#${m[2]} has no target`);
@@ -266,7 +286,7 @@ function main() {
   }
 
   for (const b of built) {
-    if (only.length && !only.includes(b.page.file)) continue;
+    if (b.skip) continue;
     const prev = present[b.i - 1];
     const next = present[b.i + 1];
     const nav = present
@@ -274,27 +294,26 @@ function main() {
       .concat(V1_LINKS.map((l) => `<a class="v1" href="${l.href}">${l.nav}</a>`))
       .join("");
     const pager =
-      (prev ? `<a class="prev" href="${prev.file}"><span>← Previous</span>${escapeHtml(builtTitle(prev))}</a>` :
-        `<a class="prev" href="../companion/Lesson02.html"><span>← Previous (companion v1)</span>Lesson 2 · Kantorovich formulation</a>`) +
-      (next ? `<a class="next" href="${next.file}"><span>Next →</span>${escapeHtml(builtTitle(next))}</a>` :
-        `<a class="next" href="../companion/Lesson04.html"><span>Next (companion v1) →</span>Lesson 4 · Duality</a>`);
+      (prev ? `<a class="prev" href="${prev.file}"><span>← Previous</span>${escapeHtml(titleOf(prev))}</a>` : "<span></span>") +
+      (next ? `<a class="next" href="${next.file}"><span>Next →</span>${escapeHtml(titleOf(next))}</a>` : "<span></span>");
     const out = template
       .replace("{{TITLE}}", escapeHtml(plainTitle(b.meta.title || "")))
       .replace("{{DESCRIPTION}}", escapeHtml(b.meta.description || ""))
-      .replace("{{KICKER}}", escapeHtml(b.meta.kicker || "Optimal Transport for ML · v2 (step-by-step rewrite)"))
+      .replace("{{KICKER}}", escapeHtml(b.meta.kicker || "Optimal Transport for ML · study guide v2"))
       .replace("{{H1}}", () => processMath(b.meta.title || "", b.page.file))
       .replace("{{SUBTITLE}}", () => (b.meta.subtitle ? `<p class="subtitle">${processMath(b.meta.subtitle, b.page.file)}</p>` : ""))
       .replace("{{NAV}}", nav)
       .replace("{{TOC}}", b.toc)
       .replace("{{PAGER}}", pager)
+      .replace("{{FOOTER}}", () => b.meta.footer || DEFAULT_FOOTER)
       .replace("{{CSS}}", () => css)
       .replace("{{CONTENT}}", () => b.html)
-      .replace("{{JS}}", () => js);
+      .replace("{{JS}}", () => pageScript(b.page, b.meta, appJs));
     fs.writeFileSync(path.join(outDir, b.page.file), out);
     console.log(`wrote ${b.page.file}  (${(out.length / 1024).toFixed(0)} KB)`);
   }
 
-  function builtTitle(p) {
+  function titleOf(p) {
     const b = built.find((x) => x.page.file === p.file);
     return (b && (b.meta.short || b.meta.title)) || p.nav;
   }

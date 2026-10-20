@@ -1,132 +1,19 @@
-"""figures.py — generates the static SVG figures of Optimal_transport_ML/v2 (written to figures/).
+"""figures_L03.py — static SVG figures of Lesson 3 (Wasserstein distances), written to figures/L03/.
 
-Run: python3 figures.py        (then node build.mjs)
-
-Every coordinate is computed here rather than estimated by hand. Colours are CSS classes of
-style.css (strokes c1..c6, fills f1..f6, transparent fills a1..a5, text tx / tx-s / tx-b / tx-i),
-so the figures follow the light and dark themes. Colour code of the course pages:
-alpha = 2 (orange-red), beta = 1 (blue), gamma = 5 (purple), maps / barycenters = 3 (green).
+Run: python3 figures_L03.py        (then node build.mjs Lesson03.html)
 """
 import math
-import os
 
 import numpy as np
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = os.path.join(HERE, "figures")
+from figures_common import Canvas, Fig, fmt1
 
-
-def esc(s):
-    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-
-
-class Fig:
-    """A panel with data coordinates mapped into a region of an SVG canvas."""
-
-    def __init__(self, canvas, box, xr, yr):
-        self.c = canvas
-        self.x0, self.y0, self.w, self.h = box  # pixel box of the plotting area
-        self.xr, self.yr = xr, yr
-
-    def X(self, x):
-        return self.x0 + (x - self.xr[0]) / (self.xr[1] - self.xr[0]) * self.w
-
-    def Y(self, y):
-        return self.y0 + self.h - (y - self.yr[0]) / (self.yr[1] - self.yr[0]) * self.h
-
-    def path(self, pts, cls, close=False, extra=""):
-        d = ""
-        pen = False
-        for p in pts:
-            if p is None or not np.isfinite(p[1]):
-                pen = False
-                continue
-            d += ("L" if pen else "M") + f"{self.X(p[0]):.1f} {self.Y(p[1]):.1f}"
-            pen = True
-        if close:
-            d += "Z"
-        self.c.add(f'<path d="{d}" class="{cls}"{extra}/>')
-
-    def fn(self, f, cls, x0=None, x1=None, n=300):
-        x0 = self.xr[0] if x0 is None else x0
-        x1 = self.xr[1] if x1 is None else x1
-        xs = np.linspace(x0, x1, n + 1)
-        self.path([(x, f(x)) for x in xs], cls)
-
-    def line(self, x1, y1, x2, y2, cls, extra=""):
-        self.c.add(f'<line x1="{self.X(x1):.1f}" y1="{self.Y(y1):.1f}" x2="{self.X(x2):.1f}" y2="{self.Y(y2):.1f}" class="{cls}"{extra}/>')
-
-    def circle(self, x, y, r, cls):
-        self.c.add(f'<circle cx="{self.X(x):.1f}" cy="{self.Y(y):.1f}" r="{r}" class="{cls}"/>')
-
-    def text(self, x, y, s, cls="tx", anchor="start", dx=0, dy=0):
-        self.c.add(f'<text x="{self.X(x) + dx:.1f}" y="{self.Y(y) + dy:.1f}" class="{cls}" text-anchor="{anchor}">{esc(s)}</text>')
-
-    def lollipop(self, x, m, k, r=4.5):
-        """A Dirac of mass m at x drawn as a stem (colour index k)."""
-        self.line(x, 0, x, m, f"ln c{k}")
-        self.circle(x, m, r, f"f{k}")
-
-    def axes(self, xticks=(), yticks=(), xfmt=str, yfmt=str, grid=True, yaxis=True, xlabel=None, ylabel=None):
-        for v in xticks:
-            if grid:
-                self.line(v, self.yr[0], v, self.yr[1], "gr")
-            self.text(v, self.yr[0], xfmt(v), "tx-s", "middle", dy=14)
-        for v in yticks:
-            if grid:
-                self.line(self.xr[0], v, self.xr[1], v, "gr")
-            self.text(self.xr[0], v, yfmt(v), "tx-s", "end", dx=-5, dy=4)
-        y0 = 0 if self.yr[0] <= 0 <= self.yr[1] else self.yr[0]
-        self.line(self.xr[0], y0, self.xr[1], y0, "ax")
-        if yaxis:
-            x0 = 0 if self.xr[0] <= 0 <= self.xr[1] else self.xr[0]
-            self.line(x0, self.yr[0], x0, self.yr[1], "ax")
-        if xlabel:
-            self.text(self.xr[1], self.yr[0], xlabel, "tx-s", "end", dy=28)
-        if ylabel:
-            self.text(self.xr[0], self.yr[1], ylabel, "tx-s", "start", dx=4, dy=-6)
-
-
-class Canvas:
-    def __init__(self, name, W, H, label):
-        self.name, self.W, self.H, self.label = name, W, H, label
-        self.items = []
-        self.defs = []
-
-    def add(self, s):
-        self.items.append(s)
-
-    def arrow_marker(self, k):
-        """Arrow head with fill class f{k} (or fk / fm); returns the marker id."""
-        mid = f"{self.name}-arr-{k}"
-        if not any(mid in d for d in self.defs):
-            self.defs.append(f'<marker id="{mid}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="f{k}"/></marker>')
-        return mid
-
-    def arrow(self, x1, y1, x2, y2, k, cls=None):
-        mid = self.arrow_marker(k)
-        cls = cls or f"ln c{k} thin"
-        self.add(f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" class="{cls}" marker-end="url(#{mid})"/>')
-
-    def text(self, x, y, s, cls="tx", anchor="start"):
-        self.add(f'<text x="{x:.1f}" y="{y:.1f}" class="{cls}" text-anchor="{anchor}">{esc(s)}</text>')
-
-    def save(self):
-        defs = f"<defs>{''.join(self.defs)}</defs>" if self.defs else ""
-        svg = (f'<svg viewBox="0 0 {self.W} {self.H}" role="img" aria-label="{esc(self.label)}" xmlns="http://www.w3.org/2000/svg">'
-               + defs + "".join(self.items) + "</svg>")
-        with open(os.path.join(OUT, self.name + ".svg"), "w") as f:
-            f.write(svg + "\n")
-        print("wrote", self.name, f"({len(svg)} bytes)")
-
-
-def fmt1(v):
-    return f"{v:g}"
+SUB = "L03"
 
 
 # ---------------------------------------------------------------------------------------------
 def fig_wpq():
-    c = Canvas("wpq", 560, 300, "W_p of a small moved mass: epsilon to the power 1/p for p = 1, 2, 4")
+    c = Canvas("wpq", 560, 300, "W_p of a small moved mass: epsilon to the power 1/p for p = 1, 2, 4", sub=SUB)
     f = Fig(c, (52, 18, 470, 236), (0, 1), (0, 1))
     f.axes(xticks=[0, 0.25, 0.5, 0.75, 1], yticks=[0, 0.25, 0.5, 0.75, 1], xlabel="ε (mass moved by a distance 1)", ylabel="W_p")
     for p, k in [(1, 2), (2, 1), (4, 5)]:
@@ -143,7 +30,7 @@ def fig_wpq():
 
 
 def fig_testfn():
-    c = Canvas("testfn", 660, 190, "Three classes of test functions: compact support, vanishing at infinity, bounded")
+    c = Canvas("testfn", 660, 190, "Three classes of test functions: compact support, vanishing at infinity, bounded", sub=SUB)
     panels = [
         ("C_c : zero outside a bounded set", lambda x: max(0.0, 1 - abs(x) / 2), "ln c3"),
         ("C_0 : tends to 0 at infinity", lambda x: 1 / (1 + x * x), "ln c1"),
@@ -161,7 +48,7 @@ def fig_testfn():
 
 
 def fig_escape():
-    c = Canvas("escape", 600, 230, "Escaping mass: (1-1/n) delta_0 + (1/n) delta_n for n = 4 and n = 10")
+    c = Canvas("escape", 600, 230, "Escaping mass: (1-1/n) delta_0 + (1/n) delta_n for n = 4 and n = 10", sub=SUB)
     for row, n in enumerate([4, 10]):
         f = Fig(c, (40, 22 + row * 104, 530, 66), (-0.5, 11), (0, 1))
         f.line(-0.5, 0, 11, 0, "ax")
@@ -178,7 +65,7 @@ def fig_escape():
 
 
 def fig_riemann():
-    c = Canvas("riemann", 560, 300, "Quantile functions of the Riemann measure (n = 5) and of the uniform law")
+    c = Canvas("riemann", 560, 300, "Quantile functions of the Riemann measure (n = 5) and of the uniform law", sub=SUB)
     f = Fig(c, (52, 16, 300, 250), (0, 1), (0, 1))
     n = 5
     f.axes(xticks=[0, 0.2, 0.4, 0.6, 0.8, 1], yticks=[0, 0.2, 0.4, 0.6, 0.8, 1], xlabel="t", ylabel="quantile")
@@ -205,7 +92,7 @@ def fig_riemann():
 
 
 def fig_tv():
-    c = Canvas("tv", 640, 200, "Total variation versus transport: two close Diracs, two shifted uniform laws")
+    c = Canvas("tv", 640, 200, "Total variation versus transport: two close Diracs, two shifted uniform laws", sub=SUB)
     f = Fig(c, (20, 40, 270, 110), (-0.2, 1.2), (0, 1.15))
     f.line(-0.2, 0, 1.2, 0, "ax")
     f.lollipop(0.45, 1, 1)
@@ -234,7 +121,7 @@ def gauss(x, m, s):
 
 
 def fig_displacement():
-    c = Canvas("displacement", 660, 270, "Mixture versus displacement interpolation between two Gaussians")
+    c = Canvas("displacement", 660, 270, "Mixture versus displacement interpolation between two Gaussians", sub=SUB)
     m0, s0, m1, s1 = -2.0, 0.5, 2.0, 1.0
     ts = [0, 0.25, 0.5, 0.75, 1]
     for col, t in enumerate(ts):
@@ -259,7 +146,7 @@ def fig_displacement():
 
 
 def fig_split():
-    c = Canvas("split", 420, 200, "Space-time picture of the displacement interpolation from delta_0 to (delta_-1 + delta_1)/2")
+    c = Canvas("split", 420, 200, "Space-time picture of the displacement interpolation from delta_0 to (delta_-1 + delta_1)/2", sub=SUB)
     f = Fig(c, (60, 20, 300, 140), (-1.3, 1.3), (0, 1))
     f.line(-1.3, 0, 1.3, 0, "ax")
     f.line(-1.3, 1, 1.3, 1, "gr")
@@ -283,7 +170,7 @@ def fig_split():
 
 
 def fig_frechet():
-    c = Canvas("frechet", 440, 230, "Points on a circle: their Euclidean average falls inside, their Frechet mean stays on the circle")
+    c = Canvas("frechet", 440, 230, "Points on a circle: their Euclidean average falls inside, their Frechet mean stays on the circle", sub=SUB)
     f = Fig(c, (40, 10, 360, 200), (-1.25, 1.25), (-0.2, 1.2))
     angs = np.deg2rad([25, 55, 100, 150])
     th = np.linspace(np.deg2rad(5), np.deg2rad(175), 200)
@@ -304,7 +191,7 @@ def fig_frechet():
 
 
 def fig_grid():
-    c = Canvas("grid", 600, 170, "Fixed-grid barycenter of delta_0 and delta_3 on the grid {0,...,4}")
+    c = Canvas("grid", 600, 170, "Fixed-grid barycenter of delta_0 and delta_3 on the grid {0,...,4}", sub=SUB)
     f = Fig(c, (40, 30, 520, 90), (-0.4, 4.4), (0, 1))
     f.line(-0.4, 0, 4.4, 0, "ax")
     Fv = [4.5, 2.5, 2.5, 4.5, 8.5]
@@ -327,7 +214,7 @@ def fig_grid():
 
 
 def fig_nonunique():
-    c = Canvas("nonunique", 560, 250, "Two different Wasserstein barycenters of the same pair of measures")
+    c = Canvas("nonunique", 560, 250, "Two different Wasserstein barycenters of the same pair of measures", sub=SUB)
     for col, (name, pairs) in enumerate([("barycenter A", [((-1, 0), (0, -1)), ((1, 0), (0, 1))]),
                                          ("barycenter B", [((-1, 0), (0, 1)), ((1, 0), (0, -1))])]):
         f = Fig(c, (30 + col * 280, 30, 220, 190), (-1.35, 1.35), (-1.25, 1.25))
@@ -347,7 +234,7 @@ def fig_nonunique():
 
 
 def fig_quantile():
-    c = Canvas("quantile", 660, 250, "One-dimensional barycenter: average the quantiles (horizontally), not the CDFs (vertically)")
+    c = Canvas("quantile", 660, 250, "One-dimensional barycenter: average the quantiles (horizontally), not the CDFs (vertically)", sub=SUB)
     # left: densities
     f = Fig(c, (36, 30, 270, 170), (-0.3, 4.3), (0, 1.15))
     f.line(-0.3, 0, 4.3, 0, "ax")
@@ -383,7 +270,7 @@ def fig_quantile():
 
 
 def fig_fixedpoint():
-    c = Canvas("fixedpoint", 600, 320, "One step of the fixed-point algorithm: average the optimal maps, then push the current measure")
+    c = Canvas("fixedpoint", 600, 320, "One step of the fixed-point algorithm: average the optimal maps, then push the current measure", sub=SUB)
     blobs = [((110, 75), 72, 34, -15, "β₁"), ((345, 40), 62, 26, 8, "β₂"), ((530, 120), 50, 40, 25, "β₃")]
     for (cx, cy), rx, ry, rot, lab in blobs:
         c.add(f'<ellipse cx="{cx}" cy="{cy}" rx="{rx}" ry="{ry}" transform="rotate({rot} {cx} {cy})" class="a1 ln c1 thin"/>')
@@ -411,7 +298,6 @@ def fig_fixedpoint():
 
 
 if __name__ == "__main__":
-    os.makedirs(OUT, exist_ok=True)
     for fn in [fig_wpq, fig_testfn, fig_escape, fig_riemann, fig_tv, fig_displacement, fig_split,
                fig_frechet, fig_grid, fig_nonunique, fig_quantile, fig_fixedpoint]:
         fn()
