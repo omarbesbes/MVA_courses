@@ -1,0 +1,111 @@
+<!--
+title: Lesson 3 — Wasserstein distances: metric, topology, geodesics, barycenters
+short: L3 · Wasserstein distances (v2)
+description: Step-by-step rewrite of the third lecture of the MVA course Optimal Transport for ML (J. Delon, 14 Oct 2026), built from the handwritten class notes: W_p is a distance (gluing), comparison of the W_p, weak convergence and total variation, displacement interpolation and geodesics, Wasserstein barycenters (LP, Gaussians, 1D, fixed-point algorithm).
+subtitle: The lecture of 14 October 2026 (Julie Delon), rebuilt from your five pages of notes. Every statement written on the board is quoted, decoded symbol by symbol, motivated, proved line by line, and tried on small numbers.
+kicker: Optimal Transport for ML · Lesson 3 · version 2 (step-by-step rewrite)
+-->
+
+<div class="box objectives">
+<div class="box-h">What you will be able to do after this page</div>
+<ol>
+<li>Explain why $W_p(\al,\be)=\big(\min_\pi \int d^p\,\dd\pi\big)^{1/p}$ is a <strong>distance</strong> between probability measures, and redo the <strong>gluing proof</strong> of the triangle inequality (with matrices, then with random variables).</li>
+<li>Compare $W_p$ and $W_q$ on a compact space, and explain why they have the same convergent sequences without being “equivalent”.</li>
+<li>Tell apart weak, weak-*, vague and strong (total variation) convergence, and say which one $W_p$ measures — on three test sequences: a moving Dirac, Riemann sums, and mass escaping to infinity.</li>
+<li>Prove $W_p^p=\frac12\norm{\al-\be}_\TV$ for the 0/1 distance, and the comparison $W_1$ versus total variation on a finite space (the two exercises of the sheet).</li>
+<li>Build the <strong>displacement interpolation</strong> $\al_t$, prove it is a constant-speed geodesic, and explain why the mixture $(1-t)\al+t\be$ is not one.</li>
+<li>Define <strong>Wasserstein barycenters</strong>, compute them for Diracs, Gaussians and measures on the line, write the fixed-grid linear program, and run (and justify) the <strong>fixed-point algorithm</strong>.</li>
+</ol>
+</div>
+
+<h2 id="start">0. Before you start</h2>
+
+<h3 id="howto">How to read this page</h3>
+<p>The page follows the board, in the order of your notes (page 1 to page 5). Each statement that was written in class appears in a box like this one, with the page of the notes it comes from:</p>
+<div class="box board"><div class="box-h">On the board <span class="ref">notes p. N</span></div>
+<p>A faithful transcription of what was written, in the notation of the lecture.</p>
+</div>
+<p>It is always followed by a <strong>decoding</strong> (what each symbol means, in words), the <strong>problem it solves</strong>, a <strong>small example with numbers</strong>, the <strong>idea of the proof</strong>, and then the <strong>full proof</strong>, folded (click to open; the button “Open all proofs” at the top opens everything). Other boxes:</p>
+<div class="cols">
+<div class="box def"><div class="box-h">Definition</div><p>A new object, stated precisely.</p></div>
+<div class="box thm"><div class="box-h">Proposition</div><p>A result, with its hypotheses.</p></div>
+<div class="box intu"><div class="box-h">Intuition</div><p>The picture to keep in mind.</p></div>
+<div class="box example"><div class="box-h">Worked example</div><p>Numbers you can check by hand.</p></div>
+<div class="box pitfall"><div class="box-h">Pitfall</div><p>A classical mistake.</p></div>
+<div class="box reflex"><div class="box-h">Reflex</div><p>“When you see … → think …”.</p></div>
+</div>
+<p>Interactive figures have sliders and buttons: move them, the text under each figure says what to look for. All the numbers given on this page were checked by computer (exact linear programs, closed forms, or both).</p>
+
+<h3 id="story">The story of the lecture in five steps</h3>
+<p class="tldr">A transport cost between two distributions becomes a distance; a distance gives a notion of convergence and a geometry; in that geometry one can draw shortest paths and compute averages of distributions.</p>
+<ol class="chain">
+<li><strong>Recap (§1).</strong> Kantorovich’s problem gives a number $\Lc(\al,\be)$: the cost of the cheapest way to move the mass of $\al$ onto $\be$ when moving a unit of mass from $x$ to $y$ costs $c(x,y)$.</li>
+<li><strong>A distance (§2–§3).</strong> If the cost is a distance raised to a power, $c=d^p$ with $p\ge1$, then $W_p=\Lc^{1/p}$ is a distance between probability measures. The key tool is the <em>gluing</em> of two transport plans. Different $p$ give comparable distances.</li>
+<li><strong>Convergence (§4–§5).</strong> What does “$\al_n\to\al$” mean for distributions? $W_p$-convergence is <em>weak convergence</em> (plus moments when the space is not compact). Total variation (the “strong” notion) is much stricter: it does not see how far mass moves, only whether it moves.</li>
+<li><strong>Shortest paths (§6).</strong> Moving each unit of mass along a straight line, at constant speed, gives the <em>displacement interpolation</em> $\al_t$. It is a shortest path (a <em>geodesic</em>) for $W_2$; fading one distribution into the other is not.</li>
+<li><strong>Averages (§7–§9).</strong> The weighted average of points minimizes a sum of squared distances. Replace points by distributions and distances by $W_2$: you get <em>Wasserstein barycenters</em>. Closed forms for Diracs, Gaussians and 1D measures; a linear program on a grid; and a fixed-point algorithm in general.</li>
+</ol>
+
+<h3 id="toolbox">What you need from Lessons 1 and 2</h3>
+<p>Open only the refreshers you need. Each one says exactly what is used on this page.</p>
+
+<details class="fold more" id="recall-measures"><summary>Refresher — probability measures, Diracs, integrals</summary><div class="fold-body">
+<p>In this course, a <em class="new">probability measure</em> $\al$ on a space $\X$ (a subset of $\R^d$, a compact set, a finite set…) distributes a total mass $1$ over $\X$: $\al(A)\ge0$ is the mass of the set $A$, and $\al(\X)=1$. The set of all of them is written $\M(\X)$ in the lecture (“positive measures of mass 1”). Three kinds appear all the time:</p>
+<ul>
+<li><strong>A Dirac</strong> $\delta_x$: all the mass sits at the single point $x$. Then $\int f\,\dd\delta_x=f(x)$.</li>
+<li><strong>A discrete measure</strong> $\al=\sum_i a_i\delta_{x_i}$ with weights $a_i\ge0$, $\sum_ia_i=1$ (a histogram): mass $a_i$ at the point $x_i$. Then $\int f\,\dd\al=\sum_i a_if(x_i)$.</li>
+<li><strong>A measure with a density</strong> $\al=\rho(x)\,\dd x$: then $\al(A)=\int_A\rho$ and $\int f\,\dd\al=\int f(x)\rho(x)\,\dd x$. Example: the uniform law $\mathcal U[0,1]$, density $1$ on $[0,1]$.</li>
+</ul>
+<p>Probabilistic reading: “$X\sim\al$” means that the random variable $X$ has law $\al$, i.e. $\P(X\in A)=\al(A)$; then $\E[f(X)]=\int f\,\dd\al$.</p>
+</div></details>
+
+<details class="fold more" id="recall-push"><summary>Refresher — push-forward $\pf{T}{\al}$</summary><div class="fold-body">
+<p>If $T:\X\to\Y$ is a map, the <em class="new">push-forward</em> (image measure) $\pf{T}{\al}$ is the measure obtained by moving each bit of mass of $\al$ from $x$ to $T(x)$:</p>
+$$(\pf{T}{\al})(B)=\al\big(T^{-1}(B)\big),\qquad \int g\,\dd(\pf{T}{\al})=\int g\big(T(x)\big)\,\dd\al(x).$$
+<p>Random variables: if $X\sim\al$ then $T(X)\sim\pf{T}{\al}$. Discrete: $\pf{T}{\Big(\sum_ia_i\delta_{x_i}\Big)}=\sum_ia_i\delta_{T(x_i)}$ (the weights travel with their points). <strong>Used here</strong> for the marginals of a coupling ($P_1(x,y)=x$), for the displacement interpolation ($P_t(x,y)=(1-t)x+ty$) and for the barycenter algorithm ($\pf{T}{\al}$ with an averaged map $T$).</p>
+</div></details>
+
+<details class="fold more" id="recall-couplings"><summary>Refresher — couplings, and why an optimal one exists</summary><div class="fold-body">
+<p>A <em class="new">coupling</em> (transport plan) of $\al$ and $\be$ is a probability measure $\pi$ on pairs $(x,y)$ whose two marginals are $\al$ and $\be$. For histograms $a\in\R^n$, $b\in\R^m$ it is a matrix $P\in\R_+^{n\times m}$ with</p>
+$$\sum_j P_{ij}=a_i\ \ (\text{row sums}),\qquad \sum_i P_{ij}=b_j\ \ (\text{column sums}).$$
+<p>$P_{ij}$ is the mass sent from $x_i$ to $y_j$. There is always at least one coupling, the <em>independent</em> one $P_{ij}=a_ib_j$ (the product measure $\al\otimes\be$), so the set of couplings is never empty. Lesson 2 showed that the minimum of $\int c\,\dd\pi$ over couplings is <strong>attained</strong> (for a continuous cost on a compact space, and more generally for lower semi-continuous costs on Polish spaces such as $\R^d$): there is an <em>optimal</em> coupling. <strong>Used here</strong> in the proof that $W_p(\al,\be)=0$ forces $\al=\be$, and every time we write “let $\pi$ be an optimal plan”.</p>
+</div></details>
+
+<details class="fold more" id="recall-1d"><summary>Refresher — optimal transport on the line (CDF and quantiles)</summary><div class="fold-body">
+<p>For a probability $\al$ on $\R$, the <em>cumulative distribution function</em> is $C_\al(x)=\al\big((-\infty,x]\big)$ and the <em>quantile function</em> is its generalized inverse $C_\al^{-1}(t)=\inf\{x:\ C_\al(x)\ge t\}$, $t\in(0,1)$. The quantile function is non-decreasing; $C_\al^{-1}(t)$ is “the point below which a fraction $t$ of the mass lies”.</p>
+<p>On the line, the optimal plan for $\abs{x-y}^p$ with $p\ge1$ is the <strong>monotone</strong> one (sorted mass goes to sorted mass: the $t$-th quantile of $\al$ goes to the $t$-th quantile of $\be$), and</p>
+$$W_p^p(\al,\be)=\int_0^1\abs{C_\al^{-1}(t)-C_\be^{-1}(t)}^p\,\dd t.$$
+<p>When $\al$ has a density, the monotone plan is the map $T=C_\be^{-1}\circ C_\al$. <strong>Used here</strong> for every 1D computation (Riemann sums, Gaussians on the line, 1D barycenters).</p>
+</div></details>
+
+<details class="fold more" id="recall-brenier"><summary>Refresher — Brenier’s theorem and Gaussians (Lesson 1)</summary><div class="fold-body">
+<p><strong>Brenier.</strong> On $\R^d$ with $c(x,y)=\norm{x-y}^2$: if $\al$ has a density, there is a unique optimal plan, and it is carried by the graph of a map $T=\nabla\varphi$ with $\varphi$ convex: $\pi=\pf{(\Id,T)}{\al}$, i.e. $Y=T(X)$. Conversely, the gradient of <em>any</em> convex function is the optimal map between $\al$ and $\pf{(\nabla\varphi)}{\al}$. So Kantorovich (plans) and Monge (maps) give the same answer.</p>
+<p><strong>Gaussians.</strong> Between $\N(m_\al,\Sigma_\al)$ and $\N(m_\be,\Sigma_\be)$ the optimal map is affine, $T(x)=m_\be+A(x-m_\al)$ with the symmetric positive matrix</p>
+$$A=\Sigma_\al^{-1/2}\big(\Sigma_\al^{1/2}\Sigma_\be\Sigma_\al^{1/2}\big)^{1/2}\Sigma_\al^{-1/2},$$
+<p>and $W_2^2=\norm{m_\al-m_\be}^2+\B(\Sigma_\al,\Sigma_\be)^2$ with the <em>Bures distance</em> $\B(\Sigma,\Lambda)^2=\tr\big(\Sigma+\Lambda-2(\Lambda^{1/2}\Sigma\Lambda^{1/2})^{1/2}\big)$. In 1D: $T(x)=m_\be+\frac{\sigma_\be}{\sigma_\al}(x-m_\al)$ and $W_2^2=(m_\al-m_\be)^2+(\sigma_\al-\sigma_\be)^2$. Here $M^{1/2}$ is the <em>matrix square root</em>: diagonalize $M=UDU\T$ (with $D\ge0$) and set $M^{1/2}=UD^{1/2}U\T$. <strong>Used here</strong> in §6 (geodesics) and §8–§9 (barycenters).</p>
+</div></details>
+
+<h3 id="notation">Notation decoder</h3>
+<p>The notes use the notation of the lecture. Here is how to read every symbol of this page.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Symbol</th><th>Read</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td>$\X,\Y$; $d(x,y)$</td><td>“the ground spaces”; “distance”</td><td>Where the points live; how far two points are.</td></tr>
+<tr><td>$\M(\X)$</td><td>“probability measures on $\X$”</td><td>Positive measures of total mass $1$ (also written $\mathcal P(\X)$).</td></tr>
+<tr><td>$\Pc_p(\R^d)$</td><td>“measures with a finite $p$-th moment”</td><td>$\int\norm{x}^p\,\dd\al(x)<\infty$. Needed on $\R^d$ so that $W_p$ is finite.</td></tr>
+<tr><td>$\delta_x$; $\sum_ia_i\delta_{x_i}$</td><td>“Dirac at $x$”; “histogram”</td><td>All the mass at $x$; mass $a_i$ at $x_i$.</td></tr>
+<tr><td>$\pf{T}{\al}$</td><td>“$T$ push-forward $\al$”</td><td>Move the mass at $x$ to $T(x)$ (law of $T(X)$).</td></tr>
+<tr><td>$P_1(x,y)=x$, $P_2(x,y)=y$</td><td>“projections”</td><td>Keep the first, or the second, point of a pair.</td></tr>
+<tr><td>$\U(\al,\be)$</td><td>“couplings of $\al$ and $\be$”</td><td>Transport plans: joint laws with marginals $\al$ and $\be$.</td></tr>
+<tr><td>$\Lc(\al,\be)$</td><td>“OT cost for the cost $c$”</td><td>$\min_{\pi\in\U(\al,\be)}\int c\,\dd\pi$.</td></tr>
+<tr><td>$W_p(\al,\be)$</td><td>“$p$-Wasserstein distance”</td><td>$\mathcal L_{d^p}(\al,\be)^{1/p}$ (§2).</td></tr>
+<tr><td>$\diam(\X)$</td><td>“diameter”</td><td>$\sup_{x,y}d(x,y)$, the largest distance in $\X$ (§3).</td></tr>
+<tr><td>$C_b,\ C_0,\ C_c$</td><td>“bounded / vanishing at infinity / compactly supported continuous functions”</td><td>Test functions defining convergences (§4).</td></tr>
+<tr><td>$\al_n\wto\al$</td><td>“$\al_n$ converges weakly to $\al$”</td><td>$\int\varphi\,\dd\al_n\to\int\varphi\,\dd\al$ for every test function (§4).</td></tr>
+<tr><td>$\norm{\al-\be}_\TV$</td><td>“total variation”</td><td>Total amount of mass by which $\al$ and $\be$ differ (§5).</td></tr>
+<tr><td>$\al_t$</td><td>“displacement interpolation”</td><td>The distribution at time $t$ when mass moves along straight lines (§6).</td></tr>
+<tr><td>$\lambda_1,\dots,\lambda_P$</td><td>“weights”</td><td>$\lambda_k\ge0$, $\sum_k\lambda_k=1$: how much each input counts in a barycenter (§7).</td></tr>
+<tr><td>$\N(m,\Sigma)$; $\B(\Sigma,\Lambda)$</td><td>“Gaussian”; “Bures distance”</td><td>Mean $m$, covariance $\Sigma$; the covariance part of $W_2$ between Gaussians (§8).</td></tr>
+<tr><td>$C_\al$, $C_\al^{-1}$</td><td>“CDF”, “quantile function”</td><td>See the 1D refresher above (§8).</td></tr>
+</tbody></table></div>
+<p>Colour code of the figures: <span class="al">$\al$ (source, orange-red)</span>, <span class="be">$\be$ (target, blue)</span>, <span class="ga">$\ga$ (third measure, purple)</span>, <span class="bar">maps, interpolations and barycenters (green)</span>.</p>
