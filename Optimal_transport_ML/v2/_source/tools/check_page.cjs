@@ -48,10 +48,8 @@ const openFolds = (h) => h.evaluate((e) => { for (let d = e.closest("details"); 
       require("fs").mkdirSync(shots, { recursive: true });
       const base = page.replace(/\.html$/, "");
       await p.click("[data-action=collapse]");
-      if (scheme === "light") {
-        const figs = await p.$$("figure.fig");
-        for (const [i, f] of figs.entries()) { await openFolds(f); await f.scrollIntoViewIfNeeded(); await f.screenshot({ path: `${shots}/${base}_fig${String(i).padStart(2, "0")}.png` }); }
-      }
+      const figs = await p.$$("figure.fig"); // light: <base>_figNN.png, dark: <base>_dark_figNN.png
+      for (const [i, f] of figs.entries()) { await openFolds(f); await f.scrollIntoViewIfNeeded(); await f.screenshot({ path: `${shots}/${base}_${scheme === "light" ? "" : scheme + "_"}fig${String(i).padStart(2, "0")}.png` }); }
       const ws = await p.$$(".widget");
       for (const [i, x] of ws.entries()) {
         const name = await x.getAttribute("data-widget");
