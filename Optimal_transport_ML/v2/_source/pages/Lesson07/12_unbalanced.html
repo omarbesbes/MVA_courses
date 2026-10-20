@@ -1,0 +1,44 @@
+<h2 id="unbalanced">12. Unbalanced transport, briefly <span class="ref">OT4ML §8.6, pp. 155–157 · §11.1, pp. 217–221</span></h2>
+<p class="tldr">Replace the hard marginal constraints by penalties $\tau\KL(P\ind|a)+\tau\KL(P\T\ind|b)$: mass may be created or destroyed at a price. With entropy, Sinkhorn survives with a single change, a damping exponent: $u\leftarrow(a/Kv)^{\tau/(\tau+\eps)}$.</p>
+
+<h3 id="unbalanced-why">Why relax the marginals</h3>
+<p>Balanced transport conserves mass: every gram of $\al$ must arrive somewhere in $\be$. This is wrong for histograms that are not normalized in the same way (two images with different total brightness), for data with outliers (an outlier of $\al$ must still be transported, possibly very far), and for populations that grow or die between two observations. Unbalanced transport replaces the constraint “the marginals are $a$ and $b$” by a cost for deviating from them.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 8.25, (8.31), p. 155 · Prop. 8.26, (8.33)–(8.34), pp. 155–156 · compact Prop. 8.22, p. 40</span></div>
+<p><strong>Definition 8.25</strong> (Marginal-dependent entropic transport). […] For discrete reference weights a, b and convex functions $F:\R^n_+\to\R\cup\{+\infty\}$, $G:\R^m_+\to\R\cup\{+\infty\}$, its matrix form is</p>
+$$\inf_{P\in\R^{n\times m}_+}\ \ps{C}{P}+F(P\ind_m)+G(P\T\ind_n)+\eps\KL(P|a\otimes b).\qquad(8.31)$$
+<p><strong>Proposition 8.26</strong> (Dual and scaling for marginal penalties). […] If $u=e^{f/\eps}$ and $v=e^{g/\eps}$, exact block ascent in the two dual variables is the generalized Sinkhorn cycle</p>
+$$r\leftarrow\mathrm{prox}^{\KL}_{F/\eps}(Kv),\quad u\leftarrow r\oslash(Kv),\qquad s\leftarrow\mathrm{prox}^{\KL}_{G/\eps}(K\T u),\quad v\leftarrow s\oslash(K\T u),\qquad(8.33)$$
+<p>[with $K_{i,j}=a_ib_je^{-C_{i,j}/\eps}$] where […] $\mathrm{prox}^{\KL}_h(z):=\argmin_{r\in\R^d_+}h(r)+\KL(r|z)$. (8.34) […] KL marginal relaxation. If $F(r)=\tau\KL(r|a)$ with $\tau>0$, then, coordinatewise, $\mathrm{prox}^{\KL}_{F/\eps}(z)=z^{\eps/(\tau+\eps)}\odot a^{\tau/(\tau+\eps)}$, and the scaling update becomes $u\leftarrow(a\oslash z)^{\tau/(\tau+\eps)}$, the damped scaling of unbalanced Sinkhorn.</p>
+</div>
+<dl class="decode">
+<dt>$F(P\ind)$, $G(P\T\ind)$</dt><dd>Prices on the marginals of the plan. $F=\iota_{\{a\}}$ (zero at $a$, $+\infty$ elsewhere) is the hard constraint and gives back balanced transport; $F(r)=\tau\KL(r|a)$ lets the row marginal $r$ differ from $a$ at the price $\tau$ per unit of KL.</dd>
+<dt>$\mathrm{prox}^{\KL}$</dt><dd>The step “choose the best marginal $r$ given what the kernel delivers ($z=Kv$)”: a compromise between $z$ and the target $a$. For the hard constraint it returns $a$ (classical Sinkhorn); for the KL penalty, a weighted geometric mean $z^{\eps/(\tau+\eps)}a^{\tau/(\tau+\eps)}$.</dd>
+<dt>$\frac{\tau}{\tau+\eps}$</dt><dd>The damping exponent: $1$ when $\tau=\infty$ (balanced), close to $0$ when $\tau\ll\eps$ (the marginals are almost free and $u$ barely moves).</dd>
+</dl>
+<details class="fold proof"><summary>Derivation of the damped update</summary><div class="fold-body">
+<p>With $v$ fixed, write $z=Kv$; the row step chooses $u$, i.e. the row marginal $r=u\odot z$, to minimize $F(r)+\eps\KL(r|z)$ (Prop. 8.26: the KL of $\operatorname{diag}(u)K\operatorname{diag}(v)$ to $K\operatorname{diag}(v)$ is $\KL(r|z)$).</p>
+<ol class="steps">
+<li>$$\frac{\partial}{\partial r_i}\Big[\tau\Big(r_i\log\frac{r_i}{a_i}-r_i+a_i\Big)+\eps\Big(r_i\log\frac{r_i}{z_i}-r_i+z_i\Big)\Big]=\tau\log\frac{r_i}{a_i}+\eps\log\frac{r_i}{z_i}.$$<span class="why">Derivative of $t\log(t/c)-t$ is $\log(t/c)$.</span></li>
+<li>$$(\tau+\eps)\log r_i=\tau\log a_i+\eps\log z_i\iff r_i=a_i^{\tau/(\tau+\eps)}z_i^{\eps/(\tau+\eps)} .$$<span class="why">Set the derivative to $0$; the objective is strictly convex in $r_i$.</span></li>
+<li>$$u_i=\frac{r_i}{z_i}=\Big(\frac{a_i}{z_i}\Big)^{\tau/(\tau+\eps)} .$$<span class="why">$r=u\odot z$. As $\tau\to\infty$ this is $a_i/z_i$: Sinkhorn’s row step.</span></li>
+</ol>
+</div></details>
+<p>The sheet (Exercises 8–9, solved in §13) derives the dual of the unbalanced problem without and with entropy, and the same damped update in the log domain, $f_i=-\frac{\eps\tau}{\eps+\tau}\log\frac{a_i}{S_i}$; it also checks that $\tau\to\infty$ gives back the balanced dual. At the other extreme, OT4ML Prop. 11.5 (p. 220) shows that $\frac1\tau\mathrm{UW}_{c,\tau}(\al,\be)\to\int(\sqrt a-\sqrt b)^2\,\dd\lambda$ as $\tau\to0$ for KL penalties and densities $a,b$: the squared <em>Hellinger</em> distance, where nothing moves and mass is only created and destroyed.</p>
+<figure class="fig"><!-- include figures/L07/unbalanced.svg --><figcaption>Entropic unbalanced transport between two bimodal histograms on $[0,1]$ ($\eps=0.002$): $a$ has $70\%$ of its mass on the left bump, $b$ has $70\%$ on the right bump. Shaded: prescribed marginals; lines: marginals of the plan. Balanced ($\tau=\infty$): $40\%$ of the mass must cross from left to right. $\tau=1$: the plan keeps $97\%$ of the mass and moves $31\%$ across. $\tau=0.05$: it is cheaper to destroy mass on the left and create it on the right — $87\%$ of the mass remains and only $0.1\%$ crosses.</figcaption></figure>
+<div class="box ml"><div class="box-h">In machine learning — single-cell trajectories (Waddington-OT)</div>
+<p>Single-cell RNA sequencing measures the gene expression of thousands of individual cells, but destroys them: a time course gives unpaired snapshots $\al_{t_1},\al_{t_2},\dots$ of a population, not trajectories. Schiebinger et al. (<em>Optimal-transport analysis of single-cell gene expression identifies developmental trajectories in reprogramming</em>, Cell 176(4), 2019) couple successive snapshots by entropic optimal transport in gene-expression space, and read the plan as transition probabilities: where do the descendants of a cell at day 2 lie at day 4? Normalizing the rows of the plan gives conditional transition probabilities, and multiplying them over successive days gives lineage probabilities (OT4ML pp. 61–62). Because cells proliferate and die at different rates, the marginal constraints are relaxed with KL penalties and growth-rate estimates — unbalanced entropic transport, computed by the damped Sinkhorn iteration above (OT4ML Example 11.4, p. 219: missing mass reads as death or undersampling, excess mass as growth).</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — “$\tau$ large is the safe choice”</div>
+<p>With a very large $\tau$ you are back to balanced transport, with all its sensitivity to outliers and to mass mismatches. $\tau$ is a length scale in disguise: with the quadratic cost, moving mass over a distance $\ell$ costs $\ell^2$, while destroying and recreating it costs of order $\tau$, so transport is preferred only over distances below about $\sqrt\tau$. Choose $\tau$ like $\eps$, from the geometry of the data.</p>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>Mass mismatch, outliers, growth → unbalanced: $\tau\KL(P\ind|a)+\tau\KL(P\T\ind|b)$.</li>
+<li>Unbalanced Sinkhorn = Sinkhorn with exponent $\frac{\tau}{\tau+\eps}$; $\tau\to\infty$ balanced, $\tau\to0$ Hellinger.</li>
+<li>Any convex marginal penalty → generalized Sinkhorn with a KL-proximal step (8.33).</li>
+</ul>
+</div>
+<div class="quiz"><p>What is the KL-proximal step for the hard constraint $F=\iota_{\{a\}}$, and for no constraint at all ($F=0$)? What does Sinkhorn do in the second case?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>Hard constraint: the only admissible $r$ is $a$, so $\mathrm{prox}=a$ and $u=a\oslash(Kv)$ (Sinkhorn). No constraint: $\argmin_r\KL(r|z)=z$, so $u=\ind$: the row marginal is whatever the kernel gives. With $F=G=0$ the problem is $\min_P\ps{C}{P}+\eps\KL(P|a\otimes b)$ without constraints, solved by $P=K=(a\otimes b)\odot e^{-C/\eps}$ in one step (the tilted Gibbs reference of §5).</p>
+</div></details></div>

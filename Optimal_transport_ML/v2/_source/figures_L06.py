@@ -107,7 +107,7 @@ def fig_gauss_plane():
     f.circle(4, 2, 5, "f1")
     f.text(0, 1, "α₀ = N(0, 1)", "tx-s t2", "start", dx=6, dy=16)
     f.text(4, 2, "α₁ = N(4, 2²)", "tx-s t1", "start", dx=8, dy=4)
-    f.text(0.75, 1.1875, "geodesic: action 17 = W₂²", "tx-s t3", "start", dy=-8)
+    f.text(1.45, 1.3625, "geodesic: action 17 = W₂²", "tx-s t3", "start", dy=15)
     f.text(2.1, 1.0, "translate, then dilate: action 34", "tx-s", "middle", dy=-6)
     f.text(1.6, 1 + 0.4 + 2 * 0.4 * 0.6, "bent: action 18.33", "tx-s t5", "end", dx=-6, dy=-4)
     for t in [0.5]:

@@ -119,8 +119,11 @@ def fig_slice():
         f.circle(q[0], q[1], 4.5, "f3")
         f.circle(p[0], p[1], 6, "f2")
         f.text(p[0], p[1], f"x{'₁₂₃'[i]}", "tx-b t2", "start", dx=8, dy=(14 if i == 0 else -6))
-        if t > 0:
-            f.text(q[0], q[1], f"⟨θ, x{'₁₂₃'[i]}⟩ = {t:g}", "tx-s t3", "end", dx=-8, dy=-2)
+        if t > 0:  # x3's dashed projection line runs up-left from its foot: put that label on the right
+            if i == 2:
+                f.text(q[0], q[1], f"⟨θ, x{'₁₂₃'[i]}⟩ = {t:g}", "tx-s t3", "start", dx=9, dy=12)
+            else:
+                f.text(q[0], q[1], f"⟨θ, x{'₁₂₃'[i]}⟩ = {t:g}", "tx-s t3", "end", dx=-8, dy=-2)
     c.arrow(f.X(0), f.Y(0), f.X(0.6 * 0.95), f.Y(0.8 * 0.95), 3, "ln c3")
     f.text(0.55, 0.62, "θ", "tx-i", "start", dx=6, dy=8)
     c.text(148, 18, "θ = (3/5, 4/5); ⟨θ, x₁⟩ = 0", "tx-b", "middle")

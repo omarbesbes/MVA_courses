@@ -619,7 +619,7 @@
         txt = "shares of 400 noise quantiles per atom: " + counts.map(function (c) { return fmt(c / NQ, 3); }).join(", ") +
           "   (weights " + comp.map(function (c) { return fmt(c[0], 3); }).join(", ") + ")" +
           "\nflow boundaries: " + bnd.map(function (bb) { return fmt(bb[0], 4); }).join(", ") +
-          "    monotone map, Φ⁻¹(cumulated weights): " + bnd.map(function (bb) { return fmt(bb[1], 4); }).join(", ");
+          "    monotone map, Φ⁻¹(cumulative weights): " + bnd.map(function (bb) { return fmt(bb[1], 4); }).join(", ");
         bnd.forEach(function (bb) { P.line(bb[0], 0, bb[0], 0.05, "ln ck thin"); });
       } else {
         txt = "smooth data: the flow sends the noise quantiles to the data quantiles (a monotone map, hence optimal in 1D).";

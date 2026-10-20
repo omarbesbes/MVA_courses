@@ -148,7 +148,7 @@ def fig_cycle():
     panels = [(40, "product plan: 6 edges, a cycle"), (380, "a vertex: 4 = n + m − 1 edges, no cycle")]
     Pv = np.array([[0.3, 0.3, 0.0], [0.0, 0.15, 0.25]])
     # labels of the alternating perturbation, in panel coordinates (x, y baseline)
-    eps_lab = {(0, 0): (75, 52, "+ε"), (0, 1): (120, 93, "−ε"), (1, 0): (30, 131, "−ε"), (1, 1): (75, 158, "+ε")}
+    eps_lab = {(0, 0): (75, 52, "+ε"), (0, 1): (128, 103, "−ε"), (1, 0): (30, 131, "−ε"), (1, 1): (75, 158, "+ε")}
     for k, (x0, title) in enumerate(panels):
         c.text(x0 + 110, 20, title, "tx-b", "middle")
         P = np.outer(a, b) if k == 0 else Pv
