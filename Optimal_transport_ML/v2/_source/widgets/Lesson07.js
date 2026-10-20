@@ -114,9 +114,10 @@
     }
     return Math.sqrt(lam); // lam = sigma_2^2
   }
-  function l7exp(e) { // 1e-5 style
+  function l7exp(e) { // 1e-5 style for small numbers
     if (!isFinite(e)) return String(e);
     if (e === 0) return "0";
+    if (Math.abs(e) >= 0.01) return fmt(e, 3);
     var s = e.toExponential(1).replace("e-", "e−").replace("e+", "e");
     return s;
   }
@@ -220,7 +221,7 @@
 
   /* --- 2. Convergence of Sinkhorn: marginal error against iterations, for several temperatures (§7) --- */
   WIDGETS.l7conv = function (box) {
-    var s = scaffold(box, "How fast Sinkhorn converges: the row-marginal error after each cycle, for four temperatures (log scale)");
+    var s = scaffold(box, "How fast Sinkhorn converges: the row-marginal error after each cycle, for five temperatures (log scale)");
     var plot = new Plot(s.svg, { x: [0, 1000], y: [-13, 0.5], w: 680, h: 330, pad: { l: 52, r: 120, t: 18, b: 36 }, label: "Marginal error of Sinkhorn against the number of iterations" });
     var pairSel = select(s.controls, "Histograms", [["split", "two bumps → one bump"], ["shift", "one bump → shifted bump"]], "split", compute);
     var hSel = select(s.controls, "horizon", [["300", "300 cycles"], ["1000", "1000 cycles"], ["3000", "3000 cycles"]], "1000", draw);
@@ -266,14 +267,9 @@
         }
       });
       plot.unclip();
-      runs.forEach(function (r, k) {
-        var last = Math.min(r.errs.length, Hz) - 1, y = Math.log10(Math.max(r.errs[last], 1e-16));
-        var yy = Math.max(-12.6, Math.min(0.2, y));
-        plot.text(Hz, yy, "ε = " + r.eps, "tx-s" + (COLS[k] === "c4" ? "" : " t" + COLS[k].slice(1)), "start", 6, 4 + (k - 2) * 2);
-      });
       var lines = runs.map(function (r) {
-        return "ε = " + (r.eps + "      ").slice(0, 6) + "  cycles to 1e−9: " + (r.hit > 0 ? r.hit : "> 3000") + "   measured rate per cycle: " + fmt(r.rate, 4) +
-          "   σ_ε² = " + fmt(r.sig2, 4) + "   Birkhoff guarantee 1 − λ² = " + l7exp(r.gain);
+        return "ε = " + (r.eps + "      ").slice(0, 6) + " " + (r.hit > 0 ? r.hit : "> 3000") + " cycles to 1e−9 · rate " + fmt(r.rate, 4) +
+          " · σ_ε² = " + fmt(r.sig2, 4) + " · Birkhoff 1 − λ² " + (r.gain > 0 ? "= " + l7exp(r.gain) : "≈ 0 (< 1e−16)");
       });
       ro.textContent = lines.join("\n");
     }
@@ -347,7 +343,7 @@
       el("rect", { x: X0, y: Y0, width: S, height: S, "class": "ln cm hair nofill" }, gr);
       var tk = el("text", { x: X0 + S / 2, y: Y0 - 10, "class": "tx-b", "text-anchor": "middle" }, gr); tk.textContent = "K = exp(−C/ε), " + (f32 ? "float32" : "float64");
       var tk2 = el("text", { x: X0 + S / 2, y: Y0 + S + 16, "class": "tx-s", "text-anchor": "middle" }, gr); tk2.textContent = "rows: x in [0, 0.35] · columns: y in [0.55, 1]";
-      var tk3 = el("text", { x: X0 + S / 2, y: Y0 + S + 30, "class": "tx-s", "text-anchor": "middle" }, gr); tk3.textContent = "grey: log K (darker = larger) · red: exactly 0";
+      var tk3 = el("text", { x: X0 + S / 2, y: Y0 + S + 30, "class": "tx-s", "text-anchor": "middle" }, gr); tk3.textContent = "shade: log K (stronger = larger) · red: exactly 0";
       // errors on the right
       P.g = el("g", {}, s.svg);
       P.axes({ xticks: [0, 50, 100, 150], yticks: [0, -4, -8, -12, -16], yfmt: function (v) { return v === 0 ? "1" : "1e" + v; }, xlabel: "cycles" });
@@ -497,7 +493,7 @@
     var box2 = { x0: 20, y0: 10, w: 420, h: 360, xr: [-2.4, 2.4] };
     box2.k = box2.w / (box2.xr[1] - box2.xr[0]);
     function MX(x) { return box2.x0 + (x - box2.xr[0]) * box2.k; }
-    function MY(y) { return box2.y0 + box2.h / 2 - (y - 0.15) * box2.k; }
+    function MY(y) { return box2.y0 + box2.h / 2 - (y - 0.75) * box2.k; }
     function draw() {
       while (s.svg.firstChild) s.svg.removeChild(s.svg.firstChild);
       var g = el("g", {}, s.svg);
