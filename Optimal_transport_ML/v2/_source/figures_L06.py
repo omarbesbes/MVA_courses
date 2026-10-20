@@ -718,15 +718,16 @@ def fig_multimarginal():
         b = np.mean([qf(xs[s], ws[s], um) for s in range(3)])
         f.line(u0, b, u1, b, "ln c3")
         f.circle(um, b, 3.4, "f3")
-    x0 = 450
+    x0 = 446
     c.text(x0, 50, "β₁ = ½(δ₀ + δ₃)", "tx-s t1", "start")
     c.text(x0, 68, "β₂ = ⅓(δ₀ + δ₁ + δ₂)", "tx-s t5", "start")
     c.add(f'<text x="{x0}" y="86" class="tx-s" text-anchor="start" style="fill: var(--s4)">β₃ = ¼(δ₁ + δ₂ + δ₃ + δ₅)</text>')
     c.text(x0, 112, "green: average quantile =", "tx-s t3", "start")
     c.text(x0, 128, "barycenter (weights ⅓)", "tx-s t3", "start")
-    c.text(x0, 160, "dashed: cuts at ¼, ⅓, ½, ⅔, ¾", "tx-s", "start")
-    c.text(x0, 176, "6 intervals = 6 atoms of", "tx-s", "start")
-    c.text(x0, 192, "the comonotone plan", "tx-s", "start")
+    c.text(x0, 160, "dashed: cuts at", "tx-s", "start")
+    c.text(x0, 176, "u = ¼, ⅓, ½, ⅔, ¾;", "tx-s", "start")
+    c.text(x0, 192, "6 intervals = 6 atoms", "tx-s", "start")
+    c.text(x0, 208, "of the comonotone plan", "tx-s", "start")
     c.save()
 
 

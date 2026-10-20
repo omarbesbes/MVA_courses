@@ -360,7 +360,7 @@
         tf.textContent = "plain: NaN / ∞ at cycle " + fail;
       }
       var minC = Infinity; for (j = 0; j < n; j++) minC = Math.min(minC, C[0][j]);
-      var thr = f32 ? 103.28 : 744.44;
+      var thr = f32 ? 103.97 : 745.13; // exp(-t) rounds to 0 beyond t = 150 log 2 (float32) or 1075 log 2 (float64)
       ro.textContent = "ε = " + eps.toExponential(2) + ": " + zeros + " of " + n * n + " entries of K are exactly 0, " + zrows + " whole rows vanish" +
         "  (first row: smallest cost " + fmt(minC, 4) + ", so its row vanishes when ε < " + (minC / thr).toExponential(2) + ")" +
         "\nplain iteration: " + (fail > 0 ? "fails at cycle " + fail + " (division by 0 or overflow → ∞, then NaN)" : "error " + l7exp(plain[plain.length - 1]) + " after " + ITER + " cycles") +

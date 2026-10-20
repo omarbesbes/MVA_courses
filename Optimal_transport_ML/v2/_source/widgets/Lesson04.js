@@ -151,9 +151,9 @@
      ===================================================================================== */
   WIDGETS.l4ctrans = function (box) {
     var s = scaffold(box, "c-transforms in 1D: drag the prices f(xₖ); the transform is the lower envelope, the double transform raises useless prices");
-    var top = new Plot(s.svg, { x: [-2.2, 2.2], y: [-1.8, 2.8], w: 680, h: 230, pad: { l: 40, r: 16, t: 16, b: 26 }, label: "Source side: prices f at seven points and the double transform" });
+    var top = new Plot(s.svg, { x: [-2.2, 2.2], y: [-1.8, 2.8], w: 680, h: 240, pad: { l: 40, r: 16, t: 26, b: 26 }, label: "Source side: prices f at seven points and the double transform" });
     var botSvg = addSvg(box, s.svg);
-    var bot = new Plot(botSvg, { x: [-2.2, 2.2], y: [-2.8, 2.6], w: 680, h: 230, pad: { l: 40, r: 16, t: 16, b: 26 }, label: "Target side: sections and their lower envelope, the c-transform of f" });
+    var bot = new Plot(botSvg, { x: [-2.2, 2.2], y: [-2.8, 2.6], w: 680, h: 240, pad: { l: 40, r: 16, t: 26, b: 26 }, label: "Target side: sections and their lower envelope, the c-transform of f" });
     var costSel = select(s.controls, "Cost", [["sq", "c = |x − y|²"], ["abs", "c = |x − y|"], ["bil", "c = −x·y"]], "sq", draw);
     var secChk = checkbox(s.controls, "show the sections", true, draw);
     button(s.controls, "Replace f by its double transform", function () { var r = compute(); for (var k = 0; k < K; k++) F[k] = Math.round(r.fccAt[k] * 1000) / 1000; draw(); });
@@ -208,17 +208,20 @@
         el("circle", { cx: top.tx(XK[kk]), cy: top.ty(r.fccAt[kk]), r: 4.5, "class": "ln c3 thin nofill" }, top.g);
         top.dot(XK[kk], F[kk], 6.5, "f2 drag");
       }
-      l4svgText(top.g, top.tx(-2.15), top.ty(2.5), "source side: f (dots) and f^{cc̄} (green), on 𝒳", "tx-s", "start", true);
+      l4svgText(top.g, top.tx(-2.2), 16, "source side 𝒳: the prices f (dots) and the double transform f^{cc̄} (green)", "tx-s", "start");
       // bottom: target side
+      var emin = Infinity; for (i = 0; i < N; i++) emin = Math.min(emin, r.fc[i]);
+      bot.o.y = [Math.min(-2.8, Math.floor(emin - 0.3)), 2.6];
+      var yt = []; for (var v = Math.ceil(bot.o.y[0]); v <= 2; v += (bot.o.y[0] < -4 ? 2 : 1)) yt.push(v);
       bot.clear();
-      bot.axes({ xticks: [-2, -1, 0, 1, 2], yticks: [-2, -1, 0, 1, 2], xfmt: function (v) { return fmt(v, 0); }, yfmt: function (v) { return fmt(v, 0); } });
+      bot.axes({ xticks: [-2, -1, 0, 1, 2], yticks: yt, xfmt: function (v) { return fmt(v, 0); }, yfmt: function (v) { return fmt(v, 0); } });
       bot.clip();
       if (secChk.checked) for (kk = 0; kk < K; kk++) bot.fn(function (y) { return cost(XK[kk], y) - F[kk]; }, "ln cm thin dash", 200);
       pts = []; for (i = 0; i < N; i++) pts.push([GR[i], r.fc[i]]);
       bot.poly(pts, "ln c1");
       bot.unclip();
       if (costSel.value !== "bil") for (kk = 0; kk < K; kk++) bot.dot(XK[kk], -F[kk], 4, "f2");
-      l4svgText(bot.g, bot.tx(-2.15), bot.ty(2.25), "target side: f^{c}(y) = minₖ c(xₖ, y) − f(xₖ), on 𝒴", "tx-s", "start", true);
+      l4svgText(bot.g, bot.tx(-2.2), 16, "target side 𝒴: the sections and their lower envelope f^{c}(y) = minₖ c(xₖ, y) − f(xₖ)", "tx-s", "start");
       var maxId = 0, minGap = Infinity;
       for (i = 0; i < N; i++) maxId = Math.max(maxId, Math.abs(r.fccc[i] - r.fc[i]));
       for (kk = 0; kk < K; kk++) minGap = Math.min(minGap, r.fccAt[kk] - F[kk]);
@@ -283,7 +286,7 @@
       var P = PRE[preSel.value], t = tS.get(), A = P.a, B = l4shift(P.b, t), i;
       tS.out.textContent = fmt(t, 2);
       // computations on a window holding all the mass (the shifted β may leave the drawn window [L, R])
-      var lo = L, hi = R;
+      var L = P.L, R = P.R, lo = L, hi = R;
       A.concat(B).forEach(function (q) {
         if (q.t === "d") { lo = Math.min(lo, q.x - 0.5); hi = Math.max(hi, q.x + 0.5); }
         else if (q.t === "g") { lo = Math.min(lo, q.m - 8 * q.s); hi = Math.max(hi, q.m + 8 * q.s); }
@@ -406,7 +409,16 @@
       bot.axes({ xticks: [-3, -2, -1, 0, 1, 2, 3], yticks: [0, 1, 2, 3], xlabel: "t", xfmt: function (x) { return fmt(x, 0); } });
       bot.clip();
       var keys = [["tv", "ln cm"], ["js", "ln c5"], ["mmd", "ln c4"], ["w1", "ln c3"]];
-      keys.forEach(function (kc) { bot.poly(curves.ts.map(function (tt, j) { return [tt, curves.v[j][kc[0]]]; }), kc[1]); });
+      keys.forEach(function (kc) {
+        var jump = fam === "dirac" && (kc[0] === "tv" || kc[0] === "js"); // discontinuous at t = 0: two branches and a point
+        if (!jump) { bot.poly(curves.ts.map(function (tt, j) { return [tt, curves.v[j][kc[0]]]; }), kc[1]); return; }
+        var neg = [], pos = [];
+        curves.ts.forEach(function (tt, j) { if (tt < -1e-9) neg.push([tt, curves.v[j][kc[0]]]); else if (tt > 1e-9) pos.push([tt, curves.v[j][kc[0]]]); });
+        neg.push([0, neg[neg.length - 1][1]]); pos.unshift([0, pos[0][1]]);
+        bot.poly(neg, kc[1]); bot.poly(pos, kc[1]);
+        el("circle", { cx: bot.tx(0), cy: bot.ty(pos[0][1]), r: 3.5, "class": "fs" }, bot.g);
+        el("circle", { cx: bot.tx(0), cy: bot.ty(pos[0][1]), r: 3.5, "class": kc[1] + " nofill" }, bot.g);
+      });
       if (fam === "gauss") bot.poly(curves.ts.map(function (tt, j) { return [tt, curves.v[j].kl]; }), "ln c6 dash");
       else { bot.seg(-3, 3.05, -0.02, 3.05, "ln c6 dash"); bot.seg(0.02, 3.05, 3, 3.05, "ln c6 dash"); bot.dot(0, 0, 4, "f6"); }
       bot.unclip();
@@ -476,7 +488,7 @@
     var Y = Y0.map(function (p) { return p.slice(); });
     var BS = { eq: [1 / 6, 1 / 6, 1 / 6, 1 / 6, 1 / 6, 1 / 6], uneq: [0.10, 0.15, 0.30, 0.15, 0.20, 0.10] };
     function zeros() { return [0, 0, 0, 0, 0, 0]; }
-    var g = zeros(), hist = [], mode = "ot", lloydCount = 0, stoCount = 0, gbar = null;
+    var g = zeros(), hist = [], lhist = [], mode = "ot", lloydCount = 0, stoCount = 0, gbar = null;
     var NG = 90, GX = [], GW = [];
     function buildGrid() {
       GX = []; GW = []; var tot = 0;
@@ -569,8 +581,15 @@
         if (frames < 100) timer = setTimeout(loop, 40); else timer = null;
       })();
     }
+    function lloydEnergy() { // quantization energy with zero weights (Voronoi cells)
+      var r = evalAt(zeros()), en = 0;
+      if (denSel.value === "unif") r.cells.forEach(function (P, jj) { en += l4polySq(P, Y[jj]); }); else en = r.E;
+      return en;
+    }
     function lloydStep() {
+      if (mode !== "lloyd") lhist = [];
       mode = "lloyd"; g = zeros(); hist = []; gbar = null;
+      if (!lhist.length) lhist.push(lloydEnergy());
       var r = evalAt(g), from = Y.map(function (p) { return p.slice(); }), to = Y.map(function (p, j) { return r.cent[j] ? r.cent[j] : p; });
       var t0 = null, dur = 450; busy = true;
       function frame(ts) {
@@ -578,14 +597,14 @@
         var u = Math.min(1, (ts - t0) / dur), e = u * u * (3 - 2 * u);
         for (var j = 0; j < M; j++) Y[j] = [from[j][0] + e * (to[j][0] - from[j][0]), from[j][1] + e * (to[j][1] - from[j][1])];
         draw();
-        if (u < 1 && busy) requestAnimationFrame(frame); else { busy = false; lloydCount++; draw(); }
+        if (u < 1 && busy) requestAnimationFrame(frame); else { busy = false; lloydCount++; lhist.push(lloydEnergy()); draw(); }
       }
       requestAnimationFrame(frame);
     }
     function newSites() {
       var rng = mulberry32(seedS++);
       Y = []; for (var j = 0; j < M; j++) Y.push([0.1 + 0.8 * rng(), 0.1 + 0.8 * rng()]);
-      g = zeros(); hist = []; mode = "ot"; lloydCount = 0; gbar = null; draw();
+      g = zeros(); hist = []; lhist = []; mode = "ot"; lloydCount = 0; gbar = null; draw();
     }
     // dragging atoms
     var SQ = { x: 10, y: 10, s: 400 };
@@ -600,7 +619,7 @@
       if (drag < 0) return; e.preventDefault();
       var p = svgPoint(s.svg, e);
       Y[drag] = [Math.min(0.98, Math.max(0.02, (p.x - SQ.x) / SQ.s)), Math.min(0.98, Math.max(0.02, 1 - (p.y - SQ.y) / SQ.s))];
-      hist = []; draw();
+      hist = []; lhist = []; draw();
     });
     function endDrag() { drag = -1; }
     s.svg.addEventListener("pointerup", endDrag); s.svg.addEventListener("pointercancel", endDrag);
@@ -609,10 +628,10 @@
       var b = BS[bSel.value], r = evalAt(g), gg = l4clear(s.svg), j;
       // density shading for the blobs
       if (denSel.value === "blobs") {
-        var cs = SQ.s / NG, mx = Math.max.apply(null, GW);
+        var cs = SQ.s / NG, mx = Math.max.apply(null, GW), gd = el("g", { "shape-rendering": "crispEdges" }, gg);
         for (var i = 0; i < GX.length; i += 1) {
           var o = GW[i] / mx;
-          if (o > 0.06) el("rect", { x: (PX(GX[i][0]) - cs / 2).toFixed(1), y: (PY(GX[i][1]) - cs / 2).toFixed(1), width: cs.toFixed(2), height: cs.toFixed(2), "class": "fk", "fill-opacity": (0.32 * o).toFixed(3) }, gg);
+          if (o > 0.06) el("rect", { x: (PX(GX[i][0]) - cs / 2).toFixed(2), y: (PY(GX[i][1]) - cs / 2).toFixed(2), width: cs.toFixed(3), height: cs.toFixed(3), "class": "fk", "fill-opacity": (0.32 * o).toFixed(3) }, gd);
         }
       }
       r.cells.forEach(function (P, jj) {
@@ -640,13 +659,14 @@
       // history of the dual value (or energy)
       var hx = 440, hy = 205, hw = 210, hh = 150;
       el("rect", { x: hx, y: hy, width: hw, height: hh, "class": "ln cm hair nofill" }, gg);
-      l4txt(gg, hx, hy - 8, mode === "ot" ? "dual value ℰ₀(g) along the iterations" : "Lloyd: positions only (weights 0)", "tx-s", "start");
-      if (mode === "ot" && hist.length > 1) {
-        var lo = Math.min.apply(null, hist), hi = Math.max.apply(null, hist), span = Math.max(hi - lo, 1e-6), n = Math.max(hist.length - 1, 4);
-        var d2 = hist.map(function (v, k) { return (k ? "L" : "M") + (hx + 4 + k / n * (hw - 8)).toFixed(1) + " " + (hy + hh - 8 - (v - lo) / span * (hh - 16)).toFixed(1); }).join("");
-        el("path", { d: d2, "class": "ln c3 thin" }, gg);
-        l4txt(gg, hx + hw - 4, hy + 14, "max " + fmt(hi, 5), "tx-s", "end");
-        l4txt(gg, hx + hw - 4, hy + hh - 4, "min " + fmt(lo, 5), "tx-s", "end");
+      l4txt(gg, hx, hy - 8, mode === "ot" ? "dual value ℰ₀(g) along the iterations" : "Lloyd: quantization energy, step by step", "tx-s", "start");
+      var H2 = mode === "ot" ? hist : lhist;
+      if (H2.length > 1) {
+        var lo = Math.min.apply(null, H2), hi = Math.max.apply(null, H2), span = Math.max(hi - lo, 1e-6), n = Math.max(H2.length - 1, 4);
+        var d2 = H2.map(function (v, k) { return (k ? "L" : "M") + (hx + 4 + k / n * (hw - 8)).toFixed(1) + " " + (hy + hh - 8 - (v - lo) / span * (hh - 16)).toFixed(1); }).join("");
+        el("path", { d: d2, "class": "ln thin " + (mode === "ot" ? "c3" : "c4") }, gg);
+        if (mode === "lloyd") H2.forEach(function (v, k) { el("circle", { cx: (hx + 4 + k / n * (hw - 8)).toFixed(1), cy: (hy + hh - 8 - (v - lo) / span * (hh - 16)).toFixed(1), r: 2.5, "class": "f4" }, gg); });
+        l4txt(gg, hx, hy + hh + 16, "first " + fmt(H2[0], 5) + "  →  last " + fmt(H2[H2.length - 1], 5), "tx-s", "start");
       }
       var err = maxErr(r);
       var txt;
@@ -655,9 +675,7 @@
           "\nweights g = (" + g.map(function (v) { return fmt(v, 3); }).join(", ") + ")" + (err < 1e-3 ? "   — balanced: the map Lⱼ → yⱼ is optimal and ℰ₀(g) = W₂²" : "");
         if (gbar) { var rb = evalAt(gbar); txt += "\nstochastic ascent: " + stoCount + " samples, step 0.08/√(1 + ℓ/30). The iterate g is noisy; the averaged weights ḡ give ℰ₀(ḡ) = " + fmt(rb.E, 5) + ", max |α(Lⱼ(ḡ)) − bⱼ| = " + fmt(maxErr(rb), 4); }
       } else {
-        var en = 0;
-        if (denSel.value === "unif") r.cells.forEach(function (P, jj) { en += l4polySq(P, Y[jj]); });
-        else en = r.E;
+        var en = lloydEnergy();
         txt = "Lloyd (k-means): weights 0, Voronoi cells; step " + lloydCount + ", energy ∫ minⱼ |x − yⱼ|² dα = " + fmt(en, 5) +
           "\neach step moves every atom to the centroid of its cell; the energy never increases.";
       }

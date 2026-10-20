@@ -26,10 +26,13 @@
     return [m - r, m + r];
   }
   // Arrow from (x1, y1) to (x2, y2), in the coordinates of the Plot P, with a filled triangular head.
-  function l1arrow(P, x1, y1, x2, y2, cls, head) {
+  // With gap > 0 the arrow stops gap pixels before (x2, y2), outside a dot drawn there.
+  function l1arrow(P, x1, y1, x2, y2, cls, head, gap) {
     var X1 = P.tx(x1), Y1 = P.ty(y1), X2 = P.tx(x2), Y2 = P.ty(y2), L = Math.hypot(X2 - X1, Y2 - Y1);
-    if (L < 1) return;
-    var ux = (X2 - X1) / L, uy = (Y2 - Y1) / L, h = Math.min(8, 0.45 * L), w = 0.42 * h;
+    if (L < 1 + 2 * (gap || 0)) return;
+    var ux = (X2 - X1) / L, uy = (Y2 - Y1) / L;
+    if (gap) { X1 += gap * ux; Y1 += gap * uy; X2 -= gap * ux; Y2 -= gap * uy; L -= 2 * gap; }
+    var h = Math.min(8, 0.45 * L), w = 0.42 * h;
     el("line", { x1: X1.toFixed(1), y1: Y1.toFixed(1), x2: (X2 - 0.8 * h * ux).toFixed(1), y2: (Y2 - 0.8 * h * uy).toFixed(1), "class": cls }, P.g);
     el("path", { d: "M" + X2.toFixed(1) + " " + Y2.toFixed(1) + "L" + (X2 - h * ux - w * uy).toFixed(1) + " " + (Y2 - h * uy + w * ux).toFixed(1) +
       "L" + (X2 - h * ux + w * uy).toFixed(1) + " " + (Y2 - h * uy - w * ux).toFixed(1) + "Z", "class": head }, P.g);
@@ -67,6 +70,18 @@
       if (fp >= 0) out.push(p);
       if ((fp >= 0) !== (fq >= 0)) { var t = fp / (fp - fq); out.push([p[0] + t * (q[0] - p[0]), p[1] + t * (q[1] - p[1])]); }
     }
+    return out;
+  }
+  var l1permCache = {};
+  function l1perms(n) { // all permutations of 0..n-1 (n <= 7), cached
+    if (l1permCache[n]) return l1permCache[n];
+    var out = [[]];
+    for (var k = 0; k < n; k++) {
+      var next = [];
+      out.forEach(function (q) { for (var j = 0; j <= q.length; j++) { var r = q.slice(); r.splice(j, 0, k); next.push(r); } });
+      out = next;
+    }
+    l1permCache[n] = out;
     return out;
   }
   function l1centroid(poly) {
@@ -146,7 +161,7 @@
     button(s.controls, "New random points", function () { seed++; preSel.value = "rand"; load(); });
     var ro = readout(s.controls);
     legend(s.legend, [["--s2", "sources (top line)"], ["--s1", "targets (bottom line)"], ["--s3", "optimal pairing"], ["--muted", "sorted pairing (dashed)"]]);
-    var seed = 3, xs = [], ys = [];
+    var seed = 18, xs = [], ys = [];
     function load() {
       var v = preSel.value;
       if (v === "two") { xs = [0, 1]; ys = [1, 2]; P.o.x = [-0.4, 2.4]; }
@@ -202,7 +217,16 @@
       } else {
         lines.push("→ the sorted pairing is optimal on these points");
       }
-      if (n <= 4) lines.push("optimal pairing: " + xs.map(function (x, i) { return fmt(x, 2) + " → " + fmt(ys[a[i]], 2); }).join(",  "));
+      if (n <= 7) {
+        var nopt = 0;
+        l1perms(n).forEach(function (q) {
+          var c = 0;
+          for (var i = 0; i < n; i++) c += C[i][q[i]];
+          if (c <= copt * (1 + 1e-9) + 1e-12) nopt++;
+        });
+        lines.push("optimal pairings: " + nopt + " of the n! = " + l1group(l1fact(n)) + (nopt > 1 ? " — a tie" : " — a unique optimum"));
+      }
+      if (n <= 4) lines.push("the solver's pairing: " + xs.map(function (x, i) { return fmt(x, 2) + " → " + fmt(ys[a[i]], 2); }).join(",  "));
       ro.textContent = lines.join("\n");
     }
     load(); redrawers.push(draw);
@@ -217,7 +241,7 @@
     var mapSel = select(s.controls, "map T", [["comp", "compression at ½"], ["quad", "(x + x²)/2, the figure above"], ["affine", "2x + 1, a stretch"], ["square", "x², crushes 0"], ["fold", "(2x − 1)², two-to-one"]], "comp", resample);
     var srcSel = select(s.controls, "source α", [["unif", "𝒰[0, 1]"], ["beta", "density 6x(1 − x)"]], "unif", resample);
     var kS = slider(s.controls, "strength s", 0, 0.95, 0.01, 0.8, resample);
-    var x0S = slider(s.controls, "point x₀", 0.02, 0.98, 0.01, 0.5, draw);
+    var x0S = slider(s.controls, "point x₀", 0.02, 0.98, 0.01, 0.4, draw);
     var ro = readout(s.controls);
     legend(s.legend, [["--s2", "source density ρα"], ["--muted", "histogram of T(X), 20 000 samples"], ["--s3", "Jacobian formula"], ["--text", "naive guess (dashed)"]]);
     var NS = 20000, XS = new Float64Array(NS), YSm = new Float64Array(NS), src = "";
@@ -335,7 +359,7 @@
 
   /* --- 4. Two sources, two targets, squared cost: the half-plane of Exercise 2 (§7) --- */
   WIDGETS.l1swap = function (box) {
-    var s = scaffold(box, "Swap test for the squared cost: where must z lie for x₁ → y₁, z → y₂ to beat the swap? Drag the four points");
+    var s = scaffold(box, "Swap test for the squared cost: where must z lie for x₁ → y₁, z → y₂ to beat the swap?");
     var XR = [-3, 3], YR = [-1.8, 1.8];
     var P = new Plot(s.svg, { x: XR, y: YR, w: 680, h: 418, pad: { l: 12, r: 12, t: 12, b: 12 }, label: "Half-plane of the positions of z where the pairing Id beats the swap" });
     var names = ["x1", "z", "y1", "y2"], init = { x1: [-1.6, -0.6], z: [-0.9, 0.9], y1: [1.7, -0.9], y2: [1.1, 1.15] }, pts = {};
@@ -372,10 +396,9 @@
           P.text(g[0], g[1], r[1], r[2], "middle");
         });
       }
-      P.seg(y1[0], y1[1], y2[0], y2[1], "ln cm hair dash");
       var win = idWins ? [[x1, y1], [z, y2]] : [[x1, y2], [z, y1]], lose = idWins ? [[x1, y2], [z, y1]] : [[x1, y1], [z, y2]];
-      lose.forEach(function (e) { l1arrow(P, e[0][0], e[0][1], e[1][0], e[1][1], "ln cm thin dash", "fm"); });
-      win.forEach(function (e) { l1arrow(P, e[0][0], e[0][1], e[1][0], e[1][1], "ln c3", "f3"); });
+      lose.forEach(function (e) { l1arrow(P, e[0][0], e[0][1], e[1][0], e[1][1], "ln cm thin dash", "fm", 10); });
+      win.forEach(function (e) { l1arrow(P, e[0][0], e[0][1], e[1][0], e[1][1], "ln c3", "f3", 10); });
       [["x1", "x₁", "f2"], ["z", "z", "f2"], ["y1", "y₁", "f1"], ["y2", "y₂", "f1"]].forEach(function (q) {
         var p = pts[q[0]];
         P.dot(p[0], p[1], 7.5, q[2] + " drag");
@@ -383,7 +406,7 @@
       });
       ro.textContent = "cost(Id)   = ‖x₁ − y₁‖² + ‖z − y₂‖² = " + fmt(sq(x1, y1), 3) + " + " + fmt(sq(z, y2), 3) + " = " + fmt(cId, 3) +
         "\ncost(Swap) = ‖x₁ − y₂‖² + ‖z − y₁‖² = " + fmt(sq(x1, y2), 3) + " + " + fmt(sq(z, y1), 3) + " = " + fmt(cSw, 3) +
-        "\ncost(Swap) − cost(Id) = " + fmt(cSw - cId, 3) + "   and   2⟨x₁ − z, y₁ − y₂⟩ = " + fmt(ip, 3) +
+        "\ncost(Swap) − cost(Id) = " + fmt(cSw - cId, 3) + "   and   2 (x₁ − z)·(y₁ − y₂) = " + fmt(ip, 3) +
         "\n→ z is in the " + (idWins ? "green half-plane: Id is optimal" : "grey half-plane: Swap is optimal") +
         " (the boundary is the line through x₁ orthogonal to y₁ − y₂)";
     }
@@ -437,7 +460,7 @@
       var src = [], k;
       [0.5, 1].forEach(function (r) {
         var e = ellipsePts(mA, SA, r);
-        for (k = 0; k < 96; k += 8) src.push(e[k]);
+        for (k = 0; k < 96; k += 12) src.push(e[k]);
       });
       if (cmp.checked) src.forEach(function (x) { var y = Tp(x); l1arrow(P, x[0], x[1], y[0], y[1], "ln cm thin dash", "fm"); });
       src.forEach(function (x) { var y = T(x); l1arrow(P, x[0], x[1], y[0], y[1], "ln c3 thin", "f3"); });
@@ -464,13 +487,36 @@
   };
 
   /* --- 6. One dimension: the quantile map T = Cβ⁻¹ ∘ Cα, W₁ and W₂ by quantiles, McCann's interpolation (§9) --- */
+  function l1Phi(x) { // CDF of N(0, 1) (Abramowitz-Stegun 7.1.26, error < 1.5e-7)
+    var z = Math.abs(x) / Math.SQRT2, t = 1 / (1 + 0.3275911 * z);
+    var y = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-z * z);
+    return x >= 0 ? 0.5 * (1 + y) : 0.5 * (1 - y);
+  }
+  function l1Phinv(p) { // inverse of l1Phi (Acklam's rational approximation, relative error < 1.2e-9)
+    var a = [-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02, 1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00];
+    var b = [-5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02, 6.680131188771972e+01, -1.328068155288572e+01];
+    var c = [-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00, -2.549732539343734e+00, 4.374664141464968e+00, 2.938163982698783e+00];
+    var d = [7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00, 3.754408661907416e+00];
+    var q, r;
+    if (p < 0.02425 || p > 0.97575) {
+      q = Math.sqrt(-2 * Math.log(p < 0.5 ? p : 1 - p));
+      var v = (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
+      return p < 0.5 ? v : -v;
+    }
+    q = p - 0.5; r = q * q;
+    return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
+  }
   function l1mix(w, m, sd) { return function (x) { var v = 0; for (var i = 0; i < w.length; i++) v += w[i] * gpdf(x, m[i], sd[i]); return v; }; }
   var L1PAIRS = {
     modes: { L: -4, R: 4, a: l1mix([0.46, 0.54], [-1.45, 0.78], [0.34, 0.43]), b: l1mix([0.24, 0.43, 0.33], [-2.02, 0.05, 1.92], [0.24, 0.39, 0.28]),
       xr: [-3.4, 3.4], tx: [-3.4, 3.4], ty: [-3.4, 3.4], ticks: [-3, -2, -1, 0, 1, 2, 3], tt: [-3, 0, 3] },
     expo: { L: -0.5, R: 10, a: function (x) { return updf(x, 0, 1); }, b: function (x) { return x >= 0 ? Math.exp(-x) : 0; },
+      qa: function (r) { return r; }, qb: function (r) { return -Math.log(1 - r); },
+      Ca: function (x) { return l1clamp(x, 0, 1); }, Cb: function (x) { return x > 0 ? 1 - Math.exp(-x) : 0; },
       xr: [-0.3, 4.5], tx: [-0.1, 1.1], ty: [-0.3, 4.5], ticks: [0, 1, 2, 3, 4], tt: [0, 1, 2, 3, 4] },
     gauss: { L: -5, R: 11, a: function (x) { return gpdf(x, 0, 1); }, b: function (x) { return gpdf(x, 3, 2); },
+      qa: function (r) { return l1Phinv(r); }, qb: function (r) { return 3 + 2 * l1Phinv(r); },
+      Ca: function (x) { return l1Phi(x); }, Cb: function (x) { return l1Phi((x - 3) / 2); },
       xr: [-3.5, 9], tx: [-3.2, 3.2], ty: [-4, 10], ticks: [-2, 0, 2, 4, 6, 8], tt: [-3, 0, 3, 6, 9] }
   };
   function l1cdfAt(line, x) { // tabulated CDF, linear interpolation
@@ -479,12 +525,6 @@
     if (i >= n - 1) return 1;
     var f = (x - xs[i]) / h;
     return line.c[i] + f * (line.c[i + 1] - line.c[i]);
-  }
-  function l1denAt(line, x) {
-    var xs = line.xs, n = xs.length, h = xs[1] - xs[0], i = Math.floor((x - xs[0]) / h);
-    if (i < 0 || i >= n - 1) return 0;
-    var f = (x - xs[i]) / h;
-    return line.d[i] + f * (line.d[i + 1] - line.d[i]);
   }
   function l1qAt(line, r) { // generalized inverse of the tabulated CDF at the level r
     var c = line.c, a = 0, b = c.length - 1;
@@ -503,15 +543,23 @@
     var tS = slider(s.controls, "McCann t", 0, 1, 0.01, 0.5, draw);
     var ro = readout(s.controls);
     legend(s.legend, [["--s2", "α"], ["--s1", "β"], ["--s3", "McCann interpolation αₜ; map T"], ["--muted", "mixture (1 − t)α + tβ (dashed)"]]);
-    var D = null, la = null, lb = null, qa = null, qb = null, ymax = 1, W1q = 0, W1c = 0, W2 = 0;
+    var D = null, la = null, lb = null, qa = null, qb = null, ymax = 1, W1q = 0, W1c = 0, W2 = 0, QA, QB;
     function prep() {
       D = L1PAIRS[pairSel.value];
-      la = new Line1D(D.L, D.R, 2201, D.a); lb = new Line1D(D.L, D.R, 2201, D.b);
+      la = new Line1D(D.L, D.R, 4201, D.a); lb = new Line1D(D.L, D.R, 4201, D.b);
       qa = quantiles(la.xs, la.c); qb = quantiles(lb.xs, lb.c);
-      var i, s1 = 0, s2 = 0, sc = 0, h = la.xs[1] - la.xs[0];
-      for (i = 0; i < MQ; i++) { var d = Math.abs(qa[i] - qb[i]); s1 += d; s2 += d * d; }
-      W1q = s1 / MQ; W2 = Math.sqrt(s2 / MQ);
-      for (i = 1; i < la.xs.length; i++) sc += 0.5 * h * (Math.abs(la.c[i] - lb.c[i]) + Math.abs(la.c[i - 1] - lb.c[i - 1]));
+      // exact quantile functions and CDFs when known, tabulated ones otherwise
+      QA = D.qa || function (r) { return l1qAt(la, r); }; QB = D.qb || function (r) { return l1qAt(lb, r); };
+      var CA = D.Ca || function (x) { return l1cdfAt(la, x); }, CB = D.Cb || function (x) { return l1cdfAt(lb, x); };
+      // (2.11) with the levels r = 3v² − 2v³ (dr = 6v(1 − v) dv), which tames the tails; (2.12) by trapezoids
+      var i, s1 = 0, s2 = 0, sc = 0, K = 20000;
+      for (i = 0; i < K; i++) {
+        var v = (i + 0.5) / K, rr = v * v * (3 - 2 * v), wv = 6 * v * (1 - v), d = Math.abs(QA(rr) - QB(rr));
+        s1 += wv * d; s2 += wv * d * d;
+      }
+      W1q = s1 / K; W2 = Math.sqrt(s2 / K);
+      var hx = (D.R - D.L) / K, prev = Math.abs(CA(D.L) - CB(D.L));
+      for (i = 1; i <= K; i++) { var cur = Math.abs(CA(D.L + i * hx) - CB(D.L + i * hx)); sc += 0.5 * hx * (prev + cur); prev = cur; }
       W1c = sc;
       ymax = 0;
       for (i = 0; i < la.xs.length; i++) if (la.xs[i] >= D.xr[0] && la.xs[i] <= D.xr[1]) ymax = Math.max(ymax, la.d[i], lb.d[i]);
@@ -548,7 +596,7 @@
       top.unclip();
       top.text(D.xr[0], top.o.y[1], "densities; green: αₜ at t = " + fmt(t, 2), "tx-s", "start", 4, 12);
       // bottom left: the CDFs and the path through the level r
-      var x0 = l1qAt(la, r), y0 = l1qAt(lb, r);
+      var x0 = QA(r), y0 = QB(r);
       while (botSvg.firstChild) botSvg.removeChild(botSvg.firstChild);
       cdfP.g = el("g", {}, botSvg);
       cdfP.axes({ xticks: D.ticks, yticks: [0, 0.5, 1], xfmt: function (v) { return fmt(v, 0); }, yfmt: function (v) { return fmt(v, v % 1 ? 1 : 0); } });
@@ -580,8 +628,8 @@
       tP.text(D.tx[0], D.ty[1], "graph of T", "tx-s", "start", 4, -8);
       // check of T'(x) = rho_alpha(x) / rho_beta(T(x)) by finite differences in the level
       var dr = 0.004, r1 = Math.max(r - dr, 0.001), r2 = Math.min(r + dr, 0.999);
-      var dT = (l1qAt(lb, r2) - l1qAt(lb, r1)) / (l1qAt(la, r2) - l1qAt(la, r1));
-      var ra = l1denAt(la, x0), rb = l1denAt(lb, y0);
+      var dT = (QB(r2) - QB(r1)) / (QA(r2) - QA(r1));
+      var ra = D.a(x0), rb = D.b(y0);
       ro.textContent = "level r = " + fmt(r, 2) + ":  x = Cα⁻¹(r) = " + fmt(x0, 3) + "   T(x) = Cβ⁻¹(r) = " + fmt(y0, 3) +
         "\ncheck: T′(x) ≈ " + fmt(dT, 3) + " (finite difference)   ρα(x) / ρβ(T(x)) = " + fmt(ra, 3) + " / " + fmt(rb, 3) + " = " + fmt(ra / rb, 3) +
         "\nW₁ by (2.11): ∫|Cα⁻¹ − Cβ⁻¹| dr = " + fmt(W1q, 3) + "   by (2.12): ∫|Cα − Cβ| dx = " + fmt(W1c, 3) +

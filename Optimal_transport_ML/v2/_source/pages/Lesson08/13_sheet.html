@@ -1,0 +1,212 @@
+<h2 id="exos">13. Exercises</h2>
+<p>The exercise sheet of this lecture, <em>Gradient Flows — Exercises</em>, is solved in full just below. After it come twelve more exercises on the lecture, graded from ★ (direct application) to ★★★ (needs an idea). Try each exercise before opening the hint, and open the hint before the solution.</p>
+
+<h3 id="sheet">The sheet “Gradient Flows — Exercises”, solved</h3>
+<p class="tldr">Six exercises that train the computations of §3–§4 and §9: first variations of divergences and of energies built from derivatives of the density, Gaussian laws under linear dynamics, interaction energies with quadratic kernels, a mean-field linear network, and the flow of $W_2^2$, which follows a McCann geodesic with an exponential clock.</p>
+<p>Source: <a href="../course%20material%20exercices%20and%20one%20slides/exo-gradient-flows-uncorrected.pdf">exo-gradient-flows-uncorrected.pdf</a> (8 pages). Exercises 1–4 are the core and have no solution on the sheet. Exercises 5–6 are marked “Optional – More difficult exercises” and come with the teacher’s solutions; the solutions below follow them and point out two slips. The statement of Exercise 2 has two slips of its own. Every formula below was checked numerically by a script (finite differences of the energies on a grid, particle simulations, matrix exponentials).</p>
+<div class="box idea"><div class="box-h">What the sheet trains</div>
+<ul>
+<li><strong>The recipe of §3–§4</strong> (Exercises 1, 2, 4): perturb by mixing to get the first variation $\delta f$; take its gradient; plug it into $\partial_t\al=\dv(\al\nabla\delta f)$.</li>
+<li><strong>Which metric</strong> (Exercise 2): the same energy has an $L^2$ flow (second order) and a Wasserstein flow (fourth order).</li>
+<li><strong>Gaussian closures</strong> (Exercises 3, 4, 5, as in §9): a velocity that is linear in $x$ keeps Gaussian laws Gaussian, and the PDE becomes a matrix ODE.</li>
+<li><strong>Geometry of $W_2$</strong> (Exercise 6): the gradient of $W_2^2(\cdot,\be)$ points along the geodesic to $\be$.</li>
+</ul>
+</div>
+<div class="box recall"><div class="box-h">Reminder — the three steps of every computation</div>
+<p>(1) <strong>First variation</strong>: $\frac{\dd}{\dd\eps}f(\al+\eps\chi)\big|_{\eps=0}=\int\delta f(\al)\,\dd\chi$ for perturbations $\chi$ of zero mass; $\delta f(\al)$ is a function, defined up to a constant (<a href="#grad-fv">§3</a>). (2) <strong>Wasserstein gradient</strong>: $\nabla_Wf(\al)=\nabla\delta f(\al)$, a vector field (<a href="#grad-wgrad">§3</a>). (3) <strong>Flow</strong>: $\partial_t\al_t=\dv\big(\al_t\nabla_Wf(\al_t)\big)$, a continuity equation with velocity $-\nabla_Wf$; for densities, $\partial_t\rho=\dv(\rho\nabla\delta f)$ (<a href="#pde-jko">§4</a>). Tools: integration by parts $\int\ps{\nabla g}{w}=-\int g\,\dv w$ (<a href="Reminders.html#divergence">more</a>), Jensen’s inequality (<a href="Reminders.html#convex-functions">more</a>), Gaussian vectors under linear maps (<a href="Lesson03.html#gauss">Lesson 3, §8</a>).</p>
+</div>
+
+<!-- ============================================================ Ex 1 -->
+<div class="exo" id="gf-ex1"><div class="exo-h">Sheet, Exercise 1 — $\varphi$-divergences and their Wasserstein flow <span class="lvl">★</span></div>
+<div class="box course"><div class="box-h">The sheet <span class="ref">exo-gradient-flows, Ex. 1, p. 1</span></div>
+<p>Let $\nu$ be a reference probability measure on $\R^d$ and let $\varphi:\R_+\to\R$ be a convex $C^1$ function with $\varphi(1)=0$. For a probability measure $\al$ such that $\al\ll\nu$ with density $\rho:=\frac{\dd\al}{\dd\nu}$, the $\varphi$-divergence of $\al$ with respect to $\nu$ is defined by $D_\varphi(\al\,|\,\nu):=\int\varphi\big(\frac{\dd\al}{\dd\nu}(x)\big)\dd\nu(x)=\int\varphi(\rho(x))\dd\nu(x)$.<br>
+(1) Show that $D_\varphi(\al|\nu)\ge0$.<br>
+(2) Consider the functional $f(\al):=D_\varphi(\al|\nu)$ on $W_2(\R^d)$. Assume that both $\nu$ and $\al$ admit smooth strictly positive densities with respect to Lebesgue measure. (a) Compute the first variation $\frac{\delta f}{\delta\al}(\al)(x)$ and deduce the Wasserstein gradient $\nabla_Wf(\al)(x)$. (b) Write the corresponding Wasserstein gradient flow PDE. (c) Specialize your formulas to the case $\varphi(s)=s\log s$.</p>
+</div>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body">
+<p>(1) Jensen for the probability $\nu$. (2) Perturb $\al$ by $\eps\chi$; the density with respect to $\nu$ changes by $\eps\frac{\dd\chi}{\dd\nu}$; differentiate under the integral. For (c), take $\nu\propto e^{-V}$.</p>
+</div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>(1)</strong></p>
+<ol class="steps">
+<li>$$D_\varphi(\al|\nu)=\int\varphi(\rho)\,\dd\nu\ \ge\ \varphi\Big(\int\rho\,\dd\nu\Big)=\varphi(1)=0.$$<span class="why">Jensen’s inequality for the convex $\varphi$ and the probability measure $\nu$; $\int\rho\,\dd\nu=\al(\R^d)=1$.</span></li>
+</ol>
+<p>If $\varphi$ is strictly convex, equality forces $\rho$ to be constant $\nu$-almost everywhere, i.e. $\al=\nu$.</p>
+<p><strong>(2)(a)</strong> Let $\chi$ be a signed measure of zero mass with a smooth density $\zeta=\frac{\dd\chi}{\dd\nu}$ (bounded, so that $\al+\eps\chi\ge0$ for small $\eps$).</p>
+<ol class="steps">
+<li>$$\frac{\dd}{\dd\eps}D_\varphi(\al+\eps\chi\,|\,\nu)\Big|_{\eps=0}=\frac{\dd}{\dd\eps}\int\varphi(\rho+\eps\zeta)\,\dd\nu\Big|_{\eps=0}=\int\varphi'(\rho)\,\zeta\,\dd\nu.$$<span class="why">The density of $\al+\eps\chi$ with respect to $\nu$ is $\rho+\eps\zeta$; differentiate under the integral ($\varphi\in C^1$).</span></li>
+<li>$$\int\varphi'(\rho)\,\zeta\,\dd\nu=\int\varphi'(\rho)\,\dd\chi\quad\Longrightarrow\quad\delta f(\al)=\varphi'\Big(\frac{\dd\al}{\dd\nu}\Big)\ (+\text{const}).$$<span class="why">$\zeta\,\dd\nu=\dd\chi$; this is the definition of the first variation.</span></li>
+<li>$$\nabla_Wf(\al)=\nabla\Big[\varphi'\Big(\frac{\dd\al}{\dd\nu}\Big)\Big]=\varphi''(\rho)\,\nabla\rho\quad(\text{if }\varphi\in C^2).$$<span class="why">The Wasserstein gradient is the gradient of the first variation; chain rule.</span></li>
+</ol>
+<p><strong>(2)(b)</strong> Write $\al_t=a_t\,\dd x$ and $\nu=n\,\dd x$ (Lebesgue densities), so that $\rho_t=a_t/n$:</p>
+$$\partial_ta_t=\dv\Big(a_t\,\nabla\varphi'\big(a_t/n\big)\Big).$$
+<p>Since $\nabla\varphi'(\rho)=\varphi''(\rho)\nabla\rho$ with $\varphi''\ge0$, it is a (nonlinear) diffusion: mass flows from where $\rho=a/n$ is large to where it is small, at a speed set by $\varphi''$.</p>
+<p><strong>(2)(c)</strong> $\varphi(s)=s\log s$: $D_\varphi=\KL(\al|\nu)$, $\varphi'(s)=1+\log s$, so</p>
+$$\delta f(\al)=\log\frac an+1,\qquad\nabla_Wf(\al)=\nabla\log a-\nabla\log n.$$
+<p>With $\nu\propto e^{-V}$, $\nabla\log n=-\nabla V$ and the PDE is $\partial_ta=\dv(\nabla a+a\nabla V)=\Delta a+\dv(a\nabla V)$: <strong>the Fokker–Planck equation</strong> (<a href="#pde-fp">§4</a>). Another case: $\varphi(s)=(s-1)^2$ (the $\chi^2$ divergence) gives $\delta f=2(\rho-1)$ and $\partial_ta=2\dv\big(a\nabla(a/n)\big)$, a porous-medium-type equation (Exercise 9 below).</p>
+<p><strong>Check (script).</strong> $\nu=\N(0,1)$, $\al=\N(0.5,0.8^2)$, $\chi=\N(1,0.6^2)-\al$, on a grid: $\KL(\al|\nu)=0.168144$ (closed form $\frac12(0.64+0.25-1-\log0.64)=0.168144$); derivative of $\eps\mapsto D_\varphi(\al+\eps\chi|\nu)$ by finite differences $0.258437$, formula $\int\varphi'(\rho)\dd\chi=0.258438$. For $\varphi(s)=(s-1)^2$: $0.537753$ and $0.537753$.</p>
+</div></details></div>
+
+<!-- ============================================================ Ex 2 -->
+<div class="exo" id="gf-ex2"><div class="exo-h">Sheet, Exercise 2 — Dirichlet energy and Fisher information: $L^2$ flow vs Wasserstein flow <span class="lvl">★★</span></div>
+<div class="box course"><div class="box-h">The sheet <span class="ref">exo-gradient-flows, Ex. 2, p. 1</span></div>
+<p>We denote $\al_t$ be a family of probability measures on $\R^d$ with smooth positive density $\al_t(\dd x)=\rho_t(x)\dd x$.<br>
+(1) Consider the Dirichlet energy $E(\al):=\int_{\R^d}\abs{\nabla\rho(x)}^2\dd x$, $\rho=\frac{\dd\al}{\dd x}$. (a) Compute first variation $\delta f(\al)$ and write down the “$L^2(\dd x)$” gradient flow PDE, which is $\partial_t\rho_t=\delta f(\al_t)$ ie. the steepest descent for $E$ with respect to the $L^2(\dd x)$ metric. (b) Compute the $W_2$-gradient of $E$ and write the associated Wasserstein gradient flow PDE.<br>
+(2) Consider now the Fisher information $I(\al):=\int_{\R^d}\abs{\nabla\log\rho(x)}^2\dd x$, $\rho=\frac{\dd\al}{\dd x}$. Same questions.</p>
+</div>
+<div class="box remark"><div class="box-h">Note on the sources — two slips in the statement</div>
+<ul>
+<li><strong>Sign of the $L^2$ flow.</strong> Steepest descent is $\partial_t\rho_t=-\delta E(\al_t)$, not $+\delta E(\al_t)$. Check: along $\partial_t\rho=\pm\delta E$, $\frac{\dd}{\dd t}E=\int\delta E\,\partial_t\rho=\pm\int(\delta E)^2$, so the sign $+$ makes the energy <em>increase</em>; with $\delta E=-2\Delta\rho$ (below) it is the backward heat equation $\partial_t\rho=-2\Delta\rho$, which has no solution for most initial data.</li>
+<li><strong>The Fisher information has a factor $\rho$:</strong> $I(\al)=\int\abs{\nabla\log\rho}^2\rho\,\dd x=\int\frac{\abs{\nabla\rho}^2}{\rho}\dd x$. Check: for $\rho=\N(0,s^2)$ on $\R$, $\abs{\nabla\log\rho}^2=x^2/s^4$, whose integral against $\dd x$ is infinite (over $[-L,L]$ it is $\frac{2L^3}{3s^4}$; numerically $177.8$ for $L=4$, $1421.9$ for $L=8$, $s=0.7$), while $\int\frac{x^2}{s^4}\rho\,\dd x=\frac1{s^2}$ ($2.0408$ for $s=0.7$, on the grid too).</li>
+</ul>
+<p>The solution below uses the corrected statement (and writes $\delta E$, $\delta I$ for the sheet’s $\delta f$).</p>
+</div>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body">
+<p>Expand $E(\rho+\eps\chi)$ and $I(\rho+\eps\chi)$ to first order and integrate by parts until $\chi$ appears alone. For $I$, it helps to write $I=4\int\abs{\nabla\sqrt\rho}^2$. Then: $L^2$ flow $\partial_t\rho=-\delta$, Wasserstein flow $\partial_t\rho=\dv(\rho\nabla\delta)$.</p>
+</div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>(1)(a) Dirichlet energy, first variation and $L^2$ flow.</strong> For a smooth perturbation $\chi$ of zero mass:</p>
+<ol class="steps">
+<li>$$E(\rho+\eps\chi)=E(\rho)+2\eps\int\ps{\nabla\rho}{\nabla\chi}+\eps^2E(\chi).$$<span class="why">Expand the square $\abs{\nabla\rho+\eps\nabla\chi}^2$.</span></li>
+<li>$$\int\ps{\nabla\rho}{\nabla\chi}=-\int\Delta\rho\;\chi\quad\Longrightarrow\quad\delta E(\al)=-2\Delta\rho.$$<span class="why">Integration by parts ($\dv\nabla=\Delta$), boundary terms vanish for decaying densities.</span></li>
+<li>$$\partial_t\rho_t=-\delta E(\al_t)=2\Delta\rho_t.$$<span class="why">Steepest descent in $L^2(\dd x)$: the velocity in the space of functions is minus the $L^2$ gradient.</span></li>
+</ol>
+<p>The $L^2$ flow of the Dirichlet energy is the <strong>heat equation</strong> (with diffusivity $2$): from $\N(0,s_0^2)$ on $\R$, $\rho_t=\N(0,s_0^2+4t)$. Compare with §4: the heat equation is also the Wasserstein flow of the entropy — two different energies, two different metrics, one PDE.</p>
+<p><strong>(1)(b) Wasserstein flow.</strong></p>
+$$\nabla_WE(\al)=\nabla\delta E=-2\nabla\Delta\rho,\qquad\partial_t\rho_t=\dv\big(\rho_t\nabla(-2\Delta\rho_t)\big)=-2\,\dv\big(\rho_t\nabla\Delta\rho_t\big).$$
+<p>A <strong>fourth-order</strong> equation, the thin-film equation (in one dimension, $\partial_t\rho=-2\partial_x(\rho\,\partial_x^3\rho)$): the Wasserstein metric adds one divergence and one gradient, i.e. two derivatives, to the $L^2$ flow. It dissipates $E$: $\frac{\dd}{\dd t}E=-\int\rho\abs{\nabla\delta E}^2\le0$ (§4).</p>
+<p><strong>(2)(a) Fisher information, first variation and $L^2$ flow.</strong> Write $I=\int\frac{\abs{\nabla\rho}^2}\rho$.</p>
+<ol class="steps">
+<li>$$\frac{\dd}{\dd\eps}I(\rho+\eps\chi)\Big|_0=\int\Big(\frac{2\ps{\nabla\rho}{\nabla\chi}}{\rho}-\frac{\abs{\nabla\rho}^2}{\rho^2}\chi\Big).$$<span class="why">Derivative of $\abs{\nabla\rho}^2$ (as in (1)) and of $1/\rho$.</span></li>
+<li>$$\int\frac{\ps{\nabla\rho}{\nabla\chi}}{\rho}=\int\ps{\nabla\log\rho}{\nabla\chi}=-\int\Delta\log\rho\;\chi.$$<span class="why">$\nabla\rho/\rho=\nabla\log\rho$, then integration by parts.</span></li>
+<li>$$\delta I(\al)=-2\Delta\log\rho-\abs{\nabla\log\rho}^2=-4\,\frac{\Delta\sqrt\rho}{\sqrt\rho}.$$<span class="why">Lines 1–2. The second form: $\Delta e^g=e^g(\Delta g+\abs{\nabla g}^2)$ with $g=\frac12\log\rho$ gives $\frac{\Delta\sqrt\rho}{\sqrt\rho}=\frac12\Delta\log\rho+\frac14\abs{\nabla\log\rho}^2$.</span></li>
+<li>$$\partial_t\rho_t=-\delta I(\al_t)=2\Delta\log\rho_t+\abs{\nabla\log\rho_t}^2.$$<span class="why">Steepest descent in $L^2(\dd x)$. This flow does not even conserve mass: $\frac{\dd}{\dd t}\int\rho=\int\abs{\nabla\log\rho}^2\neq0$ — the $L^2$ metric knows nothing about probability measures.</span></li>
+</ol>
+<p><strong>(2)(b) Wasserstein flow.</strong></p>
+$$\partial_t\rho_t=\dv\big(\rho_t\nabla\delta I(\al_t)\big)=-4\,\dv\Big(\rho_t\,\nabla\frac{\Delta\sqrt{\rho_t}}{\sqrt{\rho_t}}\Big).$$
+<p>This is the Derrida–Lebowitz–Speer–Spohn (quantum drift-diffusion) equation, identified as the Wasserstein gradient flow of the Fisher information by Gianazza, Savaré and Toscani (2009, cited in OT4ML p. 361). <strong>Gaussian solution:</strong> for $\rho=\N(0,s^2)$ on $\R$, $\log\rho=-\frac{x^2}{2s^2}+c$, so $\delta I=\frac2{s^2}-\frac{x^2}{s^4}$ and the velocity $-\nabla\delta I=\frac{2x}{s^4}$ is linear: the flow stays Gaussian (§9), with $\dot s=s\cdot\frac2{s^4}$, i.e.</p>
+$$\frac{\dd}{\dd t}s^4=8,\qquad s_t=\big(s_0^4+8t\big)^{1/4}.$$
+<p>The Gaussian spreads, more and more slowly; $I=1/s_t^2$ decreases to $0$.</p>
+<p><strong>Check (script).</strong> $\rho=\N(0.3,0.7^2)$ and a zero-mass perturbation $\chi$ on a grid: derivative of $E$ by finite differences $-0.174640$, formula $\int(-2\Delta\rho)\chi=-0.174640$; derivative of $I$: $-0.041649$ against $-0.041649$. For $s=0.7$: velocity at $x=0.9$ from the grid $7.49687$, formula $2x/s^4=7.49688$.</p>
+</div></details></div>
+
+<!-- ============================================================ Ex 3 -->
+<div class="exo" id="gf-ex3"><div class="exo-h">Sheet, Exercise 3 — Gaussian laws under linear dynamics <span class="lvl">★</span></div>
+<div class="box course"><div class="box-h">The sheet <span class="ref">exo-gradient-flows, Ex. 3, p. 1</span></div>
+<p>Let $(X_t)_{t\in\N}$ be a sequence of random variables in $\R^d$ defined by the linear recursion $X_{t+1}=X_t-\tau A_tX_t$, $t=0,1,2,\dots$, where $\tau>0$ is a fixed step size and, for each $t$, $A_t\in\R^{d\times d}$ is a deterministic matrix. Denote by $\al_t$ the law of $X_t$.<br>
+(1) Assume that the initial condition is Gaussian $X_0\sim\N(0,\Sigma_0)$, for some symmetric positive semidefinite covariance matrix $\Sigma_0\in\R^{d\times d}$. Show that each $X_t$ is also Gaussian, and describe the evolution of the law $\al_t=\mathcal L(X_t)$ by giving an explicit recursion for the covariance matrices $\Sigma_t$.<br>
+(2) Consider now the continuous time ODE $\dot X_t=-A_tX_t$, $t\ge0$, with $A_t\in\R^{d\times d}$ a (say, continuous) time dependent matrix and random initial condition $X_0\sim\N(0,\Sigma_0)$. Explain why $X_t$ is Gaussian for every $t\ge0$, say $X_t\sim\N(0,\Sigma_t)$, and, by considering the limit $\tau\to0$ in the discrete time recursion from part (1), show that $(\Sigma_t)_{t\ge0}$ solves a matrix ODE that you should identify.</p>
+</div>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body">
+<p>A linear image $MX$ of a Gaussian vector $X\sim\N(0,\Sigma)$ is Gaussian with covariance $\E[MX(MX)\T]=M\Sigma M\T$. For (2), the solution of a linear ODE is a linear function of the initial condition.</p>
+</div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>(1)</strong> By induction: if $X_t\sim\N(0,\Sigma_t)$, then $X_{t+1}=M_tX_t$ with the deterministic matrix $M_t=\Id-\tau A_t$, so $X_{t+1}$ is Gaussian (its characteristic function is $\E e^{i\ps{\xi}{M_tX_t}}=e^{-\frac12\ps{M_t\T\xi}{\Sigma_tM_t\T\xi}}$), centred, with covariance</p>
+$$\Sigma_{t+1}=(\Id-\tau A_t)\,\Sigma_t\,(\Id-\tau A_t)\T.$$
+<p>In words: the law is pushed forward by the linear map $M_t$, $\al_{t+1}=\pf{(M_t)}{\al_t}$, and Gaussian laws are closed under linear push-forwards (they may become degenerate if $M_t$ is singular).</p>
+<p><strong>(2)</strong> The ODE is linear: its solution is $X_t=R(t)X_0$, where the resolvent $R(t)$ solves $\dot R=-A_tR$, $R(0)=\Id$ (it exists for continuous $A_t$). So $X_t\sim\N(0,R(t)\Sigma_0R(t)\T)$. With step $\tau$, part (1) gives</p>
+$$\Sigma_{t+\tau}=\Sigma_t-\tau\big(A_t\Sigma_t+\Sigma_tA_t\T\big)+\tau^2A_t\Sigma_tA_t\T,$$
+<p>and dividing by $\tau$, $\tau\to0$:</p>
+$$\dot\Sigma_t=-A_t\Sigma_t-\Sigma_tA_t\T.$$
+<p>(Directly: $\frac{\dd}{\dd t}R\Sigma_0R\T=\dot R\Sigma_0R\T+R\Sigma_0\dot R\T=-A\Sigma-\Sigma A\T$.) This is a <strong>Lyapunov differential equation</strong>. With an affine drift $\dot X=-A_tX-b_t$ the law stays Gaussian with mean $\dot m=-A_tm-b_t$ and the same covariance equation — the fact used in Exercises 4–5 and in §9.</p>
+<p><strong>Check (script).</strong> $A=\begin{pmatrix}1&2\\0&3\end{pmatrix}$, $\Sigma_0=\Id$, time $1$: the recursion with $\tau=0.1,\,0.01,\,0.001$ gives $\Sigma_{11}=0.22425,\,0.23541,\,0.23641$, $\Sigma_{12}=-0.00905,\,-0.01514,\,-0.01577$; the exact $e^{-A}\Sigma_0e^{-A\T}$ has $0.23652$ and $-0.01584$ (error $O(\tau)$).</p>
+</div></details></div>
+
+<!-- ============================================================ Ex 4 -->
+<div class="exo" id="gf-ex4"><div class="exo-h">Sheet, Exercise 4 — Wasserstein flows for quadratic kernels <span class="lvl">★★</span></div>
+<div class="box course"><div class="box-h">The sheet <span class="ref">exo-gradient-flows, Ex. 4, pp. 1–2</span></div>
+<p>Let $\al\in\Pc_2(\R^d)$ and denote its mean and covariance by $m(\al):=\int x\,\dd\al(x)$, $\Sigma(\al):=\int(x-m(\al))(x-m(\al))\T\dd\al(x)$. Consider the functionals $f(\al):=\iint k(x,y)\,\dd\al(x)\dd\al(y)$ on the Wasserstein space $W_2(\R^d)$, where the kernels $k$ are given below.<br>
+(1) Let $k(x,y)=\ps{Ax}{y}$, $A\in\R^{d\times d}$. (a) Express $f(\al)$ in terms of $m(\al)$ and $A$. (b) Compute the Wasserstein gradient $\nabla_Wf(\al)$. (c) Write the Wasserstein gradient flow PDE, and, for a general initial condition $\al_{t=0}=\al_0$, give an explicit expression of $\al_t$ in terms of $\al_0$.<br>
+(2) Let $k(x,y)=\ps{Ax}{y}\ps{Bx}{y}$, $A,B\in\R^{d\times d}$. (a) Compute the Wasserstein gradient $\nabla_Wf(\al)$. (b) Using the previous exercise on linear ODEs with Gaussian initial data, show that if $\al_{t=0}=\N(0,\Sigma_0)$, then $\al_t=\N(0,\Sigma_t)$ for all $t\ge0$, and derive the matrix ODE satisfied by $(\Sigma_t)_{t\ge0}$.</p>
+</div>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body">
+<p>The kernels are not symmetric: $\al$ appears in two slots, so $\delta f(\al)(x)=\int k(x,y)\dd\al(y)+\int k(y,x)\dd\al(y)$. In (2), the integrals bring out the second-moment matrix $S=\int yy\T\dd\al(y)$.</p>
+</div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>(1)(a)</strong> $f(\al)=\iint y\T Ax\,\dd\al(x)\dd\al(y)=m\T Am=\ps{Am}{m}$, with $m=m(\al)$: only the mean matters, and only the symmetric part of $A$ ($\ps{Am}{m}=\frac12\ps{(A+A\T)m}{m}$).</p>
+<p><strong>(1)(b)</strong></p>
+<ol class="steps">
+<li>$$\delta f(\al)(x)=\int\ps{Ax}{y}\dd\al(y)+\int\ps{Ay}{x}\dd\al(y)=\ps{Ax}{m}+\ps{Am}{x}.$$<span class="why">First variation of a quadratic form in $\al$: perturb each slot in turn (the kernel is not symmetric).</span></li>
+<li>$$\nabla_Wf(\al)(x)=(A\T+A)\,m(\al)\quad\text{— a constant vector field.}$$<span class="why">Gradient in $x$ of $\ps{x}{A\T m}+\ps{x}{Am}$.</span></li>
+</ol>
+<p><strong>(1)(c)</strong> PDE: $\partial_t\al_t-\dv\big(\al_t\,(A+A\T)m(\al_t)\big)=0$. All the points move with the same velocity $-(A+A\T)m_t$: the flow is a <strong>translation</strong>. The mean solves $\dot m_t=-(A+A\T)m_t$, so</p>
+$$m_t=e^{-(A+A\T)t}m_0,\qquad\al_t=\pf{\tau_{m_t-m_0}}{\al_0},\quad\tau_v(x)=x+v.$$
+<p>The shape of $\al_0$ never changes. If $A+A\T$ is not positive semidefinite, $f$ is unbounded below and the mean escapes exponentially along a negative direction (e.g. $A=-\Id$: $f=-\norm{m}^2$, $m_t=e^{2t}m_0$). Example: $A=\begin{pmatrix}1&1\\0&0.5\end{pmatrix}$ ($A+A\T$ has eigenvalues $0.382$ and $2.618$), $m_0=(1,1)$: $m_1=(-0.0312,\ 0.2414)$.</p>
+<p><strong>(2)(a)</strong> Write $k(x,y)=(y\T Ax)(y\T Bx)=x\T A\T yy\T Bx$, and let $S=S(\al)=\int yy\T\dd\al(y)=\Sigma(\al)+m(\al)m(\al)\T$.</p>
+<ol class="steps">
+<li>$$\int k(x,y)\dd\al(y)=x\T A\T SBx,\qquad\int k(y,x)\dd\al(y)=x\T ASB\T x.$$<span class="why">For the second: $k(y,x)=(x\T Ay)(x\T By)=x\T Ayy\T B\T x$.</span></li>
+<li>$$\nabla_Wf(\al)(x)=L(S)\,x,\qquad L(S):=A\T SB+B\T SA+ASB\T+BSA\T.$$<span class="why">$\nabla_x(x\T Mx)=(M+M\T)x$, applied to $M=A\T SB+ASB\T$; $L(S)$ is symmetric.</span></li>
+</ol>
+<p><strong>(2)(b)</strong> The velocity $-L(S(\al_t))x$ is linear in $x$. Let $\Sigma_t$ solve the matrix ODE below, set $A_t:=L(\Sigma_t)$ and let $X_t$ solve $\dot X_t=-A_tX_t$, $X_0\sim\N(0,\Sigma_0)$. By Exercise 3, $X_t\sim\N(0,\Sigma_t)$ (mean $0$ stays $0$, so $S=\Sigma$), hence its law solves the continuity equation with velocity $-L(S(\al_t))x=-\nabla_Wf(\al_t)$: it is the Wasserstein gradient flow (uniqueness of the flow assumed, formally). The covariance ODE is</p>
+$$\dot\Sigma_t=-\big(L(\Sigma_t)\Sigma_t+\Sigma_tL(\Sigma_t)\big).$$
+<p><strong>Example ($d=1$).</strong> $A=a$, $B=b$: $f(\al)=ab\,S^2$, $L(S)=4abS$, and $\dot\Sigma=-8ab\Sigma^2$, so $\Sigma_t=\frac{\Sigma_0}{1+8ab\Sigma_0t}$ (for $ab>0$). Check: for centred Gaussians $W_2$ is the Euclidean distance on the standard deviation $s$ (§9), $f=ab\,s^4$, and $\dot s=-4ab\,s^3$ gives the same $\frac{\dd}{\dd t}s^2=-8ab\,s^4$.</p>
+<p><strong>Check (script).</strong> Random $2\times2$ matrices $A,B$, 40 particles: $n\,\nabla_{x_1}F(X)$ by finite differences of $F(X)=\frac1{n^2}\sum_{i,j}k(x_i,x_j)$ is $(-0.14555,\,-1.53451)$, and $L(S)x_1=(-0.14555,\,-1.53451)$ (§5: particle gradient $\times\,n$ = Wasserstein gradient).</p>
+</div></details></div>
+
+<!-- ============================================================ Ex 5 -->
+<div class="exo" id="gf-ex5"><div class="exo-h">Sheet, Exercise 5 (optional) — A mean-field two-layer linear network <span class="lvl">★★★</span></div>
+<div class="box course"><div class="box-h">The sheet <span class="ref">exo-gradient-flows, Ex. 5, p. 3</span></div>
+<p>Let $\rho$ be a probability measure on $\R^d$ (the data distribution) and $h:\R^d\to\R$ a target function. For a parameter distribution $\al\in\Pc_2(\R\times\R^d)$, $x=(u,v)\in\R\times\R^d$, consider the two-layer linear mean-field model $g_\al(z):=\int u\ps{z}{v}\dd\al(u,v)$, $z\in\R^d$, and the quadratic loss $f(\al):=\int\big(g_\al(z)-h(z)\big)^2\dd\rho(z)$.<br>
+(1) Show that $f$ can be written as a quadratic functional of $\al$ of the form $f(\al)=\iint k(x,y)\dd\al(x)\dd\al(y)+\int b(x)\dd\al(x)+c$, where $x=(u,v)$, $y=(u',v')$, and identify explicit formulas for $k(x,y)$ and $b(x)$ in terms of $\rho$ and $h$. You may leave the constant $c$ implicit.<br>
+(2) Consider the Wasserstein gradient flow of $f$ on $W_2(\R\times\R^d)$: $\partial_t\al_t+\nabla\cdot(\al_tv_t)=0$, $v_t(x)=-\nabla_Wf(\al_t)(x)$. Using the structure from part (1) and the previous exercise on quadratic kernels, show that if $\al_{t=0}=\N(0,\Sigma_0)$, then $\al_t$ remains Gaussian for all $t\ge0$.</p>
+</div>
+<p>The setting of §10 with a linear activation: a neuron is $x=(u,v)$, with output weight $u$ and input weights $v$ (the sheet swaps the letters of OT4ML, see the <a href="#start">notation decoder</a>).</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body">
+<p>Expand the square; use $K=\int zz\T\dd\rho$ and $c_h=\int zh(z)\dd\rho(z)$. For (2), compute $\delta f$ explicitly: it is $2u\ps{v}{e}$ for a vector $e$ that depends on $\al$ only through $\int uv\,\dd\al$.</p>
+</div></details>
+<details class="fold sol"><summary>Solution (following the sheet’s, made explicit)</summary><div class="fold-body">
+<p><strong>(1)</strong> With $\phi_x(z)=u\ps{z}{v}$, $g_\al=\int\phi_x\dd\al(x)$, and</p>
+$$f(\al)=\int g_\al^2\dd\rho-2\int g_\al h\,\dd\rho+\int h^2\dd\rho.$$
+<ol class="steps">
+<li>$$\int g_\al^2\dd\rho=\iint\Big(\int\phi_x\phi_y\dd\rho\Big)\dd\al(x)\dd\al(y),\quad k(x,y)=uu'\,v\T Kv'.$$<span class="why">Write the square as a double integral, Fubini; $\int\ps{z}{v}\ps{z}{v'}\dd\rho=v\T Kv'$ with $K=\int zz\T\dd\rho$.</span></li>
+<li>$$-2\int g_\al h\,\dd\rho=\int b\,\dd\al,\qquad b(x)=-2u\ps{v}{c_h},\ \ c_h=\int zh(z)\dd\rho(z).$$<span class="why">Fubini again.</span></li>
+<li>$c=\int h^2\dd\rho$.<span class="why">The last term does not depend on $\al$.</span></li>
+</ol>
+<p><strong>(2)</strong> Let $\bar w(\al)=\int u\,v\,\dd\al(u,v)\in\R^d$. The network is linear in $z$: $g_\al(z)=\ps{z}{\bar w}$.</p>
+<ol class="steps">
+<li>$$\delta f(\al)(x)=2\int k(x,y)\dd\al(y)+b(x)=2u\,\ps{v}{e},\qquad e:=K\bar w-c_h.$$<span class="why">$k$ is symmetric ($K$ is), so the first variation of the quadratic part is $2\int k(x,\cdot)\dd\al$; $\int u'v'\dd\al=\bar w$.</span></li>
+<li>$$\nabla_Wf(\al)(u,v)=\big(2\ps{v}{e},\ 2u\,e\big)=M\begin{pmatrix}u\\v\end{pmatrix},\quad M=2\begin{pmatrix}0&e\T\\e&0\end{pmatrix}.$$<span class="why">Gradient in $u$ and in $v$ of $2u\ps{v}{e}$. Linear in $x$, with a matrix that depends on $\al$ only through $\bar w$.</span></li>
+<li>If $\al_0=\N(0,\Sigma_0)$, then $\al_t=\N(0,\Sigma_t)$ with $\dot\Sigma_t=-(M_t\Sigma_t+\Sigma_tM_t)$, $M_t=M(\bar w(\al_t))$.<span class="why">Exactly the argument of Exercise 4(2)(b): solve the closed matrix ODE (note $\bar w=$ the $(u,v)$ block of $\Sigma$, since the mean is $0$), then the linear ODE $\dot X=-M_tX$ keeps $X_t\sim\N(0,\Sigma_t)$ (Exercise 3).</span></li>
+</ol>
+<p>$e=\int z\big(g_\al(z)-h(z)\big)\dd\rho(z)$ is the correlation between the inputs and the residual; it vanishes exactly when $\bar w$ solves the least-squares normal equations $K\bar w=c_h$.</p>
+<p><strong>Worked case</strong> ($d=1$, $\rho=\N(0,1)$, $h(z)=2z$, so $K=1$, $c_h=2$, $\Sigma_0=\Id_2$). Write $\Sigma=\begin{pmatrix}a&c\\c&b\end{pmatrix}$: $\bar w=c$, $e=c-2$, $f=(c-2)^2$, and line 3 reads</p>
+$$\dot a=\dot b=-4ec,\qquad\dot c=-2e(a+b).$$
+<p>So $a-b$ and $(a+b)^2-4c^2$ are conserved ($=0$ and $4$). The loss vanishes when $c=2$, and then $(a+b)^2=4+16$: the flow ends at $\Sigma_\infty=\begin{pmatrix}\sqrt5&2\\2&\sqrt5\end{pmatrix}$, with $\dot c=-4(c-2)\sqrt{1+c^2}$ on the way. <strong>Check (script):</strong> $2\times10^5$ particles from $\N(0,\Id_2)$, explicit steps $10^{-4}$: $(a,c)=(1.2218,\,0.7022)$, $(1.7826,\,1.4758)$, $(2.1749,\,1.9314)$, $(2.2360,\,2.0000)$ at $t=0.1,\,0.25,\,0.5,\,2$; the ODE gives $(1.2219,\,0.7021)$, $(1.7826,\,1.4757)$, $(2.1749,\,1.9313)$, $(2.2361,\,2)$; $\sqrt5=2.23607$. The two weights grow together until the product of their correlations fits the target: the “balancedness” $a-b$ (here $\E u^2-\E v^2$) is conserved, as the quantity $\abs u^2-v^2$ of §10.</p>
+</div></details>
+<div class="box remark"><div class="box-h">Note on the sources — a slip in the sheet’s solution of Exercise 5</div>
+<p>The solution (p. 4) states “$k(x,y)$ is bilinear in $x$ and $y$, so integrating in $y$ leaves a function that is quadratic in $x$”. $k(x,y)=uu'v\T Kv'$ is not bilinear: it is of degree $2$ in $x=(u,v)$ (and in $y$). Check: $k(\lambda x,y)=\lambda^2k(x,y)$, while a bilinear map would give $\lambda k(x,y)$ — and integrating a bilinear $k$ in $y$ would give a <em>linear</em> function of $x$, not a quadratic one. The conclusion of the sheet (a quadratic first variation, hence an affine gradient) is right; line 2 above gives the gradient explicitly, with $\ell(\al)=0$.</p>
+</div></div>
+
+<!-- ============================================================ Ex 6 -->
+<div class="exo" id="gf-ex6"><div class="exo-h">Sheet, Exercise 6 (optional) — The Wasserstein flow of $W_2^2$ <span class="lvl">★★★</span></div>
+<div class="box course"><div class="box-h">The sheet <span class="ref">exo-gradient-flows, Ex. 6, p. 5</span></div>
+<p>Fix $\be\in\Pc_2(\R^d)$. For $\al\in\Pc_2(\R^d)$ define $f(\al):=W_2(\al,\be)^2$. Assume $\al$ has a smooth strictly positive density and consider the quadratic cost $c(x,y)=\frac12\abs{x-y}^2$.<br>
+(1) Using the Kantorovich dual problem, and using the enveloppe theorem (that was used the same way in the previous exercise sheet for discrete measure), compute the first variation $\delta f(\al)$.<br>
+(2) Assume $\al$ is absolutely continuous. Leveraging Brenier’s theorem connecting the transport map $T$ to the dual potential, compute the Wasserstein gradient $\nabla_Wf(\al)$.<br>
+(3) Relate the Wasserstein flow $(\al_t)_{t\ge0}$ to the McCann interpolation (you should use Benamou–Brenier dynamical formulation which details a valid field advecting the interpolant).</p>
+</div>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body">
+<p>(1) $F=\frac12W_2^2$ is a supremum over dual pairs of an expression that is linear in $\al$. (2) $\varphi=\frac12\abs x^2-u$ with $\nabla u=T$. (3) Guess $\al_t=\mu_{s(t)}$ on the McCann geodesic; compute the velocity of the curve $s\mapsto\mu_s$ at $\mu_s$ and match it with $-\nabla_Wf(\mu_s)$.</p>
+</div></details>
+<details class="fold sol"><summary>Solution (following the sheet’s)</summary><div class="fold-body">
+<p><strong>(1)</strong> With the cost $\frac12\abs{x-y}^2$, the optimal value is $F(\al)=\frac12W_2^2(\al,\be)$ and, by Kantorovich duality,</p>
+$$F(\al)=\sup_{\varphi\oplus\psi\le\frac12\abs{x-y}^2}\ \int\varphi\,\dd\al+\int\psi\,\dd\be .$$
+<ol class="steps">
+<li>For a perturbation $\al+\eps\chi$: $F(\al+\eps\chi)\ge\int\varphi_\al\dd(\al+\eps\chi)+\int\psi_\al\dd\be=F(\al)+\eps\int\varphi_\al\dd\chi$.<span class="why">$(\varphi_\al,\psi_\al)$, optimal for $\al$, is still admissible (the constraint does not involve $\al$).</span></li>
+<li>$$\frac{\dd}{\dd\eps}F(\al+\eps\chi)\Big|_{\eps=0}=\int\varphi_\al\,\dd\chi,\qquad\delta F(\al)=\varphi_\al,\quad\delta f(\al)=2\varphi_\al.$$<span class="why">Envelope theorem (formal): a supremum of linear functions of $\al$ is differentiable where the maximiser is unique (up to constants), with the derivative of the active linear function. Line 1 is the inequality half of it. $f=2F$.</span></li>
+</ol>
+<p><strong>(2)</strong> By Brenier, the optimal map is $T=\nabla u$ with $u$ convex, and the optimal potential is $\varphi_\al(x)=\frac12\abs x^2-u(x)$ (+ const) — the $c$-transform computation of Lesson 4: $\inf_y\frac12\abs{x-y}^2-\psi(y)=\frac12\abs x^2-u(x)$ with $u=(\frac12\abs\cdot^2-\psi)^*$. Hence</p>
+$$\nabla_Wf(\al)(x)=2\nabla\varphi_\al(x)=2\big(x-T(x)\big).$$
+<p>The steepest-descent direction $2(T-\Id)$ points from each point to its partner: §3 and the $W_2$ row of the table of §8.</p>
+<p><strong>(3)</strong> Let $T$ be the optimal map from $\al_0$ to $\be$ and $\mu_s=\pf{\big((1-s)\Id+sT\big)}{\al_0}$, $s\in[0,1]$, the McCann geodesic (<a href="Lesson03.html#geo">Lesson 3, §6</a>).</p>
+<ol class="steps">
+<li>The optimal map from $\mu_s$ to $\be$ is $T_s$ with $T_s\big((1-s)x+sT(x)\big)=T(x)$.<span class="why">Restriction of an optimal plan to the end of the geodesic; $W_2(\mu_s,\be)=(1-s)W_2(\al_0,\be)$.</span></li>
+<li>The velocity field advecting $\mu_s$ is $w_s=\dfrac{T_s-\Id}{1-s}$.<span class="why">A particle at $y=(1-s)x+sT(x)$ moves with speed $T(x)-x$, and $T_s(y)-y=T(x)-(1-s)x-sT(x)=(1-s)(T(x)-x)$.</span></li>
+<li>Try $\al_t=\mu_{s(t)}$: its velocity is $\dot s\,w_s=\dot s\,\frac{T_s-\Id}{1-s}$; the flow requires $-\nabla_Wf(\mu_s)=2(T_s-\Id)$.<span class="why">Chain rule in time; item (2) at $\mu_s$.</span></li>
+<li>$$\dot s=2(1-s),\quad s(t)=1-e^{-2t},\quad W_2(\al_t,\be)=e^{-2t}W_2(\al_0,\be).$$<span class="why">Match the two velocities of line 3; $s(0)=0$.</span></li>
+</ol>
+<p>The flow follows the McCann geodesic to $\be$, with an exponential clock: it never arrives. <strong>Check (script):</strong> $\al_0=\N(0,1)$, $\be=\N(3,0.5^2)$: $W_2(\al_0,\be)=\sqrt{9+0.25}=3.0414$, so at $t=\frac12$ the prediction is $e^{-1}\times3.0414=1.1189$; 2000 quantile particles moved by $\dot x_i=2(y_i-x_i)$ (explicit steps $10^{-3}$) give $1.1177$ (the difference is the Euler factor $(1-2\cdot10^{-3})^{500}=e^{-1.001}$).</p>
+</div></details>
+<div class="box remark"><div class="box-h">Note on the sources — the geodesic velocity in the sheet’s solution of Exercise 6</div>
+<p>The solution (p. 7) states that the tangent vector to the geodesic at $\mu_s$ is $w_s=T_s-\Id$, and that $-\nabla_Wf(\mu_s)$ is “exactly the geodesic velocity scaled by a factor 2”. The velocity of $s\mapsto\mu_s$ at $\mu_s$ is $\frac{T_s-\Id}{1-s}$ (line 2 above), so $-\nabla_Wf(\mu_s)=2(1-s)\times$ (geodesic velocity): the factor is $2$ only at $s=0$. Check on the means in the Gaussian example: the mean of $\mu_s$ is $3s$, with speed $3$, while $T_s(3s)-3s=3-3s$. With a constant factor $2$, the clock would be $\dot s=2$ and the flow would reach $\be$ at $t=\frac12$; the sheet’s final ODE $\dot s=2(1-s)$, $s=1-e^{-2t}$, is the correct one. (Also, p. 5: “enveloppe” is the French spelling of “envelope”.)</p>
+</div></div>
