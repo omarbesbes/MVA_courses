@@ -80,19 +80,19 @@
       function wid(m) { return (1.2 + 22 * m).toFixed(2); }
       if (mode === "plans") {
         for (i = 0; i < nx; i++) for (j = 0; j < ny; j++) if (P[i][j] > 1e-12)
-          el("line", { x1: X(data.x[i]), y1: yA, x2: X(data.y[j]), y2: yB, "class": "ln c2", "stroke-width": wid(P[i][j]), "stroke-opacity": hover < 0 || j === hover ? 0.6 : 0.12 }, g);
+          el("line", { x1: X(data.x[i]), y1: yA, x2: X(data.y[j]), y2: yB, "class": "ln c2", style: "stroke-width:" + wid(P[i][j]) + "px", "stroke-opacity": hover < 0 || j === hover ? 0.6 : 0.12 }, g);
         for (j = 0; j < ny; j++) for (k = 0; k < nz; k++) if (Q[j][k] > 1e-12)
-          el("line", { x1: X(data.y[j]), y1: yB, x2: X(data.z[k]), y2: yC, "class": "ln c1", "stroke-width": wid(Q[j][k]), "stroke-opacity": hover < 0 || j === hover ? 0.6 : 0.12 }, g);
+          el("line", { x1: X(data.y[j]), y1: yB, x2: X(data.z[k]), y2: yC, "class": "ln c1", style: "stroke-width:" + wid(Q[j][k]) + "px", "stroke-opacity": hover < 0 || j === hover ? 0.6 : 0.12 }, g);
       } else if (mode === "paths") {
         for (i = 0; i < nx; i++) for (j = 0; j < ny; j++) for (k = 0; k < nz; k++) if (S[i][j][k] > 1e-12) {
           var off = (k - (nz - 1) / 2) * 4 + (i - (nx - 1) / 2) * 4;
           var d = "M" + X(data.x[i]).toFixed(1) + " " + yA + " L" + (X(data.y[j]) + off).toFixed(1) + " " + yB + " L" + X(data.z[k]).toFixed(1) + " " + yC;
-          el("path", { d: d, "class": "ln " + SRC[i % SRC.length], "stroke-width": wid(S[i][j][k]), "stroke-opacity": hover < 0 ? 0.55 : (j === hover ? 0.9 : 0.07) }, g);
+          el("path", { d: d, "class": "ln " + SRC[i % SRC.length], style: "stroke-width:" + wid(S[i][j][k]) + "px", "stroke-opacity": hover < 0 ? 0.55 : (j === hover ? 0.9 : 0.07) }, g);
         }
       } else {
         for (i = 0; i < nx; i++) for (k = 0; k < nz; k++) {
-          if (O[i][k] > 1e-12) el("line", { x1: X(data.x[i]), y1: yA, x2: X(data.z[k]), y2: yC, "class": "ln cm dash", "stroke-width": wid(O[i][k]), "stroke-opacity": 0.7 }, g);
-          if (R[i][k] > 1e-12) el("line", { x1: X(data.x[i]) + 3, y1: yA, x2: X(data.z[k]) + 3, y2: yC, "class": "ln c3", "stroke-width": wid(R[i][k]), "stroke-opacity": 0.55 }, g);
+          if (O[i][k] > 1e-12) el("line", { x1: X(data.x[i]), y1: yA, x2: X(data.z[k]), y2: yC, "class": "ln cm dash", style: "stroke-width:" + wid(O[i][k]) + "px", "stroke-opacity": 0.7 }, g);
+          if (R[i][k] > 1e-12) el("line", { x1: X(data.x[i]) + 3, y1: yA, x2: X(data.z[k]) + 3, y2: yC, "class": "ln c3", style: "stroke-width:" + wid(R[i][k]) + "px", "stroke-opacity": 0.55 }, g);
         }
       }
       function row(xs, ws, yy, fcls, where, faded) {
@@ -113,8 +113,8 @@
 
       var wac = Math.pow(planCost(O, data.x, data.z, p), 1 / p), wg = Math.pow(planCost(R, data.x, data.z, p), 1 / p);
       var wab = Math.pow(planCost(P, data.x, data.y, p), 1 / p), wbc = Math.pow(planCost(Q, data.y, data.z, p), 1 / p);
-      var txt = "p = " + p + ":  W_p(α,γ) = " + fmt(wac, 4) + "  ≤  glued plan " + fmt(wg, 4) +
-        "  ≤  W_p(α,β) + W_p(β,γ) = " + fmt(wab, 4) + " + " + fmt(wbc, 4) + " = " + fmt(wab + wbc, 4);
+      var txt = "p = " + p + ":  Wₚ(α,γ) = " + fmt(wac, 4) + "  ≤  glued plan " + fmt(wg, 4) +
+        "  ≤  Wₚ(α,β) + Wₚ(β,γ) = " + fmt(wab, 4) + " + " + fmt(wbc, 4) + " = " + fmt(wab + wbc, 4);
       if (mode === "glued") {
         txt += "\nglued plan (rows α, columns γ) = " + matStr(R) + "     optimal plan = " + matStr(O);
       } else if (hover >= 0) {
@@ -140,7 +140,7 @@
     var nS = slider(s.controls, "n", 0, 3, 0.005, 1, draw);
     var gS = slider(s.controls, "far atom at x = n^γ, γ =", 0, 1.5, 0.05, 1, draw);
     var ro = readout(s.controls);
-    legend(s.legend, [["--s2", "αₙ (top)"], ["--s1", "limit α (top)"], ["--muted", "‖αₙ − α‖_TV"], ["--s4", "W₁(αₙ, α)"], ["--s5", "W₂(αₙ, α)"]]);
+    legend(s.legend, [["--s2", "αₙ (top)"], ["--s1", "limit α (top)"], ["--muted", "‖αₙ − α‖TV"], ["--s4", "W₁(αₙ, α)"], ["--s5", "W₂(αₙ, α)"]]);
     function vals(seq, n, gam) {
       if (seq === "dirac") return { tv: 2, w1: 1 / n, w2: 1 / n };
       if (seq === "riemann") return { tv: 2, w1: 1 / (2 * n), w2: 1 / (Math.sqrt(3) * n) };
@@ -195,7 +195,7 @@
       } else {
         verdict = "TV stays at 2: no strong convergence. W₁ and W₂ → 0 like 1/n: weak convergence, measured.";
       }
-      ro.textContent = "n = " + n + "   ‖αₙ − α‖_TV = " + fmt(v.tv, 4) + "   W₁ = " + (v.w1 < 0.01 ? v.w1.toExponential(2) : fmt(v.w1, 4)) + "   W₂ = " + (v.w2 < 0.01 ? v.w2.toExponential(2) : fmt(v.w2, 4)) + "\n" + verdict;
+      ro.textContent = "n = " + n + "   ‖αₙ − α‖TV = " + fmt(v.tv, 4) + "   W₁ = " + (v.w1 < 0.01 ? v.w1.toExponential(2) : fmt(v.w1, 4)) + "   W₂ = " + (v.w2 < 0.01 ? v.w2.toExponential(2) : fmt(v.w2, 4)) + "\n" + verdict;
     }
     draw(); redrawers.push(draw);
   };
@@ -223,7 +223,7 @@
     var pairSel = select(s.controls, "Pair", [["gauss", "two Gaussians"], ["bumps", "one bump → two bumps"], ["unif", "two uniform laws"]], "gauss", setup);
     var tS = slider(s.controls, "t", 0, 1, 0.01, 0.5, draw);
     var ro = readout(s.controls);
-    legend(s.legend, [["--s2", "α (t = 0)"], ["--s1", "β (t = 1)"], ["--muted", "mixture (1 − t)α + tβ"], ["--s3", "displacement interpolation α_t"]]);
+    legend(s.legend, [["--s2", "α (t = 0)"], ["--s1", "β (t = 1)"], ["--muted", "mixture (1 − t)α + tβ"], ["--s3", "displacement interpolation αₜ"]]);
     var D;
     function setup() { D = prep1D(pairSel.value); draw(); }
     function draw() {
@@ -251,7 +251,7 @@
       var cm = new Float64Array(D.A.c.length);
       for (i = 0; i < cm.length; i++) cm[i] = (1 - t) * D.A.c[i] + t * D.B.c[i];
       var qm = quantiles(D.A.xs, cm), wmix = w2q(D.qa, qm);
-      ro.textContent = "t = " + fmt(t, 2) + "    W₂(α, α_t) / W₂(α, β) = " + fmt(wdisp / wab, 3) + "  (= t: constant speed)" +
+      ro.textContent = "t = " + fmt(t, 2) + "    W₂(α, αₜ) / W₂(α, β) = " + fmt(wdisp / wab, 3) + "  (= t: constant speed)" +
         "\n          W₂(α, mixture) / W₂(α, β) = " + fmt(wmix / wab, 3) + (t > 0 && t < 1 ? "  (≠ t: the mixture is not a geodesic)" : "");
     }
     setup(); redrawers.push(draw);
