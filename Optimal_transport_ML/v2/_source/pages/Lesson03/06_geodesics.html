@@ -1,0 +1,106 @@
+<h2 id="geo">6. Displacement interpolation and geodesics <span class="ref">notes p. 4</span></h2>
+<p class="tldr">To go from $\al$ to $\be$, move every unit of mass along the straight segment from its starting point to its destination (given by an optimal plan) at constant speed: the distributions $\al_t$ you see along the way form a shortest path for $W_2$.</p>
+
+<h3 id="geo-problem">The problem: how to go from one distribution to another?</h3>
+<p>Between two points $x$ and $y$ of $\R^d$ the natural path is the segment $(1-t)x+ty$. Between two distributions there are two natural candidates, and they behave very differently.</p>
+<div class="cols">
+<div class="card"><h4>Mixture (“vertical”)</h4><p>$m_t=(1-t)\al+t\be$. Nothing moves: the mass of $\al$ fades out where it is while the mass of $\be$ fades in where it is. For images: a cross-fade, with ghosting.</p></div>
+<div class="card"><h4>Displacement (“horizontal”)</h4><p>Every unit of mass travels from its starting point $x$ to its destination $y$, along the segment, at constant speed: at time $t$ it is at $(1-t)x+ty$. For images: a morphing.</p></div>
+</div>
+<p>For the second one we need to know <em>which</em> $x$ goes to <em>which</em> $y$: that is exactly what an optimal transport plan tells us.</p>
+
+<h3 id="geo-def">Displacement interpolation</h3>
+<div class="box board"><div class="box-h">On the board <span class="ref">notes p. 4</span></div>
+<p><strong>Displacement interpolation.</strong> $\al,\be\in\M(\X)$,</p>
+$$P_t(x,y)=(1-t)x+ty,\qquad P_0(x,y)=x,\qquad P_1(x,y)=y,$$
+$$\al_t:=\pf{P_t}{\pi}\quad=\ \text{distribution of }(1-t)X+tY\ \text{ where }(X,Y)\sim\pi .$$
+<p>[drawing: $\al_0=\al$, a set of concentric circles, deformed through $\al_t$ into $\al_1=\be$, an irregular blob]</p>
+<p>If $\pi=\pf{(\Id,T)}{\al}$ (Monge solution), then $\al_t$ is the distribution of $(1-t)X+tT(X)$ with $X\sim\al$.</p>
+<p>$\al_t$ = displacement interpolation, McCann.</p>
+</div>
+<dl class="decode">
+<dt>$\pi$</dt><dd>An <strong>optimal</strong> plan between $\al$ and $\be$ for the quadratic cost $\norm{x-y}^2$ (implicit on the board). It decides who goes where.</dd>
+<dt>$P_t(x,y)$</dt><dd>The point at fraction $t$ of the way from $x$ to $y$. At $t=0$ it is $x$, at $t=1$ it is $y$: $P_0$ and $P_1$ are the two projections of §1.</dd>
+<dt>$\al_t=\pf{P_t}{\pi}$</dt><dd>Take every pair $(x,y)$ with its weight $\pi$, and put that weight at the intermediate point $(1-t)x+ty$. For a discrete plan, $\al_t=\sum_{i,j}\pi_{ij}\,\delta_{(1-t)x_i+ty_j}$.</dd>
+<dt>endpoints</dt><dd>$P_0(x,y)=x$ keeps the starting point and $P_1(x,y)=y$ the arrival point, so $\al_0=\al$ and $\al_1=\be$ (the marginals of $\pi$). <strong>Beware a clash of names on the board:</strong> in §1, $P_1$ and $P_2$ were the first and second projections (the index was a <em>coordinate</em>); here the index of $P_t$ is a <em>time</em>, so $P_0$ is the first projection and $P_1$ the second.</dd>
+<dt>Monge case</dt><dd>If the optimal plan is a map, $Y=T(X)$, then $\al_t=\pf{\big((1-t)\Id+tT\big)}{\al}$: every point $x$ slides towards $T(x)$. This is <strong>McCann’s interpolation</strong> (Lesson 1). By Brenier, this is the case when $\al$ has a density.</dd>
+</dl>
+
+<div class="box example"><div class="box-h">Worked examples</div>
+<ul>
+<li><strong>Two Diracs.</strong> $\al=\delta_x$, $\be=\delta_y$: the only plan is $\delta_{(x,y)}$, so $\al_t=\delta_{(1-t)x+ty}$, a single atom sliding along the segment. The mixture instead is $(1-t)\delta_x+t\delta_y$: two atoms, fixed, changing weights.</li>
+<li><strong>A Dirac that splits.</strong> $\al=\delta_0$, $\be=\frac12\delta_{-1}+\frac12\delta_1$ on $\R$. The plan sends half of the mass to each side: $\al_t=\frac12\delta_{-t}+\frac12\delta_t$. Mass can split, because plans can.</li>
+<li><strong>Two Gaussians on the line.</strong> $\al=\N(m_0,\sigma_0^2)$, $\be=\N(m_1,\sigma_1^2)$. The optimal map is $T(x)=m_1+\frac{\sigma_1}{\sigma_0}(x-m_0)$, so $(1-t)X+tT(X)$ is again Gaussian with mean $(1-t)m_0+tm_1$ and standard deviation $(1-t)\sigma_0+t\sigma_1$:
+$$\al_t=\N\big((1-t)m_0+tm_1,\ ((1-t)\sigma_0+t\sigma_1)^2\big).$$
+The <em>standard deviations</em> are interpolated linearly (not the variances). The mixture is a two-bump distribution as soon as the means are far apart.</li>
+</ul>
+</div>
+<figure class="fig"><!-- include figures/split.svg --><figcaption>Space–time picture of the splitting Dirac: horizontal axis = position, vertical axis = time. Each half of the mass moves along its own straight line, at constant speed.</figcaption></figure>
+<figure class="fig"><!-- include figures/displacement.svg --><figcaption>From $\al=\N(-2,0.5^2)$ to $\be=\N(2,1)$. Top: the mixture fades one bump into the other (never a single bump). Bottom: the displacement interpolation is a single Gaussian that moves and widens, $\N(-2+4t,(0.5+0.5t)^2)$.</figcaption></figure>
+<div class="widget" data-widget="interp"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p>What to look at: move $t$. The grey curve is the mixture $m_t$, the green one the displacement interpolation $\al_t$ (computed by interpolating quantile functions, which on the line is exactly $\pf{P_t}{\pi}$ for the monotone plan). The readout compares $W_2(\al,\cdot)$ with $t\,W_2(\al,\be)$: for $\al_t$ the ratio is exactly $1$ at every $t$ (constant speed); for the mixture it is not. Try the pair with two bumps: $\al_t$ moves the mass of one bump into both bumps of $\be$.</p>
+
+<h3 id="geo-speed">Constant speed: $W_2(\al_s,\al_t)=\abs{t-s}\,W_2(\al,\be)$</h3>
+<p>This is the property that makes $\al_t$ a “straight line” in the Wasserstein space: it travels at constant speed, and the distance covered between times $s$ and $t$ is proportional to $t-s$.</p>
+<div class="box thm"><div class="box-h">Proposition (constant speed) — on $\R^d$ with $c(x,y)=\norm{x-y}^2$</div>
+<p>If $\pi$ is optimal between $\al$ and $\be$ and $\al_t=\pf{P_t}{\pi}$, then $W_2(\al_s,\al_t)=\abs{t-s}\,W_2(\al,\be)$ for all $s,t\in[0,1]$.</p>
+</div>
+<div class="box idea"><div class="box-h">Idea of the proof</div>
+<p>Upper bound: follow the mass itself from time $s$ to time $t$; it moves by $(t-s)$ times its total displacement. Lower bound: if some piece of the path were a shortcut, the triangle inequality would make the whole trip shorter than $W_2(\al,\be)$, which is impossible.</p>
+</div>
+<details class="fold proof" open><summary>Full proof</summary><div class="fold-body">
+<ol class="steps">
+<li>Let $s\le t$. The plan $\pf{(P_s,P_t)}{\pi}$ couples $\al_s$ and $\al_t$: under it, the mass that went $x\to y$ is matched from $(1-s)x+sy$ to $(1-t)x+ty$.<span class="why">Its marginals are $\pf{P_s}{\pi}=\al_s$ and $\pf{P_t}{\pi}=\al_t$.</span></li>
+<li>$$W_2^2(\al_s,\al_t)\le\int\norm{P_t(x,y)-P_s(x,y)}^2\,\dd\pi=\int\norm{(t-s)(y-x)}^2\,\dd\pi=(t-s)^2\,W_2^2(\al,\be).$$<span class="why">Any coupling gives an upper bound; $P_t-P_s=(t-s)(y-x)$; $\pi$ is optimal for $\al,\be$.</span></li>
+<li>So $W_2(\al_s,\al_t)\le(t-s)\,W_2(\al,\be)$ for all $s\le t$. Apply it to the three pieces $[0,s]$, $[s,t]$, $[t,1]$ and use the triangle inequality (§2):
+$$\begin{aligned}W_2(\al,\be)&\le W_2(\al_0,\al_s)+W_2(\al_s,\al_t)+W_2(\al_t,\al_1)\\&\le\big(s+(t-s)+(1-t)\big)W_2(\al,\be)=W_2(\al,\be).\end{aligned}$$<span class="why">The two ends of the chain are equal, so every inequality in between is an equality.</span></li>
+<li>In particular $W_2(\al_s,\al_t)=(t-s)\,W_2(\al,\be)$.<span class="why">If it were strictly smaller, the middle sum would be strictly smaller than $W_2(\al,\be)$.</span></li>
+</ol>
+</div></details>
+
+<h3 id="geo-space">A geodesic space</h3>
+<div class="box board"><div class="box-h">On the board <span class="ref">notes p. 4</span></div>
+<p><strong>Prop:</strong> $(\Pc_2(\R^d),W_2)$ is a geodesic space.</p>
+<p><strong>Reminder:</strong> $(\X,d)$ is a geodesic space if for any $(x,y)\in\X^2$ there exists a shortest path (= geodesic) joining $x$ and $y$: $\ga:[0,1]\to\X$ s.t. $\ga(0)=x$, $\ga(1)=y$ and $d\big(\ga(s),\ga(t)\big)=\abs{s-t}\,d(x,y)$.</p>
+</div>
+<dl class="decode">
+<dt>$\ga:[0,1]\to\X$</dt><dd>A path (a curve) in the space, parametrised by time. (On the board the letter $\ga$ is a path here, not the third measure of §2.)</dd>
+<dt>$d(\ga(s),\ga(t))=\abs{s-t}\,d(x,y)$</dt><dd>The path is a <strong>constant-speed shortest path</strong>: the distance covered between two times is proportional to the elapsed time, and the total length is exactly $d(x,y)$. In $\R^d$: the segment. On a sphere: an arc of great circle.</dd>
+<dt>geodesic space</dt><dd>Any two points can be joined by such a path. Counter-example: the plane with the origin removed, $\R^2\setminus\{0\}$, between $x$ and $-x$ — the only candidate (the segment) goes through the missing point.</dd>
+<dt>$\Pc_2(\R^d)$</dt><dd>Probability measures with a finite second moment, the natural home of $W_2$ on $\R^d$ (§2).</dd>
+</dl>
+<p><strong>Proof of the proposition.</strong> Given $\al,\be\in\Pc_2(\R^d)$, take an optimal plan $\pi$ (it exists) and $\ga(t)=\al_t$. Then $\ga(0)=\al$, $\ga(1)=\be$, and the constant-speed proposition is exactly the condition $W_2(\al_s,\al_t)=\abs{s-t}\,W_2(\al,\be)$. $\square$</p>
+
+<div class="box pitfall"><div class="box-h">Pitfall — the mixture is not a geodesic (it is infinitely long!)</div>
+<p>Take two Diracs at distance $1$ and the mixture $m_t=(1-t)\delta_x+t\delta_y$. Between $m_s$ and $m_t$ ($s<t$), the common part stays and an extra mass $t-s$ must travel a distance $1$: $W_2(m_s,m_t)=\sqrt{t-s}$, not $t-s$. Cut $[0,1]$ into $N$ equal pieces and add up the distances: $N\cdot\sqrt{1/N}=\sqrt N\to\infty$. The mixture path has <strong>infinite length</strong> for $W_2$ (for $N=4,16,64$: lengths $2,4,8$, while $W_2(\delta_x,\delta_y)=1$).</p>
+<p>(For $W_1$ the mixture is a geodesic: $W_1(m_s,m_t)=(t-s)\,W_1(\al,\be)$. Geodesics of $W_1$ are not unique. This is one reason why $W_2$ is the distance of choice for interpolation.)</p>
+</div>
+
+<h3 id="geo-variational">$\al_t$ is the weighted average of $\al$ and $\be$</h3>
+<div class="box board"><div class="box-h">On the board <span class="ref">notes p. 4</span></div>
+<p>We also have: $\displaystyle\ \al_t\in\argmin_\rho\ (1-t)\,W_2^2(\al,\rho)+t\,W_2^2(\be,\rho).$</p>
+</div>
+<p><strong>Why this matters.</strong> In $\R^d$ the point $(1-t)x+ty$ is the minimiser of $z\mapsto(1-t)\norm{z-x}^2+t\norm{z-y}^2$ (set the gradient $2(1-t)(z-x)+2t(z-y)$ to zero). The board says that the same characterisation holds in the Wasserstein space: $\al_t$ is the <strong>weighted average of $\al$ and $\be$, with weights $(1-t,t)$</strong>, defined variationally. This is the bridge to the next section: averaging more than two distributions.</p>
+<details class="fold proof"><summary>Proof (an algebraic identity and the triangle inequality)</summary><div class="fold-body">
+<p>Fix $\rho$ and write $A=W_2(\al,\rho)$, $B=W_2(\rho,\be)$, $D=W_2(\al,\be)$.</p>
+<ol class="steps">
+<li>$$(1-t)A^2+tB^2=t(1-t)(A+B)^2+\big((1-t)A-tB\big)^2 .$$<span class="why">Expand the right side: $t(1-t)(A^2+2AB+B^2)+(1-t)^2A^2-2t(1-t)AB+t^2B^2=(1-t)A^2+tB^2$.</span></li>
+<li>$$(1-t)A^2+tB^2\ \ge\ t(1-t)(A+B)^2\ \ge\ t(1-t)D^2 .$$<span class="why">Drop the square $\ge0$; then the triangle inequality $A+B\ge D$ (§2).</span></li>
+<li>For $\rho=\al_t$: $A=tD$ and $B=(1-t)D$ (constant speed), so $(1-t)A^2+tB^2=(1-t)t^2D^2+t(1-t)^2D^2=t(1-t)D^2$.<span class="why">The lower bound of step 2 is attained.</span></li>
+<li>Hence $\al_t$ minimises $\rho\mapsto(1-t)W_2^2(\al,\rho)+tW_2^2(\be,\rho)$, with minimal value $t(1-t)W_2^2(\al,\be)$.<span class="why">Step 2 holds for every $\rho$.</span></li>
+</ol>
+<p>(Conversely, any minimiser must turn both inequalities into equalities, so it sits on some geodesic at the right fraction $t$: when $\al$ has a density, the minimiser is unique and it is $\al_t$.)</p>
+</div></details>
+
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>To interpolate between two distributions → interpolate <em>positions</em> along an optimal plan, not <em>weights</em>.</li>
+<li>To compute $\al_t$ on the line → average quantile functions: $C_{\al_t}^{-1}=(1-t)C_\al^{-1}+tC_\be^{-1}$.</li>
+<li>To prove that something is a geodesic → upper bound by a coupling, then the triangle inequality forces equality.</li>
+</ul>
+</div>
+
+<div class="quiz"><p>Compute the displacement interpolation between $\mathcal U_{[0,1]}$ and $\mathcal U_{[2,4]}$.</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>The monotone map is $T(x)=2+2x$. With $X\sim\mathcal U_{[0,1]}$: $(1-t)X+t(2+2X)=2t+(1+t)X$, uniform on $[2t,\ 2t+1+t]=[2t,\ 1+3t]$. At $t=0$: $[0,1]$; at $t=1$: $[2,4]$; the length grows linearly from $1$ to $2$.</p>
+</div></details></div>

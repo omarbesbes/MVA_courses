@@ -1,0 +1,113 @@
+<h2 id="closed">8. Two cases with closed forms: Gaussians and the line <span class="ref">notes p. 5</span></h2>
+<p class="tldr">The barycenter of Gaussians is the Gaussian whose mean is the average of the means and whose covariance solves a matrix fixed-point equation; on the line, the barycenter is obtained by averaging quantile functions.</p>
+
+<h3 id="gauss">Gaussian inputs</h3>
+<div class="box board"><div class="box-h">On the board <span class="ref">notes p. 5</span></div>
+<p><strong>Gaussians:</strong> $\be_k=\N(m_k,\Sigma_k)$ and $c(x,y)=\norm{x-y}^2$.</p>
+<p><strong>Prop:</strong> the barycenter is a Gaussian $\N(m^\star,\Sigma^\star)$ with</p>
+$$m^\star=\sum_{k=1}^P\lambda_km_k\qquad\text{and}\qquad\Sigma^\star\in\argmin_\Sigma\ \sum_{k=1}^P\lambda_k\,\B(\Sigma,\Sigma_k)^2,$$
+$$\B(\Sigma,\Lambda)^2=\tr\Big(\Sigma+\Lambda-2\big(\Lambda^{1/2}\Sigma\Lambda^{1/2}\big)^{1/2}\Big).$$
+<p>$\to\Sigma^\star$ is also the unique solution of the fixed point problem:</p>
+$$\Sigma^\star=\Psi(\Sigma^\star)\qquad\text{where}\qquad\Psi(\Sigma)=\sum_{k=1}^P\lambda_k\big(\Sigma^{1/2}\Sigma_k\Sigma^{1/2}\big)^{1/2}.$$
+<p>$\to$ Fixed-point algo: $\ \Sigma^{(\ell+1)}=\Psi\big(\Sigma^{(\ell)}\big)$. [drawing: ellipses]</p>
+</div>
+<dl class="decode">
+<dt>$\N(m,\Sigma)$</dt><dd>Gaussian with mean $m$ and covariance $\Sigma$ (symmetric positive matrix). Picture: an ellipse centred at $m$, axes along the eigenvectors of $\Sigma$, half-lengths $\propto$ square roots of the eigenvalues — the ellipses of the board’s drawing.</dd>
+<dt>$\B(\Sigma,\Lambda)$</dt><dd>The <strong>Bures distance</strong> between covariance matrices (Lesson 1): $W_2^2\big(\N(m,\Sigma),\N(m',\Lambda)\big)=\norm{m-m'}^2+\B(\Sigma,\Lambda)^2$.</dd>
+<dt>$M^{1/2}$</dt><dd>Matrix square root (diagonalise, take the square roots of the eigenvalues). See the <a href="#recall-brenier">refresher</a>.</dd>
+<dt>$\Psi$</dt><dd>A map from covariance matrices to covariance matrices; the barycenter covariance is a fixed point of it.</dd>
+<dt>“the unique solution”</dt><dd>Unique <strong>among positive definite matrices</strong>, as soon as one input with $\lambda_k>0$ has a positive definite $\Sigma_k$. The zero matrix is always a (useless) fixed point, since $\Psi(0)=0$; this is why the algorithm starts from a positive definite $\Sigma^{(0)}$.</dd>
+<dt>$\Sigma^{(\ell)}$</dt><dd>The $\ell$-th iterate of the algorithm, starting from any positive definite $\Sigma^{(0)}$.</dd>
+</dl>
+
+<h4>Why the means and covariances separate</h4>
+<p>Try a Gaussian candidate $\al=\N(m,\Sigma)$ in the barycenter objective, using the Gaussian formula for each term:</p>
+$$\sum_k\lambda_kW_2^2\big(\N(m,\Sigma),\be_k\big)=\underbrace{\sum_k\lambda_k\norm{m-m_k}^2}_{\text{only depends on }m}+\underbrace{\sum_k\lambda_k\B(\Sigma,\Sigma_k)^2}_{\text{only depends on }\Sigma}.$$
+<p>Minimise each part separately: the first is the barycenter of the points $m_k$ (§7), so $m^\star=\sum_k\lambda_km_k$; the second is the “Bures barycenter” problem of the board.</p>
+<details class="fold more"><summary>Why is the barycenter Gaussian at all (and not only the best Gaussian)?</summary><div class="fold-body">
+<p>The key fact is <strong>Gelbrich’s inequality</strong>: for any $\al,\be$ with means $m_\al,m_\be$ and covariances $\Sigma_\al,\Sigma_\be$,</p>
+$$W_2^2(\al,\be)\ \ge\ \norm{m_\al-m_\be}^2+\B(\Sigma_\al,\Sigma_\be)^2,$$
+<p>with equality when both are Gaussian. So if you replace any candidate $\al$ by the Gaussian $\N(m_\al,\Sigma_\al)$ with the same mean and covariance, each term $W_2^2(\al,\be_k)$ (with $\be_k$ Gaussian) can only decrease: Gaussian candidates are never worse. A barycenter exists (Agueh–Carlier), hence a Gaussian one exists; if one $\Sigma_k$ with $\lambda_k>0$ is positive definite, that $\be_k$ has a density, the barycenter is unique, and therefore it is that Gaussian.</p>
+</div></details>
+
+<h4>The one-dimensional case: average the standard deviations</h4>
+<p>In 1D, $\B(\sigma^2,\sigma_k^2)^2=\sigma^2+\sigma_k^2-2\sigma\sigma_k=(\sigma-\sigma_k)^2$. So the covariance problem is $\min_\sigma\sum_k\lambda_k(\sigma-\sigma_k)^2$, whose solution is the mean of the standard deviations:</p>
+$$\sigma^\star=\sum_k\lambda_k\sigma_k .$$
+<div class="box example"><div class="box-h">Worked example</div>
+<p>$\be_1=\N(0,1)$, $\be_2=\N(4,9)$ (standard deviations $1$ and $3$), weights $\frac12,\frac12$: the barycenter is $\N(2,\,2^2)=\N(2,4)$.</p>
+<ul>
+<li>Not the average of the variances (which would give variance $5$).</li>
+<li>Not the mixture $\frac12\N(0,1)+\frac12\N(4,9)$, which is not even Gaussian (its variance is $5+4=9$: the average variance plus the spread of the means).</li>
+</ul>
+</div>
+<p>When all the $\Sigma_k$ commute (for instance all diagonal), the same thing happens eigenvalue by eigenvalue: $(\Sigma^\star)^{1/2}=\sum_k\lambda_k\Sigma_k^{1/2}$ — “average the square roots”. In general the matrices do not commute, and the fixed-point equation is the right generalisation.</p>
+
+<h4>Where the fixed-point equation comes from</h4>
+<div class="box intu"><div class="box-h">Intuition — “the average of the transport maps is the identity”</div>
+<p>From the barycenter $\al^\star=\N(m^\star,\Sigma)$, the optimal map to $\be_k$ is affine (Lesson 1): $T_k(x)=m_k+A_k(x-m^\star)$ with $A_k=\Sigma^{-1/2}\big(\Sigma^{1/2}\Sigma_k\Sigma^{1/2}\big)^{1/2}\Sigma^{-1/2}$. We will see in §9 that a barycenter is characterised by <strong>“on average, the points do not need to move”</strong>:</p>
+$$\sum_k\lambda_kT_k(x)=x\quad\text{for all }x\qquad\iff\qquad\sum_k\lambda_km_k=m^\star\ \text{ and }\ \sum_k\lambda_kA_k=I .$$
+<p>Multiply $\sum_k\lambda_kA_k=I$ by $\Sigma^{1/2}$ on both sides: $\sum_k\lambda_k\big(\Sigma^{1/2}\Sigma_k\Sigma^{1/2}\big)^{1/2}=\Sigma$, i.e. <strong>$\Psi(\Sigma)=\Sigma$</strong>. The board’s fixed-point equation says exactly: the average of the optimal maps from the barycenter to the inputs is the identity.</p>
+</div>
+<details class="fold more"><summary>The same equation by differentiation (first-order condition)</summary><div class="fold-body">
+<p>Write $E(\Sigma)=\sum_k\lambda_k\B(\Sigma,\Sigma_k)^2=\tr\Sigma+\sum_k\lambda_k\tr\Sigma_k-2\sum_k\lambda_k\tr\big(\Sigma_k^{1/2}\Sigma\Sigma_k^{1/2}\big)^{1/2}$. One can show that the derivative of $\Sigma\mapsto\tr\big(\Sigma_k^{1/2}\Sigma\Sigma_k^{1/2}\big)^{1/2}$ in a symmetric direction $Z$ is $\frac12\tr(A_kZ)$, with the matrix $A_k$ above (compact notes, proof of Prop. 12.6). Hence</p>
+$$DE(\Sigma)[Z]=\tr\Big(\big(I-\textstyle\sum_k\lambda_kA_k\big)Z\Big),$$
+<p>which vanishes for all $Z$ iff $\sum_k\lambda_kA_k=I$, i.e. $\Psi(\Sigma)=\Sigma$. $E$ is convex, so this stationary point is the minimiser.</p>
+</div></details>
+
+<h4>The fixed-point algorithm — and a faster cousin</h4>
+<p>The board’s algorithm iterates $\Sigma^{(\ell+1)}=\Psi(\Sigma^{(\ell)})$. Let us run it in 1D, where $\Psi(v)=\sum_k\lambda_k\sqrt{v\,\sigma_k^2}=\sqrt v\,\bar\sigma$ with $\bar\sigma=\sum_k\lambda_k\sigma_k$. On the worked example ($\bar\sigma=2$), starting from the variance $v^{(0)}=1$:</p>
+$$v^{(\ell)}:\quad1,\ \ 2,\ \ 2.83,\ \ 3.36,\ \ 3.67,\ \ 3.83,\ \ 3.91,\ \ 3.96,\ \dots\ \longrightarrow\ 4=(\sigma^\star)^2 .$$
+<p>It converges, but slowly: in terms of $\sigma=\sqrt v$, the update is $\sigma\leftarrow\sqrt{\sigma\,\bar\sigma}$, so $\log\sigma$ moves halfway to $\log\bar\sigma$ at each step — the error is only halved.</p>
+<div class="box remark"><div class="box-h">What is known about convergence</div>
+<p>Peyré–Cuturi (<em>Computational OT</em>, Remark 9.5) note that $\Psi$ is not a strict contraction, and that the iteration $\Sigma\leftarrow\Psi(\Sigma)$ “converges in practice” (we observed convergence on 800 random instances in dimensions 2 to 10, sometimes after more than 200 iterations). Álvarez-Esteban, del Barrio, Cuesta-Albertos and Matrán (2016) proposed the variant</p>
+$$\Sigma^{(\ell+1)}=\big(\Sigma^{(\ell)}\big)^{-1/2}\,\Psi\big(\Sigma^{(\ell)}\big)^{2}\,\big(\Sigma^{(\ell)}\big)^{-1/2},$$
+<p>for which convergence is <strong>proved</strong>, and which is much faster: in 1D it gives $v\leftarrow(\sqrt v\,\bar\sigma)^2/v=\bar\sigma^2$, the exact answer <strong>in one step</strong>. This variant is not a trick: it is exactly the general algorithm of the board’s last paragraph (§9), run on Gaussians.</p>
+</div>
+<div class="widget" data-widget="gauss"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p>What to look at: three Gaussians in the plane (blue ellipses: one standard deviation). <strong>Drag the green dot inside the triangle</strong> to choose the weights $\lambda$ (the closer to a corner, the more that input counts); the green ellipse is the barycenter $\N(m^\star,\Sigma^\star)$. Near a corner it becomes that input; in the middle, a compromise of <em>shapes</em> (orientations and elongations), not a superposition. The small plot on the right runs both iterations from $\Sigma^{(0)}=I$ and shows the Bures distance to $\Sigma^\star$ (log scale): the board’s $\Psi$ iteration (grey, dashed) and the Álvarez-Esteban update (green, solid). The menu draws the first iterates $\Sigma^{(0)},\dots,\Sigma^{(5)}$ as ellipses.</p>
+
+<h3 id="oned">Measures on the line: average the quantiles</h3>
+<div class="box board"><div class="box-h">On the board <span class="ref">notes p. 5</span></div>
+<p><strong>1D case:</strong></p>
+$$\sum_k\lambda_kW_2^2(\al,\be_k)=\sum_k\lambda_k\int_0^1\abs{C_\al^{-1}(t)-C_{\be_k}^{-1}(t)}^2\,\dd t$$
+$$\Rightarrow\ \forall t,\qquad C_\al^{-1}(t)=\sum_{k=1}^P\lambda_k\,C_{\be_k}^{-1}(t).$$
+<p>[drawing: two CDFs $C_{\be_1}$, $C_{\be_2}$ on $[0,1]$]</p>
+</div>
+<dl class="decode">
+<dt>$C_\al$, $C_\al^{-1}$</dt><dd>CDF and quantile function of $\al$ (<a href="#recall-1d">refresher</a>). $C_\al^{-1}(t)$ = the position of the $t$-th quantile.</dd>
+<dt>first line</dt><dd>The 1D formula $W_2^2(\al,\be)=\int_0^1\abs{C_\al^{-1}-C_\be^{-1}}^2$, used for each input.</dd>
+<dt>“$\Rightarrow$”</dt><dd>The unknown $\al$ only enters through its quantile function $q=C_\al^{-1}$, and the objective is $\int_0^1\Big(\sum_k\lambda_k\abs{q(t)-q_k(t)}^2\Big)\dd t$. Minimise <strong>separately for each $t$</strong>: for fixed $t$ this is the barycenter of the <em>points</em> $q_1(t),\dots,q_P(t)$ with weights $\lambda$, i.e. their weighted mean.</dd>
+</dl>
+<details class="fold proof"><summary>Detail: the average of quantile functions is a quantile function</summary><div class="fold-body">
+<p>Pointwise minimisation is legitimate only if the result $q=\sum_k\lambda_kq_k$ is itself the quantile function of a probability measure. It is: quantile functions are exactly the non-decreasing, left-continuous functions on $(0,1)$, and a positive combination of such functions is again one. (Its square-integrability follows from that of each $q_k$.) So $q$ is admissible, and it minimises the integrand at every $t$, hence the integral.</p>
+</div></details>
+<div class="box intu"><div class="box-h">Intuition — average horizontally, not vertically</div>
+<p>On a graph of CDFs (like the board’s drawing), the barycenter is obtained by averaging <strong>horizontally</strong>: at each height $t$, put the new curve at the average of the abscissas where the input CDFs reach $t$. Averaging <strong>vertically</strong> (averaging the values $C_{\be_k}(x)$ at each $x$) gives the CDF of the mixture. Horizontal = move mass; vertical = mix mass.</p>
+</div>
+<div class="box example"><div class="box-h">Worked examples</div>
+<ul>
+<li><strong>Two uniforms.</strong> $\be_1=\mathcal U_{[0,1]}$, $\be_2=\mathcal U_{[2,4]}$, weights $\frac12,\frac12$. Quantiles: $q_1(t)=t$, $q_2(t)=2+2t$. Average: $1+\frac32t$, the quantile function of $\mathcal U_{[1,2.5]}$. (The mixture would be two separate blocks.)</li>
+<li><strong>Gaussians.</strong> With $\Phi$ the CDF of $\N(0,1)$, $q_k(t)=m_k+\sigma_k\Phi^{-1}(t)$, so $\sum_k\lambda_kq_k=\bar m+\bar\sigma\,\Phi^{-1}$: the Gaussian $\N(\bar m,\bar\sigma^2)$ with $\bar\sigma=\sum_k\lambda_k\sigma_k$ — the same answer as the Gaussian proposition, as it should.</li>
+<li><strong>Diracs.</strong> $q_k\equiv x_k$, so the average is the constant $\sum_k\lambda_kx_k$: the Dirac at the mean (§7).</li>
+<li><strong>A uniform and a Dirac.</strong> $\be_1=\mathcal U_{[0,1]}$, $\be_2=\delta_3$, weights $\frac12,\frac12$: $\frac12t+\frac32$, the quantile function of $\mathcal U_{[1.5,2]}$ — the uniform is moved halfway and shrunk by half.</li>
+</ul>
+</div>
+<figure class="fig"><!-- include figures/quantile.svg --><figcaption>Barycenter of $\mathcal U_{[0,1]}$ and $\mathcal U_{[2,4]}$. Left: densities (green: barycenter $\mathcal U_{[1,2.5]}$; dashed: mixture). Right: CDFs; at each level $t$ the green CDF sits at the midpoint of the two input quantiles (dotted segments at $t=\frac14,\frac34$).</figcaption></figure>
+<div class="widget" data-widget="bary1d"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p>What to look at: choose a pair of inputs and move the weight $\lambda$ (the barycenter is $\lambda$-close to $\be_2$). Top: densities — the green barycenter is always a single “shape” that travels and morphs between the inputs, while the grey dashed mixture is a superposition. Bottom: the CDFs, with the horizontal averaging at a few levels. Two bumps against one bump: the barycenter keeps two bumps whose positions and widths interpolate.</p>
+
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>Gaussian inputs, quadratic cost → barycenter is Gaussian; mean = average of means; covariance = fixed point of $\Psi$ (in 1D: average of standard deviations).</li>
+<li>Inputs on the line → average the quantile functions.</li>
+<li>To check a barycenter formula → test it on Diracs (it must give the Dirac at the mean) and on Gaussians.</li>
+</ul>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — averaging the wrong thing</div>
+<p>Averaging densities or CDFs gives the mixture. Averaging variances gives the wrong width. For $W_2$ barycenters, average <em>positions</em>: quantiles in 1D, standard deviations for 1D Gaussians, square roots of commuting covariances.</p>
+</div>
+
+<div class="quiz"><p>Barycenter of $\N(0,1)$ and $\N(4,9)$ with weights $\lambda=(\frac14,\frac34)$, and its objective value?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>$m^\star=\frac14\cdot0+\frac34\cdot4=3$, $\sigma^\star=\frac14\cdot1+\frac34\cdot3=2.5$: the barycenter is $\N(3,\,6.25)$. Value: $\sum_k\lambda_k\big[(m^\star-m_k)^2+(\sigma^\star-\sigma_k)^2\big]=\frac14(9+2.25)+\frac34(1+0.25)=2.8125+0.9375=3.75$.</p>
+</div></details></div>

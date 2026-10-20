@@ -1,0 +1,91 @@
+<h2 id="algo">9. How to compute barycenters: the fixed-point algorithm <span class="ref">notes p. 5</span></h2>
+<p class="tldr">From the current guess $\al$, compute the optimal maps $T_k$ to each input, average them into $T=\sum_k\lambda_kT_k$, and move $\al$ by $T$; each step decreases the barycenter cost, and a barycenter is a point where the averaged map is the identity.</p>
+
+<div class="box board"><div class="box-h">On the board <span class="ref">notes p. 5, bottom</span></div>
+<p><strong>How to compute them?</strong></p>
+<p>[drawing: a measure $\al$ in the middle, arrows $T_1,T_2,T_3$ to $\be_1,\be_2,\be_3$, and the measure $\pf{T^{(\al)}}{\al}$]</p>
+$$\pf{T_k}{\al^{(\ell)}}=\be_k,\qquad T^{(\al)}=\sum_{k=1}^P\lambda_kT_k\quad\text{with }T_k=\mathrm{OT}(\al,\be_k).$$
+<p>$T^{(\al)}$ is itself an optimal map between $\al$ and $\pf{T^{(\al)}}{\al}$.</p>
+$$\al^{(\ell+1)}:=\pf{T^{(\al^{(\ell)})}}{\al^{(\ell)}} .$$
+</div>
+<dl class="decode">
+<dt>setting</dt><dd>$\R^d$, quadratic cost $\norm{x-y}^2$, and a current guess $\al^{(\ell)}$ with a density, so that optimal <em>maps</em> exist (Brenier). When the inputs $\be_k$ have densities, every step keeps a density (Álvarez-Esteban et al., 2016), so the maps exist at every iteration. This can fail otherwise: if all inputs are Diracs, $T$ is constant and $\al^{(1)}$ is a Dirac — the right answer here, but maps <em>from</em> a Dirac no longer make sense. For point clouds, assignments replace maps (end of this section).</dd>
+<dt>$T_k=\mathrm{OT}(\al,\be_k)$</dt><dd>The optimal transport map from the current $\al$ to the $k$-th input: $\pf{T_k}{\al}=\be_k$.</dd>
+<dt>$T^{(\al)}=\sum_k\lambda_kT_k$</dt><dd>The <strong>averaged map</strong>: the point $x$ is sent to the weighted average of its $P$ destinations $T_1(x),\dots,T_P(x)$. The superscript $(\al)$ recalls that the maps depend on the current $\al$.</dd>
+<dt>$\al^{(\ell+1)}$</dt><dd>The new guess: move the mass of $\al^{(\ell)}$ with the averaged map.</dd>
+</dl>
+<figure class="fig"><!-- include figures/fixedpoint.svg --><figcaption>One step of the algorithm (the board’s drawing): from a point $x$ of the current measure, the three optimal maps give three destinations; $x$ moves to their weighted average $T(x)$, and the whole measure moves with it.</figcaption></figure>
+
+<h3 id="algo-why">The idea, with points</h3>
+<p>For points, the barycenter is found in <strong>one step</strong>: wherever you start, move to $\sum_k\lambda_kx_k$. Here “where does $x$ go in each input” is the information carried by the maps $T_k(x)$, and moving to $\sum_k\lambda_kT_k(x)$ is the same move. The difference with points: once $\al$ has moved, the optimal maps from the new $\al$ are different, so we iterate. The algorithm stops moving when <strong>the averaged map is the identity</strong>: on average, every point is already where its destinations want it to be. That is the “no net displacement” condition we used for Gaussians in §8.</p>
+
+<h3 id="algo-optimal">Why $T^{(\al)}$ is an optimal map</h3>
+<ol class="steps">
+<li>By Brenier, $T_k=\nabla\varphi_k$ with $\varphi_k$ convex.<span class="why">$T_k$ is the optimal map for the quadratic cost from a measure with a density.</span></li>
+<li>$$T^{(\al)}=\sum_k\lambda_k\nabla\varphi_k=\nabla\Big(\sum_k\lambda_k\varphi_k\Big).$$<span class="why">The gradient is linear.</span></li>
+<li>$\sum_k\lambda_k\varphi_k$ is convex, so $T^{(\al)}$ is the gradient of a convex function, hence the optimal map between $\al$ and $\pf{T^{(\al)}}{\al}$.<span class="why">A positive combination of convex functions is convex; and the converse part of Brenier: the gradient of <em>any</em> convex function is optimal between a measure and its push-forward.</span></li>
+</ol>
+<p>So the board’s remark says: the step from $\al^{(\ell)}$ to $\al^{(\ell+1)}$ is itself an optimal transport, and its cost is $W_2^2(\al^{(\ell)},\al^{(\ell+1)})=\int\norm{x-T^{(\al)}(x)}^2\,\dd\al^{(\ell)}(x)$.</p>
+
+<h3 id="algo-descent">Why the algorithm works: each step decreases the cost</h3>
+<div class="box thm"><div class="box-h">Proposition (descent) — Álvarez-Esteban et al. 2016; Zemel–Panaretos 2019</div>
+<p>Let $F(\al)=\sum_k\lambda_kW_2^2(\al,\be_k)$ be the barycenter cost, $T=T^{(\al)}$ the averaged map. Then</p>
+$$F\big(\pf{T}{\al}\big)\ \le\ F(\al)-\int\norm{x-T(x)}^2\,\dd\al(x)\ =\ F(\al)-W_2^2\big(\al,\pf{T}{\al}\big).$$
+</div>
+<div class="box idea"><div class="box-h">Idea of the proof</div>
+<p>A Pythagoras-type identity for points (“the mean is the closest point on average”), applied at every $x$ to the $P$ destinations $T_k(x)$, then integrated; the new measure is coupled to each input through the old one.</p>
+</div>
+<details class="fold proof" open><summary>Full proof</summary><div class="fold-body">
+<ol class="steps">
+<li>For points $y_1,\dots,y_P$ with mean $\bar y=\sum_k\lambda_ky_k$ and any $z$:
+$$\sum_k\lambda_k\norm{z-y_k}^2=\norm{z-\bar y}^2+\sum_k\lambda_k\norm{\bar y-y_k}^2 .$$<span class="why">Write $z-y_k=(z-\bar y)+(\bar y-y_k)$ and expand: the cross term $2\big\langle z-\bar y,\sum_k\lambda_k(\bar y-y_k)\big\rangle$ vanishes because $\sum_k\lambda_k(\bar y-y_k)=0$. (The variance decomposition.)</span></li>
+<li>Apply it at each $x$ with $z=x$, $y_k=T_k(x)$, $\bar y=T(x)$, and integrate against $\al$:
+$$\sum_k\lambda_k\int\norm{x-T_k(x)}^2\dd\al=\int\norm{x-T(x)}^2\dd\al+\sum_k\lambda_k\int\norm{T(x)-T_k(x)}^2\dd\al .$$<span class="why">Integration of an identity valid at every point.</span></li>
+<li>The left side is $F(\al)$.<span class="why">$T_k$ is optimal from $\al$ to $\be_k$, so $\int\norm{x-T_k(x)}^2\dd\al=W_2^2(\al,\be_k)$.</span></li>
+<li>For each $k$, $\int\norm{T(x)-T_k(x)}^2\dd\al\ \ge\ W_2^2\big(\pf{T}{\al},\be_k\big)$; so the last sum is $\ge F\big(\pf{T}{\al}\big)$.<span class="why">With $X\sim\al$, the pair $\big(T(X),T_k(X)\big)$ is a coupling of $\pf{T}{\al}$ and $\pf{T_k}{\al}=\be_k$ — a gluing through the old measure. Any coupling gives an upper bound on $W_2^2$.</span></li>
+<li>$$F(\al)\ \ge\ \int\norm{x-T(x)}^2\dd\al+F\big(\pf{T}{\al}\big),$$ and $\int\norm{x-T(x)}^2\dd\al=W_2^2(\al,\pf{T}{\al})$.<span class="why">Steps 2–4; the last equality because $T$ is optimal (previous subsection).</span></li>
+</ol>
+</div></details>
+<p><strong>Three consequences.</strong></p>
+<ul>
+<li><strong>Descent.</strong> Each step decreases the cost by at least the squared length of the step: the algorithm never goes uphill. (It is in fact a gradient descent with step $1$ in the Wasserstein space; Zemel–Panaretos, 2019.)</li>
+<li><strong>Barycenters are fixed points.</strong> If $\al$ is a barycenter, $F(\pf{T}{\al})\ge F(\al)$, so $\int\norm{x-T(x)}^2\dd\al=0$: $\ \sum_k\lambda_kT_k=\Id$ ($\al$-almost everywhere). This is the first-order optimality condition of Agueh and Carlier, and the condition used for Gaussians in §8.</li>
+<li><strong>Convergence of the iterates</strong> to the barycenter holds under regularity assumptions (Álvarez-Esteban et al., 2016; Zemel–Panaretos, 2019) — a harder theorem, not proved here.</li>
+</ul>
+
+<h3 id="algo-cases">Three special cases</h3>
+<h4>On the line: exact in one step</h4>
+<p>From $\al$ (with a continuous CDF), the optimal maps are $T_k=C_{\be_k}^{-1}\circ C_\al$. The quantile function of $\pf{T}{\al}$ is $T\circ C_\al^{-1}=\sum_k\lambda_kC_{\be_k}^{-1}\circ C_\al\circ C_\al^{-1}=\sum_k\lambda_kC_{\be_k}^{-1}$ — the barycenter of §8, whatever the starting point. One step, as for points.</p>
+<h4>Gaussians: the Álvarez-Esteban update</h4>
+<p>Start from $\al=\N(m,\Sigma)$. The optimal maps are $T_k(x)=m_k+A_k(x-m)$ with $A_k=\Sigma^{-1/2}\big(\Sigma^{1/2}\Sigma_k\Sigma^{1/2}\big)^{1/2}\Sigma^{-1/2}$. Average them:</p>
+$$T(x)=m^\star+A(x-m),\qquad A=\sum_k\lambda_kA_k=\Sigma^{-1/2}\,\Psi(\Sigma)\,\Sigma^{-1/2},$$
+<p>with $m^\star=\sum_k\lambda_km_k$. An affine image of a Gaussian is Gaussian: $\pf{T}{\al}=\N\big(m^\star,A\Sigma A\big)$, and</p>
+$$A\Sigma A=\Sigma^{-1/2}\Psi(\Sigma)\,\Sigma^{-1/2}\,\Sigma\,\Sigma^{-1/2}\Psi(\Sigma)\Sigma^{-1/2}=\Sigma^{-1/2}\,\Psi(\Sigma)^2\,\Sigma^{-1/2}.$$
+<p>So the general algorithm, run on Gaussians, is exactly the provably convergent update of §8. The mean is right after one step; the covariance converges fast (in the widget of §8, about 5× closer at each step on the default example, against 2× for the board’s $\Psi$ iteration).</p>
+<h4>Point clouds: average the matched partners</h4>
+<p>If the current guess and every input are clouds of $n$ points with equal weights $\frac1n$, optimal plans can be taken to be permutations (Lesson 2, Birkhoff–von Neumann): the optimal “map” $T_k$ sends the point $x_i$ to its partner $y^k_{\sigma_k(i)}$ in the optimal assignment. The step is then</p>
+$$x_i\ \leftarrow\ \sum_k\lambda_k\,y^k_{\sigma_k(i)}\qquad(\text{each point moves to the average of its partners}).$$
+<p>The descent proof applies verbatim (step 4 only needs couplings). Since there are finitely many assignments and the cost strictly decreases while points move, the iteration <strong>stops after finitely many steps</strong>, at a fixed point. Caveat: for point clouds the problem is not convex in the positions, so different starting clouds can stop at slightly different fixed points. In the widget below, starting from the ring gives a fixed point of cost $9.4819$ after two steps, and starting from the first random cloud gives $9.4834$ after four.</p>
+<div class="widget" data-widget="fixedpoint"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p>What to look at: three input clouds (blue) and the current guess $\al^{(\ell)}$ (green). Press <strong>Step</strong>: each green point is matched to one point of each input (optimal assignment), the thin lines show where its partners are, and it moves to their weighted average. The readout prints the cost $F$ before and after, and the squared step length: you can check the descent inequality at every step. Typically the cloud settles after 2 to 5 steps. Move the weights to get other barycenters; restart from a random cloud to see the fixed point (and its cost) change slightly.</p>
+
+<div class="box remark"><div class="box-h">Other ways to compute barycenters (beyond this lecture)</div>
+<ul>
+<li>Fixed grid: the linear program of §7, or, much faster, its entropic regularisation solved by Sinkhorn-like iterations (Lesson 7).</li>
+<li>Free support: the fixed-point algorithm above, with barycentric projections when the clouds have different sizes (Cuturi–Doucet, 2014).</li>
+<li>Multi-marginal formulation: for the quadratic cost, the barycenter is the push-forward of an optimal multi-marginal plan by $(x_1,\dots,x_P)\mapsto\sum_k\lambda_kx_k$ (compact notes, Prop. 12.16).</li>
+</ul>
+</div>
+
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>Barycenter condition → “the average of the optimal maps from the barycenter is the identity”.</li>
+<li>Barycenter algorithm → average the maps, push the measure, repeat.</li>
+<li>To show a step decreases a sum of squared distances → variance decomposition around the mean.</li>
+</ul>
+</div>
+
+<div class="quiz"><p>Why does the algorithm need the current guess $\al^{(\ell)}$ to have a density (or to be a cloud of $n$ equal-weight points)?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>To have optimal <em>maps</em> $T_k$: averaging plans that split mass is not defined pointwise. With a density, Brenier gives maps; with equal-weight clouds of the same size, optimal permutations exist. (For general discrete measures one replaces $T_k(x)$ by the barycentric projection of the plan, the average of the destinations of $x$.)</p>
+</div></details></div>
