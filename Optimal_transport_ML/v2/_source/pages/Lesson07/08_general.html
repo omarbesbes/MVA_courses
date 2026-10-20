@@ -1,0 +1,112 @@
+<h2 id="general">8. Entropic transport between general measures <span class="ref">OT4ML §8.4–8.5, pp. 145–153 · §9.6, p. 190</span></h2>
+<p class="tldr">Between arbitrary measures, the entropic plan has a density $e^{(f(x)+g(y)-c(x,y))/\eps}$ with respect to $\al\otimes\be$, the potentials are soft $c$-transforms of each other, and for the quadratic cost the plan is a transport map blurred by Gaussian noise of variance about $\eps/2$; Gaussians have a closed form, and the bias with respect to $W_2^2$ is of order $\eps\log(1/\eps)$.</p>
+
+<h3 id="general-def">The problem and its dual</h3>
+<p>Machine learning works with distributions that are known through samples, or with densities; the matrices of §1–§7 are the special case of discrete measures. Every object has a continuous counterpart, obtained by replacing sums by integrals and entries of matrices by densities with respect to $\al\otimes\be$.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 8.12, (8.14), p. 145 · Prop. 8.20, (8.23)–(8.25), p. 152 · Def. 8.21, p. 153 · compact Def. 8.10, p. 36; Prop. 8.18, p. 38; Def. 8.19, p. 39</span></div>
+<p><strong>Definition 8.12</strong> (Continuous entropic optimal transport). For $\eps>0$, define</p>
+$$\mathcal L^\eps_c(\al,\be):=\min_{\pi\in\U(\al,\be)}\int_{\X\times\Y}c(x,y)\,\dd\pi(x,y)+\eps\KL(\pi|\al\otimes\be).\qquad(8.14)$$
+<p><strong>Proposition 8.20</strong> (Continuous entropic duality). Let $\X$ and $\Y$ be compact metric spaces, let $\al\in\Pc(\X)$ and $\be\in\Pc(\Y)$, and let $c\in\mathcal C(\X\times\Y)$. For every $\eps>0$, […] $\ \mathcal L^\eps_c(\al,\be)=\sup_{f\in\mathcal C(\X),\,g\in\mathcal C(\Y)}\mathcal D_\eps(f,g)$, (8.23) where the concave dual objective is</p>
+$$\mathcal D_\eps(f,g):=\int_\X f\,\dd\al+\int_\Y g\,\dd\be-\eps\int_{\X\times\Y}\Big(e^{\frac{f(x)+g(y)-c(x,y)}{\eps}}-1\Big)\dd\al(x)\dd\be(y).\qquad(8.24)$$
+<p>If $\pi^\star$ and $(f^\star,g^\star)$ are primal and dual optimizers, then $\ \dfrac{\dd\pi^\star}{\dd(\al\otimes\be)}(x,y)=\exp\Big(\dfrac{f^\star(x)+g^\star(y)-c(x,y)}{\eps}\Big)\ $ $(\al\otimes\be)$-a.e. (8.25)</p>
+<p><strong>Definition 8.21</strong> (Continuous soft $c$-transforms). For $f\in\mathcal C(\X)$ and $g\in\mathcal C(\Y)$, define</p>
+$$f^{c,\eps}(y):=-\eps\log\int_\X e^{\frac{f(x)-c(x,y)}{\eps}}\dd\al(x),\qquad g^{\bar c,\eps}(x):=-\eps\log\int_\Y e^{\frac{g(y)-c(x,y)}{\eps}}\dd\be(y).\qquad(8.26)\text{–}(8.27)$$
+</div>
+<dl class="decode">
+<dt>$\KL(\pi|\al\otimes\be)$</dt><dd>$\int\log\frac{\dd\pi}{\dd(\al\otimes\be)}\,\dd\pi$ for couplings: the mutual information of $(X,Y)\sim\pi$ (§1). It is $+\infty$ if $\pi$ has a part that $\al\otimes\be$ does not see — for instance <strong>any transport map between densities</strong>, which lives on a graph of zero area. So the entropic problem never returns a map.</dd>
+<dt>(8.25)</dt><dd>The plan has a density with respect to the product, of the scaling form $e^{f/\eps}\,e^{-c/\eps}\,e^{g/\eps}$: the continuous version of $P=\operatorname{diag}(u)K\operatorname{diag}(v)$.</dd>
+<dt>(8.26)–(8.27)</dt><dd>The soft $c$-transforms: Sinkhorn alternates $f\leftarrow g^{\bar c,\eps}$, $g\leftarrow f^{c,\eps}$. With samples, the integrals become averages over the samples: the discrete algorithm of §6.</dd>
+</dl>
+<p>OT4ML also proves that optimal potentials exist and are unique up to $(f+\lambda,g-\lambda)$ when the supports are compact and $c$ is continuous (Prop. 8.22, p. 153; compact Prop. 8.20, p. 39), and that the limits of §3 hold for measures: $\mathcal L^\eps_c\to\mathcal L_c$ as $\eps\to0$, every cluster point of $\pi_\eps$ is an optimal plan — the Brenier plan $(\Id,T)_\#\al$ for the quadratic cost when $\al$ has a density — and $\pi_\eps\to\al\otimes\be$ as $\eps\to\infty$ (Prop. 8.15, p. 147; compact Prop. 8.13, p. 37).</p>
+
+<h3 id="general-gibbs">Entropic transport is “transport plus noise”</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 8.14 and its example, pp. 146–147 · compact Prop. 8.12, p. 36</span></div>
+<p><strong>Proposition 8.14</strong> (Closed-form Gibbs coupling). […] Define the normalized Gibbs transition and its output density by $\ p_\eps(x,y):=\frac{k_\eps(x,y)}{Z_\eps(x)}$, $q_\eps(y):=\int_\X p_\eps(x,y)\,\dd\al(x)$, $\dd\be_\eps=q_\eps\,\dd\be_0$ (8.18), where $k_\eps=e^{-c/\eps}$ and $Z_\eps(x)=\int k_\eps(x,y)\,\dd\be_0(y)$. […] Then the unique solution of (8.14) between $\al$ and $\be_\eps$ is $\ \dd\pi_\eps(x,y)=p_\eps(x,y)\,\dd\al(x)\,\dd\be_0(y).$ (8.19)</p>
+<p>For example, let $\X=\Y=\R^d$, let $\be_0$ be Lebesgue measure, and take $c(x,y)=\norm{x-y}^2$. Then $Z_\eps=(\pi\eps)^{d/2}$ and $\ p_\eps(x,y)=(\pi\eps)^{-d/2}e^{-\norm{x-y}^2/\eps}$, $\be_\eps=\al*\N\big(0,\frac\eps2\Id\big)$. Equivalently, (8.19) is the law of $(X,X+\sqrt{\eps/2}\,G)$ for independent $X\sim\al$ and $G\sim\N(0,\Id)$. Time-indexed Gaussian blurrings of this type are the forward noising mechanism behind diffusion models […].</p>
+</div>
+<dl class="decode">
+<dt>$\be_\eps=\al*\N(0,\frac\eps2\Id)$</dt><dd>The target is the source blurred by Gaussian noise of variance $\frac\eps2$ in each direction. For this particular target, no iteration is needed: the entropic plan is “do not move, then add noise”.</dd>
+<dt>$(X,X+\sqrt{\eps/2}\,G)$</dt><dd>The conditional law of $Y$ given $X=x$ is $\N(x,\frac\eps2\Id)$: the plan is the identity map blurred at the scale $\sqrt{\eps/2}$.</dd>
+</dl>
+<details class="fold proof"><summary>Proof of Proposition 8.14 (the main identity)</summary><div class="fold-body">
+<ol class="steps">
+<li>$\pi_\eps\in\U(\al,\be_\eps)$.<span class="why">$p_\eps(x,\cdot)\,\dd\be_0$ is a probability measure for every $x$ (normalization by $Z_\eps$), so the first marginal is $\al$; the second is $\int p_\eps(x,y)\,\dd\al(x)\,\dd\be_0(y)=q_\eps\,\dd\be_0=\be_\eps$ (Fubini).</span></li>
+<li>$\dfrac{\dd\pi_\eps}{\dd(\al\otimes\be_\eps)}(x,y)=\dfrac{k_\eps(x,y)}{Z_\eps(x)q_\eps(y)}$, so $\eps\log\dfrac{\dd\pi_\eps}{\dd(\al\otimes\be_\eps)}=-c(x,y)-\eps\log Z_\eps(x)-\eps\log q_\eps(y)$.<span class="why">Divide $p_\eps(x,y)\,\dd\al\,\dd\be_0$ by $\dd\al\,q_\eps\dd\be_0$; $\eps\log k_\eps=-c$.</span></li>
+<li>For every $\gamma\in\U(\al,\be_\eps)$: $$\eps\KL(\gamma|\pi_\eps)=\int c\,\dd\gamma+\eps\KL(\gamma|\al\otimes\be_\eps)+\eps\int\log Z_\eps\,\dd\al+\eps\int\log q_\eps\,\dd\be_\eps .$$<span class="why">$\log\frac{\dd\gamma}{\dd\pi_\eps}=\log\frac{\dd\gamma}{\dd(\al\otimes\be_\eps)}-\log\frac{\dd\pi_\eps}{\dd(\al\otimes\be_\eps)}$; integrate against $\gamma$ and use step 2; the terms in $x$ alone and $y$ alone integrate against the marginals of $\gamma$.</span></li>
+</ol>
+<p>The last two terms do not depend on $\gamma$: minimizing the entropic objective over $\U(\al,\be_\eps)$ is minimizing $\KL(\gamma|\pi_\eps)$, whose unique minimizer is $\gamma=\pi_\eps$. (The same argument as the “if” part of §2.) $\square$</p>
+</div></details>
+<p>Check by simulation (three atoms for $\al$, $\eps=0.2$): solving the entropic problem between $\al$ and $\al*\N(0,0.1)$ on a fine grid gives conditional laws $Y|X=x$ with mean $x$ and variance $0.100000=\eps/2$ for each atom.</p>
+<div class="box ml"><div class="box-h">In machine learning — the noising process of diffusion models</div>
+<p>Diffusion models generate images by learning to reverse a process that progressively adds Gaussian noise to the data: $X_t=X_0+\sigma_tG$ (or a rescaled variant). Proposition 8.14 says that each pair $(X_0,X_t)$ of this forward process is <em>exactly</em> the entropic optimal plan between the data distribution and its noisy version, for the quadratic cost and the temperature $\eps=2\sigma_t^2$. The dynamic version of this statement is the Schrödinger bridge (OT4ML §14.3, Def. 14.10): the most likely noisy evolution between two prescribed distributions. Learning such bridges between two arbitrary distributions, rather than between data and pure noise, is a natural generalization of diffusion models (OT4ML §16.1 discusses diffusion models).</p>
+</div>
+
+<h3 id="general-gauss">Gaussians in closed form</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 9.26, p. 190 · compact Prop. 9.23, p. 52</span></div>
+<p><strong>Proposition 9.26</strong> (Balanced entropic OT between Gaussians). Let $\al=\N(m_\al,\Sigma_\al)$ and $\be=\N(m_\be,\Sigma_\be)$ have positive-definite covariances, and let $\Sigma_\al^{1/2}\Sigma_\be^{1/2}=U\operatorname{diag}(\sigma_i)V\T$ be a singular-value decomposition. For the balanced entropic problem (8.14) with $c(x,y)=\norm{x-y}^2$, the optimizer is Gaussian with cross-covariance</p>
+$$K_\eps=\Sigma_\al^{1/2}U\operatorname{diag}(s_i)V\T\Sigma_\be^{1/2},\qquad s_i=\frac{\sqrt{\eps^2+16\sigma_i^2}-\eps}{4\sigma_i}.$$
+<p>The optimal value is $\ \norm{m_\al-m_\be}^2+\tr(\Sigma_\al)+\tr(\Sigma_\be)+\sum_i\Big(-2\sigma_is_i-\frac\eps2\log(1-s_i^2)\Big).$ As $\eps\downarrow0$, $s_i\to1$ and the full covariance contribution, including the two trace terms, converges to $\B(\Sigma_\al,\Sigma_\be)^2$.</p>
+</div>
+<p>On the line ($d=1$, variances $\sigma_\al^2$, $\sigma_\be^2$), the only singular value is $\sigma_\al\sigma_\be$, and the cross-covariance $k_\eps=\sigma_\al\sigma_\be s$ and the value are</p>
+$$k_\eps=\frac{\sqrt{\eps^2+16\sigma_\al^2\sigma_\be^2}-\eps}{4},\qquad\begin{aligned}\mathcal L^\eps(\al,\be)=\ &(m_\al-m_\be)^2+\sigma_\al^2+\sigma_\be^2-2k_\eps\\&-\frac\eps2\log\Big(1-\frac{k_\eps^2}{\sigma_\al^2\sigma_\be^2}\Big).\end{aligned}$$
+<div class="box idea"><div class="box-h">Idea of the proof (in one dimension)</div>
+<p>Replacing a coupling by the Gaussian with the same means and covariances keeps the cost $\E(X-Y)^2$ and does not increase the mutual information (Gaussians maximize entropy at fixed covariance). So only the cross-covariance $k$ is free. For a Gaussian pair with correlation $\rho=k/(\sigma_\al\sigma_\be)$, $\E(X-Y)^2=(m_\al-m_\be)^2+\sigma_\al^2+\sigma_\be^2-2k$ and $\mathcal I(X,Y)=-\frac12\log(1-\rho^2)$. Minimize in $k$: $-2+\frac{\eps k}{\sigma_\al^2\sigma_\be^2-k^2}=0$, i.e. $2k^2+\eps k-2\sigma_\al^2\sigma_\be^2=0$, whose positive root is $k_\eps$.</p>
+</div>
+<div class="box example"><div class="box-h">Worked example — $\al=\N(0,1)$, $\be=\N(1,4)$</div>
+<p>Here $W_2^2(\al,\be)=(0-1)^2+(1-2)^2=2$ and the Monge map is $T(x)=1+2x$.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>$\eps$</th><th>$k_\eps$</th><th>correlation $k_\eps/2$</th><th>$\mathrm{Var}(Y|X)=4-k_\eps^2$</th><th>$\mathcal L^\eps(\al,\be)$</th></tr></thead>
+<tbody>
+<tr><td>$0.01$</td><td>$1.997502$</td><td>$0.998751$</td><td>$0.009988$</td><td>$2.034960$</td></tr>
+<tr><td>$0.1$</td><td>$1.975156$</td><td>$0.987578$</td><td>$0.098758$</td><td>$2.234756$</td></tr>
+<tr><td>$0.5$</td><td>$1.878902$</td><td>$0.939451$</td><td>$0.469726$</td><td>$2.777670$</td></tr>
+<tr><td>$1$</td><td>$1.765564$</td><td>$0.882782$</td><td>$0.882782$</td><td>$3.224357$</td></tr>
+<tr><td>$2$</td><td>$1.561553$</td><td>$0.780776$</td><td>$1.561553$</td><td>$3.817508$</td></tr>
+</tbody></table></div>
+<p>The rows $\eps=0.5$, $1$, $2$ were checked against Sinkhorn on a grid of $701$ points (same values to six digits). Three readings:</p>
+<ul>
+<li><strong>The conditional law</strong> $Y|X=x$ is $\N\big(1+\frac{k_\eps}{1}x,\ 4-k_\eps^2\big)$. Its mean, the barycentric projection, is a line of slope $k_\eps=1.9975$ at $\eps=0.01$ (Monge: $2$); its variance $\mathrm{Var}(Y|X)=\frac\eps2k_\eps$ (use $2k_\eps^2+\eps k_\eps=8$) is $\approx\frac\eps2T'=\eps$ for small $\eps$: standard deviation $0.09994\approx\sqrt{0.01}$. Transport plus noise, again.</li>
+<li><strong>The bias</strong> $\mathcal L^\eps-W_2^2$ is $0.035$ at $\eps=0.01$ and $0.235$ at $\eps=0.1$: much more than $\eps$, because of a $\eps\log(1/\eps)$ term (next paragraph).</li>
+<li><strong>Large $\eps$</strong>: $k_\eps\to0$ (independence) and $\mathcal L^\eps\to\E\abs{X-Y}^2=1+1+4=6$ for $X,Y$ independent ($5.992$ at $\eps=1000$).</li>
+</ul>
+</div>
+<figure class="fig"><!-- include figures/L07/gauss.svg --><figcaption>Entropic plans between $\N(0,1)$ and $\N(1,4)$ at $\eps=0.1$ (left) and $\eps=2$ (right): one- and two-standard-deviation ellipses of the Gaussian plan, the Monge map $y=1+2x$ (blue, dashed) and the barycentric projection $x\mapsto\E[Y|X=x]$ (green), of slope $k_\eps<2$. At $\eps=0.1$ the plan is a thin band around the graph of the map (correlation $0.988$); at $\eps=2$ it is a fat cloud (correlation $0.781$), and the barycentric projection is visibly flatter than the map.</figcaption></figure>
+
+<h3 id="general-bias">The bias at low temperature</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 8.17, p. 149 · compact Prop. 8.15, p. 37</span></div>
+<p><strong>Proposition 8.17</strong> (Small-temperature quadratic expansion). Let $\al=\rho_\al\dd x$ and $\be=\rho_\be\dd x$ be probability measures on $\R^d$ with bounded compactly supported densities. Let $\al_t=\rho_t\dd x$ be their quadratic displacement interpolation and assume $\ \mathcal I_{geo}(\al,\be):=\int_0^1\int_{\R^d}\norm{\nabla\log\rho_t(x)}^2\rho_t(x)\,\dd x\,\dd t<+\infty.$ For $c(x,y)=\norm{x-y}^2$, define $\ \mathrm H(\al):=\int\rho_\al\log\rho_\al\,\dd x$, $\mathrm H(\be):=\int\rho_\be\log\rho_\be\,\dd x$. Then, as $\eps\downarrow0$,</p>
+$$\mathcal L^\eps_{\norm{\cdot}^2}(\al,\be)=\mathcal W_2^2(\al,\be)-\frac{d\eps}2\log(\pi\eps)-\frac\eps2\big(\mathrm H(\al)+\mathrm H(\be)\big)+\frac{\eps^2}{16}\mathcal I_{geo}(\al,\be)+o(\eps^2).$$
+</div>
+<dl class="decode">
+<dt>$-\frac{d\eps}2\log(\pi\eps)$</dt><dd>The leading bias, <strong>positive</strong> for $\eps<1/\pi$ and of order $\eps\log(1/\eps)$: the price of blurring a map into a plan of width $\sqrt\eps$ in $d$ directions. It grows with the dimension.</dd>
+<dt>$\mathrm H(\al)=\int\rho_\al\log\rho_\al$</dt><dd>Careful: this is <em>minus</em> the differential entropy (it is large for concentrated densities), while Def. 8.1 used $\mathrm H$ for the entropy itself. See the note below.</dd>
+<dt>$\mathcal I_{geo}$</dt><dd>The Fisher information integrated along the McCann interpolation of Lesson 3: a second-order correction. It will cancel in the Sinkhorn divergence (§9).</dd>
+</dl>
+<div class="box example"><div class="box-h">Worked example — the expansion, checked</div>
+<p>For $\al=\N(0,1)$, $\be=\N(1,4)$: $\mathrm H(\al)=-\frac12\log(2\pi e)=-1.418939$, $\mathrm H(\be)=-\frac12\log(8\pi e)=-2.112086$, and along the interpolation $\rho_t=\N(t,(1+t)^2)$, so $\mathcal I_{geo}=\int_0^1(1+t)^{-2}\dd t=\frac12$. Compare the exact bias with the expansion:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>$\eps$</th><th>exact $\mathcal L^\eps-W_2^2$</th><th>first-order terms</th><th>difference</th><th>$\frac{\eps^2}{16}\mathcal I_{geo}$</th></tr></thead>
+<tbody>
+<tr><td>$0.1$</td><td>$0.2347565$</td><td>$0.2344440$</td><td>$3.12\times10^{-4}$</td><td>$3.125\times10^{-4}$</td></tr>
+<tr><td>$0.01$</td><td>$0.03496045$</td><td>$0.03495732$</td><td>$3.12\times10^{-6}$</td><td>$3.125\times10^{-6}$</td></tr>
+<tr><td>$0.001$</td><td>$0.004647056$</td><td>$0.004647025$</td><td>$3.13\times10^{-8}$</td><td>$3.125\times10^{-8}$</td></tr>
+</tbody></table></div>
+<p>The remaining error after the second-order term is below $5\times10^{-9}$ in all three cases.</p>
+</div>
+<div class="box remark"><div class="box-h">Note on the sources — the sign of $\mathrm H$</div>
+<p>OT4ML uses the letter $\mathrm H$ with opposite signs: in Def. 8.1, $\mathrm H(P)=-\sum P\log P$ is the entropy; in Prop. 8.17, $\mathrm H(\al)=\int\rho_\al\log\rho_\al$ is minus the (differential) entropy. The expansion is correct with the second meaning: with the differential entropies $+1.418939$ and $+2.112086$ instead, the first-order terms would give $-0.1187$ at $\eps=0.1$ instead of $0.2344$, far from the exact $0.2348$. The exercise sheet also writes $H(P)=\sum P(\log P-1)$, i.e. minus an entropy (<a href="#conventions">conventions box</a>).</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — “the entropic bias is of order $\eps$”</div>
+<p>For discrete problems with a unique optimal plan, yes (§3: $\eps\KL(P^\star|a\otimes b)$). Between densities, no: the optimal plan has infinite mutual information, and the bias is of order $\frac d2\eps\log\frac1\eps$, larger in high dimension. Moreover the bias depends on the measures (through $\mathrm H(\al)+\mathrm H(\be)$), so it does not cancel when you compare two candidate fits: this is why minimizing $\mathcal L^\eps$ over a model shrinks it (§9).</p>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>Measures → $\frac{\dd\pi_\eps}{\dd(\al\otimes\be)}=e^{(f\oplus g-c)/\eps}$; Sinkhorn = alternating soft $c$-transforms (integrals, or averages over samples).</li>
+<li>Quadratic cost → “map plus Gaussian noise”: $\mathrm{Var}(Y|X=x)\approx\frac\eps2T'(x)$ in 1D; target $\al*\N(0,\frac\eps2)$ → exact Gibbs plan $(X,X+\sqrt{\eps/2}G)$.</li>
+<li>Gaussians → solve $2k^2+\eps k-2\sigma_\al^2\sigma_\be^2=0$; bias $\approx-\frac{d\eps}2\log(\pi\eps)-\frac\eps2(\mathrm H(\al)+\mathrm H(\be))$.</li>
+</ul>
+</div>
+<div class="quiz"><p>Check the Gibbs coupling on Gaussians: if $\al=\N(0,1)$ and $\be=\N(0,1+\frac\eps2)$, what does the closed form give for $k_\eps$?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>Prop. 8.14 predicts $Y=X+\sqrt{\eps/2}\,G$, so $k_\eps=\mathrm{Cov}(X,Y)=1$. Closed form: $16\sigma_\al^2\sigma_\be^2=16+8\eps$ and $\sqrt{\eps^2+16+8\eps}=\eps+4$, so $k_\eps=\frac{(\eps+4)-\eps}{4}=1$. ✓</p>
+</div></details></div>

@@ -1,6 +1,6 @@
 // widgets/Lesson01.js — interactive figures of Lesson 1 (Monge's problem).
 // This file is inserted by build.mjs inside the scope of app.js: it uses el, fmt, Plot, scaffold, slider, select,
-// button, checkbox, readout, legend, addSvg, svgPoint, mulberry32, gpdf, updf, Line1D, MQ, US, quantiles,
+// button, checkbox, readout, legend, addSvg, svgPoint, mulberry32, gpdf, updf, Line1D, MQ, quantiles,
 // densityFromQ, mmul, msym, msqrt, minv, bures, ellipsePts, hungarian and redrawers, and registers its widgets
 // in WIDGETS. Its own helpers are prefixed "l1".
 

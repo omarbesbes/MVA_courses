@@ -171,7 +171,7 @@
       }, fsLabel: "f*(y) = 0 on [−1, 1], +∞ outside (an indicator)" },
     quart: { label: "f(x) = x⁴/4", f: function (x) { return x * x * x * x / 4; },
       conj: function (y) { var x = Math.sign(y) * Math.pow(Math.abs(y), 1 / 3); return { v: 0.75 * Math.pow(Math.abs(y), 4 / 3), x: [x] }; },
-      fsLabel: "f*(y) = ¾|y|^(4/3)  (|x|ᵖ/p ↔ |y|^q/q, 1/p + 1/q = 1)" },
+      fsLabel: "f*(y) = ¾ |y| ∛|y|  (the pair p = 4, q = 4/3 of the table: 1/p + 1/q = 1)" },
     well: { label: "f(x) = (x² − 1)²  (not convex)", f: remWell, conj: remWellConj,
       env: function (x) { return Math.abs(x) <= 1 ? 0 : remWell(x); }, fsLabel: "f* computed numerically; f** = convex envelope (dashed)" }
   };

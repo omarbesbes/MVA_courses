@@ -180,7 +180,7 @@
       var ymax = 0; dens.forEach(function (p) { if (isFinite(p[1]) && p[1] > ymax) ymax = p[1]; });
       top.yr = [0, Math.max(1.0, ymax * 1.08)];
       var d0 = densityFromQ(traj[0]), d1 = densityFromQ(traj[NT]);
-      var capY = function (d) { return d.map(function (p) { return [p[0], Math.min(p[1], top.yr[1] * 1.12)]; }); };
+      var capY = function (d) { return d.map(function (p) { return [p[0], Math.min(p[1], top.yr[1])]; }); };
       top.path(capY(d0), "ln c2 thin dash"); top.path(capY(d1), "ln c1 thin dash");
       var w = F.win;
       top.line(w[0], 0, w[0], top.yr[1], "ln cm thin dash"); top.line(w[1], 0, w[1], top.yr[1], "ln cm thin dash");
