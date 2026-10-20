@@ -27,6 +27,9 @@ const PAGES = [
   { file: "04_seance4.html", nav: "S4" },
   { file: "05_seance5.html", nav: "S5" },
   { file: "06_seance6.html", nav: "S6" },
+  { file: "08_td1.html", nav: "TD1" },
+  { file: "09_td2.html", nav: "TD2" },
+  { file: "10_td3.html", nav: "TD3" },
   { file: "07_fiche.html", nav: "Fiche réflexes" },
 ];
 

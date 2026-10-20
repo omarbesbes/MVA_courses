@@ -139,6 +139,39 @@ N'utilisez jamais de couleur codée en dur. Calculez les coordonnées (Python) p
 `probabilites` : `esperance`, `gaussien`, `forme-quadratique`, `queues`, `convergences` ·
 `statistique` : `estimateur`, `vraisemblance`, `fisher`, `erreur-test`, `tests`.
 
+Ajoutées avec les TD (octobre 2026) : `existence` (dans `optimisation`), `lois-usuelles` (χ², exponentielle),
+`concentration` (concentration gaussienne des fonctions lipschitziennes), `hoeffding`, `slutsky`.
+
+## 7 bis. Sources du cours
+
+- Diapos : `Cours1.pdf` … `Cours6.pdf` (2024, cumulatives) et `Cours5_enrichi_annote.pdf` (version 2026 de la partie GLM,
+  36 pages, avec les notes manuscrites du tableau). Référence : `<span class="ref">Cours5 enrichi · p. 24</span>`.
+- Preuves manuscrites de la professeure : `Preuves_cours 4.pdf` (inégalités oracle lente et rapide). Référence :
+  `<span class="ref">Preuves cours 4 · p. 2</span>`.
+- TD : `TD_et_correction/TD1.pdf`, `TD2.pdf`, `TD3.pdf` ; corrigés officiels `Correction_TD1.pdf` (tapé) et
+  `Correction_TD2.pdf` (manuscrit). Pas de corrigé officiel pour le TD3 : le corrigé du guide le dit explicitement.
+
+## 7 ter. Pages de TD (`08_td1.html`, `09_td2.html`, `10_td3.html`)
+
+```
+<div class="box objectifs"> ce que le TD fait travailler + séances concernées (liens) </div>
+<h2 id="avant">Avant de commencer</h2>   prérequis (liens Rappels/séances), comment travailler le TD
+<h2 id="ex1">Exercice 1 — Titre</h2>
+  <div class="box enonce"><div class="box-h">Énoncé <span class="ref">TD1 · exercice 1</span></div> énoncé fidèle </div>
+  <div class="box idee"><div class="box-h">De quoi parle cet exercice ?</div> lien avec le cours, enjeu </div>
+  <h3 id="ex1-q1">Question 1 — reformulation courte</h3>
+    rappel de la question ; <div class="box methode"> comment l'attaquer </div>
+    <details class="fold hint">Indice</details> <details class="fold sol">Solution détaillée (pas à pas)</details>
+    <div class="box officiel"><div class="box-h">Le corrigé officiel <span class="ref">Correction_TD1 · p. 2</span></div>
+      ce qu'il fait, ce que la solution ci-dessus détaille en plus, coquilles éventuelles </div>
+  <div class="box reflexe"> ce qu'il faut retenir de l'exercice </div>
+<h2 id="bilan">Ce qu'il faut retenir du TD</h2>
+<h2 id="reflexes">Les réflexes du TD</h2>
+<h2 id="errata">Coquilles repérées</h2>   (énoncé et corrigé ; seulement si vérifiées)
+<h2 id="suite">Et après ?</h2>
+```
+Composants spécifiques : `box enonce` (énoncé, bordure double ardoise), `box officiel` (corrigé officiel, prune).
+
 ## 8. Notations communes
 
 - $n$ observations, $p$ variables ; $X\in\R^{n\times p}$ ; ligne $i$ : $x_i$ (vecteur ligne, comme les diapos) ; colonne $j$ : $X_j\in\R^n$.
