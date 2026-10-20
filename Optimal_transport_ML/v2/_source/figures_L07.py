@@ -411,7 +411,7 @@ def fig_bias():
     g.path([(e, math.sqrt(max(1 - e / 2, 0))) for e in es2], "ln c2")
     g.line(0, 1, 3, 1, "ln c3")
     g.text(0.1, 1.0, "Sinkhorn divergence: s = 1", "tx-s t3", "start", dy=-6)
-    g.text(0.1, 0.25, "raw loss: s = √(1 − ε/2)", "tx-s t2", "start")
+    g.text(0.05, 0.13, "raw loss: s = √(1 − ε/2)", "tx-s t2", "start")
     g.text(2.05, 0.04, "collapse to δ₀", "tx-s t2", "start", dy=-4)
     c.text(536, 16, "best fit N(0, s²) of N(0, 1)", "tx-b", "middle")
     c.text(440, 34, "best width s", "tx-s", "start")

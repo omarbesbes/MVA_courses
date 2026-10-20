@@ -5,7 +5,7 @@
 <p>The loss of a neural network is not convex in its weights, and permuting the hidden neurons does not change the function: the weights are a <em>set</em> of neurons, not a vector. Both difficulties disappear when the network is written as an <strong>average over its neurons</strong> — the mean-field parametrisation — because an average only depends on the empirical measure of the neurons.</p>
 <div class="box course"><div class="box-h">In the course <span class="ref">OT4ML §15.4, p. 387</span></div>
 <p><em>Wasserstein training of two-layer MLPs.</em> The key modeling step is to forget the ordering of the hidden neurons and to regard the network weights as a probability measure on parameter space. […] We use $z\in\R^d$ for the input data and $y\in\R^{d'}$ for the label. A neuron is a particle $x=(u,v)\in\R^d\times\R^{d'}$, where $u$ is the inner weight and $v$ is the outer vector weight. For a scalar nonlinearity $\sigma$, define the vector-valued feature $\psi(x,z)=v\,\sigma(\ps{u}{z})\in\R^{d'}$. The width-$n$ network and its mean-field version are</p>
-$$G_X(z)=\frac1n\sum_{i=1}^n\psi(x_i,z),\qquad G_\al(z)=\int\psi(x,z)\,\dd\al(x),\qquad\al=\frac1n\sum_i\delta_{x_i}.$$
+$$\begin{aligned}G_X(z)&=\frac1n\sum_{i=1}^n\psi(x_i,z),\\ G_\al(z)&=\int\psi(x,z)\,\dd\al(x),\qquad\al=\frac1n\sum_i\delta_{x_i}.\end{aligned}$$
 <p>[…] Let $\zeta$ be a probability distribution on data-label pairs $(z,y)$. The population risk is $f(\al)=\int\ell(G_\al(z),y)\,\dd\zeta(z,y)$ […]. Since $\al\mapsto G_\al$ is linear, $f$ is convex as a function of $\al$ whenever $\ell(\cdot,y)$ is convex. For the empirical neuron law $\al_X=n^{-1}\sum_i\delta_{x_i}$, the Wasserstein metric induces on particles the rescaled metric $n^{-1}\sum_i\norm{\dot x_i}^2$. The corresponding particle flow is $\dot x_i=-n\nabla_{x_i}F(X)$, $F(X)=f\big(\frac1n\sum_i\delta_{x_i}\big)$, which is the gradient flow of $F(X)=f(\al_X)$ for this Wasserstein particle metric, equivalently Euclidean gradient descent with the time scale multiplied by $n$.</p>
 <p>[…] The first variation is $\delta f(\al)(x)=\int\ps{\nabla_1\ell(G_\al(z),y)}{\psi(x,z)}\dd\zeta(z,y)$, (15.28) and the Wasserstein gradient in parameter space is $\nabla_Wf(\al)(x)=\nabla_x\delta f(\al)(x)=\int[D_x\psi(x,z)]\T\nabla_1\ell(G_\al(z),y)\,\dd\zeta(z,y)$.</p>
 </div>
@@ -18,13 +18,13 @@ $$G_X(z)=\frac1n\sum_{i=1}^n\psi(x_i,z),\qquad G_\al(z)=\int\psi(x,z)\,\dd\al(x)
 </dl>
 <div class="box course"><div class="box-h">In the course <span class="ref">OT4ML (15.29)–(15.30), p. 387</span></div>
 <p>For the squared Euclidean loss $\ell(s,y)=\frac12\norm{s-y}^2$, the energy is the sum of a quadratic interaction and a linear potential:</p>
-$$f(\al)=\frac12\iint k(x,x')\dd\al(x)\dd\al(x')+\int g(x)\dd\al(x)+\frac12\int\norm{y}^2\dd\zeta(z,y),\qquad(15.29)$$
+$$\begin{aligned}f(\al)=\frac12\iint k(x,x')\dd\al(x)\dd\al(x')&+\int g(x)\dd\al(x)\\&+\frac12\int\norm{y}^2\dd\zeta(z,y),\end{aligned}\qquad(15.29)$$
 <p>with $k(x,x')=\int\ps{\psi(x,z)}{\psi(x',z)}\dd\zeta(z,y)$, $g(x)=-\int\ps{y}{\psi(x,z)}\dd\zeta(z,y)$. (15.30) […] These kernels are generally not convex in the particle variable, so the geodesic-convex convergence theory above does not apply directly.</p>
 </div>
 <p>So the neurons are interacting particles (§5): <strong>they repel each other when they do the same job</strong> (the kernel $k$ is large for neurons with similar features and outputs of the same sign) and <strong>they are attracted by the potential $g$</strong>, low where the feature correlates with the target.</p>
 <div class="box example"><div class="box-h">Worked example — the interaction between two ReLU neurons</div>
 <p>Take scalar outputs, $\sigma=\mathrm{ReLU}$ and Gaussian inputs $z\sim\N(0,\Id_2)$. For neurons $x=(u,v)$, $x'=(u',v')$ whose input weights make an angle $\theta$,</p>
-$$k(x,x')=vv'\,\E\big[\sigma(\ps{u}{z})\,\sigma(\ps{u'}{z})\big]=vv'\,\norm{u}\norm{u'}\,\frac{\sin\theta+(\pi-\theta)\cos\theta}{2\pi}$$
+$$\begin{aligned}k(x,x')&=vv'\,\E\big[\sigma(\ps{u}{z})\,\sigma(\ps{u'}{z})\big]\\&=vv'\,\norm{u}\norm{u'}\,\frac{\sin\theta+(\pi-\theta)\cos\theta}{2\pi}\end{aligned}$$
 <p>(the “arc-cosine kernel”; a classical Gaussian computation). Values of the fraction for $\theta=0,\frac\pi3,\frac\pi2,\frac{2\pi}3,\pi$: $0.5,\ 0.3045,\ 0.1592,\ 0.0545,\ 0$ (Monte Carlo with $2\times10^6$ samples: $0.5,\ 0.3042,\ 0.1588,\ 0.0544,\ 0$). Two neurons with the same direction and outputs of the same sign interact most; opposite directions do not interact at all (their ReLUs are never active together).</p>
 </div>
 

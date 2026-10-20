@@ -504,7 +504,7 @@ def fig_schedules():
         c.text(125 + col * 215, 20, title, "tx-b", "middle")
     c.text(10, 36, "data", "tx-s t1", "start")
     c.text(10, 232, "noise", "tx-s t2", "start")
-    c.text(330, 262, f"every particle starting left of Φ⁻¹(0.3) = {q:.3f} (black tick) lands on −2, every other on +1", "tx-s", "middle")
+    c.text(330, 262, f"every particle starting left of Φ⁻¹(0.3) = {q:.3f} (tick mark) lands on −2, every other on +1", "tx-s", "middle")
     c.text(330, 276, "trajectories differ, the terminal map is the same: in 1D it is the monotone (optimal) map", "tx-s", "middle")
     c.save()
 
@@ -552,7 +552,7 @@ def fig_fm_gauss():
     c.text(x0, 68, "blue: α₁ = N(0, Σ₁) (1-st.-dev. ellipses)", "tx-s", "start")
     c.text(x0, 86, "green curves: flow-matching paths (6 shown)", "tx-s", "start")
     c.text(x0, 104, "green dots: flow map T₁ᶠᴹ (independent", "tx-s", "start")
-    c.text(x0, 118, "coupling); black circles: Brenier map Tᴼᵀ", "tx-s", "start")
+    c.text(x0, 118, "coupling); open circles: Brenier map Tᴼᵀ", "tx-s", "start")
     c.text(x0, 160, f"cost of T₁ᶠᴹ: E‖T(X) − X‖² = {cost(Tfm):.4f}", "tx-s t3", "start")
     c.text(x0, 178, f"W₂² (Brenier map) = {cost(Tot):.4f}", "tx-s", "start")
     c.text(x0, 196, f"excess {100 * (cost(Tfm) / cost(Tot) - 1):.1f}%: Σ₀Σ₁ ≠ Σ₁Σ₀", "tx-s", "start")

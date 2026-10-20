@@ -488,7 +488,8 @@
       line("(a stand-in for the neural network).", "tx-s");
       ro.textContent = "Coupling: " + coupSel.options[coupSel.selectedIndex].text + ".  With K = 1 step, each sample moves once along v₀(x) ≈ E[X₁ − X₀ | X₀ = x]." +
         (coupSel.value === "ind" ? "\nIndependent pairs: v₀(x) ≈ E[X₁] − x, so K = 1 sends every sample to the data mean; many steps are needed." :
-          "\nOT pairs do not cross: the paths are nearly straight, and a few Euler steps already land near the data.");
+          coupSel.value === "full" ? "\nOT pairs do not cross: the paths are nearly straight, and a few Euler steps already land near the data." :
+          "\nMinibatch OT pairs do not cross inside a minibatch, but pairs of different minibatches still can: the paths straighten as the minibatch grows.");
     }
     retrain();
     redrawers.push(draw);

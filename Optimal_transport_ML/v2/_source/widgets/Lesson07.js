@@ -268,7 +268,7 @@
       });
       plot.unclip();
       var lines = runs.map(function (r) {
-        return "ε = " + (r.eps + "      ").slice(0, 6) + " " + (r.hit > 0 ? r.hit : "> 3000") + " cycles to 1e−9 · rate " + fmt(r.rate, 4) +
+        return "ε = " + (r.eps + "      ").slice(0, 6) + " " + (r.hit > 0 ? r.hit : "> 3000") + " cycles to 1e−9 · rate " + (isFinite(r.rate) ? fmt(r.rate, 4) : "— (too few cycles)") +
           " · σ_ε² = " + fmt(r.sig2, 4) + " · Birkhoff 1 − λ² " + (r.gain > 0 ? "= " + l7exp(r.gain) : "≈ 0 (< 1e−16)");
       });
       ro.textContent = lines.join("\n");
@@ -353,9 +353,9 @@
       P.unclip();
       var hd = el("text", { x: 360, y: 24, "class": "tx-b" }, s.svg); hd.textContent = "row-marginal error ‖P𝟙 − a‖₁";
       if (fail > 0) {
-        var xf = P.tx(Math.min(fail, ITER)), yt = P.ty(0) + 16;
+        var xf = P.tx(Math.min(fail, ITER)), yt = P.ty(-14);
         el("line", { x1: xf, x2: xf, y1: P.ty(1), y2: P.ty(-16), "class": "ln c2 thin dash" }, s.svg);
-        var tf = el("text", { x: Math.min(xf + 6, W - 150), y: yt + 14, "class": "tx-s t2" }, s.svg);
+        var tf = el("text", { x: Math.min(xf + 6, W - 150), y: yt, "class": "tx-s t2" }, s.svg);
         tf.textContent = "plain: NaN / ∞ at cycle " + fail;
       }
       var minC = Infinity; for (j = 0; j < n; j++) minC = Math.min(minC, C[0][j]);
