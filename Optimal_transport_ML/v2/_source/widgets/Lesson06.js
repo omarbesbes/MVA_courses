@@ -690,8 +690,10 @@
       ty += 6;
       line("‖Σ₀Σ₁ − Σ₁Σ₀‖ = " + fmt(cn, 3));
       line("asymmetry of T₁ᶠᴹ: |T₁₂ − T₂₁|/2 = " + fmt(Math.abs(T1[1] - T1[2]) / 2, 3));
-      ro.textContent = "Green: the flow-matching trajectories and Tₜᶠᴹ(x) at time t; dashed green ellipse: N(0, Σₜ), Σₜ = (1 − t)²Σ₀ + t²Σ₁ (it shrinks in the middle: independent coupling)." +
-        "\nAt θ = 0° or 90° the covariances commute and the flow map is the Brenier map; in between it carries a rotation and costs more.";
+      ro.textContent = "Green: the flow-matching trajectories, and the points Tₜᶠᴹ(x) at time t." +
+        "\nDashed green ellipse: N(0, Σₜ), Σₜ = (1 − t)²Σ₀ + t²Σ₁ (smaller in the middle: independent coupling)." +
+        "\nAt θ = 0° or 90° the covariances commute and the flow map is the Brenier map;" +
+        "\nin between, it carries a rotation and costs more.";
     }
     draw();
     redrawers.push(draw);
