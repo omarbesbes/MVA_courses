@@ -10,7 +10,7 @@ from fractions import Fraction as Fr
 
 import numpy as np
 
-from figures_common import Canvas, Fig
+from figures_common import Canvas, Fig, esc
 
 SUB = "P05"
 
@@ -64,6 +64,19 @@ def draw_line(f, a, b, r, box, cls="ln cm thin"):
     return s
 
 
+def rich(s):
+    """Escapes s and writes P_ad with a true subscript (no underscore is left in the figure)."""
+    return esc(s).replace("P_ad", 'P<tspan baseline-shift="sub" font-size="75%">ad</tspan>')
+
+
+def ftext(f, x, y, s, cls="tx-s", anchor="start", dx=0, dy=0):
+    f.c.add(f'<text x="{f.X(x) + dx:.1f}" y="{f.Y(y) + dy:.1f}" class="{cls}" text-anchor="{anchor}">{rich(s)}</text>')
+
+
+def ctext(c, x, y, s, cls="tx-s", anchor="start"):
+    c.add(f'<text x="{x:.1f}" y="{y:.1f}" class="{cls}" text-anchor="{anchor}">{rich(s)}</text>')
+
+
 def frs(q):
     q = Fr(q)
     s = str(q.numerator) if q.denominator == 1 else f"{q.numerator}/{q.denominator}"
@@ -110,15 +123,15 @@ def fig_bornes():
 # ------------------------------------------------------------------------------------------------ §2
 def fig_lagrangien():
     """min over x_i >= 0 of k x_i, for k < 0, k = 0, k > 0."""
-    c = Canvas("lagrangien", 660, 200, "Minimum sur x_i positif d'une fonction linéaire k x_i, selon le signe de k", sub=SUB)
-    panels = [(-1.0, "(c − Aᵀp)ᵢ < 0", "inf = −∞ : xᵢ → +∞"), (0.0, "(c − Aᵀp)ᵢ = 0", "min = 0, pour tout xᵢ"), (1.0, "(c − Aᵀp)ᵢ > 0", "min = 0, atteint en xᵢ = 0")]
+    c = Canvas("lagrangien", 660, 200, "Minimum sur xⱼ positif d'une fonction linéaire k xⱼ, selon le signe de k", sub=SUB)
+    panels = [(-1.0, "(c − Aᵀp)ⱼ < 0", "inf = −∞ : xⱼ → +∞"), (0.0, "(c − Aᵀp)ⱼ = 0", "min = 0, atteint en tout xⱼ ≥ 0"), (1.0, "(c − Aᵀp)ⱼ > 0", "min = 0, atteint en xⱼ = 0")]
     for i, (k, title, sub) in enumerate(panels):
         x0 = 20 + i * 215
         f = Fig(c, (x0 + 20, 40, 170, 110), (0, 4), (-3, 3))
         f.line(0, 0, 4, 0, "ax")
         f.line(0, -3, 0, 3, "ax")
         f.fn(lambda t: k * t * 0.7, "ln c2", 0, 4)
-        f.text(4, 0, "xᵢ", "tx-s", "end", dy=14)
+        f.text(4, 0, "xⱼ", "tx-s", "end", dy=14)
         if k < 0:
             c.arrow(f.X(3.3), f.Y(-2.31) + 4, f.X(3.75), f.Y(-2.63) + 9, 6, "ln c6 thin")
             f.text(2.0, -2.2, "→ −∞", "tx-b t6", "end")
@@ -136,7 +149,7 @@ def fig_lagrangien():
 
 def fig_fonction_duale():
     """The plane of p for (R): P_ad (where G > −∞), level lines of b·p, optimum."""
-    c = Canvas("fonction-duale", 600, 330, "Fonction duale de l'exemple (R) : P_ad en violet, G(p) = b·p dedans, moins l'infini dehors", sub=SUB)
+    c = Canvas("fonction-duale", 600, 330, "Fonction duale de l'exemple (R) : ensemble admissible dual en violet, G(p) = b·p dedans, moins l'infini dehors", sub=SUB)
     box = (-0.4, 2.6, -0.35, 1.6)
     f = Fig(c, (50, 20, 400, 280), box[:2], box[2:])
     f.axes(xticks=[0, 1, 2], yticks=[0, 1], xlabel="p₁", ylabel="p₂")
@@ -154,7 +167,7 @@ def fig_fonction_duale():
     # level lines of b.p = 8 p1 + 9 p2
     for v in [4, 8, 13]:
         draw_line(f, 8, 9, v, box, "ln c2 thin dash" if v != 13 else "ln c2 thin")
-    f.text(1.0, 0.21, "P_ad", "tx-b t5", "start")
+    ftext(f, 1.0, 0.21, "P_ad", "tx-b t5", "start")
     f.text(0.98, 0.08, "G(p) = b·p", "tx-s t5", "start")
     f.text(1.95, 1.3, "G(p) = −∞", "tx-b", "middle")
     f.text(1.95, 1.18, "(une composante de c − Aᵀp < 0)", "tx-s", "middle")
@@ -191,7 +204,7 @@ def fig_cas():
         (0, 0): ("a3", "possible", "valeurs égales (4.19)", "ex. : (R), 13 = 13"),
         (1, 2): ("a4", "possible", "dual vide", "ex. : min −x₁, x₁ − x₂ = 0"),
         (2, 1): ("a4", "possible", "primal vide", "ex. : min x₁, x₁ + x₂ = −1"),
-        (2, 2): ("a4", "possible", "les deux vides", "ex. : § 4, exemple vide/vide"),
+        (2, 2): ("a4", "possible", "les deux vides", "ex. : min −x₁, 0·x₁ = 1"),
     }
     for i in range(3):
         for j in range(3):
@@ -233,7 +246,7 @@ def fig_sensibilite():
     f.circle(10, 220, 6, "f5")
     f.line(10, 0, 10, 220, "ln cm thin dot")
     f.text(10, 130, "b₁ = 10 : V = 220,", "tx-s t5", "start", dx=8)
-    f.text(10, 130, "pente p₁ = 10", "tx-s t5", "start", dx=8, dy=14)
+    f.text(10, 130, "pente y₁ = 10", "tx-s t5", "start", dx=8, dy=14)
     f.text(7.5, 195, "(15/2 ; 195)", "tx-s", "start", dx=8, dy=14)
     f.text(12, 240, "(12 ; 240)", "tx-s", "middle", dy=-10)
     f.text(5, 150, "(5 ; 150)", "tx-s", "end", dx=-8, dy=-4)
@@ -300,7 +313,7 @@ def fig_centre_dual():
     draw_line(f, 0, 1, 6, box)
     f.text(4, 6.3, "p₂ = 4 (p₁ ≥ 0)", "tx-s", "start", dx=4)
     f.text(3.0, 2.6, "p₂ + p₄ = 5 (p₃ ≥ 0)", "tx-s", "start")
-    f.text(1.2, 6, "p₄ = 6 (p₅ ≥ 0)", "tx-s", "start", dy=-5)
+    f.text(6.45, 6, "p₄ = 6 (p₅ ≥ 0)", "tx-s", "end", dy=14)
     # level lines -p2 + 2p4 = k  <=>  phi = 74 + k
     for k in [0, 4, 10]:
         draw_line(f, -1, 2, k, box, "ln c2 thin dash" if k != 10 else "ln c2 thin")
@@ -324,11 +337,11 @@ def fig_ex427():
     poly = half_plane_polygon(cons, box)
     f.path(poly, "a5", close=True)
     f.path(poly, "ln c5 thin", close=True)
-    labels = {0: ("(i) 4p₁ + p₂ = 8", (1.25, 3.25)), 1: ("(ii) p₁ + 3p₂ = 9", (2.15, 2.5)), 2: ("(iii) p₁ + 2p₂ = 4", (2.75, 0.75)), 3: ("(iv) 2p₁ + p₂ = 6", (2.58, 1.62))}
+    labels = {0: ("(i) 4p₁ + p₂ = 8", (1.12, 3.22)), 1: ("(ii) p₁ + 3p₂ = 9", (2.15, 2.5)), 2: ("(iii) p₁ + 2p₂ = 4", (2.75, 0.75)), 3: ("(iv) 2p₁ + p₂ = 6", (2.58, 1.62))}
     for k, (a, b, r) in enumerate(cons[:4]):
         draw_line(f, a, b, r, box)
         lab, (x, y) = labels[k]
-        f.text(x, y, lab, "tx-s", "start")
+        f.text(x, y, lab, "tx-s", "end" if k == 0 else "start")
     # level line p1 + p2 = 20/7
     v = 20 / 7
     draw_line(f, 1, 1, v, box, "ln c2 thin")
@@ -342,13 +355,13 @@ def fig_ex427():
         c.arrow(f.X(px), f.Y(py), f.X(px + sc * nx * (1 if k == 5 else 2.2)), f.Y(py + sc * ny * (1 if k == 5 else 2.2)), k, f"ln c{k} thin")
     f.text(px + sc * 4, py + sc * 1, "(4, 1)", "tx-s t5", "start", dx=4, dy=10)
     f.text(px + sc * 1, py + sc * 2, "(1, 2)", "tx-s t5", "end", dx=-4, dy=-4)
-    f.text(px + sc * 2.2, py + sc * 2.2, "b = (1, 1)", "tx-s t2", "start", dx=4, dy=-2)
+    f.text(px + sc * 2.2, py + sc * 2.2, "b = (1, 1)", "tx-s t2", "start", dx=8, dy=-6)
     lx = 445
     for k, s in enumerate(["Sommets de P_ad", "et valeur de p₁ + p₂ :", "(0, 0) : 0", "(2, 0) : 2", "(12/7, 8/7) : 20/7", "(0, 2) : 2", "",
                            "Contraintes (ii) et (iv) lâches", "à l’optimum ⇒ x₂ = x₄ = 0.", "", "(1, 1) = (1/7)(4, 1) + (3/7)(1, 2) :", "les poids 1/7 et 3/7 sont x₁, x₃."]):
         if s:
-            c.text(lx, 40 + 16 * k, s, "tx-s", "start")
-    f.text(0.05, 0.12, "P_ad", "tx-b t5", "start", dx=4)
+            ctext(c, lx, 40 + 16 * k, s, "tx-s", "start")
+    ftext(f, 0.05, 0.12, "P_ad", "tx-b t5", "start", dx=4)
     c.save()
 
 

@@ -262,8 +262,9 @@
       RAP_PENTA.forEach(function (V, k) {
         var inT = T3.indexOf(k), w = inT >= 0 ? W[inT] : 0;
         p.dot(V[0], V[1], 5, k === imin && showC.checked ? "f3" : "fk");
-        var dx = V[0] < 0.5 ? -8 : 8, an = V[0] < 0.5 ? "end" : "start";
-        p.text(V[0], V[1], "V" + SUBS[k] + "  " + rapDec(w, 2), inT >= 0 ? (w < -1e-9 ? "tx-b t6" : "tx-b t3") : "tx-s", an, dx, V[1] < 0.5 ? 16 : -8);
+        var dx = V[0] < 0.5 ? -8 : 8, an = V[0] < 0.5 ? "end" : "start", dy = V[1] < 0.5 ? 16 : -8;
+        if (k === 3) { dx = 0; an = "middle"; dy = -14; } // V₄ : label centred above, clear of the edges V₅V₄ and V₄V₃
+        p.text(V[0], V[1], "V" + SUBS[k] + "  " + rapDec(w, 2), inT >= 0 ? (w < -1e-9 ? "tx-b t6" : "tx-b t3") : "tx-s", an, dx, dy);
       });
       p.dot(P[0], P[1], 7, inside ? "f2" : "f6").setAttribute("class", (inside ? "f2" : "f6") + " drag");
       p.text(P[0], P[1], "P", "tx-b", "start", 9, -9);
