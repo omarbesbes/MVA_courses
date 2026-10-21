@@ -669,7 +669,7 @@ def fig_newton():
         dot(f, x, 0, "f3", 4)
     f.text(1.0, 0, "x₀ = 1", "tx-s t3", "start", dx=4, dy=-8)
     f.text(1.5, 0, "x₁ = 3/2", "tx-s t3", "start", dx=6, dy=16)
-    f.text(17 / 12, 0, "x₂ = 17/12", "tx-s t3", "end", dx=-4, dy=16)
+    f.text(17 / 12, 0, "x₂ = 17/12", "tx-s t3", "end", dx=-4, dy=-24)   # above the axis: the curve and the tangents are below
     f.text(2.05, F_(2.05), "F(x) = x² − 2", "tx-s t2", "end", dx=-6, dy=4)
     c.text(185, 16, "tangente en xₙ, coupée avec l'axe : xₙ₊₁", "tx-b", "middle")
     # right: errors, log scale

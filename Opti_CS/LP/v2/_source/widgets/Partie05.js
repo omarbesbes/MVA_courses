@@ -73,7 +73,7 @@
      1. Primal and dual side by side (§3, weak duality) — example (R)
      ====================================================================== */
   WIDGETS.p5paire = function (box) {
-    var s = scaffold(box, "Le primal (R) et son dual côte à côte : déplacez x et p, regardez b·p ≤ c·x");
+    var s = scaffold(box, "Le primal (R) et son dual : déplacez x et p, regardez b·p ≤ c·x");
     var svg = s.svg;
     svg.setAttribute("role", "img");
     svg.setAttribute("aria-label", "Deux plans : à gauche la région admissible du primal et le point x, à droite celle du dual et le point p ; en bas une règle avec b·p et c·x");
@@ -263,8 +263,8 @@
       rows.forEach(function (rw, k) {
         var y0 = top + k * rowH;
         var t = el("text", { x: x0, y: y0 + 12, "class": "tx-s" }, svg); t.textContent = rw.lab;
-        var scaleA = 5, scaleB = 2.2;   // primal bars ≤ 75 px, so that their label ends before the dual column
-        var wa = Math.min(75, Math.abs(rw.av.val()) * scaleA), wb = Math.min(110, Math.abs(rw.bv.val()) * scaleB);
+        var scaleA = 5, scaleB = 1.5;   // bars ≤ 75 px (primal) and ≤ 60 px (dual): their labels stay inside the figure
+        var wa = Math.min(75, Math.abs(rw.av.val()) * scaleA), wb = Math.min(60, Math.abs(rw.bv.val()) * scaleB);
         el("rect", { x: x0, y: y0 + 17, width: Math.max(1.5, wa), height: 10, "class": rw.av.sign() < 0 ? "f6" : "f1" }, svg);
         var ta = el("text", { x: x0 + Math.max(1.5, wa) + 4, y: y0 + 26, "class": "tx-s" }, svg); ta.textContent = rw.a + " = " + rw.av.str();
         el("rect", { x: x0 + 160, y: y0 + 17, width: Math.max(1.5, wb), height: 10, "class": rw.bv.sign() < 0 ? "f6" : "f5" }, svg);
@@ -394,8 +394,8 @@
       st += "\np = B⁻ᵀc_B = " + p5vec(Bc.p) + " ; coûts réduits c − Aᵀp = " + p5vec(Bc.red) + (Bc.dual ? " ≥ 0 : p admissible pour le dual" : " : une composante < 0, p NON admissible");
       st += "\nc·x = " + Bc.val.str() + " et b·p = " + Bc.bp.str() + " : égaux, car x·(c − Aᵀp) = 0 (x est nul hors base, les coûts réduits sont nuls dans la base).";
       if (Bc.prim && Bc.dual) st += "\nLes deux sont admissibles : c·x = b·p certifie que x et p sont optimaux.";
-      else if (Bc.prim) st += "\nLe simplexe (primal) garde x admissible et cherche à rendre p admissible : bouton « Pas du simplexe ».";
-      else if (Bc.dual) st += "\nLe simplexe dual (hors cours) garde p admissible et cherche à rendre x admissible.";
+      else if (Bc.prim) st += "\nLe simplexe (primal) garde x admissible et cherche à rendre p admissible : bouton « Pas du simplexe (primal) ».";
+      else if (Bc.dual) st += "\nLe simplexe dual (hors cours) garde p admissible et cherche à rendre x admissible : bouton « Pas du simplexe dual ».";
       else st += "\nNi x ni p n’est admissible : aucune des deux méthodes ne passe par cette base.";
       ro.textContent = st;
     }
