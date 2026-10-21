@@ -29,6 +29,19 @@
     return t;
   }
   function p3closed(P) { return P.length ? P.concat([P[0]]) : P; }
+  // The admissible polygon: blue fill, and a border only along true constraints (not along the sides of the box
+  // that clips an unbounded set).
+  function p3drawPoly(plot, P, box) {
+    if (!P.length) return;
+    plot.poly(p3closed(P), "a1");
+    var eps = 1e-9;
+    for (var i = 0; i < P.length; i++) {
+      var p = P[i], q = P[(i + 1) % P.length];
+      var onRight = Math.abs(p[0] - box[1]) < eps && Math.abs(q[0] - box[1]) < eps;
+      var onTop = Math.abs(p[1] - box[3]) < eps && Math.abs(q[1] - box[3]) < eps;
+      if (!onRight && !onTop) plot.seg(p[0], p[1], q[0], q[1], "ln c1 thin");
+    }
+  }
   // Draws the constraint lines a x1 + b x2 = r (grey) with the label "x_k = 0" of their slack variable.
   function p3lines(plot, A, b, box, slackOf) {
     A.forEach(function (row, i) {
@@ -109,8 +122,7 @@
       plot.clear();
       var mk3 = arrowMarker(s.svg, "f3"), mk2 = arrowMarker(s.svg, "f2"), mkm = arrowMarker(s.svg, "fm");
       plot.axes({ xticks: [0, 1, 2, 3, 4, 5], yticks: [0, 1, 2, 3], nogrid: true, xlabel: "x₁", ylabel: "x₂" });
-      var P = p3polygon(A, b, BOX);
-      plot.poly(p3closed(P), "a1"); plot.poly(p3closed(P), "ln c1 thin");
+      p3drawPoly(plot, p3polygon(A, b, BOX), BOX);
       p3lines(plot, A, b, BOX, function (i) { return "x" + p3sub(i + 3) + " = 0"; });
       var st = run.steps[k], x = st.x, xp = [x[0].val(), x[1].val()];
       // level line of the cost through the current vertex
@@ -215,8 +227,7 @@
       plot.clear();
       var mk2 = arrowMarker(s.svg, "f2");
       plot.axes({ xticks: [0, 1, 2, 3, 4, 5], yticks: [0, 1, 2, 3, 4], nogrid: true, xlabel: "x₁", ylabel: "x₂" });
-      var P = p3polygon(V.A, V.b, BOX);
-      plot.poly(p3closed(P), "a1"); plot.poly(p3closed(P), "ln c1 thin");
+      p3drawPoly(plot, p3polygon(V.A, V.b, BOX), BOX);
       p3lines(plot, V.A, V.b, BOX, function (i) { return "x" + p3sub(i + 3) + " = 0"; });
       verts.forEach(function (v) { plot.dot(v.sol.x[0].val(), v.sol.x[1].val(), 3.5, "fm"); });
       var x0 = [cur.sol.x[0].val(), cur.sol.x[1].val()], d = p3edge(st, ent);
@@ -310,7 +321,7 @@
       plot.axes({ xticks: [0, 1, 2, 3, 4, 5], yticks: [0, 1, 2, 3], nogrid: true, xlabel: "x₁", ylabel: "x₂" });
       var cons = E.draw.map(function (r) { return r.slice(); }); cons.push([-1, 0, 0], [0, -1, 0]);
       var P = halfPlanePolygon(cons, BOX);
-      if (P.length) { plot.poly(p3closed(P), "a1"); plot.poly(p3closed(P), "ln c1 thin"); }
+      p3drawPoly(plot, P, BOX);
       E.draw.forEach(function (r) { var seg = lineInBox(r[0], r[1], r[2], BOX); if (seg) plot.seg(seg[0][0], seg[0][1], seg[1][0], seg[1][1], "ln cm hair"); });
       if (!P.length) {
         plot.text(2.6, 2.6, "x₁ + x₂ ≥ 2", "tx-s", "start"); plot.text(0.05, 0.35, "x₁ + x₂ ≤ 1", "tx-s", "start");
