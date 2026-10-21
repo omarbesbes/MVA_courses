@@ -252,7 +252,7 @@
         p.unclip();
         var o = [5.3, 3.3], mk = arrowMarker(s.svg, "f2");
         p.seg(o[0], o[1], o[0] + 0.55 * c[0], o[1] + 0.55 * c[1], "ln c2", { "marker-end": mk });
-        p.text(o[0], o[1], "c", "tx-b t2", "middle", 0, 18);
+        p.text(o[0], o[1], "c", "tx-b t2", "end", -6, 6);
       }
       // weights: segments from P to the three vertices, width proportional to the weight
       T3.forEach(function (vi, k) {

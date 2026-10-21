@@ -12,12 +12,21 @@
   }
   function p3pt(x) { return "(" + x[0].str() + " ; " + x[1].str() + ")"; }
   function p3vec(v) { return "(" + v.map(function (q) { return q === null ? "—" : q.str(); }).join(", ") + ")"; }
-  function p3num(q) { return fmt(q.val(), 2).replace(".", ","); }
+  function p3f(x, d) { return fmt(x, d).replace(".", ",").replace("-", "−"); }
+  function p3par(q) { var t = q.str(); return t.indexOf("/") >= 0 ? "(" + t + ")" : t; }
   // The polygon {a·x ≤ r for the rows of A restricted to the first two columns} ∩ {x ≥ 0} ∩ box.
   function p3polygon(A, b, box) {
     var cons = A.map(function (row, i) { return [row[0], row[1], Fr.of(b[i]).val()]; });
     cons.push([-1, 0, 0], [0, -1, 0]);
     return halfPlanePolygon(cons, box);
+  }
+  // An SVG text with subscripts: parts = [[text, isSub], …] (no Unicode subscript exists for B).
+  function p3subText(g, x, y, parts, cls, anchor) {
+    var t = el("text", { x: x, y: y, "class": cls || "tx-s", "text-anchor": anchor || "start" }, g);
+    parts.forEach(function (pp) {
+      var sp = el("tspan", pp[1] ? { "baseline-shift": "sub", "font-size": "75%" } : {}, t); sp.textContent = pp[0];
+    });
+    return t;
   }
   function p3closed(P) { return P.length ? P.concat([P[0]]) : P; }
   // Draws the constraint lines a x1 + b x2 = r (grey) with the label "x_k = 0" of their slack variable.
@@ -147,7 +156,7 @@
         txt += nm + " entre (" + (rSel.value === "bland" ? "plus petit indice de coût réduit < 0" : "coût réduit le plus négatif") + "). Direction d = B⁻¹a" + p3sub(e + 1) + " = " + p3vec(st.dir) + ".\n";
         if (st.leaving < 0) txt += "Aucun dᵣ > 0 : on peut avancer indéfiniment, le minimum vaut −∞.";
         else {
-          var rr = st.basis.map(function (col, r) { return NAMES[col] + " : " + (st.ratios[r] === null ? "—" : st.xB[r].str() + "/" + st.dir[r].str() + " = " + st.ratios[r].str()); });
+          var rr = st.basis.map(function (col, r) { return NAMES[col] + " : " + (st.ratios[r] === null ? "—" : p3par(st.xB[r]) + "/" + p3par(st.dir[r]) + " = " + st.ratios[r].str()); });
           txt += "Rapports x_B/d sur d > 0 : " + rr.join(" ; ") + " → ε = " + st.eps.str() + ", " + NAMES[st.basis[st.leaving]] + " sort.\n";
           txt += st.eps.isZero() ? "Pas nul (ε = 0) : la base change mais le point ne bouge pas — pivot dégénéré." : "Le coût va baisser de ε·|c̃| = " + st.eps.mul(st.reduced[e].neg()).str() + ".";
         }
@@ -168,7 +177,7 @@
     var eSel = select(s.controls, "Variable entrante", [["0", "—"]], "0", function () { setEntering(); });
     var eps = slider(s.controls, "ε", 0, 1, 0.005, 0, draw);
     var ro = readout(s.controls);
-    legend(s.legend, [["--s1", "ensemble admissible"], ["--s3", "x(ε) admissible"], ["--s6", "x(ε) hors de X_ad (une variable < 0)"], ["--s2", "arête suivie"]]);
+    legend(s.legend, [["--s1", "ensemble admissible"], ["--s3", "x(ε) admissible"], ["--s6", "x(ε) hors de l'ensemble admissible"], ["--s2", "arête suivie"]]);
     var V, verts, cur, st, ent, dir, ratios, epsK, epsMax;
     function setVariant() {
       V = VARS[vSel.value];
@@ -202,7 +211,7 @@
     }
     function draw() {
       var e = eps.get(), n = V.A[0].length, m = V.A.length;
-      eps.out.textContent = fmt(e, 3).replace(".", ",");
+      eps.out.textContent = p3f(e, 3);
       plot.clear();
       var mk2 = arrowMarker(s.svg, "f2");
       plot.axes({ xticks: [0, 1, 2, 3, 4, 5], yticks: [0, 1, 2, 3, 4], nogrid: true, xlabel: "x₁", ylabel: "x₂" });
@@ -227,20 +236,20 @@
       plot.dot(x0[0], x0[1], 5, "f3");
       plot.clip(); plot.dot(xe[0], xe[1], 7, ok ? "f3" : "f6"); plot.unclip();
       // bars of the basic variables
-      var g = el("g", {}, s.svg), X0 = 430, W = 230, Y0 = 170, H = 120;
+      var g = el("g", {}, s.svg), X0 = 430, W = 230, Y0 = 158, H = 100;
       var vmax = 0.5; st.xB.forEach(function (v, r) { vmax = Math.max(vmax, Math.abs(v.val()), Math.abs(v.val() - epsMax * dir[r].val())); });
-      var tt = el("text", { x: X0 + W / 2, y: 28, "class": "tx-b", "text-anchor": "middle" }, g); tt.textContent = "variables de base x_B(ε) = x_B − ε d";
+      p3subText(g, X0 + W / 2, 28, [["variables de base x", 0], ["B", 1], ["(ε) = x", 0], ["B", 1], [" − ε d", 0]], "tx-b", "middle");
       el("line", { x1: X0, x2: X0 + W, y1: Y0, y2: Y0, "class": "ax" }, g);
       var bw = W / m;
       vals.forEach(function (v, r) {
         var h = v / vmax * H, cx = X0 + bw * (r + 0.5);
         el("rect", { x: cx - bw * 0.28, y: h >= 0 ? Y0 - h : Y0, width: bw * 0.56, height: Math.max(Math.abs(h), 0.5), "class": v >= -1e-9 ? "f1" : "f6", "fill-opacity": 0.8 }, g);
         var blocking = epsK !== null && ratios[r] !== null && ratios[r].cmp(epsK) === 0;
-        if (blocking) el("rect", { x: cx - bw * 0.34, y: Y0 - H - 6, width: bw * 0.68, height: 2 * H + 12, rx: 6, "class": "ln c3 thin nofill" }, g);
+        if (blocking) el("rect", { x: cx - bw * 0.4, y: Y0 - H - 22, width: bw * 0.8, height: 2 * H + 84, rx: 6, "class": "ln c3 thin nofill" }, g);
         var lab = el("text", { x: cx, y: Y0 + H + 26, "class": "tx-b", "text-anchor": "middle" }, g); lab.textContent = "x" + p3sub(st.basis[r] + 1);
-        var val = el("text", { x: cx, y: h >= 0 ? Y0 - h - 6 : Y0 - h + 14, "class": "tx-s", "text-anchor": "middle" }, g); val.textContent = fmt(v, 2).replace(".", ",");
-        var dd = el("text", { x: cx, y: Y0 + H + 42, "class": "tx-s", "text-anchor": "middle" }, g);
-        dd.textContent = "d = " + dir[r].str() + (ratios[r] !== null ? " ; rapport " + ratios[r].str() : "");
+        var val = el("text", { x: cx, y: h >= 0 ? Y0 - h - 6 : Y0 - h + 14, "class": "tx-s", "text-anchor": "middle" }, g); val.textContent = p3f(v, 2);
+        var dd = el("text", { x: cx, y: Y0 + H + 42, "class": "tx-s", "text-anchor": "middle" }, g); dd.textContent = "d = " + dir[r].str();
+        var rq = el("text", { x: cx, y: Y0 + H + 56, "class": "tx-s", "text-anchor": "middle" }, g); rq.textContent = ratios[r] !== null ? "rapport " + ratios[r].str() : "pas de rapport";
       });
       // text
       var cost = st.cost.val() + e * st.reduced[ent].val();
@@ -251,7 +260,7 @@
         var who = []; ratios.forEach(function (q, r) { if (q !== null && q.cmp(epsK) === 0) who.push("x" + p3sub(st.basis[r] + 1)); });
         txt += "Rapports sur d > 0 : " + st.basis.map(function (col, r) { return "x" + p3sub(col + 1) + " " + (ratios[r] === null ? "—" : ratios[r].str()); }).join(", ") + " → ε_max = " + epsK.str() + " (" + who.join(" et ") + " s'annule" + (who.length > 1 ? "nt" : "") + ").";
       }
-      txt += "\nε = " + fmt(e, 3).replace(".", ",") + " : x(ε) = (" + fmt(xe[0], 2).replace(".", ",") + " ; " + fmt(xe[1], 2).replace(".", ",") + "), " + (ok ? "admissible" : "NON admissible") + ", coût " + fmt(cost, 2).replace(".", ",") + ".";
+      txt += "\nε = " + p3f(e, 3) + " : x(ε) = (" + p3f(xe[0], 2) + " ; " + p3f(xe[1], 2) + "), " + (ok ? "admissible" : "NON admissible") + ", coût " + p3f(cost, 2) + ".";
       ro.textContent = txt;
     }
     setVariant(); redrawers.push(draw);
@@ -398,7 +407,7 @@
       lab(470, 300, "Bland quitte le cycle au 4ᵉ pivot (x₁ entre au lieu de x₇).", "tx-s");
       p3tableau(tw, stc, NAMES);
       var red = []; for (var j = 0; j < 7; j++) if (stc.basis.indexOf(j) < 0) red.push("c̃" + p3sub(j + 1) + " = " + stc.reduced[j].str());
-      var txt = "Pivot " + k + " : base " + p3set(stc.basis, 7) + ", x = " + p3vec(stc.x) + ", coût " + stc.cost.str() + ".\nCoûts réduits : " + red.join(", ") + ".\n";
+      var txt = "Après " + k + " pivot" + (k > 1 ? "s" : "") + " : base " + p3set(stc.basis, 7) + ", x = " + p3vec(stc.x) + ", coût " + stc.cost.str() + ".\nCoûts réduits : " + red.join(", ") + ".\n";
       if (stc.entering < 0) txt += "Tous ≥ 0 : optimum atteint en " + k + " pivots.";
       else {
         txt += NAMES[stc.entering] + " entre ; rapports " + p3vec(stc.ratios) + " → " + NAMES[stc.basis[stc.leaving]] + " sort, ε = " + stc.eps.str() + (stc.eps.isZero() ? " : pivot dégénéré, le point ne bouge pas." : " : le point bouge, le coût baisse de " + stc.eps.mul(stc.reduced[stc.entering].neg()).str() + ".");
