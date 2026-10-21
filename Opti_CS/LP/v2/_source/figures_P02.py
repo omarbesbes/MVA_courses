@@ -403,7 +403,7 @@ def fig_aretes():
         f.circle(u, v, 5, "f3")
         f.text(u, v, t, "tx-s t3", anc, dx=dx, dy=dy)
     edges = [((0, 0), (5, 0), "x₁ entre, x₅ sort", "middle", 0, 18, "sur x₂ = 0"),
-             ((5, 0), (2, 3), "x₂ entre, x₄ sort", "start", 10, 0, "sur x₅ = 0"),
+             ((5, 0), (2, 3), "x₂ entre, x₄ sort", "start", 18, 0, "sur x₅ = 0"),
              ((2, 3), (1, 2.5), "x₅ entre, x₃ sort", "end", -2, -24, "sur x₄ = 0"),
              ((1, 2.5), (0, 1), "x₄ entre, x₁ sort", "end", -14, -4, "sur x₃ = 0"),
              ((0, 1), (0, 0), "x₃ entre, x₂ sort", "end", -10, -2, "sur x₁ = 0")]

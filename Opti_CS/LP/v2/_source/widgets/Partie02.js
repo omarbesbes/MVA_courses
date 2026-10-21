@@ -100,6 +100,11 @@
         seen[d.key] = true;
         plot.dot(d.x[0].val(), d.x[1].val(), 5.5, admissible(d) ? "f1" : "f6");
       });
+      if (cur && nbBox.checked && cur.x) { // admissible neighbours: a thin green ring (their segments lie on the green lines)
+        neighbours(cur).forEach(function (e) {
+          if (e.x && e.key !== cur.key && admissible(e)) plot.dot(e.x[0].val(), e.x[1].val(), 8.5, "ln c3 nofill dash");
+        });
+      }
       if (key) {
         var d0 = basesOf(key)[0];
         plot.dot(d0.x[0].val(), d0.x[1].val(), 10, "ln c3 nofill");
@@ -222,8 +227,8 @@
       p2drawPolygon(plot, 5, BOX, LAB, null);
       if (cv === "11") plot.seg(2, 3, 5, 0, "ln c3", { style: "stroke-width:6px", "stroke-opacity": 0.45 });
       if (cv === "12") plot.dot(2, 3, 11, "ln c3 nofill");
-      if (cv === "11") plot.text(5, 0.2, "x₁ + x₂ = 5 (optimum)", "tx-s t2", "end", -10, -40);
-      if (cv === "12") plot.text(2, 3, "x₁ + 2x₂ = 8 (optimum)", "tx-s t2", "start", 14, -8);
+      if (cv === "11") plot.text(4, 1, "x₁ + x₂ = 5 (optimum)", "tx-s t2", "start", 14, 4);
+      if (cv === "12") plot.text(3.6, 2.2, "x₁ + 2x₂ = 8 (optimum)", "tx-s t2", "start", 0, -6);
       var x = path[path.length - 1], st = plan(x);
       if (st.move) {
         var a = [x[0].sub(st.epsSym.mul(st.y[0])).val(), x[1].sub(st.epsSym.mul(st.y[1])).val()];

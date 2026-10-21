@@ -375,7 +375,9 @@ def fig_treillis():
         for st, y in ys.items():
             node(c, (xs[t + 1], y), st, "f3" if (t, st) in best else "f1", r=22, tcls="tx-s on-fill")
     for st, y in ys.items():
-        arc(c, (xs[3], y), (xs[4], 115), 0, "ln cm thin", "m", r=22)
+        on = (2, st) in best   # le chemin vert se termine par l'arc vers « fin »
+        arc(c, (xs[3], y), (xs[4], 115), 0, "ln c3" if on else "ln cm thin", 3 if on else "m", r=22,
+            style="stroke-width:3px" if on else "")
     node(c, (xs[4], 115), "fin", "fm", r=22, tcls="tx-s on-fill")
     c.text(320, 210, "coût d'un arc = −ln(probabilité initiale ou de transition × probabilité d'émission) ≥ 0", "tx-s", "middle")
     c.text(320, 225, "chemin le plus court = suite d'états la plus probable : Soleil, Pluie, Pluie", "tx-s t3", "middle")

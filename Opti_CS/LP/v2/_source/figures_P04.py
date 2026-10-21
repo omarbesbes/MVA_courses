@@ -383,7 +383,7 @@ def fig_suivi():
     # the two edges through the optimum
     f.path([(1.55, (4 + 1.55) / 2), (2, 3), (3.35, 5 - 3.35)], "ln c1 thin")
     f.path([(1.55, (4 + 1.55) / 2), (2, 3), (3.35, 5 - 3.35), (3.35, 1.15), (1.55, 1.15)], "a1", close=True)
-    f.text(1.6, 2.62, "−x₁ + 2x₂ = 4", "tx-s t1", "start")
+    f.text(1.57, 3.1, "−x₁ + 2x₂ = 4", "tx-s t1", "start")
     f.text(3.05, 1.95, "x₁ + x₂ = 5", "tx-s t1", "start", dx=4)
     pts = PENT.path(CU, [3.0, 1.5], list(np.logspace(0.2, -6, 300)))
     f.path([tuple(p) for p in pts] + [(2, 3)], "ln ck thin")
@@ -404,7 +404,7 @@ def fig_suivi():
             lab = {1: "cible x^{μ₁}, μ₁ = 0,3", 2: "cible x^{μ₂}, μ₂ = 0,09"}[j]
             FT(f, center[0], center[1], lab, "tx-s", "end", dx=-8, dy=4 if j == 1 else 26)
     f.circle(2, 3, 5, "f3")
-    f.text(2, 3, "optimum", "tx-s t3", "end", dx=-8, dy=-6)
+    f.text(2, 3, "optimum", "tx-s t3", "start", dx=8, dy=-8)
     lx = 460
     c.add(f'<line x1="{lx}" y1="70" x2="{lx + 26}" y2="70" class="ln ck thin"/>')
     c.text(lx + 32, 74, "trajectoire centrale", "tx-s")

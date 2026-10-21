@@ -122,9 +122,11 @@
       plot.clear();
       var mk3 = arrowMarker(s.svg, "f3"), mk2 = arrowMarker(s.svg, "f2"), mkm = arrowMarker(s.svg, "fm");
       plot.axes({ xticks: [0, 1, 2, 3, 4, 5], yticks: [0, 1, 2, 3], nogrid: true, xlabel: "x₁", ylabel: "x₂" });
-      p3drawPoly(plot, p3polygon(A, b, BOX), BOX);
+      var PP = p3polygon(A, b, BOX);
+      p3drawPoly(plot, PP, BOX);
       p3lines(plot, A, b, BOX, function (i) { return "x" + p3sub(i + 3) + " = 0"; });
       var st = run.steps[k], x = st.x, xp = [x[0].val(), x[1].val()];
+      var cen = [0, 0]; PP.forEach(function (q) { cen[0] += q[0] / PP.length; cen[1] += q[1] / PP.length; });
       // level line of the cost through the current vertex
       var lv = lineInBox(c[0], c[1], st.cost.val(), BOX);
       if (lv) plot.seg(lv[0][0], lv[0][1], lv[1][0], lv[1][1], "ln c2 hair dash");
@@ -141,7 +143,12 @@
         if (L < 1e-12) continue;
         var tip = [xp[0] + 0.75 * d[0] / L, xp[1] + 0.75 * d[1] / L], neg = st.reduced[j].sign() < 0;
         var a = p3arrow(plot, xp, tip, "ln " + (neg ? "c2" : "cm") + (j === st.entering ? "" : " thin"), neg ? mk2 : mkm, 4);
-        plot.text(tip[0], tip[1], "c̃" + p3sub(j + 1) + " = " + st.reduced[j].str(), "tx-s " + (neg ? "t2" : ""), d[0] >= -0.2 ? "start" : "end", d[0] >= -0.2 ? 5 : -5, d[1] > 0.3 ? -4 : 12);
+        // label beside the arrow tip, on the side away from the polygon
+        var ux = (plot.tx(tip[0]) - plot.tx(xp[0])), uy = (plot.ty(tip[1]) - plot.ty(xp[1])), Lp = Math.hypot(ux, uy);
+        var nx = -uy / Lp, ny = ux / Lp, cx = plot.tx(cen[0]) - plot.tx(tip[0]), cy = plot.ty(cen[1]) - plot.ty(tip[1]);
+        if (nx * cx + ny * cy > 0) { nx = -nx; ny = -ny; }
+        var lt = el("text", { x: plot.tx(tip[0]) + 16 * nx, y: plot.ty(tip[1]) + 16 * ny + 4, "class": "tx-s " + (neg ? "t2" : ""), "text-anchor": Math.abs(nx) < 0.35 ? "middle" : nx > 0 ? "start" : "end" }, plot.g);
+        lt.textContent = "c̃" + p3sub(j + 1) + " = " + st.reduced[j].str();
       }
       // preview of the next vertex
       if (st.entering >= 0 && k + 1 < run.steps.length) {
