@@ -107,7 +107,7 @@ def fig_atelier():
     c.text(x0, 268, "ligne de niveau avance", "tx-s t3")
     c.text(x0, 285, "dans la direction de c", "tx-s t3")
     c.text(x0, 318, "Sommets → profit :", "tx-b")
-    for k, (lab, cls) in enumerate([("(0, 0) → 0 €", "tx-s"), ("(50, 0) → 2000 €", "tx-s"), ("(30, 40) → 2400 €", "tx-s tx-b t3"),
+    for k, (lab, cls) in enumerate([("(0, 0) → 0 €", "tx-s"), ("(50, 0) → 2000 €", "tx-s"), ("(30, 40) → 2400 €", "tx-b t3"),
                                     ("(15, 55) → 2250 €", "tx-s"), ("(0, 60) → 1800 €", "tx-s")]):
         c.text(x0, 336 + 16 * k, lab, cls)
     c.save()

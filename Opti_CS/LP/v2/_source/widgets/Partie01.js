@@ -210,15 +210,20 @@
         dirs.forEach(function (d, j) { if (j === k) return; ccw = Math.min(ccw, (d - dirs[k] + 360) % 360); cw = Math.min(cw, (dirs[k] - d + 360) % 360); });
         var phi = (dirs[k] + (ccw > cw ? 90 : -90)) * Math.PI / 180, ox = Math.cos(phi), oy = Math.sin(phi);
         var m = [(x[0] + f[0]) / 2, (x[1] + f[1]) / 2];
+        var Lpx = Math.hypot(pl.tx(f[0]) - pl.tx(x[0]), pl.ty(f[1]) - pl.ty(x[1]));
+        if (Lpx > 1 && Lpx < 70) {   // segment court (x près d'un sommet) : étiquette au-delà du pied, dans le prolongement
+          var th = dirs[k] * Math.PI / 180; ox = Math.cos(th); oy = Math.sin(th); m = f;
+        }
         var anchor = ox > 0.3 ? "start" : ox < -0.3 ? "end" : "middle";
-        pl.text(m[0], m[1], names[2 + k] + " = " + p1num(sl[k]), "tx-s " + (sl[k] >= -1e-12 ? "t3" : "t6"), anchor, 9 * ox, -9 * oy + 4 + (oy < -0.3 ? 4 : 0));
+        var off = Lpx <= 1 ? 17 : 9;   // x sur la droite : on s'écarte du disque du point
+        pl.text(m[0], m[1], names[2 + k] + " = " + p1num(sl[k]), "tx-s " + (sl[k] >= -1e-12 ? "t3" : "t6"), anchor, off * ox, -off * oy + 4 + (oy < -0.3 ? 4 : 0));
       });
       pl.seg(x[0], x[1], 0, x[1], x[0] >= 0 ? "ln c3 thin dash" : "ln c6 thin dash");
       pl.seg(x[0], x[1], x[0], 0, x[1] >= 0 ? "ln c3 thin dash" : "ln c6 thin dash");
       var ok = z.every(function (v) { return v >= -1e-12; });
-      pl.dot(x[0], x[1], 11, ok ? "a1" : "a5");
-      pl.dot(x[0], x[1], 7, (ok ? "f1" : "f6") + " drag");
-      pl.text(x[0], x[1], "x", "tx-b", "end", -8, 17);
+      pl.dot(x[0], x[1], 13, ok ? "a1" : "a5");
+      pl.dot(x[0], x[1], 9, (ok ? "f1" : "f6") + " drag");
+      pl.text(x[0], x[1], "x", "on-fill", "middle", 0, 4);   // le nom du point, dans le disque (aucune collision avec les étiquettes)
       var zeros = z.filter(function (v) { return Math.abs(v) < 1e-12; }).length;
       var txt = "x = " + p1pt(x) + "      coût x₁ + 2x₂ = " + p1num(x[0] + 2 * x[1]);
       txt += "\ns₁ = 2 + 3x₁ − 2x₂ = " + p1num(sl[0]) + "    s₂ = 4 + x₁ − 2x₂ = " + p1num(sl[1]) + "    s₃ = 5 − x₁ − x₂ = " + p1num(sl[2]);
