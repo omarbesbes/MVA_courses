@@ -114,8 +114,8 @@
     function draw() {
       var c = cvec(); c1S.out.textContent = frac(c[0]);
       p5clear(svg);
-      PX = p5panel(svg, [44, 26, 270, 250], [0, 10], [0, 10]);
-      PP = p5panel(svg, [392, 26, 270, 250], [-0.3, 3.3], [-0.3, 1.3]);
+      PX = p5panel(svg, [44, 40, 270, 238], [0, 10], [0, 10]);
+      PP = p5panel(svg, [392, 40, 270, 238], [-0.3, 3.3], [-0.3, 1.3]);
       PX.axes([0, 2, 4, 6, 8, 10], [0, 2, 4, 6, 8, 10], "x₁", "x₂");
       PP.axes([0, 1, 2, 3], [0, 0.5, 1], "p₁", "p₂");
       var t1 = el("text", { x: 44 + 135, y: 14, "class": "tx-b", "text-anchor": "middle" }, svg); t1.textContent = "primal : min c·x, Ax ≥ b, x ≥ 0";
@@ -166,7 +166,7 @@
         var tx = el("text", { x: X, y: R.Y(0.5) - 12 - (k === 1 && Math.abs(R.X(bp) - R.X(cx)) < 46 ? 14 : 0), "class": "tx-b", "text-anchor": "middle" }, svg);
         tx.textContent = m[1] + " = " + frac(m[0]);
       });
-      var lab = el("text", { x: 44, y: 316, "class": "tx-s" }, svg);
+      var lab = el("text", { x: 44, y: 326, "class": "tx-s" }, svg);
       lab.textContent = "la règle : b·p (violet) et c·x (bleu) ; l’intervalle entre les deux est l’écart c·x − b·p";
       // readout
       var gap = cx - bp;
@@ -328,8 +328,8 @@
     }
     function draw() {
       p5clear(svg);
-      PX = p5panel(svg, [44, 26, 270, 250], [-0.5, 10], [-0.5, 9]);
-      PP = p5panel(svg, [392, 26, 270, 250], [-0.3, 3.3], [-0.3, 3.3]);
+      PX = p5panel(svg, [44, 40, 270, 238], [-0.5, 10], [-0.5, 9]);
+      PP = p5panel(svg, [392, 40, 270, 238], [-0.3, 3.3], [-0.3, 3.3]);
       PX.axes([0, 2, 4, 6, 8, 10], [0, 2, 4, 6, 8], "x₁", "x₂");
       PP.axes([0, 1, 2, 3], [0, 1, 2, 3], "p₁", "p₂");
       var t1 = el("text", { x: 44 + 135, y: 14, "class": "tx-b", "text-anchor": "middle" }, svg); t1.textContent = "primal : x de la base (x₁, x₂)";
@@ -371,7 +371,7 @@
         el("circle", { cx: X, cy: R.Y(0.5), r: i === cur ? 7 : 5, "class": cls }, svg);
         var tx = el("text", { x: X, y: R.Y(0.5) - 11 - (B.prim ? 0 : 12), "class": i === cur ? "tx-b" : "tx-s", "text-anchor": "middle" }, svg); tx.textContent = B.val.str();
       });
-      var lab2 = el("text", { x: 44, y: 316, "class": "tx-s" }, svg);
+      var lab2 = el("text", { x: 44, y: 326, "class": "tx-s" }, svg);
       lab2.textContent = "valeur commune c·x = b·p de chaque base : bleu = x admissible (≥ 13), violet = p admissible (≤ 13)";
       bPrim.disabled = !(Bc.prim && !Bc.dual); bDual.disabled = !(Bc.dual && !Bc.prim);
       var st = "Base {" + Bc.cols.map(function (j) { return "x" + "₁₂₃₄"[j]; }).join(", ") + "} : x = " + p5vec(Bc.x) + (Bc.prim ? " (admissible)" : " (NON admissible : une composante < 0)");

@@ -76,7 +76,7 @@
       var out = basis[r];
       basis[r] = k; pivots.push(p); last = [r, k];
       msg = "Pivot " + p.str() + " en (L" + (r + 1) + ", " + D.names[k] + ") : " + ops.join(" ; ") + "." +
-        (out >= 0 && out !== k ? "\n" + D.names[k] + " entre dans la base, " + D.names[out] + " en sort (c'est un pas du simplexe)." : "");
+        (out >= 0 && out !== k ? "\n" + D.names[k] + " entre dans la base, " + D.names[out] + " en sort : un changement de base, comme dans le simplexe." : "");
       draw();
     }
     function reduced() { // reduced costs and cost, when the basis is complete and the matrix has a cost vector
@@ -174,7 +174,8 @@
         }
         if (rc) {
           var neg = rc.red.filter(function (v) { return v.sign() < 0; }).length;
-          lines.push("Coût c·x = " + rc.cost.str() + (neg ? " ; un coût réduit est négatif : on peut encore descendre." : " ; tous les coûts réduits sont ≥ 0 : optimum."));
+          lines.push("Coût c·x = " + rc.cost.str() + (negs ? " ; mais cette solution basique n'est pas admissible : le test du rapport aurait choisi une autre ligne."
+            : (neg ? " ; un coût réduit est négatif : on peut encore descendre." : " ; tous les coûts réduits sont ≥ 0 : optimum.")));
         }
       } else {
         var zeroRows = [];

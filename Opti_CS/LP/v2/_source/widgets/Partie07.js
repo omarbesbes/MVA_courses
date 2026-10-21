@@ -225,7 +225,7 @@
         var rat = [];
         st.basis.forEach(function (jj, r) { if (st.ratios[r]) rat.push(NAMES[jj] + " : " + st.ratios[r].str()); });
         txt += "\nRapports xᵢ / dᵢ : " + rat.join(", ") + " → sort " + NAMES[st.basis[st.leaving]] + ", ε = " + st.eps.str() +
-          (st.eps.isZero() ? " (pas dégénéré : le flot ne bouge pas, seule la base change)." : " ; le coût baisse de " + st.reduced[st.entering].neg().str() + " × " + st.eps.str() + " = " + st.reduced[st.entering].neg().mul(st.eps).str() + ".");
+          (st.eps.isZero() ? " (pivot dégénéré : le flot ne bouge pas, seule la base change)." : " ; le coût baisse de " + st.reduced[st.entering].neg().str() + " × " + st.eps.str() + " = " + st.reduced[st.entering].neg().mul(st.eps).str() + ".");
       }
       ro.textContent = txt;
     }
@@ -257,7 +257,7 @@
         return false;
       })(s);
     }
-    if (!(p in prev)) return { path: null, reach: Object.keys(prev) };
+    if (!(p in prev)) return { path: null, reach: nodes.filter(function (v) { return v in prev; }) };
     var path = [], w = p;
     while (prev[w] !== null) { path.push([prev[w][1], prev[w][2], prev[w][0], w]); w = prev[w][0]; }
     path.reverse();

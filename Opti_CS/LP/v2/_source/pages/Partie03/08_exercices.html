@@ -1,0 +1,80 @@
+<h2 id="exercices">8. Les exercices du livre, corrigés <span class="ref">Allaire, Ex. 4.2.3–4.2.5, p. 128</span></h2>
+<p>Le livre propose trois exercices à résoudre « par l'algorithme du simplexe ». Les diapos 6 à 11 n'ont pas d'exemple chiffré. L'exercice 4.2.1 (le polygone fil rouge) est résolu graphiquement dans la <a href="Partie01.html#exercices">partie 1</a> et par le simplexe au §3 ; l'exercice 4.2.2 (le cube à $2^{n-m}$ sommets) dans la <a href="Partie02.html#exercices">partie 2</a>. Tous les tableaux ci-dessous sont calculés en fractions exactes, et chaque optimum est confirmé par <code>linprog</code>. Cherchez chaque exercice avant d'ouvrir l'indice, et l'indice avant la solution.</p>
+<div class="box method"><div class="box-h">Méthode — résoudre un PL « par l'algorithme du simplexe »</div>
+<ol>
+<li>Mettre en forme standard : min, égalités, variables $\ge0$ (écarts pour les « $\le$ »).</li>
+<li>Trouver une base admissible de départ (écarts avec $b\ge0$, colonnes de l'identité) ; sinon, phase I.</li>
+<li>Écrire le tableau initial (ligne $\ct$ comprise), puis pivoter jusqu'à $\ct\ge0$ ou une colonne entrante $\le0$.</li>
+<li>Conclure : solution, valeur (dans le sens du problème d'origine : attention aux max), unicité si $\ct_N>0$.</li>
+<li>Vérifier : la solution satisfait les contraintes, et sa valeur est celle du coin du tableau, au signe près.</li>
+</ol>
+</div>
+
+<!-- ============================================================ Ex 4.2.3 -->
+<div class="exo" id="ex-4-2-3"><div class="exo-h">Exercice 4.2.3 — Le polygone de l'exercice 4.2.1, par le simplexe <span class="lvl">★</span></div>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, Ex. 4.2.3, p. 128</span></div>
+<p>Résoudre par l'algorithme du simplexe le programme linéaire</p>
+$$\min_{x_1\ge0,\ x_2\ge0,\ x_3\ge0,\ x_4\ge0,\ x_5\ge0}x_1+2x_2\qquad\text{sous les contraintes}\qquad\begin{cases}-3x_1+2x_2+x_3=2,\\-x_1+2x_2+x_4=4,\\x_1+x_2+x_5=5.\end{cases}$$
+</div>
+<div class="box remark"><div class="box-h">Note sur les sources</div>
+<p>Tel qu'il est imprimé, avec « $\min\,x_1+2x_2$ » et $x\ge0$, l'exercice est immédiat : le coût est $\ge0$ sur $\Xad$ et vaut $0$ au point de départ, donc la base initiale est optimale, sans aucun pivot. Les contraintes sont exactement celles de l'exercice 4.2.1 écrites avec les variables d'écart $x_3,x_4,x_5$ : l'énoncé voulait très probablement la forme standard de l'exercice 4.2.1, $\max\,x_1+2x_2$, c'est-à-dire $\min\,-x_1-2x_2$. Les deux versions sont résolues ci-dessous.</p>
+</div>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>Les colonnes de $x_3,x_4,x_5$ forment l'identité et $b=(2,4,5)\ge0$ : la base $\{x_3,x_4,x_5\}$ est admissible, et comme $c_B=0$, les coûts réduits de départ sont les coefficients du coût. Pour la version « max », pensez à changer $c$ en $-c$.</p>
+</div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>(a) L'énoncé tel qu'imprimé : $\min\,x_1+2x_2$.</strong></p>
+<!-- include figures/P03/tab-423-imprime.html -->
+<p>Les coûts réduits hors base sont $\ct_1=1$ et $\ct_2=2$, tous deux $>0$ : le sommet $(0\,;0)$, c'est-à-dire $x=(0,0,2,4,5)$, est l'optimum, unique, de valeur $0$. Vérification directe : sur $\Xad$, $x_1,x_2\ge0$, donc $x_1+2x_2\ge0$, avec égalité seulement si $x_1=x_2=0$.</p>
+<p><strong>(b) La version voulue : $\max\,x_1+2x_2$, soit $\min\,-x_1-2x_2$.</strong> Règle du plus négatif (celle des diapos) :</p>
+<!-- include figures/P03/tab-421-0.html -->
+<!-- include figures/P03/tab-421-1.html -->
+<!-- include figures/P03/tab-421-2.html -->
+<!-- include figures/P03/tab-421-3.html -->
+<p>Le chemin est $(0\,;0)\to(0\,;1)\to(1\,;\frac52)\to(2\,;3)$, les coûts $0\to-2\to-6\to-8$. Au tableau final, $\ct_4=\frac13>0$ et $\ct_5=\frac43>0$ : l'optimum est unique, $x^\star=(2,3,2,0,0)$, et $\max\,x_1+2x_2=8$. Contrôle : $-3\cdot2+2\cdot3=0\le2$ (écart $x_3=2$), $-2+6=4$ et $2+3=5$ (contraintes saturées), $x_1+2x_2=2+6=8$ ; <code>linprog</code> donne $(2,3)$ et $-8$. Les multiplicateurs se lisent sous les colonnes d'écart : $p=-(0,\frac13,\frac43)$.</p>
+<details class="fold more"><summary>Pour aller plus loin — la même résolution avec la règle de Bland</summary><div class="fold-body">
+<p>Avec la règle du plus petit indice, $x_1$ entre d'abord ($\ct_1=-1$), et deux pivots suffisent, par $(5\,;0)$ :</p>
+<!-- include figures/P03/tab-421b-0.html -->
+<!-- include figures/P03/tab-421b-1.html -->
+<!-- include figures/P03/tab-421b-2.html -->
+<p>Même optimum, même tableau final (aux lignes près), mais un pivot de moins : la règle des diapos n'est pas la plus courte ici.</p>
+</div></details>
+</div></details>
+</div>
+
+<!-- ============================================================ Ex 4.2.4 -->
+<div class="exo" id="ex-4-2-4"><div class="exo-h">Exercice 4.2.4 — Avec un dessin et des variables d'écart <span class="lvl">★</span></div>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, Ex. 4.2.4, p. 128</span></div>
+<p>Résoudre par l'algorithme du simplexe le programme linéaire</p>
+$$\min_{x_1\ge0,\ x_2\ge0}2x_1-x_2$$
+<p>sous les contraintes $x_1+x_2\le1$ et $x_2-x_1\le1/2$ (on pourra s'aider d'un dessin et introduire des variables d'écart).</p>
+</div>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>Écarts $x_3,x_4\ge0$ : $x_1+x_2+x_3=1$, $-x_1+x_2+x_4=\frac12$. Départ : base $\{x_3,x_4\}$ au point $(0\,;0)$. Sur le dessin, le coût $2x_1-x_2$ diminue quand on va vers la gauche et vers le haut : vers quel sommet ?</p>
+</div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>Le dessin.</strong> L'ensemble admissible est le quadrilatère de sommets $(0\,;0)$, $(1\,;0)$, $(\frac14\,;\frac34)$ et $(0\,;\frac12)$ (le troisième est l'intersection de $x_1+x_2=1$ et $x_2-x_1=\frac12$). Les coûts aux sommets valent $0$, $2$, $-\frac14$ et $-\frac12$ : le minimum est en $(0\,;\frac12)$.</p>
+<figure class="fig"><!-- include figures/P03/ex424.svg --><figcaption>Exercice 4.2.4. Le simplexe part de $x^0=(0\,;0)$ et monte le long de l'axe $x_1=0$ jusqu'à $x^1=(0\,;\frac12)$ ; les lignes de niveau en tirets montrent que c'est le minimum.</figcaption></figure>
+<p><strong>Forme standard.</strong> $\min\,2x_1-x_2$ sous $x_1+x_2+x_3=1$, $-x_1+x_2+x_4=\frac12$, $x\in\R^4_+$. Les colonnes de $x_3,x_4$ forment l'identité et $b=(1,\frac12)\ge0$ : on part de la base $\{x_3,x_4\}$, sommet $(0\,;0)$.</p>
+<!-- include figures/P03/tab-424-0.html -->
+<!-- include figures/P03/tab-424-1.html -->
+<p><strong>Lecture.</strong> Au départ, $\ct_1=2>0$ et $\ct_2=-1&lt;0$ : seul $x_2$ peut entrer. Sa colonne est $(1,1)$, les rapports $\frac11=1$ et $\frac{1/2}1=\frac12$ : $\eps=\frac12$, $x_4$ sort. Nouveau sommet $(0\,;\frac12)$, avec $x_3=\frac12$, coût $-\frac12$. Les coûts réduits $\ct_1=1$ et $\ct_4=1$ sont $>0$ : <strong>optimum unique $x^\star=(0,\frac12)$, valeur $-\frac12$</strong> (<code>linprog</code> : idem). Un seul pivot, et la variable $x_1$, qui coûte $2$ par unité, n'entre jamais.</p>
+</div></details>
+</div>
+
+<!-- ============================================================ Ex 4.2.5 -->
+<div class="exo" id="ex-4-2-5"><div class="exo-h">Exercice 4.2.5 — Une base de départ toute faite <span class="lvl">★★</span></div>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, Ex. 4.2.5, p. 128</span></div>
+<p>Résoudre par l'algorithme du simplexe le programme linéaire</p>
+$$\min_{x_1\ge0,\ x_2\ge0,\ x_3\ge0,\ x_4\ge0}3x_3-x_4\qquad\text{sous les contraintes}\qquad\begin{cases}x_1-3x_3+3x_4=6,\\x_2-8x_3+4x_4=4.\end{cases}$$
+</div>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>Les colonnes de $x_1$ et $x_2$ forment l'identité, et $b=(6,4)\ge0$ : la base $\{x_1,x_2\}$ est admissible, de coût $0$, avec $c_B=0$. Une seule variable a un coût réduit négatif.</p>
+</div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<!-- include figures/P03/tab-425-0.html -->
+<!-- include figures/P03/tab-425-1.html -->
+<p><strong>Lecture.</strong> Au départ, $x=(6,4,0,0)$, coût $0$ ; $\ct_3=3$, $\ct_4=-1$ : $x_4$ entre. Sa colonne $(3,4)$ donne les rapports $\frac63=2$ et $\frac44=1$ : $\eps=1$, $x_2$ sort. Nouveau sommet $x=(3,0,0,1)$ (on vérifie : $3-0+3=6$ et $0-0+4=4$), coût $-1$. Les coûts réduits $\ct_2=\frac14$ et $\ct_3=1$ sont $>0$ : <strong>optimum unique $x^\star=(3,0,0,1)$, valeur $-1$</strong> (<code>linprog</code> : idem).</p>
+<p><strong>Une remarque instructive.</strong> L'ensemble admissible n'est <em>pas</em> borné : le vecteur $w=(0,4,1,1)$ vérifie $Aw=(0-3+3,\ 4-8+4)=(0,0)$ et $w\ge0$, donc $x^\star+tw\in\Xad$ pour tout $t\ge0$. Mais $c\cdot w=3-1=2>0$ : le coût monte le long de cette demi-droite. Il n'y a donc pas de contradiction avec l'existence d'un minimum (la non-bornitude de $\Xad$ ne rend pas le problème non borné). Sur les $\binom42=6$ bases, trois sont admissibles : $\{x_1,x_2\}$ (coût $0$), $\{x_1,x_4\}$ (coût $-1$) et $\{x_3,x_4\}$, de point $(0,0,1,3)$ (coût $0$) ; les trois autres donnent une composante négative.</p>
+</div></details>
+</div>

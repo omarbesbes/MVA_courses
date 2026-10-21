@@ -85,11 +85,13 @@
       var opt = []; vals.forEach(function (v, i) { if (v >= M - tol) opt.push(i); });
       var unb = null, optRays = [];
       if (!withThird) {
+        var best = 1e-9;
         P1_R3.forEach(function (r) {
-          var d = p1dot(c, r.dir);
-          if (d > 1e-9) unb = r;
+          var d = p1dot(c, r.dir), dn = d / Math.hypot(r.dir[0], r.dir[1]);
+          if (dn > best) { best = dn; unb = r; }   // la demi-droite où c·x monte le plus vite
           else if (Math.abs(d) <= 1e-9 && opt.indexOf(r.from) >= 0) optRays.push(r);
         });
+        if (unb) optRays = [];
       }
       pl.clear();
       pl.axes({ xticks: [0, 1, 2, 3, 4, 5, 6], yticks: [0, 1, 2, 3, 4], cross: true, xlabel: "x₁", ylabel: "x₂" });
@@ -98,13 +100,13 @@
       pl.poly(P.concat([P[0]]), "a1");
       p1drawConstraints(pl, BOX, withThird);
       // bord de Xad
+      pl.clip();
       if (withThird) pl.poly(P1_V5.concat([P1_V5[0]]), "ln c1");
       else {
         pl.poly([[0, 0]].concat([[0, 1], [1, 2.5]]), "ln c1");
         P1_R3.forEach(function (r) { var o = P1_V3[r.from]; pl.seg(o[0], o[1], o[0] + 9 * r.dir[0], o[1] + 9 * r.dir[1], "ln c1"); });
       }
       // lignes de niveau
-      pl.clip();
       var corners = [[BOX[0], BOX[2]], [BOX[1], BOX[2]], [BOX[1], BOX[3]], [BOX[0], BOX[3]]].map(function (p) { return p1dot(c, p); });
       var kmin = Math.min.apply(null, corners), kmax = Math.max.apply(null, corners), D = (kmax - kmin) / 9;
       for (var j = 1; j < 9; j++) {
@@ -136,7 +138,7 @@
         var a0 = [o[0] + 0.5 * unb.dir[0], o[1] + 0.5 * unb.dir[1] + off], a1 = [o[0] + kEnd * unb.dir[0], o[1] + kEnd * unb.dir[1] + off];
         var mk6 = arrowMarker(s.svg, "f6");
         pl.seg(a0[0], a0[1], a1[0], a1[1], "ln c6", { "marker-end": mk6 });
-        pl.text(a1[0], a1[1], "c·x → +∞", "tx-b t6", "end", -6, unb.dir[1] === 0 ? -10 : 20);
+        pl.text(a1[0], a1[1], "c·x → +∞", "tx-b t6", "start", 10, 5);
       }
       // sommets
       V.forEach(function (v, i) {
