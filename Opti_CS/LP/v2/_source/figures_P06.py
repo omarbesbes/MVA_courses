@@ -120,9 +120,9 @@ def fig_diapo18():
     c.arrow(f.X(x0), f.Y(y0), f.X(x0 + 0.85 * 10 / n), f.Y(y0 + 0.85 * 11 / n), 2)
     f.text(x0 + 0.85 * 10 / n, y0 + 0.85 * 11 / n, "c = (10, 11)", "tx-s t2", "start", dx=4, dy=-2)
     # points remarquables
-    cross(c, f.X(6), f.Y(0), 6)
     square(c, f.X(5), f.Y(0), 5, "fm")
-    f.circle(5.9, 0, 6, "f3")
+    f.circle(5.9, 0, 5, "f3")
+    cross(c, f.X(6), f.Y(0), 6)  # dessinée après l'optimum continu, tout proche (0,1 unité), pour rester visible
     f.circle(1, 4, 6.5, "f4")
     ring(c, f.X(1), f.Y(4), 9.5)
     f.text(1, 4, "(1, 4)", "tx-b", "start", dx=12, dy=-8)
@@ -182,7 +182,7 @@ def fig_enveloppe():
     for h in H:
         ring(c, f.X(h[0]), f.Y(h[1]), 6.5, "ln c4 thin nofill")
     f.text(2.8, 2.6, "x₁ + x₂ ≤ 5", "tx-s t4", "start", dx=4)
-    f.text(0.5, 4, "x₂ ≤ 4", "tx-s t4", "middle", dy=-12)
+    f.text(0.5, 4, "x₂ ≤ 4", "tx-s t4", "middle", dy=18)
     c.text(181, 20, "diapo 18 : conv(P ∩ ℤ²) a 4 sommets", "tx-b", "middle")
     c.text(181, 318, "sommets (0,0), (5,0), (1,4), (0,4)", "tx-s", "middle")
     # droite : triangle fin
@@ -395,7 +395,7 @@ def fig_centre():
         c.add(f'<line x1="{X(bounds[j + 1]):.1f}" y1="34" x2="{X(bounds[j + 1]):.1f}" y2="{yax}" class="gr"/>')
         c.text(xm, 160, f"f{'₁₂₃₄₅'[j]}", "tx-b", "middle")
         c.text(xm, 180, f"c = {dem[j]}", "tx-s t2", "middle")
-        c.text(xm, 198, f"servi {cov[j]}", "tx-s t3", "middle")
+        c.text(xm, 198, f"présents {cov[j]}", "tx-s t3", "middle")
     c.text(X(12), 318, "coût 4·5 + 5·8 + 6·4 = 84 ; positions des instants schématiques", "tx-s", "middle")
     # matrice tU (fractions x tranches)
     M = [[1, 0, 0], [1, 1, 0], [0, 1, 0], [0, 1, 1], [0, 0, 1]]

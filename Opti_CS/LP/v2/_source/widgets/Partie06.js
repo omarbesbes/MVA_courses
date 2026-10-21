@@ -132,18 +132,19 @@
         if (l1) plot.seg(l1[0][0], l1[0][1], l1[1][0], l1[1][1], "ln c2 dash");
         if (l2 && Math.abs(ibest - bv) > 1e-9) plot.seg(l2[0][0], l2[0][1], l2[1][0], l2[1][1], "ln c2 thin");
       }
-      // arrondis de l'optimum continu
+      // optimum continu, puis ses arrondis par-dessus (l'arrondi (6, 0) est à 0,1 unité de (5,9 ; 0))
       var ov = best.v, fx = [Math.floor(ov[0].val() + 1e-12), Math.ceil(ov[0].val() - 1e-12)], fy = [Math.floor(ov[1].val() + 1e-12), Math.ceil(ov[1].val() - 1e-12)];
       var rounds = [];
       fx.forEach(function (a) { fy.forEach(function (b) { if (!rounds.some(function (r) { return r[0] === a && r[1] === b; })) rounds.push([a, b]); }); });
       var integral = rounds.length === 1;
+      plot.dot(ov[0].val(), ov[1].val(), integral ? 5 : 5.5, "f3");
       if (!integral) rounds.forEach(function (r) {
         if (feas(r)) el("rect", { x: plot.tx(r[0]) - 6, y: plot.ty(r[1]) - 6, width: 12, height: 12, "class": "fm", "fill-opacity": 0.85 }, plot.g);
         else p6cross(plot.g, plot.tx(r[0]), plot.ty(r[1]), 6, "ln c6");
       });
-      // optimum entier puis optimum continu
+      // optimum entier (si l'optimum continu est entier, il est redessiné par-dessus)
       iopt.forEach(function (p) { plot.dot(p[0], p[1], 7, "f4"); el("circle", { cx: plot.tx(p[0]), cy: plot.ty(p[1]), r: 10.5, "class": "ln ck thin nofill" }, plot.g); });
-      plot.dot(ov[0].val(), ov[1].val(), integral ? 5 : 6.5, "f3");
+      if (integral) plot.dot(ov[0].val(), ov[1].val(), 5, "f3");
       // texte
       var cs = "(" + String(c[0]).replace("-", "−") + ", " + String(c[1]).replace("-", "−") + ")";
       var txt = "Coût à maximiser c·x avec c = " + cs + ".\n";

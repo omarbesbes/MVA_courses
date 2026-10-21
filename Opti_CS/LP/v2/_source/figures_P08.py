@@ -343,7 +343,7 @@ def fig_lagrange():
     f.line(0, float(best), 5, float(best), "ln cm thin dot")
     f.circle(float(lam_star), float(best), 5, "f5")
     f.text(float(lam_star), float(best), f"min G = G({lam_star.numerator}/{lam_star.denominator}) = {fr(best)}", "tx-b t5", "middle", dy=18)
-    f.text(0.05, float(G(0)), f"G(0) = {fr(G(0))} = somme des utilités", "tx-s", "start", dx=6, dy=4)
+    f.text(0.3, float(G(0)), f"G(0) = {fr(G(0))} = somme des utilités", "tx-s", "start", dx=6, dy=4)
     # ratio labels under the axis
     for t in ratios:
         f.line(float(t), 30, float(t), float(G(t)), "ln cm hair dot")
@@ -473,8 +473,9 @@ def fig_sous_tours():
                 vx, vy = f.X(CITIES[j][0]) - f.X(CITIES[i][0]), f.Y(CITIES[j][1]) - f.Y(CITIES[i][1])
                 ln = math.hypot(vx, vy)
                 nx, ny = -vy / ln, vx / ln
-                # put the label on the side away from the centre of the panel
-                cxp, cyp = f.X(47), f.Y(25)
+                # put the label on the outer side of its own cycle (away from the cycle's centroid)
+                cxp = sum(f.X(CITIES[v][0]) for v in cy) / len(cy)
+                cyp = sum(f.Y(CITIES[v][1]) for v in cy) / len(cy)
                 if (mx - cxp) * nx + (my - cyp) * ny < 0:
                     nx, ny = -nx, -ny
                 raw_text(c, mx + 9 * nx, my + 9 * ny + 4, str(D[i][j]), "tx-s", "middle")
