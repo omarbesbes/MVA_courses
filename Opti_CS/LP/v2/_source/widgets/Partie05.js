@@ -66,7 +66,7 @@
      ====================================================================== */
   WIDGETS.p5paire = function (box) {
     var s = scaffold(box, "Le primal (R) et son dual côte à côte : déplacez x et p, regardez b·p ≤ c·x");
-    var svg = s.svg, W = 680, H = 420;
+    var svg = s.svg, W = 680, H = 396;
     svg.setAttribute("viewBox", "0 0 " + W + " " + H);
     svg.setAttribute("role", "img");
     svg.setAttribute("aria-label", "Deux plans : à gauche la région admissible du primal et le point x, à droite celle du dual et le point p ; en bas une règle avec b·p et c·x");
@@ -172,7 +172,7 @@
       var gap = cx - bp;
       var txt = "x = " + p5vec(x) + (xadm ? " admissible" : " NON admissible") + " ; c·x = " + frac(cx) +
         "\np = " + p5vec(p) + (padm ? " admissible" : " NON admissible") + " ; b·p = " + frac(bp) +
-        "\nécart c·x − b·p = x₁s₁ + x₂s₂ + p₁e₁ + p₂e₂ = " + frac(x[0] * sl[0]) + " + " + frac(x[1] * sl[1]) + " + " + frac(p[0] * e[0]) + " + " + frac(p[1] * e[1]) + " = " + frac(gap) +
+        "\nécart c·x − b·p = x₁s₁ + x₂s₂ + p₁e₁ + p₂e₂ = " + [x[0] * sl[0], x[1] * sl[1], p[0] * e[0], p[1] * e[1]].map(function (v) { return v < -1e-12 ? "(" + frac(v) + ")" : frac(v); }).join(" + ") + " = " + frac(gap) +
         "\n   où s = c − Aᵀp = " + p5vec(sl) + " (jeu des contraintes duales) et e = Ax − b = " + p5vec(e) + " (surplus primal)";
       if (xadm && padm) txt += "\nLes deux sont admissibles : les quatre produits sont ≥ 0, donc b·p ≤ c·x (dualité faible)." + (Math.abs(gap) < 1e-9 ? "  Écart nul : x et p sont optimaux." : "");
       else txt += "\nHors des régions admissibles, un produit peut être négatif : l’inégalité b·p ≤ c·x n’est plus garantie.";
@@ -282,7 +282,7 @@
      ====================================================================== */
   WIDGETS.p5bases = function (box) {
     var s = scaffold(box, "Chaque base donne un couple (x, p) avec c·x = b·p : l’optimum, c’est la base où les deux sont admissibles");
-    var svg = s.svg, W = 680, H = 400;
+    var svg = s.svg, W = 680, H = 392;
     svg.setAttribute("viewBox", "0 0 " + W + " " + H);
     svg.setAttribute("role", "img");
     svg.setAttribute("aria-label", "Les six bases du problème (R) en forme standard : solution basique primale à gauche, solution basique duale à droite, et leurs valeurs sur une règle");
@@ -333,7 +333,7 @@
       PX.axes([0, 2, 4, 6, 8, 10], [0, 2, 4, 6, 8], "x₁", "x₂");
       PP.axes([0, 1, 2, 3], [0, 1, 2, 3], "p₁", "p₂");
       var t1 = el("text", { x: 44 + 135, y: 14, "class": "tx-b", "text-anchor": "middle" }, svg); t1.textContent = "primal : x de la base (x₁, x₂)";
-      var t2 = el("text", { x: 392 + 135, y: 14, "class": "tx-b", "text-anchor": "middle" }, svg); t2.textContent = "dual : p = B⁻ᵀc_B";
+      var t2 = el("text", { x: 392 + 135, y: 14, "class": "tx-b", "text-anchor": "middle" }, svg); t2.textContent = "dual : p tel que Bᵀp = coûts de la base";
       var reg = halfPlanePolygon([[-2, -1, -8], [-1, -3, -9], [-1, 0, 0], [0, -1, 0]], PX.box);
       PX.poly(reg, "a1"); PX.poly(reg, "ln c1 thin");
       PX.cline(2, 1, 8, "ln cm thin"); PX.cline(1, 3, 9, "ln cm thin");
@@ -455,8 +455,8 @@
       var mins = argmins(rF), left = null, right = null;
       mins.forEach(function (y) { if (!left || y[res].cmp(left) > 0) left = y[res]; if (!right || y[res].cmp(right) < 0) right = y[res]; });
       // validity interval of the current price (right slope): between the breakpoints around t
-      var lo = Fr(0), hi = Fr(tmax[res]);
-      bps.forEach(function (bp) { if (bp.cmp(t) <= 0 && bp.cmp(lo) > 0) lo = bp; if (bp.cmp(t) > 0 && bp.cmp(hi) < 0) hi = bp; });
+      var lo = Fr(0), hi = Fr(tmax[res]), prev = Fr(0);
+      bps.forEach(function (bp) { if (bp.cmp(t) <= 0 && bp.cmp(lo) > 0) lo = bp; if (bp.cmp(t) > 0 && bp.cmp(hi) < 0) hi = bp; if (bp.cmp(t) < 0 && bp.cmp(prev) > 0) prev = bp; });
       var isBp = bps.some(function (bp) { return bp.cmp(t) === 0; });
       el("rect", { x: PR.X(lo.val()), y: PR.Y(0) - 5, width: Math.max(2, PR.X(hi.val()) - PR.X(lo.val())), height: 10, "class": "a4" }, svg);
       PR.poly(pts, "ln c3", PR.gc, false);
@@ -469,9 +469,14 @@
       var ys = mins[0];
       var st = "b = " + p5vec(rF) + " : profit maximal V = " + Vof(rF).str() + (best ? ", atteint en x = (" + frac(best[0]) + ", " + frac(best[1]) + ")" : "");
       st += "\nprix duaux (solution du dual min b·y, Mᵀy ≥ g, y ≥ 0) : y = " + p5vec(ys) + (mins.length > 1 ? " — non unique, autres : " + mins.slice(1).map(p5vec).join(", ") : "");
-      if (isBp && left.cmp(right) !== 0) st += "\nb est un point anguleux de V : pente à gauche " + left.str() + ", pente à droite " + right.str() + " (le dual a plusieurs solutions).";
-      else st += "\npente de V en b = y" + "₁₂₃"[res] + " = " + right.str() + " : une unité de " + names[res] + " en plus rapporte " + right.str() + " (prix ombre).";
-      st += "\nCe prix reste valable pour b dans [" + lo.str() + " ; " + hi.str() + "] (bande dorée) : la base optimale ne change pas.";
+      // a final slope 0 lasts for ever: V is non-decreasing (more resource never hurts) and concave
+      var hiStr = hi.cmp(Fr(tmax[res])) === 0 && right.isZero() ? "+∞[" : hi.str() + "]";
+      if (isBp && left.cmp(right) !== 0) {
+        st += "\nb est un point anguleux de V : pente à gauche " + left.str() + " (sur [" + prev.str() + " ; " + t.str() + "]), pente à droite " + right.str() + " (sur [" + t.str() + " ; " + hiStr + ", bande dorée) : le dual a plusieurs solutions.";
+      } else {
+        st += "\npente de V en b = y" + "₁₂₃"[res] + " = " + right.str() + " : une unité de " + names[res] + " en plus rapporte " + right.str() + " (prix ombre).";
+        st += "\nCe prix reste valable pour b dans [" + lo.str() + " ; " + hiStr + " (bande dorée) : la base optimale ne change pas.";
+      }
       ro.textContent = st;
     }
     setSlider(); draw(); redrawers.push(draw);

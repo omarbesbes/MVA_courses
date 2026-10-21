@@ -28,6 +28,15 @@
     return "url(#" + id + ")";
   }
   function p7clear(svg) { while (svg.firstChild) svg.removeChild(svg.firstChild); }
+  // Où écrire une étiquette près d'un nœud du graphe de la diapo 26 (au-dessus de 1 et 2, en dessous des autres,
+  // décalée pour s et p afin d'éviter les arcs).
+  function p7lab(v) {
+    var P = P7G.pos[v];
+    if (v === "1" || v === "2") return [P[0], P[1] - 28];
+    if (v === "s") return [P[0] - 16, P[1] + 52];
+    if (v === "p") return [P[0] + 20, P[1] + 52];
+    return [P[0], P[1] + 37];
+  }
   // Une zone cliquable large le long d'un arc.
   function p7hit(g, l, P, onClick) {
     var a = P7G.arcs[l];
@@ -77,7 +86,7 @@
         x[k] = Math.max(0, Math.min(9, x[k] + d)); msg = ""; draw();
       });
       // flots extérieurs
-      var dirs = { s: [-46, -40], p: [46, -40], "3": [-50, 26], "1": [-46, -30], "2": [46, -30], "4": [50, 26] };
+      var dirs = { s: [-34, -48], p: [34, -48], "3": [-50, 26], "1": [-46, -30], "2": [46, -30], "4": [50, 26] };
       G.nodes.forEach(function (v, k) {
         if (!b[k]) return;
         var q = P[v], d = dirs[v], L = Math.hypot(d[0], d[1]);
@@ -85,7 +94,8 @@
         var ln = b[k] > 0 ? { x1: far[0], y1: far[1], x2: near[0], y2: near[1] } : { x1: near[0], y1: near[1], x2: far[0], y2: far[1] };
         ln["class"] = "ln c2 thin"; ln["marker-end"] = m2;
         el("line", ln, g);
-        var t = el("text", { x: far[0] + (d[0] < 0 ? -4 : 4), y: far[1] - 5, "class": "tx-b t2", "text-anchor": d[0] < 0 ? "end" : "start" }, g);
+        var vert = (v === "s" || v === "p");
+        var t = el("text", { x: vert ? far[0] : far[0] + (d[0] < 0 ? -4 : 4), y: far[1] - 6, "class": "tx-b t2", "text-anchor": vert ? "middle" : (d[0] < 0 ? "end" : "start") }, g);
         t.textContent = "b" + ({ s: "ₛ", p: "ₚ", "1": "₁", "2": "₂", "3": "₃", "4": "₄" })[v] + " = " + p7sign(b[k]);
       });
       // nœuds et bilans
@@ -95,9 +105,9 @@
         sumD += dlt;
         if (dlt !== 0) allOk = false;
         drawNode(g, P[v], v, { cls: dlt === 0 ? "f3" : "f6", r: 18 });
-        var up = (v === "1" || v === "2");
-        var t = el("text", { x: P[v][0], y: P[v][1] + (up ? -27 : 36), "class": dlt === 0 ? "tx-s" : "tx-b t6", "text-anchor": "middle" }, g);
-        t.textContent = p7sign(b[k] || 0).replace(/^$/, "0") + " + " + inn[k] + " − " + out[k] + " = " + p7sign(dlt).replace(/^$/, "0");
+        var lp = p7lab(v);
+        var t = el("text", { x: lp[0], y: lp[1], "class": dlt === 0 ? "tx-s" : "tx-b t6", "text-anchor": "middle" }, g);
+        t.textContent = p7sign(b[k]) + " + " + inn[k] + " − " + out[k] + " = " + p7sign(dlt);
         lines.push("Nœud " + v + " : b = " + (p7sign(b[k]) || "0") + ", entre " + inn[k] + ", sort " + out[k] + "  →  b + entre − sort = " + (p7sign(dlt) || "0") + (dlt === 0 ? "  ✓" : "  ✗"));
       });
       var sumB = b.reduce(function (u, v) { return u + v; }, 0);
@@ -416,8 +426,8 @@
         var fixed = done.indexOf(v) >= 0, cur = st && st.v === v;
         drawNode(g, P[v], v, { cls: fixed ? "f3" : "fm", r: 18 });
         if (cur) el("circle", { cx: P[v][0], cy: P[v][1], r: 23, "class": "ln c3 thin nofill" }, g);
-        var up = (v === "1" || v === "2");
-        var t = el("text", { x: P[v][0], y: P[v][1] + (up ? -28 : 37), "class": fixed ? "tx-b t3" : "tx-s", "text-anchor": "middle" }, g);
+        var lp = p7lab(v);
+        var t = el("text", { x: lp[0], y: lp[1], "class": fixed ? "tx-b t3" : "tx-s", "text-anchor": "middle" }, g);
         t.textContent = "d = " + dstr(d[v]) + (fixed ? "" : " (provisoire)");
       });
       var lines = [];
@@ -443,7 +453,7 @@
 
   /* --- 5. L'affectation : matrices doublement stochastiques et permutations (§7) --- */
   WIDGETS.p7affectation = function (box) {
-    var s = scaffold(box, "Affectation : une matrice doublement stochastique qu'on déforme vers une permutation, et le coût linéaire");
+    var s = scaffold(box, "Affectation : déformer une matrice doublement stochastique vers une permutation");
     var W = 680, H = 300, N = 4;
     s.svg.setAttribute("viewBox", "0 0 " + W + " " + H);
     s.svg.setAttribute("role", "img");
