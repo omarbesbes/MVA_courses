@@ -1,0 +1,59 @@
+<h2 id="stats">10. Sample complexity: why entropy helps statistically <span class="ref">OT4ML §10.2, pp. 198–205</span></h2>
+<p class="tldr">From $n$ samples, $W_p$ is estimated at the rate $n^{-1/d}$ in dimension $d$ (the curse of dimensionality), an MMD at the rate $n^{-1/2}$ in every dimension, and a Sinkhorn divergence at fixed $\eps$ at the rate $n^{-1/2}$ as well — with a constant that explodes as $\eps\to0$. Entropy buys statistical speed with bias.</p>
+
+<h3 id="stats-why">The problem: losses are computed on samples</h3>
+<p>In machine learning, $\al$ and $\be$ are never known: you have $n$ samples of each (a data set, a mini-batch, the outputs of a generator), and you compute the loss between the <em class="new">empirical measures</em> $\hat\al_n=\frac1n\sum_{i=1}^n\delta_{X_i}$ and $\hat\be_n$. The question is how close $\mathrm{loss}(\hat\al_n,\hat\be_n)$ is to $\mathrm{loss}(\al,\be)$, i.e. how many samples are needed to estimate the loss — and its gradient — to a given accuracy. Lesson 3 showed that $W_p(\hat\al_n,\al)\to0$ (<a href="Lesson03.html#conv">Lesson 3, convergence</a>); the issue here is the <em>speed</em>.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML (10.3) and Prop. 10.5, p. 198 · Prop. 10.11, p. 203 · compact Props. 10.5, p. 56 and 10.9, p. 57</span></div>
+<p>For compactly supported measures, it is convenient to record the worst-case empirical Wasserstein scale once […]. For $n\ge2$, $p\ge1$, and $d\ge1$, define</p>
+$$r_{n,p,d}:=\begin{cases}n^{-1/(2p)},&d<2p,\\ n^{-1/(2p)}\big(\log(1+n)\big)^{1/p},&d=2p,\\ n^{-1/d},&d>2p.\end{cases}\qquad(10.3)$$
+<p><strong>Proposition 10.5</strong> (Empirical OT has intrinsic-dimension value rates). Let $p\ge1$, let $\X\subset\R^d$ be compact, and, for each $\al\in\Pc(\X)$, let $\hat\al_n=n^{-1}\sum_{i=1}^n\delta_{X_i}$ for i.i.d. samples $X_i\sim\al$. Then $\ \sup_{\al\in\Pc(\X)}\big(\E\,\mathcal W_p(\hat\al_n,\al)^p\big)^{1/p}\le C_{\X,p,d}\,r_{n,p,d}.$ (10.4) […]</p>
+<p><strong>Proposition 10.11</strong> (MMD has a parametric value rate). Let $k$ be a bounded positive definite kernel with $k(x,x)\le\kappa^2$ […]. If $\hat\al_n$ and $\hat\be_m$ are independent empirical measures, then $\ \E\big|\mathrm{MMD}_k(\hat\al_n,\hat\be_m)-\mathrm{MMD}_k(\al,\be)\big|\le\kappa\Big(\frac1{\sqrt n}+\frac1{\sqrt m}\Big).$</p>
+</div>
+<dl class="decode">
+<dt>$r_{n,p,d}=n^{-1/d}$ for $d>2p$</dt><dd>To halve the error you need $2^d$ times more samples: in dimension $d=50$ (a small feature space), no realistic data set gets close. The book adds that the relevant $d$ is the <em>intrinsic</em> dimension of the support (Remark 10.6): data on a low-dimensional manifold behave better.</dd>
+<dt>$\frac1{\sqrt n}$</dt><dd>The <em class="new">parametric rate</em>, the rate of an average: an MMD is a combination of averages of kernel values, so it is estimated like a mean, in every dimension.</dd>
+</dl>
+<div class="box idea"><div class="box-h">Why MMD is fast and $W_p$ is slow</div>
+<p>MMD is an explicit formula: averages of $k(X_i,X_j)$, whose fluctuations are those of a mean, $\kappa/\sqrt n$ (the proof is three lines: the reverse triangle inequality in the kernel space and $\E\norm{\Phi(X)-m_\al}^2\le\kappa^2$). $W_p$ is an optimization over couplings: $n$ points must be matched to the “holes” of the distribution, and in dimension $d$ the typical distance from a point to its nearest neighbour among $n$ samples is $n^{-1/d}$ — the empirical measure is that far from the truth, whatever the matching.</p>
+</div>
+
+<h3 id="stats-sinkhorn">Fixed temperature: the parametric rate</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 10.12, pp. 203–204 · Remark 10.13, p. 205 · compact Prop. 10.10, p. 58</span></div>
+<p><strong>Proposition 10.12</strong> (Fixed-temperature Sinkhorn divergence has a parametric rate). Let $c(x,y)=\norm{x-y}^2/2$, and assume that $\al$ and $\be$ are $\sigma^2$-subgaussian probability measures on $\R^d$ […]. Set $q_d:=\lceil\frac{5d}2\rceil+6$ and $\Lambda_{d,\sigma}(\eps):=\eps\Big[1+\Big(\frac{\sigma}{\sqrt\eps}\Big)^{q_d}\Big]$. Let $\hat\al_n$ and $\hat\be_m$ be independent empirical measures. Then, for every $\eps>0$,</p>
+$$\E\big|\bar{\mathcal L}^\eps_c(\hat\al_n,\hat\be_m)-\bar{\mathcal L}^\eps_c(\al,\be)\big|\le C_d\,\Lambda_{d,\sigma}(\eps)\Big(\frac1{\sqrt n}+\frac1{\sqrt m}\Big).$$
+<p><strong>Remark 10.13</strong> (No free lunch when approximating exact OT). The parametric rate in Proposition 10.12 holds for fixed $\eps$. If the goal is to approximate the unregularized OT value, one must also account for the regularization bias. […] Balancing the two terms gives $\eps\simeq n^{-1/(2(p_d+1))}$ and total error of order $n^{-1/(2(p_d+1))}$ under this conservative fixed-support bound [with $p_d=\frac{q_d}2-1$]. […] Thus entropic smoothing improves statistical behavior at fixed scale, but approximating exact OT still forces a geometry-dependent bias–variance tradeoff.</p>
+</div>
+<dl class="decode">
+<dt>$\sigma^2$-subgaussian</dt><dd>Tails at least as light as those of a Gaussian of variance $\sigma^2$ (the precise condition is an exponential moment bound); compactly supported measures qualify.</dd>
+<dt>$\Lambda_{d,\sigma}(\eps)$</dt><dd>The constant. For $\eps\ge\sigma^2$ it is between $\eps$ and $2\eps$; for small $\eps$ it behaves like $\sigma^{q_d}\eps^{1-q_d/2}$, which explodes as $\eps\to0$, faster in high dimension. The rate in $n$ is parametric, the price is paid in the constant.</dd>
+<dt>“no free lunch”</dt><dd>To approximate $W_2^2$ itself, you must also send $\eps\to0$ to kill the bias of §8–§9; balancing bias and statistical error brings back a rate that degrades with the dimension.</dd>
+</dl>
+<p>Chewi, Niles-Weed and Rigollet prove a related bound for the raw entropic value between measures supported in a ball of diameter $1$: mean squared error and bias both of order $1/n$, “where the implicit constants depends exponentially on $1/\eps$” (StatOT Thm. 4.9, pp. 129–130). The mechanism is the same: the dual potentials of the entropic problem are smooth at scale $\eps$ (soft $c$-transforms are smooth functions), and smooth functions are estimated at parametric rates.</p>
+<div class="box example"><div class="box-h">Worked example — a null experiment</div>
+<p>Draw two independent samples of size $n$ from the <em>same</em> law $\N(0,\Id_d)$ (the true value of every divergence is $0$), and compute $W_2$ (exact, linear program), $\sqrt{S_\eps}$ (log-domain Sinkhorn, cost $\norm{x-y}^2$) and an MMD (Gaussian kernel of bandwidth $\sqrt d$); report the median over 12 to 24 repetitions, for $n=16,\dots,512$, and the slope of the log–log fit:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>$d$</th><th>$W_2$</th><th>$\sqrt{S_\eps}$, large $\eps$</th><th>$\sqrt{S_\eps}$, small $\eps$</th><th>MMD</th></tr></thead>
+<tbody>
+<tr><td>$6$</td><td>$-0.17$ ($2.28\to1.28$)</td><td>$-0.38$ ($\eps=3$)</td><td>$-0.19$ ($\eps=0.3$)</td><td>$-0.52$</td></tr>
+<tr><td>$2$</td><td>$-0.37$</td><td>—</td><td>$-0.41$ ($\eps=0.2$)</td><td>$-0.53$</td></tr>
+</tbody></table></div>
+<p>In dimension $6$, $W_2$ decays like $n^{-0.17}\approx n^{-1/6}$, the rate $n^{-1/d}$ of Prop. 10.5: multiplying the sample size by $32$ only divides the error by $1.8$. The MMD decays like $n^{-1/2}$. The Sinkhorn divergence sits in between and moves with $\eps$: at $\eps=3$ its slope $-0.38$ is closer to the parametric $-\frac12$ of the MMD, at $\eps=0.3$ it behaves like $W_2$ over this range of $n$ (its parametric regime starts later, the constant $\Lambda(\eps)$ is large).</p>
+</div>
+<figure class="fig"><!-- include figures/L07/samples.svg --><figcaption>The null experiment above on log–log axes: distance between two independent samples of size $n$ of the same Gaussian, in dimension $6$ (left) and $2$ (right). Blue: MMD; orange-red: $W_2$; green and purple: $\sqrt{S_\eps}$ at the temperatures given in the legends (in dimension $6$, a large and a small one). The slopes are written in the legends; a slope $-\frac12$ is the parametric rate.</figcaption></figure>
+<div class="box ml"><div class="box-h">In machine learning — choosing $\eps$ for a loss on mini-batches</div>
+<p>When a generative model is trained with $S_\eps$ on mini-batches of $n=256$ images, the loss is computed between two empirical measures of $256$ points in a space of dimension $10^3$ to $10^5$. With exact transport ($\eps=0$) two mini-batches drawn from the <em>same</em> distribution are already far apart (in the null experiment above, two samples of $512$ points of one Gaussian in dimension $6$ are still at $W_2\approx1.28$), so the sampling error of the loss can hide the differences one wants to detect; with a large $\eps$ the loss is stable but only compares smoothed features (MMD regime). Practitioners therefore choose $\eps$ on the scale of the distances that matter (often as a fraction of the diameter of the data, or of the median pairwise distance), and debias (§9); Genevay, Peyré and Cuturi (AISTATS 2018) introduced Sinkhorn losses for generative models precisely to interpolate between these two regimes. The mini-batch itself introduces a further bias (the transport between two mini-batches is not the mini-batch of the transport), a separate topic.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — “Sinkhorn beats the curse of dimensionality”</div>
+<p>It does at fixed $\eps$, for the quantity $S_\eps$, which is not $W_2^2$. If you need $W_2^2$ itself to accuracy $\delta$, $\eps$ must go to $0$ with $\delta$, and the dimension comes back through $\Lambda(\eps)$ (Remark 10.13). What entropy really offers is a <em>family</em> of losses, from geometric and slow to statistical and fast, with a knob.</p>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>Loss estimated from $n$ samples in dimension $d$ → $W_p$: $n^{-1/d}$ ($d>2p$); MMD: $n^{-1/2}$; $S_\eps$ at fixed $\eps$: $n^{-1/2}$ with a constant growing as $\eps\to0$.</li>
+<li>Why parametric → the entropic potentials are smooth at scale $\eps$.</li>
+<li>Approximating exact OT → bias–variance tradeoff in $\eps$.</li>
+</ul>
+</div>
+<div class="quiz"><p>In dimension $d=10$, how many more samples are needed to divide the $W_1$ error by $2$? And the MMD error?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>$W_1$: error $\propto n^{-1/10}$, so $n$ must be multiplied by $2^{10}=1024$. MMD: error $\propto n^{-1/2}$, so by $2^2=4$.</p>
+</div></details></div>

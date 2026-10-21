@@ -108,8 +108,11 @@ def fig_cdf_quantile():
     f.line(1.5, 0.5, 1.5, 0, "ln c3 thin dash")
     f.circle(1.5, 0.5, 3.5, "f3")
     f.text(1.5, 0, "1.5", "tx-s t3", "middle", dy=26)
-    f.text(0.06, 0.25, "jump ¼ = atom at 0", "tx-s", "start", dx=2, dy=-8)
-    f.text(2.04, 0.75, "flat: no mass in (2,3)", "tx-s", "start", dx=0, dy=-8)
+    # two short lines, so that the label ends before the CDF starts rising at x = 1
+    f.text(0.06, 0.25, "jump ¼ =", "tx-s", "start", dx=2, dy=-21)
+    f.text(0.06, 0.25, "atom at 0", "tx-s", "start", dx=2, dy=-8)
+    # anchored at its end, left of the vertical jump at x = 3 (it used to cross it)
+    f.text(2.94, 0.75, "flat: no mass in (2,3)", "tx-s", "end", dx=0, dy=-8)
     c.text(171, 18, "CDF  C(x) = α((−∞, x])", "tx-b", "middle")
     # quantile function
     g = Fig(c, (390, 30, 230, 200), (0, 1), (-0.25, 3.4))
@@ -135,11 +138,11 @@ def fig_cdf_quantile():
 
 # ---------------------------------------------------------------------------------------------
 def fig_sorting():
-    c = Canvas("sorting", 640, 210, "Matching three points to three points on the line: crossing versus sorted", sub=SUB)
+    c = Canvas("sorting", 640, 218, "Matching three points to three points on the line: crossing versus sorted", sub=SUB)
     xs, ys = [0, 1, 3], [1, 2, 5]
     titles = ["reversed: (0−5)² + (1−2)² + (3−1)² = 30", "sorted: (0−1)² + (1−2)² + (3−5)² = 6"]
     for col, perm in enumerate([[2, 1, 0], [0, 1, 2]]):
-        f = Fig(c, (40 + col * 320, 40, 260, 120), (-0.5, 5.5), (0, 1))
+        f = Fig(c, (40 + col * 320, 48, 260, 120), (-0.5, 5.5), (0, 1))
         f.line(-0.5, 1, 5.5, 1, "gr")
         f.line(-0.5, 0, 5.5, 0, "gr")
         for i, x in enumerate(xs):
@@ -151,9 +154,9 @@ def fig_sorting():
             f.circle(y, 0, 6, "f1")
             f.text(y, 0, str(y), "tx-s", "middle", dy=20)
         c.text(40 + col * 320 + 130, 18, titles[col], "tx-b", "middle")
-        c.text(28 + col * 320, 45, "x", "tx-i t2", "end")
-        c.text(28 + col * 320, 165, "y", "tx-i t1", "end")
-    c.text(320, 202, "uncrossing two segments never increases a convex cost h(x − y): the sorted matching is optimal", "tx-s", "middle")
+        c.text(28 + col * 320, 53, "x", "tx-i t2", "end")
+        c.text(28 + col * 320, 173, "y", "tx-i t1", "end")
+    c.text(320, 210, "uncrossing two segments never increases a convex cost h(x − y): the sorted matching is optimal", "tx-s", "middle")
     c.save()
 
 # ---------------------------------------------------------------------------------------------
@@ -230,9 +233,10 @@ def fig_gaussian():
             v = -v
         f.line(0, 0, v[0], v[1], "ln c3")
         f.circle(v[0], v[1], 3, "f3")
-    f.text(1.25, 1.35, "√3", "tx-b t3", "start", dx=4)
-    f.text(0.75, -0.72, "1", "tx-b t3", "start", dx=4, dy=8)
-    f.text(-4.2, 4.0, "one- and two-σ ellipses", "tx-s t2", "start")
+    # labels just outside the one-sigma ellipse, which passes through the tips of the scaled eigenvectors
+    f.text(1.5, 1.58, "√3", "tx-b t3", "start", dx=2)
+    f.text(0.86, -0.9, "1", "tx-b t3", "start", dx=2, dy=6)
+    f.text(-4.2, 4.0, "1σ and 2σ ellipses", "tx-s t2", "start")
     f.text(-4.2, -4.0, "x ∼ 𝒩(0, Σ), 160 samples", "tx-s", "start")
     # right: laws of the projections
     g = Fig(c, (360, 36, 260, 170), (-5, 5), (0, 0.42))
@@ -354,7 +358,7 @@ def fig_legendre():
     for y, cl in cols:
         g.circle(y, y * math.log(y) - y, 4.5, "f" + cl[1])
     g.text(3.3, 3.3 * math.log(3.3) - 3.3, "f*(y) = y log y − y", "tx-b", "end", dy=-10)
-    g.text(0.5, 0.5 * math.log(0.5) - 0.5, "−0.85", "tx-s t5", "middle", dy=18)
+    g.text(0.42, 0.5 * math.log(0.5) - 0.5, "−0.85", "tx-s t5", "middle", dy=22)  # below-left: clear of the curve
     g.text(1.0, -1.0, "−1", "tx-s t2", "middle", dy=18)
     g.text(2.0, 2 * math.log(2) - 2, "−0.61", "tx-s t3", "start", dx=8, dy=4)
     c.text(535, 14, "the conjugate, at the three slopes", "tx-s", "middle")
@@ -463,7 +467,7 @@ def fig_ode():
     g.text(1.9, 0.2, "particles at t = 0", "tx-s t2", "middle", dy=18)
     q = expA(1.0) @ np.array([1.9, 0.5])
     g.text(q[0], q[1], "Tₜ(particles), t = 1", "tx-s t3", "middle", dy=-24)
-    c.text(455, 240, "the flow map Tₜ = e^(tA) rotates", "tx-s", "middle")
+    c.text(455, 240, "the flow map Tₜ = exp(tA) rotates", "tx-s", "middle")
     c.text(455, 256, "and contracts (area × e⁻ᵗ)", "tx-s", "middle")
     c.text(280, 296, "grey: v(x) = Ax with A = [[−0.5, −1], [1, −0.5]];  green: trajectories, dots at t = 1, 2", "tx-s", "middle")
     c.save()

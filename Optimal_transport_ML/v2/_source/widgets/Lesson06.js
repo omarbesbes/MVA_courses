@@ -180,10 +180,11 @@
       var ymax = 0; dens.forEach(function (p) { if (isFinite(p[1]) && p[1] > ymax) ymax = p[1]; });
       top.yr = [0, Math.max(1.0, ymax * 1.08)];
       var d0 = densityFromQ(traj[0]), d1 = densityFromQ(traj[NT]);
-      top.path(d0, "ln c2 thin dash"); top.path(d1, "ln c1 thin dash");
+      var capY = function (d) { return d.map(function (p) { return [p[0], Math.min(p[1], top.yr[1])]; }); };
+      top.path(capY(d0), "ln c2 thin dash"); top.path(capY(d1), "ln c1 thin dash");
       var w = F.win;
       top.line(w[0], 0, w[0], top.yr[1], "ln cm thin dash"); top.line(w[1], 0, w[1], top.yr[1], "ln cm thin dash");
-      top.text(w[0], top.yr[1], "a", "tx-i", "middle", 0, 12); top.text(w[1], top.yr[1], "b", "tx-i", "middle", 0, 12);
+      top.text(w[0], top.yr[1], "a", "tx-i", "end", -4, 10); top.text(w[1], top.yr[1], "b", "tx-i", "start", 4, 10);
       top.area(dens, "a3"); top.path(dens, "ln c3");
       top.line(xr[0], 0, xr[1], 0, "ax");
       // particles on the axis, and velocity arrows below
@@ -207,7 +208,7 @@
       bot.line(w[0], 0, w[0], 1, "ln cm hair dash"); bot.line(w[1], 0, w[1], 1, "ln cm hair dash");
       bot.xticks([-4, -2, 0, 2, 4]);
       bot.text(xr[0], 0, "t = 0", "tx-s", "end", -5, 4); bot.text(xr[0], 1, "t = 1", "tx-s", "end", -5, 4);
-      bot.text(xr[0], t, "t", "tx-i", "end", -5, 4);
+      bot.text(xr[1], t, "t", "tx-i", "start", 5, 4);
       // mass balance in the window and kinetic energy
       var km = Math.max(1, Math.min(NT - 1, k));
       var mass = function (kk) { return Fcdf(traj[kk], w[1]) - Fcdf(traj[kk], w[0]); };
@@ -216,8 +217,8 @@
       var rho = function (kk, x) { return (Fcdf(traj[kk], x + hd) - Fcdf(traj[kk], x - hd)) / (2 * hd); };
       var flux = rho(km, w[0]) * vAt(km, w[0]) - rho(km, w[1]) * vAt(km, w[1]);
       var E = 0; for (i = 0; i < MQ; i++) E += vel[k][i] * vel[k][i]; E /= MQ;
-      ro.textContent = "t = " + fmt(t, 2) + "    mass between a and b: " + fmt(mass(k), 4) +
-        "\nmass balance at t = " + fmt(km / NT, 2) + ":  d/dt(mass) = " + fmt(dmdt, 3) + "   flux in at a − flux out at b = ρv(a) − ρv(b) = " + fmt(flux, 3) +
+      ro.textContent = "t = " + fmt(t, 2) + "    mass in [a, b]: " + fmt(mass(k), 4) +
+        "\nbalance at t = " + fmt(km / NT, 2) + ":  d/dt(mass) = " + fmt(dmdt, 3) + "    ρv(a) − ρv(b) = " + fmt(flux, 3) + "  (flux in − flux out)" +
         "\nkinetic energy ∫|v|² dαₜ = " + fmt(E, 3) + (F.comp1 ? "  (constant in time: this is W₂²(α₀, α₁))" : "");
     }
     setup();
@@ -356,7 +357,9 @@
         "\nlength ∫₀¹ √(kinetic energy) dt = " + fmt(len, 3) + "    W₂ = " + fmt(Math.sqrt(W22), 3) +
         (kind === "geo" ? "\nconstant speed along a straight line: action = length² = W₂² (Benamou–Brenier)." :
           kind === "clock" ? "\nsame curve as the geodesic (length W₂), run at a non-constant speed: the action is 4/3 of W₂²." :
-          kind === "mix" ? "\nthe energy blows up near t = 0 and t = 1 (mass must appear where the other density is tiny); off the chart." :
+          kind === "mix" ? (s1 > Math.SQRT2 ? "\nthe energy blows up as t → 0: mass must appear in the wide tails of α₁, where the density of α₀ is tiny (curve cut at the top)." :
+            s1 < Math.SQRT1_2 ? "\nthe energy blows up as t → 1: mass must appear in the wide tails of α₀, where the density of α₁ is tiny (curve cut at the top)." :
+            "\nthe energy stays finite at both ends here (σ₁ between 1/√2 and √2: comparable tails); the action is still at least W₂² (Benamou–Brenier).") :
           "\nthe action is at least length², with equality only at constant speed; the length is at least W₂.");
     }
     draw();
@@ -365,7 +368,7 @@
 
   /* --- 3. Flow matching in 2D: independent versus (minibatch) optimal-transport couplings (§8) --- */
   WIDGETS.l6fm2d = function (box) {
-    var s = scaffold(box, "Flow matching in 2D: the coupling decides how straight the paths are, and how many steps sampling needs");
+    var s = scaffold(box, "Flow matching in 2D: the coupling decides how straight the paths are");
     var W = 680, H = 430;
     s.svg.setAttribute("viewBox", "0 0 " + W + " " + H);
     s.svg.setAttribute("role", "img");
@@ -376,7 +379,7 @@
     var kS = slider(s.controls, "Euler steps K", 0, KS.length - 1, 1, 2, generate);
     var pairChk = checkbox(s.controls, "show training pairs", true, draw);
     var ro = readout(s.controls);
-    legend(s.legend, [["--s2", "noise samples X₀ ~ N(0, I)"], ["--s1", "data samples"], ["--muted", "training pairs (X₀, X₁)"], ["--s3", "generated: Euler trajectories and end points"]]);
+    legend(s.legend, [["--s2", "noise samples X₀ ~ N(0, I)"], ["--s1", "data samples"], ["--muted", "40 training pairs (X₀, X₁)"], ["--s3", "generated: Euler trajectories and end points"]]);
     var M = 400, NG = 150, hbw = 0.35, X0, X1, Xt0, Xt1, pair, gen = null, tgtTest, cache = {};
     function sampleTarget(kind, rng, n) {
       var out = [], i;
@@ -456,7 +459,7 @@
       var P = l6panel(g, [10, 10, 410, 410], [-5.2, 5.2], [-5.2, 5.2]);
       P.frame();
       tgtTest.forEach(function (p) { P.circle(p[0], p[1], 2.2, "f1", { "fill-opacity": 0.45 }); });
-      if (pairChk.checked) for (i = 0; i < 70; i++) P.line(Xt0[i][0], Xt0[i][1], Xt1[i][0], Xt1[i][1], "ln cm hair", { "stroke-opacity": 0.55 });
+      if (pairChk.checked) for (i = 0; i < 40; i++) P.line(Xt0[i][0], Xt0[i][1], Xt1[i][0], Xt1[i][1], "ln cm hair", { "stroke-opacity": 0.55 });
       gen.forEach(function (path) { P.path(path, "ln c3 hair", { "stroke-opacity": 0.7 }); });
       gen.forEach(function (path) { P.circle(path[0][0], path[0][1], 1.8, "f2", { "fill-opacity": 0.6 }); });
       gen.forEach(function (path) { var e = path[path.length - 1]; P.circle(e[0], e[1], 2.6, "f3"); });
@@ -487,7 +490,8 @@
       line("(a stand-in for the neural network).", "tx-s");
       ro.textContent = "Coupling: " + coupSel.options[coupSel.selectedIndex].text + ".  With K = 1 step, each sample moves once along v₀(x) ≈ E[X₁ − X₀ | X₀ = x]." +
         (coupSel.value === "ind" ? "\nIndependent pairs: v₀(x) ≈ E[X₁] − x, so K = 1 sends every sample to the data mean; many steps are needed." :
-          "\nOT pairs do not cross: the paths are nearly straight, and a few Euler steps already land near the data.");
+          coupSel.value === "full" ? "\nOT pairs do not cross: the paths are nearly straight, and a few Euler steps already land near the data." :
+          "\nMinibatch OT pairs do not cross inside a minibatch, but pairs of different minibatches still can: the paths straighten as the minibatch grows.");
     }
     retrain();
     redrawers.push(draw);
@@ -548,7 +552,7 @@
       var D = DATA[dataSel.value], comp = D.comp, kind = schSel.value, i, k;
       l6clear(s.svg);
       var g = el("g", {}, s.svg);
-      var P = l6panel(g, [46, 24, 600, 380], [-4.2, 4.2], [0, 1]);
+      var P = l6panel(g, [72, 40, 580, 364], [-4.2, 4.2], [0, 1]);
       // ridgeline densities of X_t at 9 times
       var NR = 8;
       for (k = 0; k <= NR; k++) {
@@ -566,8 +570,9 @@
         P.text(-4.2, t, "t = " + fmt(t, 3).replace(/0+$/, "").replace(/\.$/, ""), "tx-s", "end", -4, 4);
       }
       // data at the top
+      var maxw = 0; comp.forEach(function (c) { if (c[0] > maxw) maxw = c[0]; });
       comp.forEach(function (c) {
-        if (c[2] === 0) { P.line(c[1], 1, c[1], 1 + 0.12 * c[0] / 0.7, "ln c1"); P.circle(c[1], 1 + 0.12 * c[0] / 0.7, 4, "f1"); }
+        if (c[2] === 0) { var hh = 1 + 0.075 * c[0] / maxw; P.line(c[1], 1, c[1], hh, "ln c1"); P.circle(c[1], hh, 4, "f1"); }
       });
       // probability-flow trajectories from 24 noise quantiles
       var NP = 24, ends = [];
@@ -614,10 +619,10 @@
           for (var it = 0; it < 40; it++) { var mm = 0.5 * (lo + hi); if (endPoint(solveY(comp, mm)) < mid2) lo = mm; else hi = mm; }
           cum += comp[k][0]; bnd.push([0.5 * (lo + hi), l6Phiinv(cum)]);
         }
-        txt = "share of 400 noise quantiles landing on each atom: " + counts.map(function (c) { return fmt(c / NQ, 3); }).join(", ") +
+        txt = "shares of 400 noise quantiles per atom: " + counts.map(function (c) { return fmt(c / NQ, 3); }).join(", ") +
           "   (weights " + comp.map(function (c) { return fmt(c[0], 3); }).join(", ") + ")" +
-          "\nboundaries of the flow: " + bnd.map(function (bb) { return fmt(bb[0], 4); }).join(", ") +
-          "    monotone (optimal) map: Φ⁻¹(cumulative weights) = " + bnd.map(function (bb) { return fmt(bb[1], 4); }).join(", ");
+          "\nflow boundaries: " + bnd.map(function (bb) { return fmt(bb[0], 4); }).join(", ") +
+          "    monotone map, Φ⁻¹(cumulative weights): " + bnd.map(function (bb) { return fmt(bb[1], 4); }).join(", ");
         bnd.forEach(function (bb) { P.line(bb[0], 0, bb[0], 0.05, "ln ck thin"); });
       } else {
         txt = "smooth data: the flow sends the noise quantiles to the data quantiles (a monotone map, hence optimal in 1D).";
@@ -688,8 +693,10 @@
       ty += 6;
       line("‖Σ₀Σ₁ − Σ₁Σ₀‖ = " + fmt(cn, 3));
       line("asymmetry of T₁ᶠᴹ: |T₁₂ − T₂₁|/2 = " + fmt(Math.abs(T1[1] - T1[2]) / 2, 3));
-      ro.textContent = "Green: the flow-matching trajectories and Tₜᶠᴹ(x) at time t; dashed green ellipse: N(0, Σₜ), Σₜ = (1 − t)²Σ₀ + t²Σ₁ (it shrinks in the middle: independent coupling)." +
-        "\nAt θ = 0° or 90° the covariances commute and the flow map is the Brenier map; in between it carries a rotation and costs more.";
+      ro.textContent = "Green: the flow-matching trajectories, and the points Tₜᶠᴹ(x) at time t." +
+        "\nDashed green ellipse: N(0, Σₜ), Σₜ = (1 − t)²Σ₀ + t²Σ₁ (smaller in the middle: independent coupling)." +
+        "\nAt θ = 0° or 90° the covariances commute and the flow map is the Brenier map;" +
+        "\nin between, it carries a rotation and costs more.";
     }
     draw();
     redrawers.push(draw);

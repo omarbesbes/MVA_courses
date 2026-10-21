@@ -238,7 +238,7 @@
       // radial statistics around the mean
       var R = X.map(function (p) { return Math.hypot(p[0] - mx, p[1] - my); }), rmax = Math.max.apply(null, R);
       var f05 = R.filter(function (r) { return r < 0.5; }).length / n, f075 = R.filter(function (r) { return r < 0.75; }).length / n;
-      var lines = ["t = " + fmt(t, 2) + "   f(αₜ) = " + fmt(hist[hist.length - 1][1], 4), "mean (black circle) = (" + fmt(mx, 3) + ", " + fmt(my, 3) + ")",
+      var lines = ["t = " + fmt(t, 2) + "   f(αₜ) = " + fmt(hist[hist.length - 1][1], 4), "mean (small ring) = (" + fmt(mx, 3) + ", " + fmt(my, 3) + ")",
         "largest distance to the mean = " + fmt(rmax, 3), "fraction within 0.5 of the mean = " + fmt(f05, 3), "fraction within 0.75 of the mean = " + fmt(f075, 3)];
       lines.forEach(function (L, k) { var tt = el("text", { x: cx0, y: cy0 + ch + 40 + 17 * k, "class": "tx-s" }, g); tt.textContent = L; });
       ro.textContent = P.formula + ";  explicit Euler steps of size " + dt + " on the n coupled ODEs ẋᵢ = −(1/n) Σⱼ ∇W(xᵢ − xⱼ)" + (P.ext ? " − ∇V(xᵢ)" : "") + ".  Press Run.";
@@ -292,7 +292,11 @@
     var top = new Plot(s.svg, { x: [-3.5, 3.5], y: [0, 0.8], w: 680, h: 240, pad: { l: 40, r: 16, t: 14, b: 28 }, label: "Histogram of the Langevin particles and the Fokker-Planck density" });
     var botSvg = addSvg(box, s.svg);
     var bot = new Plot(botSvg, { x: [0, T], y: [-3.5, 3.5], w: 680, h: 230, pad: { l: 40, r: 16, t: 16, b: 34 }, label: "Paths of Langevin particles and quantile curves of the density" });
-    var tgtSel = select(s.controls, "Target", [["ou", "𝒩(0,1), from two bumps"], ["dw", "double well (x² − 1)²"]], "ou", reset);
+    // switching to the double well selects a stable step (its drift grows like x^3: large explicit steps explode)
+    var tgtSel = select(s.controls, "Target", [["ou", "𝒩(0,1), from two bumps"], ["dw", "double well (x² − 1)²"]], "ou", function () {
+      if (tgtSel.value === "dw" && parseFloat(hSel.value) > 0.05) hSel.value = "0.01";
+      reset();
+    });
     var hSel = select(s.controls, "Euler–Maruyama step h", [["0.01", "0.01"], ["0.05", "0.05"], ["0.1", "0.1"], ["0.2", "0.2"], ["0.4", "0.4"]], "0.1", reset);
     var runBtn = button(s.controls, "Run", function () { running = !running; runBtn.textContent = running ? "Pause" : "Run"; if (running) loop(); });
     button(s.controls, "Reset", reset);
@@ -326,11 +330,14 @@
     }
     function advance() {
       var i, sq = Math.sqrt(2 * h);
-      for (i = 0; i < NP; i++) X[i] = X[i] - h * Vp(X[i]) + sq * gaussRand(rng);
+      for (i = 0; i < NP; i++) {
+        X[i] = X[i] - h * Vp(X[i]) + sq * gaussRand(rng);
+        if (!(Math.abs(X[i]) < 10)) X[i] = NaN; // exploded particle (far outside both targets): removed from the statistics
+      }
       var tn = t + h, tp = t;
       while (tp < tn - 1e-12) { rho = fpS.step(rho); tp += dtp; }
       t = tn;
-      for (i = 0; i < 6; i++) paths[i].push([t, X[i * 37]]);
+      for (i = 0; i < 6; i++) if (isFinite(X[i * 37])) paths[i].push([t, X[i * 37]]);
       var q = fpS.quantiles(rho, LV); q.forEach(function (v, j) { qpaths[j].push([t, v]); });
     }
     function loop() {
@@ -341,7 +348,13 @@
       if (t >= T - 1e-9) { running = false; runBtn.textContent = "Run"; return; }
       requestAnimationFrame(loop);
     }
-    function stats(arr) { var m = 0, v = 0, i; for (i = 0; i < arr.length; i++) m += arr[i]; m /= arr.length; for (i = 0; i < arr.length; i++) v += (arr[i] - m) * (arr[i] - m); return [m, v / arr.length]; }
+    function stats(arr) { // mean and variance of the particles that have not exploded
+      var m = 0, v = 0, k = 0, i;
+      for (i = 0; i < arr.length; i++) if (isFinite(arr[i])) { m += arr[i]; k++; }
+      m /= Math.max(k, 1);
+      for (i = 0; i < arr.length; i++) if (isFinite(arr[i])) v += (arr[i] - m) * (arr[i] - m);
+      return [m, v / Math.max(k, 1), k];
+    }
     function draw() {
       var i, ou = tgtSel.value === "ou";
       top.clear();
@@ -371,9 +384,11 @@
       for (i = 0; i < fpS.x.length; i++) { var w = rho[i] * fpS.dx; mass += w; mf += w * fpS.x[i]; if (fpS.x[i] < 0) left += w; }
       mf /= mass; for (i = 0; i < fpS.x.length; i++) vf += rho[i] * fpS.dx * (fpS.x[i] - mf) * (fpS.x[i] - mf); vf /= mass;
       var lp = 0; for (i = 0; i < NP; i++) if (X[i] < 0) lp++;
+      var lost = NP - sp[2];
       ro.textContent = "t = " + fmt(t, 2) + "   particles: mean " + fmt(sp[0], 3) + ", variance " + fmt(sp[1], 3) + "   |   Fokker–Planck: mean " + fmt(mf, 3) + ", variance " + fmt(vf, 3) +
         (ou ? "\nEuler–Maruyama with step h is biased: its stationary variance for this target is 1/(1 − h/2) = " + fmt(1 / (1 - h / 2), 4) + " instead of 1"
-            : "\nmass left of the barrier: particles " + fmt(lp / NP, 3) + ", Fokker–Planck " + fmt(left / mass, 3) + "  (equilibrium 0.5)") +
+            : "\nmass left of the barrier: particles " + fmt(lp / Math.max(sp[2], 1), 3) + ", Fokker–Planck " + fmt(left / mass, 3) + "  (equilibrium 0.5)") +
+        (lost > 0 ? "\n" + lost + " particles have exploded (|x| > 10): the step h is too large for a drift growing like x³; they are left out" : "") +
         "\n" + NP + " particles: Monte Carlo fluctuations of the order of 1/√" + NP + " ≈ " + fmt(1 / Math.sqrt(NP), 3);
     }
     reset();
@@ -525,8 +540,8 @@
     var runBtn = button(s.controls, "Run", function () { running = !running; runBtn.textContent = running ? "Pause" : "Run"; if (running) loop(); });
     button(s.controls, "Reset", reset);
     var ro = readout(s.controls);
-    legend(s.legend, [["--s3", "tokens"], ["--s2", "initial tokens"], ["--muted", "number of clusters (right panel, top)"]]);
-    var th, th0, t, eps, n, hist, events, running = false, TMAX = 1e4, LT0 = -2, LT1 = 4;
+    legend(s.legend, [["--s3", "tokens now (inside the circle) and their angles over time"], ["--s2", "initial tokens"]]);
+    var th, th0, t, eps, n, hist, events, pairT, running = false, TMAX = 1e4, LT0 = -2, LT1 = 4;
     function speeds() {
       var v = new Float64Array(n), i, j;
       for (i = 0; i < n; i++) {
@@ -543,6 +558,13 @@
       th = new Float64Array(n); for (var i = 0; i < n; i++) th[i] = 2 * Math.PI * r();
       th0 = Float64Array.from(th); t = 0;
       hist = [[0.01, Float64Array.from(th)]]; events = [[0, l8clusters(th, 0.05)]];
+      // two lone tokens at angle pi/2: time for their gap to shrink to 0.01 rad, T = int (1 + e^{(1 - cos a)/eps}) / (2 sin a) da
+      var M = 400, u0 = Math.log(0.01), u1 = Math.log(Math.PI / 2), hu = (u1 - u0) / M, acc = 0;
+      for (var k = 0; k <= M; k++) {
+        var a = Math.exp(u0 + k * hu), fv = (1 + Math.exp((1 - Math.cos(a)) / eps)) * a / (2 * Math.sin(a));
+        acc += fv * (k === 0 || k === M ? 1 : (k % 2 ? 4 : 2));
+      }
+      pairT = acc * hu / 3;
       draw();
     }
     function loop() {
@@ -579,8 +601,11 @@
         el("line", { x1: TX(Math.pow(10, e)), x2: TX(Math.pow(10, e)), y1: y0, y2: y0 + h, "class": "gr" }, g);
         var tl = el("text", { x: TX(Math.pow(10, e)), y: y0 + h + 14, "class": "tx-s", "text-anchor": "middle" }, g); tl.textContent = e === 0 ? "1" : "10" + (e < 0 ? "⁻" : "") + "⁰¹²³⁴"[Math.abs(e)];
       }
-      var xl = el("text", { x: x0 + w, y: y0 + h + 28, "class": "tx-s", "text-anchor": "end" }, g); xl.textContent = "time t (log scale)";
-      var yl = el("text", { x: x0, y: y0 - 6, "class": "tx-s" }, g); yl.textContent = "angle of each token (0 to 2π)";
+      var xl = el("text", { x: x0 + w, y: y0 - 6, "class": "tx-s", "text-anchor": "end" }, g); xl.textContent = "time t (log scale) →";
+      var yl = el("text", { x: x0, y: y0 - 6, "class": "tx-s" }, g); yl.textContent = "angle of each token";
+      [[0, "0"], [Math.PI, "π"], [2 * Math.PI - 1e-9, "2π"]].forEach(function (q) {
+        var ty = el("text", { x: x0 - 4, y: AY(q[0]) + 4, "class": "tx-s", "text-anchor": "end" }, g); ty.textContent = q[1];
+      });
       for (i = 0; i < n; i++) {
         var d = "", prev = null;
         hist.forEach(function (hh) {
@@ -590,15 +615,18 @@
         });
         el("path", { d: d, "class": "ln c3 hair" }, g);
       }
-      events.forEach(function (ev) {
-        if (ev[0] <= 0) return;
-        var X = TX(ev[0]);
-        el("line", { x1: X, x2: X, y1: y0, y2: y0 + 10, "class": "ln cm thin" }, g);
-        var tt = el("text", { x: X, y: y0 + 22, "class": "tx-s", "text-anchor": "middle" }, g); tt.textContent = ev[1];
-      });
-      var cnow = l8clusters(th, 0.05);
-      ro.textContent = "ε = " + eps + ", n = " + n + "   t = " + (t < 10 ? fmt(t, 2) : t.toExponential(2)) + "   clusters (gaps > 0.05 rad): " + cnow +
-        "\nchanges of the number of clusters at t ≈ " + events.slice(1).map(function (ev) { return (ev[0] < 10 ? fmt(ev[0], 2) : ev[0].toExponential(1)) + " → " + ev[1]; }).join(",  ");
+      // number of clusters at each decade already reached
+      var cl = el("text", { x: x0 - 16, y: y0 + h + 30, "class": "tx-s", "text-anchor": "end" }, g); cl.textContent = "clusters";
+      for (var e2 = LT0; e2 <= LT1; e2++) {
+        var td = Math.pow(10, e2), hh = null;
+        for (var q = 0; q < hist.length; q++) if (hist[q][0] >= td * (1 - 1e-9)) { hh = hist[q]; break; }
+        if (!hh) break;
+        var tc = el("text", { x: TX(td), y: y0 + h + 30, "class": "tx-s", "text-anchor": "middle" }, g); tc.textContent = l8clusters(hh[1], 0.05);
+      }
+      var cnow = l8clusters(th, 0.05), last = events[events.length - 1], prevc = events.length > 1 ? events[events.length - 2][1] : null;
+      ro.textContent = "ε = " + eps + ", n = " + n + "   t = " + (t < 10 ? fmt(t, 2) : t.toExponential(2)) + "   clusters now (gaps > 0.05 rad): " + cnow +
+        (prevc !== null ? "   last change at t ≈ " + (last[0] < 10 ? fmt(last[0], 2) : last[0].toExponential(1)) + " (" + prevc + " → " + last[1] + ")" : "") +
+        "\ncompare: two lone tokens at angle π/2 come within 0.01 rad of each other at t ≈ " + (pairT < 1e4 ? fmt(pairT, pairT < 100 ? 2 : 0) : pairT.toExponential(2)) + " for this ε";
     }
     reset();
     redrawers.push(draw);

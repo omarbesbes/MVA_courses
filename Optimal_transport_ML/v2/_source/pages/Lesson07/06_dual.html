@@ -1,0 +1,92 @@
+<h2 id="dual">6. The dual: soft $c$-transforms and the log domain <span class="ref">OT4ML §8.5, pp. 150–152</span></h2>
+<p class="tldr">The dual of entropic transport is an unconstrained, smooth, concave problem in the potentials $(f,g)$; maximizing it in $f$ for fixed $g$ is a <em>soft</em> $c$-transform; Sinkhorn is exactly this block ascent, and written with log-sum-exp it never overflows or underflows.</p>
+
+<h3 id="dual-why">Why go to the potentials</h3>
+<p>The scalings $u,v$ of §4 are exponentials of the potentials: $u=a\odot e^{f/\eps}$, $v=b\odot e^{g/\eps}$. For a small $\eps$ these numbers are astronomically large or small, and a computer stores them as $0$ or $\infty$. The potentials themselves stay of the size of the costs. They are also what you need later: the gradient of the entropic cost (§11) and the extension to continuous measures (§8). Finally, the dual shows how entropic transport relaxes the Kantorovich dual of Lesson 4 (<a href="#recall-duality">refresher</a>).</p>
+
+<h3 id="dual-statement">The dual problem</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 8.18, (8.20)–(8.21), p. 150 · compact Prop. 8.16, p. 38</span></div>
+<p><strong>Proposition 8.18</strong> (Dual of entropic OT). The optimal value of (8.8) is</p>
+$$\begin{aligned}\min_{P\in\U(a,b)}\ps{P}{C}+\eps\KL(P|a\otimes b)=\max_{f\in\R^n,\,g\in\R^m}\ &\ps{f}{a}+\ps{g}{b}\\&-\eps\sum_{i,j}\exp\Big(\frac{f_i+g_j-C_{i,j}}{\eps}\Big)a_ib_j+\eps.\end{aligned}\qquad(8.20)$$
+<p>The optimal $(f,g)$ are linked to scalings $(u,v)$ appearing in (8.2) through $\ u_i=a_ie^{f_i/\eps}$ and $v_j=b_je^{g_j/\eps}$. (8.21)</p>
+</div>
+<dl class="decode">
+<dt>$f_i$, $g_j$</dt><dd>The <em>dual potentials</em>, Lagrange multipliers of the row and column constraints; as in Lesson 4, prices paid at departure from $x_i$ and at arrival in $y_j$.</dd>
+<dt>$-\eps\sum_{ij}e^{(f_i+g_j-C_{ij})/\eps}a_ib_j$</dt><dd>A <em>soft</em> version of the constraint $f_i+g_j\le C_{ij}$ of the Kantorovich dual: prices that exceed the cost are not forbidden, they are penalized exponentially, with a penalty that becomes a wall as $\eps\to0$ (the exponential of a positive number divided by a tiny $\eps$).</dd>
+<dt>$+\eps$</dt><dd>A constant that makes the two values equal for the KL normalization; it is $\eps\sum_{ij}a_ib_j$.</dd>
+<dt>“max”, unconstrained</dt><dd>No constraint on $(f,g)$: the dual is a smooth concave function on $\R^n\times\R^m$, which is why simple coordinate ascent works. Its maximizers are unique up to $(f+c,g-c)$.</dd>
+</dl>
+<div class="box idea"><div class="box-h">Idea of the proof</div>
+<p>Dualize the two marginal constraints with multipliers $f,g$. For fixed $(f,g)$, the Lagrangian separates into one scalar problem per entry $P_{ij}\ge0$, whose minimum is a convex conjugate: $\min_{r\ge0}\{\varphi(r)-sr\}=-\varphi^*(s)$ with $\varphi(r)=r\log r-r+1$ and $\varphi^*(s)=e^s-1$. This gives the dual function and weak duality. Equality: at the potentials of §2 the dual value equals the primal value.</p>
+</div>
+<details class="fold proof"><summary>Full proof</summary><div class="fold-body">
+<p>Write $E(P)=\ps{P}{C}+\eps\KL(P|a\otimes b)$ and, for $P\ge0$, $f\in\R^n$, $g\in\R^m$, the Lagrangian $\mathcal L(P,f,g)=E(P)+\ps{f}{a-P\ind_m}+\ps{g}{b-P\T\ind_n}$.</p>
+<ol class="steps">
+<li>$$\mathcal L(P,f,g)=\ps{f}{a}+\ps{g}{b}+\sum_{ij}a_ib_j\Big[\eps\,\varphi\Big(\frac{P_{ij}}{a_ib_j}\Big)-\frac{f_i+g_j-C_{ij}}{\eps}\cdot\eps\,\frac{P_{ij}}{a_ib_j}\Big].$$<span class="why">$\KL(P|a\otimes b)=\sum_{ij}a_ib_j\,\varphi\big(P_{ij}/(a_ib_j)\big)$ with $\varphi(r)=r\log r-r+1$; and $\ps{f}{P\ind}+\ps{g}{P\T\ind}-\ps{P}{C}=\sum_{ij}(f_i+g_j-C_{ij})P_{ij}$.</span></li>
+<li>$$\min_{r\ge0}\big\{\varphi(r)-sr\big\}=-\varphi^*(s)=-(e^s-1),\ \text{attained at }r=e^s .$$<span class="why">$\frac{\dd}{\dd r}(r\log r-r+1-sr)=\log r-s=0$ gives $r=e^s$, and the value is $se^s-e^s+1-se^s=1-e^s$ (<a href="#recall-convex">refresher</a>).</span></li>
+<li>$$D(f,g):=\min_{P\ge0}\mathcal L(P,f,g)=\ps{f}{a}+\ps{g}{b}-\eps\sum_{ij}a_ib_j\Big(e^{(f_i+g_j-C_{ij})/\eps}-1\Big).$$<span class="why">Minimize each entry separately with step 2, $r=P_{ij}/(a_ib_j)$, $s=(f_i+g_j-C_{ij})/\eps$. This is the right side of (8.20), since $\sum_{ij}a_ib_j=1$.</span></li>
+<li>$D(f,g)\le E(P)$ for every $P\in\U(a,b)$ and all $(f,g)$ (weak duality).<span class="why">For $P\in\U(a,b)$ the constraint terms vanish: $E(P)=\mathcal L(P,f,g)\ge\min_{Q\ge0}\mathcal L(Q,f,g)=D(f,g)$.</span></li>
+<li>With the potentials of §2, $P_{\eps,ij}=a_ib_je^{(f_i+g_j-C_{ij})/\eps}$, so $D(f,g)=\ps{f}{a}+\ps{g}{b}-\eps\sum_{ij}P_{\eps,ij}+\eps=\ps{f}{a}+\ps{g}{b}=E(P_\eps)$.<span class="why">$P_\eps$ has mass $1$; the last equality is step 4 of the “if” part in §2.</span></li>
+</ol>
+<p>Steps 4–5: $\max D\ge D(f,g)=E(P_\eps)=\min E\ge\max D$, so the two values are equal and these potentials are optimal; (8.21) is the definition of $f,g$ in §2. Any maximizer satisfies the first-order conditions below, which force $a_ib_je^{(f_i+g_j-C_{ij})/\eps}$ to be a coupling of the form (8.2), hence $P_\eps$: the maximizers are unique up to $(f+c,g-c)$. $\square$</p>
+</div></details>
+<div class="box example"><div class="box-h">Worked example — the dual of the running example</div>
+<p>At $\eps=0.5$, with $f=(-0.344364,\ 0.079317)$, $g=(0.670307,\ 0.086744)$ from §2: $D(f,g)=0.330739$, the primal value. With $f=g=0$: $D(0,0)=\eps\big(1-\sum_{ij}a_ib_je^{-C_{ij}/\eps}\big)=0.5\times(1-0.567668)=0.216166$, below the optimum as weak duality requires. With $(f+1,g-1)$: again $0.330739$ — the gauge.</p>
+</div>
+
+<h3 id="dual-soft">Soft $c$-transforms</h3>
+<p>Fix $g$ and maximize $D$ in $f$. The derivative in $f_i$ is $a_i-a_ie^{f_i/\eps}\sum_jb_je^{(g_j-C_{ij})/\eps}$; setting it to zero gives an explicit formula.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 8.19, (8.22), p. 151 · compact Def. 8.17, p. 38</span></div>
+<p><strong>Definition 8.19</strong> (Soft-min and discrete soft $c$-transform). For $h\in\R^m$ and weights $b\in\Sigma_m$, the weighted soft-min at temperature $\eps>0$ is</p>
+$$\min\nolimits^\eps_b(h):=-\eps\log\sum_je^{-h_j/\eps}b_j .$$
+<p>It converges to $\min_{j:\,b_j>0}h_j$ as $\eps\to0$; for positive weights this is $\min_jh_j$. Given a cost matrix C, the discrete soft $c$-transforms are</p>
+$$f_i=\min\nolimits^\eps_b(C_{i,\cdot}-g),\qquad g_j=\min\nolimits^\eps_a(C_{\cdot,j}-f).\qquad(8.22)$$
+<p>Exponentiating these iterations recovers exactly the Sinkhorn algorithm.</p>
+</div>
+<dl class="decode">
+<dt>$\min^\eps_b(h)$</dt><dd>A smooth minimum: $-\eps\log$ of a weighted average of $e^{-h_j/\eps}$. The smallest $h_j$ dominates the average when $\eps$ is small. It lies between $\min_jh_j$ and $\min_jh_j+\eps\log(1/b_{j^\star})$, $j^\star$ an argmin (<a href="#exo-softmin">Exercise 5 of §14</a>).</dd>
+<dt>$f_i=\min^\eps_b(C_{i,\cdot}-g)$</dt><dd>The best price at $x_i$ given the prices $g$: in Lesson 4 it was $\min_j(C_{ij}-g_j)$, the largest $f_i$ with $f_i+g_j\le C_{ij}$ for all $j$. Now it is the soft minimum: the soft constraint lets $f_i$ exceed the hard value slightly.</dd>
+<dt>“exponentiating”</dt><dd>$e^{-f_i/\eps}=\sum_jb_je^{(g_j-C_{ij})/\eps}$, i.e. $\frac{a_i}{u_i}=\sum_jK_{ij}v_j$: this is $u=a/(Kv)$.</dd>
+</dl>
+<div class="box example"><div class="box-h">Worked example — a soft minimum</div>
+<p>$h=(0,1,2)$, $b=(\frac13,\frac13,\frac13)$, $\min h=0$. Then $\min^\eps_b(h)=0.691006$ at $\eps=1$, $0.477840$ at $\eps=0.5$, $0.109857$ at $\eps=0.1$ and $0.010986$ at $\eps=0.01$: it approaches $0$ from above, and for small $\eps$ the gap is $\eps\log3$ ($0.109861$ at $\eps=0.1$), the price of the weight $\frac13$ of the minimizing entry. On the running example, $\min^{0.5}_b(C_{1,\cdot}-g)=-0.5\log\big(0.5e^{(0.670307-0)/0.5}+0.5e^{(0.086744-1)/0.5}\big)=-0.344364=f_1$: the optimal potentials are soft $c$-transforms of each other.</p>
+</div>
+<figure class="fig"><!-- include figures/L07/softmin.svg --><figcaption>Soft $c$-transforms for the cost $(x-y)^2$: $f(x)=\min^\eps_b\big((x-y_j)^2-g_j\big)$ over five points $y_j$ with weights $\frac15$. The hard $c$-transform (black) is the lower envelope of the five parabolas (grey); the soft transforms ($\eps=0.5$, $0.15$, $0.03$) are smooth, lie above it, and approach it as $\eps\to0$, staying within $\eps\log5$.</figcaption></figure>
+<div class="box remark"><div class="box-h">Hard versus soft alternation</div>
+<p>In Lesson 4, alternating hard $c$-transforms stalls after one cycle: $f=g^{\bar c}$, then $g=f^c$, then $f=g^{\bar c}$ again gives back the same $f$ (the double transform is idempotent). The soft transforms are exact block maximizers of a <em>smooth, strictly concave (up to the gauge)</em> function, so each one strictly increases $D$ until the optimum is reached. Entropy turns a degenerate coordinate ascent into a convergent one.</p>
+</div>
+
+<h3 id="dual-log">The log domain</h3>
+<p>In floating point, $e^{-C_{ij}/\eps}$ is rounded to $0$ as soon as $C_{ij}/\eps$ exceeds about $745$ in double precision (the smallest positive double is $4.9\times10^{-324}\approx e^{-744.4}$) and about $104$ in single precision, the default on GPUs. With costs of order $1$, that is $\eps$ below about $1.3\times10^{-3}$ in double and $10^{-2}$ in single precision. A row of zeros in $K$ makes $Kv$ vanish, and $u=a/(Kv)$ becomes infinite. The cure is to never form $K$, $u$, $v$.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML p. 151 and Algorithm 8.2, p. 152</span></div>
+<p>These iterations, however, become unstable for small $\eps$. To apply the algorithm in this regime, one needs to stabilize it using the celebrated log-sum-exp trick. This follows from noticing that, similarly to the minimum operator, one has $\ \min^\eps_b(h-\text{cst})=\min^\eps_b(h)-\text{cst}\ $ and to replace the computation of $\min^\eps_b(h)$ by its stabilized version (equal when using infinite precision computation) $\ \min^\eps_b(h-\min(h))+\min(h)$.</p>
+<p><strong>Algorithm 8.2</strong> (Log-domain Sinkhorn by soft transforms). […] For $i=1,\dots,n$: set $M_i=\max_j\{g^{(\ell-1)}_j-C_{i,j}\}$; set $f^{(\ell)}_i=-M_i-\eps\log\sum_jb_j\exp\big((g^{(\ell-1)}_j-C_{i,j}-M_i)/\eps\big)$. For $j=1,\dots,m$: set $N_j=\max_i\{f^{(\ell)}_i-C_{i,j}\}$; set $g^{(\ell)}_j=-N_j-\eps\log\sum_ia_i\exp\big((f^{(\ell)}_i-C_{i,j}-N_j)/\eps\big)$. Set $P^{(\ell)}_{i,j}=a_ib_j\exp\big((f^{(\ell)}_i+g^{(\ell)}_j-C_{i,j})/\eps\big)$. […]</p>
+</div>
+<dl class="decode">
+<dt>$M_i=\max_j\{g_j-C_{ij}\}$</dt><dd>The largest exponent of row $i$. After subtracting it, every exponent is $\le0$ and the largest one is exactly $0$: the sum contains a term $b_j\cdot e^0=b_j$, so it can neither overflow nor be rounded to $0$.</dd>
+<dt>$-M_i-\eps\log(\dots)$</dt><dd>The same number as $\min^\eps_b(C_{i,\cdot}-g)$, computed safely. Libraries call this a <em>log-sum-exp</em> reduction.</dd>
+</dl>
+<div class="widget" data-widget="l7underflow"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p><strong>What to look at.</strong> Here $30$ points in $[0,0.35]$ are sent to $30$ points in $[0.55,1]$, so every cost is at least $0.045$; the first source point is at squared distance at least $0.3043$ from every target, and the last target point at squared distance at least $0.4203$ from every source. At the starting value $\eps=10^{-3}$, in double precision, $54$ of the $900$ entries of $K$ are already exactly $0$ (red), yet both iterations still agree (the grey and the dashed green curves coincide). Slide $\eps$ down: below about $6.2\times10^{-4}$ the plain iteration returns $\infty$ and then NaN. The culprit is the last target point: its column of $K$ is tiny, so $v_j=b_j/(K\T u)_j$ exceeds the largest double, after $29$ to $96$ cycles for $\eps$ between $5.75\times10^{-4}$ and $6.17\times10^{-4}$, and at the first cycle once the whole column has vanished, for $\eps<0.4203/745.1=5.64\times10^{-4}$ (the readout counts the vanished rows and columns); the first row vanishes only for $\eps<0.3043/745.1=4.08\times10^{-4}$. Switch to single precision: the plain iteration fails already at $\eps=4.9\times10^{-3}$ (after $15$ cycles, $v_j$ exceeds the largest single-precision number, $3.4\times10^{38}$) and at the first cycle below about $4.2\times10^{-3}$; at $\eps=10^{-3}$, $857$ entries and $20$ whole rows of $K$ are $0$. The log-domain iteration never fails; at very small $\eps$ it is merely slow (§7).</p>
+<div class="box pitfall"><div class="box-h">Pitfall — “no entry underflowed, so the plain iteration is safe”</div>
+<p>The scalings can overflow even when $K$ does not underflow: $v_j=b_je^{g_j/\eps}$ with $g_j=1$ and $\eps=10^{-3}$ is $e^{1000}=\infty$. And before anything is exactly $0$ or $\infty$, the relative precision of tiny numbers degrades (subnormal numbers carry fewer digits). For $\eps$ below a few percent of the cost scale, use the log domain; for large $\eps$ the plain iteration is faster (no logarithms), which is why libraries offer both.</p>
+</div>
+
+<div class="box ml"><div class="box-h">In machine learning — softmax attention is half a Sinkhorn step; Sinkformers</div>
+<p>In a transformer, the attention weights between queries $Qx_i$ and keys $Kx_j$ are $a_{ij}=\exp(\ps{Qx_i}{Kx_j})/\sum_\ell\exp(\ps{Qx_i}{Kx_\ell})$ (OT4ML (4.14), p. 91; the usual factor $1/\sqrt r$ is absorbed in $Q$ or $K$). Read $-\ps{Qx_i}{Kx_j}$ as a cost $C_{ij}$ and set $\eps=1$: the matrix $(e^{-C_{ij}})$ is a Gibbs kernel, and the softmax normalizes its rows to sum to $1$ — <strong>exactly the first row step of Sinkhorn</strong>, with all row targets equal to $1$. Nothing constrains the columns: some keys receive much more total attention than others. Sinkformers (Sander, Ablin, Blondel and Peyré, AISTATS 2022; OT4ML p. 417) continue the iteration, alternating row and column normalizations, so that the attention matrix becomes doubly stochastic (approximately a transport plan between queries and keys). The authors report accuracies comparable to or better than standard attention on several benchmark tasks. (The letter $K$ is overloaded here: the key matrix of the transformer, not the Gibbs kernel.)</p>
+</div>
+<div class="widget" data-widget="l7attention"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p><strong>What to look at.</strong> With one half-step (plain softmax) the rows sum to $1$ but the column sums are $1.69$, $1.66$, $0.57$, $0.54$, $1.01$, $0.54$ (temperature $1$): two keys get three times the attention of three others. Each further half-step alternately fixes the rows and the columns; after $12$ half-steps the row error is $0.0096$. Change the temperature: at $10$ the scores are nearly flat and $12$ half-steps reach $6\times10^{-13}$; at $0.1$ the softmax is nearly a hard argmax and $12$ half-steps leave a row error of $2.1$ — the same slowdown at low temperature as in §7.</p>
+
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>Entropic dual = Kantorovich dual with the hard constraint $f\oplus g\le C$ replaced by the penalty $-\eps\sum e^{(f\oplus g-C)/\eps}a\otimes b$.</li>
+<li>Block maximizer = soft $c$-transform: $f=\min^\eps_b(C-g)$; Sinkhorn = alternating soft $c$-transforms.</li>
+<li>Small $\eps$, or single precision → log domain: subtract the max before exponentiating.</li>
+<li>Softmax over scores = one row step of Sinkhorn on the kernel $e^{\text{scores}/\text{temperature}}$.</li>
+</ul>
+</div>
+<div class="quiz"><p>Show that the gradient of the dual objective at $(f,g)$ vanishes if and only if the plan $a_ib_je^{(f_i+g_j-C_{ij})/\eps}$ belongs to $\U(a,b)$.</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>$\partial D/\partial f_i=a_i-\sum_ja_ib_je^{(f_i+g_j-C_{ij})/\eps}=a_i-(P\ind)_i$ and $\partial D/\partial g_j=b_j-(P\T\ind)_j$ with $P_{ij}=a_ib_je^{(f_i+g_j-C_{ij})/\eps}$. The gradient of the dual is the marginal defect of the associated plan: dual ascent and primal feasibility are the same thing.</p>
+</div></details></div>

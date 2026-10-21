@@ -114,9 +114,10 @@
     }
     return Math.sqrt(lam); // lam = sigma_2^2
   }
-  function l7exp(e) { // 1e-5 style
+  function l7exp(e) { // 1e-5 style for small numbers
     if (!isFinite(e)) return String(e);
     if (e === 0) return "0";
+    if (Math.abs(e) >= 0.01) return fmt(e, 3);
     var s = e.toExponential(1).replace("e-", "e−").replace("e+", "e");
     return s;
   }
@@ -203,9 +204,11 @@
       [0, 0.25, 0.5, 0.75, 1].forEach(function (v) { var tt = el("text", { x: PX + v * PW, y: PY + PH + 14, "class": "tx-s", "text-anchor": "middle" }, g); tt.textContent = fmt(v, 2); });
       var hdr = el("text", { x: PX, y: PY - 26, "class": "tx-b" }, g); hdr.textContent = "Conditional law of Y given X = x" + "ᵢ" + ", x = " + fmt(D.t[sel], 3);
       var sub = el("text", { x: PX, y: PY - 10, "class": "tx-s" }, g); sub.textContent = "(hover or tap a row of the plan to change it)";
-      var nt = el("text", { x: PX + PW, y: PY + 14, "class": "tx-s t3", "text-anchor": "end" }, g); nt.textContent = "mean = T(x) = " + fmt(mean, 3);
-      var nt2 = el("text", { x: PX + PW, y: PY + 28, "class": "tx-s", "text-anchor": "end" }, g); nt2.textContent = "std = " + fmt(Math.sqrt(vr), 3) + ",  √(ε/2) = " + fmt(Math.sqrt(eps / 2), 3);
-      var nt3 = el("text", { x: PX + PW, y: PY + 42, "class": "tx-s", "text-anchor": "end" }, g); nt3.textContent = "grey band: where the exact plan sends x";
+      var lx = mean > 0.5 ? PX + 6 : PX + PW - 6, la = mean > 0.5 ? "start" : "end"; // keep the labels away from the mean line
+      var nt = el("text", { x: lx, y: PY + 14, "class": "tx-s t3", "text-anchor": la }, g); nt.textContent = "mean = T(x) = " + fmt(mean, 3);
+      var nt2 = el("text", { x: lx, y: PY + 28, "class": "tx-s", "text-anchor": la }, g); nt2.textContent = "std = " + fmt(Math.sqrt(vr), 3) + ",  √(ε/2) = " + fmt(Math.sqrt(eps / 2), 3);
+      var nt3 = el("text", { x: lx, y: PY + 42, "class": "tx-s", "text-anchor": la }, g); nt3.textContent = "grey band: where the exact";
+      var nt4 = el("text", { x: lx, y: PY + 56, "class": "tx-s", "text-anchor": la }, g); nt4.textContent = "plan sends x";
       // readout
       var st = l7planStats(P, D.a, D.b, C), e = 0;
       for (i = 0; i < N; i++) e += Math.abs(rows[i] - D.a[i]);
@@ -218,7 +221,7 @@
 
   /* --- 2. Convergence of Sinkhorn: marginal error against iterations, for several temperatures (§7) --- */
   WIDGETS.l7conv = function (box) {
-    var s = scaffold(box, "How fast Sinkhorn converges: the row-marginal error after each cycle, for four temperatures (log scale)");
+    var s = scaffold(box, "How fast Sinkhorn converges: the row-marginal error after each cycle, for five temperatures (log scale)");
     var plot = new Plot(s.svg, { x: [0, 1000], y: [-13, 0.5], w: 680, h: 330, pad: { l: 52, r: 120, t: 18, b: 36 }, label: "Marginal error of Sinkhorn against the number of iterations" });
     var pairSel = select(s.controls, "Histograms", [["split", "two bumps → one bump"], ["shift", "one bump → shifted bump"]], "split", compute);
     var hSel = select(s.controls, "horizon", [["300", "300 cycles"], ["1000", "1000 cycles"], ["3000", "3000 cycles"]], "1000", draw);
@@ -264,14 +267,9 @@
         }
       });
       plot.unclip();
-      runs.forEach(function (r, k) {
-        var last = Math.min(r.errs.length, Hz) - 1, y = Math.log10(Math.max(r.errs[last], 1e-16));
-        var yy = Math.max(-12.6, Math.min(0.2, y));
-        plot.text(Hz, yy, "ε = " + r.eps, "tx-s t" + (COLS[k] === "c4" ? "2" : COLS[k].slice(1)), "start", 6, 4 + (k - 2) * 2);
-      });
       var lines = runs.map(function (r) {
-        return "ε = " + (r.eps + "      ").slice(0, 6) + "  cycles to 1e−9: " + (r.hit > 0 ? r.hit : "> 3000") + "   measured rate per cycle: " + fmt(r.rate, 4) +
-          "   σ_ε² = " + fmt(r.sig2, 4) + "   Birkhoff guarantee 1 − λ² = " + l7exp(r.gain);
+        return "ε = " + (r.eps + "      ").slice(0, 6) + " " + (r.hit > 0 ? r.hit : "> 3000") + " cycles to 1e−9 · rate " + (isFinite(r.rate) ? fmt(r.rate, 4) : "— (too few cycles)") +
+          " · σ_ε² = " + fmt(r.sig2, 4) + " · Birkhoff 1 − λ² " + (r.gain > 0 ? "= " + l7exp(r.gain) : "≈ 0 (< 1e−16)");
       });
       ro.textContent = lines.join("\n");
     }
@@ -285,10 +283,10 @@
     s.svg.setAttribute("viewBox", "0 0 " + W + " " + H);
     s.svg.setAttribute("role", "img");
     s.svg.setAttribute("aria-label", "The Gibbs kernel with its underflowed entries, and the marginal errors of the two iterations");
-    var eS = slider(s.controls, "ε", -4, -1, 0.01, -2.5, draw);
-    var pSel = select(s.controls, "arithmetic", [["64", "double precision (float64)"], ["32", "single precision (float32, as on most GPUs)"]], "64", draw);
+    var eS = slider(s.controls, "ε", -4, -1, 0.01, -3, draw);
+    var pSel = select(s.controls, "arithmetic", [["64", "float64 (double)"], ["32", "float32 (single, GPUs)"]], "64", draw);
     var ro = readout(s.controls);
-    legend(s.legend, [["--s2", "entries of K that are exactly 0"], ["--muted", "plain iteration u ← a/Kv"], ["--s3", "log-domain iteration"]]);
+    legend(s.legend, [["--s2", "entries of K that are exactly 0"], ["--muted", "plain iteration u ← a/Kv"], ["--s3", "log-domain iteration (dashed)"]]);
     var xs = [], ys = [], a = [], b = [], i, j;
     for (i = 0; i < n; i++) { xs.push(0.35 * (i + 0.5) / n); ys.push(0.55 + 0.45 * (i + 0.5) / n); a.push(1 / n); b.push(1 / n); }
     var C = l7cost(xs, ys), ITER = 150;
@@ -303,6 +301,8 @@
         for (j = 0; j < n; j++) { var k = R(Math.exp(-C[i][j] / eps)); K[i].push(k); if (k === 0) zeros++; else rz = false; }
         if (rz) zrows++;
       }
+      var zcols = 0;
+      for (j = 0; j < n; j++) { var cz = true; for (i = 0; i < n; i++) if (K[i][j] !== 0) { cz = false; break; } if (cz) zcols++; }
       // plain Sinkhorn
       var u = new Array(n).fill(1), v = new Array(n).fill(1), plain = [], fail = -1, it;
       for (it = 1; it <= ITER; it++) {
@@ -330,40 +330,41 @@
         for (i = 0; i < n; i++) { var r2 = 0; for (j = 0; j < n; j++) r2 = R(r2 + R(Math.exp(R(2 * la + (f[i] + g[j] - C[i][j]) / eps)))); e2 += Math.abs(r2 - a[i]); }
         logd.push(Math.max(e2, 1e-16));
       }
-      // draw: kernel on the left
-      while (s.svg.firstChild) s.svg.removeChild(s.svg.firstChild);
+      // the Plot of the errors clears the svg when it is created: create it first, then draw the kernel on the left
+      var P = new Plot(s.svg, { x: [0, ITER], y: [-16, 1], w: W, h: H, pad: { l: 360, r: 16, t: 34, b: 36 } });
       var gr = el("g", {}, s.svg), X0 = 40, Y0 = 34, S = 240, cw = S / n;
-      var floorLog = f32 ? 45.2 : 323.3; // -log10 of the smallest positive (subnormal) number
+      var lmin = Infinity, lmax = -Infinity; // grey levels: log K relative to its current range over the nonzero entries
+      for (i = 0; i < n; i++) for (j = 0; j < n; j++) if (K[i][j] > 0) { var lk = Math.log(K[i][j]); lmin = Math.min(lmin, lk); lmax = Math.max(lmax, lk); }
       for (i = 0; i < n; i++) for (j = 0; j < n; j++) {
         if (K[i][j] === 0) el("rect", { x: X0 + j * cw, y: Y0 + i * cw, width: cw + 0.2, height: cw + 0.2, "class": "f2", "fill-opacity": 0.75 }, gr);
         else {
-          var op = 1 - (-Math.log10(K[i][j])) / floorLog;
-          el("rect", { x: X0 + j * cw, y: Y0 + i * cw, width: cw + 0.2, height: cw + 0.2, "class": "fk", "fill-opacity": Math.max(0.04, op * 0.8).toFixed(2) }, gr);
+          var op = lmax > lmin ? (Math.log(K[i][j]) - lmin) / (lmax - lmin) : 1;
+          el("rect", { x: X0 + j * cw, y: Y0 + i * cw, width: cw + 0.2, height: cw + 0.2, "class": "fk", "fill-opacity": (0.08 + 0.72 * op).toFixed(2) }, gr);
         }
       }
       el("rect", { x: X0, y: Y0, width: S, height: S, "class": "ln cm hair nofill" }, gr);
       var tk = el("text", { x: X0 + S / 2, y: Y0 - 10, "class": "tx-b", "text-anchor": "middle" }, gr); tk.textContent = "K = exp(−C/ε), " + (f32 ? "float32" : "float64");
       var tk2 = el("text", { x: X0 + S / 2, y: Y0 + S + 16, "class": "tx-s", "text-anchor": "middle" }, gr); tk2.textContent = "rows: x in [0, 0.35] · columns: y in [0.55, 1]";
-      var tk3 = el("text", { x: X0 + S / 2, y: Y0 + S + 30, "class": "tx-s", "text-anchor": "middle" }, gr); tk3.textContent = "grey level ∝ log K (darker = larger)";
+      var tk3 = el("text", { x: X0 + S / 2, y: Y0 + S + 30, "class": "tx-s", "text-anchor": "middle" }, gr); tk3.textContent = "shade: log K (stronger = larger) · red: exactly 0";
       // errors on the right
-      var P = new Plot(s.svg, { x: [0, ITER], y: [-16, 1], w: W, h: H, pad: { l: 360, r: 16, t: 34, b: 36 } });
       P.g = el("g", {}, s.svg);
       P.axes({ xticks: [0, 50, 100, 150], yticks: [0, -4, -8, -12, -16], yfmt: function (v) { return v === 0 ? "1" : "1e" + v; }, xlabel: "cycles" });
       P.clip();
       P.poly(plain.map(function (e, k) { return [k + 1, Math.log10(Math.max(e, 1e-16))]; }), "ln cm");
-      P.poly(logd.map(function (e, k) { return [k + 1, Math.log10(e)]; }), "ln c3");
+      P.poly(logd.map(function (e, k) { return [k + 1, Math.log10(e)]; }), "ln c3 dash");
       P.unclip();
       var hd = el("text", { x: 360, y: 24, "class": "tx-b" }, s.svg); hd.textContent = "row-marginal error ‖P𝟙 − a‖₁";
       if (fail > 0) {
-        var xf = P.tx(Math.min(fail, ITER)), yt = P.ty(0) + 16;
+        var xf = P.tx(Math.min(fail, ITER)), yt = P.ty(-14);
         el("line", { x1: xf, x2: xf, y1: P.ty(1), y2: P.ty(-16), "class": "ln c2 thin dash" }, s.svg);
-        var tf = el("text", { x: Math.min(xf + 6, W - 150), y: yt + 14, "class": "tx-s t2" }, s.svg);
+        var tf = el("text", { x: Math.min(xf + 6, W - 150), y: yt, "class": "tx-s t2" }, s.svg);
         tf.textContent = "plain: NaN / ∞ at cycle " + fail;
       }
       var minC = Infinity; for (j = 0; j < n; j++) minC = Math.min(minC, C[0][j]);
-      var thr = f32 ? 103.28 : 744.44;
-      ro.textContent = "ε = " + eps.toExponential(2) + ": " + zeros + " of " + n * n + " entries of K are exactly 0, " + zrows + " whole rows vanish" +
-        "  (first row: smallest cost " + fmt(minC, 4) + ", so its row vanishes when ε < " + (minC / thr).toExponential(2) + ")" +
+      var minL = Infinity; for (i = 0; i < n; i++) minL = Math.min(minL, C[i][n - 1]);
+      var thr = f32 ? 103.97 : 745.13; // exp(-t) rounds to 0 beyond t = 150 log 2 (float32) or 1075 log 2 (float64)
+      ro.textContent = "ε = " + eps.toExponential(2) + ": " + zeros + " of " + n * n + " entries of K are exactly 0; " + zrows + " whole rows and " + zcols + " whole columns vanish" +
+        "\n(last column: smallest cost " + fmt(minL, 4) + ", vanishes when ε < " + (minL / thr).toExponential(2) + "; first row: smallest cost " + fmt(minC, 4) + ", vanishes when ε < " + (minC / thr).toExponential(2) + ")" +
         "\nplain iteration: " + (fail > 0 ? "fails at cycle " + fail + " (division by 0 or overflow → ∞, then NaN)" : "error " + l7exp(plain[plain.length - 1]) + " after " + ITER + " cycles") +
         "\nlog-domain iteration: error " + l7exp(logd[logd.length - 1]) + " after " + ITER + " cycles";
     }
@@ -495,7 +496,7 @@
     var box2 = { x0: 20, y0: 10, w: 420, h: 360, xr: [-2.4, 2.4] };
     box2.k = box2.w / (box2.xr[1] - box2.xr[0]);
     function MX(x) { return box2.x0 + (x - box2.xr[0]) * box2.k; }
-    function MY(y) { return box2.y0 + box2.h / 2 - (y - 0.15) * box2.k; }
+    function MY(y) { return box2.y0 + box2.h / 2 - (y - 0.75) * box2.k; }
     function draw() {
       while (s.svg.firstChild) s.svg.removeChild(s.svg.firstChild);
       var g = el("g", {}, s.svg);

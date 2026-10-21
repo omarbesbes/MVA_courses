@@ -1,0 +1,118 @@
+<h2 id="schrodinger">1. The discrete Schrödinger problem <span class="ref">OT4ML §8.1, §8.3, pp. 136–145</span></h2>
+<p class="tldr">Add to the transport cost a multiple $\eps$ of the mutual information of the coupling: the linear program becomes a strictly convex problem with a unique, entrywise positive solution.</p>
+
+<h3 id="schrod-why">Why regularize the linear program</h3>
+<p>Lessons 2–4 solved optimal transport between histograms as a linear program, $L_C(a,b)=\min_{P\in\U(a,b)}\ps{P}{C}$ (<a href="#recall-lp">refresher</a>). For machine learning this has three defects.</p>
+<ul>
+<li><strong>It is slow.</strong> Exact solvers (Hungarian method, network simplex) cost about $n^3$ operations for $n$ points (OT4ML p. 180 compares with the $O(n^3)$ Hungarian method), and they parallelize badly. A data set of $10^4$ points is already expensive; a training loop that solves one problem per mini-batch is out of reach.</li>
+<li><strong>Its solutions are unstable.</strong> A minimizer sits at a vertex of the polytope $\U(a,b)$: sparse, possibly not unique, and it <em>jumps</em> to another vertex when the data move.</li>
+<li><strong>Its value is not differentiable.</strong> $L_C$ is a minimum of functions that are linear in $C$: a concave, piecewise linear function, with kinks exactly where the optimal vertex changes.</li>
+</ul>
+<div class="box example" id="schrod-jump"><div class="box-h">Worked example — a plan that jumps, a value with a kink</div>
+<p>Two points on each side, $a=b=(\frac12,\frac12)$ and $C_\theta=\begin{pmatrix}0&1\\1&\theta\end{pmatrix}$ with $\theta\ge0$. The couplings are $P_s=\begin{pmatrix}s&\frac12-s\\\frac12-s&s\end{pmatrix}$, $0\le s\le\frac12$, of cost $\ps{P_s}{C_\theta}=(1-2s)+s\theta=1+s(\theta-2)$. This is linear in $s$, so the minimum is at an end of the segment:</p>
+$$P^\star=\begin{cases}\operatorname{diag}(\tfrac12,\tfrac12)&\text{if }\theta<2,\\[2pt]\begin{pmatrix}0&\frac12\\\frac12&0\end{pmatrix}&\text{if }\theta>2,\end{cases}\qquad L_{C_\theta}(a,b)=\min\Big(\frac\theta2,\ 1\Big).$$
+<p>At $\theta=2$ the whole mass of the plan is reassigned at once, and the value has a corner: its derivative jumps from $\frac12$ to $0$. A loss built on $L_C$ would have no gradient there, and a matching read off $P^\star$ would flip from one assignment to the other. With the entropic penalty below, the plan becomes a smooth function of $\theta$ (<a href="#exo-theta">Exercise 2 of §14</a>).</p>
+</div>
+<p>The remedy proposed by the course is to add a strictly convex penalty that pushes the plan away from the vertices: the negative entropy. The name “Schrödinger problem” comes from physics: in 1931–32 Schrödinger asked for the most likely way a cloud of Brownian particles moves between two observed distributions, and the answer is this entropic problem (OT4ML §14.3; 2019 notes §4.2 call it the “static Schrödinger problem”, with the particles of a “lazy gas”).</p>
+
+<h3 id="schrod-def">The definition</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 8.1, Def. 8.2, p. 136 · (8.8), p. 143 · compact Def. 8.2, p. 34</span></div>
+<p><strong>Definition 8.1</strong> (Discrete Shannon–Boltzmann entropy). For a nonnegative matrix $P$, its Shannon–Boltzmann entropy is $\ \mathrm H(P):=-\sum_{i,j}P_{i,j}\log(P_{i,j})$, with the convention $0\log(0)=0$.</p>
+<p><strong>Definition 8.2</strong> (Discrete entropic optimal transport). For $\eps>0$, define</p>
+$$\mathrm L^\eps_C(a,b):=\min_{P\in\U(a,b)}\ \ps{P}{C}-\eps\mathrm H(P).\qquad(8.1)$$
+<p>[…] Choosing the tensor product $a\otimes b=(a_ib_j)_{i,j}$ as reference measure leads to the normalized problem</p>
+$$\min_{P\in\U(a,b)}\ \ps{P}{C}+\eps\KL(P|a\otimes b).\qquad(8.8)$$
+<p>For every $P\in\U(a,b)$, the two objectives satisfy $\ps{P}{C}+\eps\KL(P|a\otimes b)=\ps{P}{C}-\eps\mathrm H(P)+\eps\big(\mathrm H(a)+\mathrm H(b)\big)$. Thus (8.8) has exactly the same minimizer as the original entropic problem (8.1), while its optimal value is $\mathrm L^\eps_C(a,b)+\eps\big(\mathrm H(a)+\mathrm H(b)\big)$.</p>
+</div>
+<dl class="decode">
+<dt>$\mathrm H(P)$</dt><dd>The entropy of the joint law $P$: large when the mass of $P$ is spread over many entries, small when it is concentrated. On $\U(a,b)$ it is largest at the independent coupling $a\otimes b$ and smallest at a deterministic plan (<a href="#exo-entropy">Exercise 1 of §14</a>).</dd>
+<dt>$-\eps\mathrm H(P)$</dt><dd>A <em>penalty</em> on concentrated plans: minimizing $\ps{P}{C}-\eps\mathrm H(P)$ trades a smaller transport cost against a larger entropy.</dd>
+<dt>$\eps>0$</dt><dd>The <em class="new">temperature</em>: the exchange rate between cost units and entropy units. Only the ratio $C/\eps$ matters (sheet, Exercise 7).</dd>
+<dt>$\KL(P|a\otimes b)$</dt><dd>The relative entropy of $P$ with respect to the independent coupling (<a href="#recall-kl">refresher</a>): $\sum_{ij}P_{ij}\log\frac{P_{ij}}{a_ib_j}$ on couplings. It is $\ge0$, and $0$ only at $P=a\otimes b$.</dd>
+<dt>“same minimizer”</dt><dd>On $\U(a,b)$ the two objectives differ by the constant $\eps(\mathrm H(a)+\mathrm H(b))$, which does not depend on $P$.</dd>
+<dt>$\mathrm L^\eps_C(a,b)$</dt><dd>The book’s name for the value of (8.1). <strong>On this page $L^\eps_C(a,b)$ is the value of (8.8)</strong> (the normalized one), because it is the one that passes to general measures and to Sinkhorn divergences; see the <a href="#conventions">conventions box</a>.</dd>
+</dl>
+<details class="fold proof"><summary>Check of the identity between (8.1) and (8.8)</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\KL(P|a\otimes b)=\sum_{ij}P_{ij}\log P_{ij}-\sum_{ij}P_{ij}\log a_i-\sum_{ij}P_{ij}\log b_j-\sum_{ij}P_{ij}+\sum_{ij}a_ib_j .$$<span class="why">Expand $\log\frac{P_{ij}}{a_ib_j}=\log P_{ij}-\log a_i-\log b_j$.</span></li>
+<li>$$=-\mathrm H(P)-\sum_ia_i\log a_i-\sum_jb_j\log b_j-1+1=-\mathrm H(P)+\mathrm H(a)+\mathrm H(b).$$<span class="why">On $\U(a,b)$: $\sum_jP_{ij}=a_i$ and $\sum_iP_{ij}=b_j$, and both $P$ and $a\otimes b$ have total mass $1$.</span></li>
+</ol>
+<p>Multiply by $\eps$ and add $\ps{P}{C}$. $\square$</p>
+</div></details>
+
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 8.13, p. 145 · 2019 notes Remark 3, p. 19</span></div>
+<p><strong>Definition 8.13</strong> (Mutual information). If $(X,Y)\sim\pi$ have marginals $X\sim\al$ and $Y\sim\be$, the mutual information of the pair is $\mathcal I(X,Y):=\KL(\pi|\al\otimes\be)$. It is nonnegative and vanishes if and only if $X$ and $Y$ are independent.</p>
+<p>With this terminology, the entropic problem (8.14) is equivalent to $\displaystyle\inf_{X\sim\al,\,Y\sim\be}\E\big[c(X,Y)\big]+\eps\mathcal I(X,Y)$.</p>
+</div>
+<dl class="decode">
+<dt>$(X,Y)\sim\pi$</dt><dd>A random pair whose joint law is the coupling (for histograms, $\P(X=x_i,Y=y_j)=P_{ij}$).</dd>
+<dt>$\mathcal I(X,Y)$</dt><dd>How much knowing $X$ tells you about $Y$, in nats (natural-logarithm units). $0$ for independent variables; for a deterministic plan $Y=T(X)$ between uniform laws on $n$ points it is $\log n$, the largest possible value.</dd>
+<dt>the problem</dt><dd>“Choose how $X$ and $Y$ depend on each other, paying the transport cost plus $\eps$ per nat of shared information.” Large $\eps$: information is expensive, the plan tends to independence. Small $\eps$: it is cheap, the plan can be (nearly) deterministic.</dd>
+</dl>
+
+<h3 id="schrod-example">The running example</h3>
+<div class="box example"><div class="box-h">Worked example — the sheet’s Exercise 1 with $p=0.3$</div>
+<p>Take $C=\begin{pmatrix}0&1\\1&0\end{pmatrix}$, $a=(0.3,\ 0.7)$, $b=(0.5,\ 0.5)$. Fixing $x=P_{11}$, the row and column sums determine the other entries:</p>
+$$P(x)=\begin{pmatrix}x&0.3-x\\0.5-x&0.2+x\end{pmatrix},\qquad 0\le x\le0.3 .$$
+<p>So $\U(a,b)$ is a segment, of cost $\ps{P(x)}{C}=(0.3-x)+(0.5-x)=0.8-2x$. Three points on it:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>$x$</th><th>plan</th><th>$\ps{P}{C}$</th><th>$\KL(P|a\otimes b)$</th></tr></thead>
+<tbody>
+<tr><td>$0$</td><td>anti-diagonal vertex</td><td>$0.8$</td><td>$0.2744$</td></tr>
+<tr><td>$0.15$</td><td>$a\otimes b$ (independent)</td><td>$0.5$</td><td>$0$</td></tr>
+<tr><td>$0.3$</td><td>optimal vertex $P^\star=\begin{pmatrix}0.3&0\\0.2&0.5\end{pmatrix}$</td><td>$0.2=L_C$</td><td>$0.2744$</td></tr>
+</tbody></table></div>
+<p>The linear program picks the vertex $x=0.3$. With $\eps=0.5$, the objective $0.8-2x+0.5\KL(P(x)|a\otimes b)$ is minimized at the interior point $x_\eps=0.2879$ (computed in Exercise 1 of the sheet, §13):</p>
+$$\begin{aligned}&P_{0.5}=\begin{pmatrix}0.2879&0.0121\\0.2121&0.4879\end{pmatrix},\qquad \ps{P_{0.5}}{C}=0.2243,\qquad \KL=0.2130,\\&L^{0.5}_C=0.2243+0.5\times0.2130=0.3307 .\end{aligned}$$
+</div>
+<figure class="fig"><!-- include figures/L07/penalty.svg --><figcaption>Left: along the segment of couplings of the running example, the linear cost (blue, dashed) is minimized at the vertex $x=0.3$; the penalty $\eps\KL$ (purple, dashed) is minimized at the independent coupling $x=0.15$, and its slope is infinite at both ends; their sum (black, $\eps=0.5$) is minimized inside, at $x_\eps\approx0.288$. Right: the minimizer $x_\eps$ moves from the vertex ($\eps\to0$) to the independent coupling ($\eps\to\infty$) — the entropic path of §3.</figcaption></figure>
+
+<h3 id="schrod-unique">Existence, uniqueness and positivity</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 8.3, p. 137 · compact Prop. 8.3, p. 34</span></div>
+<p><strong>Proposition 8.3</strong> (Existence and uniqueness of entropic OT). Assume that $a,b$ are probability histograms and that $C$ is finite. For every $\eps>0$, problem (8.1) admits a unique minimizer. If all entries of $a$ and $b$ are positive, then this minimizer is positive on every entry.</p>
+</div>
+<dl class="decode">
+<dt>“$C$ is finite”</dt><dd>No forbidden pair ($C_{ij}=+\infty$ would force $P_{ij}=0$).</dd>
+<dt>“positive on every entry”</dt><dd>$P_{ij}>0$ for all $i,j$: every source point sends some mass to every target point. The entropic plan is <strong>never</strong> sparse — in contrast with a vertex of the linear program.</dd>
+</dl>
+<div class="box idea"><div class="box-h">Idea of the proof</div>
+<p>Existence: a continuous function on a compact set. Uniqueness: $t\mapsto t\log t$ is strictly convex, so the objective is strictly convex. Positivity: the slope of $t\mapsto t\log t$ is $-\infty$ at $0$, so moving a plan with a zero entry slightly towards $a\otimes b$ decreases the objective — infinitely fast.</p>
+</div>
+<details class="fold proof"><summary>Full proof</summary><div class="fold-body">
+<p>Write $F(P)=\ps{P}{C}-\eps\mathrm H(P)=\sum_{ij}\big(C_{ij}P_{ij}+\eps\,\varphi(P_{ij})\big)$ with $\varphi(t)=t\log t$, $\varphi(0)=0$.</p>
+<ol class="steps">
+<li>$\U(a,b)$ is non-empty and compact.<span class="why">It contains $a\otimes b$; it is closed (defined by linear equalities and $P\ge0$) and bounded ($0\le P_{ij}\le1$).</span></li>
+<li>$F$ is continuous on $\U(a,b)$, so a minimizer exists.<span class="why">$\varphi$ is continuous on $[0,\infty)$ because $t\log t\to0$ as $t\to0^+$; a continuous function on a compact set attains its minimum (Weierstrass).</span></li>
+<li>$\varphi''(t)=1/t>0$ on $(0,\infty)$, so $\varphi$ is strictly convex on $[0,\infty)$.<span class="why">A continuous function on $[0,\infty)$ that is strictly convex on $(0,\infty)$ is strictly convex on $[0,\infty)$.</span></li>
+<li>If $P\ne P'$ are two minimizers, $F\big(\frac{P+P'}2\big)<\frac12F(P)+\frac12F(P')=\min F$: impossible. So the minimizer is unique.<span class="why">$\frac{P+P'}2\in\U(a,b)$ (convex set); the linear part is affine; for an entry with $P_{ij}\ne P'_{ij}$, strict convexity of $\varphi$ gives a strict inequality, and for the others an equality.</span></li>
+<li>Assume now $a,b>0$ and let $P$ be feasible with $P_{kl}=0$ for some $(k,l)$. Set $Q=a\otimes b$ (all entries positive) and $P_t=(1-t)P+tQ\in\U(a,b)$ for $t\in[0,1]$.<span class="why">Convexity of $\U(a,b)$.</span></li>
+<li>For an entry with $P_{ij}>0$, $t\mapsto\varphi\big((1-t)P_{ij}+tQ_{ij}\big)$ has a finite derivative at $t=0^+$, namely $(Q_{ij}-P_{ij})(\log P_{ij}+1)$.<span class="why">$\varphi$ is differentiable at $P_{ij}>0$; chain rule.</span></li>
+<li>For the entry $(k,l)$: $\varphi(tQ_{kl})=tQ_{kl}\log(tQ_{kl})$, whose derivative $Q_{kl}\big(\log(tQ_{kl})+1\big)\to-\infty$ as $t\to0^+$.<span class="why">$\log(tQ_{kl})\to-\infty$ and $Q_{kl}>0$.</span></li>
+<li>So $\frac{\dd}{\dd t}F(P_t)\to-\infty$ as $t\to0^+$: for small $t>0$, $F(P_t)<F(P)$, and $P$ is not a minimizer. Hence the minimizer has no zero entry.<span class="why">The derivative of $F(P_t)$ is a finite sum of finite terms and at least one term tending to $-\infty$; a function whose derivative is negative on $(0,t_0)$ decreases there (mean value theorem). $\square$</span></li>
+</ol>
+</div></details>
+<div class="box remark"><div class="box-h">Entropy is a barrier</div>
+<p>Step 7 is why the positivity constraints $P_{ij}\ge0$ are <em>never active</em> at the optimum: the entropy repels the plan from the boundary of the orthant. Interior-point methods for linear programs use a logarithmic barrier $-\sum\log P_{ij}$ for the same purpose, but each of their Newton steps solves a dense linear system; for transport the entropy gives instead diagonal scalings (§2, OT4ML Remark 8.4, p. 138). Since only the two marginal constraints remain, the Lagrange conditions of §2 have a product form.</p>
+</div>
+
+<div class="box intu"><div class="box-h">Intuition — a fuzzy matching</div>
+<p>Think of $P_\eps$ as a matching in which every source point hedges its bets: it sends most of its mass to its “transport partner”, and a little everywhere else, with weights decaying like $e^{-C_{ij}/\eps}$. The smaller $\eps$, the more decisive the matching. In §8 we will see that for the cost $\norm{x-y}^2$ the hedging has a width of order $\sqrt{\eps}$.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — “the entropic plan is an approximate optimal plan, so it is sparse too”</div>
+<p>No: <em>every</em> entry is positive (Prop. 8.3), for every $\eps>0$. What converges to the optimal plan as $\eps\to0$ (§3) is the matrix, entrywise; most entries become tiny, none becomes $0$. To extract a map, use the barycentric projection of §11, not the support of $P_\eps$.</p>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>Entropic problem → first ask: which convention (<a href="#conventions">four of them</a>)? Same minimizer, different values.</li>
+<li>$\KL(P|a\otimes b)$ on couplings → mutual information; $0$ iff independent.</li>
+<li>Positivity of a minimizer of an entropy-penalized problem → perturb towards a positive feasible point and use the infinite slope of $t\log t$ at $0$.</li>
+</ul>
+</div>
+<div class="quiz"><p>For $a=b=(\frac12,\frac12)$, compute $\KL(P|a\otimes b)$ for the identity plan $\operatorname{diag}(\frac12,\frac12)$ and for $a\otimes b$.</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>Identity plan: two entries $\frac12$ with $a_ib_i=\frac14$: $2\times\frac12\log\frac{1/2}{1/4}=\log2\approx0.693$ — the largest possible value on $2$ points ($Y$ determines $X$: one full bit, $\log 2$ nats). Independent plan: $0$.</p>
+</div></details></div>
+<div class="quiz"><p>Why is the entropic objective strictly convex while the linear program’s objective is not?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>$\ps{P}{C}$ is linear: it is convex but constant along every direction where $\ps{\cdot}{C}$ vanishes, which is why linear programs can have a whole face of minimizers. $-\mathrm H(P)=\sum\varphi(P_{ij})$ is a sum of strictly convex functions of the entries, so it is strictly convex; adding a linear function keeps strict convexity.</p>
+</div></details></div>

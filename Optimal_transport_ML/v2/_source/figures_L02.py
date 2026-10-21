@@ -148,7 +148,7 @@ def fig_cycle():
     panels = [(40, "product plan: 6 edges, a cycle"), (380, "a vertex: 4 = n + m − 1 edges, no cycle")]
     Pv = np.array([[0.3, 0.3, 0.0], [0.0, 0.15, 0.25]])
     # labels of the alternating perturbation, in panel coordinates (x, y baseline)
-    eps_lab = {(0, 0): (75, 52, "+ε"), (0, 1): (120, 93, "−ε"), (1, 0): (30, 131, "−ε"), (1, 1): (75, 158, "+ε")}
+    eps_lab = {(0, 0): (75, 52, "+ε"), (0, 1): (128, 103, "−ε"), (1, 0): (30, 131, "−ε"), (1, 1): (75, 158, "+ε")}
     for k, (x0, title) in enumerate(panels):
         c.text(x0 + 110, 20, title, "tx-b", "middle")
         P = np.outer(a, b) if k == 0 else Pv
@@ -307,7 +307,8 @@ def fig_atoms():
     yb, bb = [-1.0, 1.0], [0.5, 0.5]
     c = Canvas("atoms", 660, 236, "With atoms, the best map can cost three times the best coupling", sub=SUB)
     # (from, to, mass, label x, label y, anchor)
-    maps = [(-1.0, -1.0, 0.25, -1.0, 0.5, "end"), (0.0, 1.0, 0.5, 0.42, 0.66, "start"), (1.0, -1.0, 0.25, -0.42, 0.22, "end")]
+    # labels of the two crossing arrows placed beside their own arrow, away from the crossing point
+    maps = [(-1.0, -1.0, 0.25, -1.0, 0.5, "end"), (0.0, 1.0, 0.5, 0.87, 0.33, "start"), (1.0, -1.0, 0.25, -0.4, 0.17, "start")]
     plan = [(-1.0, -1.0, 0.25, -1.0, 0.5, "end"), (0.0, -1.0, 0.25, -0.62, 0.22, "start"), (0.0, 1.0, 0.25, 0.62, 0.22, "end"), (1.0, 1.0, 0.25, 1.0, 0.5, "start")]
     cost_map = sum(m * (x - y) ** 2 for x, y, m, *_ in maps)
     cost_plan = sum(m * (x - y) ** 2 for x, y, m, *_ in plan)
@@ -425,9 +426,9 @@ def fig_simplex():
     f.path(poly, "a3", close=True)
     f.path(poly, "ln c3 thin")
     # the level line through the optimum touches the polytope only there
-    opt_line = [(s_, 0.35 - 4 * s_) for s_ in np.linspace(-0.04, 0.0875, 20)]
+    opt_line = [(s_, 0.35 - 4 * s_) for s_ in np.linspace(-0.012, 0.0875, 20)]  # stops below the label "cost 1.45"
     f.path(opt_line, "ln c3 thin dash")
-    for lev in [1.6, 2.0, 2.4, 2.8]:
+    for lev in [1.7, 2.3, 2.9]:  # chosen so that no level line crosses a vertex label
         s0, s1 = -0.04, 0.36
         pts = [(s, lev - 1 - 4 * s) for s in np.linspace(s0, s1, 50)]
         pts = [p for p in pts if 0.0 <= p[1] <= 0.52]

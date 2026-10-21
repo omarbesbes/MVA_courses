@@ -1,0 +1,107 @@
+<h2 id="optimal">8. When is the generated map optimal? <span class="ref">OT4ML pp. 412–414</span></h2>
+<p class="tldr">The flow learned by flow matching or a diffusion model always transports noise onto data, but its map is the optimal (Brenier) map only in special cases: always on the line, for Gaussians exactly when the covariances commute, and when the training pairs are optimally coupled — which minibatch OT approximates and rectification does not guarantee.</p>
+
+<h3 id="opt-question">The question</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML p. 412</span></div>
+<p><strong>When is the induced map optimal?</strong> Integrating the learned velocity gives a deterministic map from $\al_0$ to $\al_1$, but this map is not automatically the Brenier optimal map. It is optimal only in special cases where the accumulated flow remains the gradient of a convex potential. The Gaussian product-coupling case already shows the precise obstruction: the interpolated covariances are simple, the velocity is affine, but the terminal map can contain a hidden rotational part. This phenomenon, and its extensions to rectified flows and mixtures, is analyzed in depth in [283].</p>
+</div>
+<p>Why care, if any transport map generates the data? Three reasons. (i) <strong>Straightness:</strong> the optimal flow moves every particle on a straight line at constant speed (§2), so one Euler step is exact; curved flows need many network evaluations (§6). (ii) <strong>Meaning:</strong> an optimal map moves the noise as little as possible on average and is monotone, $\ps{T(x)-T(x')}{x-x'}\ge0$ (the gradient of a convex function), so it keeps as much as possible of the geometry of the noise, which matters when the map itself is used, e.g. to edit or translate data. (iii) <strong>Understanding:</strong> it tells us what the regression actually computes. By Brenier, “optimal” means “gradient of a convex function” (<a href="#recall-brenier">refresher</a>). Reference [283] is Hertrich, Chambolle and Delon, <em>On the relation between rectified flows and optimal transport</em> (NeurIPS 2025), co-authored by the lecturer.</p>
+
+<h3 id="opt-1d">On the line: always optimal</h3>
+<p>In dimension one the trajectories of a well-posed ODE cannot cross, so the flow map is increasing; an increasing map that pushes $\al_0$ to $\al_1$ is the monotone rearrangement, which is optimal — <strong>whatever the coupling used for training</strong>. This is Exercise 3 of the sheet, solved in §11. In the two-atom example the flow map is $\mathrm{sign}(x)$, the optimal map (§6), and in the widget of §7 the landing boundaries are exactly $\Phi^{-1}$ of the cumulative weights. The <em>path</em> is still not the geodesic: its action ($0.982$) exceeds $W_2^2$ ($0.404$).</p>
+
+<h3 id="opt-gauss">Gaussians: optimal exactly when the covariances commute</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 16.8, pp. 412–413</span></div>
+<p><strong>Proposition 16.8 (Gaussian flow matching and optimality).</strong> Let $\Sigma_0,\Sigma_1\succ0$ and let $X_0\sim\N(0,\Sigma_0)$ and $X_1\sim\N(0,\Sigma_1)$ be independent. Consider the linear flow-matching interpolation $Z_t=(1-t)X_0+tX_1$, $\al_t=\mathrm{Law}(Z_t)=\N(0,\Sigma_t)$, where</p>
+$$\Sigma_t=(1-t)^2\Sigma_0+t^2\Sigma_1.\qquad(16.10)$$
+<p>Then the exact flow-matching velocity is affine, $v_t(z)=A_tz$, with</p>
+$$A_t=\big(t\Sigma_1-(1-t)\Sigma_0\big)\Sigma_t^{-1}.\qquad(16.11)$$
+<p>The induced flow map $T^{\mathrm{FM}}_t$ from $\al_0$ to $\al_t$ is</p>
+$$T^{\mathrm{FM}}_t=\Sigma_0^{1/2}\Big((1-t)^2\Id+t^2\,\Sigma_0^{-1/2}\Sigma_1\Sigma_0^{-1/2}\Big)^{1/2}\Sigma_0^{-1/2}.\qquad(16.12)$$
+<p>In particular, $\ T^{\mathrm{FM}}_1=\Sigma_0^{1/2}\big(\Sigma_0^{-1/2}\Sigma_1\Sigma_0^{-1/2}\big)^{1/2}\Sigma_0^{-1/2}$. (16.13) This terminal map coincides with the quadratic optimal transport map</p>
+$$T^{\mathrm{OT}}=\Sigma_0^{-1/2}\big(\Sigma_0^{1/2}\Sigma_1\Sigma_0^{1/2}\big)^{1/2}\Sigma_0^{-1/2}\qquad(16.14)$$
+<p>if and only if $\Sigma_0\Sigma_1=\Sigma_1\Sigma_0$.</p>
+</div>
+<dl class="decode">
+<dt>$\Sigma_t$</dt><dd>Covariance of $(1-t)X_0+tX_1$ for independent $X_0,X_1$: it <em>shrinks</em> in the middle (at $t=\frac12$ it is $\frac14(\Sigma_0+\Sigma_1)$). With independent pairs the path is not the geodesic.</dd>
+<dt>$A_t$</dt><dd>$\mathrm{Cov}(X_1-X_0,Z_t)\,\mathrm{Cov}(Z_t)^{-1}$: Gaussian conditioning. In general <em>not symmetric</em>.</dd>
+<dt>$C=\Sigma_0^{-1/2}\Sigma_1\Sigma_0^{-1/2}$</dt><dd>The target covariance seen in the whitened coordinates of the source (where $\al_0$ becomes $\N(0,\Id)$).</dd>
+<dt>(16.13)</dt><dd>“Whiten, take the square root of $C$, un-whiten”: similar to the symmetric matrix $C^{1/2}$, but not symmetric itself in general.</dd>
+<dt>(16.14)</dt><dd>Brenier’s map between the two Gaussians: the unique symmetric positive definite matrix sending $\Sigma_0$ to $\Sigma_1$ (Lesson 1).</dd>
+</dl>
+<div class="box idea"><div class="box-h">Idea of the proof</div>
+<p>In whitened coordinates both covariances, $\Id$ and $C$, commute, so the flow is the simple square root $\big((1-t)^2\Id+t^2C\big)^{1/2}$. Coming back multiplies by $\Sigma_0^{1/2}$ on the left and $\Sigma_0^{-1/2}$ on the right — a <em>similarity</em>, not a congruence — which destroys symmetry unless $\Sigma_0$ commutes with $C$. A pushing map is optimal iff it is symmetric positive definite.</p>
+</div>
+<details class="fold proof"><summary>Full proof</summary><div class="fold-body">
+<ol class="steps">
+<li>$$v_t(z)=\mathrm{Cov}(X_1-X_0,Z_t)\,\mathrm{Cov}(Z_t)^{-1}z=\big(t\Sigma_1-(1-t)\Sigma_0\big)\Sigma_t^{-1}z .$$<span class="why">Gaussian conditioning (centred variables); $\mathrm{Cov}(X_1-X_0,(1-t)X_0+tX_1)=t\Sigma_1-(1-t)\Sigma_0$ by independence. This is (16.11).</span></li>
+<li>Whiten: $\tilde z=\Sigma_0^{-1/2}z$. Then $\tilde\Sigma_t=(1-t)^2\Id+t^2C$, and the whitened velocity is $\tilde A_t=(tC-(1-t)\Id)\tilde\Sigma_t^{-1}$.<span class="why">Conjugate step 1 by $\Sigma_0^{-1/2}$: $\Sigma_0^{-1/2}(t\Sigma_1-(1-t)\Sigma_0)\Sigma_t^{-1}\Sigma_0^{1/2}=(tC-(1-t)\Id)\tilde\Sigma_t^{-1}$.</span></li>
+<li>$\tilde T_t=\tilde\Sigma_t^{1/2}$ solves $\dot{\tilde T}_t=\tilde A_t\tilde T_t$, $\tilde T_0=\Id$.<span class="why">$\Id$ and $C$ commute, so everything is a function of $C$ and commutes: $\frac{\dd}{\dd t}\tilde\Sigma_t^{1/2}=\frac12\tilde\Sigma_t^{-1/2}\dot{\tilde\Sigma}_t=(tC-(1-t)\Id)\tilde\Sigma_t^{-1/2}=\tilde A_t\tilde\Sigma_t^{1/2}$.</span></li>
+<li>$T^{\mathrm{FM}}_t=\Sigma_0^{1/2}\tilde\Sigma_t^{1/2}\Sigma_0^{-1/2}$, which is (16.12); at $t=1$, (16.13).<span class="why">Undo the whitening.</span></li>
+<li>Both $T_1^{\mathrm{FM}}$ and $T^{\mathrm{OT}}$ push $\N(0,\Sigma_0)$ to $\N(0,\Sigma_1)$; $T^{\mathrm{OT}}$ is the unique symmetric positive definite matrix doing so. $T_1^{\mathrm{FM}}$ is similar to $C^{1/2}$ (positive eigenvalues), so it equals $T^{\mathrm{OT}}$ iff it is symmetric.<span class="why">Gaussian Brenier map (Lesson 1); a symmetric matrix similar to $C^{1/2}$ is positive definite.</span></li>
+<li>$(T_1^{\mathrm{FM}})\T=\Sigma_0^{-1/2}C^{1/2}\Sigma_0^{1/2}$, so symmetry $\iff\Sigma_0C^{1/2}=C^{1/2}\Sigma_0\iff\Sigma_0C=C\Sigma_0\iff\Sigma_0\Sigma_1=\Sigma_1\Sigma_0$.<span class="why">Multiply $\Sigma_0^{1/2}C^{1/2}\Sigma_0^{-1/2}=\Sigma_0^{-1/2}C^{1/2}\Sigma_0^{1/2}$ by $\Sigma_0^{1/2}$ on both sides; commuting with $C^{1/2}$ is commuting with $C$ (functional calculus); multiply $\Sigma_0C=C\Sigma_0$ by $\Sigma_0^{1/2}$ on both sides. $\square$</span></li>
+</ol>
+</div></details>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Remark 16.9, p. 414</span></div>
+<p><strong>Remark 16.9 (Changing the bridge speed does not restore optimality).</strong> The same terminal map (16.13) is obtained for every continuously differentiable scalar schedule $Z_t=a_tX_0+b_tX_1$ satisfying $(a_0,b_0)=(1,0)$, $(a_1,b_1)=(0,1)$, and $a_t^2\Id+b_t^2C\succ0$ for all $t$. Indeed, after whitening, the covariance path is $a_t^2\Id+b_t^2C$, and the flow map is its positive square root. Thus changing the speed of a nondegenerate scalar Gaussian bridge, for instance by using an OU schedule, cannot repair the non-optimality created by non-commuting covariances.</p>
+</div>
+<div class="box example"><div class="box-h">Worked example — a hidden rotation</div>
+<p>$\Sigma_0=\mathrm{diag}(4,1)$, $\Sigma_1=\begin{pmatrix}2&1\\1&2\end{pmatrix}$ (they do not commute: $\Sigma_0\Sigma_1-\Sigma_1\Sigma_0=\begin{pmatrix}0&3\\-3&0\end{pmatrix}$). Then</p>
+$$T_1^{\mathrm{FM}}=\begin{pmatrix}0.664&0.486\\0.122&1.393\end{pmatrix},\qquad T^{\mathrm{OT}}=\begin{pmatrix}0.697&0.243\\0.243&1.328\end{pmatrix}.$$
+<p>Both push $\Sigma_0$ to $\Sigma_1$ (to $10^{-15}$), but $T_1^{\mathrm{FM}}$ is not symmetric. Costs $\E\norm{T(X_0)-X_0}^2=\tr\big((T-\Id)\Sigma_0(T-\Id)\T\big)$: $0.9015$ for the flow map, $W_2^2=0.7712$ for Brenier’s — <strong>16.9% more</strong>; the independent coupling costs $\tr\Sigma_0+\tr\Sigma_1=9$. With commuting covariances, $\Sigma_0=\mathrm{diag}(4,1)$ and $\Sigma_1=\mathrm{diag}(1,4)$, both maps are $\mathrm{diag}(\frac12,2)$ and cost $W_2^2=2$ — but the flow-matching <em>path</em> still has action $3.717$: an optimal map along a non-geodesic path.</p>
+</div>
+<figure class="fig"><!-- include figures/L06/fm_gauss.svg --><figcaption>The worked example. Twelve points on the source ellipse (orange) are carried by the flow-matching field (green paths, which first contract then expand) to the green dots, on the target ellipse (blue); the Brenier map sends the same points to the open circles. Same image ellipse, different points: the flow map contains a rotation.</figcaption></figure>
+<div class="widget" data-widget="l6gaussfm"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p>What to look at: rotate the target covariance $\Sigma_1=R_\theta\,\mathrm{diag}(3,1)R_\theta\T$ against the fixed $\Sigma_0=\mathrm{diag}(4,1)$. At $\theta=0°$ and $90°$ the covariances commute: green dots and open circles coincide and the excess cost is $0$. In between, the flow map rotates the points and costs more. Move $t$ to watch the dashed ellipse $\N(0,\Sigma_t)$ shrink at mid-time: the independent coupling does not follow the geodesic.</p>
+
+<h3 id="opt-coupling">With an optimal coupling, flow matching is optimal transport</h3>
+<p>Train on pairs from an optimal coupling, $X_1=T(X_0)$ with $T=\nabla\varphi$ Brenier’s map. Then $X_t=(1-t)X_0+tT(X_0)=S_t(X_0)$ with $S_t$ injective for $t<1$ (§2, proof of Benamou–Brenier, Part 2). Knowing $X_t$ means knowing $X_0$, so the conditional expectation is trivial:</p>
+$$v_t(X_t)=\E[T(X_0)-X_0\mid X_t]=T(X_0)-X_0,\qquad\text{i.e.}\qquad v_t\big((1-t)x+tT(x)\big)=T(x)-x,$$
+<p>the Benamou–Brenier velocity (14.10). The interpolant is McCann’s path (OT4ML Example 16.2), the paths do not cross, the flow map is $T$, and one Euler step is exact. The catch: we would need the OT plan between noise and data, which is what we wanted to avoid (§5).</p>
+<p><strong>Minibatch OT.</strong> A cheap approximation: draw a minibatch of $B$ noise vectors and $B$ data points, solve the $B\times B$ assignment problem (Lesson 2), and use the matched pairs in the regression. With $B=1$ this is the independent coupling; as $B$ grows the empirical coupling approaches an optimal one. This is OT-CFM (Tong, Fatras, Malkin, Huguet, Zhang, Rector-Brooks, Wolf, Bengio, <em>Improving and generalizing flow-based generative models with minibatch optimal transport</em>, TMLR 2024) and multisample flow matching (Pooladian, Ben-Hamu, Domingo-Enrich, Amos, Lipman, Chen, ICML 2023).</p>
+<div class="widget" data-widget="l6fm2d"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p>What to look at: 400 training pairs (noise, data) are formed with the chosen coupling (grey segments: the first 40 pairs). The velocity is estimated from the pairs by a kernel average of $X_1-X_0$ near $x$ at time $t$ — a stand-in for the neural network — and 150 new noise samples are moved by Euler with $K$ steps (green). With independent pairs the segments cross, the averaged field is curved, and with $K=1$ every sample lands near the data mean; with OT pairs the segments barely cross, the paths are almost straight, and one or two steps already land near the data. The side text reports the transport cost of the generated map, the extra length of the paths, and $W_2$ between the generated points and 150 fresh data points.</p>
+
+<h3 id="opt-rectified">Rectified flows: straight is not optimal</h3>
+<p>Rectified flow (Liu, Gong, Liu, ICLR 2023; OT4ML Example 16.2) proposes to straighten the flow without solving OT: after a first training, generate pairs $(X_0,T_1(X_0))$ with the learned flow (“reflow”) and train again on this <em>deterministic</em> coupling. By the chain of inequalities of §6, $\E\norm{T_1(X_0)-X_0}^2\le\E_\pi\norm{X_1-X_0}^2$: the quadratic cost never increases (Liu et al. prove it for all convex costs), and the paths get straighter. But the fixed points need not be optimal.</p>
+<div class="box example"><div class="box-h">Worked example — one reflow on the Gaussian example (derived here)</div>
+<ol class="steps">
+<li>Reflow coupling: $X_1=TX_0$ with $T=T_1^{\mathrm{FM}}=\begin{pmatrix}0.664&0.486\\0.122&1.393\end{pmatrix}$; its eigenvalues $0.590$ and $1.467$ are positive.<span class="why">$T$ is similar to $C^{1/2}$.</span></li>
+<li>$X_t=M_tX_0$ with $M_t=(1-t)\Id+tT$, invertible for all $t\in[0,1]$ (its eigenvalues $(1-t)+t\lambda>0$; numerically $\min_t\det M_t=0.866$).<span class="why">So the straight segments of the pairs do not cross.</span></li>
+<li>$v_t(x)=\E[(T-\Id)X_0\mid X_t=x]=(T-\Id)M_t^{-1}x$, whose flow is $x(t)=M_tx_0$: the flow reproduces the coupling exactly (checked by integrating the ODE).<span class="why">$X_t$ determines $X_0=M_t^{-1}X_t$, and $\frac{\dd}{\dd t}M_tx_0=(T-\Id)x_0$.</span></li>
+<li>So $T$ is a fixed point of rectification after one step, with straight paths, and its cost is still $0.9015>W_2^2=0.7712$.<span class="why">Rectification preserves the map here; only an optimal coupling would give $T^{\mathrm{OT}}$.</span></li>
+</ol>
+</div>
+<p>Hertrich, Chambolle and Delon (2025) analyse these questions in depth: invariance properties of rectified flows, explicit velocity fields for Gaussians and Gaussian mixtures — the setting of Exercises 1, 4 and 5 of the sheet — and counterexamples showing that constraining rectified flows to gradient fields does not, in general, produce optimal transport maps.</p>
+
+<h3 id="opt-atoms">Noise to atoms in the plane: close to optimal, not optimal</h3>
+<p>Take Gaussian noise $\N(0,\Id_2)$ and data made of three atoms with weights $\frac13$. Both the flow-matching / probability-flow map (§7: all schedules give the same map) and the optimal map send each noise sample to one atom; the optimal map is semi-discrete, with Laguerre cells (Lesson 4). We computed both on a fine grid of $[-5.5,5.5]^2$ (flow: the schedule-free ODE of §7 with the exact posterior; OT: Laguerre weights $g_k$ for which each cell has Gaussian mass exactly $\frac13$; excess cost $\E[\psi_{\text{flow}}(Z)-\min_k\psi_k(Z)]$ with $\psi_k(z)=\norm{z-y_k}^2-g_k$, which is exact when both maps give each atom mass $\frac13$):</p>
+<ul>
+<li>atoms $(-3,0)$, $(3,0)$, $(0,1)$: both maps give each atom mass $\frac13$, but about <strong>5.7%</strong> of the noise mass lands on a different atom, and the flow map costs about $0.7\%$ more than $W_2^2\approx3.74$;</li>
+<li>atoms $4(-1,-1)$, $4(1.3,-0.7)$, $4(0,1.2)$: $0.3\%$ of the mass changes atom, excess cost $0.0014\%$ ($W_2^2=20.74$);</li>
+<li>two atoms $(\pm1,0)$ with weights $0.3,0.7$: <strong>identical</strong> maps (the posterior depends on the first coordinate only, which follows a 1D monotone flow; the boundary is the line $x=\Phi^{-1}(0.3)=-0.5244$ at every height).</li>
+</ul>
+<figure class="fig"><!-- include figures/L06/cells.svg --><figcaption>Which atom each noise sample reaches: boundaries of the flow cells (green) and of the Laguerre cells of the optimal map (dashed), for three atoms with weights $\frac13$. By symmetry the whole vertical axis flows to the top atom, so its flow cell has a thin tail downwards; the optimal cell is a V. About 5.7% of the Gaussian mass is assigned differently.</figcaption></figure>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML p. 414</span></div>
+<p>[…] This distinction is closely related to counterexamples showing that flow maps associated with Fokker–Planck or diffusion-type evolutions do not in general provide optimal transport maps [332]. In particular, starting from an isotropic Gaussian does not by itself guarantee optimality once the target distribution is non-Gaussian; additional structural assumptions on the path or on the coupling are needed.</p>
+</div>
+<p>([332] is Lavenant and Santambrogio, <em>The flow map of the Fokker–Planck equation does not provide optimal transport</em>, Applied Mathematics Letters 2022.)</p>
+
+<div class="box ml"><div class="box-h">In machine learning — straighter flows, fewer steps</div>
+<p>The number of network evaluations per sample is the main cost of flow and diffusion models. <strong>Minibatch OT couplings</strong> (OT-CFM, multisample flow matching) straighten the learned paths at the price of a $B\times B$ assignment per batch (Hungarian or Sinkhorn, Lesson 7), and report good samples with fewer integration steps on image benchmarks; they also reduce the variance of the regression target, since fewer pairs cross. <strong>Reflow</strong> straightens the paths of a trained model; InstaFlow (Liu et al., ICLR 2024) applies it to Stable Diffusion before distilling the flow into a one-step generator. Neither makes the map exactly optimal in general (this section), but for sampling speed straightness is what matters. Pointer: OT4ML Example 16.2, p. 408 (rectified flow “emphasizes straight couplings, reflow, and the possibility of reducing transport costs and discretization error”).</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — “straight paths” and “Gaussian start” do not imply optimal transport</div>
+<p>A flow whose trajectories are straight lines is optimal only if the coupling it realizes is optimal: the reflow example has straight paths and a non-optimal map. And the map from an isotropic Gaussian to a non-Gaussian target given by flow matching or a diffusion model is in general not the Brenier map (three atoms in the plane, non-commuting Gaussians).</p>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>Is a generated map optimal? → Is it the gradient of a convex function? For linear maps: is the matrix symmetric positive definite?</li>
+<li>Dimension one → monotone flow → optimal map, for any coupling.</li>
+<li>Gaussians with independent coupling → optimal iff $\Sigma_0\Sigma_1=\Sigma_1\Sigma_0$; no schedule changes that.</li>
+<li>Want straight paths → better couplings (minibatch OT), or reflow; want exact OT → an optimal coupling.</li>
+</ul>
+</div>
+<div class="quiz"><p>Flow matching from $\N(0,\Id)$ to $\N(0,\Sigma_1)$ with the independent coupling: is the flow map optimal?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>Yes: $\Sigma_0=\Id$ commutes with everything, and $T_1^{\mathrm{FM}}=\Sigma_1^{1/2}=T^{\mathrm{OT}}$. Non-optimality needs a non-isotropic source that does not commute with the target — or a non-Gaussian target (three atoms).</p>
+</div></details></div>

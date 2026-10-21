@@ -1,0 +1,192 @@
+<h2 id="tf">11. Transformers: tokens are particles, depth is time <span class="ref">OT4ML §16.4, pp. 424–430</span></h2>
+<p class="tldr">A residual attention layer moves every token by a velocity computed from all the tokens: stacking many thin layers is an explicit Euler scheme, and the token measure follows a continuity equation whose velocity depends on the measure. With a Gaussian (L²) attention score, this velocity is mean shift — a Markov averaging that contracts the cloud of tokens to a single point, but, for a narrow bandwidth, only after a very long phase where the tokens sit in clusters. In general this dynamics is <em>not</em> a Wasserstein gradient flow.</p>
+
+<h3 id="tf-why">Depth as time</h3>
+<p>Sections 5 and 10 moved particles by $\dot x_i=-\nabla_W f(\al)(x_i)$ for an energy $f$. A transformer also moves particles — its tokens, the vectors that represent the words of a sentence or the patches of an image — and each layer moves every token according to all the others. The question of this section is what the tools of the lesson say about this motion.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML p. 92 (Def. 4.38)</span></div>
+<p><strong>Definition 4.38</strong> (Mean-field attention map). <em>Fix $p\ge1$, let $Q,K\in\R^{r\times d}$ and $V\in\R^{d\times d}$, write $\theta=(Q,K,V)$, and let $\al\in\Pc_p(\R^d)$. […] The mean-field attention field is</em></p>
+$$\Gamma_\theta[\al](x):=\frac{\int e^{\ps{Qx}{Kz}}\,Vz\,\dd\al(z)}{\int e^{\ps{Qx}{Kz}}\dd\al(z)}\qquad(4.15)$$
+<p>[…] For an empirical token measure, the construction is an exact rewriting of discrete attention.</p>
+</div>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML (16.34)–(16.35), p. 425</span></div>
+<p>Here the number of tokens is fixed in the discrete model and the limit concerns depth: the number $T$ of residual attention layers grows while each layer makes an update of size $1/T$, as in continuous-depth neural networks. […] Since the attention weights are normalized using the whole current token law, the resulting velocity is nonlinear and context dependent. […] We focus on the non-causal single-head mechanism […], ignoring MLP layers, layer normalization and masking.</p>
+<p><em>Attention as a context-dependent velocity.</em> […] Whereas (4.14) replaces a token by its attention output, a residual block adds this output through a skip connection. With residual scale $1/T$, it acts as</p>
+$$x_i\longmapsto x_i+\frac1T\sum_{j=1}^n\frac{e^{\ps{Qx_i}{Kx_j}}\,Vx_j}{\sum_{\ell=1}^ne^{\ps{Qx_i}{Kx_\ell}}}.\qquad(16.34)$$
+<p>The attention output is therefore interpreted as a context-dependent velocity, and the skip connection performs one explicit Euler step along this field. <em>Token measure evolution.</em> […] With $\tau=1/T$, equation (16.34) is exactly</p>
+$$\al^{(\ell+1)}=\pf{\big(\Id+\tau\Gamma_{\theta^{(\ell)}}[\al^{(\ell)}]\big)}{\al^{(\ell)}}.\qquad(16.35)$$
+<p>[…] As $T\to+\infty$, a time interpolation of (16.35) converges formally to the conservation equation $\partial_t\al_t+\dv(\al_t\Gamma_{\theta_t}[\al_t])=0$.</p>
+</div>
+<dl class="decode">
+<dt>$\Gamma_\theta[\al](x)$</dt><dd>The output of attention for a token at $x$: an average of the values $Vz$ of all tokens, weighted by the softmax of the scores $\ps{Qx}{Kz}$. It depends on the tokens only through their empirical measure $\al$ (attention is permutation equivariant, OT4ML p. 91), which is why a measure is the natural state.</dd>
+<dt>“context dependent”</dt><dd>The velocity of a token depends on all the other tokens, as in the interaction flows of §5 — but it is not of the form $-\nabla(V+W*\al)$: the softmax normalisation divides by a quantity that depends on $x$ and on $\al$.</dd>
+<dt>(16.35)</dt><dd>One layer is one explicit Euler step with step $\tau=1/T$ (§1), applied to every token: the new token measure is the push-forward of the old one by $\Id+\tau\Gamma$. It stays a sum of $n$ Diracs (§5).</dd>
+<dt>$\theta^{(\ell)}$, $\theta_t$</dt><dd>Each layer has its own matrices; in the limit, a depth-dependent path of parameters. Below, the parameters are fixed in time.</dd>
+</dl>
+<p>So a deep transformer is a <strong>particle system in which depth plays the role of time</strong>; the limit PDE is a continuity equation, like every equation of §4, but its velocity is not given (yet) by an energy. The rest of the section studies a variant where the motion can be understood completely, then asks whether attention is a gradient flow.</p>
+
+<h3 id="tf-meanshift">Gaussian attention is mean shift</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML (16.36), pp. 425–426</span></div>
+<p><em>$L^2$ attention and mean shift.</em> A particularly geometric variant replaces the dot-product score $\ps{Qx}{Ky}$ by a negative squared Euclidean score $s_\eps(x,y)=-\norm{x-y}^2/(2\eps)$. Take, for simplicity, the same token space for queries, keys and values, and set</p>
+$$\begin{aligned}K_\eps(x,y)&=\exp\big(-\norm{x-y}^2/(2\eps)\big),\\ \rho_\eps[\al](x)&=\int K_\eps(x,y)\dd\al(y),\\ m_\eps[\al](x)&=\frac{\int yK_\eps(x,y)\dd\al(y)}{\rho_\eps[\al](x)}.\end{aligned}$$
+<p>The map $x\mapsto m_\eps[\al](x)$ is exactly Gaussian-kernel attention, i.e. normalized kernel regression over tokens […]. Classical mean shift, however, uses the displacement from the current point to this local barycenter. This gives</p>
+$$\begin{aligned}M_\eps[\al](x)&:=m_\eps[\al](x)-x\\&=\frac{\int(y-x)K_\eps(x,y)\dd\al(y)}{\rho_\eps[\al](x)}=\eps\nabla\log\rho_\eps[\al](x)\end{aligned}\qquad(16.36)$$
+<p>[…] If the data measure $\al$ is frozen, the update $x\leftarrow m_\eps[\al](x)$ is the usual mode-seeking mean-shift iteration. If instead all support points move and the empirical measure is recomputed after every step, one obtains the self-consistent, or blurring, mean-shift process. Its damped update is $x_i^{(\ell+1)}=(1-\tau)x_i^{(\ell)}+\tau m_\eps[\al^{(\ell)}](x_i^{(\ell)})=x_i^{(\ell)}+\tau M_\eps[\al^{(\ell)}](x_i^{(\ell)})$, which is an explicit Euler step of the continuous-time mean-shift equation $\partial_t\al_t+\dv(\al_tM_\eps[\al_t])=0$. For $\tau=1$ this is discrete blurring mean shift; for small $\tau$ it approximates a transport PDE that moves each token uphill along the log of the smoothed token density.</p>
+</div>
+<dl class="decode">
+<dt>$\rho_\eps[\al]$</dt><dd>A kernel density estimate of the tokens (up to the factor $(2\pi\eps)^{-d/2}$): the tokens smoothed by a Gaussian of variance $\eps$. The temperature $\eps$ is the squared bandwidth.</dd>
+<dt>$m_\eps[\al](x)$</dt><dd>The attention output: the average of the tokens seen from $x$, with weights $\propto K_\eps(x,y)$ (nearby tokens count most). It is the Nadaraya–Watson kernel regression of the function $y\mapsto y$.</dd>
+<dt>$=\eps\nabla\log\rho_\eps$</dt><dd>One line: $\nabla_xK_\eps(x,y)=\frac{y-x}\eps K_\eps(x,y)$, so $\eps\nabla\rho_\eps=\int(y-x)K_\eps\dd\al$; divide by $\rho_\eps$. The velocity is $\eps$ times the <em>score</em> of the smoothed density, as in the Langevin drift of §6.</dd>
+<dt>frozen vs blurring</dt><dd>Frozen: points climb a fixed density and stop at its modes (a clustering algorithm). Blurring: the density is recomputed from the moving tokens, so it sharpens as they move — this is the attention dynamics.</dd>
+</dl>
+<div class="box intu"><div class="box-h">Intuition — attention denoises each token against the others (our remark)</div>
+<p>If $Y\sim\al$ and $X=Y+\sqrt\eps\,Z$ with $Z\sim\N(0,\Id)$, the posterior law of $Y$ given $X=x$ has weights $\propto K_\eps(x,y)\dd\al(y)$, so $m_\eps[\al](x)=\E[Y\,|\,X=x]$: <strong>the attention output is the optimal denoiser of the token cloud at noise level $\eps$</strong>, and (16.36) is Tweedie’s formula $\E[Y|X=x]=x+\eps\nabla\log p_\eps(x)$ (OT4ML Prop. 16.6, p. 411), $p_\eps=\al*\N(0,\eps\Id)\propto\rho_\eps[\al]$. Blurring mean shift asks every token to “denoise itself” against the current cloud, again and again — the same object, $\eps\nabla\log(\al*\N(0,\eps))$, that a diffusion model learns.</p>
+</div>
+
+<h3 id="tf-consensus">Markov averaging and consensus</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML (16.37)–(16.39), p. 426</span></div>
+<p><em>Consensus and Markov averaging.</em> When the averaging measure evolves together with the particles, mean shift becomes a consensus model. […] replace $K_\eps$ by a positive kernel $K$ and write</p>
+$$M_K[\al](x):=\frac{\int(y-x)K(x,y)\dd\al(y)}{\int K(x,y)\dd\al(y)}.\qquad(16.37)$$
+<p>For an empirical law $\al=\sum_{i=1}^na_i\delta_{x_i}$, where $a_i>0$ and $\sum_ia_i=1$, let $X\in\R^{n\times d}$ have rows $x_i\T$, set $\mathbf a=(a_i)_i$, and define</p>
+$$\begin{aligned}(\mathbf K_X)_{i,j}&=K(x_i,x_j),\\ \mathbf P_X&:=\mathrm{diag}(\mathbf K_X\mathbf a)^{-1}\mathbf K_X\,\mathrm{diag}(\mathbf a).\end{aligned}\qquad(16.38)$$
+<p>The matrix $\mathbf P_X$ is positive and row-stochastic, $\mathbf P_X\mathbf 1_n=\mathbf 1_n$. Its $i$th row is precisely the probability law used to average the cloud from the viewpoint of $x_i$. […] The particle system (16.37) is therefore</p>
+$$\dot x_i=\frac{\sum_ja_jK(x_i,x_j)(x_j-x_i)}{\sum_ja_jK(x_i,x_j)},$$
+<p>or equivalently</p>
+$$\dot X=(\mathbf P_X-\Id_n)X.\qquad(16.39)$$
+<p>Thus blurring mean shift is a state-dependent Markov averaging process.</p>
+</div>
+<p>Each token moves towards a weighted average of the tokens, with weights given by a row of a Markov matrix. Averaging shrinks spreads: a coordinate of the averaged cloud, $(\mathbf P_Xz)_i$, lies between $\min z$ and $\max z$. How much it shrinks is measured by the Dobrushin coefficient, the same object (seen from the tangent side) as the Birkhoff contraction coefficient that drives the convergence of Sinkhorn in Lesson 7.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 16.19, p. 426</span></div>
+<p><strong>Proposition 16.19</strong> (Dobrushin contraction is the tangent form of Birkhoff contraction). <em>Let $\mathbf P\in\R_+^{n\times n}$ be row-stochastic. Its Dobrushin coefficient is</em></p>
+$$\begin{aligned}\delta(\mathbf P)&:=\frac12\max_{i,\ell}\sum_j\abs{\mathbf P_{i,j}-\mathbf P_{\ell,j}}\\&=1-\min_{i,\ell}\sum_j\min\{\mathbf P_{i,j},\mathbf P_{\ell,j}\}.\end{aligned}\qquad(16.40)$$
+<p><em>It is the exact operator norm induced by $\norm{\cdot}_V$ on $\R^n/\mathrm{Span}(\mathbf 1_n)$: $\delta(\mathbf P)=\sup_{z\notin\mathrm{Span}(\mathbf 1_n)}\norm{\mathbf Pz}_V/\norm{z}_V$. (16.41) Consequently, $\norm{\mathbf Pz}_V\le\delta(\mathbf P)\norm{z}_V$ $(z\in\R^n)$. (16.42) If $\mathbf P>0$, then this exact tangent factor is bounded by the Birkhoff coefficient of Theorem 9.17: $\delta(\mathbf P)\le\lambda(\mathbf P)<1$. (16.43)</em></p>
+</div>
+<dl class="decode">
+<dt>$\norm{z}_V$</dt><dd>The variation seminorm $\max_jz_j-\min_jz_j$, the width of the vector $z$ (OT4ML Def. 9.6). It ignores constants: $\norm{z+s\mathbf 1}_V=\norm{z}_V$.</dd>
+<dt>$\delta(\mathbf P)$</dt><dd>The largest total-variation distance between two rows; $1-\delta$ is the smallest overlap between two rows. $\delta=0$: all rows equal (one averaging kills all spread); $\delta=1$: two rows with disjoint supports (two groups that do not see each other).</dd>
+<dt>$\lambda(\mathbf P)$</dt><dd>Birkhoff’s coefficient $\frac{\sqrt\eta-1}{\sqrt\eta+1}$, with $\eta$ the largest cross-ratio $\frac{P_{ij}P_{kl}}{P_{il}P_{kj}}$ (Lesson 7). Unchanged by the diagonal scalings of (16.38), so it can be computed on $\mathbf K_X$ directly (OT4ML (16.47)–(16.48), p. 427).</dd>
+</dl>
+<div class="box idea"><div class="box-h">Idea of the proof</div>
+<p>Two rows $p$, $p'$ share a common mass $\sum_j\min(p_j,p'_j)$, which gives the same contribution to $(\mathbf Pz)_i$ and $(\mathbf Pz)_\ell$. Only the remaining mass, $\frac12\sum_j\abs{p_j-p'_j}$, can create a difference, at most this mass times the width of $z$.</p>
+</div>
+<details class="fold proof"><summary>Proof of (16.40)–(16.42) (OT4ML pp. 426–427)</summary><div class="fold-body">
+<ol class="steps">
+<li>Write $r_j=\min(p_j,p'_j)$, $p=r+u$, $p'=r+u'$ with $u,u'\ge0$ and $\sum_ju_j=\sum_ju'_j=1-\sum_jr_j=\frac12\sum_j\abs{p_j-p'_j}=:m$.<span class="why">$p$ and $p'$ both have mass $1$; $\abs{p_j-p'_j}=u_j+u'_j$ and only one of $u_j,u'_j$ is nonzero.</span></li>
+<li>$\ps{p}{z}-\ps{p'}{z}=\ps{u}{z}-\ps{u'}{z}\le m\max z-m\min z=m\norm{z}_V$.<span class="why">The common part $r$ cancels; $u$ and $u'$ are nonnegative of mass $m$.</span></li>
+<li>$\norm{\mathbf Pz}_V\le\delta(\mathbf P)\norm{z}_V$.<span class="why">Line 2 for every pair of rows; the largest $m$ is $\delta(\mathbf P)$ by definition. The equality of the two expressions in (16.40) is line 1.</span></li>
+<li>Equality in (16.41): for the pair of rows attaining the max, take $z_j=1$ if $p_j\ge p'_j$, $0$ otherwise.<span class="why">Then $\norm{z}_V=1$ and $\ps{p-p'}{z}=\sum_{p_j\ge p'_j}(p_j-p'_j)=m$.</span></li>
+</ol>
+<p>The bound $\delta\le\lambda$ (16.43) linearises Birkhoff’s contraction of Hilbert’s metric at the constant vector: apply it to $e^{sz}$ and $\mathbf 1$, use $\log(\mathbf Pe^{sz})=s\mathbf Pz+O(s^2)$ and let $s\to0$ (p. 427).</p>
+</div></details>
+<div class="box example" id="tf-example"><div class="box-h">Worked example — three tokens on a line</div>
+<p>Tokens $x=(0,1,3)$, equal weights, Gaussian kernel with $\eps=1$. The kernel and its row normalisation (16.38):</p>
+$$\mathbf K_X=\begin{pmatrix}1&0.6065&0.0111\\0.6065&1&0.1353\\0.0111&0.1353&1\end{pmatrix},$$
+$$\mathbf P_X=\begin{pmatrix}0.6182&0.3749&0.0069\\0.3482&0.5741&0.0777\\0.0097&0.1180&0.8723\end{pmatrix}.$$
+<ul>
+<li><strong>Dobrushin.</strong> Overlaps of the rows: $(1,2)$: $0.3482+0.3749+0.0069=0.7300$; $(2,3)$: $0.2054$; $(1,3)$: $0.0097+0.1180+0.0069=0.1346$. So $\delta(\mathbf P_X)=1-0.1346=0.8654$: the outer tokens see each other very little.</li>
+<li><strong>One full step</strong> ($\tau=1$): $\mathbf P_Xx=(0.3956,\ 0.8072,\ 2.7348)$, width $2.3393=0.7798\times3$. Check: $0.7798\le\delta=0.8654\le\lambda=\tanh(3^2/4)=0.9780$ (the Gaussian Birkhoff bound (16.56) below, with the diameter $D=3$; here it is also $\lambda(\mathbf K_X)$, attained by the pair $0,3$).</li>
+<li><strong>The mean moves.</strong> The velocities $(\mathbf P_X-\Id)x=(0.3956,\ -0.1928,\ -0.2652)$ do not sum to $0$: the mean decreases at rate $0.0208$. Following the continuous flow (16.39) numerically: diameter $2.326$, $1.505$, $0.0978$, $6.6\times10^{-4}$ at $t=1,2,5,10$; all three tokens meet at $1.2203$, not at the initial mean $4/3$.</li>
+</ul>
+</div>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Thm 16.20, p. 428</span></div>
+<p><strong>Theorem 16.20</strong> (Dobrushin consensus for positive mean shift). <em>Let $\al_0\in\Pc(\R^d)$ have compact support, and set $C_0=\mathrm{conv}(\supp\al_0)$, $D_0=\diam(\supp\al_0)$, $\bar\delta=\bar\delta_K(C_0)<1$. Assume that $K:C_0\times C_0\to(0,+\infty)$ is Lipschitz. For an empirical initial measure […], let $X^{(\ell)}$ follow the damped blurring iteration $X^{(\ell+1)}=\big((1-\tau)\Id_n+\tau\mathbf P_{X^{(\ell)}}\big)X^{(\ell)}$, $0<\tau\le1$, define $\delta^{(\ell)}=\delta(\mathbf P_{X^{(\ell)}})$, $q^{(\ell)}=1-\tau(1-\delta^{(\ell)})$, $q_\tau=1-\tau(1-\bar\delta)<1$. Then</em></p>
+$$D(X^{(\ell)}):=\max_{i,j}\norm{x_i^{(\ell)}-x_j^{(\ell)}}\le D_0\prod_{r=0}^{\ell-1}q^{(r)}\le q_\tau^\ell D_0.\qquad(16.51)$$
+<p><em>All particles converge to a common $\hat x_\infty\in C_0$ […]. The characteristic solution of $\partial_t\al_t+\dv(\al_tM_K[\al_t])=0$, $\al_{t=0}=\al_0$, (16.52) is globally defined and has nested convex hulls […]. Writing $D(t)=\diam(\supp\al_t)$, one has the adaptive estimate</em></p>
+$$\begin{aligned}D(t)&\le D(s)\exp\Big(-\int_s^t\big(1-\delta(\mathbf P_{\al_r})\big)\dd r\Big)\\&\le e^{-(1-\bar\delta)(t-s)}D(s).\end{aligned}\qquad(16.53)$$
+<p><em>Consequently there exists $\hat x_\infty\in C_0$ such that $\mathcal W_\infty(\al_t,\delta_{\hat x_\infty})\le\frac{D_0}{1-\bar\delta}e^{-(1-\bar\delta)t}$. (16.54)</em></p>
+</div>
+<dl class="decode">
+<dt>$\bar\delta_K(C_0)$</dt><dd>The worst Dobrushin coefficient over all clouds in $C_0$, $\sup_{\al\in\Pc(C_0)}\delta(\mathbf P_\al)$; it is at most the Birkhoff coefficient $\lambda_K(C_0)<1$ of the kernel on $C_0$ (OT4ML (16.49), p. 427), and $<1$ because $K>0$: every token sees every other token a little.</dd>
+<dt>$q^{(\ell)}$</dt><dd>One damped step mixes $1-\tau$ of the identity (which does not contract) with $\tau$ of an averaging (which contracts widths by $\delta^{(\ell)}$).</dd>
+<dt>$\mathcal W_\infty$</dt><dd>The largest displacement: every token is within $\frac{D_0}{1-\bar\delta}e^{-(1-\bar\delta)t}$ of the consensus point.</dd>
+</dl>
+<details class="fold proof"><summary>Proof of the continuous part (OT4ML p. 428)</summary><div class="fold-body">
+<ol class="steps">
+<li>$x+M_K[\al](x)=\mathbf P_\al\Id(x)\in\mathrm{conv}(\supp\al)$: no token leaves the current convex hull.<span class="why">$x+M_K[\al](x)$ is a weighted average of the tokens (16.37); the velocity points into the hull, so the hulls are nested and the flow exists for all times ($K$ is bounded below on $C_0$, so the field is Lipschitz).</span></li>
+<li>$\diam S=\sup_{\theta\in\mathbb S^{d-1}}\big(\sup_{x\in S}\ps\theta x-\inf_{x\in S}\ps\theta x\big)$. (16.55)<span class="why">The diameter is the largest width of the projections on a direction: it suffices to contract each scalar coordinate $f_\theta(x)=\ps\theta x$.</span></li>
+<li>$D^+w_\theta(t)\le\norm{\mathbf P_{\al_t}f_\theta}_V-w_\theta(t)\le-(1-\delta(\mathbf P_{\al_t}))\,w_\theta(t)$, with $w_\theta(t)$ the width of $\supp\al_t$ in direction $\theta$.<span class="why">The extreme tokens move with velocity $\mathbf P_{\al_t}f_\theta-f_\theta$ (16.39); the averaged coordinate has width at most $\delta$ times the width (Prop. 16.19 for the operator (16.44)).</span></li>
+<li>(16.53).<span class="why">Grönwall’s lemma on line 3, then the supremum over $\theta$ (line 2).</span></li>
+<li>(16.54).<span class="why">$\norm{\dot X_t}\le D(t)$ along every characteristic, so each path is Cauchy; integrate the exponential bound from $t$ to $\infty$. All limits coincide because $D(t)\to0$.</span></li>
+</ol>
+</div></details>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML (16.56)–(16.57), p. 429</span></div>
+<p>For the Gaussian kernel $K_\eps(x,y)=e^{-\norm{x-y}^2/(2\eps)}$, the cross-ratio has the closed form $\log\frac{K_\eps(x,y)K_\eps(x',y')}{K_\eps(x',y)K_\eps(x,y')}=\frac{\ps{x-x'}{y-y'}}\eps$. Hence, for a compact convex set $C$ of diameter $D$,</p>
+$$\eta_{K_\eps}(C)=e^{D^2/\eps},\qquad\lambda_{K_\eps}(C)=\tanh\Big(\frac{D^2}{4\eps}\Big).\qquad(16.56)$$
+<p>[…] the continuous flow obeys</p>
+$$D(t)\le D(s)\exp\Big(-\int_s^t\Big(1-\tanh\Big(\frac{D(r)^2}{4\eps}\Big)\Big)\dd r\Big).\qquad(16.57)$$
+<p>Thus strict positivity gives a global exponential rate, and the certified contraction becomes much stronger once the cloud is narrow relative to the bandwidth. These are Birkhoff bounds; the exact Dobrushin factors can be smaller.</p>
+</div>
+<p>When the cloud is wide compared with the bandwidth, $D^2/(4\eps)$ is large and the certified rate $1-\tanh(D^2/(4\eps))\approx2e^{-D^2/(2\eps)}$ is exponentially small. The example below shows that this is not pessimism of the bound: for two tokens it is the exact rate.</p>
+<div class="box example" id="tf-two"><div class="box-h">Worked example — two tokens: (16.57) is an equality, and merging takes forever</div>
+<p>Two tokens $x_1<x_2$ on a line, equal weights, distance $D$; write $k=e^{-D^2/(2\eps)}$. Then</p>
+$$\mathbf P_X=\frac1{1+k}\begin{pmatrix}1&k\\k&1\end{pmatrix},$$
+$$\begin{aligned}\delta(\mathbf P_X)&=\frac{1-k}{1+k}=\tanh\Big(\frac{D^2}{4\eps}\Big),\\ \dot D&=-\frac{2k}{1+k}\,D=-\Big(1-\tanh\Big(\frac{D^2}{4\eps}\Big)\Big)D.\end{aligned}$$
+<p>(First line: (16.40) with the two rows of $\mathbf P_X$, and $\frac{1-e^{-2u}}{1+e^{-2u}}=\tanh u$ with $u=\frac{D^2}{4\eps}$. Second line: (16.39) gives $\dot x_1=\frac{k}{1+k}D=-\dot x_2$.) So the Dobrushin coefficient equals the Birkhoff bound, and (16.57) holds <strong>with equality</strong>. Separating variables, the time to go from $D_0$ to $D_1$ is</p>
+$$\begin{aligned}T&=\int_{D_1}^{D_0}\frac{e^{D^2/(2\eps)}+1}{2D}\dd D\\&=\frac12\log\frac{D_0}{D_1}+\frac14\int_{D_1^2/(2\eps)}^{D_0^2/(2\eps)}\frac{e^w}w\dd w,\end{aligned}$$
+<p>dominated by $\frac{\eps}{2D_0^2}e^{D_0^2/(2\eps)}$ when $\eps$ is small. From $D_0=2$ to $D_1=0.01$ (numerical quadrature, and an ODE solver for the two tokens):</p>
+<div class="table-wrap"><table>
+<thead><tr><th>$\eps$</th><th>$1$</th><th>$0.5$</th><th>$0.25$</th><th>$0.1$</th></tr></thead>
+<tbody>
+<tr><td>speed $-\dot D$ at $D=2$</td><td>$0.477$</td><td>$0.0719$</td><td>$1.34\times10^{-3}$</td><td>$8.2\times10^{-9}$</td></tr>
+<tr><td>merging time $T$</td><td>$6.22$</td><td>$9.72$</td><td>$114.7$</td><td>$6.4\times10^{6}$</td></tr>
+</tbody></table></div>
+<p>Consensus is guaranteed, but with $\eps=0.1$ two tokens at distance $2$ are, for all practical depths, two separate clusters.</p>
+</div>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML p. 429 (Rem. 16.21)</span></div>
+<p>[Remark 16.21] […] both slow regimes have the same origin: when the positive kernel has a large projective diameter, its Birkhoff factor approaches one. This occurs for small entropic temperature in Sinkhorn and for a narrow Gaussian bandwidth relative to the cloud diameter in mean shift.</p>
+<p><em>Scope of the consensus result.</em> […] Because row normalization makes the pairwise coefficients asymmetric, the consensus point need not equal the barycenter of $\al_0$; that barycenter is conserved for the constant kernel, but not in general. The self-consistent flow should not be confused with classical mode seeking, where the data measure is frozen and different initial points may converge to different modes. Finally, one-point consensus can fail for the hard confidence kernel $K_R(x,y)=\mathbb 1_{\{\norm{x-y}\le R\}}$: once the interaction graph disconnects, its Dobrushin and Birkhoff coefficients can equal one. […] For the Gaussian kernel, global positivity ultimately forces a single Dirac, although $1-\tanh(D_0^2/(4\eps))$ can be very small and the multimodal transient can be long.</p>
+</div>
+<p>This long multimodal transient is what the widget shows, in the setting of real transformers, where a normalisation layer keeps the tokens on a sphere (here a circle). For tokens $x=(\cos\vartheta,\sin\vartheta)$ and $y=(\cos\varphi,\sin\varphi)$ on the unit circle, $\norm{x-y}^2=2-2\cos(\varphi-\vartheta)$, so Gaussian attention weights are $\propto e^{\cos(\varphi-\vartheta)/\eps}$, i.e. dot-product attention with $Q=K=\Id/\sqrt\eps$; projecting the attention output on the tangent line gives</p>
+$$\dot\vartheta_i=\sum_jw_{ij}\sin(\vartheta_j-\vartheta_i),\qquad w_{ij}=\frac{e^{\cos(\vartheta_j-\vartheta_i)/\eps}}{\sum_\ell e^{\cos(\vartheta_\ell-\vartheta_i)/\eps}}.$$
+<p>(This projected model is our choice for the illustration; it is the normalised self-attention dynamics on the sphere of Geshkovski et al., which the course cites but does not write.)</p>
+<div class="widget" data-widget="l8tokens"></div>
+<p id="tf-widget-text">What to look at: with the default $\eps=0.1$ and 32 random tokens (26 separate groups at $t=0$, counting gaps larger than $0.05$ rad), the tokens gather into 3 clusters by $t\approx8$; then nothing visible happens for almost three decades of time; at $t\approx5\times10^3$ two clusters merge, and at $t=10^4$ two clusters remain, at angles $1.14$ and $4.71$ rad, about $155^\circ$ apart — separate for any reasonable depth. The row “clusters” under the time axis counts them at each decade. With $\eps=1$: one cluster by $t\approx11$. With $\eps=0.25$: two clusters at $t\approx12$, one at $t\approx10^3$. With $\eps=0.05$: three clusters from $t\approx140$ to the end. The last line of the readout gives the merging time of two lone tokens at angle $\pi/2$: $5.77$, $12.3$, $1132$ and $1.2\times10^7$ for $\eps=1,\,0.25,\,0.1,\,0.05$ — the exponential law of the two-token example, with $\norm{x-y}^2=2-2\cos\frac\pi2=2$, so that $e^{\norm{x-y}^2/(2\eps)}=e^{1/\eps}$. (Check: an independent integration from the same initial angles with an adaptive ODE solver gives the same cluster counts at every decade, $26,26,21,3,3,3,2$ for $\eps=0.1$, and the last merge at $t\approx5.2\times10^3$.)</p>
+
+<h3 id="tf-gradient">Is attention a Wasserstein gradient flow?</h3>
+<p>Sections 4–10 obtained every dynamics as $\dot x=-\nabla_Wf(\al)(x)$, and this is what gave convergence tools (dissipation, convexity, Łojasiewicz). Is there an energy behind attention?</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML p. 430</span></div>
+<p><em>Gradient structure and limitations.</em> When the token space has dimension $d$ and the query/key space has dimension $r$, take $Q,K\in\R^{r\times d}$ and $V\in\R^{d\times d}$. If $V=Q\T K$, the field $\Gamma_\theta[\al]$ is a gradient vector field in the token variable. Indeed, define the log-partition potential $\Phi_\al(x)=\int\exp(\ps{Qx}{Ky})\dd\al(y)$, $U_\al(x)=\log\Phi_\al(x)$. Then $\nabla_xU_\al(x)=\Gamma_\theta[\al](x)$. This proves only that the velocity is an instantaneous gradient in $x$; it does not by itself identify a Wasserstein energy. Indeed, the natural scalar candidate $f_{\mathrm{att}}(\al)=\int U_\al(x)\dd\al(x)$ has first variation</p>
+$$\delta f_{\mathrm{att}}(\al)(z)=U_\al(z)+\int\frac{\exp(\ps{Qx}{Kz})}{\Phi_\al(x)}\dd\al(x),$$
+<p>up to an additive constant. The second term is the response of every query normalization to a perturbation of the key distribution, and its spatial gradient is absent from $\Gamma_\theta[\al]$. Thus, without additional symmetry or integrability conditions, the displayed attention PDE is a transportation dynamics rather than the Wasserstein gradient flow of this fixed scalar functional. Special variants recover additional structure: Sinkhorn attention can be interpreted through doubly stochastic normalization and Wasserstein-type gradient flows, while layer normalization leads naturally to dynamics on the sphere and to modified metrics. The key open difficulty for the present viewpoint is training: […] learning corresponds to optimizing the time-dependent parameters $(\theta_t)_t$ rather than merely analyzing the forward PDE for fixed parameters.</p>
+</div>
+<dl class="decode">
+<dt>“instantaneous gradient”</dt><dd>At each time, the velocity is $\nabla U_{\al_t}$ for some function — but a gradient flow (§3) needs this function to be the first variation $\delta f(\al_t)$ of <em>one fixed</em> energy $f$. Here the obvious candidate has an extra term in its first variation.</dd>
+<dt>the extra term</dt><dd>$U_\al$ depends on $\al$ through $\Phi_\al$ (keys) <em>and</em> is integrated against $\al$ (queries): the first variation sees both roles (a “two-slot” computation, as for interaction energies in §3), the attention velocity only the first.</dd>
+</dl>
+<div class="box course"><div class="box-h">In the course <span class="ref">StatOT §6.6, pp. 205–206</span></div>
+<p>This perspective on transformers was first put forward in [SABP22] which raised the question of whether this curve could be viewed as a Wasserstein gradient flow. […] Unfortunately, [SABP22] also show that this is not the case due to a lack of symmetry. To overcome this limitation, one may consider instead the unnormalized self-attention dynamics introduced in [GLPR24]. These dynamics are of the form $\dot x_t=\int ye^{\ps{x_t}{y}}\mu_t(\dd y)=\nabla\big[\int e^{\ps{\cdot}{y}}\mu_t(\dd y)\big](x_t)$. We readily get that these dynamics describe the Wasserstein gradient flow of the interaction energy $\mathcal F(\mu):=-\iint e^{\ps xy}\mu(\dd x)\mu(\dd y)$. […] In practice however, tokens are restricted to live on the unit sphere $\mathbb S^{d-1}$ […] (“layernorm”). […] these dynamics correspond to a Wasserstein gradient flow of the interaction energy $\mathcal F$ now defined on the sphere. In fact, since for $x,y\in\mathbb S^{d-1}$, it holds that $\norm{x-y}^2=2(1-\ps xy)$, we can write $\mathcal F$ as</p>
+$$\mathcal F(\mu):=-e\iint_{\mathbb S^{d-1}\times\mathbb S^{d-1}}e^{-\frac{\norm{x-y}^2}2}\mu(\dd x)\mu(\dd y).\qquad(6.29)$$
+<p>It can be readily seen that the maximizers of this functional are precisely Dirac deltas $\delta_x$ for any $x\in\mathbb S^{d-1}$. Hence unnormalized self-attention is a Wasserstein gradient flow of a functional minimized at Dirac deltas, which correspond to states where all the tokens are clustered. Unfortunately, this functional is not geodesically convex and admits many stationary points where the Wasserstein gradient vanishes. Using this framework [CRMB24, GLPR24] show that these points are in fact saddle points, guaranteeing asymptotic convergence to a single cluster when dynamics are initialized in a generic position.</p>
+</div>
+<dl class="decode">
+<dt>unnormalized</dt><dd>No softmax denominator: the weights are $e^{\ps{x}{y}}$ themselves. The velocity is then the gradient of $x\mapsto\int e^{\ps xy}\dd\mu(y)$, and this function <em>is</em> (up to a factor) the first variation of the interaction energy $-\iint e^{\ps xy}$ (§3, interaction row of the table): the symmetry that the softmax destroyed is back.</dd>
+<dt>(6.29)</dt><dd>On the sphere, $e^{\ps xy}=e\cdot e^{-\norm{x-y}^2/2}$: an attractive Gaussian interaction (§5). $\iint e^{-\norm{x-y}^2/2}\dd\mu\dd\mu\le1$ with equality only for Diracs, so $\mathcal F\ge-e$ with equality exactly at Diracs: all tokens in one cluster.</dd>
+<dt>saddle points</dt><dd>Other stationary measures exist (on a circle: tokens evenly spread, or two antipodal clusters — every token feels a zero net force by symmetry), but they are unstable: a generic initialisation ends in one cluster — eventually.</dd>
+</dl>
+<div class="box remark"><div class="box-h">Note on the sources — StatOT p. 206</div>
+<p>“The <em>maximizers</em> of this functional are precisely Dirac deltas” should read <em>minimizers</em>, as the next sentence says. Check: on the sphere, $\iint e^{-\norm{x-y}^2/2}\dd\mu\dd\mu\le1$, with equality iff $\norm{x-y}=0$ $\mu\otimes\mu$-almost everywhere, i.e. $\mu$ is a Dirac; so $\mathcal F=-e\iint\cdots\ge-e=\mathcal F(\delta_x)$. Second, a factor $2$: the first variation of $-\iint e^{\ps xy}\dd\mu\dd\mu$ is $-2\int e^{\ps xy}\dd\mu(y)$ (two slots), so its flow is $\dot x=2\int ye^{\ps xy}\dd\mu(y)$; the displayed dynamics is the flow of $\frac12\mathcal F$ (the same curves, at half speed). Neither slip affects the conclusions.</p>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — transformers as interacting particles</div>
+<p><strong>Clusters of tokens.</strong> Geshkovski, Letrouit, Polyanskiy and Rigollet (“A mathematical perspective on transformers”, Bull. AMS 2025; [248] in OT4ML, [GLPR24] in StatOT) study exactly the dynamics of the widget, in any dimension: tokens on the sphere cluster, the number of clusters depends on the temperature, and the clustered state is metastable before a final collapse. A related collapse was observed for attention without skip connections (Dong, Cordonnier and Loukas, ICML 2021, not cited in the course): the token matrix tends to rank one, doubly exponentially fast with depth, while skip connections and MLP layers prevent this degeneration. <strong>Sinkformers.</strong> Sander, Ablin, Blondel and Peyré (AISTATS 2022, [471] in OT4ML, [SABP22] in StatOT) replace the softmax (row-stochastic) by a few Sinkhorn iterations (doubly stochastic attention, Lesson 7): the symmetry is restored and the course states that this variant “can be interpreted through […] Wasserstein-type gradient flows” (OT4ML p. 430). <strong>$L^2$ attention.</strong> The Gaussian score of (16.36) is used in transformer variants “motivated by Lipschitz control” (OT4ML p. 425, citing Kim, Papamakarios and Mnih 2020): a model whose output moves little when the input tokens move little, measured by $W_p$ on token measures (OT4ML Prop. 4.39, p. 92). <strong>Concrete picture:</strong> the widget with $n=32$ is a prompt of 32 tokens embedded in dimension 2 and normalised to the circle, processed by a deep stack of identical attention layers; the horizontal axis is depth.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul>
+<li><strong>Output vs velocity.</strong> The attention output $m_\eps$ is a position (a barycenter); the velocity is $M_\eps=m_\eps-\Id$. “Adding $m_\eps$ directly as a residual would produce a different drift” (OT4ML p. 426).</li>
+<li><strong>The mean is not conserved</strong> (worked example above: the tokens meet at $1.2203$, not at $4/3$), unlike the interaction flows of §5 with a symmetric force.</li>
+<li><strong>Consensus is not contraction between clouds.</strong> Theorem 16.20 shrinks one cloud; “the theorem does not assert contraction between two different clouds” (Rem. 16.21).</li>
+<li><strong>“Converges to one point” says nothing about when.</strong> The certified rate $1-\tanh(D_0^2/(4\eps))$ can be $10^{-8}$; the clusters are what a finite-depth network sees.</li>
+<li><strong>Not every particle dynamics is a gradient flow.</strong> Softmax attention is not (without extra structure): no energy, no dissipation identity, no geodesic convexity argument.</li>
+</ul>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>Residual layer $x\mapsto x+\tau\,\mathrm{Att}(x)$ → one explicit Euler step; token measure → push-forward (16.35); infinite depth → continuity equation.</li>
+<li>Gaussian attention → mean shift: $M_\eps=\eps\nabla\log\rho_\eps$ (the score of the smoothed tokens; Tweedie).</li>
+<li>Row-stochastic averaging → widths contract by the Dobrushin coefficient $\delta(\mathbf P)\le\lambda=\tanh(D^2/(4\eps))$ (Gaussian kernel).</li>
+<li>Narrow bandwidth → long-lived clusters (time $\sim e^{D^2/(2\eps)}$), then consensus.</li>
+<li>Gradient-flow structure → symmetric interactions: unnormalised attention on the sphere, or Sinkhorn normalisation.</li>
+</ul>
+</div>
+<div class="quiz"><p>Constant kernel $K\equiv1$, equal weights. Solve (16.39). What do Prop. 16.19 and Theorem 16.20 give, and are they sharp?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>$\mathbf P_X=\frac1n\mathbf 1\mathbf 1\T$, so $\dot x_i=\bar x-x_i$ with $\bar x=\frac1n\sum_jx_j$. Summing, $\dot{\bar x}=0$: the mean is conserved, and $x_i(t)=\bar x+e^{-t}(x_i(0)-\bar x)$. All rows of $\mathbf P_X$ are equal, so $\delta=0$ and (16.53) gives $D(t)\le e^{-t}D_0$ — an equality. With the hard kernel $K_R$ and two tokens at distance $>R$, instead, $\mathbf P_X=\Id$, $\delta=1$, and nothing moves.</p>
+</div></details></div>

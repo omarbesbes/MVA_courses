@@ -107,7 +107,7 @@ def fig_gauss_plane():
     f.circle(4, 2, 5, "f1")
     f.text(0, 1, "α₀ = N(0, 1)", "tx-s t2", "start", dx=6, dy=16)
     f.text(4, 2, "α₁ = N(4, 2²)", "tx-s t1", "start", dx=8, dy=4)
-    f.text(0.75, 1.1875, "geodesic: action 17 = W₂²", "tx-s t3", "start", dy=-8)
+    f.text(1.45, 1.3625, "geodesic: action 17 = W₂²", "tx-s t3", "start", dy=15)
     f.text(2.1, 1.0, "translate, then dilate: action 34", "tx-s", "middle", dy=-6)
     f.text(1.6, 1 + 0.4 + 2 * 0.4 * 0.6, "bent: action 18.33", "tx-s t5", "end", dx=-6, dy=-4)
     for t in [0.5]:
@@ -298,7 +298,7 @@ def fig_bb_solver():
     a0 /= a0.sum() * dx; a1 /= a1.sum() * dx
     S = BB1D(a0, a1, L, R, T)
     acts = S.solve(1000)
-    rb, mb = S.interp(S.U)
+    rho_k = S.split(S.U)[0]  # densities rho_k at the times k/T (raw staggered values, no time averaging)
     edges = L + dx * np.arange(N + 1)
     c0 = np.concatenate([[0], np.cumsum(a0 * dx)]); c1 = np.concatenate([[0], np.cumsum(a1 * dx)])
     uu = (np.arange(400000) + 0.5) / 400000
@@ -311,7 +311,7 @@ def fig_bb_solver():
         g = Fig(c, (62, y0 - 46, 320, 46), (L, R), (0, 1.15))
         k = int(round(t * T))
         if 0 < k < T:
-            dens = 0.5 * (rb[k - 1] + rb[k])
+            dens = rho_k[k]
         else:
             dens = a0 if k == 0 else a1
         qh = (1 - t) * qa + t * qb
@@ -504,7 +504,7 @@ def fig_schedules():
         c.text(125 + col * 215, 20, title, "tx-b", "middle")
     c.text(10, 36, "data", "tx-s t1", "start")
     c.text(10, 232, "noise", "tx-s t2", "start")
-    c.text(330, 262, f"every particle starting left of Φ⁻¹(0.3) = {q:.3f} (black tick) lands on −2, every other on +1", "tx-s", "middle")
+    c.text(330, 262, f"every particle starting left of Φ⁻¹(0.3) = {q:.3f} (tick mark) lands on −2, every other on +1", "tx-s", "middle")
     c.text(330, 276, "trajectories differ, the terminal map is the same: in 1D it is the monotone (optimal) map", "tx-s", "middle")
     c.save()
 
@@ -552,7 +552,7 @@ def fig_fm_gauss():
     c.text(x0, 68, "blue: α₁ = N(0, Σ₁) (1-st.-dev. ellipses)", "tx-s", "start")
     c.text(x0, 86, "green curves: flow-matching paths (6 shown)", "tx-s", "start")
     c.text(x0, 104, "green dots: flow map T₁ᶠᴹ (independent", "tx-s", "start")
-    c.text(x0, 118, "coupling); black circles: Brenier map Tᴼᵀ", "tx-s", "start")
+    c.text(x0, 118, "coupling); open circles: Brenier map Tᴼᵀ", "tx-s", "start")
     c.text(x0, 160, f"cost of T₁ᶠᴹ: E‖T(X) − X‖² = {cost(Tfm):.4f}", "tx-s t3", "start")
     c.text(x0, 178, f"W₂² (Brenier map) = {cost(Tot):.4f}", "tx-s", "start")
     c.text(x0, 196, f"excess {100 * (cost(Tfm) / cost(Tot) - 1):.1f}%: Σ₀Σ₁ ≠ Σ₁Σ₀", "tx-s", "start")
@@ -718,15 +718,16 @@ def fig_multimarginal():
         b = np.mean([qf(xs[s], ws[s], um) for s in range(3)])
         f.line(u0, b, u1, b, "ln c3")
         f.circle(um, b, 3.4, "f3")
-    x0 = 450
+    x0 = 446
     c.text(x0, 50, "β₁ = ½(δ₀ + δ₃)", "tx-s t1", "start")
     c.text(x0, 68, "β₂ = ⅓(δ₀ + δ₁ + δ₂)", "tx-s t5", "start")
     c.add(f'<text x="{x0}" y="86" class="tx-s" text-anchor="start" style="fill: var(--s4)">β₃ = ¼(δ₁ + δ₂ + δ₃ + δ₅)</text>')
     c.text(x0, 112, "green: average quantile =", "tx-s t3", "start")
     c.text(x0, 128, "barycenter (weights ⅓)", "tx-s t3", "start")
-    c.text(x0, 160, "dashed: cuts at ¼, ⅓, ½, ⅔, ¾", "tx-s", "start")
-    c.text(x0, 176, "6 intervals = 6 atoms of", "tx-s", "start")
-    c.text(x0, 192, "the comonotone plan", "tx-s", "start")
+    c.text(x0, 160, "dashed: cuts at", "tx-s", "start")
+    c.text(x0, 176, "u = ¼, ⅓, ½, ⅔, ¾;", "tx-s", "start")
+    c.text(x0, 192, "6 intervals = 6 atoms", "tx-s", "start")
+    c.text(x0, 208, "of the comonotone plan", "tx-s", "start")
     c.save()
 
 

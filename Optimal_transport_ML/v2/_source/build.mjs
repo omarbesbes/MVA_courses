@@ -122,12 +122,18 @@ function processChunk(chunk, file, src, offset) {
   chunk = chunk.replace(/\\\$/g, DOLLAR);
   chunk = chunk.replace(/\$\$([\s\S]+?)\$\$/g, (m, tex, i) =>
     `<div class="math-display">${renderMath(tex.trim(), true, file, src, offset + i)}</div>`);
-  chunk = chunk.replace(/\$((?:[^$\\]|\\[\s\S])+?)\$/g, (m, tex, i) => {
+  chunk = chunk.replace(/\$((?:[^$\\]|\\[\s\S])+?)\$([.,;:!?)\]%]+)?/g, (m, tex, punct, i) => {
     if (/\n\s*\n/.test(tex)) {
       errors.push(`${file}:${lineOf(src, offset + i)}  unclosed $ (inline formula across an empty line)`);
       return m;
     }
-    return renderMath(tex, false, file, src, offset + i);
+    const html = renderMath(tex, false, file, src, offset + i);
+    if (!punct) return html;
+    // Punctuation right after a formula must not start a new line. A browser may break after the last
+    // block of a KaTeX formula (an inline-block), even before a word joiner or a no-break space, so the
+    // sign goes INSIDE that last block, just before its three closing tags (block, katex-html, katex).
+    const tail = "</span></span></span>";
+    return html.endsWith(tail) ? html.slice(0, -tail.length) + `<span class="kp">${punct}</span>` + tail : html + punct;
   });
   return chunk.replace(new RegExp(DOLLAR, "g"), "$");
 }

@@ -1,0 +1,71 @@
+<h2 id="schrodinger">9. Noisy paths: Schrödinger bridges (going further) <span class="ref">OT4ML §14.3, pp. 334–339; CompOT §7.6, pp. 115–117</span></h2>
+<p class="tldr">Replace the straight paths of optimal transport by random paths that stay close (in relative entropy) to Brownian motion while matching the two endpoint laws: the endpoints are then paired by the entropic OT plan of Lesson 7, and each pair is joined by a Brownian bridge.</p>
+
+<h3 id="sb-why">The problem</h3>
+<p>The path-space form of Benamou–Brenier (§2) pairs the endpoints optimally and joins each pair by a straight segment. Real trajectories are noisy (cells, particles, diffusion samplers), and the sharp optimum is numerically fragile. Schrödinger (1931) asked: if particles perform a Brownian motion and we observe their distribution at time $0$ and at time $1$, what is the most likely way they went? The answer smooths optimal transport, and it is the dynamic picture of the entropic regularization of Lesson 7.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 14.10, p. 336</span></div>
+<p><strong>Entropic path-space problem.</strong> Let $\mathrm R^\eps\in\Pc(\Omega)$ be a reference path law, for instance a Brownian or Langevin dynamics at noise level $\eps$. The corresponding entropy projection defines the dynamic Schrödinger problem.</p>
+<p><strong>Definition 14.10 (Schrödinger bridge).</strong></p>
+$$\mathrm{SB}_\eps(\al,\be):=\inf_{M\in\Pc(\Omega)}\big\{\eps\,\KL(M\mid\mathrm R^\eps)\ ;\ \pf{(e_0)}{M}=\al,\ \pf{(e_1)}{M}=\be\big\}.\qquad(14.18)$$
+<p>It asks for the most likely path law, relative to the prior dynamics $\mathrm R^\eps$, among all path laws matching the observed endpoint marginals.</p>
+</div>
+<dl class="decode">
+<dt>$\Omega$</dt><dd>The space of continuous paths $\omega:[0,1]\to\X$; $e_t(\omega)=\omega_t$ evaluates a path at time $t$.</dd>
+<dt>$M$</dt><dd>A law of random paths (a stochastic process). $\pf{(e_0)}{M}=\al$: the paths start distributed as $\al$; $\pf{(e_1)}{M}=\be$: they end as $\be$.</dd>
+<dt>$\mathrm R^\eps$</dt><dd>The prior: what the particles would do on their own, e.g. $\dd X_t=\sqrt\eps\,\dd B_t$ (OT4ML’s convention on p. 336), a Brownian motion with variance $\eps$ per unit time.</dd>
+<dt>$\KL(M\mid\mathrm R^\eps)$</dt><dd>Relative entropy of path laws: how unlikely $M$ is under the prior (large deviations). Minimizing it = choosing the most likely explanation of the observed endpoints.</dd>
+</dl>
+<div class="box recall"><div class="box-h">Reminder — relative entropy and its chain rule</div>
+<p>$\KL(\mu\mid\nu)=\int\log\frac{\dd\mu}{\dd\nu}\dd\mu\ge0$, with equality iff $\mu=\nu$. <strong>Chain rule:</strong> if $\mu=\int\mu^z\,\dd\mu_Z(z)$ and $\nu=\int\nu^z\,\dd\nu_Z(z)$ are disintegrated along the same variable $Z$, then $\KL(\mu\mid\nu)=\KL(\mu_Z\mid\nu_Z)+\int\KL(\mu^z\mid\nu^z)\,\dd\mu_Z(z)$. More: <a href="Reminders.html#entropy">Reminders — entropy and KL</a>.</p>
+</div>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 14.11, p. 337</span></div>
+<p><strong>Proposition 14.11 (Endpoint reduction of the Schrödinger problem).</strong> Assume that the regular conditional laws above exist and that the relative-entropy chain rule applies, with value $+\infty$ when absolute continuity fails. Then</p>
+$$\mathrm{SB}_\eps(\al,\be)=\inf_{\pi\in\U(\al,\be)}\eps\,\KL\big(\pi\mid\mathrm R^\eps_{0,1}\big).\qquad(14.19)$$
+<p>For a fixed endpoint coupling $\pi$ with finite $\KL(\pi\mid\mathrm R^\eps_{0,1})$, the minimizing path law is the mixture of reference bridges</p>
+$$M^\pi=\int\mathrm R^{\eps,x,y}\,\dd\pi(x,y).\qquad(14.20)$$
+<p>Consequently, if $\pi^\star$ solves (14.19), then $M^{\pi^\star}$ solves the path-space problem (14.18).</p>
+</div>
+<dl class="decode">
+<dt>$\mathrm R^\eps_{0,1}$</dt><dd>The law of the pair (start, end) under the prior; for Brownian motion its density is proportional to $e^{-\norm{x-y}^2/2\eps}$ (times the initial law).</dd>
+<dt>$\mathrm R^{\eps,x,y}$</dt><dd>The prior conditioned to start at $x$ and end at $y$: for Brownian motion, the <em>Brownian bridge</em>.</dd>
+<dt>(14.19)–(14.20)</dt><dd>The path problem splits: first choose the endpoint coupling (a static problem), then fill each pair with the prior’s bridge.</dd>
+</dl>
+<details class="fold proof"><summary>Proof (chain rule of the relative entropy)</summary><div class="fold-body">
+<ol class="steps">
+<li>Disintegrate a feasible $M$ along its endpoints: $M=\int M^{x,y}\,\dd\pi(x,y)$ with $\pi=\pf{(e_0,e_1)}{M}\in\U(\al,\be)$; likewise $\mathrm R^\eps=\int\mathrm R^{\eps,x,y}\dd\mathrm R^\eps_{0,1}$.<span class="why">Regular conditional laws exist on path space (Polish).</span></li>
+<li>$$\KL(M\mid\mathrm R^\eps)=\KL(\pi\mid\mathrm R^\eps_{0,1})+\int\KL\big(M^{x,y}\mid\mathrm R^{\eps,x,y}\big)\dd\pi(x,y).\qquad(14.21)$$<span class="why">Chain rule (reminder).</span></li>
+<li>The second term is $\ge0$, and $=0$ iff $M^{x,y}=\mathrm R^{\eps,x,y}$ for $\pi$-a.e. $(x,y)$. So for fixed $\pi$ the best $M$ is (14.20), and it remains to minimize the first term over $\pi$: (14.19). $\square$<span class="why">Positivity of KL and its equality case.</span></li>
+</ol>
+</div></details>
+
+<h3 id="sb-sinkhorn">Brownian prior: Sinkhorn plus Brownian bridges</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML p. 338</span></div>
+<p>[…] Thus multiplying the endpoint entropy by $\eps$ produces the static cost $\norm{x-y}^2/2$; the convention $e^{-\norm{x-y}^2/\eps}$ used for quadratic Sinkhorn is recovered by replacing the Brownian noise variance by $\eps/2$. […] In words, Sinkhorn computes which endpoints should be paired; the path-space Schrödinger bridge then connects each paired endpoint by a Brownian bridge rather than by a deterministic straight line.</p>
+</div>
+<p>With the prior $\dd X_t=\sqrt\eps\,\dd B_t$, $\eps\KL(\pi\mid\mathrm R^\eps_{0,1})=\frac12\int\norm{x-y}^2\dd\pi+\eps\KL(\pi\mid\al\otimes\be)+\text{const}$ (OT4ML p. 338): the endpoint problem is <strong>entropic optimal transport</strong>, solved by Sinkhorn’s algorithm in Lesson 7. The Brownian bridge from $x$ to $y$ is $X_t=(1-t)x+ty+\sqrt\eps\,(B_t-tB_1)$:</p>
+$$X_t\sim\N\big((1-t)x+ty,\ \eps\,t(1-t)\,\Id\big):$$
+<p>McCann’s segment, blurred by a Gaussian whose variance vanishes at both ends. Numbers: $\eps=0.2$, $t=\frac12$: variance $0.05$ per coordinate (a simulation with $2\times10^5$ bridges gives $0.04995$). As $\eps\to0$ the coupling becomes the OT plan and the bridges collapse on the segments: back to Benamou–Brenier (OT4ML p. 337, under large-deviation assumptions).</p>
+<figure class="fig"><!-- include figures/L06/bridges.svg --><figcaption>Six central atoms (orange) sent to six surrounding atoms (blue). For $\eps=0$ the optimal plan pairs them and the paths are segments. For $\eps>0$ the endpoint coupling is the entropic plan (Sinkhorn, kernel $e^{-\norm{x-y}^2/2\eps}$) and about 36 paths, allocated to the pairs in proportion to the plan, follow Brownian bridges: the larger $\eps$, the softer the pairing and the wilder the paths.</figcaption></figure>
+
+<h3 id="sb-fluid">The fluid picture: Benamou–Brenier plus Fisher information</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML pp. 336–337</span></div>
+<p>[…] Write $\sigma>0$ for the diffusion intensity; thus the uncontrolled noise is $\sqrt\sigma\,\dd B_t$ and its generator is $(\sigma/2)\Delta$. Formally, for smooth positive densities the controlled Fokker–Planck equation is $\partial_t\rho_t+\dv(\rho_tv_t)=\frac\sigma2\Delta\rho_t$, one minimizes, among curves joining the prescribed endpoint densities, the kinetic action $\int_0^1\!\int\frac12\norm{v_t(x)}^2\rho_t(x)\,\dd x\,\dd t$. Equivalently, one can absorb the diffusion into the velocity by writing $u_t=v_t-\frac\sigma2\nabla\log\rho_t$, $\partial_t\rho_t+\dv(\rho_tu_t)=0$. […] the same minimizers are obtained from the modified Benamou–Brenier action</p>
+$$\int_0^1\!\!\int\Big(\frac12\norm{u_t(x)}^2+\frac{\sigma^2}8\norm{\nabla\log\rho_t(x)}^2\Big)\rho_t(x)\,\dd x\,\dd t .$$
+<p>Thus the Schrödinger bridge is a least-action interpolation with both transport kinetic energy and a Fisher-information penalty.</p>
+</div>
+<p>The derivation is the computation of §7 in reverse: expand $\frac12\norm{u+\frac\sigma2\nabla\log\rho}^2$; the cross term integrates to $\frac\sigma2\big(\int\rho_1\log\rho_1-\int\rho_0\log\rho_0\big)$, a constant fixed by the endpoints. The Fisher information $\int\norm{\nabla\log\rho}^2\rho$ penalizes sharp densities: Schrödinger interpolations are blurred versions of McCann’s.</p>
+
+<div class="box ml"><div class="box-h">In machine learning — Schrödinger bridges for generation and for cells</div>
+<p><strong>Generative modelling and translation.</strong> The Diffusion Schrödinger Bridge (De Bortoli, Thornton, Heng, Doucet, NeurIPS 2021) learns the bridge between noise and data — or between two datasets, e.g. two image domains — by alternately fitting forward and backward diffusions, an iterative proportional fitting on path space, i.e. Sinkhorn’s algorithm (Lesson 7) lifted to processes. Unlike a diffusion model, the forward process does not need to run until the data are completely destroyed.</p>
+<p><strong>Single-cell trajectory inference.</strong> Population snapshots of cells (§2) are naturally modelled by noisy dynamics. Lavenant, Zhang, Kim and Schiebinger (<em>Towards a mathematical theory of trajectory inference</em>, 2021, cited in OT4ML Example 3.24, pp. 61–62) reconstruct the law of cell trajectories from snapshots by minimizing a relative entropy to a Brownian-type reference — a Schrödinger problem — and Waddington-OT pairs consecutive snapshots with entropic, unbalanced OT plans (Schiebinger et al. 2019; OT4ML Example 3.24 mentions the unbalanced relaxation).</p>
+</div>
+<div class="box remark"><div class="box-h">Note on the sources — CompOT §7.6</div>
+<ul>
+<li><strong>(7.17), p. 115.</strong> “$\mathcal W_2(\al_0,\al_1)^2=\min\int\mathcal L(\ga)^2\dd\bar\pi(\ga)$, where $\mathcal L(\ga)=\int_0^1\abs{\ga'(s)}^2\dd s$ is the kinetic energy”. Squaring the kinetic energy is one square too many: on the segment from $x$ to $y$, $\mathcal L=\norm{x-y}^2$ and $\mathcal L^2=\norm{x-y}^4$. Either integrate $\mathcal L$ itself (as in OT4ML p. 334), or take $\mathcal L(\ga)=\int_0^1\abs{\ga'}$, the length, squared. The same sentence says “$\pi^\star$ and $\bar\pi^\star$ solving respectively (7.17) and (2.15)”: the order is reversed.</li>
+<li><strong>(7.19)–(7.21), pp. 116–117.</strong> The reference “reversible Brownian motion” carries no $\eps$, the bridges have variance $t(1-t)\eps^2$, and (7.21) weights the Fisher term by $\frac\eps4$. With noise of variance $\sigma$ per unit time and the action $\int\!\!\int\norm v^2$, the bridge variance is $t(1-t)\sigma$ and the Fisher weight is $\frac{\sigma^2}4$ (twice OT4ML’s $\frac{\sigma^2}8$, which has the $\frac12$): variance $t(1-t)\eps^2$ means $\sigma=\eps^2$ and weight $\frac{\eps^4}4$, so the two constants describe different noise levels. For the static problem with kernel $e^{-\norm{x-y}^2/\eps}$, OT4ML p. 338 gives $\sigma=\eps/2$.</li>
+</ul>
+</div>
+<div class="quiz"><p>For the Brownian prior with $\eps\to\infty$ (very large noise), what does the endpoint coupling of the Schrödinger bridge become?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>The endpoint problem is $\min\frac12\int\norm{x-y}^2\dd\pi+\eps\KL(\pi\mid\al\otimes\be)$: when $\eps$ dominates, the minimizer tends to the independent coupling $\al\otimes\be$ (KL $=0$). Huge noise forgets where particles started — the opposite limit of optimal transport ($\eps\to0$).</p>
+</div></details></div>

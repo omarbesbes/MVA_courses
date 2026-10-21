@@ -133,6 +133,10 @@ e.g. `l5slices`). Use the helpers of `app.js`: `el`, `fmt`, `Plot` (axes, poly, 
 `ellipsePts`, `WeightTriangle`, `hungarian`, `redrawers`. **Never redefine one of these names**; prefix your
 own helpers (e.g. `l5sort`). Place with `<div class="widget" data-widget="name"><p class="w-noscript">Interactive
 figure (needs JavaScript).</p></div>`, followed by a paragraph “What to look at: …”. At least three per lesson.
+Pitfalls of the helpers: `new Plot(svg, …)` and `Plot.clear()` empty the whole `svg` (two panels in one svg need
+one `Plot` whose `g` you switch by hand, or plain `el` drawing); `svg .ln` sets `stroke-width` in CSS, which beats a
+`stroke-width` attribute, so variable widths must be inline styles (`style: "stroke-width:3px"`); `fmt` prints
+“—” for NaN and ±∞ for infinities.
 
 ## 6. Build and check
 

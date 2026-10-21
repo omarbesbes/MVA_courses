@@ -1,0 +1,141 @@
+<h2 id="summary">15. Summary of the lecture</h2>
+<div class="box summary"><div class="box-h">The lecture on one screen</div>
+<ol>
+<li><strong>Schrödinger problem</strong> (§1): $L^\eps_C(a,b)=\min_{P\in\U(a,b)}\ps{C}{P}+\eps\KL(P|a\otimes b)$, the penalty being the mutual information of the coupling; same minimizer as $\ps{C}{P}-\eps\mathrm H(P)$ (four conventions, four values). Unique, strictly convex, entrywise positive solution.</li>
+<li><strong>Scaling form</strong> (§2): $P_\eps=\operatorname{diag}(u)K\operatorname{diag}(v)$, $K=e^{-C/\eps}$, with $u\odot Kv=a$, $v\odot K\T u=b$; potentials $u=ae^{f/\eps}$, $v=be^{g/\eps}$; value $\ps{f}{a}+\ps{g}{b}$; on couplings the objective is $L^\eps_C+\eps\KL(\cdot|P_\eps)$.</li>
+<li><strong>Limits</strong> (§3): $\eps\to0$: the maximal-entropy optimal plan, with a value bias between $\eps\KL(P_\eps)$ and $\eps\KL(P^\star)$; $\eps\to\infty$: $a\otimes b$.</li>
+<li><strong>Sinkhorn</strong> (§4–§5): $u\leftarrow a/(Kv)$, $v\leftarrow b/(K\T u)$, $O(nm)$ per cycle; each half-step is the KL projection onto one marginal constraint, and the iterates converge to the KL projection of $(a\otimes b)\odot e^{-C/\eps}$ onto $\U(a,b)$ (Pythagoras).</li>
+<li><strong>Dual</strong> (§6): $\max\ps{f}{a}+\ps{g}{b}-\eps\sum a_ib_je^{(f_i+g_j-C_{ij})/\eps}+\eps$, unconstrained; block maximizers are soft $c$-transforms $f=\min^\eps_b(C-g)$; implement with log-sum-exp. Softmax attention is one row step.</li>
+<li><strong>Convergence</strong> (§7): Birkhoff contraction $\lambda(K)=\tanh(\frac14\log\eta(K))$ per half-step in Hilbert’s metric (global, pessimistic); local factor $\sigma_\eps^2$ per cycle, the squared maximal correlation of $P_\eps$; $\approx1/\eps$ cycles; robust $O(\norm{C}^2_\infty/(\eps\ell))$ dual gap and $O(n^2\log n/\delta^2)$ operations to approximate $L_C$.</li>
+<li><strong>Measures</strong> (§8): density $e^{(f\oplus g-c)/\eps}$ with respect to $\al\otimes\be$; quadratic cost: map plus Gaussian noise of variance $\approx\frac\eps2T'$; Gaussians in closed form; bias $-\frac{d\eps}2\log(\pi\eps)-\frac\eps2(\mathrm H(\al)+\mathrm H(\be))+O(\eps^2)$.</li>
+<li><strong>Sinkhorn divergence</strong> (§9): $S_\eps=\mathcal L^\eps(\al,\be)-\frac12\mathcal L^\eps(\al,\al)-\frac12\mathcal L^\eps(\be,\be)\ge0$, $=0$ iff $\al=\be$; $\to\mathcal L_c$ as $\eps\to0$ (error $O(\eps^2)$ for smooth densities), $\to-\frac12\iint c\,\dd(\al-\be)^{\otimes2}$ as $\eps\to\infty$; the raw cost shrinks fits ($s^\star=\sqrt{1-\eps/2}$ for Gaussians).</li>
+<li><strong>Statistics</strong> (§10): $n^{-1/d}$ for $W_p$, $n^{-1/2}$ for MMD and for $S_\eps$ at fixed $\eps$ (constant exploding as $\eps\to0$).</li>
+<li><strong>Learning</strong> (§11–§12): $\nabla_C=P_\eps$, $\nabla_a=f$, $\nabla_{x_i}=a_i(x_i-T_\eps(x_i))$; envelope formulas or autodiff. Unbalanced transport: $\tau\KL$ marginal penalties, damped update $u\leftarrow(a/Kv)^{\tau/(\tau+\eps)}$.</li>
+</ol>
+</div>
+
+<h3 id="formulas">Formula sheet</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>Object</th><th>Formula</th></tr></thead>
+<tbody>
+<tr><td>Entropic OT (this page)</td><td>$L^\eps_C(a,b)=\min_{P\in\U(a,b)}\ps{C}{P}+\eps\KL(P|a\otimes b)$; on $\U(a,b)$, $\eps\KL(P|a\otimes b)=-\eps\mathrm H(P)+\eps(\mathrm H(a)+\mathrm H(b))$</td></tr>
+<tr><td>Scaling form</td><td>$P_\eps=\operatorname{diag}(u)K\operatorname{diag}(v)$, $K=e^{-C/\eps}$, $u\odot(Kv)=a$, $v\odot(K\T u)=b$</td></tr>
+<tr><td>Sinkhorn</td><td>$u\leftarrow a\oslash(Kv)$, $v\leftarrow b\oslash(K\T u)$; stop on $\norm{u\odot Kv-a}_1$</td></tr>
+<tr><td>Potentials</td><td>$u=a\odot e^{f/\eps}$, $v=b\odot e^{g/\eps}$, $P_{ij}=a_ib_je^{(f_i+g_j-C_{ij})/\eps}$, $L^\eps_C=\ps{f}{a}+\ps{g}{b}$</td></tr>
+<tr><td>Dual</td><td>$\max_{f,g}\ps{f}{a}+\ps{g}{b}-\eps\sum_{ij}a_ib_je^{(f_i+g_j-C_{ij})/\eps}+\eps$</td></tr>
+<tr><td>Soft $c$-transform</td><td>$f_i=\min^\eps_b(C_{i\cdot}-g)=-\eps\log\sum_jb_je^{(g_j-C_{ij})/\eps}$; $\min^\eps_b(h)=\min^\eps_b(h-m)+m$</td></tr>
+<tr><td>KL projections</td><td>$P_\eps=\mathrm{Proj}^{\KL}_{\U(a,b)}\big((a\otimes b)\odot e^{-C/\eps}\big)$; $\mathrm{Proj}^{\KL}_{\{P\ind=a\}}(P)=\operatorname{diag}(a/P\ind)P$</td></tr>
+<tr><td>Birkhoff, Hilbert</td><td>$d_{\mathcal H}(u,u')=\norm{\log u-\log u'}_V$; $\lambda(K)=\frac{\sqrt\eta-1}{\sqrt\eta+1}$, $\eta=\max\frac{K_{ik}K_{j\ell}}{K_{jk}K_{i\ell}}$; $d_{\mathcal H}(v^{(\ell)},v^\star)\le\lambda^{2\ell}d_{\mathcal H}(v^{(0)},v^\star)$</td></tr>
+<tr><td>Local rate</td><td>$\sigma_\eps$ = second singular value of $\operatorname{diag}(a)^{-1/2}P_\eps\operatorname{diag}(b)^{-1/2}$; error $\times\sigma_\eps^2$ per cycle; $\sigma_\eps\le\lambda(K)$</td></tr>
+<tr><td>Robust rate</td><td>$\Delta^{(\ell)}\le2\norm{C}^2_\infty/(\eps\ell)$; $\eps=\delta/\log(nm)$; $O(n^2\norm{C}_\infty^2\log n/\delta^2)$ operations</td></tr>
+<tr><td>Limits, bias</td><td>$0\le\eps\KL(P_\eps|a\otimes b)\le L^\eps_C-L_C\le\eps\KL(P^\star|a\otimes b)$; $P_\eps\to a\otimes b$ as $\eps\to\infty$</td></tr>
+<tr><td>Gaussians (1D, $c=\abs{x-y}^2$)</td><td>$k_\eps=\frac{\sqrt{\eps^2+16\sigma_\al^2\sigma_\be^2}-\eps}4$; $\mathcal L^\eps=(m_\al-m_\be)^2+\sigma_\al^2+\sigma_\be^2-2k_\eps-\frac\eps2\log\big(1-\frac{k_\eps^2}{\sigma_\al^2\sigma_\be^2}\big)$</td></tr>
+<tr><td>Small $\eps$</td><td>$\mathcal L^\eps=W_2^2-\frac{d\eps}2\log(\pi\eps)-\frac\eps2(\mathrm H(\al)+\mathrm H(\be))+\frac{\eps^2}{16}\mathcal I_{geo}+o(\eps^2)$, $\mathrm H(\al)=\int\rho_\al\log\rho_\al$</td></tr>
+<tr><td>Sinkhorn divergence</td><td>$S_\eps=\mathcal L^\eps(\al,\be)-\frac12\mathcal L^\eps(\al,\al)-\frac12\mathcal L^\eps(\be,\be)$; $\eps\to\infty$: $-\frac12\iint c\,\dd(\al-\be)^{\otimes2}$</td></tr>
+<tr><td>Sample complexity</td><td>$W_p$: $n^{-1/d}$ ($d>2p$); MMD: $\kappa(n^{-1/2}+m^{-1/2})$; $S_\eps$: $C_d\Lambda_{d,\sigma}(\eps)(n^{-1/2}+m^{-1/2})$</td></tr>
+<tr><td>Gradients</td><td>$\nabla_CL^\eps=P_\eps$; $\nabla_aL^\eps=f$ (centred); $\nabla_{x_i}=\sum_jP_{ij}\nabla_1c(x_i,y_j)=a_i(x_i-T_\eps(x_i))$ for $\frac12\norm{x-y}^2$</td></tr>
+<tr><td>Barycentric projection</td><td>$T_\eps(x_i)=\frac1{a_i}\sum_jP_{ij}y_j=x_i-\frac1{a_i}\nabla_{x_i}W_\eps$</td></tr>
+<tr><td>Unbalanced (KL penalties)</td><td>$u\leftarrow\big(a\oslash Kv\big)^{\tau/(\tau+\eps)}$, $K=(a\otimes b)\odot e^{-C/\eps}$; $\tau\to\infty$: Sinkhorn</td></tr>
+</tbody></table></div>
+
+<h3 id="reflexes">The reflexes to acquire</h3>
+<ul class="checklist">
+<li>An entropic value → first ask which convention (§0); minimizers agree, values do not.</li>
+<li>Entropic OT → $P=\operatorname{diag}(u)K\operatorname{diag}(v)$: $n+m$ unknowns, two scaling equations.</li>
+<li>Sinkhorn by hand → $u=a/(Kv)$, then $v=b/(K\T u)$; check the row sums, not the column sums.</li>
+<li>Small $\eps$ or single precision → log domain; subtract the maximum before exponentiating.</li>
+<li>Half-step of Sinkhorn → KL projection; dual block maximization; soft $c$-transform; softmax.</li>
+<li>Speed → $\sigma_\eps^2$ per cycle, about $1/\eps$ cycles; Birkhoff’s $\lambda^2$ is a (very) pessimistic guarantee.</li>
+<li>Quadratic cost → “map plus noise” of variance $\approx\frac\eps2T'$; Gaussians: solve $2k^2+\eps k-2\sigma_\al^2\sigma_\be^2=0$.</li>
+<li>Loss between distributions → debias: $S_\eps$, never the raw $\mathcal L^\eps$; $S_\eps\ge0$ by kernel Cauchy–Schwarz.</li>
+<li>Samples → $S_\eps$ and MMD at $n^{-1/2}$, $W_p$ at $n^{-1/d}$; $\eps$ trades geometry for statistics.</li>
+<li>Gradient of an optimal value → envelope theorem: plan, potential, barycentric projection.</li>
+<li>Mass mismatch, outliers, growth → unbalanced: exponent $\tau/(\tau+\eps)$.</li>
+</ul>
+
+<h3 id="ml-apps">Machine learning: the applications of this lesson</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>Application</th><th>What entropic transport does there</th><th>Tool of this lesson</th></tr></thead>
+<tbody>
+<tr><td>Comparing many histograms (Cuturi 2013)</td><td>replaces thousands of linear programs by parallel matrix–vector products</td><td>Sinkhorn (<a href="#sinkhorn">§4</a>)</td></tr>
+<tr><td>Losses between large point clouds (GeomLoss, KeOps)</td><td>plans with $10^{10}$ entries kept as two vectors, kernels computed on the fly</td><td>scaling form, log domain (<a href="#scaling">§2</a>, <a href="#dual">§6</a>)</td></tr>
+<tr><td>Differentiable sorting and ranking</td><td>soft ranks and soft sorts from the entropic plan on the line</td><td>limits $\eps\to0$ (<a href="#limits">§3</a>)</td></tr>
+<tr><td>Barycenters of images and shapes</td><td>iterative Bregman projections; convolutions as Gibbs kernels</td><td>KL projections (<a href="#bregman">§5</a>)</td></tr>
+<tr><td>Attention, Sinkformers</td><td>softmax = one row step; doubly stochastic attention by full Sinkhorn</td><td>soft $c$-transforms (<a href="#dual">§6</a>)</td></tr>
+<tr><td>Diffusion models</td><td>the forward noising $(X,X+\sqrt{\eps/2}G)$ is an entropic optimal plan</td><td>Gibbs coupling (<a href="#general">§8</a>)</td></tr>
+<tr><td>Generative models with Sinkhorn losses</td><td>debiased, differentiable loss between generated and real samples</td><td>Sinkhorn divergence, gradients (<a href="#debias">§9</a>, <a href="#learning">§11</a>)</td></tr>
+<tr><td>Losses on mini-batches</td><td>choice of $\eps$ between OT geometry and MMD-like statistics</td><td>sample complexity (<a href="#stats">§10</a>)</td></tr>
+<tr><td>Domain adaptation (Courty et al. 2017)</td><td>source samples moved to their barycentric projections, then a classifier is retrained</td><td>barycentric projection (<a href="#learning">§11</a>)</td></tr>
+<tr><td>Single-cell trajectories (Waddington-OT)</td><td>couplings between snapshots of growing and dying populations</td><td>unbalanced entropic OT (<a href="#unbalanced">§12</a>)</td></tr>
+</tbody></table></div>
+
+<h3 id="next">What comes next</h3>
+<p>The particles of the widget of §11, moved step after step by the gradient of a Sinkhorn divergence, are a discretized <em>gradient flow</em> in the space of measures: this is the subject of <a href="Lesson08.html">Lesson 8</a>, which studies the JKO scheme (an implicit step with a Wasserstein penalty, for which entropic regularization gives a Sinkhorn-like solver; OT4ML p. 155 mentions this “entropic JKO step”), particle flows of MMD and Sinkhorn divergences (see also the first companion, <a href="../companion/Lesson08.html#particles-normalized">Lesson 8, normalized particles</a>), and the reading of transformers as interacting particles (<a href="../companion/Lesson08.html#tokens">tokens</a>). The dynamic counterpart of the Schrödinger problem, Schrödinger bridges, connects this lesson to Lesson 6 (<a href="../companion/Lesson06.html#beyond-sb">Lesson 6, beyond: Schrödinger bridges</a>).</p>
+
+<h3 id="glossary">Glossary (English – French)</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>English</th><th>Français</th></tr></thead>
+<tbody>
+<tr><td>entropic regularization</td><td>régularisation entropique</td></tr>
+<tr><td>relative entropy, Kullback–Leibler divergence</td><td>entropie relative, divergence de Kullback–Leibler</td></tr>
+<tr><td>mutual information</td><td>information mutuelle</td></tr>
+<tr><td>temperature</td><td>température</td></tr>
+<tr><td>Gibbs kernel</td><td>noyau de Gibbs</td></tr>
+<tr><td>scaling vectors; matrix scaling</td><td>vecteurs de mise à l’échelle ; équilibrage (mise à l’échelle) de matrices</td></tr>
+<tr><td>iterative proportional fitting, raking</td><td>ajustement proportionnel itératif, calage sur marges</td></tr>
+<tr><td>gauge (invariance)</td><td>(invariance de) jauge</td></tr>
+<tr><td>soft minimum, log-sum-exp</td><td>minimum adouci (soft-min), log-somme-exp</td></tr>
+<tr><td>soft $c$-transform</td><td>$c$-transformée adoucie (régularisée)</td></tr>
+<tr><td>underflow, overflow</td><td>dépassement de capacité inférieur, supérieur</td></tr>
+<tr><td>Bregman divergence, projection</td><td>divergence, projection de Bregman</td></tr>
+<tr><td>Hilbert projective metric</td><td>métrique projective de Hilbert</td></tr>
+<tr><td>contraction factor; linear convergence</td><td>facteur de contraction ; convergence linéaire</td></tr>
+<tr><td>maximal correlation</td><td>corrélation maximale</td></tr>
+<tr><td>Sinkhorn divergence; debiasing</td><td>divergence de Sinkhorn ; débiaisage</td></tr>
+<tr><td>energy distance; maximum mean discrepancy (MMD)</td><td>distance d’énergie ; écart moyen maximal (MMD)</td></tr>
+<tr><td>sample complexity; empirical measure</td><td>complexité d’échantillonnage ; mesure empirique</td></tr>
+<tr><td>barycentric projection</td><td>projection barycentrique</td></tr>
+<tr><td>envelope theorem; automatic differentiation</td><td>théorème de l’enveloppe ; différentiation automatique</td></tr>
+<tr><td>unbalanced optimal transport</td><td>transport optimal non équilibré</td></tr>
+<tr><td>domain adaptation</td><td>adaptation de domaine</td></tr>
+</tbody></table></div>
+
+<h3 id="sources">Sources, and notes on the sources</h3>
+<p><strong>Reading in the course resources</strong> (folder <code>ressources/</code>; page numbers are PDF pages):</p>
+<ul>
+<li>G. Peyré, <em>Optimal Transport for Machine Learners</em> (<code>OT4ML.pdf</code>): Chapter 8 (pp. 136–170: §8.1–8.5 for §1–§8 of this page, §8.6 for §12, §8.9 for §9), Chapter 9 (pp. 172–191: §9.1 Bregman projections, §9.3 robust rate, §9.4 Hilbert metric, §9.5 local rate, §9.6 Gaussians), §10.2 (pp. 198–207, sample complexity), §11.1 (pp. 217–221, unbalanced transport). The machine-learning boxes also cite Example 3.22 (p. 61), Waddington-OT (p. 62), attention (4.14) (p. 91) and Sinkformers (p. 417).</li>
+<li>The compact notes (<code>CourseOT-compact.pdf</code>): same statements, numbered differently (Chapter 8, pp. 34–45; Chapter 9, pp. 46–53; Chapter 10, pp. 56–58); each reference box gives both numbers.</li>
+<li>G. Peyré, course notes 2019 (<code>CourseOT.pdf</code>): §4 “Sinkhorn” (pp. 17–22) and §7 “Sinkhorn divergences” (pp. 34–37).</li>
+<li>G. Peyré and M. Cuturi, <em>Computational Optimal Transport</em> (<code>1803.00567v4.pdf</code>): Chapter 4 (pp. 61–88) and §9.1–9.2 (pp. 140–149).</li>
+<li>S. Chewi, J. Niles-Weed and P. Rigollet, <em>Statistical optimal transport</em> (<code>2407.18163v2.pdf</code>): Chapter 4, “Entropic optimal transport” (pp. 115–140).</li>
+<li>The exercise sheet <em>Sinkhorn — Exercises</em> (<code>exo-sinkhorn-uncorrected.pdf</code>), solved in <a href="#sheet">§13</a>.</li>
+<li>Articles: R. Sinkhorn, <em>Ann. Math. Statist.</em> 35, 1964; R. Sinkhorn and P. Knopp, <em>Pacific J. Math.</em> 21, 1967; W. E. Deming and F. F. Stephan, <em>Ann. Math. Statist.</em> 11, 1940; J. Franklin and J. Lorenz, <em>Linear Algebra Appl.</em> 114–115, 1989; M. Cuturi, NeurIPS 2013; M. Cuturi and A. Doucet, ICML 2014; J.-D. Benamou, G. Carlier, M. Cuturi, L. Nenna and G. Peyré, <em>SIAM J. Sci. Comput.</em> 37(2), 2015; J. Solomon et al., <em>ACM Trans. Graph.</em> 34(4), 2015; J. Altschuler, J. Weed and P. Rigollet, NeurIPS 2017; N. Courty, R. Flamary, D. Tuia and A. Rakotomamonjy, <em>IEEE TPAMI</em> 39(9), 2017; A. Genevay, G. Peyré and M. Cuturi, AISTATS 2018; J. Feydy, T. Séjourné, F.-X. Vialard, S. Amari, A. Trouvé and G. Peyré, AISTATS 2019; M. Cuturi, O. Teboul and J.-P. Vert, NeurIPS 2019; G. Schiebinger et al., <em>Cell</em> 176(4), 2019; M. E. Sander, P. Ablin, M. Blondel and G. Peyré, AISTATS 2022.</li>
+</ul>
+<p><strong>Going further: parts of the book not covered on this page.</strong> They are not needed for the lecture, but they extend it.</p>
+<ul>
+<li>OT4ML §8.7 “Heat kernels and Hopf–Cole transforms” (p. 157): for the quadratic cost the Gibbs kernel is a heat kernel, so on grids and surfaces the only expensive step of Sinkhorn becomes a heat-diffusion step, and soft minima become Hopf–Cole transforms.</li>
+<li>OT4ML §8.8 “Other convex regularizers” (p. 161): $\varphi$-divergence penalties instead of the entropy; a quadratic penalty replaces the exponential law by a thresholding and gives sparse plans (p. 164).</li>
+<li>OT4ML §8.10 “Complex $\eps$” (p. 169): the scaling equations continued to complex temperatures near each positive one.</li>
+<li>OT4ML §9.2 “Sinkhorn convergence: monotone point of view” (p. 176), a third proof of convergence beside the Bregman and Hilbert-metric ones of §7.</li>
+<li>OT4ML Prop. 9.24 (curvature and conditioning of the semi-dual, p. 189) and Prop. 9.28 (the exact rate of Sinkhorn between two one-dimensional Gaussians, p. 191).</li>
+<li>OT4ML §9.7 “Continuous $\eps$-Sinkhorn flow” (p. 192): when one Sinkhorn cycle counts as a time step $\eps$, the iterates follow a parabolic Monge–Ampère equation as $\eps\to0$.</li>
+</ul>
+<div class="box remark"><div class="box-h">Notes on the sources (things that could confuse you)</div>
+<ul>
+<li><strong>Four conventions for the penalty.</strong> OT4ML (8.1) uses $-\eps\mathrm H(P)$, OT4ML (8.8) and the 2019 notes use $+\eps\KL(P|a\otimes b)$, CompOT and the sheet use $\pm\eps\sum P(\log P-1)$. Same minimizers, values shifted by $\eps(\mathrm H(a)+\mathrm H(b))$ or $\eps(1+\mathrm H(a)+\mathrm H(b))$: $-0.3213$, $0.3307$, $-0.8213$, $-0.8213$ on the running example (<a href="#conventions">§0</a>). Joint convexity of the value in $(a,b)$ holds in the sheet’s convention but not in the KL one (<a href="#sheet-ex6">§13, Exercise 6</a>), as OT4ML p. 260 says.</li>
+<li><strong>Two signs for $\mathrm H$ in OT4ML.</strong> Def. 8.1: $\mathrm H=-\sum P\log P$; Prop. 8.17: $\mathrm H(\al)=\int\rho\log\rho$. The expansion is right with the second meaning (with the other sign it would be off by $0.35$ at $\eps=0.1$; <a href="#general-bias">§8</a>).</li>
+<li><strong>OT4ML Prop. 8.5</strong> is stated as an equivalence but the printed proof shows only that the solution has the scaling form; the converse is the identity $E(Q)=E(P)+\eps\KL(Q|P)$ (<a href="#scaling-statement">§2</a>).</li>
+<li><strong>Indexing of half-steps.</strong> OT4ML (9.2), CompOT (4.16) and the 2019 notes (37) write $P^{(\ell+1)}=\mathrm{Proj}_{\mathcal C^1}(P^{(\ell)})$, $P^{(\ell+2)}=\mathrm{Proj}_{\mathcal C^2}(P^{(\ell+1)})$: one index per half-step, read for even $\ell$; Algorithm 9.1 uses half-integer indices for the same thing.</li>
+<li><strong>2019 notes, p. 18.</strong> The reference-change identity “$\KL(P|a\otimes b)=\KL(P|a'\otimes b')+\KL(a'\otimes b'|a\otimes b)$ [ToDo: check this]” is wrong; the correct one is OT4ML Prop. 8.9, $\KL(P|a'\otimes b')-\KL(a|a')-\KL(b|b')$. On a random $3\times4$ coupling the left side is $0.025447$, the printed right side $1.635244$, OT4ML’s $0.025447$.</li>
+<li><strong>2019 notes, (29), p. 18.</strong> The two KL terms are swapped, and so is the conclusion; the book’s (8.12) is right (check: $0.024253$ against a printed bound of $-0.030694$; <a href="#limits-statement">§3</a>).</li>
+<li><strong>2019 notes, typos.</strong> p. 19: “$P\in\U(a,\beta)$” for $\U(a,b)$; p. 21: $d_{\mathcal H}(u,u')=\norm{\log(u)-\log(v)}_V$ for $\log(u')$.</li>
+<li><strong>2019 notes, pp. 36–37.</strong> The definition of $\bar{\mathcal L}^\eps_c$ subtracts $\frac12\mathcal L^\eps_c(\al,\be)$ instead of $\frac12\mathcal L^\eps_c(\be,\be)$; the proof of Prop. 21 has $-\iint c$ for $+\iint c$; the proof of Prop. 22 uses the wrong potentials in the exponent, an extra “$-1$”, and $e^{f_{\al,\al}}$ for $e^{f_{\al,\al}/\eps}$ (<a href="#debias-def">§9</a>).</li>
+<li><strong>CompOT Prop. 4.7, p. 85.</strong> In CompOT’s own conventions, the dual value at the optimum is $D^\eps_C=\ps{f^\star}{a}+\ps{g^\star}{b}=\mathrm L^\eps_C+\eps$, so “$D^\eps_C\le\mathrm L^\eps_C$” fails, and (4.47) should read $P^\eps_C-D^\eps_C=\eps(\mathbf H(P^\star)-1)$, i.e. $\eps$ times the Shannon entropy. The chain that does hold is $D^\eps_C\le L_C\le P^\eps_C$. Check on the running example at $\eps=0.5$: $D=-0.321267$, $\mathrm L^\eps=-0.821267$, $P=0.224253$, $L_C=0.2$; $P-D=0.545520=\eps(\mathbf H-1)$, while $\eps(\mathbf H+1)=1.545520$.</li>
+<li><strong>CompOT Prop. 4.8, p. 86.</strong> For the same reason, $D^{(L)}_C\le\mathrm L^\eps_C$ can fail: after one cycle at $\eps=0.5$, $D^{(1)}=-0.3445>\mathrm L^\eps=-0.8213$. It holds with $\mathrm L^\eps_C+\eps$ (or $L_C$) on the right.</li>
+<li><strong>CompOT Remark 4.6, pp. 69–70.</strong> The temperature in Altschuler et al.’s bound is $\eps=\tau/(4\log n)$, not $4\log(n)/\tau$ (a smaller target error needs a smaller $\eps$); in the rounding scheme, $\Delta_b=b-v'\odot(K\T u')$ uses the updated $u'$.</li>
+<li><strong>CompOT Remark 4.4, p. 66.</strong> “For fully dependent variables, $\eps=+\infty$” should be $\eps=0$.</li>
+<li><strong>StatOT Exercise 4.6-3, p. 137.</strong> The identities $\nabla\varphi_\eps=\E[Y|X=x]$, $\nabla^2\varphi_\eps=\eps^{-1}\mathrm{cov}(Y|X)$ with $\varphi_\eps=\frac12\norm{\cdot}^2-f_\eps$ hold for the cost $\frac12\norm{x-y}^2$; with the chapter’s cost $\norm{x-y}^2$, take $\varphi_\eps=\frac12(\norm{\cdot}^2-f_\eps)$ and $\nabla^2\varphi_\eps=\frac2\eps\mathrm{cov}(Y|X)$. Check ($\N(0,1)$ to itself, $\eps=0.5$): the slope of $\E[Y|X]$ is $0.8828$, the printed $\varphi''_\eps$ gives $0.7656$, the corrected one $0.8828$.</li>
+<li><strong>StatOT (4.12), p. 123.</strong> The left side should read $f_t(x)$, not $f_t(y)$.</li>
+<li><strong>The sheet.</strong> Exercise 1(4): the small parameter is $e^{-2/\eps}$, not $e^{-\eps/2}$; Exercise 6(1): “that that”; Exercise 8: the printed dual flips the sign of the potentials in the constraint but not in the objective (its supremum $0.46$ exceeds the primal value $0.146264$ in a test) — all corrected in <a href="#sheet">§13</a>.</li>
+</ul>
+</div>

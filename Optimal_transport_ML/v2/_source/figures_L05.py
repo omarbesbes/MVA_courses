@@ -119,8 +119,11 @@ def fig_slice():
         f.circle(q[0], q[1], 4.5, "f3")
         f.circle(p[0], p[1], 6, "f2")
         f.text(p[0], p[1], f"x{'₁₂₃'[i]}", "tx-b t2", "start", dx=8, dy=(14 if i == 0 else -6))
-        if t > 0:
-            f.text(q[0], q[1], f"⟨θ, x{'₁₂₃'[i]}⟩ = {t:g}", "tx-s t3", "end", dx=-8, dy=-2)
+        if t > 0:  # x3's dashed projection line runs up-left from its foot: put that label on the right
+            if i == 2:
+                f.text(q[0], q[1], f"⟨θ, x{'₁₂₃'[i]}⟩ = {t:g}", "tx-s t3", "start", dx=9, dy=12)
+            else:
+                f.text(q[0], q[1], f"⟨θ, x{'₁₂₃'[i]}⟩ = {t:g}", "tx-s t3", "end", dx=-8, dy=-2)
     c.arrow(f.X(0), f.Y(0), f.X(0.6 * 0.95), f.Y(0.8 * 0.95), 3, "ln c3")
     f.text(0.55, 0.62, "θ", "tx-i", "start", dx=6, dy=8)
     c.text(148, 18, "θ = (3/5, 4/5); ⟨θ, x₁⟩ = 0", "tx-b", "middle")
@@ -287,8 +290,8 @@ def fig_cw():
     h.fn(lambda a: min(math.cos(math.radians(a)) ** 2, math.sin(math.radians(a)) ** 2), "ln ck", 0, 180, 720)
     sw = 0.5 - 1 / math.pi
     h.line(0, sw, 180, sw, "ln c3 dash")
-    h.text(180, sw, f"SW₂² = ½ − 1/π ≈ {sw:.3f}", "tx-s t3", "end", dy=-6)
     c.text(526, 22, "W₂²(α_θ, β_θ) = min(cos²φ, sin²φ)", "tx-b", "middle")
+    c.text(526, 38, f"dashed: the average SW₂² = ½ − 1/π ≈ {sw:.3f}", "tx-s t3", "middle")
     c.text(526, 226, "zero exactly at φ = 0°, 90°, 180°", "tx-s", "middle")
     c.save()
 
@@ -363,8 +366,9 @@ def fig_mcerror():
     for K, m in zip(Ks, mae):
         f.circle(math.log10(K), math.log10(m), 4, "f2")
     f.text(math.log10(24), math.log10(math.sqrt(VAR / 24)), "√(Var/K): the correct bound", "tx-s t3", "start", dy=-12)
-    f.text(math.log10(2.2), math.log10(mae[1]), "dots: measured mean |error|", "tx-s t2", "start", dx=2, dy=28)
-    f.text(math.log10(20), math.log10(VAR / 20), "Var/K (printed on the slides): too small", "tx-s", "start", dy=16)
+    # labels below descending lines are anchored at their right end, where the line is lowest
+    f.text(math.log10(1024), math.log10(mae[-1]), "dots: measured mean |error|", "tx-s t2", "end", dx=-2, dy=20)
+    f.text(math.log10(256), math.log10(VAR / 256), "Var/K (printed on the slides): too small", "tx-s", "end", dx=-2, dy=16)
     c.text(310, 292, "the cross of §4: SW₂² = 1 − 2/π, Var = ½ − 4/π² ≈ 0.0947; 4000 runs per K", "tx-s", "middle")
     c.save()
     return Ks, mae

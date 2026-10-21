@@ -1,0 +1,114 @@
+<h2 id="convergence">7. How fast does Sinkhorn converge? <span class="ref">OT4ML §9.3–9.5, pp. 178–187</span></h2>
+<p class="tldr">Sinkhorn converges linearly: each cycle multiplies the error by at most $\lambda(K)^2<1$ (Birkhoff’s contraction in Hilbert’s metric), and near the solution by exactly $\sigma_\eps^2$, the squared maximal correlation of the plan. Both tend to $1$ as $\eps\to0$: about $1/\eps$ cycles are needed, and a robust bound gives $O(n^2\log n/\delta^2)$ operations for accuracy $\delta$.</p>
+
+<h3 id="conv-hilbert">Hilbert’s projective metric</h3>
+<p>The scalings $u,v$ are only defined up to a positive factor (the gauge), so the right way to measure their convergence ignores that factor. Hilbert’s metric does exactly this, and positive matrices are contractions for it.</p>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 9.15, Prop. 9.16, Thm. 9.17, p. 180 · compact Def. 9.13, Thm. 9.15, p. 49</span></div>
+<p><strong>Definition 9.15</strong> (Hilbert metric). On $\R^n_{+,*}$, Hilbert’s projective metric is $\ \forall(u,u')\in(\R^n_{+,*})^2,\ \ d_{\mathcal H}(u,u'):=\norm{\log(u)-\log(u')}_V.\ $ (9.7) Here, $\norm{\cdot}_V$ is the variation seminorm […]: $\norm{z}_V=\max_iz_i-\min_iz_i$.</p>
+<p><strong>Proposition 9.16.</strong> The function $d_{\mathcal H}$ defines a complete distance on the projective cone $\R^n_{+,*}/\!\sim$, where $u\sim u'$ means that $u=su'$ for some $s>0$.</p>
+<p><strong>Theorem 9.17</strong> (Birkhoff contraction theorem). Let $K\in\R^{n\times m}_{+,*}$. Then, for $(v,v')\in(\R^m_{+,*})^2$,</p>
+$$d_{\mathcal H}(Kv,Kv')\le\lambda(K)\,d_{\mathcal H}(v,v'),\qquad\lambda(K):=\frac{\sqrt{\eta(K)}-1}{\sqrt{\eta(K)}+1}<1,\qquad\eta(K):=\max_{i,j,k,\ell}\frac{K_{i,k}K_{j,\ell}}{K_{j,k}K_{i,\ell}}.$$
+</div>
+<dl class="decode">
+<dt>$d_{\mathcal H}(u,u')$</dt><dd>$\log\max_i\frac{u_i}{u'_i}-\log\min_i\frac{u_i}{u'_i}$: how unevenly $u'$ must be stretched, coordinate by coordinate, to become $u$. It is $0$ iff $u=su'$, and does not change if $u$ or $u'$ is multiplied by a positive number: a distance between <em>rays</em>.</dd>
+<dt>$\R^n_{+,*}$</dt><dd>Vectors with positive entries.</dd>
+<dt>$\eta(K)$</dt><dd>The largest cross-ratio of $K$; $\eta\ge1$, and $\log\eta(K)$ is the Hilbert diameter of the image cone $K\R^m_+$.</dd>
+<dt>$\lambda(K)$</dt><dd>The <em>Birkhoff contraction factor</em>, also $\tanh\big(\frac14\log\eta(K)\big)$. For the Gibbs kernel, $\log\eta\le2R/\eps$ with $R=\max C-\min C$, so $\lambda\le\tanh\big(R/(2\eps)\big)$ (OT4ML p. 184).</dd>
+</dl>
+<figure class="fig"><!-- include figures/L07/hilbert.svg --><figcaption>Birkhoff’s contraction for the running example’s kernel at $\eps=0.5$. Rays are vectors up to a positive factor; $K$ sends the whole positive quadrant into the green cone, of Hilbert diameter $\log\eta(K)=4$. Two rays at Hilbert distance $\log12=2.485$ are sent to rays at distance $1.789\le\lambda(K)\times2.485=1.892$, with $\lambda(K)=\tanh1=0.7616$.</figcaption></figure>
+<div class="box idea"><div class="box-h">Idea of the proof of Birkhoff’s theorem</div>
+<p>In logarithmic coordinates the map is $F(z)=\log(Ke^z)$, whose derivative is a row-stochastic matrix $P(z)$: each output is a weighted average of the inputs. An average can only shrink the spread $\max-\min$ of $h$, and it shrinks it by the factor $\frac12\max_{i,j}\norm{P_{i\cdot}-P_{j\cdot}}_1$, how different two rows of averaging weights can be. Since the rows of $P(z)$ are rows of $K$ reweighted by the same vector, their ratio is controlled by the cross-ratios of $K$; an elementary inequality turns $\eta(K)$ into $\tanh(\frac14\log\eta)$.</p>
+</div>
+<details class="fold proof"><summary>Full proof of Theorem 9.17</summary><div class="fold-body">
+<p>Let $F(z)=\log(Ke^z)$ for $z\in\R^m$ (entrywise $\log$ and $\exp$), so that $d_{\mathcal H}(Kv,Kv')=\norm{F(\log v)-F(\log v')}_V$.</p>
+<ol class="steps">
+<li>$$\frac{\partial F_i}{\partial z_k}(z)=\frac{K_{ik}e^{z_k}}{(Ke^z)_i}=:P(z)_{ik},\qquad\sum_kP(z)_{ik}=1 .$$<span class="why">Chain rule for $\log\sum_kK_{ik}e^{z_k}$. Each row of $P(z)$ is a probability vector.</span></li>
+<li>For probability vectors $p,q$ and any $h$: $\abs{\ps{p-q}{h}}\le\frac12\norm{p-q}_1\norm{h}_V$.<span class="why">$\sum_k(p_k-q_k)=0$, so we may replace $h$ by $h-\min h$, which takes values in $[0,\norm{h}_V]$; then $\ps{p-q}{h}\le\norm{h}_V\sum_k(p_k-q_k)_+=\norm{h}_V\cdot\frac12\norm{p-q}_1$, and the same for $q-p$.</span></li>
+<li>$$\norm{P(z)h}_V\le\delta\big(P(z)\big)\norm{h}_V,\qquad\delta(P):=\tfrac12\max_{i,j}\sum_k\abs{P_{ik}-P_{jk}}.$$<span class="why">$\norm{Ph}_V=\max_{i,j}\big((Ph)_i-(Ph)_j\big)=\max_{i,j}\ps{P_{i\cdot}-P_{j\cdot}}{h}$; apply step 2.</span></li>
+<li>Fix rows $p=P(z)_{i\cdot}$, $q=P(z)_{j\cdot}$ and $r_k=p_k/q_k$. Then $\sum_kq_kr_k=1$ and $\frac{\max_kr_k}{\min_kr_k}=\max_{k,\ell}\frac{K_{ik}K_{j\ell}}{K_{jk}K_{i\ell}}\le\eta(K)$.<span class="why">$r_k=\frac{K_{ik}}{K_{jk}}\cdot\frac{(Ke^z)_j}{(Ke^z)_i}$: the factor $e^{z_k}$ cancels, and the second factor does not depend on $k$.</span></li>
+<li>With $\alpha=\min_kr_k\le1\le\beta=\max_kr_k$: $$\tfrac12\norm{p-q}_1=\sum_kq_k(r_k-1)_+\le\frac{(1-\alpha)(\beta-1)}{\beta-\alpha}.$$<span class="why">$\frac12\norm{p-q}_1=\sum_k(p_k-q_k)_+$. On $[\alpha,\beta]$ the convex function $(r-1)_+$ lies below its chord $(\beta-1)\frac{r-\alpha}{\beta-\alpha}$; and $\sum_kq_k(r_k-\alpha)=1-\alpha$. ($\alpha\le1\le\beta$ because $\sum_kq_kr_k=1$ is an average of the $r_k$.)</span></li>
+<li>$$\frac{(1-\alpha)(\beta-1)}{\beta-\alpha}=\frac{2\sinh(s/2)\sinh(t/2)}{\sinh\big((s+t)/2\big)}\le\tanh\frac{s+t}{4}\le\tanh\frac{\log\eta(K)}4=\lambda(K),$$ where $\alpha=e^{-s}$, $\beta=e^{t}$.<span class="why">Factor $1-e^{-s}=2e^{-s/2}\sinh\frac s2$, $e^t-1=2e^{t/2}\sinh\frac t2$, $e^t-e^{-s}=2e^{(t-s)/2}\sinh\frac{s+t}2$. Then $\sinh x\sinh y=\frac12(\cosh(x+y)-\cosh(x-y))\le\sinh^2\frac{x+y}2$ and $\frac{2\sinh^2(w/2)}{\sinh w}=\tanh\frac w2$. Finally $s+t=\log(\beta/\alpha)\le\log\eta(K)$ (step 4), and $\tanh$ is increasing; $\tanh(\frac14\log\eta)=\frac{\sqrt\eta-1}{\sqrt\eta+1}$.</span></li>
+<li>$$\norm{F(z)-F(z')}_V=\Big\|\int_0^1P(z_t)(z-z')\,\dd t\Big\|_V\le\int_0^1\norm{P(z_t)(z-z')}_V\,\dd t\le\lambda(K)\norm{z-z'}_V,$$ with $z_t=(1-t)z'+tz$.<span class="why">Fundamental theorem of calculus along the segment; $\norm{\cdot}_V$ is a seminorm, so it passes inside the integral as an inequality; steps 3–6 bound $\delta(P(z_t))$ by $\lambda(K)$ for every $t$.</span></li>
+</ol>
+<p>Take $z=\log v$, $z'=\log v'$. $\square$</p>
+</div></details>
+
+<h3 id="conv-global">Global linear convergence</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Thm. 9.18, (9.9), p. 182 · compact Thm. 9.16, p. 49</span></div>
+<p>[…] The following result, due to Franklin and Lorenz [229], makes this argument precise.</p>
+<p><strong>Theorem 9.18</strong> (Projective linear convergence of Sinkhorn). Starting from $v^{(0)}>0$, use the scaling iterates of (8.5) […]. Fix any optimal scaling pair $(u^\star,v^\star)$. Writing $\lambda=\lambda(K)$, one has</p>
+$$d_{\mathcal H}(v^{(\ell)},v^\star)\le\lambda^{2\ell}d_{\mathcal H}(v^{(0)},v^\star),\qquad d_{\mathcal H}(u^{(\ell+1)},u^\star)\le\lambda^{2\ell+1}d_{\mathcal H}(v^{(0)},v^\star).\qquad(9.9)$$
+<p>Thus the scaling rays converge linearly. […]</p>
+</div>
+<details class="fold proof"><summary>Proof</summary><div class="fold-body">
+<ol class="steps">
+<li>For a fixed positive vector $w$: $d_{\mathcal H}(w\odot u,w\odot u')=d_{\mathcal H}(u,u')$ and $d_{\mathcal H}(1/u,1/u')=d_{\mathcal H}(u,u')$.<span class="why">$\log(w\odot u)-\log(w\odot u')=\log u-\log u'$; and $\log(1/u)-\log(1/u')=-(\log u-\log u')$, which has the same $\max-\min$.</span></li>
+<li>The row map $R(v)=a/(Kv)$ and the column map $C(u)=b/(K\T u)$ are $\lambda$-Lipschitz for $d_{\mathcal H}$.<span class="why">Theorem 9.17 for $K$ and for $K\T$ (same cross-ratios, so $\lambda(K\T)=\lambda(K)$), then step 1 for the inversion and the multiplication by $a$ or $b$.</span></li>
+<li>$d_{\mathcal H}(v^{(\ell)},v^\star)=d_{\mathcal H}\big(C(R(v^{(\ell-1)})),C(R(v^\star))\big)\le\lambda^2d_{\mathcal H}(v^{(\ell-1)},v^\star)$.<span class="why">$v^{(\ell)}=C(R(v^{(\ell-1)}))$ and the fixed point $v^\star=C(R(v^\star))$ (the scaling equations (8.4)); step 2 twice.</span></li>
+</ol>
+<p>Iterate step 3; the bound for $u^{(\ell+1)}=R(v^{(\ell)})$ costs one more factor $\lambda$. $\square$</p>
+</div></details>
+<div class="box example"><div class="box-h">Worked example — the guarantee and the reality</div>
+<p>Running example at $\eps=0.5$: $\eta(K)=\frac{1\cdot1}{e^{-2}e^{-2}}=e^4=54.6$, so $\lambda(K)=\frac{e^2-1}{e^2+1}=\tanh1=0.7616$ and $\lambda^2=0.5800$ per cycle. The observed ratio of successive row errors in §4 tends to $0.3621$: convergence is faster than guaranteed. The guarantee degrades fast: $1-\lambda^2=1/\cosh^2\big(\frac14\log\eta(K)\big)\le4/\sqrt{\eta(K)}$, and for a Gibbs kernel $\log\eta(K)=\Delta/\eps$, where $\Delta=\max_{i,j,k,\ell}(C_{jk}+C_{i\ell}-C_{ik}-C_{j\ell})\le2(\max C-\min C)$. So $1-\lambda^2\le4e^{-\Delta/(2\eps)}$: exponentially small in $1/\eps$. For the histograms of the widget below ($\Delta=1.92$), $1-\lambda^2=2.7\times10^{-4}$ at $\eps=0.1$ and $5\times10^{-14}$ at $\eps=0.03$: useless, although Sinkhorn converges in $10$ and $27$ cycles there.</p>
+</div>
+
+<h3 id="conv-local">The actual rate: the maximal correlation of the plan</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 9.19, p. 184 · Props. 9.20–9.21, (9.14), (9.19), pp. 185–186 · compact Prop. 9.18, p. 51</span></div>
+<p><strong>Definition 9.19</strong> (Conditional coupling operator). For a coupling $\pi\in\U(\al,\be)$ […] define $T_\pi:L^2(\be)\to L^2(\al)$ by $(T_\pi k)(x):=\int_{\mathcal Y}k(y)\,\dd\pi_x(y)$. The centered maximal correlation of $\pi$ is the restricted operator norm $\sigma(\pi):=\norm{T_\pi:L^2_0(\be)\to L^2_0(\al)}_{op}$ (9.13) […] equivalently, $\sigma(\pi)=\sup\int h(x)k(y)\,\dd\pi(x,y)$ over $h\in L^2_0(\al)$, $k\in L^2_0(\be)$ with $\norm{h}_{L^2(\al)}=\norm{k}_{L^2(\be)}=1$. For the optimal entropic coupling $\pi_\eps$, set […] $\sigma_\eps:=\sigma(\pi_\eps)$.</p>
+<p>[…] In the discrete setting […] $\sigma_\eps$ is the second singular value of $\operatorname{diag}(a)^{-1/2}P_\eps\operatorname{diag}(b)^{-1/2}$, whose first singular value is one.</p>
+<p><strong>Proposition 9.20</strong> (Dual Hessian and local Sinkhorn rate). […] Consequently, the Jacobian of a complete cycle […] is $T^*_\eps T_\eps$. […] $\ \limsup_{\ell\to\infty}\frac{\norm{e^{(\ell+1)}}_{L^2(\be)}}{\norm{e^{(\ell)}}_{L^2(\be)}}\le\sigma_\eps^2$. […] The law of total variance gives $\ 1-\sigma_\eps^2=\inf_{k\in L^2_0(\be),\,\norm{k}_{L^2(\be)}=1}\int\mathrm{Var}_{\pi_{\eps,x}}\big(k(Y)\big)\,\dd\al(x).\ $ (9.19) Thus Sinkhorn slows down when the optimal conditional laws $Y|X=x$ become nearly deterministic. This is exactly what happens as $\eps\to0$ in a smooth Monge regime.</p>
+<p><strong>Proposition 9.21.</strong> […] $\sigma_\eps\le\lambda(K)<1$, $\ \sigma_\eps^2\le\lambda(K)^2$. (9.20)</p>
+</div>
+<dl class="decode">
+<dt>$\pi_x$, $T_\pi k(x)$</dt><dd>The conditional law of $Y$ given $X=x$, and the conditional expectation $\E[k(Y)\,|\,X=x]$. For a matrix plan, $T_\eps=\operatorname{diag}(a)^{-1}P_\eps$: row $i$ of the plan divided by $a_i$.</dd>
+<dt>$\sigma(\pi)$</dt><dd>The <em class="new">maximal correlation</em> of $(X,Y)\sim\pi$: the largest correlation between a function of $X$ and a function of $Y$. $0$ for independent variables, $1$ if some non-constant function of $Y$ is a function of $X$ (e.g. $Y=T(X)$).</dd>
+<dt>$e^{(\ell)}$</dt><dd>The error $g^{(\ell)}-g_\eps$ on the potential, centered (gauge fixed). Near the solution it is multiplied by $T^*_\eps T_\eps$ at each cycle, an operator of norm $\sigma_\eps^2$.</dd>
+<dt>(9.19)</dt><dd>$1-\sigma_\eps^2$ is the smallest average conditional variance of a normalized function of $Y$ given $X$: the less randomness the plan leaves, the slower Sinkhorn.</dd>
+</dl>
+<div class="box example"><div class="box-h">Worked example — the $0.3621$ explained</div>
+<p>For a $2\times2$ plan the centered spaces have dimension one, so $\sigma_\eps$ is the absolute correlation of the indicators $X=\ind\{\text{row }2\}$ and $Y=\ind\{\text{column }2\}$ under $P_\eps$:</p>
+$$\begin{aligned}\mathrm{Cov}(X,Y)&=P_{22}-a_2b_2=0.487873-0.35=0.137873,\\\sigma_\eps&=\frac{0.137873}{\sqrt{0.7\times0.3}\sqrt{0.5\times0.5}}=0.601729 .\end{aligned}$$
+<p>So $\sigma_\eps^2=0.362078$: the limit of the ratios $0.459$, $0.404$, $0.378$, $0.368$, $0.364$, $0.3629$, $0.3624$ of successive errors in §4. And $\sigma_\eps^2=0.362\le\lambda^2=0.580$, as (9.20) says.</p>
+</div>
+<div class="widget" data-widget="l7conv"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p><strong>What to look at.</strong> Every curve becomes a straight line on the log scale (linear convergence), and its slope is the dashed prediction $\log_{10}\sigma_\eps^2$. For the “two bumps → one bump” histograms, the cycles needed to reach $10^{-9}$ and the factor $\sigma_\eps^2$ are:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>$\eps$</th><th>$0.1$</th><th>$0.03$</th><th>$0.01$</th><th>$0.003$</th><th>$0.001$</th></tr></thead>
+<tbody>
+<tr><td>cycles to $10^{-9}$</td><td>$10$</td><td>$27$</td><td>$80$</td><td>$272$</td><td>$1006$</td></tr>
+<tr><td>$\sigma_\eps^2$</td><td>$0.1025$</td><td>$0.4364$</td><td>$0.7595$</td><td>$0.9227$</td><td>$0.9797$</td></tr>
+<tr><td>$1-\lambda(K)^2$ (Birkhoff)</td><td>$2.7\times10^{-4}$</td><td>$5\times10^{-14}$</td><td>$\approx0$</td><td>$\approx0$</td><td>$\approx0$</td></tr>
+</tbody></table></div>
+<p>The number of cycles grows roughly like $1/\eps$ (here $1-\sigma_\eps^2$ is between $20\eps$ and $26\eps$ for $\eps\le0.01$, and about $\frac{20}{1-\sigma_\eps^2}$ cycles reduce the error by a factor $10^{9}$, since $\log10^9\approx20.7$). The Birkhoff guarantee is exponentially pessimistic. The “one bump → shifted bump” pair behaves the same way ($7$, $21$, $67$, $226$, $688$ cycles).</p>
+
+<h3 id="conv-robust">A robust rate, and the cost of approximating optimal transport</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 9.13, p. 178 · Cor. 9.14, pp. 179–180 · compact Prop. 9.11, Cor. 9.12, p. 48</span></div>
+<p><strong>Proposition 9.13</strong> (Robust $O(1/\ell)$ dual rate for discrete Sinkhorn). Let $a\in\Sigma_n$ and $b\in\Sigma_m$ be positive histograms, and let $C\in\R^{n\times m}_+$ be finite. Initialize $g^{(0)}=0$, perform complete Sinkhorn dual cycles […]. Let $\Delta^{(\ell)}:=\mathcal D_\eps(f^\star,g^\star)-\mathcal D_\eps(f^{(\ell)},g^{(\ell)})$ be the dual suboptimality gap […]. Then $\ 0\le\Delta^{(\ell)}\le\frac{2\norm{C}_\infty^2}{\eps\ell}$, $\ell\ge1$.</p>
+<p><strong>Corollary 9.14.</strong> […] For any $\delta>0$, choose $\eps=\delta/\log(nm)$. Then $\ \ell\ge\frac{2\norm{C}^2_\infty\log(nm)}{\delta^2}\implies L_0-\mathcal D_\eps(f^{(\ell)},g^{(\ell)})\le\delta$.</p>
+<p>For dense $n\times n$ problems, one Sinkhorn cycle costs $O(n^2)$ operations. Corollary 9.14 therefore yields the arithmetic complexity $\ O\Big(\frac{n^2\norm{C}^2_\infty\log n}{\delta^2}\Big)\ $ for additive accuracy $\delta$.</p>
+</div>
+<dl class="decode">
+<dt>$O(1/\ell)$</dt><dd>Slower than linear, but with a constant $2\norm{C}^2_\infty/\eps$ that is only polynomial in $1/\eps$, whereas $1/(1-\lambda^2)$ is exponential in $1/\eps$. It describes the first phase, before the linear regime of the widget sets in.</dd>
+<dt>$\eps=\delta/\log(nm)$</dt><dd>The bias of §3 is at most $\eps\log(nm)$; this choice makes it at most $\delta$. The two errors (bias and optimization) are then both $\le\delta$.</dd>
+<dt>$O(n^2\log n/\delta^2)$</dt><dd>Nearly quadratic in $n$, against $O(n^3)$ for the Hungarian method — but polynomial in $1/\delta$, against exact for combinatorial solvers. In the book’s words, Sinkhorn is “especially attractive for large-scale problems requiring low or moderate precision, rather than for computing highly accurate exact solutions” (p. 180).</dd>
+</dl>
+<div class="box idea"><div class="box-h">Idea of the proof of Proposition 9.13</div>
+<p>Soft $c$-transforms have a bounded oscillation: $\norm{f}_V\le\norm{C}_\infty$ (for $C\ge0$). Concavity bounds the gap by $\ps{f^\star-f^{(\ell)}}{a-r^{(\ell)}}\le\frac12\norm{f^\star-f^{(\ell)}}_V\norm{a-r^{(\ell)}}_1\le\norm{C}_\infty\norm{a-r^{(\ell)}}_1$ ($a-r^{(\ell)}$ has zero sum), while the next row step increases the dual by $\eps\KL(a|r^{(\ell)})\ge\frac\eps2\norm{a-r^{(\ell)}}^2_1$ (Pinsker; this increase is computed in <a href="#exo-dualgain">Exercise 11 of §14</a>). So the gap decreases at each cycle by at least a constant times its square, $\Delta_{\ell}-\Delta_{\ell+1}\ge\frac{\eps}{2\norm{C}^2_\infty}\Delta_\ell^2$, hence $\frac1{\Delta_{\ell+1}}-\frac1{\Delta_\ell}\ge\frac{\eps}{2\norm{C}^2_\infty}$; with $\Delta_1\le2\norm{C}^2_\infty/\eps$, summing gives the bound $2\norm{C}^2_\infty/(\eps\ell)$ (OT4ML pp. 178–179).</p>
+</div>
+<div class="box remark"><div class="box-h">Acceleration — over-relaxation</div>
+<p>OT4ML Prop. 9.22 (p. 187) extrapolates each block update, $f\leftarrow(1-\omega)f+\omega\,g^{\bar c,\eps}$ and similarly for $g$, and shows that the best local factor is $r^\star=\frac{1-\sqrt{1-\sigma_\eps^2}}{1+\sqrt{1-\sigma_\eps^2}}$ at $\omega^\star=\frac{2}{1+\sqrt{1-\sigma_\eps^2}}$. Since $1-r^\star\approx2\sqrt{1-\sigma_\eps^2}$, the number of cycles drops from about $1/(1-\sigma_\eps^2)$ to $1/\sqrt{1-\sigma_\eps^2}$. On the widget’s histograms: at $\eps=0.01$, $\omega^\star=1.342$ and the cycles to $10^{-9}$ drop from $80$ to $26$; at $\eps=0.001$, $\omega^\star=1.751$ and they drop from $1006$ to $97$. Another classical trick is <em>$\eps$-scaling</em>: start with a large $\eps$ and decrease it along the iterations, warm-starting the potentials (OT4ML p. 175).</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — “Sinkhorn converges linearly, so it is fast”</div>
+<p>Linear with a factor $\sigma_\eps^2$ that tends to $1$: the number of cycles grows like $1/\eps$, and the global bound $\lambda^2$ is so close to $1$ for small $\eps$ that it says nothing. Conversely, do not conclude from the pessimistic bound that Sinkhorn is useless at small $\eps$: measure the marginal error.</p>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>Convergence of scalings → Hilbert metric (ignores the gauge); positive kernel → Birkhoff factor $\lambda=\tanh(\frac14\log\eta)$; one cycle → $\lambda^2$.</li>
+<li>Observed rate → $\sigma_\eps^2$, the squared second singular value of $\operatorname{diag}(a)^{-1/2}P_\eps\operatorname{diag}(b)^{-1/2}$; slow when $Y|X$ is nearly deterministic.</li>
+<li>Approximating $L_C$ to accuracy $\delta$ → $\eps\approx\delta/\log n$, $O(\log n/\delta^2)$ cycles of cost $n^2$.</li>
+</ul>
+</div>
+<div class="quiz"><p>For $K=\begin{pmatrix}1&t\\t&1\end{pmatrix}$ with $0<t<1$, compute $\eta(K)$ and $\lambda(K)$. What happens as $t\to0$ (i.e. $\eps\to0$ with $t=e^{-1/\eps}$)?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>The largest cross-ratio is $\frac{K_{11}K_{22}}{K_{21}K_{12}}=1/t^2$, so $\sqrt\eta=1/t$ and $\lambda=\frac{1/t-1}{1/t+1}=\frac{1-t}{1+t}$. As $t\to0$, $\lambda\to1$ and $1-\lambda\approx2t=2e^{-1/\eps}$: exponentially small. (Running example: $t=e^{-2}$, $\lambda=\tanh1$.)</p>
+</div></details></div>

@@ -1,0 +1,105 @@
+<h2 id="debias">9. Entropic bias and Sinkhorn divergences <span class="ref">OT4ML §8.9, pp. 166–169</span></h2>
+<p class="tldr">The raw entropic cost is not a distance: $\mathcal L^\eps(\al,\al)>0$, and fitting a model by minimizing it shrinks the model (even to a point at high temperature). Subtracting the two self-transport terms gives the Sinkhorn divergence, which is non-negative, vanishes only at $\al=\be$, and interpolates between optimal transport ($\eps\to0$) and a kernel distance of MMD type ($\eps\to\infty$).</p>
+
+<h3 id="debias-bias">The problem: the raw cost prefers a shrunk copy</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML p. 166, Prop. 8.35 and Example 8.36</span></div>
+<p>A basic defect of the raw entropic value is its self-interaction bias. Even when $c(x,x)=0$, one generally has $\mathcal L^\eps_c(\al,\al)>0$ for a non-Dirac measure. […] Consequently, a minimizer $\be_\eps\in\argmin_\be\mathcal L^\eps_c(\al,\be)$ need not equal $\al$ for $\eps>0$.</p>
+<p><strong>Proposition 8.35</strong> (Large-temperature entropic bias). Let $\X,\Y$ be compact and assume that $c$ is continuous. Then $\mathcal L^\eps_c(\al,\be)\to\iint c(x,y)\,\dd\al(x)\dd\be(y)$ as $\eps\to+\infty$.</p>
+<p><strong>Example 8.36</strong> (Large temperature collapse). […] The limiting functional is linear in the second argument: $\ \be\mapsto\int V_\al(y)\,\dd\be(y)$, $V_\al(y):=\int c(x,y)\,\dd\al(x)$. Thus every cluster point is supported on $\argmin V_\al$. […] For the quadratic cost $c(x,y)=\norm{x-y}^2$ […] the collapse is toward the Dirac mass at the mean of $\al$.</p>
+</div>
+<dl class="decode">
+<dt>$\mathcal L^\eps_c(\al,\al)>0$</dt><dd>Transporting $\al$ to itself costs something: the identity plan has infinite (densities) or large (discrete) mutual information, so the entropic plan blurs, and blurred mass travels. A loss that is positive at the perfect fit is a biased loss.</dd>
+<dt>$\iint c\,\dd\al\,\dd\be$</dt><dd>The cost of the independent coupling. It is linear in $\be$, so it is minimized by a Dirac at the point $y$ minimizing the average cost $V_\al(y)$ to $\al$: for the quadratic cost, the mean of $\al$.</dd>
+</dl>
+<div class="box example"><div class="box-h">Worked example — the bias and the shrinkage for Gaussians</div>
+<p>For $\al=\N(0,1)$, the closed form of §8 gives the self-cost $\mathcal L^\eps(\al,\al)$:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>$\eps$</th><td>$0.01$</td><td>$0.1$</td><td>$0.5$</td><td>$1$</td><td>$10$</td><td>$100$</td></tr></thead>
+<tbody><tr><th>$\mathcal L^\eps(\al,\al)$</th><td>$0.0315$</td><td>$0.2004$</td><td>$0.6122$</td><td>$0.9088$</td><td>$1.8038$</td><td>$1.9800$</td></tr></tbody></table></div>
+<p>It tends to $\iint\abs{x-y}^2\dd\al\,\dd\al=2$ as $\eps\to\infty$. Now fit $\be=\N(0,s^2)$ to $\al$ by minimizing $s\mapsto\mathcal L^\eps(\al,\N(0,s^2))$: the best width is $s^\star=0.9975$ at $\eps=0.01$, $0.9747$ at $\eps=0.1$, $0.8660$ at $\eps=0.5$, $0.7071$ at $\eps=1$, and for $\eps\ge2$ the loss decreases all the way to $s=0$ — the collapse of Example 8.36. These are the values $s^\star=\sqrt{1-\eps/2}$ derived below.</p>
+</div>
+<details class="fold more"><summary>Derivation of $s^\star=\sqrt{1-\eps/2}$ (added for this page)</summary><div class="fold-body">
+<p>Write $L(s)=\min_k\Phi(s,k)$ with $\Phi(s,k)=1+s^2-2k-\frac\eps2\log\big(1-\frac{k^2}{s^2}\big)$ (§8 with $m_\al=m_\be=0$, $\sigma_\al=1$, $\sigma_\be=s$).</p>
+<ol class="steps">
+<li>The optimal $k$ satisfies $\partial_k\Phi=0$: $\ -2+\dfrac{\eps k}{s^2-k^2}=0$, i.e. $\eps k=2(s^2-k^2)$.<span class="why">$\partial_k\big[-\frac\eps2\log(1-k^2/s^2)\big]=\frac{\eps k/s^2}{1-k^2/s^2}=\frac{\eps k}{s^2-k^2}$.</span></li>
+<li>$$L'(s)=\partial_s\Phi(s,k)=2s-\frac{\eps k^2/s}{s^2-k^2}=2s-\frac{2k}{s}.$$<span class="why">Envelope theorem (the derivative of a minimum is the partial derivative at the minimizer; Exercise 5 of the sheet). $\partial_s\big[-\frac\eps2\log(1-k^2s^{-2})\big]=-\frac\eps2\cdot\frac{2k^2s^{-3}}{1-k^2s^{-2}}$; then step 1.</span></li>
+<li>$L'(s)=0\iff s^2=k$, and then step 1 reads $\eps s^2=2(s^2-s^4)$, i.e. $s^2=1-\frac\eps2$.<span class="why">Substitute $k=s^2$.</span></li>
+<li>For $\eps\ge2$, $L'(s)>0$ for every $s>0$: no interior minimizer, the infimum is approached as $s\to0$.<span class="why">$s^2>k$ is equivalent (with $k=\frac{\sqrt{\eps^2+16s^2}-\eps}4$) to $16s^4+8\eps s^2-16s^2>0$, i.e. $s^2>1-\frac\eps2$, true for all $s$ when $\eps\ge2$.</span></li>
+</ol>
+</div></details>
+
+<h3 id="debias-def">The Sinkhorn divergence</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Def. 8.37, (8.52), p. 166 · Lemma 8.39, (8.54), p. 167 · compact Def. 8.31, Lemma 8.32, p. 44</span></div>
+<p><strong>Definition 8.37</strong> (Sinkhorn divergence). Let $c$ be a symmetric cost on a common state space. For $\eps>0$, the debiased Sinkhorn divergence associated with the entropic OT value $\mathcal L^\eps_c$ is</p>
+$$\bar{\mathcal L}^\eps_c(\al,\be):=\mathcal L^\eps_c(\al,\be)-\frac12\mathcal L^\eps_c(\al,\al)-\frac12\mathcal L^\eps_c(\be,\be).\qquad(8.52)$$
+<p>Although this formula is a debiasing by self-costs, its non-negativity is not automatic from the definition […].</p>
+<p><strong>Lemma 8.39</strong> (Entropic dual cost at optimum). Let $(f_{\al,\be},g_{\al,\be})$ be optimal dual potentials, normalized arbitrarily. Then $\ \mathcal L^\eps_c(\al,\be)=\ps{f_{\al,\be}}{\al}+\ps{g_{\al,\be}}{\be}.$ (8.54)</p>
+</div>
+<dl class="decode">
+<dt>$\bar{\mathcal L}^\eps_c$, written $S_\eps$ on this page</dt><dd>The cross term minus the average of the two self terms. The same construction turns a kernel into a squared distance: $\norm{\phi(x)-\phi(y)}^2=k(x,x)+k(y,y)-2k(x,y)$; here $-\mathcal L^\eps$ plays the role of the kernel.</dd>
+<dt>$S_\eps(\al,\al)=0$</dt><dd>Immediate from the definition: the bias is removed at the perfect fit.</dd>
+<dt>(8.54)</dt><dd>At the optimum the exponential term of the dual (8.24) integrates to $0$, so the value is just $\ps{f}{\al}+\ps{g}{\be}$ (the continuous version of §2). For the self term $\al=\be$, symmetry allows $f_{\al,\al}=g_{\al,\al}$, so $\ps{f_{\al,\al}}{\al}=\frac12\mathcal L^\eps(\al,\al)$.</dd>
+</dl>
+<div class="box course"><div class="box-h">In the course <span class="ref">OT4ML Prop. 8.40, Remark 8.41, Prop. 8.42, pp. 168–169 · compact Props. 8.33–8.34, pp. 44–45</span></div>
+<p><strong>Proposition 8.40</strong> (Asymptotics of Sinkhorn divergences). Let $\X$ be a compact metric space, let $\al,\be\in\Pc(\X)$, and assume that $c:\X\times\X\to\R_+$ is continuous and symmetric, with $c(x,x)=0$. Then $\bar{\mathcal L}^\eps_c(\al,\be)\to\mathcal L_c(\al,\be)$ when $\eps\to0$ and</p>
+$$\bar{\mathcal L}^\eps_c(\al,\be)\to\frac12\int-c\ \dd(\al-\be)\otimes\dd(\al-\be)\qquad\text{when }\eps\to+\infty.$$
+<p><strong>Remark 8.41.</strong> If $c$ is conditionally negative definite […] the large-temperature limit in Proposition 8.40 is a squared Hilbertian seminorm on zero-mass signed measures. A typical example is $c(x,y)=\norm{x-y}^p$ for $0<p<2$, which yields the energy distance.</p>
+<p><strong>Proposition 8.42</strong> (Positivity of Sinkhorn divergences). Assume that the entropic dual admits optimal potentials and that the symmetric kernel $k_\eps(x,y)=e^{-c(x,y)/\eps}$ is positive semidefinite […]. Then $\bar{\mathcal L}^\eps_c(\al,\be)\ge0$. If, in addition, the common state space is compact, $c$ is continuous, and $k_\eps$ is universal […], then $\bar{\mathcal L}^\eps_c(\al,\be)=0\iff\al=\be$, and $\bar{\mathcal L}^\eps_c(\al_n,\al)\to0$ is equivalent to $\al_n\wto\al$.</p>
+</div>
+<dl class="decode">
+<dt>$\frac12\int-c\,\dd(\al-\be)^{\otimes2}$</dt><dd>$\iint c\,\dd\al\dd\be-\frac12\iint c\,\dd\al\dd\al-\frac12\iint c\,\dd\be\dd\be$: the large-$\eps$ limit of each term (Prop. 8.35) put into (8.52). For $c=\norm{x-y}$ it is the <em class="new">energy distance</em>, an MMD with the kernel $-\norm{x-y}$ (<a href="#recall-mmd">refresher</a>).</dd>
+<dt>$k_\eps$ positive semidefinite</dt><dd>True for $c=\norm{x-y}^2$ (Gaussian kernel) and $c=\norm{x-y}$ (Laplace kernel): $\sum_{ij}c_ic_je^{-c(x_i,x_j)/\eps}\ge0$. Both are also universal.</dd>
+<dt>$\al_n\wto\al$</dt><dd>Weak convergence (Lesson 3): $S_\eps$ metrizes the same convergence as $W_p$ on a compact space.</dd>
+</dl>
+<div class="box idea"><div class="box-h">Idea of the proof of positivity</div>
+<p>Plug into the dual of $\mathcal L^\eps(\al,\be)$ the (suboptimal) pair made of the self-potentials $f_{\al,\al}$ and $f_{\be,\be}$. Their dual value is $\frac12\mathcal L^\eps(\al,\al)+\frac12\mathcal L^\eps(\be,\be)$ minus a penalty that is a kernel inner product $\eps\ps{\tilde\al}{\tilde\be}_{k_\eps}$ of two reweighted measures, plus $\eps$. The self Sinkhorn equations say that each reweighted measure has kernel norm $1$; Cauchy–Schwarz gives $\ps{\tilde\al}{\tilde\be}_{k_\eps}\le1$.</p>
+</div>
+<details class="fold proof"><summary>Full proof that $S_\eps\ge0$</summary><div class="fold-body">
+<p>Let $f_\al=f_{\al,\al}=g_{\al,\al}$ and $f_\be=f_{\be,\be}=g_{\be,\be}$ be symmetric optimal potentials of the self problems, and $k_\eps=e^{-c/\eps}$.</p>
+<ol class="steps">
+<li>$$\mathcal L^\eps(\al,\be)\ge\ps{f_\al}{\al}+\ps{f_\be}{\be}-\eps\iint\Big(e^{\frac{f_\al(x)+f_\be(y)-c(x,y)}{\eps}}-1\Big)\dd\al(x)\dd\be(y).$$<span class="why">Weak duality (8.23): the dual objective $\mathcal D_\eps$ at any pair is below the primal value; here the pair $(f_\al,f_\be)$.</span></li>
+<li>$\ps{f_\al}{\al}=\frac12\mathcal L^\eps(\al,\al)$ and $\ps{f_\be}{\be}=\frac12\mathcal L^\eps(\be,\be)$.<span class="why">Lemma 8.39 for the self problems with $f=g$.</span></li>
+<li>$$S_\eps(\al,\be)\ge\eps\big(1-\ps{\tilde\al}{\tilde\be}_{k_\eps}\big),\qquad\tilde\al=e^{f_\al/\eps}\al,\ \tilde\be=e^{f_\be/\eps}\be,\ \ \ps{\mu}{\nu}_{k_\eps}=\iint k_\eps\,\dd\mu\,\dd\nu .$$<span class="why">Steps 1–2 and $e^{(f_\al(x)+f_\be(y)-c(x,y))/\eps}=e^{f_\al(x)/\eps}k_\eps(x,y)e^{f_\be(y)/\eps}$; the “$-1$” integrates to $1$ against $\al\otimes\be$.</span></li>
+<li>$\norm{\tilde\al}^2_{k_\eps}=1$ and $\norm{\tilde\be}^2_{k_\eps}=1$.<span class="why">The self Sinkhorn equation $f_\al=(f_\al)^{c,\eps}$ exponentiated reads $e^{f_\al(x)/\eps}\int k_\eps(x,y)\,\dd\tilde\al(y)=1$ for $\al$-a.e. $x$; integrate against $\al$: $\iint k_\eps\,\dd\tilde\al\,\dd\tilde\al=\int1\,\dd\al=1$.</span></li>
+<li>$\ps{\tilde\al}{\tilde\be}_{k_\eps}\le\norm{\tilde\al}_{k_\eps}\norm{\tilde\be}_{k_\eps}=1$, hence $S_\eps(\al,\be)\ge0$.<span class="why">$k_\eps$ positive semidefinite, so $\ps{\cdot}{\cdot}_{k_\eps}$ is a (semi-)inner product and Cauchy–Schwarz holds. $\square$</span></li>
+</ol>
+<p>(The equality case and the metrization need universality of the kernel; see OT4ML p. 169.)</p>
+</div></details>
+<div class="box remark"><div class="box-h">Note on the sources — the 2019 notes, §7</div>
+<p>The same material in the 2019 notes (pp. 36–37) has four slips, each easy to check: (i) the definition of $\bar{\mathcal L}^\eps_c$ subtracts $\frac12\mathcal L^\eps_c(\al,\be)$ instead of $\frac12\mathcal L^\eps_c(\be,\be)$; (ii) the proof of Prop. 21 ends with $\mathcal L^\eps_c(\al,\be)=-\iint c\,\dd\al\dd\be+o(1)$, with a wrong sign (for $\N(0,1)$ and $\N(1,4)$ the value at $\eps=1000$ is $5.992$, close to $+\iint c=6$); (iii) in the proof of Prop. 22 the exponent should contain $f_{\al,\al}\oplus g_{\be,\be}$, not $f_{\al,\be}\oplus g_{\al,\be}$, and the bound should read $1-\ps{e^{(\dots)/\eps}}{\al\otimes\be}$ without the extra “$-1$” inside (with it, the case $\al=\be$ would give $0\ge1$); (iv) the reweighted measure is $e^{f_{\al,\al}/\eps}\al$, not $e^{f_{\al,\al}}\al$. OT4ML’s version, followed above, is correct.</p>
+</div>
+<div class="box example"><div class="box-h">Worked example — from $W_2^2$ to the means</div>
+<p>For $\al=\N(0,1)$ and $\be=\N(1,4)$ ($W_2^2=2$), the closed forms give:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>$\eps$</th><td>$0.01$</td><td>$0.1$</td><td>$1$</td><td>$10$</td><td>$100$</td><td>$1000$</td></tr></thead>
+<tbody>
+<tr><th>raw $\mathcal L^\eps(\al,\be)$</th><td>$2.0350$</td><td>$2.2348$</td><td>$3.2244$</td><td>$5.2534$</td><td>$5.9201$</td><td>$5.9920$</td></tr>
+<tr><th>$S_\eps(\al,\be)$</th><td>$1.999999$</td><td>$1.999922$</td><td>$1.992309$</td><td>$1.650977$</td><td>$1.089554$</td><td>$1.009000$</td></tr>
+</tbody></table></div>
+<ul>
+<li><strong>Small $\eps$:</strong> the raw bias $\mathcal L^\eps-W_2^2$ is of order $\eps\log\frac1\eps$ (§8), while $S_\eps-W_2^2=-7.812\times10^{-7}$ at $\eps=0.01$ and $-7.811\times10^{-5}$ at $\eps=0.1$: of order $\eps^2$. In the expansion of Prop. 8.17, the $\eps\log\eps$ and entropy terms cancel between the cross and self terms, and what remains is $\frac{\eps^2}{16}\big(\mathcal I_{geo}(\al,\be)-\frac12\mathcal I_{geo}(\al,\al)-\frac12\mathcal I_{geo}(\be,\be)\big)=-\frac{\eps^2}{32}\big(\frac1{\sigma_\al}-\frac1{\sigma_\be}\big)^2=-\frac{\eps^2}{128}$ here, i.e. $-7.8125\times10^{-7}$ at $\eps=0.01$.</li>
+<li><strong>Large $\eps$:</strong> $S_\eps\to\frac12\int-\abs{x-y}^2\dd(\al-\be)^{\otimes2}=(m_\al-m_\be)^2=1$. For the quadratic cost the limit only sees the means: $-\abs{x-y}^2$ is at the edge of the family of Remark 8.41 ($p=2$ is excluded), and the limit is a seminorm, not a norm. With $c=\abs{x-y}$ the limit would be the energy distance, which separates all measures.</li>
+<li><strong>Translations:</strong> $S_\eps\big(\N(0,1),\N(1.5,1)\big)=2.25=1.5^2$ for every $\eps$ ($0.01$, $1$, $100$): the Sinkhorn divergence is exact on translations (<a href="#exo-translation">Exercise 10 of §14</a>; OT4ML Cor. 9.27, p. 190).</li>
+</ul>
+</div>
+<figure class="fig"><!-- include figures/L07/bias.svg --><figcaption>Left: for $\N(0,1)$ against $\N(1,4)$, the bias of the raw entropic value $\mathcal L^\eps-W_2^2$ (orange-red) and of the Sinkhorn divergence $\abs{S_\eps-W_2^2}$ (green), on log–log axes; the dashed line $\eps^2/128$ is the second-order prediction. Right: best width $s$ of a fit $\N(0,s^2)$ to $\N(0,1)$: the raw loss returns $\sqrt{1-\eps/2}$ and collapses to a Dirac for $\eps\ge2$; the Sinkhorn divergence returns the right width $s=1$ for every $\eps$.</figcaption></figure>
+<div class="widget" data-widget="l7debias"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p><strong>What to look at.</strong> With “the width $s$”, the raw loss (orange-red) has its minimum to the left of $s=1$ and the minimizer moves left as $\eps$ grows — it reaches $s=0$ beyond $\eps=2$ — while the Sinkhorn divergence (green) always vanishes exactly at $s=1$, where it touches $0$. The dotted level is the bias $\mathcal L^\eps(\al,\al)$: the height of the raw loss at the perfect fit. With “the mean $m$”, all three curves are parabolas with the right minimizer $m=0$: the bias does not depend on a translation, so it does not hurt the fit of a location; it hurts the fit of a shape.</p>
+
+<div class="box ml"><div class="box-h">In machine learning — Sinkhorn divergences as training losses (GeomLoss)</div>
+<p>To train a generative model $g_\theta$ (a network mapping random noise $z$ to images, or 3D points), one compares the cloud of generated samples $\{g_\theta(z_i)\}$ with a mini-batch of data $\{y_j\}$ and descends the gradient of a discrepancy. Genevay, Peyré and Cuturi (<em>Learning generative models with Sinkhorn divergences</em>, AISTATS 2018) proposed $S_\eps$ for this: unlike the KL divergence it is finite between clouds with different supports, unlike exact transport it is differentiable and computed by Sinkhorn on a GPU, and unlike the raw $\mathcal L^\eps$ it does not reward shrunk or collapsed models. Feydy et al. (<em>Interpolating between optimal transport and MMD using Sinkhorn divergences</em>, AISTATS 2019) proved the properties above (positivity, metrization, the OT–MMD interpolation) and released the GeomLoss library, used for shape registration, point-cloud and generative modelling. The temperature is a genuine design choice: small $\eps$ gives the geometry of transport (good matchings, informative gradients), large $\eps$ the statistical robustness of MMD (§10).</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — using the raw entropic cost as a loss</div>
+<p>$\mathcal L^\eps(\al,\be)$ is minimized by a $\be$ that is a shrunk version of $\al$, and by a Dirac at the mean when $\eps$ is large. A model trained with the raw cost will be too concentrated (at high temperature it collapses towards the mean of the data, Example 8.36; OT4ML Fig. 8.15, p. 167, shows the same on a point cloud). Always debias: $S_\eps=\mathcal L^\eps(\al,\be)-\frac12\mathcal L^\eps(\al,\al)-\frac12\mathcal L^\eps(\be,\be)$. The extra cost is one more Sinkhorn per self term, and in a training loop the self term of the data is computed once.</p>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>Loss between distributions with entropy → debias with the two self terms.</li>
+<li>$S_\eps\ge0$ ← self-potentials in the cross dual + kernel Cauchy–Schwarz ($e^{-c/\eps}$ positive definite).</li>
+<li>$\eps\to0$: $S_\eps\to\mathcal L_c$ with an error $O(\eps^2)$ for smooth densities; $\eps\to\infty$: $S_\eps\to-\frac12\iint c\,\dd(\al-\be)^{\otimes2}$ (energy distance for $c=\norm{x-y}$).</li>
+</ul>
+</div>
+<div class="quiz"><p>For two Diracs, compute $\mathcal L^\eps(\delta_x,\delta_y)$ and $S_\eps(\delta_x,\delta_y)$ for a symmetric cost with $c(x,x)=0$.</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>The only coupling is $\delta_{(x,y)}=\delta_x\otimes\delta_y$, whose KL with respect to $\delta_x\otimes\delta_y$ is $0$. So $\mathcal L^\eps(\delta_x,\delta_y)=c(x,y)$, $\mathcal L^\eps(\delta_x,\delta_x)=0$, and $S_\eps(\delta_x,\delta_y)=c(x,y)$ for every $\eps$: no bias for Diracs (<a href="#exo-diracs">Exercise 7 of §14</a>).</p>
+</div></details></div>

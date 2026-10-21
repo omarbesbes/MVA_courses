@@ -1,0 +1,68 @@
+<h2 id="learning">11. Learning with Sinkhorn losses: gradients <span class="ref">CompOT §9.1, pp. 140–142 · sheet Exercises 5 and 11</span></h2>
+<p class="tldr">The gradient of the entropic cost comes for free with its solution: with respect to the cost matrix it is the plan, with respect to the weights it is the dual potential, and with respect to the positions of the points it pulls each point towards its barycentric projection. Alternatively, differentiate through the Sinkhorn iterations.</p>
+
+<h3 id="learning-why">The problem</h3>
+<p>A learning problem with a transport loss looks like $\min_\theta\mathcal L^\eps(\al_\theta,\be)$ or $\min_\theta S_\eps(\al_\theta,\be)$: $\be$ is the data, and $\al_\theta$ is a model — a histogram $a(\theta)$ on a fixed grid (“Eulerian” model), or a cloud of points $x_i(\theta)$, such as the outputs of a generator network, with fixed weights (“Lagrangian” model). Gradient descent needs the derivative of the loss with respect to $a$, to $C$, or to the points $x_i$. The loss is itself the value of an optimization problem, and the tool to differentiate such values is the envelope theorem, recalled by the sheet.</p>
+<div class="box recall"><div class="box-h">Reminder — the envelope theorem (sheet, Exercise 5)</div>
+<p>Let $V(\theta)=\min_zF(z,\theta)$ with $F$ smooth, and assume that for each $\theta$ there is a unique minimizer $z^\star(\theta)$. Then $\nabla_\theta V(\theta)=\nabla_\theta F\big(z^\star(\theta),\theta\big)$: differentiate $F$ in $\theta$ at the optimizer, as if $z^\star$ did not move. (Reason: $z^\star$ moves, but $\nabla_zF(z^\star,\theta)=0$, so its motion has no first-order effect.) The same holds for a maximum, and for constraints that do not depend on $\theta$. More: <a href="Reminders.html#first-variation">Reminders — first variation</a>.</p>
+</div>
+<div class="box course"><div class="box-h">In the course <span class="ref">CompOT Prop. 9.1 and (9.3), p. 140 · Prop. 9.2, (9.6)–(9.7), p. 141</span></div>
+<p><strong>Proposition 9.1</strong> (Derivative with respect to histograms). For $\eps>0$, $(a,b)\mapsto\mathrm L^\eps_C(a,b)$ is convex and differentiable. Its gradient reads $\ \nabla\mathrm L^\eps_C(a,b)=(f,g)$, (9.2) where $(f,g)$ is the unique solution to (4.30), centered such that $\sum_if_i=\sum_jg_j=0$. […] The zero mean condition on $(f,g)$ is important when using gradient descent to guarantee conservation of mass.</p>
+<p><strong>Proposition 9.2</strong> (Derivative with respect to the cost). For fixed input histograms $(a,b)$, for $\eps>0$, the mapping $C\mapsto R(C)=\mathrm L^\eps_C(a,b)$ is concave and smooth, and $\ \nabla R(C)=P$, (9.5) where P is the unique optimal solution of (4.2). […] For discrete measures […] one obtains using the chain rule that $x=(x_i)_{i=1}^n\mapsto F(x)=\mathrm L_{C(x)}(\ind_n/n,b)$ is smooth and that</p>
+$$\nabla F(x)=\Big(\sum_{j=1}^mP_{i,j}\nabla_1c(x_i,y_j)\Big)_{i=1}^n .\qquad(9.6)$$
+<p>[…] For $c(s,t)=\norm{s-t}^2$ […] $\nabla F(x)=2\Big(a_ix_i-\sum_{j=1}^mP_{i,j}y_j\Big)_{i=1}^n$, (9.7) where $a_i=1/n$ here. Note that, up to a constant, this gradient is $\Id-T$, where $T$ is the barycentric projection […].</p>
+</div>
+<dl class="decode">
+<dt>$\nabla_{(a,b)}=(f,g)$</dt><dd>Increasing the mass at $x_i$ by $\delta$ (and removing it elsewhere) changes the cost by about $\delta\,(f_i-f_{i'})$: $f_i$ is the marginal price of mass at $x_i$, as in Lesson 4. Only differences of potentials matter, since $a$ stays on the simplex — hence the centering. (CompOT’s convention for $\mathrm L^\eps_C$ is the sheet’s, where $P_{ij}=e^{(f_i+g_j-C_{ij})/\eps}$. With the KL convention of this page, where $P_{ij}=a_ib_je^{(f_i+g_j-C_{ij})/\eps}$, the gradient is $f-\eps\ind$: again the potential, up to a constant. The two values differ by $\eps(1+\mathrm H(a)+\mathrm H(b))$, so the gradients differ too: $\nabla_a L^\eps_{\rm KL}=\nabla_a\mathrm L^\eps_{\rm CompOT}-\eps(\log a+\ind)$, consistent with $f_{\rm KL}=f_{\rm CompOT}-\eps\log a$ up to a constant.)</dd>
+<dt>$\nabla_C=P$</dt><dd>Raising the price $C_{ij}$ of one trip by $\delta$ raises the cost by $\delta P_{ij}$, the mass on that trip. $R$ is concave because it is a minimum of functions that are linear in $C$.</dd>
+<dt>(9.6)–(9.7)</dt><dd>Chain rule: $C_{ij}=c(x_i,y_j)$ depends on $x_i$ only through row $i$. For the quadratic cost, the force on $x_i$ is $2\big(a_ix_i-\sum_jP_{ij}y_j\big)=2a_i\big(x_i-T_\eps(x_i)\big)$, with the <em class="new">barycentric projection</em> $T_\eps(x_i)=\frac1{a_i}\sum_jP_{ij}y_j$, the average target of $x_i$ under the plan (sheet, Exercise 11). With $c=\frac12\norm{x-y}^2$, as in the sheet, the factor $2$ disappears.</dd>
+</dl>
+<div class="box idea"><div class="box-h">Idea of the proofs</div>
+<p>Cost: $\mathrm L^\eps_C=\min_P\{\ps{C}{P}+\eps\KL(P|a\otimes b)\}$ has a unique minimizer and $C$ enters linearly: by the envelope theorem the gradient is $P$. Weights: write the value as the maximum of the dual (8.20), an unconstrained problem in which $a$ appears explicitly; differentiate the dual objective in $a$ at the optimal $(f,g)$. Positions: chain rule from the cost.</p>
+</div>
+<details class="fold proof"><summary>The gradient with respect to the weights, line by line</summary><div class="fold-body">
+<p>Convention (8.8) of this page. Let $D(f,g;a)=\ps{f}{a}+\ps{g}{b}-\eps\sum_{ij}e^{(f_i+g_j-C_{ij})/\eps}a_ib_j+\eps$, so that $L^\eps_C(a,b)=\max_{f,g}D(f,g;a)$ (§6).</p>
+<ol class="steps">
+<li>$$\frac{\partial D}{\partial a_i}(f,g;a)=f_i-\eps\sum_je^{(f_i+g_j-C_{ij})/\eps}b_j .$$<span class="why">$a$ appears in $\ps{f}{a}$ and in the weights $a_ib_j$.</span></li>
+<li>At the optimal $(f,g)$: $\sum_je^{(f_i+g_j-C_{ij})/\eps}b_j=\frac1{a_i}\sum_jP_{ij}=1$, so $\frac{\partial D}{\partial a_i}=f_i-\eps$.<span class="why">$P_{ij}=a_ib_je^{(f_i+g_j-C_{ij})/\eps}$ and $P\ind=a$ (§6).</span></li>
+<li>For a perturbation $\delta a$ with $\sum_i\delta a_i=0$: $\ L^\eps_C(a+t\,\delta a,b)=L^\eps_C(a,b)+t\ps{f}{\delta a}+o(t)$.<span class="why">Envelope theorem for the maximum (the optimal $(f,g)$ is unique up to the gauge, which does not change $\ps{f-\eps\ind}{\delta a}$ when $\sum\delta a_i=0$); the constant $-\eps$ disappears for the same reason.</span></li>
+</ol>
+<p>So the gradient on the simplex is $f$, up to an additive constant: center it before a gradient step, to keep $\sum_ia_i=1$. $\square$</p>
+</div></details>
+<div class="box example"><div class="box-h">Worked example — the force on two points</div>
+<p>On the line, $x=(0,1)$, $y=(0.5,2)$, $a=b=(\frac12,\frac12)$, $c(x,y)=\frac12(x-y)^2$, $\eps=0.1$. Sinkhorn gives $P=\begin{pmatrix}0.4997236&0.0002764\\0.0002764&0.4997236\end{pmatrix}$ (almost the monotone matching $0\to0.5$, $1\to2$), value $L^\eps=0.381759$. Then</p>
+$$\begin{aligned}T_\eps(x)&=\Big(\frac{P_{11}\,0.5+P_{12}\,2}{1/2},\ \frac{P_{21}\,0.5+P_{22}\,2}{1/2}\Big)=(0.500829,\ 1.999171),\\\nabla_xL^\eps&=a\odot(x-T_\eps(x))=(-0.250415,\ -0.499585).\end{aligned}$$
+<p>Finite differences on the value give $-0.2504146$ and $-0.4995854$. The step $x_i\leftarrow x_i-\frac1{a_i}\partial_{x_i}L^\eps$ lands exactly on $T_\eps(x_i)$ (sheet, Exercise 11). The weights: moving mass from $x_2$ to $x_1$ changes the value at the rate $f_1-f_2=0.75$, checked by finite differences ($0.75000$).</p>
+</div>
+
+<h3 id="learning-autodiff">Envelope formula or automatic differentiation?</h3>
+<div class="box course"><div class="box-h">In the course <span class="ref">CompOT §9.1.3, pp. 141–142</span></div>
+<p>The difficulty when applying formulas (9.3) and (9.8) is that one needs to compute the exact optimal solutions $f$ or $P$ for these formulas to be valid, which can only be achieved with acceptable precision using a very large number of Sinkhorn iterates. […] It is usually better to differentiate directly the output of Sinkhorn’s algorithm, using reverse mode automatic differentiation. […] The cost for computing the gradient of functionals involving Sinkhorn divergences is the same as that of computation of the functional itself.</p>
+</div>
+<dl class="decode">
+<dt>“differentiate the output of Sinkhorn”</dt><dd>Write $\ell$ iterations of Sinkhorn as a computational graph (each is a log-sum-exp) and let the deep-learning library backpropagate through them. This gives the exact gradient of the <em>approximate</em> loss computed with $\ell$ iterations, at the price of storing the $\ell$ iterates (memory $O(\ell(n+m))$).</dd>
+<dt>envelope formulas</dt><dd>Run Sinkhorn to convergence, detach the potentials, and use $\nabla=P$, $f$ or $a_i(x_i-T_\eps(x_i))$: memory $O(n+m)$, but the formula is only as accurate as the convergence. Libraries implement both strategies, and a third one, implicit differentiation of the fixed-point equations (for instance in the OTT-JAX library).</dd>
+</dl>
+<div class="widget" data-widget="l7flow"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p><strong>What to look at.</strong> Fifty particles (orange-red) start above a target cloud of seventy points made of two clusters (blue). Each step is a gradient step of size $\frac1{2a_i}$: with the raw loss, every particle moves half-way to its barycentric projection $\bar y_i$; with the Sinkhorn divergence, it moves by $\frac12(\bar y_i-\bar x_i)$, where $\bar x_i$ is the barycentric projection of $x_i$ through the self-transport of the particles (the gradient of $S_\eps$ is $a_i(\bar x_i-\bar y_i)$, since the self term counts twice). Run 40 steps with the default $\eps=0.5$: with the raw loss the particles end up packed in two narrow blobs — the spread ratio (spread of $\al$ over spread of $\be$) is $0.54$ — while with the divergence they fill both clusters (ratio $1.006$). At $\eps=2$ the raw loss collapses everything to the mean (ratio $0.000$, Example 8.36), the divergence still fits (ratio $1.03$); at $\eps=0.02$ both are close ($0.965$ and $0.997$): the bias vanishes with $\eps$.</p>
+
+<div class="box ml"><div class="box-h">In machine learning — domain adaptation by transport</div>
+<p>A classifier trained on one domain (labelled studio photographs, a source sensor, last year’s data) degrades on another (phone photographs, a new sensor): the feature distributions differ. Courty, Flamary, Tuia and Rakotomamonjy (<em>Optimal transport for domain adaptation</em>, IEEE TPAMI 39(9), 2017) compute an entropic plan $P$ between the source features $x^s_i$ and the unlabelled target features $x^t_j$, move each source sample to its barycentric projection $\hat x^s_i=\frac1{a_i}\sum_jP_{ij}x^t_j$, and retrain the classifier on the transported, still labelled, samples; a class-based regularization discourages mixing classes. Conversely, labels can be carried to the target by the backward barycentric rule $\tilde y_j=b_j^{-1}\sum_iP_{ij}y^s_i$ (OT4ML Example 3.22, p. 61). The entropy makes the plan smooth (each sample is moved to an average of several targets, which is robust to noise) and fast to compute; the barycentric projection is exactly the object whose gradient interpretation was given above.</p>
+</div>
+<div class="box ml"><div class="box-h">In machine learning — fitting a model by descending a Sinkhorn loss</div>
+<p>The widget above is the simplest instance of training a generative model: the particles are the outputs $g_\theta(z_i)$ of a generator, and the update is backpropagated to the parameters $\theta$ by the chain rule, $\nabla_\theta=\sum_i[\partial_\theta g_\theta(z_i)]\T\nabla_{x_i}S_\eps$ (CompOT (9.8), p. 141). The same gradients drive shape registration (deforming a template point cloud onto a scan), point-cloud generation, and the estimation of transport maps: the barycentric projection $T_\eps$ computed from samples converges to the Brenier map when $\eps\to0$ slowly enough with the sample size (OT4ML Props. 10.14–10.15, pp. 206–207).</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — forgetting the self term in the gradient</div>
+<p>The gradient of the raw loss $\mathcal L^\eps(\al_x,\be)$ pulls each particle to the barycentric projection $\bar y_i$, an average of nearby targets: the cloud contracts towards its own blurred image, and particles never spread over the target (widget, raw loss). The gradient of $S_\eps$ contains the extra term $-\nabla_x\frac12\mathcal L^\eps(\al_x,\al_x)$, which pushes particles apart by exactly the blur of the self-transport. Also, centre the potential before a step on weights (Prop. 9.1), or the total mass drifts.</p>
+</div>
+<div class="box reflex"><div class="box-h">Reflexes</div>
+<ul>
+<li>Derivative of an optimal value → envelope theorem: $\nabla_C=P_\eps$, $\nabla_a=f$ (centred), $\nabla_{x_i}=\sum_jP_{ij}\nabla_1c(x_i,y_j)$.</li>
+<li>Quadratic cost $\frac12\norm{x-y}^2$ → force $a_i\big(x_i-T_\eps(x_i)\big)$; a step of size $1/a_i$ jumps to the barycentric projection.</li>
+<li>Few Sinkhorn iterations → backpropagate through them; converged → envelope formula.</li>
+</ul>
+</div>
+<div class="quiz"><p>Why is $C\mapsto L^\eps_C(a,b)$ concave, while $(a,b)\mapsto L^\eps_C(a,b)$ is convex (in CompOT’s convention)?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>In $C$: a minimum over $P$ of functions $C\mapsto\ps{C}{P}+\text{const}$, which are affine; a minimum of affine functions is concave. In $(a,b)$: the dual writes the value as a maximum over $(f,g)$ of functions that are affine in $(a,b)$ in CompOT’s and the sheet’s conventions (the exponential term does not contain $a\otimes b$ there); a maximum of affine functions is convex (sheet, Exercise 6). With the KL convention, $a\otimes b$ multiplies the exponential and joint convexity can fail (§13).</p>
+</div></details></div>
