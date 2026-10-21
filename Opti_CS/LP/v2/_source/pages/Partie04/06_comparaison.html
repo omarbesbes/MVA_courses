@@ -8,12 +8,12 @@
 <tbody>
 <tr><td>chemin</td><td>de sommet en sommet, sur le bord</td><td>à l'intérieur, près de la trajectoire centrale</td></tr>
 <tr><td>résultat</td><td>un <strong>sommet exact</strong> et une base optimale (donc les coûts réduits, le dual, l'analyse de sensibilité)</td><td>un <strong>point approché</strong>, à $n\mu$ près, avec un certificat dual ; si l'optimum n'est pas unique, le « centre » de la face optimale, pas un sommet</td></tr>
-<tr><td>pire cas</td><td>exponentiel pour toutes les règles de pivot connues (Klee–Minty : $2^d-1$ pivots)</td><td>polynomial : $O(\sqrt n\log(1/\eps))$ itérations (variantes à pas courts)</td></tr>
+<tr><td>pire cas</td><td>exponentiel pour toutes les règles de pivot connues (Klee–Minty : $2^d-1$ pivots)</td><td>polynomial : $O\big(\sqrt n\log(n\mu_0/\eps)\big)$ itérations pour les variantes à pas courts (résultat admis)</td></tr>
 <tr><td>itérations en pratique</td><td>croissent avec la taille (de 18 à 2724 dans nos essais)</td><td>10 à 50, presque indépendantes de la taille (8 à 25 dans nos essais)</td></tr>
 <tr><td>coût d'une itération</td><td>faible : un pivot, une mise à jour de la factorisation de la base</td><td>élevé : une factorisation de $AX^2A^\top$ ($m\times m$), qui peut se remplir si $A$ a des colonnes denses</td></tr>
 <tr><td>très grands problèmes creux</td><td>bons, surtout avec une structure de réseau (transport, flots)</td><td>souvent les plus rapides sur les très grands problèmes généraux ; algèbre linéaire parallélisable</td></tr>
 <tr><td>démarrage à chaud (ajouter une contrainte, changer un coût)</td><td><strong>excellent</strong> : le simplexe dual repart de l'ancienne base, en quelques pivots</td><td><strong>médiocre</strong> : l'ancien point, collé au bord, est un mauvais départ ; il faut se recentrer</td></tr>
-<tr><td>dégénérescence</td><td>peut stagner ou cycler (<a href="Partie03.html#degenerescence">partie 3</a>)</td><td>insensible : on ne choisit pas de base</td></tr>
+<tr><td>dégénérescence</td><td>peut stagner ou cycler (<a href="Partie03.html#degenerescence">partie 3</a>)</td><td>peu sensible : on ne choisit pas de base (le crossover final, lui, peut en souffrir)</td></tr>
 <tr><td>solutions entières (matrices totalement unimodulaires)</td><td>un sommet est entier (<a href="Partie06.html#unimodularite">partie 6</a>)</td><td>le point rendu peut être non entier si l'optimum n'est pas unique ; il faut un crossover</td></tr>
 </tbody></table></div>
 <div class="box example"><div class="box-h">Exemple — quand l'optimum n'est pas unique</div>
@@ -23,7 +23,7 @@
 <li>Le suivi de chemin converge vers $(4{,}105\,;\,0{,}895)$, le centre analytique de l'arête : ni un sommet, ni le milieu $(3{,}5\,;\,1{,}5)$ (widget du §4, script <code>v03_pentagone.py</code>).</li>
 <li>La méthode de points intérieurs de HiGHS rend $(5,0)$, car elle termine par un crossover (ci-dessous).</li>
 </ul>
-<p>Si les données sont entières et la matrice totalement unimodulaire, $(5,0)$ est entier ; $(4{,}105\,;\,0{,}895)$ ne l'est pas. Pour un problème d'affectation résolu en relaxation (<a href="Partie07.html#affectation">partie 7</a>), un point intérieur peut ainsi rendre une « affectation fractionnaire » quand plusieurs affectations sont optimales.</p>
+<p>Ici le sommet $(5,0)$ est entier, le point $(4{,}105\,;\,0{,}895)$ ne l'est pas. Avec une matrice totalement unimodulaire et des données entières, <em>tous</em> les sommets sont entiers (<a href="Partie06.html#unimodularite">partie 6</a>) : le simplexe rend alors une solution entière, un point intérieur non, en général, si l'optimum n'est pas unique. Pour un problème d'affectation résolu en relaxation (<a href="Partie07.html#affectation">partie 7</a>), un point intérieur peut ainsi rendre une « affectation fractionnaire » quand plusieurs affectations sont optimales.</p>
 </div>
 
 <h3 id="comparaison-crossover">Le « crossover » : d'un point intérieur à une base</h3>
@@ -40,15 +40,15 @@
 <div class="box app"><div class="box-h">En pratique — ce que font les solveurs</div>
 <ul>
 <li><strong>HiGHS</strong> (libre, appelé par <code>scipy.optimize.linprog</code>) : simplexe dual, simplexe primal et une méthode de points intérieurs (option <code>"highs-ipm"</code>) suivie d'un crossover. C'est pourquoi il rend un sommet même avec <code>"highs-ipm"</code> (§5).</li>
-<li><strong>MOSEK</strong> : son optimiseur par défaut pour les PL est une méthode de points intérieurs, suivie d'une identification de base.</li>
-<li><strong>Gurobi</strong>, <strong>CPLEX</strong> : la méthode s'appelle « barrier » (barrière) et se termine par un crossover ; ils peuvent aussi lancer simplexe et barrière en parallèle (mode « concurrent ») et garder le premier qui finit.</li>
+<li><strong>MOSEK</strong> : sa méthode de points intérieurs est son algorithme principal pour les PL ; elle peut être suivie d'une identification de base (un crossover) qui rend une solution basique.</li>
+<li><strong>Gurobi</strong>, <strong>CPLEX</strong> : ils proposent le simplexe et une méthode « barrier » (barrière), en général suivie d'un crossover que l'on peut désactiver ; ils peuvent aussi lancer simplexe et barrière en parallèle (mode « concurrent ») et garder le premier qui finit.</li>
 <li><strong>Règle d'usage</strong> : un très grand PL résolu une seule fois → souvent la barrière ; une suite de PL voisins (séparation-évaluation en nombres entiers, <a href="Partie08.html#separation-evaluation">partie 8</a> ; génération de colonnes) → le simplexe dual, pour ses démarrages à chaud. On peut désactiver le crossover si un point approché suffit : on gagne du temps sur les très grands problèmes.</li>
 </ul>
 </div>
 <div class="box ml"><div class="box-h">En machine learning — les SVM, problèmes quadratiques</div>
 <p>Une machine à vecteurs de support (SVM) à marge souple s'entraîne en résolvant, pour $N$ exemples $(x_k,y_k)$ avec $y_k=\pm1$ et un noyau $K$, le problème dual</p>
 $$\max_\alpha\ \sum_k\alpha_k-\frac12\sum_{k,l}\alpha_k\alpha_ly_ky_lK(x_k,x_l)\quad\text{sous}\quad0\le\alpha_k\le C,\ \ \sum_ky_k\alpha_k=0 .$$
-<p>C'est un problème <em>quadratique</em> (coût quadratique, contraintes linéaires). Les solveurs génériques (CVXOPT, MOSEK, Gurobi) le résolvent par une méthode de points intérieurs : la barrière porte sur $\alpha_k>0$ et $C-\alpha_k>0$, et chaque itération résout un système $N\times N$ avec la matrice du noyau. C'est précis en une vingtaine d'itérations, mais chaque itération coûte de l'ordre de $N^3$ opérations : très bien pour quelques milliers d'exemples, trop cher au-delà. Les bibliothèques spécialisées (LIBSVM) utilisent plutôt SMO, une méthode de décomposition qui optimise deux $\alpha_k$ à la fois. La variante en norme $\ell^1$, $\min\norm w_1+C\sum_k\xi_k$ sous $y_k(w\cdot x_k+b)\ge1-\xi_k$, $\xi\ge0$, est même un programme linéaire : <code>linprog(..., method="highs-ipm")</code> la résout directement.</p>
+<p>C'est un problème <em>quadratique</em> (coût quadratique, contraintes linéaires). Les solveurs génériques de problèmes quadratiques (CVXOPT, MOSEK, Gurobi…) le résolvent typiquement par une méthode de points intérieurs : la barrière porte sur $\alpha_k>0$ et $C-\alpha_k>0$, et chaque itération résout un système $N\times N$ avec la matrice du noyau. Quelques dizaines d'itérations suffisent en général, mais chaque itération coûte de l'ordre de $N^3$ opérations : très bien pour quelques milliers d'exemples, trop cher au-delà. Les bibliothèques spécialisées (LIBSVM) utilisent plutôt SMO, une méthode de décomposition qui optimise deux $\alpha_k$ à la fois. La variante en norme $\ell^1$, $\min\norm w_1+C\sum_k\xi_k$ sous $y_k(w\cdot x_k+b)\ge1-\xi_k$, $\xi\ge0$, est même un programme linéaire : <code>linprog(..., method="highs-ipm")</code> la résout directement.</p>
 </div>
 <div class="box pitfall"><div class="box-h">Piège — « les points intérieurs donnent une solution approchée, donc moins bonne »</div>
 <p>Avec un crossover, on obtient un sommet exact, comme avec le simplexe. Sans crossover, on obtient un point dont l'écart de dualité <em>calculé</em> garantit la précision (par exemple $10^{-8}$ en relatif) : pour la plupart des usages, c'est une solution. Le vrai défaut est ailleurs : pas de base, donc pas d'analyse de sensibilité directe, et de mauvais démarrages à chaud.</p>
@@ -56,7 +56,7 @@ $$\max_\alpha\ \sum_k\alpha_k-\frac12\sum_{k,l}\alpha_k\alpha_ly_ky_lK(x_k,x_l)\
 <div class="box reflex"><div class="box-h">Réflexe</div>
 <p>Quand vous voyez « un seul PL, énorme, creux » → pensez points intérieurs (barrière). Quand vous voyez « beaucoup de PL voisins » (séparation-évaluation, coupes, analyse de sensibilité) → pensez simplexe dual. Quand vous voyez « il me faut un sommet » (solution entière, base) → crossover, ou simplexe.</p>
 </div>
-<div class="quiz"><p>Vérifiez-vous : pourquoi un point intérieur est-il un mauvais départ quand on ajoute une contrainte $a\cdot x\le\beta$ violée par l'ancien optimum ?</p>
+<div class="quiz"><p>Pourquoi un point intérieur est-il un mauvais départ quand on ajoute une contrainte $a\cdot x\le\beta$ violée par l'ancien optimum ?</p>
 <details class="fold sol"><summary>Réponse</summary><div class="fold-body">
 <p>L'ancien point est presque optimal, donc tout près du bord de l'ancien polyèdre, et il viole la nouvelle contrainte : il n'est même pas dans le nouvel intérieur $\Xado$. Il faut retrouver un point strictement admissible et bien centré, ce qui revient presque à tout recommencer. Le simplexe dual, lui, part de l'ancienne base (toujours admissible pour le dual) et fait quelques pivots.</p>
 </div></details></div>

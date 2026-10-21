@@ -164,10 +164,10 @@ def fig_rang():
     dot(f, 4, 0, "fk")
     f.text(4, 0, "x₀ = (4, 0)", "tx-s", "start", dx=8, dy=-8)
     dot(f, 0, 2, "fk")
-    f.text(0, 2, "(0, 2)", "tx-s", "end", dx=-6, dy=-4)
+    f.text(0, 2, "(0, 2)", "tx-s", "end", dx=-6, dy=14)   # below-left: clear of the axis and of the line
     # kernel direction drawn at x0
     farrow(f, 4, 0, 2.08, 0.96, "m", "ln cm thin")
-    f.text(3.0, 0.5, "+ t(−2, 1)", "tx-s", "start", dx=0, dy=18)
+    f.text(3.1, 0.45, "+ t(−2, 1)", "tx-s", "start", dx=0, dy=-12)   # above the line, clear of it
     # row of A, orthogonal to the kernel
     farrow(f, 0, 0, 0.96, 1.92, "5", "ln c5 thin")
     f.text(1.0, 2.0, "a = (1, 2), orthogonal au noyau", "tx-s t5", "start", dx=4, dy=4)
@@ -669,7 +669,7 @@ def fig_newton():
         dot(f, x, 0, "f3", 4)
     f.text(1.0, 0, "x₀ = 1", "tx-s t3", "start", dx=4, dy=-8)
     f.text(1.5, 0, "x₁ = 3/2", "tx-s t3", "start", dx=6, dy=16)
-    f.text(17 / 12, 0, "x₂ = 17/12", "tx-s t3", "end", dx=-4, dy=16)
+    f.text(17 / 12, 0, "x₂ = 17/12", "tx-s t3", "end", dx=-4, dy=-24)   # above the axis: the curve and the tangents are below
     f.text(2.05, F_(2.05), "F(x) = x² − 2", "tx-s t2", "end", dx=-6, dy=4)
     c.text(185, 16, "tangente en xₙ, coupée avec l'axe : xₙ₊₁", "tx-b", "middle")
     # right: errors, log scale

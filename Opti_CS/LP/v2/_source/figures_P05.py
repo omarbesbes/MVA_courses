@@ -348,7 +348,9 @@ def fig_ex427():
     draw_line(f, 1, 1, 2, box, "ln c2 thin dash")
     px, py = 12 / 7, 8 / 7
     f.circle(px, py, 6, "f3")
-    f.text(px, py, "p̄ = (12/7, 8/7)", "tx-b t3", "end", dx=-10, dy=18)
+    # a light outline keeps the label legible where the dashed level line p1 + p2 = 2 crosses it
+    c.add(f'<text x="{f.X(px) - 10:.1f}" y="{f.Y(py) + 18:.1f}" class="tx-b t3" text-anchor="end" '
+          f'style="paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round">p̄ = (12/7, 8/7)</text>')
     # normals at the optimum (scaled) and the objective direction
     sc = 0.11
     for (nx, ny, k) in [(4, 1, 5), (1, 2, 5), (1, 1, 2)]:

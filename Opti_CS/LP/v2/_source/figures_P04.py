@@ -111,7 +111,7 @@ def fig_kleeminty():
     for (a, b), (p, q) in zip(V[:-1], V[1:]):
         c.arrow(f.X(a), f.Y(b), f.X(p), f.Y(q), 3, "ln c3")
     vals = ["0", "10", "15", "25 : optimum"]
-    offs = [(-6, 16, "end"), (8, 14, "start"), (8, 4, "start"), (8, 4, "start")]
+    offs = [(-6, 16, "end"), (8, 14, "start"), (8, 4, "start"), (10, -6, "start")]
     for (a, b), v, (dx, dy, an) in zip(V, vals, offs):
         f.circle(a, b, 4, "f3")
         f.text(a, b, v, "tx-s t3", an, dx=dx, dy=dy)
@@ -253,7 +253,7 @@ def fig_pentagone():
     S = [(0, 0), (0, 1), (1, 2.5), (2, 3)]
     for (a, b), (p, q) in zip(S[:-1], S[1:]):
         c.arrow(f.X(a), f.Y(b), f.X(p), f.Y(q), 3, "ln c3")
-    for (a, b), v, (dx, dy, an) in zip(S, ["0", "2", "6", "8"], [(-6, 14, "end"), (-6, 4, "end"), (-6, -6, "end"), (0, -10, "middle")]):
+    for (a, b), v, (dx, dy, an) in zip(S, ["0", "2", "6", "8 : optimum (2, 3)"], [(-6, 14, "end"), (-6, 4, "end"), (-6, -6, "end"), (8, -9, "start")]):
         f.circle(a, b, 4, "f3")
         f.text(a, b, v, "tx-s t3", an, dx=dx, dy=dy)
     # central path
@@ -270,7 +270,6 @@ def fig_pentagone():
     f.circle(u[0], u[1], 3.5, "fk")
     f.text(u[0], u[1], "μ = 10", "tx-s", "start", dx=8, dy=-4)
     f.circle(2, 3, 6, "f3")
-    f.text(2, 3, "optimum (2, 3)", "tx-s t3", "end", dx=-10, dy=-6)
     # legend
     lx = 470
     c.add(f'<line x1="{lx}" y1="60" x2="{lx + 26}" y2="60" class="ln c3"/>')
@@ -301,7 +300,7 @@ def fig_contre_exemples():
         f.circle(0.5, t, 3.5, "f4")
     c.arrow(f.X(0.75), f.Y(0.6), f.X(0.75), f.Y(3.1), 4, "ln c4 thin")
     FT(f, 0.85, 2.3, "f_{μ}(1/2, t) → −∞", "tx-s t4", "start")
-    FT(f, 0.85, 2.3, "quand t → +∞", "tx-s t4", "start", dy=14)
+    FT(f, 0.85, 2.3, "quand t → +∞", "tx-s t4", "start", dy=17)
     c.arrow(f.X(2.6), f.Y(0.6), f.X(2.0), f.Y(0.6), 2, "ln c2 thin")
     f.text(2.6, 0.6, "−c", "tx-s t2", "start", dx=4, dy=4)
     c.text(40, 20, "1. min x₁, x₁ − x₂ ≤ 1, x ≥ 0", "tx-b")
@@ -316,8 +315,8 @@ def fig_contre_exemples():
     g.circle(0, 1, 4, "f3")
     g.text(0.06, 0.12, "x₁ + x₂ ≤ 1", "tx-s t1")
     g.text(0.9, 1.55, "x₁ + x₂ ≥ 1", "tx-s t5")
-    FT(g, 0.55, 0.55, "X_{ad} = le segment", "tx-s t3", "start", dx=8)
-    FT(g, 0.55, 0.55, "X^{0}_{ad} = ∅ : x₃ = x₄ = 0", "tx-s t3", "start", dx=8, dy=14)
+    FT(g, 0.42, 1.22, "X_{ad} = le segment vert", "tx-s t3", "start")
+    FT(g, 0.42, 1.22, "X^{0}_{ad} = ∅ (x₃ = x₄ = 0)", "tx-s t3", "start", dy=20)
     c.text(380, 20, "2. une égalité écrite avec ≤ et ≥", "tx-b")
     c.save()
 
@@ -337,10 +336,10 @@ def fig_newton1d():
     f.line(0.75, 0, 0.75, fx(0.75), "ln c4 thin dot")
     f.circle(1, 1, 4.5, "f3")
     f.text(0.5, fx(0.5), "x₀ = 1/2", "tx-s t4", "end", dx=-6, dy=16)
-    f.text(0.75, 0, "x₁ = 3/4", "tx-s t4", "middle", dy=-6)
+    f.text(0.75, 0, "x₁ = 3/4", "tx-s t4", "start", dx=4, dy=-6)
     f.text(1, 1, "x* = μ/c = 1", "tx-s t3", "start", dx=6, dy=16)
-    f.text(1.05, 2.6, "pointillés : modèle", "tx-s t4", "start")
-    f.text(1.05, 2.42, "quadratique en x₀", "tx-s t4", "start")
+    f.text(0.32, 2.62, "pointillés : modèle", "tx-s t4", "start")
+    f.text(0.32, 2.42, "quadratique en x₀", "tx-s t4", "start")
     c.text(46, 20, "x₀ = 1/2 : erreurs 1/2, 1/4, 1/16, 1/256", "tx-b")
     # right panel: x0 = 3
     g = Fig(c, (370, 34, 250, 210), (-4, 4), (-0.5, 4.5))

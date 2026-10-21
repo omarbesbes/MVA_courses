@@ -222,7 +222,7 @@ def fig_degenere():
     c = Canvas("degenere", 640, 300, "Un sommet dégénéré : trois droites passent par (1 ; 5/2), trois bases le décrivent", sub=SUB)
     cons = [(-3, 2, 2, "−3x₁ + 2x₂ = 2  (x₃ = 0)"), (-1, 2, 4, "−x₁ + 2x₂ = 4  (x₄ = 0)"), (1, 1, 3.5, "x₁ + x₂ = 7/2  (x₅ = 0)")]
     box = (-0.4, 4.2, -0.4, 3.6)
-    f = Fig(c, (40, 14, 300, 260), (box[0], box[1]), (box[2], box[3]))
+    f = Fig(c, (40, 14, 300, 250), (box[0], box[1]), (box[2], box[3]))
     f.axes(xticks=[0, 1, 2, 3, 4], yticks=[0, 1, 2, 3], grid=False, xlabel="x₁", ylabel="x₂")
     draw_lp(f, cons, box)
     # line labels placed by hand along each line
@@ -244,7 +244,7 @@ def fig_degenere():
     c.text(X0, 48, "min −x₁ − 2x₂ : optimum (1 ; 5/2), coût −6", "tx-s")
     rows = [("{x₁, x₂, x₃} : x₃ = 0 en base", "c̃₄ = 1/3, c̃₅ = 4/3 ≥ 0", "t3", "le critère conclut"),
             ("{x₁, x₂, x₄} : x₄ = 0 en base", "c̃₃ = 1/5, c̃₅ = 8/5 ≥ 0", "t3", "le critère conclut"),
-            ("{x₁, x₂, x₅} : x₅ = 0 en base", "c̃₃ = −1 < 0,  c̃₄ = 2", "t6", "le critère échoue, et pourtant")]
+            ("{x₁, x₂, x₅} : x₅ = 0 en base", "c̃₃ = −1 < 0,  c̃₄ = 2", "t6", "le critère échoue (sommet optimal)")]
     for k, (a, b, cl, d) in enumerate(rows):
         y = 84 + 62 * k
         c.text(X0, y, a, "tx")
@@ -361,7 +361,7 @@ def fig_phases():
 
 def fig_anatomie():
     c = Canvas("anatomie", 640, 220, "Le tableau du simplexe : B⁻¹A et B⁻¹b, puis la ligne des coûts réduits", sub=SUB)
-    x0, y0, w1, w2, h1, h2 = 110, 30, 300, 90, 110, 44
+    x0, y0, w1, w2, h1, h2 = 170, 30, 300, 90, 110, 44
     c.add(f'<rect x="{x0}" y="{y0}" width="{w1}" height="{h1}" class="a1"/>')
     c.add(f'<rect x="{x0 + w1}" y="{y0}" width="{w2}" height="{h1}" class="a3"/>')
     c.add(f'<rect x="{x0}" y="{y0 + h1}" width="{w1}" height="{h2}" class="a2"/>')
@@ -424,7 +424,7 @@ def fig_ex424():
     c = Canvas("ex424", 640, 280, "Exercice 4.2.4 : le polygone, les lignes de niveau de 2x₁ − x₂ et le pas du simplexe", sub=SUB)
     cons = [(1, 1, 1, "x₁ + x₂ = 1"), (-1, 1, 0.5, "x₂ − x₁ = 1/2")]
     box = (-0.25, 1.25, -0.2, 1.15)
-    f = Fig(c, (46, 14, 330, 240), (box[0], box[1]), (box[2], box[3]))
+    f = Fig(c, (46, 14, 330, 232), (box[0], box[1]), (box[2], box[3]))
     f.axes(xticks=[0, 0.25, 0.5, 0.75, 1], yticks=[0, 0.25, 0.5, 0.75, 1], grid=False,
            xfmt=lambda v: fs(v), yfmt=lambda v: fs(v), xlabel="x₁", ylabel="x₂")
     draw_lp(f, cons, box, label_pos=[(0.8, 0.3, "start"), (0.66, 1.12, "start")])

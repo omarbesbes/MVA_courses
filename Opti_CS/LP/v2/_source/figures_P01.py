@@ -80,15 +80,16 @@ def fig_atelier():
     # lignes de niveau du profit 40 x1 + 30 x2
     s = cline(f, 40, 30, 1200, "ln c2 thin dash")
     s = cline(f, 40, 30, 2400, "ln c2")
-    f.text(15, 20, "profit 1200 €", "tx-s t2", "end", dx=-6, dy=2)
+    f.text(12, 26, "profit 1200 €", "tx-s t2", "start")   # à droite de la ligne pointillée, dans le polygone
     # gradient
     g = np.array([4, 3]) / 5 * 12
     farrow(c, f, 30, 40, 30 + g[0], 40 + g[1], 2)
     f.text(30 + g[0], 40 + g[1], "c = (40, 30)", "tx-s t2", "start", dx=4, dy=-2)
-    for (x, y), lab, anc, dx, dy in [((0, 0), "0 €", "start", 6, -6), ((50, 0), "(50, 0) : 2000 €", "start", 4, -8),
-                                       ((15, 55), "(15, 55) : 2250 €", "start", 6, -4), ((0, 60), "(0, 60) : 1800 €", "start", 6, -8)]:
+    # sommets : les étiquettes près des points seraient coupées par les droites ; les valeurs sont listées à droite
+    for (x, y) in [(0, 0), (50, 0), (15, 55), (0, 60)]:
         f.circle(x, y, 4, "f1")
-        f.text(x, y, lab, "tx-s", anc, dx=dx, dy=dy)
+    f.text(0, 0, "0 €", "tx-s", "start", dx=6, dy=-6)
+    f.text(50, 0, "2000 €", "tx-s", "end", dx=-10, dy=-8)
     f.circle(30, 40, 6, "f3")
     f.text(30, 40, "(30, 40) : 2400 €", "tx-b t3", "end", dx=-9, dy=4)
     # légende à droite
@@ -105,6 +106,10 @@ def fig_atelier():
     c.text(x0, 251, "point touché quand la", "tx-s t3")
     c.text(x0, 268, "ligne de niveau avance", "tx-s t3")
     c.text(x0, 285, "dans la direction de c", "tx-s t3")
+    c.text(x0, 318, "Sommets → profit :", "tx-b")
+    for k, (lab, cls) in enumerate([("(0, 0) → 0 €", "tx-s"), ("(50, 0) → 2000 €", "tx-s"), ("(30, 40) → 2400 €", "tx-b t3"),
+                                    ("(15, 55) → 2250 €", "tx-s"), ("(0, 60) → 1800 €", "tx-s")]):
+        c.text(x0, 336 + 16 * k, lab, cls)
     c.save()
 
 
@@ -223,12 +228,12 @@ def fig_issues():
             P = half_plane_polygon(cons, f.xr, f.yr)
             f.path(P, "a1", close=True)
             # bord de Xad (sans les côtés de la boîte)
-            f.path([(4.6, 5.6), (0, 1), (0, 0), (2, 0), (4.6, 2.6)], "ln c1")
+            f.path([(3.6, 4.6), (0, 1), (0, 0), (2, 0), (4.6, 2.6)], "ln c1")   # coupé au bord de la boîte (−x₁ + x₂ = 1 en x₂ = 4,6)
             if k == 1:
                 for g in [1, 3, 5, 7]:
                     cline(f, 1, 1, g, "ln c2 thin dash")
                 farrow(c, f, 1.6, 1.6, 3.6, 3.6, 2)
-                f.text(3.6, 3.6, "−c = (1, 1)", "tx-s t2", "end", dx=-14, dy=-2)
+                f.text(3.6, 3.6, "−c", "tx-s t2", "start", dx=6, dy=12)
                 c.text(x0 + 95, 250, "min −x₁ − x₂ : on descend", "tx-s", "middle")
                 c.text(x0 + 95, 266, "sans fin le long de (1, 1)", "tx-s", "middle")
             else:
