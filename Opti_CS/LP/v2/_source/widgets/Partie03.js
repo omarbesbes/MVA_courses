@@ -288,7 +288,7 @@
         txt: "x₁ + x₂ ≥ 2, x₁ − x₂ ≤ 1, x₂ ≤ 3 ; min 2x₁ + x₂" },
       vide: { draw: [[-1, -1, -2], [1, 1, 1]], A: [[-1, -1, 1, 0], [1, 1, 0, 1]], b: [-2, 1], c: [2, 1, 0, 0], txt: "x₁ + x₂ ≥ 2, x₁ + x₂ ≤ 1 ; min 2x₁ + x₂" }
     };
-    var exSel = select(s.controls, "Exemple", [["ok", "réalisable"], ["vide", "X_ad vide"]], "ok", reset);
+    var exSel = select(s.controls, "Exemple", [["ok", "réalisable"], ["vide", "ensemble admissible vide"]], "ok", reset);
     button(s.controls, "Pas suivant", function () { if (k < all.length - 1) { k++; draw(); } });
     button(s.controls, "Recommencer", function () { k = 0; draw(); });
     var ro = readout(s.controls);
@@ -324,8 +324,12 @@
       p3drawPoly(plot, P, BOX);
       E.draw.forEach(function (r) { var seg = lineInBox(r[0], r[1], r[2], BOX); if (seg) plot.seg(seg[0][0], seg[0][1], seg[1][0], seg[1][1], "ln cm hair"); });
       if (!P.length) {
+        E.draw.forEach(function (r) {
+          var H = halfPlanePolygon([r, [-1, 0, 0], [0, -1, 0]], BOX);
+          if (H.length) plot.poly(p3closed(H), "am");
+        });
         plot.text(2.6, 2.6, "x₁ + x₂ ≥ 2", "tx-s", "start"); plot.text(0.05, 0.35, "x₁ + x₂ ≤ 1", "tx-s", "start");
-        plot.text(2.2, 3.4, "aucun point commun : X_ad = ∅", "tx-s t6", "middle");
+        plot.text(2.2, 3.4, "aucun point commun : l'ensemble admissible est vide", "tx-s t6", "middle");
       }
       for (var i = 0; i < k; i++) {
         var p = all[i].st.x, q = all[i + 1].st.x;
@@ -356,7 +360,7 @@
         txt += "Phase I : min Σ yᵢ. ";
         if (stc.entering >= 0) txt += p3name(stc.entering, nx) + " entre (c̃ = " + stc.reduced[stc.entering].str() + "), rapports " + p3vec(stc.ratios) + " → " + p3name(stc.basis[stc.leaving], nx) + " sort, ε = " + stc.eps.str() + ".";
         else if (stc.cost.isZero()) txt += "Optimum de la phase I de valeur 0 : y = 0, la base " + bnames + " est une base admissible du vrai problème. Pas suivant : phase II avec le vrai coût.";
-        else txt += "Optimum de la phase I de valeur Σ yᵢ = " + stc.cost.str() + " > 0 : aucun point ne vérifie Ax = b, x ≥ 0. X_ad est vide, on s'arrête.";
+        else txt += "Optimum de la phase I de valeur Σ yᵢ = " + stc.cost.str() + " > 0 : aucun point ne vérifie Ax = b, x ≥ 0 : l'ensemble admissible est vide, on s'arrête.";
       } else {
         txt += "Phase II : min 2x₁ + x₂ depuis la base trouvée. ";
         if (stc.entering >= 0) txt += p3name(stc.entering, nx) + " entre (c̃ = " + stc.reduced[stc.entering].str() + "), rapports " + p3vec(stc.ratios) + " → " + p3name(stc.basis[stc.leaving], nx) + " sort, ε = " + stc.eps.str() + ".";
