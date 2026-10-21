@@ -164,10 +164,10 @@ def fig_rang():
     dot(f, 4, 0, "fk")
     f.text(4, 0, "x₀ = (4, 0)", "tx-s", "start", dx=8, dy=-8)
     dot(f, 0, 2, "fk")
-    f.text(0, 2, "(0, 2)", "tx-s", "end", dx=-6, dy=-4)
+    f.text(0, 2, "(0, 2)", "tx-s", "end", dx=-6, dy=14)   # below-left: clear of the axis and of the line
     # kernel direction drawn at x0
     farrow(f, 4, 0, 2.08, 0.96, "m", "ln cm thin")
-    f.text(3.0, 0.5, "+ t(−2, 1)", "tx-s", "start", dx=0, dy=18)
+    f.text(3.1, 0.45, "+ t(−2, 1)", "tx-s", "start", dx=0, dy=-12)   # above the line, clear of it
     # row of A, orthogonal to the kernel
     farrow(f, 0, 0, 0.96, 1.92, "5", "ln c5 thin")
     f.text(1.0, 2.0, "a = (1, 2), orthogonal au noyau", "tx-s t5", "start", dx=4, dy=4)

@@ -59,6 +59,14 @@
   function p5clear(svg) { while (svg.firstChild) svg.removeChild(svg.firstChild); }
   function p5vec(v) { return "(" + v.map(function (z) { return z instanceof Fr ? z.str() : frac(z); }).join(", ") + ")"; }
   function p5snap(v, step) { return Math.round(v / step) * step; }
+  // A light outline behind a label, so that it stays legible where it crosses a line.
+  function p5halo(t) { t.setAttribute("style", "paint-order:stroke;stroke:var(--surface);stroke-width:3px;stroke-linejoin:round"); return t; }
+  // Two panels side by side are too small on a phone: below this width (in CSS pixels) they are stacked.
+  function p5narrow(box) { var w = box.clientWidth || 680; return w < 560; }
+  function p5onWidth(box, draw) {
+    var last = p5narrow(box);
+    window.addEventListener("resize", function () { var n = p5narrow(box); if (n !== last) { last = n; draw(); } });
+  }
   function p5dotF(u, v) { var s = Fr(0); for (var i = 0; i < u.length; i++) s = s.add(Fr.of(u[i]).mul(Fr.of(v[i]))); return s; }
 
   /* ======================================================================
@@ -66,8 +74,7 @@
      ====================================================================== */
   WIDGETS.p5paire = function (box) {
     var s = scaffold(box, "Le primal (R) et son dual côte à côte : déplacez x et p, regardez b·p ≤ c·x");
-    var svg = s.svg, W = 680, H = 396;
-    svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+    var svg = s.svg;
     svg.setAttribute("role", "img");
     svg.setAttribute("aria-label", "Deux plans : à gauche la région admissible du primal et le point x, à droite celle du dual et le point p ; en bas une règle avec b·p et c·x");
     var A = [[2, 1], [1, 3]], b = [8, 9];
@@ -114,12 +121,17 @@
     function draw() {
       var c = cvec(); c1S.out.textContent = frac(c[0]);
       p5clear(svg);
-      PX = p5panel(svg, [44, 40, 270, 238], [0, 10], [0, 10]);
-      PP = p5panel(svg, [392, 40, 270, 238], [-0.3, 3.3], [-0.3, 1.3]);
+      // wide: the two planes side by side; narrow (phone): stacked, with the ruler below
+      var L = p5narrow(box) ?
+        { W: 360, H: 660, px: [44, 34, 290, 220], pp: [44, 318, 290, 200], t1: [189, 16], t2: [189, 300], lab: [[16, 572, "la règle : b·p (violet) et c·x (bleu) ;"], [16, 586, "l’intervalle entre les deux est l’écart c·x − b·p"]], ru: [24, 612, 312, 30] } :
+        { W: 680, H: 396, px: [44, 40, 270, 238], pp: [392, 40, 270, 238], t1: [179, 14], t2: [527, 14], lab: [[44, 322, "la règle : b·p (violet) et c·x (bleu) ; l’intervalle entre les deux est l’écart c·x − b·p"]], ru: [44, 346, 618, 30] };
+      svg.setAttribute("viewBox", "0 0 " + L.W + " " + L.H);
+      PX = p5panel(svg, L.px, [0, 10], [0, 10]);
+      PP = p5panel(svg, L.pp, [-0.3, 3.3], [-0.3, 1.3]);
       PX.axes([0, 2, 4, 6, 8, 10], [0, 2, 4, 6, 8, 10], "x₁", "x₂");
       PP.axes([0, 1, 2, 3], [0, 0.5, 1], "p₁", "p₂");
-      var t1 = el("text", { x: 44 + 135, y: 14, "class": "tx-b", "text-anchor": "middle" }, svg); t1.textContent = "primal : min c·x, Ax ≥ b, x ≥ 0";
-      var t2 = el("text", { x: 392 + 135, y: 14, "class": "tx-b", "text-anchor": "middle" }, svg); t2.textContent = "dual : max b·p, Aᵀp ≤ c, p ≥ 0";
+      var t1 = el("text", { x: L.t1[0], y: L.t1[1], "class": "tx-b", "text-anchor": "middle" }, svg); t1.textContent = "primal : min c·x, Ax ≥ b, x ≥ 0";
+      var t2 = el("text", { x: L.t2[0], y: L.t2[1], "class": "tx-b", "text-anchor": "middle" }, svg); t2.textContent = "dual : max b·p, Aᵀp ≤ c, p ≥ 0";
       // primal region
       var reg = halfPlanePolygon([[-2, -1, -8], [-1, -3, -9], [-1, 0, 0], [0, -1, 0]], PX.box);
       PX.poly(reg, "a1"); PX.poly(reg, "ln c1 thin");
@@ -127,8 +139,8 @@
       var sl = [c[0] - (A[0][0] * p[0] + A[1][0] * p[1]), c[1] - (A[0][1] * p[0] + A[1][1] * p[1])];
       PX.cline(2, 1, 8, "ln cm " + (Math.abs(e[0]) < 1e-9 ? "" : "thin"));
       PX.cline(1, 3, 9, "ln cm " + (Math.abs(e[1]) < 1e-9 ? "" : "thin"));
-      PX.text(4.2, 0, "2x₁ + x₂ = 8", "tx-s", "start", 0, -6, PX.gc);
-      PX.text(0.15, 3.0, "x₁ + 3x₂ = 9", "tx-s", "start", 0, 0, PX.gc);
+      p5halo(PX.text(4.2, 0, "2x₁ + x₂ = 8", "tx-s", "start", 0, -6, PX.gc));
+      p5halo(PX.text(5.0, 4 / 3, "x₁ + 3x₂ = 9", "tx-s", "start", 0, -6, PX.gc));
       var ox = optX(), copt = c[0] * ox[0] + c[1] * ox[1], cx = c[0] * x[0] + c[1] * x[1];
       PX.cline(c[0], c[1], copt, "ln c2 thin");
       PX.cline(c[0], c[1], cx, "ln c2 thin dash");
@@ -144,14 +156,16 @@
       var op = optP(), bopt = 8 * op[0] + 9 * op[1], bp = 8 * p[0] + 9 * p[1];
       PP.cline(8, 9, bopt, "ln c2 thin");
       PP.cline(8, 9, bp, "ln c2 thin dash");
-      PP.text(Math.min(3.0, c[0] / 2 + 0.05), 0, "2p₁ + p₂ = c₁", "tx-s", "start", 0, -6, PP.gc);
-      PP.text(-0.25, 0.75, "p₁ + 3p₂ = 2", "tx-s", "start", 0, 0, PP.gc);
+      // label at the foot of the line 2p₁ + p₂ = c₁: on its right while there is room, else on its left
+      var foot = c[0] / 2, right = foot + 1.15 <= 3.3;
+      p5halo(PP.text(right ? foot + 0.05 : foot - 0.05, 0, "2p₁ + p₂ = c₁", "tx-s", right ? "start" : "end", 0, -6, PP.gc));
+      p5halo(PP.text(-0.27, 0.76, "p₁ + 3p₂ = 2", "tx-s", "start", 0, -6, PP.gc));
       PP.dot(op[0], op[1], 5, "f3");
       var padm = p[0] >= -1e-9 && p[1] >= -1e-9 && sl[0] >= -1e-9 && sl[1] >= -1e-9;
       PP.dot(p[0], p[1], 7, padm ? "f5 drag" : "f6 drag");
       PP.text(p[0], p[1], "p", "tx-b", "start", 9, -8);
       // ruler
-      var R = p5panel(svg, [44, 346, 618, 30], [0, 30], [0, 1]);
+      var R = p5panel(svg, L.ru, [0, 30], [0, 1]);
       el("line", { x1: R.X(0), x2: R.X(30), y1: R.Y(0.5), y2: R.Y(0.5), "class": "ax" }, svg);
       for (var t = 0; t <= 30; t += 5) {
         el("line", { x1: R.X(t), x2: R.X(t), y1: R.Y(0.5) - 4, y2: R.Y(0.5) + 4, "class": "ax" }, svg);
@@ -166,8 +180,7 @@
         var tx = el("text", { x: X, y: R.Y(0.5) - 12 - (k === 1 && Math.abs(R.X(bp) - R.X(cx)) < 46 ? 14 : 0), "class": "tx-b", "text-anchor": "middle" }, svg);
         tx.textContent = m[1] + " = " + frac(m[0]);
       });
-      var lab = el("text", { x: 44, y: 322, "class": "tx-s" }, svg);
-      lab.textContent = "la règle : b·p (violet) et c·x (bleu) ; l’intervalle entre les deux est l’écart c·x − b·p";
+      L.lab.forEach(function (q) { var lab = el("text", { x: q[0], y: q[1], "class": "tx-s" }, svg); lab.textContent = q[2]; });
       // readout
       var gap = cx - bp;
       var txt = "x = " + p5vec(x) + (xadm ? " admissible" : " NON admissible") + " ; c·x = " + frac(cx) +
@@ -178,14 +191,14 @@
       else txt += "\nHors des régions admissibles, un produit peut être négatif : l’inégalité b·p ≤ c·x n’est plus garantie.";
       ro.textContent = txt;
     }
-    draw(); redrawers.push(draw);
+    draw(); redrawers.push(draw); p5onWidth(box, draw);
   };
 
   /* ======================================================================
      2. Complementary slackness as a method (§5) — production example
      ====================================================================== */
   WIDGETS.p5ecarts = function (box) {
-    var s = scaffold(box, "La méthode des écarts complémentaires : choisissez un sommet, le widget en déduit p et le teste");
+    var s = scaffold(box, "La méthode des écarts complémentaires : choisissez un sommet, le widget en déduit les prix y et les teste");
     var svg = s.svg, W = 680, H = 330;
     svg.setAttribute("viewBox", "0 0 " + W + " " + H);
     svg.setAttribute("role", "img");
@@ -250,8 +263,8 @@
       rows.forEach(function (rw, k) {
         var y0 = top + k * rowH;
         var t = el("text", { x: x0, y: y0 + 12, "class": "tx-s" }, svg); t.textContent = rw.lab;
-        var scaleA = 10, scaleB = 2.2;
-        var wa = Math.min(90, Math.abs(rw.av.val()) * scaleA), wb = Math.min(110, Math.abs(rw.bv.val()) * scaleB);
+        var scaleA = 5, scaleB = 2.2;   // primal bars ≤ 75 px, so that their label ends before the dual column
+        var wa = Math.min(75, Math.abs(rw.av.val()) * scaleA), wb = Math.min(110, Math.abs(rw.bv.val()) * scaleB);
         el("rect", { x: x0, y: y0 + 17, width: Math.max(1.5, wa), height: 10, "class": rw.av.sign() < 0 ? "f6" : "f1" }, svg);
         var ta = el("text", { x: x0 + Math.max(1.5, wa) + 4, y: y0 + 26, "class": "tx-s" }, svg); ta.textContent = rw.a + " = " + rw.av.str();
         el("rect", { x: x0 + 160, y: y0 + 17, width: Math.max(1.5, wb), height: 10, "class": rw.bv.sign() < 0 ? "f6" : "f5" }, svg);
@@ -282,8 +295,7 @@
      ====================================================================== */
   WIDGETS.p5bases = function (box) {
     var s = scaffold(box, "Chaque base donne un couple (x, p) avec c·x = b·p : l’optimum, c’est la base où les deux sont admissibles");
-    var svg = s.svg, W = 680, H = 398;
-    svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+    var svg = s.svg;
     svg.setAttribute("role", "img");
     svg.setAttribute("aria-label", "Les six bases du problème (R) en forme standard : solution basique primale à gauche, solution basique duale à droite, et leurs valeurs sur une règle");
     var A = [[2, 1, -1, 0], [1, 3, 0, -1]], b = [8, 9], c = [3, 2, 0, 0];
@@ -328,12 +340,17 @@
     }
     function draw() {
       p5clear(svg);
-      PX = p5panel(svg, [44, 40, 270, 238], [-0.5, 10], [-0.5, 9]);
-      PP = p5panel(svg, [392, 40, 270, 238], [-0.3, 3.3], [-0.3, 3.3]);
+      // wide: the two planes side by side; narrow (phone): stacked, with the ruler below
+      var L = p5narrow(box) ?
+        { W: 360, H: 660, px: [44, 34, 290, 220], pp: [44, 318, 290, 200], t1: [189, 16], t2: [189, 300], lab: [[16, 572, "valeur commune c·x = b·p de chaque base :"], [16, 586, "bleu = x admissible (≥ 13), violet = p admissible (≤ 13)"]], ru: [24, 612, 312, 30] } :
+        { W: 680, H: 398, px: [44, 40, 270, 238], pp: [392, 40, 270, 238], t1: [179, 14], t2: [527, 14], lab: [[44, 326, "valeur commune c·x = b·p de chaque base : bleu = x admissible (≥ 13), violet = p admissible (≤ 13)"]], ru: [44, 352, 618, 30] };
+      svg.setAttribute("viewBox", "0 0 " + L.W + " " + L.H);
+      PX = p5panel(svg, L.px, [-0.5, 10], [-0.5, 9]);
+      PP = p5panel(svg, L.pp, [-0.3, 3.3], [-0.3, 3.3]);
       PX.axes([0, 2, 4, 6, 8, 10], [0, 2, 4, 6, 8], "x₁", "x₂");
       PP.axes([0, 1, 2, 3], [0, 1, 2, 3], "p₁", "p₂");
-      var t1 = el("text", { x: 44 + 135, y: 14, "class": "tx-b", "text-anchor": "middle" }, svg); t1.textContent = "primal : x de la base (x₁, x₂)";
-      var t2 = el("text", { x: 392 + 135, y: 14, "class": "tx-b", "text-anchor": "middle" }, svg); t2.textContent = "dual : p tel que Bᵀp = coûts de la base";
+      var t1 = el("text", { x: L.t1[0], y: L.t1[1], "class": "tx-b", "text-anchor": "middle" }, svg); t1.textContent = "primal : x de la base (x₁, x₂)";
+      var t2 = el("text", { x: L.t2[0], y: L.t2[1], "class": "tx-b", "text-anchor": "middle" }, svg); t2.textContent = "dual : p tel que Bᵀp = coûts de la base";
       var reg = halfPlanePolygon([[-2, -1, -8], [-1, -3, -9], [-1, 0, 0], [0, -1, 0]], PX.box);
       PX.poly(reg, "a1"); PX.poly(reg, "ln c1 thin");
       PX.cline(2, 1, 8, "ln cm thin"); PX.cline(1, 3, 9, "ln cm thin");
@@ -360,7 +377,7 @@
         if (sel) { PX.dot(xv[0], xv[1], 13, "ln ck thin nofill"); PP.dot(pv[0], pv[1], 13, "ln ck thin nofill"); }
       });
       // ruler with the six values
-      var R = p5panel(svg, [44, 352, 618, 30], [0, 30], [0, 1]);
+      var R = p5panel(svg, L.ru, [0, 30], [0, 1]);
       el("line", { x1: R.X(0), x2: R.X(30), y1: R.Y(0.5), y2: R.Y(0.5), "class": "ax" }, svg);
       for (var t = 0; t <= 30; t += 5) {
         el("line", { x1: R.X(t), x2: R.X(t), y1: R.Y(0.5) - 4, y2: R.Y(0.5) + 4, "class": "ax" }, svg);
@@ -371,8 +388,7 @@
         el("circle", { cx: X, cy: R.Y(0.5), r: i === cur ? 7 : 5, "class": cls }, svg);
         var tx = el("text", { x: X, y: R.Y(0.5) - 11 - (B.prim ? 0 : 12), "class": i === cur ? "tx-b" : "tx-s", "text-anchor": "middle" }, svg); tx.textContent = B.val.str();
       });
-      var lab2 = el("text", { x: 44, y: 326, "class": "tx-s" }, svg);
-      lab2.textContent = "valeur commune c·x = b·p de chaque base : bleu = x admissible (≥ 13), violet = p admissible (≤ 13)";
+      L.lab.forEach(function (q) { var lab2 = el("text", { x: q[0], y: q[1], "class": "tx-s" }, svg); lab2.textContent = q[2]; });
       bPrim.disabled = !(Bc.prim && !Bc.dual); bDual.disabled = !(Bc.dual && !Bc.prim);
       var st = "Base {" + Bc.cols.map(function (j) { return "x" + "₁₂₃₄"[j]; }).join(", ") + "} : x = " + p5vec(Bc.x) + (Bc.prim ? " (admissible)" : " (NON admissible : une composante < 0)");
       st += "\np = B⁻ᵀc_B = " + p5vec(Bc.p) + " ; coûts réduits c − Aᵀp = " + p5vec(Bc.red) + (Bc.dual ? " ≥ 0 : p admissible pour le dual" : " : une composante < 0, p NON admissible");
@@ -383,7 +399,7 @@
       else st += "\nNi x ni p n’est admissible : aucune des deux méthodes ne passe par cette base.";
       ro.textContent = st;
     }
-    draw(); redrawers.push(draw);
+    draw(); redrawers.push(draw); p5onWidth(box, draw);
   };
 
   /* ======================================================================
@@ -585,7 +601,8 @@
           st += cost - D.v.val() < 1e-9 ? "\nÉcart nul : votre planning est optimal." : "\nChaque opérateur en surplus sur un intervalle de prix p̄ⱼ > 0 coûte p̄ⱼ de trop.";
         }
       } else {
-        st = "Demande c = (" + c.join(", ") + ") : planning optimal x* = " + p5vec(P.x) + ", coût " + P.v.str() + " = c·p (dual) avec p = " + p5vec(pd) + (D.p.length > 1 ? " (prix non uniques)" : "") + ".";
+        st = "Demande c = (" + c.join(", ") + ") : planning optimal x* = " + p5vec(P.x) + ", coût " + P.v.str() + " = c·p (dual) avec p = " + p5vec(pd) + ".";
+        if (D.p.length > 1) st += "\nPrix duaux non uniques : les sommets optimaux du dual sont " + D.p.map(p5vec).join(" et ") + " (et toutes leurs combinaisons convexes) ; c’est un point anguleux du coût optimal.";
         var deltas = [0, 1, 2, 3, 4].map(function (j) { var cc = c.slice(); cc[j] += 1; return solveP(cc).v.sub(P.v).str(); });
         st += "\nUn client de plus sur I₁…I₅ coûte réellement : " + deltas.join(", ") + "   (prix duaux : " + pd.map(function (q) { return q.str(); }).join(", ") + ").";
         st += "\nQuand les deux listes diffèrent, la base optimale change avant une unité : le prix n’est valable que localement.";
