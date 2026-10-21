@@ -25,7 +25,7 @@
   var P1_E3 = [[1, 2, [-3, 2], "(1)"], [2, 0, [-1, 0], "x₁ = 0"]];
   var P1_R3 = [{ from: 0, dir: [1, 0], normal: [0, -1], name: "x₂ = 0" }, { from: 1, dir: [2, 1], normal: [-1, 2], name: "(2)" }];
   // Position des étiquettes de sommets (décalages en pixels).
-  var P1_LAB = { "0,0": [6, 16, "start"], "5,0": [8, -8, "start"], "2,3": [18, 5, "start"], "1,2.5": [-10, -6, "end"], "0,1": [9, 4, "start"] };
+  var P1_LAB = { "0,0": [6, 16, "start"], "5,0": [8, -8, "start"], "2,3": [24, 4, "start"], "1,2.5": [-10, -6, "end"], "0,1": [9, 4, "start"] };
 
   function p1drawConstraints(pl, box, withThird) {
     P1_CONS.forEach(function (h, k) {
@@ -196,23 +196,29 @@
       var sl = P1_CONS.map(function (h) { return h[2] - h[0] * x[0] - h[1] * x[1]; });
       var z = [x[0], x[1]].concat(sl);
       var names = ["x₁", "x₂", "s₁", "s₂", "s₃"];
+      // directions (degrés) des cinq segments issus de x : vers les trois droites, puis vers les deux axes
+      var dirs = P1_CONS.map(function (h, k) { var d = Math.atan2(h[1], h[0]) * 180 / Math.PI; return sl[k] >= 0 ? d : d + 180; })
+        .concat([x[0] >= 0 ? 180 : 0, x[1] >= 0 ? 270 : 90]).map(function (d) { return ((d % 360) + 360) % 360; });
       // segments vers les droites : pied de la perpendiculaire x + s a / |a|²
       P1_CONS.forEach(function (h, k) {
         var a2 = h[0] * h[0] + h[1] * h[1], f = [x[0] + sl[k] * h[0] / a2, x[1] + sl[k] * h[1] / a2];
         var cls = sl[k] >= -1e-12 ? "ln c3" : "ln c6";
         pl.seg(x[0], x[1], f[0], f[1], cls, { style: "stroke-width:2.6px" });
         pl.dot(f[0], f[1], 3, sl[k] >= -1e-12 ? "f3" : "f6");
-        // étiquette au milieu du segment, décalée perpendiculairement (en pixels)
-        var m = [x[0] + 0.7 * (f[0] - x[0]), x[1] + 0.7 * (f[1] - x[1])], px = pl.tx(f[0]) - pl.tx(x[0]), py = pl.ty(f[1]) - pl.ty(x[1]), L = Math.hypot(px, py) || 1;
-        var nx = -py / L, ny = px / L; if (nx < 0) { nx = -nx; ny = -ny; }
-        pl.text(m[0], m[1], names[2 + k] + " = " + p1num(sl[k]), "tx-s " + (sl[k] >= -1e-12 ? "t3" : "t6"), "start", 6 * nx + 2, 10 * ny + 4);
+        // étiquette au milieu du segment, décalée du côté où l'angle libre jusqu'au segment voisin est le plus grand
+        var ccw = 360, cw = 360;
+        dirs.forEach(function (d, j) { if (j === k) return; ccw = Math.min(ccw, (d - dirs[k] + 360) % 360); cw = Math.min(cw, (dirs[k] - d + 360) % 360); });
+        var phi = (dirs[k] + (ccw > cw ? 90 : -90)) * Math.PI / 180, ox = Math.cos(phi), oy = Math.sin(phi);
+        var m = [(x[0] + f[0]) / 2, (x[1] + f[1]) / 2];
+        var anchor = ox > 0.3 ? "start" : ox < -0.3 ? "end" : "middle";
+        pl.text(m[0], m[1], names[2 + k] + " = " + p1num(sl[k]), "tx-s " + (sl[k] >= -1e-12 ? "t3" : "t6"), anchor, 9 * ox, -9 * oy + 4 + (oy < -0.3 ? 4 : 0));
       });
       pl.seg(x[0], x[1], 0, x[1], x[0] >= 0 ? "ln c3 thin dash" : "ln c6 thin dash");
       pl.seg(x[0], x[1], x[0], 0, x[1] >= 0 ? "ln c3 thin dash" : "ln c6 thin dash");
       var ok = z.every(function (v) { return v >= -1e-12; });
       pl.dot(x[0], x[1], 11, ok ? "a1" : "a5");
       pl.dot(x[0], x[1], 7, (ok ? "f1" : "f6") + " drag");
-      pl.text(x[0], x[1], "x", "tx-b", "end", -10, -8);
+      pl.text(x[0], x[1], "x", "tx-b", "end", -8, 17);
       var zeros = z.filter(function (v) { return Math.abs(v) < 1e-12; }).length;
       var txt = "x = " + p1pt(x) + "      coût x₁ + 2x₂ = " + p1num(x[0] + 2 * x[1]);
       txt += "\ns₁ = 2 + 3x₁ − 2x₂ = " + p1num(sl[0]) + "    s₂ = 4 + x₁ − 2x₂ = " + p1num(sl[1]) + "    s₃ = 5 − x₁ − x₂ = " + p1num(sl[2]);
@@ -220,7 +226,7 @@
       if (ok) txt += "\nz ≥ 0 : x est ADMISSIBLE.";
       else txt += "\nz n'est pas ≥ 0 (" + z.map(function (v, i) { return v < -1e-12 ? names[i] + " < 0" : null; }).filter(Boolean).join(", ") + ") : x n'est PAS admissible, il est du mauvais côté de " + (z.filter(function (v) { return v < -1e-12; }).length > 1 ? "ces droites." : "cette droite.");
       txt += "\nCoordonnées nulles de z : " + zeros + (zeros >= 2 ? (ok ? " → x est sur deux droites à la fois : c'est un SOMMET (partie 2)." : " → intersection de deux droites, mais hors de Xad : pas un sommet.") : zeros === 1 ? " → x est sur une droite de contrainte (le bord)." : " → x n'est sur aucune droite de contrainte.");
-      txt += "\n(Distance euclidienne à la droite (i) : sᵢ / ‖aᵢ‖, avec ‖a₁‖ = √13, ‖a₂‖ = √5, ‖a₃‖ = √2.)";
+      txt += "\n(Distance euclidienne à la droite (i) : |sᵢ| / ‖aᵢ‖, avec ‖a₁‖ = √13, ‖a₂‖ = √5, ‖a₃‖ = √2.)";
       ro.textContent = txt;
     }
     draw(); redrawers.push(draw);
@@ -311,7 +317,7 @@
       if (constant && touching) path(VERT, "a3");
       else if (tr.length === 2) seg3(tr[0], tr[1], touching ? "ln c3" : "ln c2", { style: "stroke-width:" + (touching ? 7 : 4) + "px" });
       // sommets
-      var lab = [[-14, 22, "start"], [-26, 24, "start"], [10, -8, "start"]];
+      var lab = [[4, 22, "start"], [-26, 24, "start"], [10, -8, "start"]];
       VERT.forEach(function (v, i) {
         var isMin = Math.abs(vals[i] - M) < 1e-9 && g >= M - 1e-9;
         var q = p1P3(v);
@@ -442,7 +448,8 @@
       if (R.feasible && isFinite(R.lo)) { pl.dot(b, R.lo, 7, "f3"); pl.text(b, R.lo, "min " + p1num(R.lo), "tx-b t3", "start", 10, 4); }
       cols.forEach(function (v, i) {
         pl.dot(v[0], v[1], 7, "fk drag");
-        pl.text(v[0], v[1], "𝒜" + "₁₂₃"[i] + " = " + p1pt(v), "tx-s", v[0] < 0 ? "end" : "start", v[0] < 0 ? -9 : 9, -8);
+        // étiquette du côté où la demi-droite de la colonne ne passe pas : dessous si elle monte, dessus sinon
+        pl.text(v[0], v[1], "𝒜" + "₁₂₃"[i] + " = " + p1pt(v), "tx-s", v[0] < 0 ? "end" : "start", v[0] < 0 ? -9 : 9, v[1] > 0 ? 17 : -9);
       });
       var t = "a = (" + a.map(p1num).join(", ") + "), c = (" + c.map(p1num).join(", ") + "), b = " + p1num(b) + " : on minimise c·x sur Xad = {x ≥ 0 : a·x = b}.";
       t += "\nLe cône C est " + { "zéro": "réduit à {0}", "demi-droite": "une demi-droite", "secteur": "un secteur d'angle < 180° (fermé)", "demi-plan": "un demi-plan (fermé)", "droite": "une droite", "plan": "tout le plan" }[K.type] + ".";
