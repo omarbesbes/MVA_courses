@@ -151,7 +151,7 @@
       PP.dot(p[0], p[1], 7, padm ? "f5 drag" : "f6 drag");
       PP.text(p[0], p[1], "p", "tx-b", "start", 9, -8);
       // ruler
-      var R = p5panel(svg, [44, 340, 618, 30], [0, 30], [0, 1]);
+      var R = p5panel(svg, [44, 346, 618, 30], [0, 30], [0, 1]);
       el("line", { x1: R.X(0), x2: R.X(30), y1: R.Y(0.5), y2: R.Y(0.5), "class": "ax" }, svg);
       for (var t = 0; t <= 30; t += 5) {
         el("line", { x1: R.X(t), x2: R.X(t), y1: R.Y(0.5) - 4, y2: R.Y(0.5) + 4, "class": "ax" }, svg);
@@ -166,7 +166,7 @@
         var tx = el("text", { x: X, y: R.Y(0.5) - 12 - (k === 1 && Math.abs(R.X(bp) - R.X(cx)) < 46 ? 14 : 0), "class": "tx-b", "text-anchor": "middle" }, svg);
         tx.textContent = m[1] + " = " + frac(m[0]);
       });
-      var lab = el("text", { x: 44, y: 326, "class": "tx-s" }, svg);
+      var lab = el("text", { x: 44, y: 322, "class": "tx-s" }, svg);
       lab.textContent = "la règle : b·p (violet) et c·x (bleu) ; l’intervalle entre les deux est l’écart c·x − b·p";
       // readout
       var gap = cx - bp;
@@ -282,7 +282,7 @@
      ====================================================================== */
   WIDGETS.p5bases = function (box) {
     var s = scaffold(box, "Chaque base donne un couple (x, p) avec c·x = b·p : l’optimum, c’est la base où les deux sont admissibles");
-    var svg = s.svg, W = 680, H = 392;
+    var svg = s.svg, W = 680, H = 398;
     svg.setAttribute("viewBox", "0 0 " + W + " " + H);
     svg.setAttribute("role", "img");
     svg.setAttribute("aria-label", "Les six bases du problème (R) en forme standard : solution basique primale à gauche, solution basique duale à droite, et leurs valeurs sur une règle");
@@ -360,7 +360,7 @@
         if (sel) { PX.dot(xv[0], xv[1], 13, "ln ck thin nofill"); PP.dot(pv[0], pv[1], 13, "ln ck thin nofill"); }
       });
       // ruler with the six values
-      var R = p5panel(svg, [44, 340, 618, 30], [0, 30], [0, 1]);
+      var R = p5panel(svg, [44, 352, 618, 30], [0, 30], [0, 1]);
       el("line", { x1: R.X(0), x2: R.X(30), y1: R.Y(0.5), y2: R.Y(0.5), "class": "ax" }, svg);
       for (var t = 0; t <= 30; t += 5) {
         el("line", { x1: R.X(t), x2: R.X(t), y1: R.Y(0.5) - 4, y2: R.Y(0.5) + 4, "class": "ax" }, svg);
