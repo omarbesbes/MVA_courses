@@ -378,7 +378,7 @@
   //   or −1), eps (Fr: the step ε_k, null if unbounded), T (Fr m×n: B⁻¹A) and xB (Fr m: B⁻¹b).
   function simplex(A, b, c, basis, opts) {
     opts = opts || {};
-    var m = A.length, n = A[0].length, maxIter = opts.maxIter || 50;
+    var m = A.length, n = A[0].length, maxIter = opts.maxIter === undefined ? 50 : opts.maxIter;
     var cF = frVec(c), bas = basis.slice();
     var T = frMat(A), rhs = frVec(b);
     // Gauss–Jordan on the basis columns: T = B⁻¹A, rhs = B⁻¹b.
