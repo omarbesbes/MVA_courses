@@ -292,7 +292,11 @@
     var top = new Plot(s.svg, { x: [-3.5, 3.5], y: [0, 0.8], w: 680, h: 240, pad: { l: 40, r: 16, t: 14, b: 28 }, label: "Histogram of the Langevin particles and the Fokker-Planck density" });
     var botSvg = addSvg(box, s.svg);
     var bot = new Plot(botSvg, { x: [0, T], y: [-3.5, 3.5], w: 680, h: 230, pad: { l: 40, r: 16, t: 16, b: 34 }, label: "Paths of Langevin particles and quantile curves of the density" });
-    var tgtSel = select(s.controls, "Target", [["ou", "𝒩(0,1), from two bumps"], ["dw", "double well (x² − 1)²"]], "ou", reset);
+    // switching to the double well selects a stable step (its drift grows like x^3: large explicit steps explode)
+    var tgtSel = select(s.controls, "Target", [["ou", "𝒩(0,1), from two bumps"], ["dw", "double well (x² − 1)²"]], "ou", function () {
+      if (tgtSel.value === "dw" && parseFloat(hSel.value) > 0.05) hSel.value = "0.01";
+      reset();
+    });
     var hSel = select(s.controls, "Euler–Maruyama step h", [["0.01", "0.01"], ["0.05", "0.05"], ["0.1", "0.1"], ["0.2", "0.2"], ["0.4", "0.4"]], "0.1", reset);
     var runBtn = button(s.controls, "Run", function () { running = !running; runBtn.textContent = running ? "Pause" : "Run"; if (running) loop(); });
     button(s.controls, "Reset", reset);
@@ -326,11 +330,14 @@
     }
     function advance() {
       var i, sq = Math.sqrt(2 * h);
-      for (i = 0; i < NP; i++) X[i] = X[i] - h * Vp(X[i]) + sq * gaussRand(rng);
+      for (i = 0; i < NP; i++) {
+        X[i] = X[i] - h * Vp(X[i]) + sq * gaussRand(rng);
+        if (!(Math.abs(X[i]) < 10)) X[i] = NaN; // exploded particle (far outside both targets): removed from the statistics
+      }
       var tn = t + h, tp = t;
       while (tp < tn - 1e-12) { rho = fpS.step(rho); tp += dtp; }
       t = tn;
-      for (i = 0; i < 6; i++) paths[i].push([t, X[i * 37]]);
+      for (i = 0; i < 6; i++) if (isFinite(X[i * 37])) paths[i].push([t, X[i * 37]]);
       var q = fpS.quantiles(rho, LV); q.forEach(function (v, j) { qpaths[j].push([t, v]); });
     }
     function loop() {
@@ -341,7 +348,13 @@
       if (t >= T - 1e-9) { running = false; runBtn.textContent = "Run"; return; }
       requestAnimationFrame(loop);
     }
-    function stats(arr) { var m = 0, v = 0, i; for (i = 0; i < arr.length; i++) m += arr[i]; m /= arr.length; for (i = 0; i < arr.length; i++) v += (arr[i] - m) * (arr[i] - m); return [m, v / arr.length]; }
+    function stats(arr) { // mean and variance of the particles that have not exploded
+      var m = 0, v = 0, k = 0, i;
+      for (i = 0; i < arr.length; i++) if (isFinite(arr[i])) { m += arr[i]; k++; }
+      m /= Math.max(k, 1);
+      for (i = 0; i < arr.length; i++) if (isFinite(arr[i])) v += (arr[i] - m) * (arr[i] - m);
+      return [m, v / Math.max(k, 1), k];
+    }
     function draw() {
       var i, ou = tgtSel.value === "ou";
       top.clear();
@@ -371,9 +384,11 @@
       for (i = 0; i < fpS.x.length; i++) { var w = rho[i] * fpS.dx; mass += w; mf += w * fpS.x[i]; if (fpS.x[i] < 0) left += w; }
       mf /= mass; for (i = 0; i < fpS.x.length; i++) vf += rho[i] * fpS.dx * (fpS.x[i] - mf) * (fpS.x[i] - mf); vf /= mass;
       var lp = 0; for (i = 0; i < NP; i++) if (X[i] < 0) lp++;
+      var lost = NP - sp[2];
       ro.textContent = "t = " + fmt(t, 2) + "   particles: mean " + fmt(sp[0], 3) + ", variance " + fmt(sp[1], 3) + "   |   Fokker–Planck: mean " + fmt(mf, 3) + ", variance " + fmt(vf, 3) +
         (ou ? "\nEuler–Maruyama with step h is biased: its stationary variance for this target is 1/(1 − h/2) = " + fmt(1 / (1 - h / 2), 4) + " instead of 1"
-            : "\nmass left of the barrier: particles " + fmt(lp / NP, 3) + ", Fokker–Planck " + fmt(left / mass, 3) + "  (equilibrium 0.5)") +
+            : "\nmass left of the barrier: particles " + fmt(lp / Math.max(sp[2], 1), 3) + ", Fokker–Planck " + fmt(left / mass, 3) + "  (equilibrium 0.5)") +
+        (lost > 0 ? "\n" + lost + " particles have exploded (|x| > 10): the step h is too large for a drift growing like x³; they are left out" : "") +
         "\n" + NP + " particles: Monte Carlo fluctuations of the order of 1/√" + NP + " ≈ " + fmt(1 / Math.sqrt(NP), 3);
     }
     reset();

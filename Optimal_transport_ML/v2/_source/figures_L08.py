@@ -129,7 +129,8 @@ def fig_vert_horiz():
     c.arrow(f.X(2.6), f.Y(0.0) - 2, f.X(2.6), f.Y(th * gauss(2.6, 2.6, 0.35)) + 3, 5, "ln c5 thin")
     f.text(-0.5, pk, "α", "tx-i t2", "middle", dx=-14, dy=4)
     f.text(2.6, 0.55 * gauss(2.6, 2.6, 0.35), "β (shape)", "tx-s t1", "start", dx=10, dy=4)
-    f.text(1.0, 0.2, "(1 − ϑ)α + ϑβ", "tx-s", "start", dy=-16)
+    f.text(1.15, 0.43, "(1 − ϑ)α + ϑβ", "tx-s", "middle")
+    f.line(1.95, 0.405, 2.4, 0.215, "ln cm hair")
     c.text(175, 22, "mixing (vertical): mass appears and disappears", "tx-b", "middle")
     c.text(175, 205, "read by the first variation δf/δα:", "tx-s", "middle")
     c.text(175, 219, "a function — the value of a unit of mass at x", "tx-s", "middle")
@@ -191,7 +192,7 @@ def fig_three_reps():
     """Ornstein-Uhlenbeck flow from two bumps: Langevin paths, deterministic score particles (quantiles), densities."""
     from scipy.special import ndtr
     from scipy.optimize import brentq
-    c = Canvas("three_reps", 660, 260, "One Fokker-Planck flow, three representations: noisy particles, deterministic particles, density", sub=SUB)
+    c = Canvas("three_reps", 660, 264, "One Fokker-Planck flow, three representations: noisy particles, deterministic particles, density", sub=SUB)
     w, m, sd = np.array([0.5, 0.5]), np.array([-2.0, 2.0]), np.array([0.3, 0.3])
     T = 3.0
 
@@ -213,7 +214,7 @@ def fig_three_reps():
     for j in range(len(starts)):
         f.path(list(zip(tt[::4], P[::4, j])), "ln c5 hair")
     c.text(130, 20, "(LD) Langevin particles", "tx-b", "middle")
-    c.text(130, 224, "noisy, independent, they cross", "tx-s", "middle")
+    c.text(130, 234, "noisy, independent, they cross", "tx-s", "middle")
     # (b) deterministic score particles = quantile curves of the exact law
     g = Fig(c, (260, 30, 180, 170), (0, T), (-3.6, 3.6))
     g.axes(xticks=[0, 1, 2, 3], yticks=[-3, 0, 3], xfmt=lambda v: f"{v:g}", grid=False)
@@ -226,7 +227,7 @@ def fig_three_reps():
             pts.append((t, q))
         g.path(pts, "ln c3 thin")
     c.text(350, 20, "(WGF) score particles", "tx-b", "middle")
-    c.text(350, 224, "ẋ = −x − ∂ₓ log ρₜ: smooth, ordered", "tx-s", "middle")
+    c.text(350, 234, "ẋ = −x − ∂ₓ log ρₜ: smooth, ordered", "tx-s", "middle")
     # (c) densities
     k = Fig(c, (480, 30, 165, 170), (-3.6, 3.6), (0, 0.75))
     k.line(-3.6, 0, 3.6, 0, "ax")
@@ -239,8 +240,8 @@ def fig_three_reps():
         k.path(list(zip(xs, np.minimum(mix_pdf(xs, w, mm, ss), 0.75))), cls)
     k.path(list(zip(xs, gauss(xs, 0, 1))), "ln c1 thin dash")
     c.text(562, 20, "(FP) the density", "tx-b", "middle")
-    c.text(562, 224, "t = 0, 0.3, 1, 3; target 𝒩(0,1)", "tx-s", "middle")
-    c.text(330, 250, "the three objects describe the same curve of measures αₜ (Ornstein–Uhlenbeck flow from ½𝒩(−2,0.3²) + ½𝒩(2,0.3²))", "tx-s", "middle")
+    c.text(562, 234, "t = 0, 0.3, 1, 3; target 𝒩(0,1)", "tx-s", "middle")
+    c.text(330, 254, "the three objects describe the same curve of measures αₜ (Ornstein–Uhlenbeck flow from ½𝒩(−2,0.3²) + ½𝒩(2,0.3²))", "tx-s", "middle")
     c.save()
 
 

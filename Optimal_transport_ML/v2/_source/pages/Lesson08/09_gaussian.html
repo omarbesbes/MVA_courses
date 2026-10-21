@@ -10,6 +10,9 @@
 <dt>$\dot\Sigma=A\Sigma+\Sigma A\T$</dt><dd>How a linear deformation changes a covariance (a matrix Lyapunov equation). In 1D with $A=a$: $\frac{\dd}{\dd t}\sigma^2=2a\sigma^2$.</dd>
 <dt>$\nabla_Wf$ affine on Gaussians</dt><dd>Happens when $\frac{\delta f}{\delta\al}$ is a quadratic polynomial in $x$ whenever $\al$ is Gaussian: potentials and interactions with quadratic kernels, KL to a Gaussian (the score of a Gaussian is affine), $W_2^2$ to a Gaussian (the Brenier map between Gaussians is affine), Fisher information to a Gaussian.</dd>
 </dl>
+<div class="box recall"><div class="box-h">Reminder — Gaussian vectors under affine maps</div>
+<p>If $X\sim\N(m,\Sigma)$, then $MX+b\sim\N(Mm+b,\,M\Sigma M\T)$ for every matrix $M$ and vector $b$ (compute the characteristic function). A linear ODE $\dot x=A_tx$ is solved by a matrix, $x_t=\Phi_tx_0$ with $\dot\Phi_t=A_t\Phi_t$, $\Phi_0=\Id$: it maps Gaussian laws to Gaussian laws. More: <a href="Reminders.html#gaussians">Gaussian vectors</a>, <a href="Reminders.html#ode">ODEs</a>.</p>
+</div>
 <details class="fold proof"><summary>Proof (OT4ML p. 432)</summary><div class="fold-body">
 <ol class="steps">
 <li>The particles solve $\dot X_t=b_t+A_t(X_t-m_t)$; then $\tilde X_t=X_t-m_t$ solves $\dot{\tilde X}_t=A_t\tilde X_t$.<span class="why">Characteristics of the continuity equation, and $\dot m_t=b_t$.</span></li>
@@ -48,7 +51,7 @@
 <li>$W_2^2$: $(0.2707,\ 0.9323)=\big(2e^{-2},\ 1-0.5e^{-2}\big)$, on the straight segment towards $(0,1)$;</li>
 <li>Fisher: $(0.2707,\ 0.9999)$ — the standard deviation is fixed almost at once (rate $8$), the mean follows at rate $2$.</li>
 </ul>
-<p>They come within $10^{-3}$ of the target at $t=7.60$ (KL), $3.82$ ($W_2^2$) and $3.80$ (Fisher); the KL and Fisher paths are $1.4\%$ and $6.3\%$ longer than the straight segment followed by the $W_2^2$ flow. <strong>Same minimiser, different energies: different paths and different speeds.</strong></p>
+<p>They come within $10^{-3}$ of the target at $t=7.60$ (KL), $3.82$ ($W_2^2$) and $3.80$ (Fisher); the KL and Fisher paths are $1.5\%$ and $6.3\%$ longer than the straight segment followed by the $W_2^2$ flow. <strong>Same minimiser, different energies: different paths and different speeds.</strong></p>
 </div>
 <figure class="fig"><!-- include figures/L08/halfplane.svg --><figcaption>Exact Wasserstein gradient flows of three energies with the same minimiser $\N(0,1)$, drawn in the half-plane of 1D Gaussians (compare OT4ML Fig. 16.12, p. 436). The $W_2^2$ flow runs along straight rays (it is the squared Euclidean distance in this plane); the KL flow bends because the mean relaxes at rate $1$ and the standard deviation at rate $2$; the Fisher flow first fixes $\sigma$, then moves $m$.</figcaption></figure>
 
@@ -71,7 +74,7 @@
 <div class="box example" id="gauss-vi-example"><div class="box-h">Worked example — the best Gaussian for a quartic posterior</div>
 <p>Let $\pi\propto e^{-V}$ on $\R$ with $V(x)=\frac{x^4}4+\frac{x^2}2$ ($1$-convex). For $X\sim\N(m,s^2)$: $\E V'(X)=\E[X^3+X]=m^3+3ms^2+m$ and $\E V''(X)=3(m^2+s^2)+1$. Proposition 6.7: $m=0$ and $\big(3s^2+1\big)s^2=1$, i.e. $3s^4+s^2-1=0$:</p>
 $$s_\star^2=\frac{\sqrt{13}-1}6=0.4343 .$$
-<p>Compare: the Laplace approximation is $\N(0,1/V''(0))=\N(0,1)$; the true variance of $\pi$ is $0.4679$ (quadrature). In KL, $\KL(\N(0,s_\star^2)\|\pi)=0.0169$, against $0.4913$ for the Laplace approximation and $0.0192$ for the Gaussian with the true variance — VI wins on its own criterion, as it must. Running Theorem 6.8 from $\N(1,1)$: $(m,\Sigma)=(0.0850,\ 0.4280)$ at $t=1$, $(0.0085,\ 0.4342)$ at $t=2$, and $(10^{-5},\ 0.43426)$ at $t=5$.</p>
+<p>Compare: the Laplace approximation is $\N(0,1/V''(0))=\N(0,1)$; the true variance of $\pi$ is $0.4679$ (quadrature). In KL, $\KL(\N(0,s_\star^2)\|\pi)=0.0169$, against $0.4913$ for the Laplace approximation and $0.0192$ for the Gaussian with the true variance — VI wins on its own criterion, as it must. Running Theorem 6.8 from $\N(1,1)$: $(m,\Sigma)=(0.0850,\ 0.4280)$ at $t=1$, $(0.0085,\ 0.4342)$ at $t=2$, and $(8.5\times10^{-6},\ 0.43426)$ at $t=5$.</p>
 </div>
 <div class="box ml"><div class="box-h">In machine learning — Gaussian variational inference as a Wasserstein flow</div>
 <p>Bayesian models (logistic regression, Gaussian-process classification, Bayesian neural networks) have posteriors $\pi\propto e^{-V}$ known only through $V$ and its derivatives. <strong>Gaussian VI</strong> approximates $\pi$ by $\N(m,\Sigma)$; following Lambert, Chewi, Bach, Bonnabel and Rigollet (2022), StatOT §6.1.2 (pp. 177–178) runs Theorem 6.8 with Monte Carlo estimates of $\E\nabla V$ and $\E\nabla^2V$ under the current Gaussian: a <strong>stochastic Bures–Wasserstein gradient descent</strong>, with the rate $e^{-2\al t}$ when $V$ is $\al$-convex. The output gives credible intervals at the cost of a few gradient evaluations per step, and it is more accurate than the Laplace approximation (the worked example). The same flow on mixtures of Gaussians, one Bures–Wasserstein particle per component, gives Gaussian-mixture VI (StatOT §5.8.3).</p>
