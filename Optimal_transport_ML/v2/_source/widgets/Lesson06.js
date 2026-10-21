@@ -357,7 +357,9 @@
         "\nlength ∫₀¹ √(kinetic energy) dt = " + fmt(len, 3) + "    W₂ = " + fmt(Math.sqrt(W22), 3) +
         (kind === "geo" ? "\nconstant speed along a straight line: action = length² = W₂² (Benamou–Brenier)." :
           kind === "clock" ? "\nsame curve as the geodesic (length W₂), run at a non-constant speed: the action is 4/3 of W₂²." :
-          kind === "mix" ? "\nthe energy blows up near t = 0 and t = 1 (mass must appear where the other density is tiny); off the chart." :
+          kind === "mix" ? (s1 > Math.SQRT2 ? "\nthe energy blows up as t → 0: mass must appear in the wide tails of α₁, where the density of α₀ is tiny (curve cut at the top)." :
+            s1 < Math.SQRT1_2 ? "\nthe energy blows up as t → 1: mass must appear in the wide tails of α₀, where the density of α₁ is tiny (curve cut at the top)." :
+            "\nthe energy stays finite at both ends here (σ₁ between 1/√2 and √2: comparable tails); the action is still at least W₂² (Benamou–Brenier).") :
           "\nthe action is at least length², with equality only at constant speed; the length is at least W₂.");
     }
     draw();
