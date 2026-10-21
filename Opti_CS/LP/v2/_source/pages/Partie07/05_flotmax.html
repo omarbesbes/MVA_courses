@@ -1,0 +1,128 @@
+<h2 id="flot-maximal">5. Le flot maximal <span class="ref">Diapos 40–43 ; Allaire (4.34), p. 140</span></h2>
+<p class="tldr">Faire passer le plus possible de la source au puits sans dépasser les capacités : c'est un flot de coût minimum déguisé (un arc retour de coût $-1$), et sa valeur est égale à la plus petite capacité d'une coupe qui sépare la source du puits.</p>
+
+<h3 id="flotmax-def">Le problème</h3>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo 43</span></div>
+<p><strong>Définition.</strong> Un <em>flot maximal</em> sur un graphe muni d'une source $s$ (sans antécédent) et d'un puits $p$ (sans successeur) est un flot admissible maximisant $b_s$ où $b$ est tel que $b_p=-b_s$ et $b_i=0$ pour $i\notin\{s,p\}$.</p>
+<p><strong>Remarques</strong></p>
+<ul>
+<li>On rajoute l'arc $(p,s)$ reliant le puits à la source et on maximise $x_{ps}$ que l'on fait croître à partir de zéro tant qu'il existe une solution admissible</li>
+<li>pour ce problème les $c_{ij}$ n'interviennent pas</li>
+<li>$b_p=-b_s$ est nécessaire par conservation globale</li>
+</ul>
+<p>Exemple : maximiser un flux sur un réseau</p>
+</div>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, (4.34), p. 140</span></div>
+<p>Dans le graphe $\mathcal G$ on distingue deux nœuds, notés $s$ et $p$, appelés respectivement source et puits (voir la Figure 4.2), et on suppose que $s$ n'a pas de prédécesseur, autrement dit $\{i\in\Nc\mid(i,s)\in\Ac\}=\emptyset$, et $p$ n'a pas de successeur, c'est-à-dire $\{i\in\Nc\mid(p,i)\in\Ac\}=\emptyset$. Soit $v\in\R_+$. On appelle flot admissible de $s$ à $p$ de valeur $v$ une solution $x$ de $Ax=b$, $0\le x\le u$ avec</p>
+$$b_i=\begin{cases}v&\text{si } i=s,\\-v&\text{si } i=p,\\0&\text{sinon.}\end{cases}\qquad(4.34)$$
+<p>Le problème du flot maximal consiste à trouver un flot admissible de $s$ à $p$ de valeur $v$ maximale. En d'autres termes, on cherche à faire passer de la source vers le puits le trafic maximal à travers le graphe $\mathcal G$.</p>
+</div>
+<dl class="decode">
+<dt>source $s$, puits $p$</dt><dd>le point de départ (aucun arc n'y arrive) et le point d'arrivée (aucun arc n'en part). Sur le graphe de la diapo 26, c'est bien le cas : $s$ n'a que des arcs sortants, $p$ que des arcs entrants.</dd>
+<dt>$v=b_s$</dt><dd>la <em>valeur</em> du flot : ce qui entre en $s$, traverse le réseau et ressort en $p$. C'est aussi $x_{s1}+x_{s3}$, ce qui sort de $s$ (Kirchhoff en $s$).</dd>
+<dt>$b_p=-b_s$</dt><dd>imposé par (4.27) : les autres $b_i$ sont nuls, donc $b_s+b_p=0$. C'est la troisième remarque de la diapo.</dd>
+<dt>« les $c_{ij}$ n'interviennent pas »</dt><dd>on maximise un débit, pas un coût. Seules comptent les capacités $u_{ij}$.</dd>
+<dt>« on fait croître $x_{ps}$ »</dt><dd>la première remarque : boucler le réseau par un arc de $p$ vers $s$, qui ramène le débit à la source. Le flot devient une <em>circulation</em> ($b=0$ partout), et $x_{ps}$ mesure le débit. La version précise est l'Exercice 4.3.2 (§8).</dd>
+</dl>
+
+<div class="box example"><div class="box-h">Exemple — le flot maximal du graphe de la diapo 26</div>
+<p>Avec les capacités du tableau du §3 ($u_{s1}=5$, $u_{s3}=4$, $u_{12}=2$, $u_{13}=3$, $u_{21}=1$, $u_{23}=1$, $u_{24}=3$, $u_{2p}=4$, $u_{32}=2$, $u_{34}=3$, $u_{42}=1$, $u_{4p}=5$, choisies pour ce guide), suivons la remarque de la diapo : faisons croître $v$ à partir de $0$ et demandons au solveur s'il existe un flot admissible de valeur $v$. Réponse : oui pour $v=0,1,\dots,7$, non pour $v=8$. Le flot maximal vaut donc $7$. Deux bornes évidentes ne suffisaient pas à le deviner : ce qui peut sortir de $s$ vaut $u_{s1}+u_{s3}=9$, ce qui peut entrer en $p$ vaut $u_{2p}+u_{4p}=9$. Le vrai goulot est au milieu ; nous allons le trouver.</p>
+</div>
+
+<h3 id="flotmax-retour">Un flot de coût minimum déguisé</h3>
+<figure class="fig"><!-- include figures/P07/retour.svg --><figcaption>La construction de l'Exercice 4.3.2 : on ajoute l'arc retour $(p,s)$, de capacité infinie et de coût $-1$ ; tous les autres coûts sont nuls et $b=0$ partout. Minimiser le coût $-x_{ps}$, c'est maximiser le débit qui revient en $s$, donc celui qui traverse le réseau.</figcaption></figure>
+<p>Avec l'arc retour, le problème devient $\min\{-x_{ps} : A'x=0,\ 0\le x\le u\}$, où $A'$ est la matrice d'incidence du graphe augmenté (une colonne de plus, $+1$ en $p$ et $-1$ en $s$). C'est encore une matrice d'incidence, donc totalement unimodulaire, et les capacités sont entières : par le Théorème 4.3.7, <strong>il existe un flot maximal entier</strong>, et le simplexe le trouve. Sur l'exemple, <code>linprog</code> rend $x_{ps}=7$ avec un flot entier sur chaque arc. La preuve complète de l'équivalence est l'<a href="#exo-4-3-2">Exercice 4.3.2</a>.</p>
+
+<h3 id="chemins-augmentants">Pour aller plus loin : les chemins augmentants (Ford–Fulkerson)</h3>
+<p>Le cours s'arrête au programme linéaire. En pratique, on résout le flot maximal par un algorithme dédié, dû à Ford et Fulkerson (1956), qui explique aussi <em>pourquoi</em> la valeur est $7$.</p>
+<div class="box def"><div class="box-h">Définition — graphe résiduel, chemin augmentant</div>
+<p>Soit $x$ un flot admissible de $s$ à $p$. Pour chaque arc $(i,j)$ :</p>
+<ul>
+<li>si $x_{ij}<u_{ij}$, on peut encore <strong>ajouter</strong> jusqu'à $u_{ij}-x_{ij}$ sur l'arc : arête résiduelle $i\to j$ de capacité $u_{ij}-x_{ij}$ ;</li>
+<li>si $x_{ij}>0$, on peut <strong>retirer</strong> jusqu'à $x_{ij}$ de l'arc, ce qui revient à faire passer du flot « à l'envers », de $j$ vers $i$ : arête résiduelle $j\to i$ de capacité $x_{ij}$.</li>
+</ul>
+<p>Un <em>chemin augmentant</em> est un chemin de $s$ à $p$ dans ce graphe résiduel. Son <em>goulot</em> $\theta$ est la plus petite capacité résiduelle de ses arêtes. Augmenter le long du chemin, c'est ajouter $\theta$ sur les arêtes « à l'endroit » et retirer $\theta$ sur les arêtes « à l'envers » : Kirchhoff reste vraie en chaque nœud intermédiaire (ce qui entre et ce qui sort changent de la même quantité), les capacités sont respectées, et la valeur du flot augmente de $\theta$.</p>
+</div>
+<p>L'algorithme part du flot nul et augmente tant qu'il existe un chemin augmentant. Avec la règle « toujours le chemin augmentant le plus court en nombre d'arcs » (Edmonds et Karp, 1972), sur l'exemple :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Étape</th><th>Chemin augmentant</th><th>Capacités résiduelles</th><th>Goulot $\theta$</th><th>Valeur</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>$s\to1\to2\to p$</td><td>$5,\ 2,\ 4$</td><td>$2$</td><td>$0\to2$</td></tr>
+<tr><td>2</td><td>$s\to3\to2\to p$</td><td>$4,\ 2,\ 2$</td><td>$2$</td><td>$2\to4$</td></tr>
+<tr><td>3</td><td>$s\to3\to4\to p$</td><td>$2,\ 3,\ 5$</td><td>$2$</td><td>$4\to6$</td></tr>
+<tr><td>4</td><td>$s\to1\to3\to4\to p$</td><td>$3,\ 3,\ 1,\ 3$</td><td>$1$</td><td>$6\to7$</td></tr>
+</tbody></table></div>
+<p>Après l'étape 4, il n'existe plus de chemin augmentant : depuis $s$, le graphe résiduel n'atteint que $1$ et $3$ (les arcs $(1,2)$, $(3,2)$ et $(3,4)$ sont saturés, et les arcs $(2,1)$, $(2,3)$ sont vides, donc on ne peut rien « retirer » pour revenir). Le flot obtenu est $x_{s1}=3$, $x_{s3}=4$, $x_{12}=2$, $x_{13}=1$, $x_{2p}=4$, $x_{32}=2$, $x_{34}=3$, $x_{4p}=3$, les autres arcs à $0$ : valeur $7$, entière à chaque étape puisque les goulots sont entiers.</p>
+
+<div class="widget" data-widget="p7flotmax"><p class="w-noscript">Figure interactive (nécessite JavaScript).</p></div>
+<p><strong>À observer :</strong> chaque clic sur « Chemin augmentant suivant » trouve un chemin (surligné en vert), calcule son goulot et met à jour le flot ; les arcs saturés passent en rouge. Avec la règle du plus court chemin, on retrouve les quatre étapes du tableau, puis un dernier clic affiche la coupe $S=\{s,1,3\}$ : ses trois arcs sortants sont saturés ($2+2+3=7$), ses arcs entrants $(2,1)$ et $(2,3)$ sont vides. Choisissez « le premier trouvé en profondeur » : l'algorithme prend des chemins plus longs ($s\to1\to2\to3\to4\to p$ d'abord) et il lui faut six étapes ; à la sixième, il passe de $3$ à $2$ en parcourant l'arc $(2,3)$ <em>à l'envers</em> (il annule l'unité qu'il y avait mise à la première étape). La valeur finale est la même, $7$, avec la même coupe. Cliquez sur un arc pour changer sa capacité (case « −1 » pour la diminuer) : par exemple, augmenter $u_{12}$ de $2$ à $3$ fait passer le flot maximal à $8$ (la coupe $\{s,1,3\}$ a maintenant une capacité $8$), alors qu'augmenter $u_{2p}$ ne change rien (quiz ci-dessous).</p>
+
+<h3 id="coupe-min">Pour aller plus loin : flot maximal = coupe minimale</h3>
+<p>Ce théorème n'est ni dans les diapos ni dans le livre, mais il dit <em>pourquoi</em> un flot est maximal, et il est la clé des applications ci-dessous.</p>
+<div class="box def"><div class="box-h">Définition — coupe</div>
+<p>Une <em>coupe</em> est un ensemble de nœuds $S$ qui contient $s$ mais pas $p$ ; on note $T$ son complémentaire. Sa <em>capacité</em> est la somme des capacités des arcs qui vont de $S$ vers $T$ :</p>
+$$\mathrm{cap}(S)=\sum_{(i,j)\in\Ac,\ i\in S,\ j\in T}u_{ij}.$$
+<p>Les arcs de $T$ vers $S$ ne comptent pas.</p>
+</div>
+<p>Exemple : pour $S=\{s,1,3\}$, les arcs de $S$ vers $T=\{2,4,p\}$ sont $(1,2)$, $(3,2)$ et $(3,4)$, d'où $\mathrm{cap}(S)=2+2+3=7$. Pour $S=\{s\}$, $\mathrm{cap}=5+4=9$. Le graphe a $2^4=16$ coupes (chacun des nœuds $1,2,3,4$ est d'un côté ou de l'autre) ; le script les énumère : la plus petite capacité est $7$, atteinte seulement pour $S=\{s,1,3\}$ ; viennent ensuite trois coupes de capacité $9$.</p>
+<div class="box thm"><div class="box-h">Théorème — flot maximal = coupe minimale (Ford et Fulkerson, 1956)</div>
+<p>Pour tout flot admissible de $s$ à $p$ de valeur $v$ et toute coupe $S$, $v\le\mathrm{cap}(S)$. De plus, la valeur maximale d'un flot est égale à la capacité minimale d'une coupe.</p>
+</div>
+<div class="box idea"><div class="box-h">L'idée</div>
+<p>Tout ce qui va de $s$ à $p$ doit franchir la frontière entre $S$ et $T$ : le débit net à travers la frontière est la valeur du flot, et il ne peut pas dépasser la capacité des arcs qui la franchissent dans le bon sens. Pour l'égalité, on lance les chemins augmentants jusqu'au bout : l'ensemble $S$ des nœuds encore atteignables depuis $s$ est une coupe dont tous les arcs sortants sont saturés et tous les arcs entrants vides.</p>
+</div>
+<details class="fold proof"><summary>Démonstration complète</summary><div class="fold-body">
+<p><strong>L'inégalité.</strong> Soit $x$ un flot admissible de valeur $v$ et $S$ une coupe.</p>
+<ol class="steps">
+<li>$$\sum_{i\in S}b_i=b_s=v.$$<span class="why">$s\in S$, $p\notin S$, et les autres $b_i$ sont nuls (4.34).</span></li>
+<li>$$\sum_{i\in S}b_i=\sum_{i\in S}(\text{sort}_i-\text{entre}_i)=\sum_{i\in S,\,j\in T}x_{ij}-\sum_{j\in T,\,i\in S}x_{ji}.$$<span class="why">On somme Kirchhoff sur les nœuds de $S$. Un arc qui relie deux nœuds de $S$ apparaît une fois en « sort » et une fois en « entre » : il disparaît, comme dans la preuve de (4.27). Restent les arcs qui sortent de $S$ (comptés $+$) et ceux qui y entrent (comptés $-$).</span></li>
+<li>$$v\le\sum_{i\in S,\,j\in T}u_{ij}-0=\mathrm{cap}(S).$$<span class="why">$x_{ij}\le u_{ij}$ sur les arcs sortants et $x_{ji}\ge0$ sur les arcs entrants.</span></li>
+<li>Égalité si et seulement si tous les arcs de $S$ vers $T$ sont saturés et tous les arcs de $T$ vers $S$ sont vides.<span class="why">Ce sont les deux inégalités utilisées à la ligne 3.</span></li>
+</ol>
+<p><strong>L'égalité.</strong> Supposons les capacités entières et lançons les chemins augmentants depuis le flot nul.</p>
+<ol class="steps">
+<li>L'algorithme s'arrête.<span class="why">Chaque augmentation ajoute un goulot entier $\theta\ge1$ à la valeur, qui est bornée par $\mathrm{cap}(\{s\})$.</span></li>
+<li>Soit $S$ l'ensemble des nœuds atteignables depuis $s$ dans le graphe résiduel final. Alors $s\in S$ et $p\notin S$.<span class="why">Il n'y a plus de chemin augmentant.</span></li>
+<li>Tout arc $(i,j)$ de $S$ vers $T$ est saturé, tout arc $(j,i)$ de $T$ vers $S$ est vide.<span class="why">Sinon l'arête résiduelle $i\to j$ (capacité $u_{ij}-x_{ij}>0$), ou $i\to j$ obtenue en retirant du flot sur $(j,i)$ (capacité $x_{ji}>0$), rendrait $j$ atteignable.</span></li>
+<li>$$v=\mathrm{cap}(S)\ge\min_{S'}\mathrm{cap}(S')\ge\max_x v(x)\ge v.$$<span class="why">Cas d'égalité de la ligne 4 ci-dessus, puis l'inégalité appliquée à un flot maximal et à une coupe minimale. Toutes les inégalités sont des égalités : $x$ est maximal et $S$ minimale.</span></li>
+</ol>
+<p>Pour des capacités réelles, l'égalité reste vraie (par exemple par la dualité, ci-dessous), mais l'algorithme avec des choix maladroits peut ne pas s'arrêter ; la règle du plus court chemin d'Edmonds et Karp garantit l'arrêt en au plus de l'ordre de $m\,n$ augmentations ($m$ nœuds, $n$ arcs).</p>
+</div></details>
+<figure class="fig"><!-- include figures/P07/coupe.svg --><figcaption>Le flot maximal trouvé par les chemins augmentants (étiquettes « flot / capacité ») et la coupe minimale $S=\{s,1,3\}$ (zone verte). Les trois arcs qui franchissent la frontière de gauche à droite sont saturés (rouge) ; les deux qui la franchissent de droite à gauche, $(2,1)$ et $(2,3)$, sont vides. Valeur du flot $=3+4=7=\mathrm{cap}(S)$.</figcaption></figure>
+
+<h4 id="coupe-dualite">Le lien avec la dualité</h4>
+<p>Le théorème est un cas particulier de la dualité des programmes linéaires (<a href="Partie05.html#theoreme-dualite">partie 5</a>). Le flot maximal s'écrit $\max\{v : Ax=v(e_s-e_p),\ 0\le x\le u\}$. Son dual, calculé avec les règles de la partie 5 (une variable $\mu_i$ libre par nœud, une variable $d_{ij}\ge0$ par contrainte de capacité), est</p>
+$$\min\ \sum_{(i,j)\in\Ac}u_{ij}d_{ij}\quad\text{sous}\quad d_{ij}\ge\mu_i-\mu_j\ \ \forall(i,j)\in\Ac,\qquad\mu_s-\mu_p=1,\qquad d\ge0.$$
+<p>Une coupe $S$ en donne une solution admissible : $\mu_i=1$ si $i\in S$, $0$ sinon, et $d_{ij}=1$ exactement sur les arcs de $S$ vers $T$. Sa valeur est $\mathrm{cap}(S)$. L'inégalité « $v\le\mathrm{cap}(S)$ » est donc la dualité faible, et l'égalité est la dualité forte, à condition de savoir qu'un dual optimal peut être choisi de cette forme $0/1$ (c'est l'objet de l'<a href="#exo-dual-coupe">Exercice supplémentaire 10</a>). Sur l'exemple, <code>linprog</code> (méthode par défaut) appliqué à ce dual rend la valeur $7$, avec $\mu=(0,0,-1,0,-1,-1)$ pour $(s,1,2,3,4,p)$, et $d_{ij}=1$ sur $(1,2)$, $(3,2)$, $(3,4)$, $0$ ailleurs. Seules les différences $\mu_i-\mu_j$ comptent : en ajoutant $1$ partout, on obtient $\mu=(1,1,0,1,0,0)$, l'indicatrice de $\{s,1,3\}$. C'est exactement la coupe minimale. Les écarts complémentaires se lisent sur la figure : $d_{ij}>0$ seulement sur des arcs saturés.</p>
+
+<div class="box ml"><div class="box-h">En machine learning — segmenter une image par une coupe minimale</div>
+<p>Pour séparer un objet du fond dans une image, on attribue à chaque pixel $i$ une étiquette « objet » ou « fond » en minimisant une énergie : un terme d'attache aux données $D_i(\text{étiquette})$ (un pixel clair coûte cher à déclarer « fond ») plus une pénalité $w$ pour chaque paire de pixels voisins d'étiquettes différentes (les contours doivent être courts). Pour deux étiquettes, cette énergie est exactement la capacité d'une coupe dans un graphe : une source $s$ (« objet »), un puits $p$ (« fond »), un nœud par pixel, un arc $s\to i$ de capacité $D_i(\text{fond})$, un arc $i\to p$ de capacité $D_i(\text{objet})$, et des arcs $i\leftrightarrow j$ de capacité $w$ entre voisins. Les pixels du côté de $s$ sont l'objet. Exemple sur une « image » d'une ligne de $4$ pixels d'intensités $(8,4,7,1)$ sur $0..9$, avec $D_i(\text{fond})=I_i$, $D_i(\text{objet})=9-I_i$ et $w=3$ : pixel par pixel, on choisirait (objet, fond, objet, fond), d'énergie $1+4+2+1+3\cdot3=17$ ; la coupe minimale (<code>scipy.sparse.csgraph.maximum_flow</code> donne un flot maximal de $12$) étiquette (objet, objet, objet, fond), d'énergie $1+5+2+1+3=12$. Le pixel bruité du milieu est « lissé ». C'est le principe des <em>graph cuts</em> de Boykov et Jolly (2001) et de l'algorithme de flot maximal de Boykov et Kolmogorov (2004), conçu pour les graphes en grille des images ; GrabCut (2004) l'itère avec des modèles de couleur appris.</p>
+</div>
+
+<div class="box app"><div class="box-h">En pratique — <code>scipy.sparse.csgraph.maximum_flow</code></div>
+<pre><code>import numpy as np
+from scipy.sparse import csr_matrix
+from scipy.sparse.csgraph import maximum_flow
+noeuds = ["s", "1", "2", "3", "4", "p"]
+cap = np.zeros((6, 6), dtype=np.int32)          # cap[i, j] = u_ij
+for (i, j), u in {("s","1"): 5, ("s","3"): 4, ("1","2"): 2, ("1","3"): 3, ("2","1"): 1,
+                  ("2","3"): 1, ("2","4"): 3, ("2","p"): 4, ("3","2"): 2, ("3","4"): 3,
+                  ("4","2"): 1, ("4","p"): 5}.items():
+    cap[noeuds.index(i), noeuds.index(j)] = u
+res = maximum_flow(csr_matrix(cap), 0, 5)        # source s = 0, puits p = 5
+res.flow_value                                   # 7</code></pre>
+<p>Les capacités doivent être entières (<code>int32</code>). La méthode par défaut est celle de Dinic (<code>method="dinic"</code>) ; <code>method="edmonds_karp"</code> donne aussi $7$. Piège de lecture : <code>res.flow</code> est le flot <em>net</em>, antisymétrique ($F_{ji}=-F_{ij}$). Ici il vaut $3,4,2,1,4,2,3,3$ sur $(s,1)$, $(s,3)$, $(1,2)$, $(1,3)$, $(2,p)$, $(3,2)$, $(3,4)$, $(4,p)$, et la case $(2,1)$ contient $-2$ (l'opposé de $F_{12}$), pas le flot sur l'arc $(2,1)$, qui est nul. Avec des arcs dans les deux sens, lisez seulement les entrées positives.</p>
+</div>
+
+<div class="box reflex"><div class="box-h">Réflexes</div>
+<ul>
+<li>Quand on vous demande « le plus grand débit » → flot maximal ; pour le certifier, exhibez une coupe de même capacité.</li>
+<li>Pour majorer un flot → trouvez une coupe : $v\le\mathrm{cap}(S)$ pour toute coupe.</li>
+<li>Un chemin augmentant peut parcourir un arc à l'envers : c'est « retirer » du flot posé trop tôt.</li>
+</ul>
+</div>
+
+<div class="quiz"><p>Dans l'exemple, on double la capacité de l'arc $(2,p)$ (de $4$ à $8$). Le flot maximal change-t-il ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>Non. La coupe $S=\{s,1,3\}$ ne contient pas l'arc $(2,p)$ (il va de $T$ à $T$) : sa capacité reste $7$, donc le flot maximal reste $\le7$, et le flot de valeur $7$ trouvé reste admissible. Pour augmenter le flot maximal, il faut augmenter la capacité d'un arc de <em>toutes</em> les coupes minimales, ici $(1,2)$, $(3,2)$ ou $(3,4)$.</p>
+</div></details></div>

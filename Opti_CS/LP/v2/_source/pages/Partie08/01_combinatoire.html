@@ -1,0 +1,76 @@
+<h2 id="combinatoire">1. Quand le miracle n'a pas lieu : l'explosion combinatoire <span class="ref">Diapos 47–49 ; Allaire p. 134</span></h2>
+<p class="tldr">Sans totale unimodularité, la relaxation continue donne des sommets fractionnaires, l'arrondi ne suffit pas, et l'ensemble des solutions entières, fini, est bien trop grand pour être énuméré : il faut des méthodes qui raisonnent sur des bornes.</p>
+
+<h3 id="combinatoire-probleme">Le problème</h3>
+<p>Aux parties 6 et 7, on résolvait un programme linéaire en nombres entiers en oubliant la contrainte « entier » : quand la matrice des contraintes est totalement unimodulaire (flots, transport, affectation), le simplexe tombe sur un sommet entier, et c'est fini. Le livre appelle cela un « petit miracle », et il s'arrête là :</p>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, §4.3, p. 134</span></div>
+<p>En toute généralité le problème (4.24) est extrêmement difficile à résoudre, en particulier puisque, l'espace des solutions admissibles étant discret, on ne peut pas utiliser la notion de gradient pour tester l'optimalité d'une solution ou pour passer d'une solution à une autre meilleure. Nous ne disons rien des méthodes générales pour résoudre (4.24) et nous nous contentons de traiter deux cas particuliers […].</p>
+</div>
+<p>Les diapos, elles, consacrent leur dernière partie (« Problèmes entiers célèbres », diapo 47) à deux problèmes où le miracle n'a pas lieu, et à la méthode qui les attaque. Voyons d'abord ce qui casse, sur l'exemple du sac-à-dos que la section 2 détaille.</p>
+
+<div class="box example"><div class="box-h">Exemple — un sommet fractionnaire, et l'arrondi qui échoue</div>
+<p>Cinq objets A, B, C, D, E de poids $p=(4,4,8,2,8)$ et d'utilités $u=(16,15,22,4,12)$ ; un sac de capacité $14$. On cherche $x\in\{0,1\}^5$ qui maximise $u\cdot x$ sous $p\cdot x\le14$.</p>
+<ul>
+<li><strong>La contrainte n'est pas TU.</strong> La seule ligne est $(4,4,8,2,8)$ ; sa sous-matrice $1\times1$ formée du coefficient $4$ a pour déterminant $4\notin\{-1,0,1\}$.</li>
+<li><strong>La relaxation continue</strong> ($0\le x_j\le1$ au lieu de $x_j\in\{0,1\}$) a pour solution $x=(1,1,\tfrac34,0,0)$, de valeur $16+15+\tfrac34\cdot22=47{,}5$ (calcul au §2) : un sommet fractionnaire.</li>
+<li><strong>Arrondir ne suffit pas.</strong> Arrondir $\tfrac34$ à $1$ donne un poids $4+4+8=16\gt14$ : non admissible. Arrondir à $0$ donne $(1,1,0,0,0)$, d'utilité $31$, alors que l'optimum vaut $42$ (énumération des $32$ sous-ensembles, §2). C'est la leçon de la diapo 18, vue à la <a href="Partie06.html#relaxation">partie 6</a>.</li>
+</ul>
+</div>
+
+<p>Il reste donc un problème <em class="new">combinatoire</em> : l'ensemble des solutions est <strong>fini</strong> (on pourrait les essayer toutes) mais <strong>gigantesque</strong>. Pour $N$ objets, il y a $2^N$ sous-ensembles ; pour $N$ villes, $(N-1)!/2$ tournées (§4). Le tableau donne les ordres de grandeur, pour un ordinateur qui examinerait un milliard de solutions par seconde.</p>
+
+<div class="table-wrap"><table>
+<thead><tr><th>$N$</th><th>$N^3$ (polynomial)</th><th>$2^N$ (sous-ensembles)</th><th>temps pour $2^N$</th><th>$(N-1)!/2$ (tournées)</th><th>temps pour $(N-1)!/2$</th></tr></thead>
+<tbody>
+<tr><td>10</td><td>1 000</td><td>1 024</td><td>1 µs</td><td>181 440</td><td>0,18 ms</td></tr>
+<tr><td>15</td><td>3 375</td><td>32 768</td><td>33 µs</td><td>$4{,}4\cdot10^{10}$</td><td>44 s</td></tr>
+<tr><td>20</td><td>8 000</td><td>$1{,}05\cdot10^{6}$</td><td>1 ms</td><td>$6{,}1\cdot10^{16}$</td><td>1,9 an</td></tr>
+<tr><td>25</td><td>15 625</td><td>$3{,}4\cdot10^{7}$</td><td>34 ms</td><td>$3{,}1\cdot10^{23}$</td><td>9,8 millions d'années</td></tr>
+<tr><td>30</td><td>27 000</td><td>$1{,}07\cdot10^{9}$</td><td>1,1 s</td><td>$4{,}4\cdot10^{30}$</td><td>$1{,}4\cdot10^{14}$ ans</td></tr>
+<tr><td>50</td><td>125 000</td><td>$1{,}13\cdot10^{15}$</td><td>13 jours</td><td>$3{,}0\cdot10^{62}$</td><td>$9{,}6\cdot10^{45}$ ans</td></tr>
+</tbody></table></div>
+<p>À $30$ villes, l'énumération prendrait environ dix mille fois l'âge de l'Univers ($1{,}38\cdot10^{10}$ ans). Doubler la vitesse de l'ordinateur ne change presque rien : pour $2^N$, on gagne <em>un seul</em> objet ; pour $(N-1)!/2$, même pas une ville.</p>
+
+<figure class="fig"><!-- include figures/P08/croissance.svg --><figcaption>Le nombre de solutions à examiner, en échelle logarithmique (chaque graduation multiplie par 1 000). Un algorithme en $N^3$ reste loin sous la milliseconde ($25^3=15\,625$ opérations, soit $16$ µs à $N=25$) ; l'énumération des sous-ensembles ($2^N$) passe la seconde vers $N=30$ ; celle des tournées ($(N-1)!/2$) dépasse l'année à $N=20$ ; il faudrait aller jusqu'à $N=28$ pour dépasser l'âge de l'Univers.</figcaption></figure>
+
+<div class="box recall" id="rappel-complexite"><div class="box-h">Rappel — polynomial, exponentiel, NP, NP-complet</div>
+<p><strong>La taille d'un problème</strong> est la place qu'il faut pour écrire ses données : pour le sac-à-dos, les $N$ poids, les $N$ utilités et $L$, écrits en binaire. Un algorithme est <em class="new">polynomial</em> si son nombre d'opérations est au plus $C\,n^k$ pour une taille $n$ (constantes $C$ et $k$ fixes) ; <em class="new">exponentiel</em> s'il croît comme $2^n$ ou plus. Le simplexe a des cas exponentiels, mais la programmation linéaire continue se résout en temps polynomial (méthode de l'ellipsoïde, points intérieurs : <a href="Partie04.html">partie 4</a>).</p>
+<p><strong>Problèmes de décision.</strong> La théorie de la complexité classe des questions à réponse oui/non. Version « décision » du sac-à-dos : « existe-t-il $x\in\{0,1\}^N$ avec $p\cdot x\le L$ et $u\cdot x\ge K$ ? ».</p>
+<ul>
+<li><strong>P</strong> : les problèmes de décision résolus par un algorithme polynomial (exemple : « existe-t-il un flot de valeur $\ge K$ ? », partie 7).</li>
+<li><strong>NP</strong> : ceux dont un « oui » se <em>vérifie</em> en temps polynomial quand on vous donne un témoin. Pour le sac-à-dos, le témoin est $x$ : on calcule $p\cdot x$ et $u\cdot x$, c'est immédiat. Trouver $x$ est une autre affaire.</li>
+<li><strong>NP-complet</strong> : un problème de NP auquel <em>tout</em> problème de NP se ramène en temps polynomial. Un algorithme polynomial pour un seul d'entre eux en donnerait un pour tous (on aurait P = NP). Personne n'en connaît, et personne n'a démontré qu'il n'en existe pas : c'est la question ouverte « P = NP ? ». La programmation en variables 0/1, le sac-à-dos et le cycle hamiltonien (donc le voyageur de commerce) figurent dans la liste historique des 21 problèmes NP-complets de Karp (1972).</li>
+</ul>
+<p>Un problème d'<strong>optimisation</strong> dont la version décision est NP-complète est dit <em class="new">NP-difficile</em>. Pour aller plus loin : <a href="Rappels.html#polynomial-exponentiel">polynomial et exponentiel</a>, <a href="Rappels.html#np">P, NP, NP-complet</a>.</p>
+</div>
+
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo 49</span></div>
+<p>▶ Problème NP-complet (difficile). Complexité exponentielle</p>
+</div>
+
+<div class="box remark" id="note-np"><div class="box-h">Note sur les sources — « NP-complet », « complexité exponentielle »</div>
+<p>Deux précisions sur la diapo 49, qui parle du sac-à-dos :</p>
+<ul>
+<li>Au sens strict, c'est la <strong>version décision</strong> (« peut-on atteindre l'utilité $K$ ? ») qui est NP-complète ; le problème d'optimisation de la diapo est NP-difficile. Les deux sont aussi durs l'un que l'autre : savoir maximiser permet de répondre à la question, et une recherche dichotomique sur $K$ ramène l'optimisation à des questions.</li>
+<li>« Complexité exponentielle » veut dire : <strong>on ne connaît</strong> pas d'algorithme polynomial, et les méthodes exactes connues sont exponentielles dans le pire des cas. Ce n'est pas démontré (ce serait P ≠ NP). Et pour le sac-à-dos, l'exponentielle est subtile : la programmation dynamique (§2) fait environ $N\times L$ opérations, polynomial en la <em>valeur</em> de $L$ mais exponentiel en son nombre de chiffres. On dit que le sac-à-dos est NP-complet « au sens faible ». Le voyageur de commerce, lui, reste NP-difficile même quand les distances sont de petits entiers (« au sens fort »).</li>
+</ul>
+</div>
+
+<h3 id="combinatoire-strategie">La stratégie : encadrer, puis découper</h3>
+<p>Puisqu'on ne peut pas tout essayer, on raisonne sur des <strong>bornes</strong>. Pour un problème de maximisation comme le sac-à-dos :</p>
+<ul>
+<li>toute solution admissible, trouvée par une <em class="new">heuristique</em> (une méthode rapide sans garantie d'optimalité, comme le glouton), donne une <strong>borne inférieure</strong> de l'optimum : $35\le\text{opt}$ ;</li>
+<li>toute relaxation (continue, lagrangienne…) donne une <strong>borne supérieure</strong> : $\text{opt}\le47{,}5$.</li>
+</ul>
+<p>Si les deux bornes se rejoignent, c'est gagné. Sinon, on découpe le problème en sous-problèmes, chacun avec ses bornes, et on jette ceux qui ne peuvent rien apporter : c'est la séparation-évaluation (§3). En minimisation (le voyageur), les rôles s'échangent : l'heuristique donne une borne supérieure, la relaxation une borne inférieure.</p>
+$$\underbrace{\text{valeur d'une solution connue}}_{\text{heuristique}}\ \le\ \text{optimum}\ \le\ \underbrace{\text{valeur de la relaxation}}_{\text{borne}}\qquad\text{(maximisation)}$$
+
+<div class="box reflex"><div class="box-h">Réflexe</div>
+<p>Quand vous voyez un programme linéaire en nombres entiers → vérifiez d'abord si sa matrice est totalement unimodulaire (graphe, flot, intervalles : <a href="Partie06.html#unimodularite">partie 6</a>). Si oui, le simplexe suffit. Si non → une heuristique pour une solution, une relaxation pour une borne, puis séparation-évaluation.</p>
+</div>
+
+<div class="quiz"><p>Un ordinateur examine $10^9$ tournées par seconde. Combien de temps pour énumérer toutes les tournées de $20$ villes ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>$(20-1)!/2=19!/2\approx6{,}08\cdot10^{16}$ tournées, donc $6{,}08\cdot10^{7}$ secondes, soit environ $1{,}9$ an (une année fait $3{,}16\cdot10^7$ s). Avec $25$ villes, on passe à près de $10$ millions d'années.</p>
+</div></details>
+</div>

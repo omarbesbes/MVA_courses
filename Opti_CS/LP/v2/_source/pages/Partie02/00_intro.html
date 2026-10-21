@@ -1,0 +1,104 @@
+<!--
+title: Partie 2 — Sommets et solutions basiques
+short: 2 · Sommets et bases
+description: Bases, variables de base et hors base, solutions basiques et dégénérescence ; les sommets sont exactement les solutions basiques (Lemme 4.2.5) ; s'il existe une solution optimale, il en existe une en un sommet (Prop. 4.2.6, Rem. 4.2.7) ; combien de sommets (Ex. 4.2.2). Pas à pas, avec exemples chiffrés, figures interactives et applications en machine learning.
+subtitle: Comment décrire un sommet avec des équations ? On choisit $m$ colonnes inversibles de $A$, on met les autres variables à zéro et on résout : si le point obtenu est positif, c'est un sommet, et tous les sommets s'obtiennent ainsi. Puis on montre qu'un optimum, s'il existe, peut toujours être pris en un sommet.
+kicker: Optimisation · Programmation linéaire · guide v2 · partie 2
+-->
+
+<div class="box objectives">
+<div class="box-h">Ce que vous saurez faire après cette page</div>
+<ol>
+<li>Dire précisément ce qu'est un <strong>sommet</strong> de $\Xad$ (Déf. 4.2.1) et reconnaître, sur un dessin ou par le calcul, les points qui en sont.</li>
+<li>Définir une <strong>base</strong>, les variables de base et hors base, la <strong>solution basique</strong> $x_B=B^{-1}b$, $x_N=0$ ; énumérer à la main les $\binom nm$ choix de colonnes d'un petit programme linéaire et dire lesquels sont inversibles, admissibles, dégénérés.</li>
+<li>Démontrer le <strong>Lemme 4.2.5</strong> (sommets $=$ solutions basiques) dans les deux sens, en particulier l'argument de perturbation $x\pm\eps y$ dans le noyau de $A$.</li>
+<li>Démontrer la <strong>Proposition 4.2.6</strong> (s'il existe une solution optimale, il en existe une basique) en réduisant le support, et l'appliquer sur un exemple chiffré.</li>
+<li>Reconnaître la <strong>dégénérescence</strong> (plusieurs bases, un seul point) et éviter ses pièges.</li>
+<li>Compter les sommets : la borne $\binom nm$, le cube de l'<strong>Exercice 4.2.2</strong> à $2^{n-m}$ sommets, et comprendre pourquoi on n'énumère pas.</li>
+<li>Reconnaître la <strong>parcimonie</strong> des solutions basiques en machine learning : <em>basis pursuit</em>, régression en norme $\ell^1$, plans de transport optimal.</li>
+</ol>
+</div>
+
+<h2 id="start">0. Avant de commencer</h2>
+
+<h3 id="lire">Comment lire cette page</h3>
+<p>La page suit le cours dans l'ordre : les diapos 4 et 5 et les pages 121 à 124 du livre d'Allaire. Chaque énoncé du cours est cité fidèlement dans un encadré comme celui-ci, avec sa référence exacte :</p>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo N</span></div>
+<p>La citation fidèle de la diapo (ou, avec l'en-tête « Dans le livre », du livre d'Allaire, avec le numéro de l'énoncé et la page imprimée).</p>
+</div>
+<p>Il est suivi d'un <strong>décodage</strong> symbole par symbole, du <strong>problème</strong> qu'il résout, d'un <strong>petit exemple chiffré</strong>, de <strong>l'idée</strong> de la preuve, puis de la <strong>preuve complète</strong>, repliée (cliquez pour l'ouvrir ; le bouton « Tout déplier » en haut ouvre tout). Les autres encadrés :</p>
+<div class="cols">
+<div class="box def"><div class="box-h">Définition</div><p>Un objet nouveau, défini précisément.</p></div>
+<div class="box thm"><div class="box-h">Proposition</div><p>Un résultat, avec ses hypothèses.</p></div>
+<div class="box idea"><div class="box-h">L'idée</div><p>La preuve en quelques lignes, avant les détails.</p></div>
+<div class="box example"><div class="box-h">Exemple</div><p>Des nombres que vous pouvez vérifier à la main.</p></div>
+<div class="box pitfall"><div class="box-h">Piège</div><p>Une erreur classique.</p></div>
+<div class="box reflex"><div class="box-h">Réflexe</div><p>« Quand vous voyez … → pensez … ».</p></div>
+<div class="box recall"><div class="box-h">Rappel</div><p>Un prérequis rappelé là où il sert, avec un lien vers la page <a href="Rappels.html">Rappels</a>.</p></div>
+<div class="box ml"><div class="box-h">En machine learning</div><p>Où l'idée sert en apprentissage automatique.</p></div>
+<div class="box app"><div class="box-h">En pratique</div><p>Ce que font les solveurs, en recherche opérationnelle.</p></div>
+<div class="box remark"><div class="box-h">Note sur les sources</div><p>Une imprécision des diapos ou du livre, avec sa vérification.</p></div>
+</div>
+<p>Les figures interactives ont des boutons et des menus : manipulez-les, le paragraphe « À observer » qui les suit dit quoi regarder. Tous les nombres de la page ont été vérifiés par ordinateur, en fractions exactes chaque fois que c'est possible.</p>
+
+<h3 id="histoire">L'histoire de la partie en six étapes</h3>
+<p class="tldr">Un sommet se calcule en résolvant un système carré ; il y en a un nombre fini ; et si le programme linéaire a une solution optimale, l'un d'eux en est une.</p>
+<ol class="chain">
+<li><strong>Le problème (§1).</strong> La partie 1 a montré, sur des dessins, que l'optimum se trouve « au bord », en un sommet. Mais « sommet » est une notion géométrique (un point qui n'est au milieu d'aucun segment de $\Xad$). En dimension $1000$, pas de dessin : il faut une description par des <strong>équations</strong>.</li>
+<li><strong>Les bases (§2).</strong> Choisissez $m$ colonnes de $A$ formant une matrice $B$ inversible, mettez les $n-m$ autres variables à zéro, résolvez $Bx_B=b$. Le point obtenu vérifie toujours $Ax=b$ ; s'il est $\ge0$, c'est une <strong>solution basique</strong>. Sur l'Exercice 4.2.1 : dix choix de colonnes, cinq points admissibles.</li>
+<li><strong>Sommets $=$ solutions basiques (§3).</strong> Ces points sont exactement les sommets (Lemme 4.2.5). Un sommet est « coincé » : les colonnes qu'il utilise sont libres. Conséquence : au plus $\binom nm$ sommets, chacun avec au plus $m$ composantes non nulles.</li>
+<li><strong>L'optimum en un sommet (§4).</strong> S'il existe une solution optimale, il en existe une basique (Prop. 4.2.6) : on glisse dans une direction du noyau qui ne change pas le coût jusqu'à annuler une coordonnée, et l'on recommence. Avec $c=0$ : tout $\Xad$ non vide a un sommet (Rem. 4.2.7).</li>
+<li><strong>Combien de sommets ? (§5).</strong> Parfois exponentiellement nombreux : le cube de l'Exercice 4.2.2 en a $2^{n-m}$. Tout énumérer est illusoire ; le simplexe (partie 3) ira de base voisine en base voisine, en échangeant une colonne à chaque pas.</li>
+<li><strong>S'entraîner (§6–§8).</strong> Les deux exercices du livre corrigés, douze exercices supplémentaires, puis le bilan.</li>
+</ol>
+
+<h3 id="prerequis">Ce qu'il faut savoir</h3>
+<p>Ouvrez seulement les rappels dont vous avez besoin. Chacun dit exactement ce qui sert sur cette page.</p>
+
+<details class="fold more" id="rappel-forme-standard"><summary>Rappel — la forme standard et les variables d'écart (partie 1)</summary><div class="fold-body">
+<p>Toute la page porte sur le <em class="new">programme linéaire standard</em> (4.1) du livre :</p>
+$$\min_{x\in\R^n}\ c\cdot x\quad\text{sous}\quad Ax=b,\ \ x\ge0,\qquad A\in\Mc_{m\times n}(\R),\ m\le n,\ \rg A=m.$$
+<p>$\Xad=\{x\in\R^n : Ax=b,\ x\ge0\}$ est l'<em class="new">ensemble admissible</em>. Une inégalité $\alpha\cdot x\le\beta$ devient une égalité en ajoutant une <em>variable d'écart</em> $s\ge0$ : $\alpha\cdot x+s=\beta$. Un maximum devient un minimum en changeant $c$ en $-c$. L'hypothèse $\rg A=m$ dit que les $m$ équations sont indépendantes (aucune n'est redondante) ; elle sera essentielle pour « compléter en une base ».</p>
+<p><strong>Utilisé ici</strong> sur l'Exercice 4.2.1 (trois inégalités, donc trois variables d'écart $x_3,x_4,x_5$). Plus de détails : <a href="Partie01.html#forme-standard">partie 1, forme standard</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-algebre"><summary>Rappel — rang, familles libres, bases, inverse</summary><div class="fold-body">
+<ul>
+<li>Des vecteurs $v_1,\dots,v_k$ sont <em class="new">liés</em> s'il existe des réels $y_1,\dots,y_k$ <strong>non tous nuls</strong> avec $y_1v_1+\dots+y_kv_k=0$ ; sinon ils sont <em class="new">libres</em>. Dans $\R^m$, plus de $m$ vecteurs sont toujours liés.</li>
+<li>Le <em class="new">rang</em> d'une matrice est le nombre maximal de colonnes libres. $\rg A=m$ : on peut trouver $m$ colonnes libres parmi les $n$ colonnes de $A$, et les colonnes de $A$ engendrent $\R^m$.</li>
+<li>$m$ vecteurs libres de $\R^m$ forment une <em class="new">base</em> : tout $b\in\R^m$ s'écrit $b=\sum_iz_iv_i$ de façon <strong>unique</strong>. Pour la matrice carrée $B=(v_1\ \cdots\ v_m)$ : libres $\iff$ $\det B\ne0$ $\iff$ $B$ inversible, et alors $Bz=b$ a l'unique solution $z=B^{-1}b$.</li>
+<li><strong>Base incomplète</strong> : une famille libre peut être complétée en une base avec des vecteurs pris dans n'importe quelle famille génératrice (ici : les colonnes de $A$).</li>
+</ul>
+<p>Plus de détails : <a href="Rappels.html#rang">rang</a>, <a href="Rappels.html#bases-coordonnees">bases et coordonnées</a>, <a href="Rappels.html#inverse-cramer">inverse et Cramer</a>, <a href="Rappels.html#determinant">déterminant</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-convexite"><summary>Rappel — segments et ensembles convexes</summary><div class="fold-body">
+<p>Le <em class="new">segment</em> $[y,z]$ est l'ensemble des points $\theta y+(1-\theta)z$, $\theta\in[0,1]$ ; pour $\theta\in\,]0,1[$ on parle de <em>combinaison convexe non triviale</em> (le point est strictement entre $y$ et $z$ si $y\ne z$). Un ensemble est <em class="new">convexe</em> s'il contient le segment entre deux quelconques de ses points.</p>
+<p>$\Xad$ est convexe : si $Ay=Az=b$, $y,z\ge0$ et $\theta\in[0,1]$, alors $A(\theta y+(1-\theta)z)=\theta b+(1-\theta)b=b$ et $\theta y+(1-\theta)z\ge0$. C'est aussi un <em class="new">polyèdre</em> : une intersection finie de demi-espaces ($Ax\le b$, $-Ax\le-b$, $-x_j\le0$).</p>
+<p>Plus de détails : <a href="Rappels.html#ensembles-convexes">ensembles convexes</a>, <a href="Rappels.html#polyedres">polyèdres</a>, <a href="Rappels.html#points-extremaux">points extrémaux</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-partie1"><summary>Rappel — ce que la partie 1 a montré sur des dessins</summary><div class="fold-body">
+<p><strong>L'exemple (4.5) du livre</strong> : $\min x_1+4x_2+2x_3$ sous $2x_1+x_2+3x_3=6$, $x\ge0$. $\Xad$ est un triangle plat $T$ de sommets $(3,0,0)$, $(0,6,0)$, $(0,0,2)$, de coûts $3$, $24$, $4$. Les plans $x_1+4x_2+2x_3=\gamma$ « balaient » l'espace et touchent $T$ pour la première fois au sommet $(3,0,0)$ : le minimum vaut $3$. (Le livre écrit « $(0,3,0)$ », qui n'est pas dans $T$ : voir <a href="Partie01.html#geometrie">partie 1</a>.)</p>
+<p><strong>L'Exercice 4.2.1</strong> : maximiser $x_1+2x_2$ sur le polygone $\{x\ge0,\ -3x_1+2x_2\le2,\ -x_1+2x_2\le4,\ x_1+x_2\le5\}$ ; le maximum $8$ est atteint au coin $(2\,;\,3)$. C'est l'exemple qui nous suit toute la page.</p>
+<p><strong>Existence</strong> (Lemme 4.2.3) : un programme linéaire standard a une solution optimale si et seulement si $-\infty<\inf<+\infty$. Voir <a href="Partie01.html#existence">partie 1, existence</a>.</p>
+</div></details>
+
+<h3 id="notation">Tableau de notation</h3>
+<p>Les diapos, le livre et ce guide n'écrivent pas toujours les mêmes choses de la même façon.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Objet</th><th>Diapos</th><th>Livre (Allaire)</th><th>Ce guide</th></tr></thead>
+<tbody>
+<tr><td>ensemble admissible</td><td>$\Xad=\{x\in\R^n_+,\ Ax=b\}$</td><td>$\Xad$, Déf. 4.2.1</td><td>$\Xad$</td></tr>
+<tr><td>point de $\Xad$</td><td>solution admissible</td><td>solution (admissible)</td><td>point admissible</td></tr>
+<tr><td>point extrémal</td><td>solution extrémale, sommet</td><td>sommet ou point extrémal</td><td>sommet</td></tr>
+<tr><td>colonnes de $A$</td><td>—</td><td>$a_i$ ; $b_1,\dots,b_m$ pour celles de $B$ (preuve de 4.2.5)</td><td>$a_i$ (jamais $b_i$, réservé à $b$)</td></tr>
+<tr><td>base</td><td>permutation des colonnes, $A=[B\ N]$</td><td>$A=(B,N)$, Déf. 4.2.4</td><td>$B$, $N$ ; ou l'ensemble des indices, $B=\{1,2,3\}$</td></tr>
+<tr><td>variables</td><td>$x=(x_B,x_N)$</td><td>$x=(x_B,x_N)$ : de base, hors base</td><td>idem</td></tr>
+<tr><td>point de la base $B$</td><td>$x_N=0$, $x_B=B^{-1}b$</td><td>(défini seulement s'il est admissible)</td><td>$x^B$ : $x^B_N=0$, $x^B_B=B^{-1}b$</td></tr>
+<tr><td>support</td><td>—</td><td>« $k$ composantes non nulles »</td><td>$\operatorname{supp}(x)=\{j : x_j\ne0\}$, $k=\card\operatorname{supp}(x)$</td></tr>
+<tr><td>transposée</td><td>${}^tA$</td><td>$A^*$</td><td>$A\T$</td></tr>
+<tr><td>petit paramètre</td><td>—</td><td>$\epsilon$</td><td>$\eps$</td></tr>
+<tr><td>nombre de choix</td><td>—</td><td>—</td><td>$\binom nm=\frac{n!}{m!\,(n-m)!}$, « $m$ parmi $n$ »</td></tr>
+</tbody></table></div>
+<p>Code couleur des figures : <span style="color:var(--s1);font-weight:650">ensemble admissible (bleu)</span>, <span style="color:var(--s2);font-weight:650">coût et lignes de niveau (rouge orangé)</span>, <span style="color:var(--s3);font-weight:650">sommet courant, optimum, chemin (vert)</span>, <span style="color:var(--s6);font-weight:650">points non admissibles, segments qui prouvent qu'un point n'est pas un sommet (rose)</span> ; droites de contraintes en gris.</p>

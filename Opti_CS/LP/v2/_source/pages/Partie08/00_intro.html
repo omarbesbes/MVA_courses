@@ -1,0 +1,81 @@
+<!--
+title: Partie 8 — Problèmes entiers célèbres : sac-à-dos, voyageur de commerce, séparation-évaluation
+short: 8 · Problèmes célèbres
+description: Partie 8 du guide v2 de programmation linéaire (CentraleSupélec) : quand la totale unimodularité ne s'applique pas. Le sac-à-dos (glouton, relaxation continue, programmation dynamique), le voyageur de commerce (formulation binaire, sous-tours, coupes), la séparation-évaluation et la relaxation lagrangienne, la modélisation de liens logiques par variables binaires, avec leurs usages en machine learning.
+subtitle: Les diapos 48 à 63, décodées une à une. Deux problèmes entiers « vraiment » difficiles, le sac-à-dos et le voyageur de commerce ; la méthode qui les résout sans tout énumérer, la séparation-évaluation ; et l'art d'écrire des règles logiques avec des variables 0/1. Chaque nombre de la page a été vérifié par un script.
+kicker: Optimisation · Programmation linéaire · guide v2 · partie 8
+-->
+
+<div class="box objectives">
+<div class="box-h">Ce que vous saurez faire après cette page</div>
+<ol>
+<li>Expliquer pourquoi un programme linéaire en nombres entiers sans totale unimodularité est un problème <strong>combinatoire</strong>, et ce que veulent dire « polynomial », « exponentiel », « NP » et « NP-complet ».</li>
+<li>Écrire le <strong>problème du sac-à-dos</strong>, appliquer l'<strong>algorithme glouton</strong>, calculer la <strong>relaxation continue</strong> (et démontrer qu'elle se résout par le glouton fractionnaire), en déduire un encadrement de l'optimum.</li>
+<li>Dérouler à la main un <strong>arbre de séparation-évaluation</strong> complet : brancher sur une variable, évaluer chaque nœud par une relaxation, élaguer, mettre à jour la meilleure solution connue.</li>
+<li>Dire d'où viennent les deux bornes d'une séparation-évaluation (heuristique et relaxation), et calculer une borne par <strong>relaxation lagrangienne</strong>.</li>
+<li>Écrire le <strong>voyageur de commerce</strong> avec des variables binaires sur les arêtes, expliquer pourquoi les contraintes de degré ne suffisent pas (les <strong>sous-tours</strong>) et comment les contraintes de connexité, en nombre exponentiel, s'ajoutent à la demande (les <strong>coupes</strong>).</li>
+<li>Traduire des <strong>liens logiques</strong> (« pas les deux », « au moins un », « si … alors … ») en inégalités linéaires sur des variables 0/1 et vérifier chaque traduction par sa table de vérité ; écrire une contrainte « big-M » et en éviter les pièges.</li>
+<li>Reconnaître ces modèles en machine learning : vérification de réseaux ReLU, sélection de variables, sélection sous budget, apprentissage de règles de branchement.</li>
+</ol>
+</div>
+
+<h2 id="start">0. Avant de commencer</h2>
+
+<h3 id="comment-lire">Comment lire cette page</h3>
+<p>Cette partie suit les <strong>diapos 48 à 63</strong> du cours, la dernière partie du plan (« Problèmes entiers célèbres », diapo 47). Elle n'a pas d'équivalent dans le livre d'Allaire : au §4.3 (p. 134), le livre écrit « Nous ne disons rien des méthodes générales pour résoudre (4.24) » ; son introduction (p. 119–120) renvoie, pour l'optimisation combinatoire, à sa référence [5] (J. F. Bonnans et S. Gaubert, <em>Recherche opérationnelle. Aspects mathématiques et applications</em>, 2015). Chaque passage des diapos est cité dans un encadré comme celui-ci :</p>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo N</span></div>
+<p>Une citation fidèle de la diapo, dans sa notation.</p>
+</div>
+<p>puis <strong>décodé</strong> symbole par symbole, essayé sur un <strong>petit exemple chiffré</strong>, expliqué par son <strong>idée</strong>, et démontré quand il y a quelque chose à démontrer (preuves repliées). Les diapos de cette partie sont des listes de points sans démonstration : tout ce qui les complète (preuves, algorithmes détaillés, programmation dynamique, 1-arbres, big-M…) est signalé comme un ajout du guide, souvent dans un repli « Pour aller plus loin ».</p>
+<p>Les figures interactives ont des curseurs, des boutons ou des points à déplacer ; le paragraphe « À observer » qui suit chacune dit quoi regarder. Tous les nombres de la page (bornes, arbres, tables, tournées) ont été recalculés par des scripts : fractions exactes, énumération complète et <code>scipy.optimize.milp</code>.</p>
+
+<h3 id="histoire">L'histoire de la partie en six étapes</h3>
+<p class="tldr">Quand la relaxation ne donne plus des solutions entières, on encadre l'optimum entre une solution trouvée par une heuristique et une borne donnée par une relaxation, puis on découpe le problème en morceaux et on jette ceux qui ne peuvent pas battre la meilleure solution connue.</p>
+<ol class="chain">
+<li><strong>Le mur (§1).</strong> Aux parties 6 et 7, un petit miracle (la totale unimodularité) rendait entières les solutions du simplexe. Sans ce miracle, il reste un problème fini mais gigantesque : $2^N$ choix pour $N$ objets, $(N-1)!/2$ tournées pour $N$ villes.</li>
+<li><strong>Le sac-à-dos (§2).</strong> Choisir des objets de poids $p_j$ et d'utilité $u_j$ sans dépasser la capacité $L$. Le <em>glouton</em> (meilleur rapport utilité/poids d'abord) donne vite une bonne solution ; la <em>relaxation continue</em> (on a le droit de couper un objet) donne une borne qu'aucune solution ne peut dépasser. L'optimum est entre les deux.</li>
+<li><strong>Séparation et évaluation (§3).</strong> On coupe l'ensemble des solutions en deux ($x_j=0$ ou $x_j=1$), on évalue chaque morceau par sa relaxation, et on abandonne tout morceau dont la borne ne bat pas la meilleure solution connue. La relaxation lagrangienne fournit d'autres bornes, par la dualité.</li>
+<li><strong>Le voyageur de commerce (§4).</strong> La plus courte tournée passant une fois par chaque ville. Avec des variables 0/1 sur les arêtes : deux arêtes par ville, mais cela n'interdit pas plusieurs petites boucles (les sous-tours). Les contraintes qui les interdisent sont en nombre exponentiel : on ne les ajoute que quand une solution les viole (les coupes).</li>
+<li><strong>Les liens logiques (§5).</strong> « Pas les deux », « au moins un », « si $a$ alors $b$ » deviennent des inégalités linéaires sur des variables 0/1 : un modèle de décision devient un programme linéaire en nombres entiers, que la séparation-évaluation sait résoudre.</li>
+<li><strong>Au-delà (§5–§7).</strong> Les contraintes « big-M » (coûts fixes, disjonctions, réseaux ReLU) et leurs pièges, puis les exercices.</li>
+</ol>
+
+<h3 id="prerequis">Ce qu'il faut savoir des parties précédentes</h3>
+<p>Ouvrez seulement les rappels dont vous avez besoin. Chacun dit exactement ce qui sert sur cette page.</p>
+
+<details class="fold more" id="rappel-relaxation"><summary>Rappel — la relaxation continue et ce qu'elle garantit (partie 6)</summary><div class="fold-body">
+<p>Un <em class="new">programme linéaire en nombres entiers</em> (PLNE) est un programme linéaire auquel on ajoute la contrainte « $x$ entier ». Sa <em class="new">relaxation continue</em> est le même problème sans cette contrainte. Comme on optimise alors sur un ensemble <strong>plus grand</strong>, on trouve <strong>mieux ou pareil</strong> :</p>
+$$\min_{x\in P}c\cdot x\ \le\ \min_{x\in P\cap\Z^n}c\cdot x\qquad\text{et}\qquad\max_{x\in P}u\cdot x\ \ge\ \max_{x\in P\cap\Z^n}u\cdot x .$$
+<p>C'est la question de la diapo 17 : « Quand a-t-on $\min_{P\cap\Z^n}c\cdot x=\min_Pc\cdot x$ ? ». Si la solution de la relaxation est entière, elle est optimale pour le PLNE. Sinon, sa valeur est une <strong>borne</strong> : une borne inférieure en minimisation, une borne supérieure en maximisation. <strong>Utilisé ici</strong> à chaque nœud d'une séparation-évaluation. Voir <a href="Partie06.html#relaxation">la partie 6</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-tu"><summary>Rappel — la totale unimodularité, le « petit miracle » (parties 6 et 7)</summary><div class="fold-body">
+<p>Une matrice entière $A$ est <em>totalement unimodulaire</em> (TU) si toutes ses sous-matrices carrées ont un déterminant égal à $-1$, $0$ ou $1$. Si $A$ est TU et $b$ entier, les sommets de $\{x : Ax=b,\ x\ge0\}$ sont entiers (Allaire, Prop. 4.3.3, p. 135) : le simplexe donne directement une solution entière. C'est le cas des flots, du transport, de l'affectation, des plus courts chemins (partie 7). <strong>Utilisé ici</strong> pour comprendre ce qui manque : la contrainte $p\cdot x\le L$ du sac-à-dos a des coefficients comme $4$ ou $8$, et la matrice des contraintes de degré du voyageur contient un triangle, de déterminant $2$. Voir <a href="Partie06.html#unimodularite">la partie 6</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-dualite"><summary>Rappel — le lagrangien et la dualité faible (partie 5)</summary><div class="fold-body">
+<p>Pour $\min\{c\cdot x : Ax=b,\ x\ge0\}$, on « dualise » les contraintes $Ax=b$ avec un multiplicateur $p$ : le lagrangien est $c\cdot x+p\cdot(b-Ax)$. Pour tout $p$, son minimum sur $x\ge0$ est inférieur ou égal à l'optimum : c'est la <strong>dualité faible</strong>. Le dual cherche la meilleure de ces bornes. <strong>Utilisé ici</strong> pour la relaxation lagrangienne (§3), qui fait la même chose sur un problème en nombres entiers : on fait passer les contraintes « difficiles » dans l'objectif. Voir <a href="Partie05.html#dual">la partie 5</a> et <a href="Rappels.html#dualite-lagrangienne">la page Rappels</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-graphes"><summary>Rappel — graphes, cycles, arbres couvrants</summary><div class="fold-body">
+<p>Un <em>graphe non orienté</em> est un ensemble de sommets (ici les villes) et d'<em>arêtes</em> $\{i,j\}$. Le <em>degré</em> d'un sommet est son nombre d'arêtes. Un <em>cycle</em> passe par des sommets distincts et revient au départ ; un cycle qui passe par <em>tous</em> les sommets est un <em>cycle hamiltonien</em> : c'est une tournée du voyageur. Un graphe est <em>connexe</em> si l'on peut aller de tout sommet à tout autre. Un <em>arbre couvrant</em> relie tous les sommets sans cycle, avec $N-1$ arêtes. <strong>Utilisé ici</strong> au §4. Voir <a href="Rappels.html#chemins-cycles">la page Rappels</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-denombrement"><summary>Rappel — compter les choix : $2^N$ et $N!$</summary><div class="fold-body">
+<p>Pour chacun de $N$ objets, on décide « dedans » ou « dehors » : $2\times2\times\cdots\times2=2^N$ sous-ensembles. Pour ranger $N$ villes dans un ordre, on a $N$ choix pour la première, $N-1$ pour la deuxième… soit $N!=N(N-1)\cdots1$ ordres (les <em>permutations</em>). <strong>Utilisé ici</strong> au §1 et au §4. Voir <a href="Rappels.html#denombrement">la page Rappels</a>.</p>
+</div></details>
+
+<h3 id="notation">Tableau de notation</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>Diapos</th><th>Ce guide</th><th>Sens</th></tr></thead>
+<tbody>
+<tr><td>$p_j$, $u_j$, $L$</td><td>idem</td><td>poids et utilité de l'objet $j$ ; capacité du sac (la diapo 48 ne définit pas $L$)</td></tr>
+<tr><td>$p\cdot x\lt L$</td><td>$p\cdot x\le L$</td><td>le sac peut être rempli exactement (§2, note sur les sources)</td></tr>
+<tr><td>$\mathcal E_N$</td><td>$\Sc_N$</td><td>les permutations de $\{1,\dots,N\}$ (le livre écrit $S_N$ au §4.3.3)</td></tr>
+<tr><td>$x_n$ (diapo 52)</td><td>ville $n$, distances $d_{ij}$</td><td>les coordonnées des villes ; à ne pas confondre avec la variable binaire $x$ de la diapo 53</td></tr>
+<tr><td>$x\in\{0,1\}^{\mathcal A}$, $x_{ij}$</td><td>idem, $\Ac$ = arêtes $\{i,j\}$, $i\lt j$</td><td>$x_{ij}=1$ si la tournée emprunte l'arête entre $i$ et $j$</td></tr>
+<tr><td>« arrêtes »</td><td>arêtes</td><td>orthographe</td></tr>
+<tr><td>« borne inférieure $m$ » (diapo 56)</td><td>$m$ = meilleure valeur connue</td><td>en minimisation, c'est une borne <em>supérieure</em> de l'optimum (§3)</td></tr>
+<tr><td>$x_a,x_b,x_c$</td><td>idem</td><td>variables 0/1 des événements $a,b,c$ ($1$ = l'événement se produit)</td></tr>
+</tbody></table></div>
+<p>Code couleur des figures : <span class="be">ensemble admissible, nœud séparé, votre choix (bleu)</span>, <span class="bar">optimum, solution entière (vert)</span>, <span class="col4">heuristique, glouton (or)</span>, <span class="ga">relaxation, borne, dualité (violet)</span>, <span class="col6">élagué, sous-tour, non admissible (rose)</span>.</p>

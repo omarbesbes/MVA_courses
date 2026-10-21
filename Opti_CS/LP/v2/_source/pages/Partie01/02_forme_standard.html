@@ -1,0 +1,156 @@
+<h2 id="forme-standard">2. La forme standard <span class="ref">Diapo 4 ; Allaire (4.1)–(4.4), p. 120–121</span></h2>
+<p class="tldr">On convient d'écrire tout programme linéaire sous une seule forme, $\min c\cdot x$ sous $Ax=b$ et $x\ge0$ ; trois gestes simples y ramènent n'importe quel programme linéaire, sans changer sa valeur optimale.</p>
+
+<h3 id="fs-pourquoi">Pourquoi une seule forme</h3>
+<p>L'atelier maximise sous des contraintes « $\le$ », le régime minimise sous des contraintes « $\ge$ », le transport mélange les deux, et une variable peut être de signe quelconque. Écrire une théorie et un algorithme pour chaque cas serait pénible. On choisit donc <strong>une</strong> forme, dans laquelle on sait réécrire toutes les autres. Le cours choisit des <strong>égalités</strong> et des <strong>signes</strong> : $Ax=b$ et $x\ge0$. L'intérêt de ce choix apparaîtra dans les parties 2 et 3 : un point est « au bord » de l'ensemble admissible quand certaines de ses <em>coordonnées</em> sont nulles, ce qui rendra les sommets faciles à décrire et à parcourir.</p>
+
+<h3 id="fs-enonce">L'énoncé</h3>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo 4</span></div>
+<p><strong>Écriture formelle.</strong> On veut résoudre</p>
+$$\inf_{\substack{Ax=b\\x\geqslant0}}c\cdot x\qquad\text{où }x\in\R^n$$
+<p>où $A\in\mathcal M_{m\times n}$ avec $m\leqslant n$ et $\rg(A)=m$.</p>
+<p>On note $X_{ad}=\{x\in\R^n_+,\ \ Ax=b\}$. C'est un polyèdre. Que sont les faces, arrêtes, etc. ?</p>
+</div>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, §4.2.1, p. 120</span></div>
+<p>On veut résoudre le problème suivant, dit <strong>programme linéaire sous forme standard</strong>,</p>
+$$\inf_{x\in\R^n\text{ tel que }Ax=b,\ x\ge0}c\cdot x,\tag{4.1}$$
+<p>où $A$ est une matrice de taille $m\times n$, $b\in\R^m$, $c\in\R^n$, et la contrainte $x\ge0$ signifie que toutes les composantes de $x$ sont positives ou nulles. Dans tout ce qui suit on supposera que $m\le n$ et que le rang de $A$ est exactement $m$. En effet, si $\rg(A)<m$, certaines lignes de $A$ sont liées et deux possibilités se présentent : soit les contraintes (correspondantes à ces lignes) sont incompatibles, soit elles sont redondantes et on peut donc éliminer les lignes inutiles.</p>
+</div>
+<dl class="decode">
+<dt>$x\in\R^n$</dt><dd>Les $n$ variables de décision, rangées en un vecteur colonne.</dd>
+<dt>$A\in\mathcal M_{m\times n}$</dt><dd>Une matrice à $m$ lignes et $n$ colonnes : <strong>une ligne par équation</strong>, <strong>une colonne par variable</strong>. La colonne $a_j$ dit ce que « pèse » la variable $x_j$ dans chacune des $m$ équations.</dd>
+<dt>$b\in\R^m$</dt><dd>Le second membre : les $m$ nombres que les équations doivent atteindre. Son signe est quelconque.</dd>
+<dt>$c\in\R^n$</dt><dd>Le vecteur des coûts : $c_j$ est le coût d'une unité de $x_j$.</dd>
+<dt>$x\geqslant0$, $\R^n_+$</dt><dd>Toutes les composantes sont $\ge0$ (« positives ou nulles » : en français, <em>positif</em> veut dire $\ge0$). $\R^n_+=\{x\in\R^n : x\ge0\}$.</dd>
+<dt>$\inf$</dt><dd>L'infimum, et pas le minimum : on ne sait pas encore s'il est atteint. C'est l'objet du §5.</dd>
+<dt>$X_{ad}$</dt><dd>« ad » pour <em>admissible</em> : l'ensemble des points qui vérifient toutes les contraintes. Le problème est de minimiser $c\cdot x$ sur $X_{ad}$.</dd>
+<dt>$m\leqslant n$, $\rg(A)=m$</dt><dd>Les $m$ équations sont indépendantes (aucune n'est une combinaison des autres), et il y a au moins autant de variables que d'équations. Expliqué juste après.</dd>
+</dl>
+<div class="box example"><div class="box-h">Exemple — le programme (4.5) du livre est déjà sous forme standard</div>
+<p>Le livre étudie (§3 ci-dessous) $\min\ x_1+4x_2+2x_3$ sous $2x_1+x_2+3x_3=6$ et $x_1,x_2,x_3\ge0$. Ici $n=3$ variables, $m=1$ équation :</p>
+$$A=\begin{pmatrix}2&1&3\end{pmatrix},\qquad b=6,\qquad c=(1,4,2).$$
+<p>$\rg A=1=m$ (la seule ligne est non nulle) et $m=1\le n=3$. Le point $x=(3,0,0)$ est admissible : $2\cdot3=6$ et $x\ge0$ ; son coût est $c\cdot x=3$. Le point $(0,3,0)$ ne l'est pas : $2\cdot0+3+0=3\ne6$.</p>
+</div>
+
+<h3 id="rang-plein">Pourquoi supposer $m\le n$ et $\rg A=m$</h3>
+<p>Ces hypothèses ne restreignent pas les problèmes que l'on sait traiter : elles disent seulement qu'on a nettoyé les équations inutiles. Voyons ce qui se passe quand des lignes sont liées, sur un exemple à trois variables.</p>
+<div class="box example"><div class="box-h">Exemple — une ligne redondante, une ligne incompatible</div>
+<p>Les lignes de $\begin{pmatrix}1&1&1\\2&2&2\end{pmatrix}$ sont proportionnelles : le rang vaut $1<m=2$. Tout dépend du second membre.</p>
+<ul>
+<li>$x_1+x_2+x_3=4$ et $2x_1+2x_2+2x_3=8$ : la seconde équation est le double de la première, <strong>second membre compris</strong> ($2\cdot4=8$). Elle n'apporte rien : on la supprime, sans changer $\Xad$. Il reste une équation, de rang $1=m$.</li>
+<li>$x_1+x_2+x_3=4$ et $2x_1+2x_2+2x_3=9$ : la première impose $2(x_1+x_2+x_3)=8$, la seconde $9$. Aucun $x$ ne vérifie les deux : $\Xad=\emptyset$, et un solveur répond « infeasible ».</li>
+</ul>
+</div>
+<div class="box thm"><div class="box-h">Proposition — on peut toujours se ramener à $\rg A=m$ (ajout pédagogique, qui précise la phrase du livre)</div>
+<p>Soit $r=\rg A$ et $I$ un ensemble de $r$ lignes indépendantes de $A$. Si le système $Ax=b$ a au moins une solution, alors il est équivalent au système formé des seules lignes de $I$, dont la matrice est de rang $r$ = son nombre de lignes. S'il n'a pas de solution, $\Xad=\emptyset$.</p>
+</div>
+<details class="fold proof"><summary>Démonstration complète</summary><div class="fold-body">
+<ol class="steps">
+<li>Toute ligne $a^k$ de $A$ hors de $I$ s'écrit $a^k=\sum_{i\in I}\mu_ia^i$ pour des réels $\mu_i$.<span class="why">Les lignes de $I$ sont une famille libre maximale parmi les lignes de $A$ (définition du rang) : en ajouter une autre la rend liée.</span></li>
+<li>Soit $x^0$ une solution de $Ax=b$. Alors $b_k=a^k\cdot x^0=\sum_{i\in I}\mu_i\,a^i\cdot x^0=\sum_{i\in I}\mu_ib_i$.<span class="why">Ligne 1, puis $a^i\cdot x^0=b_i$ pour chaque $i$. Le second membre suit la même combinaison que la ligne.</span></li>
+<li>Si $x$ vérifie les équations de $I$, alors $a^k\cdot x=\sum_{i\in I}\mu_i\,a^i\cdot x=\sum_{i\in I}\mu_ib_i=b_k$.<span class="why">Ligne 1 puis ligne 2 : les équations hors de $I$ sont des conséquences de celles de $I$. On peut les supprimer.</span></li>
+<li>Sans solution, $\Xad\subset\{x : Ax=b\}=\emptyset$.<span class="why">Évident : c'est le cas « incompatible ».</span></li>
+</ol>
+<p>En pratique, on fait une élimination de Gauss sur la matrice augmentée $(A\,|\,b)$ : une ligne qui devient $(0\ \cdots\ 0\,|\,0)$ est redondante (on l'efface), une ligne $(0\ \cdots\ 0\,|\,\beta)$ avec $\beta\ne0$ signale l'incompatibilité.</p>
+</div></details>
+<p><strong>Et $m\le n$ ?</strong> C'est une conséquence de $\rg A=m$, car le rang est au plus le nombre de colonnes. Le cas $m=n$ est sans intérêt : $A$ est alors carrée inversible, $Ax=b$ a l'unique solution $x=A^{-1}b$, et $\Xad$ est ce seul point (s'il est $\ge0$) ou vide. Il n'y a rien à optimiser. Le cas intéressant est $m<n$ : les solutions de $Ax=b$ forment un sous-espace affine de dimension $n-m$, le nombre de « degrés de liberté », que les contraintes $x\ge0$ viennent rogner.</p>
+<div class="box recall"><div class="box-h">Rappel — rang et systèmes linéaires</div>
+<p>$\rg A$ = nombre maximal de lignes indépendantes = nombre maximal de colonnes indépendantes $\le\min(m,n)$. Le système $Ax=b$ a une solution si et seulement si $\rg(A\,|\,b)=\rg A$ (Rouché–Fontené) ; l'ensemble des solutions est alors un sous-espace affine de dimension $n-\rg A$. <a href="Rappels.html#rang">Le rang</a>, <a href="Rappels.html#systemes">les systèmes linéaires</a>.</p>
+</div>
+
+<h3 id="reductions">Tout programme linéaire se met sous forme standard</h3>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, §4.2.1, p. 120–121</span></div>
+<p>Le problème (4.1) semble être un cas particulier de programme linéaire puisque les contraintes d'inégalités sont seulement du type $x\ge0$. Il n'en est rien, et tout programme linéaire du type</p>
+$$\inf_{x\in\R^n\text{ tel que }Ax\ge b,\ A'x=b'}c\cdot x$$
+<p>peut se mettre sous la forme standard (4.1) quitte à changer la taille des données. En effet, remarquons tout d'abord que les contraintes d'égalité $A'x=b'$ sont évidemment équivalentes aux contraintes d'inégalité $A'x\le b'$ et $A'x\ge b'$. On peut donc se restreindre au cas suivant (qui ne contient que des contraintes d'inégalité)</p>
+$$\inf_{x\in\R^n\text{ tel que }Ax\ge b}c\cdot x.\tag{4.2}$$
+<p>Dans (4.2) on peut remplacer la contrainte d'inégalité en introduisant de nouvelles variables, dites <strong>d'écarts</strong>, $\lambda\in\R^m$. La contrainte $Ax\ge b$ est alors équivalente à $Ax=b+\lambda$ avec $\lambda\ge0$. Ainsi (4.2) est équivalent à</p>
+$$\inf_{(x,\lambda)\in\R^{(n+m)}\text{ tel que }Ax=b+\lambda,\ \lambda\ge0}c\cdot x.\tag{4.3}$$
+<p>Finalement, si on décompose chaque composante de $x$ en partie positive et négative, c'est-à-dire si on pose $x=x^+-x^-$ avec $x^+=\max(0,x)$ et $x^-=-\min(0,x)$, on obtient que (4.2) est équivalent à</p>
+$$\inf_{\substack{(x^+,x^-,\lambda)\in\R^{(2n+m)}\text{ tel que}\\Ax^+-Ax^-=b+\lambda,\ x^+\ge0,\ x^-\ge0,\ \lambda\ge0}}c\cdot(x^+-x^-),\tag{4.4}$$
+<p>qui est bien sous forme standard (mais avec plus de variables). Il n'y a donc aucune perte de généralité à étudier le programme linéaire standard (4.1).</p>
+</div>
+<dl class="decode">
+<dt>$Ax\ge b$, $A'x=b'$</dt><dd>Un programme linéaire général : des inégalités (une ligne de $A$ par inégalité) et des égalités (une ligne de $A'$ par égalité). Ici $x$ est de signe quelconque. Attention : dans ce passage, $A$ et $m$ désignent la matrice et le nombre des <em>inégalités</em>, pas ceux de (4.1).</dd>
+<dt>$\lambda$</dt><dd>Les variables d'écart, une par inégalité : $\lambda_i=(Ax)_i-b_i\ge0$ mesure de combien la $i$-ème inégalité est « non serrée ». Nous les noterons plutôt $s$ dans nos exemples.</dd>
+<dt>$x^+$, $x^-$</dt><dd>Les parties positive et négative : $x^+=\max(0,x)$, $x^-=\max(0,-x)=-\min(0,x)$, composante par composante. Toujours $x^+\ge0$, $x^-\ge0$, $x=x^+-x^-$ et $\abs{x}=x^++x^-$.</dd>
+<dt>« (4.2) est équivalent à (4.4) »</dt><dd>Les deux problèmes ont la même valeur, et l'on passe des solutions de l'un à celles de l'autre. Mais attention, la correspondance n'est pas une bijection (piège plus bas).</dd>
+</dl>
+<p>Les réductions du livre tiennent en quatre gestes. Le livre passe par (4.2), avec uniquement des « $\ge$ » ; en pratique on garde les égalités telles quelles, puisque la forme standard en contient.</p>
+<ol class="steps">
+<li><strong>Égalité ou « $\le$ » en « $\ge$ ».</strong> $a\cdot x=\beta\iff\big(a\cdot x\ge\beta$ et $-a\cdot x\ge-\beta\big)$, et $a\cdot x\le\beta\iff-a\cdot x\ge-\beta$.<span class="why">Multiplier une inégalité par $-1$ la retourne. Exemple : $x_1+x_2=2$ devient $x_1+x_2\ge2$ et $-x_1-x_2\ge-2$.</span></li>
+<li><strong>Inégalité en égalité : une variable d'écart.</strong> $a\cdot x\ge\beta\iff a\cdot x-s=\beta$ avec $s\ge0$ ; de même $a\cdot x\le\beta\iff a\cdot x+s=\beta$ avec $s\ge0$.<span class="why">$s$ est « ce qui dépasse » ou « ce qui reste » : $s=a\cdot x-\beta$ (ou $\beta-a\cdot x$), positif exactement quand l'inégalité est vraie. Exemple : à l'atelier, $2x_1+x_2+s_1=100$, et $s_1$ est le nombre d'heures de machine inutilisées ; à l'optimum $(30,40)$, $s=(0,0,30)$, ce que <code>linprog</code> appelle <code>slack</code>.</span></li>
+<li><strong>Variable de signe quelconque : $x_j=x_j^+-x_j^-$</strong> avec $x_j^+,x_j^-\ge0$.<span class="why">Tout réel est la différence de deux réels positifs, par exemple $-1=0-1$. La colonne $a_j$ de $x_j$ devient deux colonnes, $a_j$ pour $x_j^+$ et $-a_j$ pour $x_j^-$. Variante : si $x_j\le0$, on pose $x_j=-y_j$ avec $y_j\ge0$, une seule variable.</span></li>
+<li><strong>Maximiser en minimisant.</strong> $\max_{\Xad}c\cdot x=-\min_{\Xad}(-c)\cdot x$, avec les mêmes points optimaux.<span class="why">$x$ rend $c\cdot x$ le plus grand possible si et seulement s'il rend $-c\cdot x$ le plus petit possible.</span></li>
+</ol>
+<div class="box thm"><div class="box-h">Proposition — les réductions conservent la valeur et les solutions optimales</div>
+<p>Notons $V_{(4.2)}$ et $V_{(4.4)}$ les valeurs (infima) de (4.2) et (4.4). Alors $V_{(4.2)}=V_{(4.4)}$. Si $\bar x$ est optimal pour (4.2), alors $(\bar x^+,\bar x^-,A\bar x-b)$ est optimal pour (4.4) ; si $(\bar x^+,\bar x^-,\bar\lambda)$ est optimal pour (4.4), alors $\bar x^+-\bar x^-$ est optimal pour (4.2).</p>
+</div>
+<div class="box idea"><div class="box-h">L'idée</div>
+<p>On fabrique deux « traductions » : l'une envoie chaque point admissible de (4.2) sur un point admissible de (4.4), l'autre fait le chemin inverse, et toutes deux conservent le coût. Deux ensembles qui s'envoient l'un dans l'autre en conservant les coûts ont le même infimum. La seconde traduction n'est pas injective, mais on n'en a pas besoin.</p>
+</div>
+<details class="fold proof"><summary>Démonstration complète</summary><div class="fold-body">
+<ol class="steps">
+<li>Soit $x$ admissible pour (4.2) : $Ax\ge b$. Posons $x^+=\max(0,x)$, $x^-=\max(0,-x)$ et $\lambda=Ax-b$. Alors $x^+,x^-,\lambda\ge0$ et $Ax^+-Ax^-=Ax=b+\lambda$.<span class="why">$x^+-x^-=x$ composante par composante ; $\lambda\ge0$ car $Ax\ge b$. Le triplet est admissible pour (4.4).</span></li>
+<li>Son coût est $c\cdot(x^+-x^-)=c\cdot x$. Donc $V_{(4.4)}\le c\cdot x$ pour tout $x$ admissible de (4.2), d'où $V_{(4.4)}\le V_{(4.2)}$.<span class="why">L'infimum de (4.4) est inférieur au coût de chacun de ses points admissibles ; on passe ensuite à l'infimum sur $x$.</span></li>
+<li>Soit $(x^+,x^-,\lambda)$ admissible pour (4.4). Posons $x=x^+-x^-$. Alors $Ax=b+\lambda\ge b$.<span class="why">$\lambda\ge0$. Donc $x$ est admissible pour (4.2), et rien n'impose $x^+=\max(0,x)$ ici.</span></li>
+<li>Son coût est $c\cdot x=c\cdot(x^+-x^-)$, d'où $V_{(4.2)}\le V_{(4.4)}$, et finalement $V_{(4.2)}=V_{(4.4)}$.<span class="why">Même argument qu'à la ligne 2, dans l'autre sens.</span></li>
+<li>Si $\bar x$ est optimal pour (4.2), son image par la ligne 1 coûte $c\cdot\bar x=V_{(4.2)}=V_{(4.4)}$ : elle est optimale. Si $(\bar x^+,\bar x^-,\bar\lambda)$ est optimal pour (4.4), son image $\bar x^+-\bar x^-$ coûte $V_{(4.4)}=V_{(4.2)}$ : elle est optimale.<span class="why">Un point admissible dont le coût est égal à l'infimum est optimal. Les cas $V=\pm\infty$ sont couverts par les lignes 2 et 4 (les deux valeurs sont égales, éventuellement infinies).</span></li>
+</ol>
+<p>Le même raisonnement vaut pour chaque geste pris isolément (écart seul, $x=x^+-x^-$ seul, égalités, $\max\to\min$).</p>
+</div></details>
+
+<h3 id="fs-exemple">Un exemple complet, geste par geste</h3>
+<div class="box example"><div class="box-h">Exemple — mettre (P) sous forme standard</div>
+<p>On part du programme</p>
+$$\begin{aligned}(P)\qquad\max\ &2x_1-x_2\\\text{s.c.}\ &x_1+x_2\le2,\quad -x_1+x_2\ge-4,\\&x_1\ge0,\quad x_2\ \text{de signe quelconque}.\end{aligned}$$
+<ol class="steps">
+<li>$$\min\ -2x_1+x_2$$<span class="why">Geste 4 : on minimise l'opposé. La valeur de $(P)$ sera l'opposé de la valeur trouvée.</span></li>
+<li>$$x_1+x_2+s_1=2,\qquad -x_1+x_2-s_2=-4,\qquad s_1,s_2\ge0$$<span class="why">Geste 2 : un écart $s_1$ pour la contrainte « $\le$ » (on l'ajoute), un surplus $s_2$ pour la contrainte « $\ge$ » (on le retranche).</span></li>
+<li>$$x_2=x_2^+-x_2^-,\qquad x_2^+,x_2^-\ge0$$<span class="why">Geste 3 : $x_2$ est libre. $x_1\ge0$ reste tel quel.</span></li>
+<li>$$z=(x_1,x_2^+,x_2^-,s_1,s_2),\quad A=\begin{pmatrix}1&1&-1&1&0\\-1&1&-1&0&-1\end{pmatrix},\quad b=\begin{pmatrix}2\\-4\end{pmatrix},\quad c=(-2,1,-1,0,0).$$<span class="why">On range les variables dans l'ordre, puis on lit les coefficients : la colonne de $x_2^-$ est l'opposée de celle de $x_2^+$, les colonnes des écarts sont $(1,0)$ et $(0,-1)$.</span></li>
+</ol>
+<p>On obtient $\min\{c\cdot z : Az=b,\ z\ge0\}$ avec $n=5$ et $m=2$. Le rang est $2$ : les colonnes de $s_1$ et $s_2$ sont déjà indépendantes. Le second membre a une composante négative ($-4$) : c'est permis dans (4.1). (Pour démarrer le simplexe, on préférera $b\ge0$ et l'on multipliera cette ligne par $-1$ : voir la <a href="Partie03.html#phase-1">phase I, partie 3</a>.)</p>
+<p><strong>Vérification.</strong> L'ensemble admissible de $(P)$ est le triangle de sommets $(3,-1)$, $(0,2)$ et $(0,-4)$, où $2x_1-x_2$ vaut $7$, $-2$ et $4$ : le maximum est $7$, en $(3,-1)$. Sous forme standard, l'optimum renvoyé par un solveur est $z=(3,0,1,0,0)$, de coût $-7$ : on retrouve $x_1=3$, $x_2=0-1=-1$, les deux contraintes serrées ($s_1=s_2=0$) et la valeur $-(-7)=7$.</p>
+</div>
+
+<h3 id="fs-tableau">La recette en un tableau</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>dans le programme de départ</th><th>sous forme standard</th><th>variables ajoutées</th></tr></thead>
+<tbody>
+<tr><td>$\max\ c\cdot x$</td><td>$-\min\ (-c)\cdot x$</td><td>—</td></tr>
+<tr><td>$a\cdot x\le\beta$</td><td>$a\cdot x+s=\beta$</td><td>un écart $s\ge0$</td></tr>
+<tr><td>$a\cdot x\ge\beta$</td><td>$a\cdot x-s=\beta$</td><td>un surplus $s\ge0$</td></tr>
+<tr><td>$a\cdot x=\beta$</td><td>inchangée (le livre : deux inégalités)</td><td>—</td></tr>
+<tr><td>$x_j$ de signe quelconque</td><td>$x_j=x_j^+-x_j^-$</td><td>$x_j^+,x_j^-\ge0$ (au lieu de $x_j$)</td></tr>
+<tr><td>$x_j\le0$</td><td>$x_j=-y_j$</td><td>$y_j\ge0$ (au lieu de $x_j$)</td></tr>
+<tr><td>$x_j\ge\ell_j$</td><td>$x_j=\ell_j+y_j$</td><td>$y_j\ge0$ (au lieu de $x_j$)</td></tr>
+<tr><td>$\ell_j\le x_j\le u_j$</td><td>$x_j=\ell_j+y_j$ et $y_j+s_j=u_j-\ell_j$</td><td>$y_j,s_j\ge0$</td></tr>
+<tr><td>$\min\sum\abs{r_i(x)}$, $\min\max_k(\dots)$</td><td>variable épigraphe (§1), puis les lignes ci-dessus</td><td>$t$ ou $t_i$</td></tr>
+</tbody></table></div>
+<div class="box reflex"><div class="box-h">Réflexe</div>
+<p>Quand on vous demande « la forme standard », donnez explicitement $z$ (l'ordre des variables), $A$, $b$, $c$, les tailles $m$ et $n$, et vérifiez $\rg A=m$. Avec seulement des contraintes « $\le$ » et un écart par contrainte, la matrice contient le bloc identité des écarts, donc $\rg A=m$ automatiquement.</p>
+</div>
+
+<h3 id="fs-xplusmoins">Piège : $x^+$ et $x^-$ ne sont pas toujours les parties positive et négative</h3>
+<div class="box pitfall"><div class="box-h">Piège — dans (4.4), rien n'oblige $x^+_j$ ou $x^-_j$ à être nul</div>
+<p>Le livre « pose » $x^+=\max(0,x)$ et $x^-=-\min(0,x)$. Mais dans le programme (4.4), $x^+$ et $x^-$ sont deux vecteurs de variables <strong>indépendants</strong>, soumis seulement à $x^+\ge0$, $x^-\ge0$. Dans l'exemple ci-dessus, $z=(3,2,3,0,0)$ est admissible ($Az=(2,-4)=b$) et optimal (coût $-7$) ; il représente le même $x_2=2-3=-1$, mais $x_2^+=2\ne\max(0,-1)=0$. Plus généralement, $(3,\,t,\,1+t,\,0,\,0)$ est optimal pour tout $t\ge0$ : la forme standard a une demi-droite de solutions optimales, alors que $(P)$ a une solution unique.</p>
+<p><strong>Ce qui est vrai.</strong></p>
+<ul>
+<li>Les valeurs sont égales et l'on retrouve toujours la bonne solution par $x=x^+-x^-$ (proposition ci-dessus).</li>
+<li>En une <strong>solution basique</strong> (un sommet, celles que renvoie le simplexe : <a href="Partie02.html#bases">partie 2</a>), $x^+_j$ et $x^-_j$ ne sont jamais tous deux $>0$ : leurs colonnes $a_j$ et $-a_j$ sont liées, elles ne peuvent pas figurer ensemble dans une base inversible. Là, et seulement là, $x^\pm$ sont bien les parties positive et négative. On l'a vérifié sur l'exemple : ses cinq solutions basiques admissibles, $(3,0,1,0,0)$, $(2,0,0,0,2)$, $(0,2,0,0,6)$, $(0,0,4,6,0)$ et $(0,0,0,2,4)$, ont toutes $x_2^+x_2^-=0$.</li>
+</ul>
+</div>
+<figure class="fig"><!-- include figures/P01/xpm.svg --><figcaption>À gauche, les parties positive et négative d'un réel. À droite, tous les couples $(x^+,x^-)\ge0$ qui représentent le même $x$ : une demi-droite de pente 1 (pour $x=-1$ et pour $x=2$). Son unique sommet (en vert) est le couple des parties positive et négative ; le point gris $(2,3)$ représente aussi $x=-1$.</figcaption></figure>
+<div class="box remark"><div class="box-h">Remarque — la forme standard peut avoir plus de sommets que le problème de départ</div>
+<p>Deux des cinq solutions basiques de l'exemple, $(2,0,0,0,2)$ et $(0,0,0,2,4)$, représentent les points $x=(2,0)$ et $x=(0,0)$ : ils ne sont pas des sommets du triangle de $(P)$, ils sont au milieu de ses côtés. Pour la forme standard, « $x_2=0$ » ressemble à une contrainte active ($x_2^+=x_2^-=0$). Ce n'est pas grave (les valeurs optimales sont les mêmes et chaque sommet de $(P)$ donne bien un sommet de la forme standard), mais ne comptez pas les sommets de $(P)$ sur sa forme standard.</p>
+</div>
+
+<div class="box ml"><div class="box-h">En machine learning — le transport optimal discret, sous forme standard</div>
+<p>Le problème de Kantorovich entre deux histogrammes $a\in\R^n$ et $b\in\R^p$ (de même masse totale) cherche une matrice de transport $P\ge0$ minimisant $\sum_{i,j}C_{ij}P_{ij}$ sous $\sum_jP_{ij}=a_i$ et $\sum_iP_{ij}=b_j$ : c'est un programme linéaire <strong>déjà sous forme standard</strong>, avec $np$ variables $P_{ij}$ et $n+p$ équations. Mais ses lignes sont liées : la somme des $n$ équations « lignes » et la somme des $p$ équations « colonnes » donnent toutes deux $\sum_{i,j}P_{ij}$ = masse totale. Le rang vaut $n+p-1$ (vérifié pour $(n,p)=(2,2),(2,3),(3,4)$ : rangs $3$, $4$, $6$), et il faut effacer une équation pour avoir $\rg A=m$ : c'est la situation « redondante » du livre. Voir le cours de transport optimal, <a href="../../../Optimal_transport_ML/v2/Lesson02.html#couplings-lp">Lesson 2</a>, et l'<a href="#exo-transport">exercice 11</a>.</p>
+</div>
+
+<div class="quiz"><p>Mettez l'atelier sous forme standard. Combien de variables, combien d'équations, quel rang ? Que vaut le vecteur $z$ au point optimal ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>$z=(x_1,x_2,s_1,s_2,s_3)$, $\min\ -40x_1-30x_2$ sous $2x_1+x_2+s_1=100$, $x_1+x_2+s_2=70$, $x_1+3x_2+s_3=180$, $z\ge0$. Donc $n=5$, $m=3$, et $\rg A=3$ grâce au bloc identité des écarts. À l'optimum, $z=(30,40,0,0,30)$ : deux écarts nuls (machines et main-d'œuvre saturées), un écart de 30 panneaux.</p>
+</div></details></div>

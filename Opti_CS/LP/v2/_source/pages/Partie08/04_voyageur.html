@@ -1,0 +1,168 @@
+<h2 id="voyageur">4. Le voyageur de commerce <span class="ref">Diapos 52–54</span></h2>
+<p class="tldr">Trouver la plus courte tournée passant une fois par chaque ville ; avec une variable 0/1 par arête, « deux arêtes par ville » ne suffit pas (plusieurs petites boucles sont possibles), et les contraintes qui interdisent ces sous-tours, en nombre exponentiel, s'ajoutent seulement quand une solution les viole.</p>
+
+<h3 id="voyageur-probleme">Le problème</h3>
+<p>Un représentant doit visiter $N$ villes et revenir à son point de départ, en parcourant la plus petite distance possible. C'est le <em class="new">problème du voyageur de commerce</em> (en anglais <em>travelling salesman problem</em>, TSP). Il se pose pour des tournées de livraison, le perçage de circuits imprimés, l'ordre de passage d'un robot ou d'un télescope, et sert de banc d'essai à toute l'optimisation combinatoire.</p>
+
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo 52</span></div>
+<p><strong>Problème du représentant de commerce (travelling salesman problem)</strong></p>
+<p>N villes de coordonnées $x_n$. trouver la plus courte tournée du représentant passant une seule fois par chaque ville. Soit $\mathcal E_N$ l'ensemble des permutations de $\{1,\dots,N\}$.</p>
+$$\min_{\sigma\in\mathcal E_N}\ \sum_{n=1}^Nd\big(x_{\sigma(n)},x_{\sigma(n+1)}\big).$$
+</div>
+<dl class="decode">
+<dt>$x_n$</dt><dd>La position de la ville $n$ (un point du plan). Rien à voir avec la variable binaire $x$ de la diapo 53.</dd>
+<dt>$d(x_i,x_j)$</dt><dd>La distance entre les villes $i$ et $j$ ; ce guide écrit $d_{ij}$. Elle est symétrique : $d_{ij}=d_{ji}$.</dd>
+<dt>$\sigma\in\mathcal E_N$</dt><dd>Une permutation : l'ordre de visite. $\sigma(1)$ est la première ville visitée, $\sigma(2)$ la deuxième… Ce guide note $\Sc_N$ l'ensemble des permutations.</dd>
+<dt>$\sum_{n=1}^N d(x_{\sigma(n)},x_{\sigma(n+1)})$</dt><dd>La longueur de la tournée : la somme des $N$ trajets entre villes consécutives. Le dernier terme, $n=N$, fait intervenir $\sigma(N+1)$, qui n'existe pas : il faut lire $\sigma(N+1)=\sigma(1)$, le retour au départ.</dd>
+</dl>
+<div class="box remark"><div class="box-h">Note sur les sources — le retour au point de départ</div>
+<p>La diapo 52 n'écrit pas la convention $\sigma(N+1)=\sigma(1)$. Sans elle, le dernier terme n'a pas de sens ; si l'on arrêtait la somme à $n=N-1$, on chercherait un plus court <em>chemin</em> passant par toutes les villes, un autre problème. La phrase « tournée » et la reformulation de la diapo 53 (deux arêtes par ville) confirment qu'il s'agit d'un cycle, avec retour.</p>
+</div>
+
+<div class="box thm"><div class="box-h">Proposition — il y a $(N-1)!/2$ tournées (ajout du guide)</div>
+<p>Pour $N\ge3$ villes, le nombre de tournées différentes (cycles passant une fois par chaque ville, sans sens ni point de départ privilégié) est $(N-1)!/2$.</p>
+</div>
+<details class="fold proof"><summary>Démonstration complète</summary><div class="fold-body">
+<ol class="steps">
+<li>Il y a $N!$ permutations $\sigma$.<span class="why">Dénombrement des ordres de $N$ objets.</span></li>
+<li>Chaque tournée est décrite par exactement $2N$ permutations.<span class="why">On peut la commencer en n'importe laquelle des $N$ villes, et la parcourir dans l'un des $2$ sens ; pour $N\ge3$, ces $2N$ descriptions sont distinctes.</span></li>
+<li>Nombre de tournées $=N!/(2N)=(N-1)!/2$.<span class="why">On regroupe les permutations par paquets de $2N$.</span></li>
+</ol>
+<p>Exemples : $N=4$ donne $3$ tournées ; $N=6$ en donne $60$ ; $N=7$, $360$ ; $N=20$, environ $6\cdot10^{16}$ (§1). <span class="qed">∎</span></p>
+</div></details>
+
+<h3 id="voyageur-binaire">La reformulation binaire</h3>
+<p>La formulation par permutations est naturelle mais ne se prête pas à la programmation linéaire. Les diapos 53–54 passent à des variables 0/1, une par arête du graphe complet.</p>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo 54</span></div>
+<p>Reformulation : variable de décision binaire $x\in\{0,1\}^{\mathcal A}$.<br>
+▶ chaque sommet de la tournée est connecté à 2 arrêtes : $\sum_jx_{ij}=2$ pour tout sommet $i$.<br>
+▶ connexité de la tournée complète : toute restriction de la tournée à un sous-ensemble $S$ de noeuds n'est pas un cycle et a donc un nombre d'arrêtes strictement inférieur à $\card(S)$ : $(i,j)\in S\cap\mathcal A$, $x_{ij}\leqslant\card(S)-1$.<br>
+▶ Problème reformulé : $\min d_{ij}x_{ij}$ sous les 2 contraintes précédentes.</p>
+</div>
+<p>La diapo 53 est la même sans la dernière ligne.</p>
+<dl class="decode">
+<dt>$\mathcal A$</dt><dd>L'ensemble des arêtes $\{i,j\}$ ($i\ne j$) du graphe complet sur les villes $\Nc=\{1,\dots,N\}$ ; il y en a $N(N-1)/2$ ($15$ pour $6$ villes).</dd>
+<dt>$x_{ij}\in\{0,1\}$</dt><dd>$x_{ij}=1$ si la tournée emprunte l'arête entre $i$ et $j$ (dans un sens ou dans l'autre). Une seule variable par arête : $x_{ij}$ et $x_{ji}$ désignent la même.</dd>
+<dt>$\sum_jx_{ij}=2$</dt><dd>La <em class="new">contrainte de degré</em> : dans une tournée, on arrive dans chaque ville par une arête et on en repart par une autre. La somme porte sur les $j\ne i$.</dd>
+<dt>« connexité », $S$</dt><dd>La tournée est d'un seul tenant. Si l'on ne garde que les villes d'un sous-ensemble $S$ <em>strict</em> (pas toutes les villes), les arêtes de la tournée entre villes de $S$ forment des morceaux de chemin, jamais un cycle : il y en a au plus $\card(S)-1$.</dd>
+<dt>$\min d_{ij}x_{ij}$</dt><dd>La longueur totale : la somme des $d_{ij}$ sur les arêtes prises.</dd>
+</dl>
+<div class="box remark" id="note-sous-tours"><div class="box-h">Note sur les sources — l'écriture de la diapo 54</div>
+<p>Trois imprécisions, dont deux sommes manquantes :</p>
+<ul>
+<li>« $(i,j)\in S\cap\mathcal A,\ x_{ij}\le\card(S)-1$ » se lit comme une contrainte sur <em>chaque</em> variable $x_{ij}$ ; elle serait alors toujours vraie pour $\card(S)\ge2$ (puisque $x_{ij}\le1$) et n'interdirait rien. Il faut <strong>sommer</strong> sur les arêtes intérieures à $S$. De plus, « $S\cap\mathcal A$ » mélange des villes ($S$) et des arêtes ($\mathcal A$) : on veut les arêtes dont les deux extrémités sont dans $S$.</li>
+<li>« $\min d_{ij}x_{ij}$ » doit se lire $\min\sum_{\{i,j\}\in\mathcal A}d_{ij}x_{ij}$.</li>
+<li>Il faut préciser $S\ne\Nc$ (pour $S=\Nc$, la tournée a $N$ arêtes, et c'est voulu) ; les $S$ à un élément ne contiennent aucune arête, et sont sans intérêt.</li>
+</ul>
+<p>Vérification sur l'exemple ci-dessous : la solution « deux triangles » a trois arêtes dans $S=\{1,2,3\}$ ; la contrainte écrite variable par variable ($x_{12}\le2$, …) l'accepte, la contrainte sommée $x_{12}+x_{13}+x_{23}\le2$ la rejette. Enfin, « arrêtes » s'écrit « arêtes ».</p>
+</div>
+<p>Le programme corrigé, que ce guide note (V), est</p>
+$$\text{(V)}\qquad\begin{aligned}\min\ &\sum_{\{i,j\}\in\mathcal A}d_{ij}\,x_{ij}\\ \text{sous}\ &\sum_{j\ne i}x_{ij}=2\quad\text{pour toute ville }i,\\ &\sum_{\{i,j\}\subset S}x_{ij}\le\card(S)-1\quad\text{pour tout }S\subset\Nc,\ 2\le\card(S)\le N-1,\\ &x\in\{0,1\}^{\mathcal A}.\end{aligned}$$
+<p>Les contraintes de la troisième ligne s'appellent <em class="new">contraintes d'élimination des sous-tours</em> (ou de connexité). Ce modèle est celui de Dantzig, Fulkerson et Johnson (1954).</p>
+
+<div class="box thm" id="prop-tournees"><div class="box-h">Proposition — les solutions de (V) sont exactement les tournées (ajout du guide)</div>
+<p>Un vecteur $x\in\{0,1\}^{\mathcal A}$ vérifie les contraintes de (V) si et seulement si les arêtes $\{i,j\}$ telles que $x_{ij}=1$ forment une tournée (un cycle passant une fois par chaque ville).</p>
+</div>
+<div class="box idea"><div class="box-h">L'idée</div>
+<p>Deux arêtes en chaque ville, c'est une réunion de cycles disjoints qui couvrent toutes les villes. S'il y a un seul cycle, c'est une tournée. S'il y en a plusieurs, les villes de l'un d'eux forment un $S$ qui contient autant d'arêtes que de villes : la contrainte de sous-tour de ce $S$ est violée.</p>
+</div>
+<details class="fold proof"><summary>Démonstration complète</summary><div class="fold-body">
+<p>Notons $E_x=\{\{i,j\} : x_{ij}=1\}$ et, pour $S\subset\Nc$, $E_x(S)$ les arêtes de $E_x$ dont les deux extrémités sont dans $S$.</p>
+<p><strong>Une tournée vérifie les contraintes.</strong></p>
+<ol class="steps">
+<li>Chaque ville a exactement deux arêtes : la contrainte de degré est vraie.<span class="why">On arrive par une arête, on repart par une autre ; pour $N\ge3$, ce sont deux arêtes distinctes.</span></li>
+<li>Pour $S\ne\Nc$, $E_x(S)$ ne contient pas de cycle.<span class="why">Le seul cycle de $E_x$ est la tournée entière, qui passe par une ville hors de $S$.</span></li>
+<li>$\card E_x(S)\le\card(S)-1$.<span class="why">Un graphe sans cycle sur $\card(S)$ sommets (une forêt) a au plus $\card(S)-1$ arêtes : chaque composante connexe à $k$ sommets en a $k-1$.</span></li>
+</ol>
+<p><strong>Réciproquement</strong>, soit $x$ qui vérifie les contraintes.</p>
+<ol class="steps">
+<li>$E_x$ est une réunion de cycles disjoints couvrant toutes les villes.<span class="why">Partez d'une ville et suivez ses arêtes : comme chaque ville a degré $2$, on ne peut ni s'arrêter ni bifurquer, et l'on revient au départ (le nombre de villes est fini) ; on recommence avec une ville non encore visitée.</span></li>
+<li>S'il y a au moins deux cycles, soit $S$ les villes de l'un d'eux. Alors $2\le\card(S)\le N-1$ et $\card E_x(S)=\card(S)$.<span class="why">Un cycle a autant d'arêtes que de sommets ; un cycle sans boucle ni arête double a au moins $3$ sommets ; l'autre cycle a ses villes hors de $S$.</span></li>
+<li>Cela viole $\sum_{\{i,j\}\subset S}x_{ij}\le\card(S)-1$. Donc il y a un seul cycle, qui passe par toutes les villes : une tournée.<span class="why">Contradiction avec l'hypothèse.</span></li>
+</ol>
+<p><span class="qed">∎</span></p>
+</div></details>
+
+<h3 id="sous-tours">Pourquoi les contraintes de degré ne suffisent pas</h3>
+<div class="box example" id="exemple-six-villes"><div class="box-h">Exemple — six villes, deux triangles</div>
+<p>Six villes aux coordonnées $1:(20,20)$, $2:(35,30)$, $3:(25,0)$, $4:(65,10)$, $5:(65,30)$, $6:(75,50)$ ; distances euclidiennes arrondies à l'entier le plus proche (la convention de la bibliothèque de tests TSPLIB, qui garde les calculs exacts) :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>$d_{ij}$</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>—</td><td>18</td><td>21</td><td>46</td><td>46</td><td>63</td></tr>
+<tr><td>2</td><td>18</td><td>—</td><td>32</td><td>36</td><td>30</td><td>45</td></tr>
+<tr><td>3</td><td>21</td><td>32</td><td>—</td><td>41</td><td>50</td><td>71</td></tr>
+<tr><td>4</td><td>46</td><td>36</td><td>41</td><td>—</td><td>20</td><td>41</td></tr>
+<tr><td>5</td><td>46</td><td>30</td><td>50</td><td>20</td><td>—</td><td>22</td></tr>
+<tr><td>6</td><td>63</td><td>45</td><td>71</td><td>41</td><td>22</td><td>—</td></tr>
+</tbody></table></div>
+<ul>
+<li><strong>Toutes les tournées</strong> ($60$, par énumération) : la plus courte est $1\text{-}2\text{-}6\text{-}5\text{-}4\text{-}3\text{-}1$, de longueur $18+45+22+20+41+21=167$. Elle est unique ; la suivante mesure $173$.</li>
+<li><strong>Les contraintes de degré seules.</strong> Leurs solutions binaires sont les réunions de cycles disjoints : les $60$ tournées et les $10$ façons de couper les six villes en deux triangles. La meilleure est formée de deux triangles, $1\text{-}2\text{-}3$ ($18+32+21=71$) et $4\text{-}5\text{-}6$ ($20+22+41=83$) : longueur totale $154\lt167$. Chaque ville a bien deux arêtes, mais le voyageur ne passe jamais d'un groupe à l'autre.</li>
+<li><strong>Plus proche voisin depuis la ville 1</strong> : $1\to2$ ($18$), $2\to5$ ($30$), $5\to4$ ($20$), $4\to3$ ($41$), $3\to6$ ($71$), retour $6\to1$ ($63$) : $243$, soit $45\,\%$ de plus que l'optimum. Parti de la ville 2 ou de la ville 4, le même algorithme trouve la tournée optimale.</li>
+</ul>
+<p>D'où l'encadrement $154\le167\le243$ : relaxation (borne inférieure) $\le$ optimum $\le$ heuristique (borne supérieure).</p>
+</div>
+<figure class="fig"><!-- include figures/P08/sous-tours.svg --><figcaption>Les six villes. À gauche, la meilleure solution des seules contraintes de degré : deux sous-tours, $154$. Au centre, la tournée optimale : $167$. À droite, le plus proche voisin parti de la ville 1 : il finit par deux longs retours ($71$ et $63$), $243$. Les nombres sont les longueurs des arêtes.</figcaption></figure>
+
+<div class="box remark"><div class="box-h">Remarque — pour $N\le5$, le degré suffit</div>
+<p>Un cycle a au moins $3$ villes. Avec $N\le5$ villes, on ne peut pas en faire deux ($3+3=6$) : toute solution binaire des contraintes de degré est une tournée, et les contraintes de sous-tours sont superflues. Le premier contre-exemple est celui des deux triangles, à $N=6$. Avec $7$ villes, on peut avoir un triangle et un carré.</p>
+</div>
+
+<h3 id="coupes-sous-tours">Les contraintes de sous-tours, ajoutées à la demande</h3>
+<p>Combien y a-t-il de contraintes de sous-tours ? Une par sous-ensemble $S$ avec $2\le\card(S)\le N-1$ : $2^N-N-2$ (tous les sous-ensembles, moins le vide, les $N$ singletons et $\Nc$). Pour $N=6$ : $56$ ; pour $N=20$ : $1\,048\,554$ ; pour $N=50$ : environ $1{,}1\cdot10^{15}$. Impossible de toutes les écrire. On s'en sert comme de <strong>coupes</strong> :</p>
+<ol class="chain">
+<li>Résoudre la relaxation avec les seules contraintes de degré (et les coupes déjà ajoutées).</li>
+<li>Si la solution est une tournée : elle est optimale (sa longueur égale une borne inférieure).</li>
+<li>Sinon, elle contient un sous-tour sur un ensemble $S$ : ajouter la contrainte de $S$, qui est violée, et recommencer.</li>
+</ol>
+<div class="box example"><div class="box-h">Exemple — une seule coupe suffit sur les six villes</div>
+<p>La relaxation des degrés (même en continu, $0\le x_{ij}\le1$, résolue par <code>linprog</code>) donne les deux triangles, $154$. Le triangle $S=\{1,2,3\}$ viole sa contrainte : $x_{12}+x_{13}+x_{23}=3\gt\card(S)-1=2$. On ajoute</p>
+$$x_{12}+x_{13}+x_{23}\le2 .$$
+<p>La nouvelle relaxation continue a pour solution la tournée $1\text{-}2\text{-}6\text{-}5\text{-}4\text{-}3$, de longueur $167$ : une tournée dont la longueur égale la borne. Elle est optimale, sans aucune séparation. (On aurait pu choisir $S=\{4,5,6\}$ : sa contrainte est équivalente, voir ci-dessous.)</p>
+</div>
+<details class="fold more"><summary>Pour aller plus loin : la forme « coupe » et la séparation</summary><div class="fold-body">
+<p>Additionnons les contraintes de degré des villes de $S$ : chaque arête intérieure à $S$ est comptée deux fois, chaque arête qui sort de $S$ une fois. Avec $\delta(S)$ l'ensemble des arêtes qui ont exactement une extrémité dans $S$,</p>
+$$\begin{aligned}&2\card(S)=2\sum_{\{i,j\}\subset S}x_{ij}+\sum_{\{i,j\}\in\delta(S)}x_{ij},\\ &\text{donc}\quad\sum_{\{i,j\}\subset S}x_{ij}\le\card(S)-1\iff\sum_{\{i,j\}\in\delta(S)}x_{ij}\ge2 .\end{aligned}$$
+<p>Lecture : « au moins deux arêtes traversent la frontière de $S$ » (on doit entrer dans $S$ et en ressortir). Comme $\delta(S)=\delta(\Nc\setminus S)$, les contraintes de $S$ et de son complémentaire sont équivalentes : on peut se limiter à $\card(S)\le N/2$. Trouver une contrainte violée par une solution fractionnaire revient à chercher une coupe de capacité $\lt2$ dans le graphe pondéré par les $x_{ij}$ : un problème de coupe minimale, polynomial (le dual du flot maximal, <a href="Partie07.html#flot-maximal">partie 7</a>). On sait donc séparer ces contraintes efficacement, même si elles sont en nombre exponentiel.</p>
+</div></details>
+
+<div class="widget" data-widget="p8tsp"><p class="w-noscript">Figure interactive (nécessite JavaScript).</p></div>
+<p><strong>À observer :</strong> sur l'exemple de la page, les contraintes de degré seules donnent les deux triangles ($154$) ; un clic sur « Ajouter la coupe violée » ajoute la contrainte de $S=\{1,2,3\}$, et la solution devient la tournée optimale ($167$). Cochez « plus proche voisin » : $243$. Sur « deux grappes (7 villes) », les degrés donnent un triangle et un carré ($144$) ; une première coupe ne suffit pas (la ville 7 change de groupe : un carré et un triangle, $193$), une seconde donne une tournée optimale ($196$ ; il y en a deux de cette longueur) : il faut parfois plusieurs coupes. Sur le cercle, la solution des degrés est la tournée optimale dès le départ ($208$). Faites glisser les villes : quand elles ne forment plus de grappes séparées, la solution des degrés est souvent déjà une tournée. Toujours : degrés seuls $\le$ optimum $\le$ plus proche voisin.</p>
+
+<div class="box remark" id="remarque-fractionnaire"><div class="box-h">Remarque — la relaxation continue des degrés n'est pas toujours entière</div>
+<p>La matrice des contraintes de degré a une ligne par ville et une colonne par arête, avec deux $1$ par colonne. Elle n'est pas totalement unimodulaire : la sous-matrice d'un triangle, $\begin{pmatrix}1&1&0\\0&1&1\\1&0&1\end{pmatrix}$, a pour déterminant $2$. Exemple : six villes, les arêtes $\{1,4\}$, $\{2,5\}$, $\{3,6\}$ coûtent $1$, celles des triangles $\{1,2,3\}$ et $\{4,5,6\}$ coûtent $10$, les autres $100$. La relaxation continue des degrés vaut $33$, avec $x=1$ sur les trois arêtes à $1$ et $x=\tfrac12$ sur les six arêtes des triangles ; la meilleure solution binaire est une tournée de longueur $42$, par exemple $1\text{-}2\text{-}3\text{-}6\text{-}5\text{-}4$ (calculs par <code>linprog</code> et par énumération). Plus surprenant : ce point fractionnaire vérifie aussi les $56$ contraintes de sous-tours, et la relaxation continue de (V) tout entière vaut encore $33$. Les sous-tours ne suffisent donc pas à rendre la relaxation entière ; Concorde ajoute d'autres familles de coupes, comme les « peignes » : ici $x_{12}+x_{13}+x_{23}+x_{14}+x_{25}+x_{36}\le4$, valide pour toute tournée, vaut $4{,}5$ au point fractionnaire, et une fois ajoutée, la relaxation donne $42$. Dans la version <em>orientée</em> du problème (une variable par arc $i\to j$, un arc entrant et un arc sortant par ville), les contraintes de degré forment un problème d'<a href="Partie07.html#affectation">affectation</a>, totalement unimodulaire : la relaxation est entière, mais elle produit aussi des sous-tours.</p>
+</div>
+
+<h3 id="held-karp">Pour aller plus loin : la borne du 1-arbre (Held et Karp)</h3>
+<details class="fold more" id="un-arbre"><summary>Pour aller plus loin</summary><div class="fold-body">
+<p>Un <em class="new">1-arbre</em> est formé d'un arbre couvrant des villes $2,\dots,N$ et de deux arêtes reliant la ville 1 à cet arbre. Toute tournée est un 1-arbre (enlevez la ville 1 : il reste un chemin, qui est un arbre couvrant). Donc le plus petit 1-arbre minore la plus courte tournée. Il se calcule vite : un arbre couvrant minimal (algorithme glouton de Kruskal ou de Prim), plus les deux plus courtes arêtes de la ville 1.</p>
+<p><strong>Sur les six villes.</strong> L'arbre couvrant minimal des villes $2,\dots,6$ prend $\{4,5\}$ ($20$), $\{5,6\}$ ($22$), $\{2,5\}$ ($30$), $\{2,3\}$ ($32$) : $104$. Les deux plus courtes arêtes de la ville 1 mesurent $18$ et $21$. Borne : $104+18+21=143\le167$. En jouant le rôle de la ville 1 avec chacune des six villes, la meilleure borne est $158$ (avec la ville 5).</p>
+<p><strong>Held et Karp (1970)</strong> améliorent la borne par relaxation lagrangienne : on dualise les contraintes de degré avec des multiplicateurs $\pi_i$, ce qui remplace $d_{ij}$ par $d_{ij}+\pi_i+\pi_j$ ; on cherche le 1-arbre minimal pour ces longueurs modifiées et l'on retranche $2\sum_i\pi_i$. Le maximum en $\pi$ de cette borne est égal à la valeur de la relaxation continue de (V) avec toutes les contraintes de sous-tours. Sur l'exemple, cette relaxation (résolue par <code>linprog</code> avec les $50$ contraintes $2\le\card(S)\le4$) vaut $167$ : la borne de Held et Karp est ici exactement l'optimum. En général elle en est très proche : Johnson, McGeoch et Rothberg (1996) trouvent, sur de nombreuses familles d'instances aléatoires, un optimum en moyenne à moins de $1\,\%$ au-dessus de la borne, et presque toujours à moins de $2\,\%$ sur les instances réelles de la bibliothèque TSPLIB.</p>
+</div></details>
+
+<div class="box app" id="app-tournees"><div class="box-h">En pratique — tournées de véhicules et Concorde</div>
+<ul>
+<li><strong>Concorde</strong> (Applegate, Bixby, Chvátal et Cook) est le solveur exact de référence pour le voyageur : séparation-évaluation avec les contraintes de sous-tours et bien d'autres familles de coupes, dans le cadre de la formulation (V). Il a prouvé l'optimalité de tournées de dizaines de milliers de villes, dont l'instance <code>pla85900</code> de la TSPLIB ($85\,900$ points issus de la conception d'une puce électronique ; optimalité prouvée en 2006).</li>
+<li><strong>Les heuristiques</strong> (plus proche voisin, insertions, échanges 2-opt, Lin–Kernighan et son implémentation LKH) trouvent en pratique des tournées à quelques pour cent, voire beaucoup moins, de l'optimum, sans preuve.</li>
+<li><strong>Les tournées de véhicules</strong> (<em>vehicle routing</em>) généralisent le voyageur : plusieurs camions de capacité limitée, des fenêtres horaires de livraison. OR-Tools (Google) propose un module de routage, qui combine heuristiques de construction et recherche locale.</li>
+</ul>
+</div>
+
+<div class="box ml" id="ml-routage"><div class="box-h">En machine learning — des heuristiques apprises pour le routage</div>
+<p>Kool, van Hoof et Welling (<em>Attention, learn to solve routing problems!</em>, ICLR 2019) entraînent un modèle à attention (de type Transformer) qui construit une tournée ville par ville : à chaque pas, il donne une probabilité à chaque ville non visitée. Il est entraîné par renforcement (REINFORCE) : la « récompense » est moins la longueur de la tournée, sur des instances de villes tirées au hasard dans le carré unité. Le modèle obtenu est une <strong>heuristique</strong> : rapide, souvent proche de l'optimum sur des instances de la taille et de la distribution d'entraînement (de 20 à 100 villes dans l'article), mais sans aucune garantie, et en retrait des solveurs spécialisés (Concorde, LKH) sur la qualité. Pour un usage sérieux, on garde ce qu'apprend le §3 : une heuristique donne une borne supérieure ; seule une borne inférieure (relaxation) permet de dire à combien on est de l'optimum.</p>
+</div>
+
+<div class="box pitfall"><div class="box-h">Piège — compter les tournées</div>
+<p>Il y a $N!$ ordres de visite mais seulement $(N-1)!/2$ tournées : fixer la ville de départ divise par $N$, ignorer le sens divise par $2$. À l'inverse, oublier le retour au départ ($\sigma(N+1)=\sigma(1)$) change le problème.</p>
+</div>
+
+<div class="box reflex"><div class="box-h">Réflexe</div>
+<p>Quand une formulation en variables 0/1 « par arête » laisse passer des solutions en morceaux → cherchez un ensemble $S$ qui contient trop d'arêtes (ou trop peu d'arêtes sortantes), et ajoutez sa contrainte comme une coupe.</p>
+</div>
+
+<div class="quiz"><p>Pour $N=6$, combien la formulation (V) a-t-elle de variables, de contraintes de degré et de contraintes de sous-tours ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>$6\cdot5/2=15$ variables, $6$ contraintes de degré, $2^6-6-2=56$ contraintes de sous-tours (dont seulement $10$ distinctes utiles, les $S$ à trois villes, une par paire $\{S,\ \Nc\setminus S\}$, si l'on se sert de l'équivalence entre $S$ et son complémentaire et du fait que les $S$ à deux villes sont automatiques en binaire).</p>
+</div></details>
+</div>

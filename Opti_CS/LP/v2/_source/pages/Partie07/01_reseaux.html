@@ -1,0 +1,43 @@
+<h2 id="reseaux">1. Le problème : des réseaux partout <span class="ref">Diapo 35 ; Allaire p. 137</span></h2>
+<p class="tldr">Livrer, acheminer, affecter : beaucoup de problèmes concrets font circuler des quantités sur un réseau ; ils s'écrivent comme des programmes linéaires dont les solutions basiques sont automatiquement entières.</p>
+
+<h3 id="reseaux-exemples">Ce qui circule, et où</h3>
+<p>Voici quelques situations que le cours range sous le même mot, « flot » :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Situation</th><th>Les nœuds</th><th>Les arcs</th><th>Ce qui circule</th><th>Capacité, coût</th></tr></thead>
+<tbody>
+<tr><td>Approvisionnement, livraisons</td><td>usines, entrepôts, magasins</td><td>liaisons routières</td><td>des colis, des voitures</td><td>camions disponibles ; prix par unité transportée</td></tr>
+<tr><td>Réseau d'eau ou de gaz</td><td>stations, jonctions</td><td>canalisations</td><td>des m³ par heure</td><td>débit maximal du tuyau ; coût de pompage</td></tr>
+<tr><td>Réseau informatique</td><td>routeurs</td><td>liens</td><td>des paquets par seconde</td><td>bande passante ; latence</td></tr>
+<tr><td>Itinéraire (Google Maps)</td><td>carrefours</td><td>tronçons de route</td><td>un véhicule</td><td>aucune ; durée du trajet</td></tr>
+<tr><td>Affectation, emploi du temps</td><td>personnes ; tâches ou créneaux</td><td>« la personne $i$ peut faire la tâche $j$ »</td><td>une affectation (0 ou 1)</td><td>1 ; coût ou préférence</td></tr>
+</tbody></table></div>
+<p>Trois ingrédients reviennent toujours : un <strong>graphe orienté</strong> (on ne roule pas forcément dans les deux sens), des <strong>quantités sur les arcs</strong> qui se <strong>conservent</strong> aux nœuds (rien ne se perd à un carrefour), et des <strong>capacités</strong> et des <strong>coûts</strong> sur les arcs. La diapo 35 le dit en une ligne :</p>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo 35</span></div>
+<p>Applications : Affectations, emploi du temps, approvisionnement</p>
+</div>
+
+<h3 id="reseaux-pourquoi">Pourquoi un chapitre entier sur les flots</h3>
+<p>La partie 6 a montré que les programmes linéaires <em>en nombres entiers</em> sont en général difficiles : arrondir la solution continue ne donne ni une solution optimale, ni même parfois une solution admissible (diapo 18). Mais elle a aussi trouvé une issue : si la matrice des contraintes est <strong>totalement unimodulaire</strong> et le second membre entier, toutes les solutions basiques sont entières, et le simplexe ordinaire résout le problème entier sans rien changer (<a href="Partie06.html#poincare">critère de Poincaré, partie 6</a>). Les flots sont <em>la</em> grande famille d'exemples où cela se produit. Le livre l'annonce d'emblée :</p>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, §4.3.2, p. 137</span></div>
+<p>Nous faisons une brève présentation des problèmes de flots qui ne servent ici que de prétexte à illustrer la résolution de programmes linéaires en nombres entiers et, accessoirement, à donner des exemples de matrices vérifiant les hypothèses du Lemme 4.3.5 de Poincaré. […] Les problèmes de flots sont des problèmes d'optimisation sur des graphes, qui permettent de modéliser des réseaux (de transport, de communication, ou sociaux).</p>
+</div>
+<div class="box intu"><div class="box-h">Intuition — des solutions entières « gratuitement »</div>
+<p>Livrer $\frac23$ de voiture n'a pas de sens. Pourtant, dans tous les problèmes de cette page, on résout le programme linéaire <em>continu</em> (le simplexe, sans contrainte d'intégrité), et la solution trouvée est entière. Ce n'est pas de la chance : chaque arc part d'un nœud et arrive à un autre, donc chaque colonne de la matrice des contraintes contient exactement un $+1$ et un $-1$. Cette structure, avec des stocks, des demandes et des capacités entiers, suffit à garantir des sommets entiers. Par exemple, dans le problème du constructeur automobile (§4), le simplexe trouve le plan « 80 voitures de l'usine 1 vers le concessionnaire 1, 75 de l'usine 2 vers le concessionnaire 2 », entier, alors que rien ne l'imposait.</p>
+</div>
+
+<h3 id="reseaux-plan">Le plan de la page</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>Problème</th><th>Données</th><th>Ce que l'on cherche</th><th>Section</th></tr></thead>
+<tbody>
+<tr><td>flot de coût minimum</td><td>graphe, capacités $u$, coûts $c$, flots extérieurs $b$</td><td>le flot admissible le moins cher</td><td><a href="#flots">§2</a>, <a href="#matrice-incidence">§3</a></td></tr>
+<tr><td>transport</td><td>stocks, demandes, coûts usine → client</td><td>le plan de livraison le moins cher</td><td><a href="#transport">§4</a></td></tr>
+<tr><td>flot maximal</td><td>graphe, capacités, une source et un puits</td><td>le plus grand débit de $s$ à $p$</td><td><a href="#flot-maximal">§5</a></td></tr>
+<tr><td>plus court chemin</td><td>graphe, longueurs $c_{ij}\ge0$</td><td>le chemin le moins long de $s$ à $p$</td><td><a href="#plus-court-chemin">§6</a></td></tr>
+<tr><td>affectation</td><td>matrice de coûts $N\times N$</td><td>la permutation la moins chère</td><td><a href="#affectation">§7</a></td></tr>
+</tbody></table></div>
+<p>Les quatre derniers sont des cas particuliers du premier : on le montrera à chaque fois (Remarque 4.3.6, Exercices 4.3.2 et 4.3.3 du livre).</p>
+
+<div class="box app"><div class="box-h">En pratique — les flots en recherche opérationnelle</div>
+<p>Les problèmes de flots sont parmi les programmes linéaires les plus résolus au monde : plans de transport et de distribution, affectation d'équipages et de véhicules, routage dans les réseaux de télécommunication, emplois du temps. Comme leur structure est très particulière, on dispose d'algorithmes spécialisés bien plus rapides que le simplexe général : le <em>simplexe de réseau</em> (le simplexe du cours, où une base est un arbre du graphe, voir §4), les chemins augmentants pour le flot maximal (§5), Dijkstra pour le plus court chemin (§6), la méthode hongroise pour l'affectation (§7). En Python : <code>scipy.sparse.csgraph</code> (<code>maximum_flow</code>, <code>dijkstra</code>), <code>scipy.optimize.linear_sum_assignment</code>, la bibliothèque POT (<code>ot.emd</code>, un simplexe de réseau) ; OR-Tools de Google propose aussi des solveurs dédiés au flot maximal et au flot de coût minimum. Un solveur général comme HiGHS (<code>scipy.optimize.linprog</code>) résout aussi ces problèmes : c'est ce que font les scripts de vérification de cette page.</p>
+</div>

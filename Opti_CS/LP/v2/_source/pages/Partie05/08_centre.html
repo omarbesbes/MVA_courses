@@ -1,0 +1,123 @@
+<h2 id="centre-appels">8. Le centre d'appels (diapo 15)</h2>
+<p class="tldr">Un exemple complet du cours : modéliser un planning d'opérateurs, écrire le dual, le résoudre au dessin après une réduction à deux variables, en déduire le planning optimal par les écarts complémentaires, et lire les prix duaux comme le coût d'un client de plus.</p>
+
+<h3 id="centre-enonce">L'énoncé</h3>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo 15</span></div>
+<p><strong>Exemple.</strong> Soit un centre d'appels téléphoniques de paramètres</p>
+<ul>
+<li>$c_t$, le nombre de clients devant être servis à l'instant $t$ où $t\in[0,T]$</li>
+<li>$k$ tranches horaires de travail $[\alpha_i,\beta_i]$ pour $1\leqslant i\leqslant k$ avec $0\leqslant\alpha_i<\beta_i\leqslant T$.</li>
+<li>$S_i$, le salaire perçu sur la tranche $i$.</li>
+</ul>
+<p>On veut minimiser le coût total sous la contrainte de service satisfait.</p>
+<ol>
+<li>Introduire des variables et exprimer les contraintes et le coût comme un programme linéaire.</li>
+<li>Soient $0=\alpha_1<\alpha_2<\beta_1<\alpha_3<\beta_2<\beta_3=24$, $S=(4,5,6)$ et $c=(5,10,6,12,4)$ la suite du nombre de clients sur chaque intervalle à nombre d'opérateurs constant. Résoudre le problème dual.</li>
+</ol>
+</div>
+<dl class="decode">
+<dt>$c_t$</dt><dd>La demande à l'instant $t$ : combien de clients sont en ligne et doivent être servis. <strong>Attention :</strong> dans cet exemple, $c$ désigne les clients, et le coût est $S$ — l'inverse des notations du reste de la page.</dd>
+<dt>$[\alpha_i,\beta_i]$</dt><dd>La tranche horaire $i$ : un opérateur embauché sur cette tranche travaille de $\alpha_i$ à $\beta_i$.</dd>
+<dt>$S_i$</dt><dd>Le salaire d'un opérateur de la tranche $i$, pour toute la tranche.</dd>
+<dt>« intervalle à nombre d'opérateurs constant »</dt><dd>Un intervalle de temps sur lequel l'ensemble des tranches présentes ne change pas. Les $2k$ bornes $\alpha_i,\beta_i$ découpent $[0,T]$ en au plus $2k-1$ tels intervalles.</dd>
+<dt>« service satisfait »</dt><dd>À chaque instant, assez d'opérateurs pour servir tous les clients.</dd>
+</dl>
+
+<h3 id="centre-modele">Question 1 : le modèle</h3>
+<div class="box remark"><div class="box-h">Remarque — une hypothèse implicite</div>
+<p>La diapo ne le dit pas, mais le modèle suppose qu'<strong>un opérateur sert un client à la fois</strong> : « service satisfait à l'instant $t$ » signifie alors « au moins $c_t$ opérateurs présents ». On suppose aussi qu'un opérateur travaille toute sa tranche, et l'on accepte des nombres d'opérateurs fractionnaires (l'aspect entier est traité à la diapo 24, voir plus bas).</p>
+</div>
+<ol class="steps">
+<li>Variables : $x_i\ge0$ = nombre d'opérateurs embauchés sur la tranche $i$, $1\le i\le k$.<span class="why">Les décisions à prendre.</span></li>
+<li>$$\text{coût}=\sum_{i=1}^kS_i\,x_i=S\cdot x .$$<span class="why">Chaque opérateur de la tranche $i$ coûte $S_i$.</span></li>
+<li>$$\sum_{i\,:\,t\in[\alpha_i,\beta_i]}x_i\ \ge\ c_t\qquad\text{pour tout } t\in[0,T] .$$<span class="why">À l'instant $t$, les opérateurs présents sont ceux des tranches qui contiennent $t$ ; il en faut au moins $c_t$.</span></li>
+<li>Une contrainte par intervalle $I_j$ : $\displaystyle\sum_{i\,:\,I_j\subset[\alpha_i,\beta_i]}x_i\ge c_j$, avec $c_j=\max_{t\in I_j}c_t$.<span class="why">Le membre de gauche est constant sur chaque intervalle $I_j$ (c'est leur définition) : une infinité de contraintes se réduit à au plus $2k-1$. Aux instants de relève, les deux équipes sont présentes, et la contrainte y est plus facile.</span></li>
+<li>$$\min\ S\cdot x\quad\text{sous}\quad Ux\ge c,\quad x\ge0,\qquad u_{ji}=\begin{cases}1&\text{si } I_j\subset[\alpha_i,\beta_i],\\0&\text{sinon.}\end{cases}$$<span class="why">Forme matricielle : $U$ a une ligne par intervalle et une colonne par tranche.</span></li>
+</ol>
+<div class="box remark"><div class="box-h">Note sur les sources</div>
+<p>La diapo 24 reprend cet exemple avec « $u_{ij}=1$ si la fraction de tranche horaire $j$ est dans la tranche horaire $i$ » et écrit « $Ux\geqslant c$ dans $\R^T$ ». Avec $x\in\R^k$ et $c\in\R^T$, il faut que $U$ soit de taille $T\times k$ : la ligne doit être l'intervalle (la « fraction ») et la colonne la tranche, comme ci-dessus ($u_{ji}$). Les indices de la diapo sont échangés ; le reste est juste.</p>
+</div>
+
+<h3 id="centre-donnees">Question 2 : la matrice et le dual</h3>
+<p>L'ordre $0=\alpha_1<\alpha_2<\beta_1<\alpha_3<\beta_2<\beta_3=24$ donne cinq intervalles :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>intervalle</th><th>$I_1=[\alpha_1,\alpha_2]$</th><th>$I_2=[\alpha_2,\beta_1]$</th><th>$I_3=[\beta_1,\alpha_3]$</th><th>$I_4=[\alpha_3,\beta_2]$</th><th>$I_5=[\beta_2,\beta_3]$</th></tr></thead>
+<tbody>
+<tr><td>tranches présentes</td><td>1</td><td>1 et 2</td><td>2</td><td>2 et 3</td><td>3</td></tr>
+<tr><td>clients $c_j$</td><td>5</td><td>10</td><td>6</td><td>12</td><td>4</td></tr>
+</tbody></table></div>
+$$U=\begin{pmatrix}1&0&0\\1&1&0\\0&1&0\\0&1&1\\0&0&1\end{pmatrix},\qquad\begin{aligned}\min\ \ &4x_1+5x_2+6x_3\\ \text{sous}\ \ &x_1\ge5,\ \ x_1+x_2\ge10,\ \ x_2\ge6,\\ &x_2+x_3\ge12,\ \ x_3\ge4,\ \ x\ge0 .\end{aligned}$$
+<figure class="fig"><!-- include figures/P05/frise.svg --><figcaption>Les trois tranches sur la journée, les cinq intervalles, et pour chacun la demande $c_j$ (orange) et l'effectif $(U\bar x)_j$ du planning optimal (bleu), ainsi que les prix duaux $\bar p_j$ calculés plus bas. Les instants sont placés à intervalles réguliers : la diapo ne donne que leur ordre.</figcaption></figure>
+<p><strong>Le dual.</strong> Le primal est en forme symétrique ($\min$, contraintes $\ge$, variables $\ge0$) : par le tableau du §2, une variable $p_j\ge0$ par intervalle, une contrainte par tranche, la matrice $U\T$ :</p>
+$$\max\ 5p_1+10p_2+6p_3+12p_4+4p_5\quad\text{sous}\quad\begin{cases}p_1+p_2\le4&(\text{tranche }1)\\p_2+p_3+p_4\le5&(\text{tranche }2)\\p_4+p_5\le6&(\text{tranche }3)\end{cases}\qquad p\ge0 .$$
+<p><strong>Lecture.</strong> Une agence d'intérim propose de prendre en charge les clients au prix $p_j$ par client de l'intervalle $I_j$. Pour être compétitive, ce qu'elle facture pour les intervalles couverts par une tranche ne doit pas dépasser le salaire d'un opérateur de cette tranche (un opérateur de la tranche 2 sert un client sur $I_2$, $I_3$ et $I_4$, pour 5). Elle maximise sa recette.</p>
+
+<h3 id="centre-resolution">Résoudre le dual : deux variables suffisent, puis un dessin</h3>
+<p>Le dual a cinq variables : impossible de le dessiner tel quel. Mais regardez la structure : $p_1$ n'apparaît que dans la contrainte de la tranche 1, $p_3$ que dans celle de la tranche 2, $p_5$ que dans celle de la tranche 3, et tous trois ont un coefficient positif dans l'objectif. Une fois $p_2$ et $p_4$ fixés, il faut les prendre aussi grands que possible.</p>
+<ol class="steps">
+<li>$$p_1=4-p_2,\qquad p_3=5-p_2-p_4,\qquad p_5=6-p_4 .$$<span class="why">À $(p_2,p_4)$ fixé, le problème en $(p_1,p_3,p_5)$ se sépare en trois problèmes à une variable, du type $\max 5p_1$ sous $0\le p_1\le4-p_2$ : la borne supérieure est atteinte. Il faut que ces bornes soient $\ge0$.</span></li>
+<li>$$\varphi(p_2,p_4)=5(4-p_2)+10p_2+6(5-p_2-p_4)+12p_4+4(6-p_4)=74-p_2+2p_4 .$$<span class="why">On remplace dans l'objectif : la constante vaut $20+30+24=74$, le coefficient de $p_2$ vaut $-5+10-6=-1$, celui de $p_4$ vaut $-6+12-4=2$.</span></li>
+<li>$$p_2\ge0,\quad p_4\ge0,\quad p_2\le4,\quad p_2+p_4\le5,\quad p_4\le6 .$$<span class="why">$p_1\ge0$, $p_3\ge0$, $p_5\ge0$ s'écrivent ainsi. Le polygone a pour sommets $(0,0)$, $(4,0)$, $(4,1)$ et $(0,5)$ ($p_4\le6$ ne coupe rien).</span></li>
+<li>$$\varphi(0,0)=74,\quad\varphi(4,0)=70,\quad\varphi(4,1)=72,\quad\varphi(0,5)=84 .$$<span class="why">L'optimum d'un programme linéaire en dimension 2 est en un sommet. On peut aussi le lire au dessin : la direction $(-1,2)$ de croissance de $\varphi$ pointe vers le haut et la gauche.</span></li>
+<li>$$\bar p=(4,\ 0,\ 0,\ 5,\ 1),\qquad c\cdot\bar p=20+60+4=84 .$$<span class="why">On remonte : $p_2=0$, $p_4=5$, puis $p_1=4$, $p_3=0$, $p_5=1$ (ligne 1).</span></li>
+</ol>
+<figure class="fig"><!-- include figures/P05/centre-dual.svg --><figcaption>Le dual du centre d'appels réduit au plan $(p_2,p_4)$ : le polygone admissible, les lignes de niveau de $\varphi=74-p_2+2p_4$, et l'optimum $(0,5)$, de valeur 84.</figcaption></figure>
+
+<details class="fold more"><summary>Pour aller plus loin : la même chose par le simplexe sur le dual</summary><div class="fold-body">
+<p>Le dual a des contraintes « $\le$ » de second membre $S\ge0$ : avec trois écarts $z_1,z_2,z_3$, la base des écarts est admissible d'emblée, ce qui n'est pas le cas du primal (contraintes « $\ge$ »). On maximise ; on fait entrer la variable de plus grand gain (le simplexe du cours appliqué à $\min-c\cdot p$).</p>
+<div class="table-wrap"><table>
+<thead><tr><th>pas</th><th>base</th><th>valeur</th><th>gains des variables hors base</th><th>pivot</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>$z_1,z_2,z_3$</td><td>0</td><td>$p:(5,10,6,12,4)$</td><td>$p_4$ entre ; rapports $z_2:5$, $z_3:6$ ; $z_2$ sort</td></tr>
+<tr><td>1</td><td>$z_1,p_4,z_3$</td><td>60</td><td>$p_1:5$, $p_5:4$, $p_2:-2$, $p_3:-6$, $z_2:-12$</td><td>$p_1$ entre ; rapport $z_1:4$ ; $z_1$ sort</td></tr>
+<tr><td>2</td><td>$p_1,p_4,z_3$</td><td>80</td><td>$p_5:4$, $p_2:-7$, $p_3:-6$, $z_1:-5$, $z_2:-12$</td><td>$p_5$ entre ; rapport $z_3:1$ ; $z_3$ sort</td></tr>
+<tr><td>3</td><td>$p_1,p_4,p_5$</td><td>84</td><td>$p_2:-3$, $p_3:-2$, $z_1:-5$, $z_2:-8$, $z_3:-4$</td><td>tous $\le0$ : optimal</td></tr>
+</tbody></table></div>
+<p>Le vecteur dual de la base finale (§6), au signe près, est $(5,8,4)$ : c'est le planning optimal. Le simplexe sur le dual rend le primal dans ses multiplicateurs. Et les gains $-3$ et $-2$ de $p_2$ et $p_3$ sont les opposés des surplus du primal sur $I_2$ et $I_3$ (voir plus bas).</p>
+</div></details>
+
+<h3 id="centre-primal">Le planning optimal par les écarts complémentaires</h3>
+<p>On connaît $\bar p$ ; la méthode du §5, dans le sens « de $\bar p$ vers $\bar x$ », donne le planning.</p>
+<ol class="steps">
+<li>$$\bar p_1=4>0\Rightarrow x_1=5,\qquad\bar p_4=5>0\Rightarrow x_2+x_3=12,\qquad\bar p_5=1>0\Rightarrow x_3=4 .$$<span class="why">Un prix non nul force sa contrainte primale à être serrée : $p_j\,(Ux-c)_j=0$.</span></li>
+<li>$$\bar x=(5,\ 8,\ 4) .$$<span class="why">On résout : $x_3=4$, puis $x_2=8$.</span></li>
+<li>$$U\bar x=(5,13,8,12,4)\ge c=(5,10,6,12,4) .$$<span class="why">Admissible : les intervalles $I_2$ et $I_3$ sont sur-couverts (surplus 3 et 2), ce qui est compatible avec $\bar p_2=\bar p_3=0$.</span></li>
+<li>$$S\cdot\bar x=20+40+24=84=c\cdot\bar p .$$<span class="why">Même valeur : $\bar x$ et $\bar p$ sont optimaux (Remarque 4.2.14). Les trois contraintes duales sont serrées ($4=4$, $0+0+5=5$, $5+1=6$), ce qui est cohérent avec $\bar x_1,\bar x_2,\bar x_3>0$.</span></li>
+</ol>
+<p>Vérification par <code>linprog</code> : primal <code>x = [5. 8. 4.]</code>, <code>fun = 84.0</code> ; dual <code>[4. 0. 0. 5. 1.]</code>, valeur 84. Écrit sous la forme <code>-U @ x &lt;= -c</code>, le primal donne <code>ineqlin.marginals = [-4, -0, -0, -5, -1]</code>, soit $\bar p=-$<code>marginals</code> (§4).</p>
+<div class="box remark"><div class="box-h">Remarque — un planning entier sans l'avoir demandé</div>
+<p>On n'a pas imposé $x\in\N^3$, et pourtant $\bar x=(5,8,4)$ est entier. Ce n'est pas un hasard : la matrice $U$ a, dans chaque colonne, des 1 consécutifs ; elle est <em>totalement unimodulaire</em>, et avec $c$ entier, les sommets du polyèdre sont entiers. C'est l'objet de la diapo 24 et de la <a href="Partie06.html#unimodularite">partie 6</a>.</p>
+</div>
+
+<h3 id="centre-interpretation">Ce que disent les prix duaux</h3>
+<p>$\bar p_j$ est le <strong>coût marginal d'un client de plus sur l'intervalle $I_j$</strong> (§7). Vérifions-le en résolvant à nouveau le problème avec un client de plus, intervalle par intervalle :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>un client de plus sur</th><th>$I_1$</th><th>$I_2$</th><th>$I_3$</th><th>$I_4$</th><th>$I_5$</th></tr></thead>
+<tbody>
+<tr><td>nouveau coût optimal</td><td>88</td><td>84</td><td>84</td><td>89</td><td>85</td></tr>
+<tr><td>hausse = $\bar p_j$</td><td>4</td><td>0</td><td>0</td><td>5</td><td>1</td></tr>
+<tr><td>nouveau planning</td><td>$(6,8,4)$</td><td>$(5,8,4)$</td><td>$(5,8,4)$</td><td>$(5,9,4)$</td><td>$(5,7,5)$</td></tr>
+</tbody></table></div>
+<ul>
+<li>$\bar p_1=4$ : seule la tranche 1 couvre $I_1$ ; il faut un opérateur de plus, à 4.</li>
+<li>$\bar p_2=\bar p_3=0$ : ces intervalles sont déjà sur-couverts (13 et 8 opérateurs pour 10 et 6 clients) ; un client de plus ne coûte rien.</li>
+<li>$\bar p_4=5$ : un opérateur de la tranche 2, moins cher (5) qu'un de la tranche 3 (6).</li>
+<li>$\bar p_5=1$ : le plus subtil. On ajoute un opérateur en tranche 3 (+6) et l'on en retire un en tranche 2 (−5) : $I_4$ reste à 12, $I_3$ passe à 7 $\ge6$, $I_2$ à 12 $\ge10$. Coût net : +1.</li>
+</ul>
+<p>Ce prix n'est valable que localement (§7) : $\bar p_5=1$ tient tant que $c_5\le6$ (en $c_5=6$, le planning optimal est $(5,6,6)$, de coût 86). Au-delà, la tranche 2 est descendue à 6 opérateurs, le minimum exigé par $I_3$ : un client de plus sur $I_5$ coûte un opérateur entier de la tranche 3, et le coût passe de 86 ($c_5=6$) à 92 ($c_5=7$).</p>
+
+<div class="widget" data-widget="p5centre"><p class="w-noscript">Figure interactive (nécessite JavaScript).</p></div>
+<p><strong>À observer :</strong> en mode « planifier soi-même », réglez $x_1,x_2,x_3$. Un intervalle non couvert devient rose. Quand le planning est admissible, le texte calcule l'écart à l'optimum avec le certificat dual : $S\cdot x-c\cdot\bar p=\sum_j\bar p_j\times(\text{surplus de } I_j)$, car ici $S-U\T\bar p=0$. Le planning de départ $(6,9,5)$ coûte 99 : l'écart 15 vient d'un opérateur de trop sur $I_1$ ($4\times1$), deux sur $I_4$ ($5\times2$) et un sur $I_5$ ($1\times1$) ; les surplus sur $I_2$ et $I_3$ ne coûtent rien. En mode « changer la demande », le widget résout le primal et le dual exactement : comparez la liste des hausses réelles du coût pour un client de plus avec les prix duaux. Elles coïncident tant que la base ne change pas. Poussez $c_5$ de 4 à 7 : pour $c_5=4$ et $5$, un client de plus sur $I_5$ coûte 1, comme le prix dual ; en $c_5=6$, il coûte déjà 6, et le dual a plusieurs solutions (le texte le signale : c'est un point anguleux, où $p_5$ peut valoir de 1 à 6) ; en $c_5=7$, le prix dual de $I_5$ est devenu 6.</p>
+
+<div class="box reflex"><div class="box-h">Réflexes</div>
+<ul>
+<li>Des contraintes « $\ge$ » en minimisation avec des coûts positifs → le dual a des contraintes « $\le$ » de second membre $\ge0$ : sa base d'écarts est admissible d'emblée, sans phase I.</li>
+<li>Un dual à beaucoup de variables → chercher celles qui n'apparaissent que dans une contrainte : on peut les éliminer et dessiner.</li>
+<li>Un prix dual positif → une contrainte primale serrée ; un intervalle sur-couvert → un prix nul.</li>
+</ul>
+</div>
+
+<div class="quiz"><p>Le salaire de la tranche 3 passe de 6 à 7. Sans rien résoudre, le planning $(5,8,4)$ reste-t-il optimal ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>Cherchons un $p\ge0$ qui vérifie les écarts complémentaires avec $(5,8,4)$ : les surplus sur $I_2$, $I_3$ imposent $p_2=p_3=0$ ; $x_1,x_2,x_3>0$ imposent $p_1=4$, $p_4=5$, $p_4+p_5=7$, d'où $p_5=2$. $p=(4,0,0,5,2)\ge0$ est admissible : oui, $(5,8,4)$ reste optimal, de coût $20+40+28=88=c\cdot p=20+60+8$. Seul le prix de $I_5$ a changé. (Vérifié par <code>linprog</code>.)</p>
+</div></details></div>

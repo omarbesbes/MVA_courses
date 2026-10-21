@@ -1,0 +1,98 @@
+<!--
+title: Partie 3 — L'algorithme du simplexe
+short: 3 · Simplexe
+description: L'algorithme du simplexe pas à pas : coûts réduits (4.6), Proposition 4.2.8 et Remarque 4.2.9, test du rapport, tableau, dégénérescence et cyclage (Beale, Bland), Klee–Minty, phase I (4.8), inversion de la base, exercices 4.2.3 à 4.2.5 corrigés.
+subtitle: Diapos 6–11 et Allaire §4.2.2 (p. 124–128). On part d'un sommet, on suit une arête qui fait baisser le coût, on recommence ; on s'arrête quand aucune arête ne descend. Chaque formule est dérivée ligne par ligne et essayée sur le polygone de l'exercice 4.2.1.
+kicker: Optimisation · Programmation linéaire · guide v2 · partie 3
+-->
+
+<div class="box objectives">
+<div class="box-h">Ce que vous saurez faire après cette page</div>
+<ol>
+<li>Écrire, en un sommet, le coût de n'importe quel point admissible avec la formule (4.6), et lire les <strong>coûts réduits</strong> comme des <strong>pentes</strong> du coût le long des arêtes.</li>
+<li>Énoncer et démontrer le critère d'optimalité $\ct_N\ge0$ (Proposition 4.2.8), dire pourquoi il faut la non-dégénérescence pour la réciproque (Remarque 4.2.9), et le vérifier sur un contre-exemple.</li>
+<li>Dérouler <strong>à la main</strong> une itération du simplexe : variable entrante, direction $B^{-1}a_i$, <strong>test du rapport</strong>, variable sortante, nouveau sommet, nouveau coût — avec des matrices ou avec le <strong>tableau</strong>.</li>
+<li>Reconnaître un problème <strong>non borné</strong> pendant l'algorithme, et un pivot <strong>dégénéré</strong> ($\eps_k=0$).</li>
+<li>Expliquer pourquoi le simplexe s'arrête (Lemme 4.2.10), montrer qu'il peut <strong>cycler</strong> (exemple de Beale) et comment la <strong>règle de Bland</strong> l'en empêche.</li>
+<li>Trouver un premier sommet par la <strong>phase I</strong> (4.8), lire son résultat ($X_{\mathrm{ad}}$ vide ou non) et traiter les variables artificielles restées dans la base.</li>
+<li>Mettre à jour l'inverse de la base avec les matrices $E^k$ au lieu de l'inverser à chaque pas, et corriger la formule imprimée de $(E^k)^{-1}$.</li>
+<li>Résoudre les exercices 4.2.3, 4.2.4 et 4.2.5 du livre, et relier le simplexe aux solveurs (HiGHS), au transport optimal et à la régression en norme $\ell^1$.</li>
+</ol>
+</div>
+
+<h2 id="start">0. Avant de commencer</h2>
+
+<h3 id="lire">Comment lire cette page</h3>
+<p>La page suit les diapos 6 à 11 et la section 4.2.2 du livre d'Allaire, dans leur ordre. Chaque énoncé du cours est cité dans un encadré comme celui-ci, avec sa référence exacte :</p>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo N, ou Allaire, Prop. 4.2.8, p. 125</span></div>
+<p>Une citation fidèle, dans la notation de la source.</p>
+</div>
+<p>Il est suivi d'un <strong>décodage</strong> (chaque symbole en mots), d'un <strong>petit exemple chiffré</strong>, de <strong>l'idée</strong>, puis de la <strong>preuve complète</strong>, repliée (bouton « Tout déplier » en haut de la page). Les autres encadrés :</p>
+<div class="cols">
+<div class="box def"><div class="box-h">Définition</div><p>Un objet nouveau, défini précisément.</p></div>
+<div class="box thm"><div class="box-h">Proposition</div><p>Un résultat, avec ses hypothèses.</p></div>
+<div class="box intu"><div class="box-h">Intuition</div><p>L'image à garder en tête.</p></div>
+<div class="box example"><div class="box-h">Exemple</div><p>Des nombres que l'on peut vérifier à la main.</p></div>
+<div class="box pitfall"><div class="box-h">Piège</div><p>Une erreur classique.</p></div>
+<div class="box reflex"><div class="box-h">Réflexe</div><p>« Quand vous voyez … → pensez … ».</p></div>
+<div class="box recall"><div class="box-h">Rappel</div><p>Un prérequis rappelé là où il sert, avec un lien vers la page <a href="Rappels.html">Rappels</a>.</p></div>
+<div class="box remark"><div class="box-h">Note sur les sources</div><p>Une coquille ou une imprécision des diapos ou du livre, avec sa vérification.</p></div>
+<div class="box ml"><div class="box-h">En machine learning</div><p>Où l'idée sert en apprentissage, sur un exemple concret.</p></div>
+<div class="box app"><div class="box-h">En pratique</div><p>Ce que font vraiment les solveurs.</p></div>
+</div>
+<p>Les figures interactives ont des menus et des boutons : le texte « À observer » sous chacune dit quoi regarder. <strong>Tous les nombres de cette page</strong> (chemins, tableaux, coûts réduits, rapports, solutions des exercices, nombres d'itérations) ont été calculés par des scripts en fractions exactes, et vérifiés avec <code>scipy.optimize.linprog</code> (HiGHS).</p>
+
+<h3 id="histoire">L'histoire de la partie en six étapes</h3>
+<p class="tldr">Un sommet se code par une base ; dans cette base, le coût se lit comme une fonction affine des variables hors base, dont les pentes sont les coûts réduits ; tant qu'une pente est négative, on glisse le long de l'arête correspondante jusqu'au sommet suivant.</p>
+<ol class="chain">
+<li><strong>Le point de départ (partie 2).</strong> L'optimum, s'il existe, est atteint en un sommet ; et un sommet, c'est une solution basique : on choisit $m$ colonnes libres de $A$ (une base $B$), on annule les autres variables et on résout $Bx_B=b$.</li>
+<li><strong>Les coûts réduits (§2).</strong> En partant d'un sommet, le coût de tout point admissible s'écrit $c\cdot x=c\cdot\bar x+\ct_N\cdot x_N$ (formule (4.6)). Si toutes les pentes $\ct_N$ sont $\ge0$, on ne peut que monter : le sommet est optimal.</li>
+<li><strong>Un pas (§3).</strong> Si une pente $\ct_i$ est $<0$, on fait croître la variable $x_i$ : on glisse le long d'une arête. Le <strong>test du rapport</strong> dit jusqu'où : jusqu'à ce qu'une variable de base s'annule. On échange alors une colonne de la base : c'est un <strong>pivot</strong>. Si rien n'arrête la glissade, le problème est non borné.</li>
+<li><strong>L'arrêt (§4).</strong> Le coût baisse strictement à chaque pas si aucun sommet n'est dégénéré (Lemme 4.2.10) ; sinon, un pas peut être nul et l'algorithme peut tourner en rond (cyclage). La règle de Bland l'empêche. Le nombre de pas peut être exponentiel (Klee–Minty), mais il est modeste en pratique.</li>
+<li><strong>Le départ (§5).</strong> Pour trouver un premier sommet, on résout un problème auxiliaire dont un sommet est évident : c'est la <strong>phase I</strong>. Elle dit aussi si l'ensemble admissible est vide.</li>
+<li><strong>Le coût d'un pas (§6–§7).</strong> On ne réinverse pas la base : on met à jour son inverse avec une matrice $E^k$ très simple. C'est l'ancêtre des factorisations $LU$ mises à jour des solveurs modernes (HiGHS dans <code>scipy</code>), qui résolvent aussi le transport optimal et la régression en norme $\ell^1$.</li>
+</ol>
+
+<h3 id="prerequis">Ce qu'il faut savoir des parties 1 et 2</h3>
+<p>Ouvrez seulement les rappels dont vous avez besoin. Chacun dit exactement ce qui sert sur cette page.</p>
+
+<details class="fold more" id="rappel-forme-standard"><summary>Rappel — la forme standard et les variables d'écart (partie 1)</summary><div class="fold-body">
+<p>Le simplexe travaille sur la <em class="new">forme standard</em> $\min\{c\cdot x\ :\ Ax=b,\ x\ge0\}$ avec $A\in\Mc_{m\times n}(\R)$, $m\le n$ et $\rg A=m$ (les $m$ lignes de $A$ sont indépendantes). On s'y ramène toujours : une contrainte $a\cdot x\le\beta$ devient $a\cdot x+s=\beta$ avec une <em class="new">variable d'écart</em> $s\ge0$ ; un maximum devient un minimum en changeant $c$ en $-c$ ; une variable libre s'écrit $x=x^+-x^-$.</p>
+<p><strong>L'exemple fil rouge</strong> est l'exercice 4.2.1 : $\max\,x_1+2x_2$ sous $-3x_1+2x_2\le2$, $-x_1+2x_2\le4$, $x_1+x_2\le5$, $x\ge0$. En forme standard, avec les écarts $x_3,x_4,x_5$ :</p>
+$$\min\ -x_1-2x_2\quad\text{sous}\quad\begin{cases}-3x_1+2x_2+x_3=2\\-x_1+2x_2+x_4=4\\x_1+x_2+x_5=5\end{cases},\qquad x\in\R^5,\ x\ge0,$$
+<p>soit $m=3$, $n=5$, $c=(-1,-2,0,0,0)$. Une droite du dessin est l'endroit où une variable d'écart s'annule : « $x_3=0$ » est la droite $-3x_1+2x_2=2$. Plus de détails : <a href="Partie01.html#forme-standard">partie 1, forme standard</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-bases"><summary>Rappel — bases, solutions basiques, sommets (partie 2)</summary><div class="fold-body">
+<p>Une <em class="new">base</em> est un choix de $m$ colonnes de $A$ formant une matrice carrée $B$ inversible. Après permutation des colonnes, $A=(B\ N)$ et $x=(x_B,x_N)$ : les $x_B$ sont les <em>variables de base</em>, les $x_N$ les <em>variables hors base</em>. La <em class="new">solution basique</em> associée est</p>
+$$x_N=0,\qquad x_B=B^{-1}b .$$
+<p>Elle est <em>admissible</em> si $x_B\ge0$, et <em class="new">dégénérée</em> si de plus une composante de $x_B$ est nulle. Le résultat central de la partie 2 (Lemme 4.2.5) : <strong>les sommets de $\Xad$ sont exactement les solutions basiques admissibles</strong>. Et si le problème a une solution optimale, il en a une en un sommet (Proposition 4.2.6).</p>
+<p>Sur l'exercice 4.2.1 : il y a $\binom53=10$ façons de choisir 3 colonnes parmi 5 ; les 10 matrices sont inversibles ; 5 donnent $x_B\ge0$, ce sont les 5 sommets $(0\,;0)$, $(0\,;1)$, $(1\,;\frac52)$, $(2\,;3)$, $(5\,;0)$ ; les 5 autres donnent un point hors du polygone. Exemple : la base $\{x_2,x_4,x_5\}$ (on annule $x_1$ et $x_3$, c'est-à-dire « $x_1=0$ et $x_3=0$ ») donne le sommet $(0\,;1)$ avec $x_4=2$, $x_5=4$.</p>
+<p>Plus de détails : <a href="Partie02.html#bases">partie 2, bases</a>, <a href="Partie02.html#sommets-basiques">sommets et solutions basiques</a>, <a href="Partie02.html#optimum-sommet">l'optimum en un sommet</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-inverse"><summary>Rappel — inverse d'une matrice, système $Bz=r$, pivot de Gauss–Jordan</summary><div class="fold-body">
+<p>Une matrice carrée $B$ est inversible si et seulement si $\det B\ne0$, si et seulement si ses colonnes sont libres. Calculer $B^{-1}b$ revient à résoudre le système $Bz=b$. La méthode de <em class="new">Gauss–Jordan</em> le fait par opérations sur les lignes : diviser une ligne par un nombre non nul (le <em>pivot</em>), retrancher à une autre ligne un multiple de celle-ci, jusqu'à obtenir l'identité à gauche. Si l'on applique ces opérations à la matrice $(B\ |\ A\ |\ b)$, on obtient $(\Id\ |\ B^{-1}A\ |\ B^{-1}b)$ : c'est exactement ce que fait le <a href="#tableau">tableau du simplexe</a>.</p>
+<p>Inverse d'une matrice $2\times2$ : $\begin{pmatrix}a&b\\c&d\end{pmatrix}^{-1}=\frac1{ad-bc}\begin{pmatrix}d&-b\\-c&a\end{pmatrix}$. Plus de détails : <a href="Rappels.html#inverse-cramer">inverse et Cramer</a>, <a href="Rappels.html#systemes">systèmes linéaires</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-transposee"><summary>Rappel — la transposée et le produit scalaire</summary><div class="fold-body">
+<p>Pour $M\in\Mc_{p\times q}(\R)$, $u\in\R^p$ et $v\in\R^q$ :</p>
+$$u\cdot Mv=M^\top u\cdot v,\qquad (MN)^\top=N^\top M^\top,\qquad (B^{-1})^\top=(B^\top)^{-1}\ \text{(noté }B^{-\top}).$$
+<p>La première identité se vérifie en écrivant les deux membres : $\sum_i u_i\sum_jM_{ij}v_j=\sum_j\big(\sum_iM_{ij}u_i\big)v_j$. Elle sert à « faire passer » une matrice de l'autre côté d'un produit scalaire ; c'est le seul outil de la preuve de (4.6). Plus de détails : <a href="Rappels.html#transposee">la transposée</a>.</p>
+</div></details>
+
+<h3 id="notation">Notation : diapos, livre, ce guide</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>Objet</th><th>Diapos</th><th>Livre (Allaire)</th><th>Ce guide</th></tr></thead>
+<tbody>
+<tr><td>transposée</td><td>${}^tA$</td><td>$A^*$</td><td>$A^\top$</td></tr>
+<tr><td>itération $k$</td><td>$x_k$, $B_k$, $\eps_k$ (indices en bas)</td><td>$x^k$, $B^k$, $\eps^k$ (en haut)</td><td>$x^k$, $B^k$, $\eps_k$</td></tr>
+<tr><td>coûts réduits</td><td>$\ct_N=c_N-{}^t(B^{-1}N)c_B$, $\ct_k=c_{k,N}-{}^tN_k\,{}^tB_k^{-1}c_{k,B}$</td><td>$\ct_N=c_N-N^*(B^{-1})^*c_B$</td><td>$\ct_N=c_N-N^\top B^{-\top}c_B$</td></tr>
+<tr><td>colonne entrante</td><td>$N_i$ (diapo 7), $a_i$ (diapo 10)</td><td>$a_i$</td><td>$a_i$ ; direction $d=B^{-1}a_i$</td></tr>
+<tr><td>multiplicateurs du simplexe</td><td>—</td><td>—</td><td>$p=B^{-\top}c_B$, d'où $\ct_N=c_N-N^\top p$</td></tr>
+<tr><td>problème de phase I</td><td>$\min 1\cdot y$, $\tilde Ax+y=\tilde b$, $\tilde b_i=\abs{b_i}$</td><td>$\inf k\cdot y$, $Ax+y=b$ après $b\ge0$ (4.8)</td><td>$\min\sum_iy_i$, $Ax+y=b$ avec $b\ge0$</td></tr>
+<tr><td>matrice de mise à jour</td><td>—</td><td>$E^k$, $(E^k)^{-1}$ (p. 128)</td><td>$E^k$, colonne $l=(B^k)^{-1}a_i$</td></tr>
+</tbody></table></div>
+<p>Le livre écrit aussi $(B^{k^{-1}})^*$ pour $\big((B^k)^{-1}\big)^*$ (p. 126) : l'exposant $-1$ porte sur $B^k$, pas sur $k$. Dans les tableaux de cette page, la ligne $\ct$ contient les coûts réduits de <em>toutes</em> les variables (zéro pour les variables de base), et la case du coin contient $-c\cdot x$ (on verra pourquoi au <a href="#tableau">§3</a>).</p>
+<p>Code couleur des figures : <span class="col1">ensemble admissible $\Xad$ (bleu)</span>, <span class="col2">coût, lignes de niveau, arêtes qui descendent (rouge orangé)</span>, <span class="col3">sommet courant, chemin du simplexe, optimum (vert)</span> ; en rose, les points hors de $\Xad$ ; en gris, les droites des contraintes, chacune étiquetée par la variable d'écart qui s'y annule.</p>

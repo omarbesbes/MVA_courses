@@ -1,0 +1,102 @@
+<!--
+title: Partie 1 — Modéliser : qu'est-ce qu'un programme linéaire ?
+short: 1 · Modéliser
+description: Partie 1 du guide v2 de programmation linéaire (CentraleSupélec) : modéliser un problème par un programme linéaire, la forme standard et les réductions (4.2)–(4.4), la géométrie (polyèdres, lignes de niveau, exemple (4.5)), le vocabulaire, l'existence d'une solution optimale (Lemme 4.2.3), l'Exercice 4.2.1 corrigé et des applications en machine learning.
+subtitle: Des problèmes où tout est linéaire : comment les écrire, les ramener à une seule forme, les dessiner, et pourquoi leur minimum, s'il est fini, est toujours atteint. Diapos 4–5 et Allaire §4.1–4.2.1 (p. 119–122), pas à pas.
+kicker: Optimisation · Programmation linéaire · guide v2 · partie 1
+-->
+
+<div class="box objectives">
+<div class="box-h">Ce que vous saurez faire après cette page</div>
+<ol>
+<li><strong>Modéliser</strong> un problème de décision par un programme linéaire en répondant à trois questions (variables, objectif, contraintes), et repérer les pièges : unités, contraintes oubliées, termes non linéaires.</li>
+<li><strong>Linéariser</strong> une valeur absolue ou un maximum de fonctions affines avec une variable « épigraphe », et savoir quand ce n'est pas possible.</li>
+<li>Mettre n'importe quel programme linéaire sous <strong>forme standard</strong> $\min\{c\cdot x : Ax=b,\ x\ge0\}$ (réductions (4.2)–(4.4) du livre) et expliquer les hypothèses $m\le n$ et $\rg A=m$.</li>
+<li>Résoudre un programme à deux variables <strong>graphiquement</strong> (lignes de niveau, direction $c$, dernier point touché), et lire les variables d'écart comme des distances aux droites.</li>
+<li>Dire ce que sont un <strong>polyèdre</strong>, ses faces, arêtes et sommets, démontrer que $\Xad$ est convexe, et corriger l'exemple (4.5) du livre.</li>
+<li>Distinguer solution admissible, solution optimale et valeur optimale, et reconnaître les <strong>trois issues</strong> d'un programme linéaire : ensemble vide, valeur $-\infty$, optimum atteint.</li>
+<li>Énoncer et <strong>démontrer le Lemme 4.2.3</strong> (valeur finie $\Rightarrow$ solution optimale), en expliquant pourquoi c'est faux pour un problème non linéaire.</li>
+<li>Écrire comme des programmes linéaires la <strong>régression en norme $\ell^1$</strong>, la régression quantile, le SVM en norme $\ell^1$ et le transport optimal discret.</li>
+</ol>
+</div>
+
+<h2 id="start">0. Avant de commencer</h2>
+
+<h3 id="comment-lire">Comment lire cette page</h3>
+<p>La page suit le début du cours : les diapos 4 et 5, et dans le livre de G. Allaire l'introduction du chapitre 4 et le §4.2.1 (p. 119–122). Chaque énoncé du cours est cité fidèlement dans un encadré comme celui-ci, avec sa référence exacte :</p>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo N</span></div>
+<p>Une citation fidèle de la diapo (ou du livre : « Allaire, Lemme 4.2.3, p. 122 »), dans la notation de la source.</p>
+</div>
+<p>Il est toujours suivi d'un <strong>décodage</strong> (le sens de chaque symbole, en mots), du <strong>problème qu'il résout</strong>, d'un <strong>petit exemple chiffré</strong>, de l'<strong>idée</strong>, puis de la <strong>démonstration complète</strong>, repliée (cliquez pour l'ouvrir ; le bouton « Tout déplier » en haut ouvre tout). Les autres encadrés :</p>
+<div class="cols">
+<div class="box def"><div class="box-h">Définition</div><p>Un objet nouveau, défini précisément.</p></div>
+<div class="box thm"><div class="box-h">Lemme, proposition</div><p>Un résultat, avec ses hypothèses.</p></div>
+<div class="box intu"><div class="box-h">Intuition</div><p>L'image à garder en tête.</p></div>
+<div class="box example"><div class="box-h">Exemple</div><p>Des nombres que l'on vérifie à la main.</p></div>
+<div class="box pitfall"><div class="box-h">Piège</div><p>Une erreur classique.</p></div>
+<div class="box reflex"><div class="box-h">Réflexe</div><p>« Quand vous voyez … → pensez … ».</p></div>
+</div>
+<div class="cols">
+<div class="box recall"><div class="box-h">Rappel</div><p>Un prérequis rappelé là où il sert, avec un lien vers la <a href="Rappels.html">page Rappels</a>.</p></div>
+<div class="box ml"><div class="box-h">En machine learning</div><p>Où l'idée sert en apprentissage automatique, sur un exemple concret.</p></div>
+<div class="box app"><div class="box-h">En pratique</div><p>Recherche opérationnelle et solveurs : ce qu'on fait vraiment.</p></div>
+</div>
+<p>Les figures interactives ont des curseurs et des boutons ; le texte « À observer » qui les suit dit quoi regarder. <strong>Tous les nombres de cette page ont été vérifiés par ordinateur</strong> (fractions exactes et le solveur <code>scipy.optimize.linprog</code>).</p>
+
+<h3 id="histoire">L'histoire de cette partie en six étapes</h3>
+<p class="tldr">Un problème de décision où tout est linéaire s'écrit $\min c\cdot x$ sous des contraintes linéaires ; on le ramène à une seule forme ; son ensemble admissible est un polyèdre ; et si la valeur optimale est finie, elle est atteinte.</p>
+<ol class="chain">
+<li><strong>Modéliser (§1).</strong> On traduit un problème concret (produire, mélanger, transporter, affecter du personnel) : des <em>variables</em> de décision, un <em>objectif</em> linéaire, des <em>contraintes</em> linéaires. Quelques non-linéarités (valeur absolue, maximum) se linéarisent.</li>
+<li><strong>Une seule forme (§2).</strong> Toutes ces écritures se ramènent à la <em>forme standard</em> $\min\{c\cdot x : Ax=b,\ x\ge0\}$ : variables d'écart, $x=x^+-x^-$, $\max=-\min(-\cdot)$. Une seule théorie et un seul algorithme suffiront.</li>
+<li><strong>Une géométrie (§3).</strong> L'ensemble admissible $\Xad$ est un polyèdre convexe. Les lignes (ou plans) de niveau du coût sont parallèles ; on les pousse jusqu'au dernier contact : l'optimum est sur le bord, et l'on peut le prendre en un sommet.</li>
+<li><strong>Un vocabulaire (§4).</strong> Solution admissible, solution optimale, valeur optimale ; trois issues possibles : $\Xad$ vide, valeur $-\infty$, ou optimum atteint.</li>
+<li><strong>L'existence (§5).</strong> Le Lemme 4.2.3 : si la valeur est finie, il existe une solution optimale. C'est propre au linéaire ($e^{-x}$ n'atteint jamais $0$) ; la preuve repose sur un cône fermé, l'ingrédient du lemme de Farkas.</li>
+<li><strong>Applications et exercices (§6–§8).</strong> Régression $\ell^1$, régression quantile, SVM $\ell^1$, transport optimal ; un solveur en pratique ; l'Exercice 4.2.1 corrigé et onze exercices gradués.</li>
+</ol>
+
+<h3 id="prerequis">Ce qu'il faut savoir avant</h3>
+<p>Ouvrez seulement les rappels dont vous avez besoin. Chacun dit exactement ce qui sert sur cette page.</p>
+
+<details class="fold more" id="rappel-produit-scalaire"><summary>Rappel — produit scalaire, produit matrice-vecteur, inégalités entre vecteurs</summary><div class="fold-body">
+<p>Pour $c,x\in\R^n$, le <em class="new">produit scalaire</em> est $c\cdot x=\sum_{j=1}^nc_jx_j$. Exemple : $c=(1,2)$, $x=(2,3)$ donnent $c\cdot x=2+6=8$. Pour une matrice $A$ à $m$ lignes et $n$ colonnes, $Ax\in\R^m$ est le vecteur des produits scalaires des lignes de $A$ avec $x$ ; c'est aussi la combinaison des colonnes $a_j$ de $A$ avec les coefficients $x_j$ :</p>
+$$Ax=\sum_{j=1}^nx_j\,a_j .$$
+<p>Les deux lectures servent : « ligne par ligne » pour écrire les contraintes, « colonne par colonne » pour la géométrie (§5) et les bases (partie 2).</p>
+<p>Entre vecteurs, $x\ge0$ veut dire <strong>composante par composante</strong> : $x_j\ge0$ pour tout $j$. De même $Ax\le b$ veut dire $(Ax)_i\le b_i$ pour chaque ligne $i$. Ce n'est pas un ordre total : $(1,-1)$ n'est ni $\ge0$ ni $\le0$.</p>
+<p class="small">Sur la page Rappels : <a href="Rappels.html#algebre">algèbre linéaire</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-rang"><summary>Rappel — le rang d'une matrice</summary><div class="fold-body">
+<p>Le <em class="new">rang</em> $\rg A$ d'une matrice est le nombre maximal de lignes linéairement indépendantes ; c'est aussi le nombre maximal de colonnes indépendantes (les deux nombres sont égaux). Donc $\rg A\le\min(m,n)$. On le calcule par élimination de Gauss : c'est le nombre de pivots. Exemple : les lignes $(1,1,1)$ et $(2,2,2)$ sont proportionnelles, donc $\rg\begin{pmatrix}1&1&1\\2&2&2\end{pmatrix}=1$. <strong>Utilisé ici</strong> pour l'hypothèse $\rg A=m$ de la forme standard (§2).</p>
+<p class="small">Sur la page Rappels : <a href="Rappels.html#rang">le rang</a>, <a href="Rappels.html#systemes">systèmes linéaires</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-convexe"><summary>Rappel — ensembles convexes</summary><div class="fold-body">
+<p>Un ensemble $K\subset\R^n$ est <em class="new">convexe</em> si, avec deux points $y,z$, il contient tout le segment qui les joint : $\theta y+(1-\theta)z\in K$ pour tout $\theta\in[0,1]$. Une intersection de convexes est convexe (un point de l'intersection est dans chacun). Un <em class="new">demi-espace</em> $\{x : a\cdot x\le\beta\}$ et un hyperplan $\{x : a\cdot x=\beta\}$ sont convexes. <strong>Utilisé ici</strong> pour montrer que $\Xad$ est convexe et pour la définition d'un sommet (§3).</p>
+<p class="small">Sur la page Rappels : <a href="Rappels.html#ensembles-convexes">ensembles convexes</a>, <a href="Rappels.html#polyedres">polyèdres</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-inf"><summary>Rappel — infimum, minimum, suites minimisantes</summary><div class="fold-body">
+<p>L'<em class="new">infimum</em> d'une fonction $J$ sur un ensemble $K$ est le plus grand nombre qui minore $J$ sur $K$ ; il vaut $-\infty$ si $J$ n'est pas minorée, et <strong>par convention $+\infty$ si $K$ est vide</strong>. Il est <em>atteint</em> s'il existe $\bar x\in K$ avec $J(\bar x)=\inf_KJ$ ; on parle alors de minimum. Exemple : $\inf_{x\ge0}e^{-x}=0$ n'est pas atteint. Une <em class="new">suite minimisante</em> est une suite $x^k\in K$ avec $J(x^k)\to\inf_KJ$ ; il en existe toujours une si $K\ne\emptyset$ (Allaire, Déf. 2.1.2 et Lemme 2.1.3, p. 14). <strong>Utilisé ici</strong> dans la preuve de l'existence (§5).</p>
+<p class="small">Sur la page Rappels : <a href="Rappels.html#inf-sup">inf et sup</a>, <a href="Rappels.html#suites-minimisantes">suites minimisantes</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-ferme"><summary>Rappel — ensembles fermés, compacts, et le théorème d'existence en dimension finie</summary><div class="fold-body">
+<p>Un ensemble $F\subset\R^p$ est <em class="new">fermé</em> s'il contient les limites de ses suites convergentes. Il est <em>compact</em> s'il est fermé et borné ; alors toute suite de $F$ a une sous-suite convergente (Bolzano–Weierstrass). Le théorème d'existence du chapitre 2 (Allaire, Th. 2.2.1, p. 15) : <em>si $K$ est fermé non vide et $J$ continue et « infinie à l'infini » sur $K$, alors $J$ atteint son minimum sur $K$.</em> <strong>Utilisé ici</strong> pour l'exemple (4.5), où $\Xad$ est compact, et pour comprendre pourquoi le Lemme 4.2.3 va plus loin (§5).</p>
+<p class="small">Sur la page Rappels : <a href="Rappels.html#fermes">fermés</a>, <a href="Rappels.html#compacite">compacité</a>.</p>
+</div></details>
+
+<h3 id="notation">Notation : diapos, livre, ce guide</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>Objet</th><th>Diapos</th><th>Livre (Allaire)</th><th>Ce guide</th></tr></thead>
+<tbody>
+<tr><td>le problème</td><td>$\inf_{Ax=b,\ x\geqslant0}c\cdot x$, $x\in\R^n$</td><td>$\inf_{x\in\R^n\text{ tel que }Ax=b,\ x\ge0}c\cdot x$ (4.1)</td><td>$\min\{c\cdot x : Ax=b,\ x\ge0\}$ (on écrit $\min$ quand le minimum est atteint)</td></tr>
+<tr><td>la matrice</td><td>$A\in\mathcal M_{m\times n}$</td><td>« matrice de taille $m\times n$ »</td><td>$A\in\Mc_{m\times n}(\R)$, colonnes $a_1,\dots,a_n$</td></tr>
+<tr><td>ensemble admissible</td><td>$X_{ad}=\{x\in\R^n_+,\ Ax=b\}$</td><td>$X_{ad}$</td><td>$\Xad$</td></tr>
+<tr><td>transposée</td><td>${}^tA$</td><td>$A^*$ (et $c^*$ pour la ligne $c\T$)</td><td>$A\T$</td></tr>
+<tr><td>variables d'écart</td><td>—</td><td>$\lambda\in\R^m$ dans (4.3)</td><td>$s$ (de l'anglais <em>slack</em>) ; $\lambda$ quand on cite le livre</td></tr>
+<tr><td>point admissible</td><td>« solution admissible »</td><td>« solution (admissible) »</td><td>point (ou solution) admissible</td></tr>
+<tr><td>sommet</td><td>« solution extrémale »</td><td>« sommet ou point extrémal »</td><td>sommet</td></tr>
+<tr><td>point de minimum</td><td>« solution optimale »</td><td>« solution optimale (ou point de minimum) »</td><td>solution optimale $\bar x$</td></tr>
+<tr><td>valeur optimale</td><td>« l'infimum »</td><td>« la valeur du minimum »</td><td>valeur optimale $\inf_{\Xad}c\cdot x\in\R\cup\{\pm\infty\}$</td></tr>
+</tbody></table></div>
+<p>Code couleur des figures : <span class="col1">bleu : l'ensemble admissible $\Xad$</span> ; <span class="col2">orange : le coût, ses lignes de niveau et la direction $c$</span> ; <span class="col3">vert : l'optimum</span> ; <span class="col6">rose : ce qui n'est pas admissible</span> ; les droites de contraintes sont en gris, avec leur étiquette. Dans les parties suivantes, le <span class="col5">violet</span> servira aux objets duaux.</p>

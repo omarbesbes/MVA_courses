@@ -1,0 +1,144 @@
+<h2 id="analyse">3. Analyse : infimum, compacité, existence d'un minimum</h2>
+<p class="tldr">Un problème de minimisation peut échouer de trois façons : rien n'est admissible (l'infimum vaut $+\infty$), le coût descend sans fin ($-\infty$), ou l'infimum est fini sans être atteint. Pour un programme linéaire, le troisième cas n'arrive jamais ; ailleurs, la compacité est l'outil pour l'exclure.</p>
+
+<h3 id="inf-sup">Inf, sup, min, max et leurs conventions</h3>
+<p class="small muted"><strong>Où ça sert :</strong> les trois issues possibles d'un programme linéaire et la convention $\inf\emptyset=+\infty$ (<a href="Partie01.html#existence">partie 1</a>) ; les valeurs infinies dans le théorème de dualité (<a href="Partie05.html#theoreme-dualite">partie 5</a>) ; passer d'un maximum à un minimum (forme standard, <a href="Partie01.html#forme-standard">partie 1</a>).</p>
+<p>On écrit « $\min$ » par habitude, mais la bonne question d'abord est : quelle est la plus grande valeur qu'on est sûr de ne jamais battre ? C'est l'infimum. Le minimum, quand il existe, est un infimum <em>atteint</em>.</p>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, Déf. 2.1.2, p. 14</span></div>
+<p>« On appelle infimum de $J$ sur $K$ (ou, plus couramment, valeur minimum), que l'on désigne par la notation (2.1), la borne supérieure dans $\R$ des constantes qui minorent $J$ sur $K$. Si $J$ n'est pas minorée sur $K$, alors l'infimum vaut $-\infty$. Si $K$ est vide, par convention l'infimum est $+\infty$. »</p>
+</div>
+<dl class="decode">
+<dt>(2.1)</dt><dd>la notation $\inf_{v\in K}J(v)$ : $K$ est l'ensemble des contraintes (notre $\Xad$), $J$ le coût (notre $x\mapsto c\cdot x$).</dd>
+<dt>« la borne supérieure des constantes qui minorent »</dt><dd>la meilleure minoration possible : $m\le J(v)$ pour tout $v\in K$, et aucun nombre plus grand que $m$ n'a cette propriété.</dd>
+</dl>
+<div class="box def"><div class="box-h">À retenir (rappel standard)</div>
+<ul>
+<li>$m=\inf_KJ\in\R$ si et seulement si (i) $J(v)\ge m$ pour tout $v\in K$, et (ii) pour tout $\eps>0$, il existe $v\in K$ avec $J(v)<m+\eps$.</li>
+<li>Le <em class="new">minimum</em> existe quand l'infimum est atteint : il existe $u\in K$ avec $J(u)=\inf_KJ$ ; on écrit alors $\min$, et $u$ est un point de minimum (une <em>solution optimale</em>).</li>
+<li>De même pour $\sup$ et $\max$, avec $\sup\emptyset=-\infty$, et $\max_Kf=-\min_K(-f)$.</li>
+<li>Pour un programme linéaire, Allaire (p. 122) note que « lorsque $X_{ad}$ est vide, par convention » $\inf c\cdot x=+\infty$. Il y a trois issues : $+\infty$ (vide), $-\infty$ (non borné), ou une valeur finie — et alors elle est atteinte (Lemme 4.2.3, <a href="Partie01.html#existence">partie 1</a>).</li>
+</ul>
+</div>
+<div class="box example"><div class="box-h">Exemples — les trois issues d'un programme linéaire</div>
+<ul>
+<li><strong>Vide :</strong> $x_1+x_2=-1$, $x\ge0$ n'a pas de solution (une somme de nombres positifs n'est pas négative) : $\inf=+\infty$.</li>
+<li><strong>Non borné :</strong> $\min\{-x_1 : x_1-x_2=0,\ x\ge0\}$ : les points $(t,t)$, $t\ge0$, sont admissibles, de coût $-t$ : $\inf=-\infty$.</li>
+<li><strong>Fini et atteint :</strong> $\min\{x_1+x_2 : x_1+2x_2=4,\ x\ge0\}$ : sur le segment de $(4,0)$ à $(0,2)$ (<a href="#rang">figure du §1</a>), le coût vaut $4$ en $(4,0)$ et $2$ en $(0,2)$ ; le minimum est $2$, en $(0,2)$.</li>
+<li><strong>Fini mais pas atteint</strong> (hors programmation linéaire) : $\inf_{x>0}\frac1x=0$, et $\frac1x>0$ pour tout $x>0$.</li>
+<li><strong>Max et min :</strong> le maximum de l'exercice 4.2.1 vaut $8$ ; sous forme standard, le minimum de $-x_1-2x_2$ vaut $-8$, au même point $(2,3)$.</li>
+</ul>
+</div>
+<div class="box pitfall"><div class="box-h">Pièges</div>
+<ul>
+<li>Écrire « $\min$ » ne prouve pas que le minimum existe : c'est à démontrer (<a href="#compacite">ci-dessous</a>).</li>
+<li>$\inf\emptyset=+\infty$, pas $-\infty$. L'image : en minimisation, $+\infty$ est la pire valeur possible, et un problème impossible est « infiniment mauvais ». Symétriquement, $\sup\emptyset=-\infty$. Ces conventions rendent la dualité faible vraie dans tous les cas : si le primal est non borné ($-\infty$), le dual est vide ($-\infty$) (<a href="Partie05.html#dualite-faible">partie 5</a>).</li>
+<li>Quand on remplace $\max$ par $\min$ en changeant le signe, la <em>valeur</em> change de signe, pas le point optimal.</li>
+</ul>
+</div>
+
+<h3 id="compacite">Compacité, Bolzano–Weierstrass, existence d'un minimum</h3>
+<p class="small muted"><strong>Où ça sert :</strong> le triangle de l'exemple (4.5) est compact, donc le minimum est atteint (<a href="Partie01.html#geometrie">partie 1</a>) ; le Lemme 4.2.3 doit faire autrement, car $c\cdot x$ n'est pas infinie à l'infini (<a href="Partie01.html#existence">partie 1</a>) ; la preuve du Lemme 4.2.11 refait l'argument à la main (<a href="Partie04.html#barriere">partie 4</a>).</p>
+<p>Pour qu'un minimum existe, il faut empêcher les suites de points de plus en plus bons de « s'échapper » : vers l'infini, vers un trou du domaine, ou vers un saut de la fonction. En dimension finie, « fermé et borné » suffit à tout retenir.</p>
+<div class="box thm"><div class="box-h">Compacité en dimension finie (rappel standard)</div>
+<ul>
+<li>Une partie de $\R^N$ est <em class="new">compacte</em> si et seulement si elle est fermée et bornée.</li>
+<li><strong>Bolzano–Weierstrass :</strong> toute suite bornée de $\R^N$ a une sous-suite convergente.</li>
+<li><strong>Weierstrass :</strong> une fonction continue sur un compact non vide y atteint son minimum et son maximum.</li>
+</ul>
+</div>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, Th. 2.2.1, p. 15</span></div>
+<p>« <strong>Théorème 2.2.1 (Existence d'un minimum en dimension finie)</strong> Soit $K$ un ensemble fermé non vide de $\R^N$, et $J$ une fonction continue sur $K$ à valeurs dans $\R$ vérifiant la propriété, dite “infinie à l'infini”,</p>
+$$\begin{aligned}&\forall(u^n)_{n\ge0}\ \text{suite dans }K,\\&\lim_{n\to+\infty}\norm{u^n}=+\infty\\&\qquad\Longrightarrow\ \lim_{n\to+\infty}J(u^n)=+\infty.\qquad(2.2)\end{aligned}$$
+<p>Alors il existe au moins un point de minimum de $J$ sur $K$. De plus, on peut extraire de toute suite minimisante de $J$ sur $K$ une sous-suite convergeant vers un point de minimum sur $K$. »</p>
+<p><strong>Remarque 2.2.2</strong> « Notons que la propriété (2.2), qui assure que toute suite minimisante de $J$ sur $K$ est bornée, est automatiquement vérifiée si $K$ est borné. »</p>
+</div>
+<dl class="decode">
+<dt>fermé</dt><dd>$K$ contient les limites de ses suites convergentes (<a href="#fermes">ci-dessous</a>) : le minimum ne peut pas tomber dans un « trou » du bord.</dd>
+<dt>infinie à l'infini</dt><dd>$J$ devient très grande quand on part loin : les bons points restent dans une région bornée.</dd>
+<dt>suite minimisante</dt><dd>une suite de $K$ dont les valeurs tendent vers l'infimum (<a href="#suites-minimisantes">ci-dessous</a>).</dd>
+</dl>
+<figure class="fig"><!-- include figures/RAP/existence.svg --><figcaption>Les réponses à l'exercice 2.2.1 du livre (« Montrer par des exemples que le fait que $K$ est fermé ou que $J$ est continue est en général nécessaire pour l'existence d'un minimum. Donner un exemple de fonction continue et minorée de $\R$ dans $\R$ n'admettant pas de minimum sur $\R$ », p. 15). Dans les trois premiers cas, l'infimum vaut $0$ et n'est pas atteint (cercle vide) ; dans le dernier, toutes les hypothèses sont là, et le minimum existe (point vert).</figcaption></figure>
+<details class="fold proof"><summary>Démonstration du théorème 2.2.1, pas à pas</summary><div class="fold-body">
+<ol class="steps">
+<li>$$(u^n)\subset K,\qquad J(u^n)\to m=\inf_KJ.$$<span class="why">Une suite minimisante existe dès que $K\ne\emptyset$ (Lemme 2.1.3, <a href="#suites-minimisantes">ci-dessous</a>) ; ici $m<+\infty$.</span></li>
+<li>$$(u^n)\ \text{est bornée.}$$<span class="why">Sinon une sous-suite aurait $\norm{u^{n_k}}\to+\infty$, donc $J(u^{n_k})\to+\infty$ par (2.2), alors que $J(u^n)$ tend vers $m<+\infty$.</span></li>
+<li>$$u^{n_k}\to u\in\R^N.$$<span class="why">Bolzano–Weierstrass.</span></li>
+<li>$$u\in K.$$<span class="why">$K$ est fermé et contient tous les $u^{n_k}$.</span></li>
+<li>$$J(u)=\lim_kJ(u^{n_k})=m.$$<span class="why">$J$ est continue ; la sous-suite d'une suite qui tend vers $m$ tend vers $m$. Donc $m$ est fini et atteint en $u$.</span></li>
+</ol>
+</div></details>
+<div class="box example"><div class="box-h">Exemples dans le cours</div>
+<ul>
+<li>Pour l'exemple (4.5), le livre dit du triangle $T$ : « C'est un fermé compact de $\R^3$, donc la fonction continue $x_1+4x_2+2x_3$ y atteint son minimum » (Allaire, p. 121). Même raisonnement pour le pentagone du fil rouge : fermé et borné, donc le maximum $8$ est atteint.</li>
+<li>En général, $c\cdot x$ n'est <strong>pas</strong> infinie à l'infini sur $\Xad$. Exemple : $\Xad=\{x\ge0 : x_1-x_2=1\}$ contient les points $(1+t,t)$, de norme infinie quand $t\to\infty$, et le coût $x_1-x_2$ y vaut toujours $1$. Le théorème 2.2.1 ne s'applique pas — pourtant le minimum ($1$, atteint partout) existe. C'est pourquoi le Lemme 4.2.3 passe par un <a href="#cones">cône fermé</a>.</li>
+</ul>
+</div>
+<div class="box pitfall"><div class="box-h">Pièges</div>
+<ul>
+<li>En dimension infinie, un fermé borné n'est pas forcément compact : « Cette difficulté est intimement liée au fait qu'en dimension infinie les fermés bornés ne sont pas compacts ! » (Allaire, p. 16). Dans ce cours, tout est en dimension finie.</li>
+<li>Borné ne suffit pas (il faut fermé : $]0,1]$, premier panneau de la figure), fermé ne suffit pas (il faut borné, ou infinie à l'infini : $e^{-x}$ sur $[0,+\infty[$, troisième panneau), et il faut la continuité (deuxième panneau).</li>
+</ul>
+</div>
+
+<div class="quiz"><p>Le théorème 2.2.1 s'applique-t-il à $\min e^{x}$ sur $K=[0,+\infty[$ ? Et à $\min e^{-x}$ sur le même $K$ ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>Pour $e^{x}$ : $K$ est fermé non vide, $J$ continue, et sur $K$ les seules suites de norme infinie tendent vers $+\infty$, où $e^x\to+\infty$ : la fonction est infinie à l'infini <em>sur $K$</em>. Le théorème s'applique ; le minimum vaut $1$, en $0$. Pour $e^{-x}$ : elle tend vers $0$ à l'infini, l'hypothèse (2.2) est fausse, et en effet il n'y a pas de minimum (troisième panneau de la figure).</p>
+</div></details></div>
+
+<h3 id="fermes">Ensembles fermés</h3>
+<p class="small muted"><strong>Où ça sert :</strong> $\Xad$ et tout polyèdre sont fermés (<a href="Partie01.html">partie 1</a>) ; l'intérieur $\Xado$ ne l'est pas, ce qui oblige la preuve du Lemme 4.2.11 à un détour (<a href="Partie04.html#barriere">partie 4</a>) ; la fermeture des cônes finis (<a href="#cones">§2</a>).</p>
+<div class="box def"><div class="box-h">Définition et propriétés (rappel standard)</div>
+<ul>
+<li>$F\subset\R^N$ est <em class="new">fermé</em> si la limite de toute suite convergente de points de $F$ est dans $F$. (De façon équivalente : son complémentaire est ouvert.)</li>
+<li>Si $g$ est continue, $\{g\le0\}$ et $\{g=0\}$ sont fermés, $\{g<0\}$ est ouvert. Une intersection quelconque et une réunion finie de fermés sont fermées.</li>
+<li>Donc les demi-espaces $\{a\cdot x\le\beta\}$, les polyèdres et $\Xad$ sont fermés ; $\{Ax=b,\ x>0\}$ ne l'est pas en général.</li>
+</ul>
+</div>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, preuve du Lemme 4.2.11, p. 130</span></div>
+<p>« Par ailleurs, $X^0_{ad}$ est convexe mais pas fermé, donc on ne peut pas utiliser directement le Théorème 2.2.1 bien que $J$ soit continue et $X^0_{ad}$ borné. »</p>
+</div>
+<figure class="fig"><!-- include figures/RAP/fermes.svg --><figcaption>À gauche, $]0,1]$ n'est pas fermé : la suite $1/k$ y reste et tend vers $0$, qui n'y est pas. À droite, $H=\{x>0,\ xy\ge1\}$ est fermé (bleu), mais sa projection sur l'axe horizontal, $]0,+\infty[$, ne l'est pas : les points $(x,1/x)$ s'échappent vers le haut quand $x\to0$.</figcaption></figure>
+<div class="box example"><div class="box-h">Exemple — l'intérieur du pentagone</div>
+<p>Pour le fil rouge, $\Xado=\{x\in\R^5 : Ax=b,\ x>0\}$ correspond aux points du pentagone qui ne sont sur aucun côté. La suite $(\frac1k,\frac1k)$ y reste ($x_3=2+\frac1k>0$, $x_4=4-\frac1k>0$, $x_5=5-\frac2k>0$ pour $k\ge1$) et tend vers le sommet $(0,0)$, qui n'y est pas : $\Xado$ n'est pas fermé.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pièges</div>
+<ul>
+<li>« Pas fermé » ne veut pas dire « ouvert » : $]0,1]$ n'est ni l'un ni l'autre.</li>
+<li>Fermé ne veut pas dire borné : $\R^N$, un demi-espace, $\Xad$ souvent.</li>
+<li>L'image d'un fermé par une application linéaire peut ne pas être fermée (figure). C'est ce qui rend non trivial le fait que le cône $\{Ax : x\ge0\}$ soit fermé (<a href="#cones">§2</a>).</li>
+</ul>
+</div>
+
+<h3 id="suites-minimisantes">Suites minimisantes</h3>
+<p class="small muted"><strong>Où ça sert :</strong> la preuve du Lemme 4.2.3 part d'une suite minimisante et passe au cône fermé (<a href="Partie01.html#existence">partie 1</a>) ; celle du Lemme 4.2.11 montre que la barrière empêche une suite minimisante d'approcher le bord (<a href="Partie04.html#barriere">partie 4</a>) ; la fin de la preuve du Th. 4.2.13 (<a href="Partie05.html#theoreme-dualite">partie 5</a>).</p>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, Déf. 2.1.2 et Lemme 2.1.3, p. 14</span></div>
+<p>« Une suite minimisante de $J$ dans $K$ est une suite $(u^n)_{n\in\N}$ telle que $u^n\in K\ \forall n$ et $\lim_{n\to+\infty}J(u^n)=\inf_{v\in K}J(v)$. Par la définition même de l'infimum de $J$ sur $K$ il existe toujours des suites minimisantes. »</p>
+<p>« <strong>Lemme 2.1.3</strong> Pour tout problème d'optimisation, si $K$ est non vide, il existe au moins une suite minimisante. »</p>
+</div>
+<div class="box method"><div class="box-h">Méthode — la « méthode directe » pour prouver qu'un minimum existe</div>
+<ol>
+<li>Prendre une suite minimisante $(u^n)$.</li>
+<li>Montrer qu'elle est bornée (ou qu'une quantité qui la résume l'est).</li>
+<li>En extraire une sous-suite convergente (Bolzano–Weierstrass).</li>
+<li>Montrer que la limite est admissible (ensemble fermé, ou argument direct).</li>
+<li>Passer à la limite dans le coût (continuité).</li>
+</ol>
+<p>Le théorème 2.2.1 est cette méthode. Le Lemme 4.2.3 l'applique non pas à $x^k$ mais à $\mathcal Ax^k=(c\cdot x^k,\,b)$, dans le <a href="#cones">cône fermé</a> des colonnes de $\mathcal A=\begin{pmatrix}c\T\\A\end{pmatrix}$.</p>
+</div>
+<div class="box example"><div class="box-h">Exemples</div>
+<ul>
+<li>$J(x)=(x-1)^2+\frac12$ sur $\R$ : $u^n=1+\frac1n$ est minimisante et converge vers le point de minimum $1$.</li>
+<li>$J(x)=e^{-x}$ sur $[0,+\infty[$ : $u^n=n$ est minimisante ($e^{-n}\to0=\inf$) et n'a aucune sous-suite convergente ; il n'y a pas de minimum.</li>
+<li>Programme linéaire $\min\{x_1-x_2 : x_1-x_2=1,\ x\ge0\}$ : $x_k=(1+k,k)$ est minimisante (coût constant $1=\inf$) et diverge, alors que le minimum est atteint. Mais $\mathcal Ax_k=(c\cdot x_k,\,Ax_k)=(1,1)$ converge : c'est sur cette suite-là que raisonne le Lemme 4.2.3.</li>
+</ul>
+</div>
+<details class="fold proof"><summary>Démonstration du Lemme 2.1.3 (constructive)</summary><div class="fold-body">
+<p>Soit $m=\inf_KJ\in\R\cup\{-\infty\}$ ($K\ne\emptyset$, donc $m<+\infty$). Si $m$ est fini, pour chaque $n\ge1$, $m+\frac1n$ n'est pas un minorant de $J$ sur $K$ (c'est le plus grand minorant qui vaut $m$) : il existe $u^n\in K$ avec $m\le J(u^n)<m+\frac1n$. Si $m=-\infty$, $-n$ n'est pas un minorant : il existe $u^n\in K$ avec $J(u^n)<-n$. Dans les deux cas, $J(u^n)\to m$. (Le livre raisonne par l'absurde, avec le même argument.)</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Piège</div>
+<p>Une suite minimisante n'a aucune raison de converger, ni même d'être bornée (exemples ci-dessus) ; et la limite d'une sous-suite n'est un point de minimum que si elle est admissible et si le coût passe à la limite. Chaque étape de la méthode directe est à justifier.</p>
+</div>
+<div class="quiz"><p>Donnez une suite minimisante pour $\inf_{x>0}\frac1x$. A-t-elle une sous-suite convergente dans $]0,+\infty[$ ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>$u^n=n$ : $\frac1n\to0=\inf$. Toute sous-suite tend vers $+\infty$, donc aucune ne converge : l'étape 2 de la méthode directe (borner la suite) échoue, et en effet le minimum n'existe pas. La fonction n'est pas infinie à l'infini, elle tend même vers son infimum.</p>
+</div></details></div>

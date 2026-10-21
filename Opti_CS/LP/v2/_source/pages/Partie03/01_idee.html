@@ -1,0 +1,48 @@
+<h2 id="idee">1. L'idée du simplexe en une image <span class="ref">Allaire p. 124–125</span></h2>
+<p class="tldr">Partir d'un sommet, suivre une arête le long de laquelle le coût baisse, recommencer au sommet suivant ; s'arrêter quand aucune arête ne descend.</p>
+
+<h3 id="idee-probleme">Le problème : trop de sommets pour les essayer tous</h3>
+<p>La partie 2 a établi deux faits : l'optimum d'un programme linéaire, s'il existe, est atteint en un sommet ; et un sommet se calcule à partir d'une base, en résolvant un système $m\times m$. D'où un premier algorithme : essayer toutes les bases, garder les admissibles, prendre la moins chère. Il est correct, mais inutilisable. Le nombre de bases candidates est $\binom nm$ :</p>
+<ul>
+<li>pour l'exercice 4.2.1 ($n=5$, $m=3$) : $\binom53=10$ systèmes $3\times3$, dont 5 donnent un sommet ;</li>
+<li>pour $n=50$ variables et $m=25$ contraintes : $\binom{50}{25}=126\,410\,606\,437\,752$, soit plus de $10^{14}$ systèmes ;</li>
+<li>pour $n=100$, $m=50$ : environ $1{,}0\times10^{29}$.</li>
+</ul>
+<p>Or les programmes linéaires des applications ont des milliers, voire des millions, de variables. Il faut une façon de <strong>ne visiter qu'une petite partie des sommets</strong>, en sachant à chaque instant dans quelle direction aller et quand s'arrêter.</p>
+
+<h3 id="idee-image">L'idée : descendre le long des arêtes</h3>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, §4.2.2, p. 124–125</span></div>
+<p>L'algorithme du simplexe est dû à G. Dantzig dans les années 1940. Il consiste à parcourir les sommets du polyèdre des solutions admissibles jusqu'à ce qu'on trouve une solution optimale (ce qui est garanti si le programme linéaire admet effectivement une solution optimale). L'algorithme du simplexe ne se contente pas d'énumérer tous les sommets, il décroît la valeur de la fonction $c\cdot x$ en passant d'un sommet au suivant.</p>
+</div>
+<p>Pensez à un randonneur dans le brouillard sur un relief en forme de polyèdre. Il est sur un sommet ; il ne voit que les sentiers (les <em class="new">arêtes</em>) qui en partent. Il en prend un qui descend, le suit jusqu'au bout (le sommet voisin), et recommence. Quand tous les sentiers montent, il s'arrête. Pour un programme linéaire, ce randonneur myope a toujours raison : <strong>un sommet d'où aucune arête ne descend est un minimum global</strong>. C'est le contenu de la Proposition 4.2.8 (§2), et c'est une conséquence de la convexité : il n'y a pas de minimum local qui ne soit global.</p>
+
+<figure class="fig"><!-- include figures/P03/idee.svg --><figcaption>Le simplexe sur l'exercice 4.2.1 ($\max\,x_1+2x_2$, c'est-à-dire $\min\,-x_1-2x_2$), avec la règle du plus négatif des diapos : $(0\,;0)\to(0\,;1)\to(1\,;\frac52)\to(2\,;3)$, coût $0\to-2\to-6\to-8$. Les droites grises sont les contraintes, chacune étiquetée par la variable d'écart qui s'y annule ; les tirets rouges sont des lignes de niveau du coût. En chaque sommet, la base change d'une seule variable.</figcaption></figure>
+
+<p>Sur la figure, trois questions se posent à chaque sommet, et y répondre est tout le contenu de cette page :</p>
+<ol>
+<li><strong>Une arête descend-elle ?</strong> On le lit sur les <em>coûts réduits</em>, les pentes du coût le long des arêtes (§2).</li>
+<li><strong>Jusqu'où la suivre, et quel est le sommet d'arrivée ?</strong> Le <em>test du rapport</em> et le <em>pivot</em> (§3).</li>
+<li><strong>Est-on sûr de s'arrêter ?</strong> Oui si aucun sommet n'est dégénéré ; sinon il faut une règle de choix (§4).</li>
+</ol>
+<p>Deux questions pratiques s'ajoutent : où trouver un <strong>premier sommet</strong> (§5, la phase I) et comment éviter de <strong>réinverser la base</strong> à chaque pas (§6).</p>
+
+<div class="box recall"><div class="box-h">Rappel — sommet, base, arête (partie 2)</div>
+<p>Un sommet $\bar x$ est une solution basique admissible : $\bar x_N=0$ et $\bar x_B=B^{-1}b\ge0$ pour une base $B$ (<a href="Partie02.html#sommets-basiques">partie 2</a>). Partir d'un sommet le long d'une arête, c'est faire croître <strong>une seule</strong> variable hors base, $x_i$, en gardant les autres variables hors base nulles ; les variables de base s'ajustent pour que $Ax=b$ reste vrai. Au bout de l'arête, une variable de base s'annule : elle sort de la base, $x_i$ y entre, et l'on est sur un sommet voisin. Deux sommets voisins ont des bases qui diffèrent d'une seule colonne.</p>
+</div>
+
+<div class="box intu"><div class="box-h">Intuition — pourquoi « simplexe » ?</div>
+<p>Le nom, suggéré à Dantzig par T. Motzkin, vient d'une lecture géométrique de la méthode dans un autre espace, celui des colonnes de $A$, où chaque base correspond à un cône simplicial (un « simplexe » : triangle, tétraèdre…). Il n'a rien à voir avec la méthode de Nelder et Mead pour l'optimisation sans dérivées, parfois aussi appelée « simplexe ». Retenez seulement : <em>simplexe = marche de sommet en sommet le long des arêtes</em>.</p>
+</div>
+
+<div class="box remark"><div class="box-h">Remarque — un peu d'histoire</div>
+<p>George Dantzig propose la méthode en 1947, pour planifier la logistique de l'armée de l'air américaine (le mot « programme » veut dire « planning »). Le problème du transport et les premiers modèles de Kantorovich (1939) et Koopmans la précèdent ; la dualité est formulée par von Neumann la même année. Le simplexe reste aujourd'hui, avec les méthodes de points intérieurs (<a href="Partie04.html">partie 4</a>), l'un des deux grands algorithmes des solveurs.</p>
+</div>
+
+<div class="box ml"><div class="box-h">En machine learning — pourquoi une solution en un sommet est creuse</div>
+<p>Un sommet a au plus $m$ composantes non nulles (ses variables de base). Quand un modèle d'apprentissage est un programme linéaire, la solution rendue par le simplexe est donc <strong>creuse</strong>. Exemple : le transport optimal discret entre deux histogrammes à $n$ et $m'$ points (<a href="../../../Optimal_transport_ML/v2/Lesson02.html">cours de transport optimal, leçon 2</a>) est un programme linéaire à $n\,m'$ variables et $n+m'$ contraintes, dont une redondante. Un plan optimal sommet a donc au plus $n+m'-1$ cases non nulles sur $n\,m'$. Vérifié avec <code>ot.emd</code> de la bibliothèque POT sur des nuages aléatoires : $n=100$, $m'=80$, le plan optimal a exactement $179=100+80-1$ cases non nulles sur $8\,000$. Même phénomène pour la régression en norme $\ell^1$ (§7) : la droite optimale passe par des points de données.</p>
+</div>
+
+<div class="quiz"><p>Sur la figure, pourquoi le simplexe ne va-t-il pas directement de $(0\,;0)$ à $(2\,;3)$ ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>Parce que le segment de $(0\,;0)$ à $(2\,;3)$ n'est pas une arête : il traverse l'intérieur du polygone. Le simplexe ne se déplace que le long des arêtes (il fait croître une seule variable hors base à la fois), donc de sommet voisin en sommet voisin. Il faut ici au moins deux pas, par $(5\,;0)$ ou par $(0\,;1)$ et $(1\,;\frac52)$ ; la règle du plus négatif en fait trois (§4, <a href="#choix-pivot">choix du pivot</a>).</p>
+</div></details></div>

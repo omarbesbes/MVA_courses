@@ -1,0 +1,127 @@
+<h2 id="optimum-sommet">4. S'il y a un optimum, il y en a un en un sommet <span class="ref">Diapo 5 ; Allaire, Prop. 4.2.6 et Rem. 4.2.7, p. 123–124</span></h2>
+<p class="tldr">Partez d'une solution optimale ; tant que les colonnes de son support sont liées, glissez dans une direction du noyau qui ne change pas le coût, jusqu'à annuler une coordonnée : on finit sur un sommet, toujours optimal.</p>
+
+<h3 id="optimum-enonces">Les deux énoncés</h3>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo 5, Lemme, point 3</span></div>
+<p>3. S'il existe une solution optimale au programme linéaire alors il existe une solution optimale basique.</p>
+</div>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, Prop. 4.2.6, p. 123</span></div>
+<p>Le résultat fondamental suivant nous dit qu'il est suffisant de chercher une solution optimale parmi les sommets du polyèdre $\Xad$.</p>
+<p><strong>Proposition 4.2.6.</strong> S'il existe une solution optimale du programme linéaire standard (4.1), alors il existe une solution optimale basique.</p>
+</div>
+<dl class="decode">
+<dt>solution optimale</dt><dd>Un point $x\in\Xad$ tel que $c\cdot x\le c\cdot x'$ pour tout $x'\in\Xad$.</dd>
+<dt>solution optimale basique</dt><dd>Une solution basique (§2) qui est optimale, c'est-à-dire, par le Lemme 4.2.5, un <strong>sommet optimal</strong>.</dd>
+<dt>« s'il existe »</dt><dd>L'hypothèse est indispensable : sans solution optimale (valeur $-\infty$, ou $\Xad$ vide), il n'y a rien à trouver. Le Lemme 4.2.3 (partie 1) dit quand elle est vérifiée : exactement quand $-\infty<\inf<+\infty$.</dd>
+<dt>« il existe une … basique »</dt><dd>Pas « toute solution optimale est basique ». Pour $\max x_1+x_2$ sur le polygone de l'Exercice 4.2.1, toute l'arête $x_1+x_2=5$ est optimale, et seules ses deux extrémités sont des sommets.</dd>
+</dl>
+<p>Mis bout à bout avec le Lemme 4.2.3 et le corollaire du §3, cela donne un algorithme (très lent, mais correct) : <strong>si la valeur est finie, le minimum est le plus petit des $c\cdot x^B$ sur les bases admissibles</strong>, en nombre fini. C'est ainsi que l'on a résolu l'Exercice 4.2.1 au §2.</p>
+
+<h3 id="optimum-idee">L'idée : glisser à plat jusqu'au bord</h3>
+<div class="box idea"><div class="box-h">L'idée</div>
+<p>Si une solution optimale $x$ n'est pas basique, les colonnes de son support sont liées : il existe $y\ne0$ dans le noyau de $A$, nul hors du support (§3). On peut bouger dans les deux sens, $x\pm\eps y\in\Xad$. Comme $x$ est optimal, le coût ne peut baisser ni dans un sens ni dans l'autre : $c\cdot y=0$, la direction est <strong>plate</strong>. On glisse alors le long de $y$ jusqu'à ce qu'une coordonnée tombe à zéro : le point reste admissible et optimal, et son support a perdu au moins un élément. On recommence ; le support ne peut pas diminuer indéfiniment, et l'on s'arrête sur des colonnes libres : un sommet optimal.</p>
+</div>
+
+<figure class="fig"><!-- include figures/P02/glisser.svg --><figcaption>Réduire le support avec $c=0$ (tout point est optimal). Depuis $x^0=(1,1,3,3,3)$, intérieur, on glisse dans la direction $y=(1,0,3,1,-1)$ jusqu'à annuler $x_5$ ; puis, sur l'arête $x_5=0$, dans la direction de l'arête $y=(1,-1,5,3,0)$, jusqu'à annuler $x_2$ : on arrive au sommet $(5\,;\,0)$. Avec la direction $(0,1)$, un seul pas suffit : $x_3$ et $x_4$ s'annulent en même temps.</figcaption></figure>
+
+<h3 id="optimum-preuve">La preuve, pas à pas</h3>
+<details class="fold proof"><summary>Démonstration complète</summary><div class="fold-body">
+<p>Soit $x$ une solution optimale, $S=\operatorname{supp}(x)$, $k=\card S$, de sorte que $b=\sum_{j\in S}x_ja_j$ avec $x_j>0$ sur $S$ (après réarrangement, le livre écrit $b=\sum_{i=1}^kx_ia_i$).</p>
+<ol class="steps">
+<li>$$\text{Si } (a_j)_{j\in S} \text{ est libre, } x \text{ est une solution optimale basique.}$$<span class="why">Critère du support (§3) : on complète $S$ en une base, et $x$ en est la solution basique. C'est fini.</span></li>
+<li>$$\text{Sinon : }\ \exists\,y\ne0,\quad y_j=0\ (j\notin S),\quad Ay=\sum_{j\in S}y_ja_j=0 .$$<span class="why">Définition de « liées », complétée par des zéros.</span></li>
+<li>$$\exists\,\eps>0:\quad x+\eps y\in\Xad\ \text{ et }\ x-\eps y\in\Xad .$$<span class="why">Exactement les étapes 2–4 du sens 2 de la preuve du Lemme 4.2.5 (§3) : $\eps=\min_{y_j\ne0}x_j/\abs{y_j}$.</span></li>
+<li>$$c\cdot x\le c\cdot(x+\eps y)=c\cdot x+\eps\,c\cdot y\ \Rightarrow\ c\cdot y\ge0 .$$<span class="why">$x$ est optimal et $x+\eps y$ est admissible ; on simplifie par $c\cdot x$ et on divise par $\eps>0$.</span></li>
+<li>$$c\cdot x\le c\cdot(x-\eps y)=c\cdot x-\eps\,c\cdot y\ \Rightarrow\ c\cdot y\le0 .$$<span class="why">Même chose avec $x-\eps y$. Les deux lignes donnent $c\cdot y=0$ : <strong>un coût linéaire qui ne baisse dans aucune de deux directions opposées est constant le long de cette droite</strong>.</span></li>
+<li>$$\text{Quitte à remplacer } y \text{ par } -y,\ \ y \text{ a au moins une composante } y_j<0 .$$<span class="why">$y\ne0$ : si toutes ses composantes sont $\ge0$, l'une est $>0$, et $-y$ a une composante $<0$. Changer $y$ en $-y$ ne change ni $Ay=0$, ni $c\cdot y=0$, ni le support.</span></li>
+<li>$$z_\eps:=x+\eps y,\qquad \eps_0:=\min_{j:\ y_j<0}\frac{x_j}{-y_j}>0 .$$<span class="why">Pour $\eps\ge0$, la coordonnée $j$ de $z_\eps$ décroît seulement si $y_j<0$, et s'annule en $\eps=x_j/(-y_j)$ ; $\eps_0$ est la première de ces valeurs. Elle est $>0$ car $y_j\ne0$ force $j\in S$, donc $x_j>0$.</span></li>
+<li>$$z_{\eps_0}\in\Xad,\qquad c\cdot z_{\eps_0}=c\cdot x+\eps_0\,c\cdot y=c\cdot x .$$<span class="why">$Az_{\eps_0}=b$ car $Ay=0$ ; $z_{\eps_0}\ge0$ par le choix de $\eps_0$ (les coordonnées avec $y_j\ge0$ ne diminuent pas) ; et $c\cdot y=0$. Donc $z_{\eps_0}$ est encore optimal.</span></li>
+<li>$$\operatorname{supp}(z_{\eps_0})\subset S\setminus\{j^*\},\qquad \card\operatorname{supp}(z_{\eps_0})\le k-1 ,$$<span class="why">où $j^*$ réalise le minimum de l'étape 7 : $z_{\eps_0,j^*}=0$. Hors de $S$, $x_j=y_j=0$, donc $z_{\eps_0,j}=0$ : le support n'a pas grossi.</span></li>
+<li>$$\text{On recommence avec } z_{\eps_0} \text{ à la place de } x .$$<span class="why">Le support diminue strictement à chaque passage ; après au plus $k$ passages, l'étape 1 s'applique (au pire avec le support vide, qui est libre). On obtient une solution optimale basique.</span></li>
+</ol>
+<p class="small">Le livre écrit : « si on augmente ou on diminue $\eps$ on reste dans l'ensemble $\Xad$ jusqu'à une valeur $\eps_0$ au delà de laquelle la contrainte $z_\eps\ge0$ est violée ». C'est l'étape 6–7 : dans <em>au moins un</em> des deux sens (celui où $y$ a une composante négative), on bute sur une contrainte. Dans l'autre sens, on peut ne jamais buter : si $y\ge0$, la demi-droite $x+\eps y$, $\eps\ge0$, reste admissible.</p>
+<span class="qed">□</span>
+</div></details>
+
+<div class="box example" id="optimum-exemple"><div class="box-h">Exemple chiffré — réduire le support d'une solution optimale</div>
+<p>Sur le polygone de l'Exercice 4.2.1, maximisons $x_1+x_2$, soit $c=(-1,-1,0,0,0)$. La contrainte $x_1+x_2\le5$ montre que la valeur est $5$, atteinte sur toute l'arête $x_5=0$, de $(2\,;\,3)$ à $(5\,;\,0)$. Partons du point optimal $(3\,;\,2)$, qui n'est pas un sommet :</p>
+<ol class="steps">
+<li>$$x=(3,2,7,3,0),\qquad S=\{1,2,3,4\},\ k=4>m=3 .$$<span class="why">Écarts : $x_3=2+9-4=7$, $x_4=4+3-4=3$, $x_5=5-5=0$. Quatre colonnes de $\R^3$ : liées.</span></li>
+<li>$$y=(1,-1,5,3,0),\qquad Ay=\begin{pmatrix}-3-2+5\\-1-2+3\\1-1+0\end{pmatrix}=0,\quad y_5=0 .$$<span class="why">On cherche $y$ avec $y_5=0$ ; dans le plan, c'est la direction $(1\,;\,-1)$ de l'arête, et les écarts suivent : $y_3=3y_1-2y_2$, $y_4=y_1-2y_2$.</span></li>
+<li>$$c\cdot y=-1+1=0 .$$<span class="why">Comme prévu par les étapes 4–5 : la direction est plate (on reste sur la ligne de niveau $x_1+x_2=5$).</span></li>
+<li>$$\eps_0=\min_{y_j<0}\frac{x_j}{-y_j}=\frac{x_2}{1}=2 .$$<span class="why">Seule $y_2=-1$ est négative.</span></li>
+<li>$$z=x+2y=(5,0,17,9,0),\qquad c\cdot z=-5 .$$<span class="why">Support $\{1,3,4\}$ ; $\det(a_1\ a_3\ a_4)=1\ne0$ (tableau du §2) : libre. C'est le sommet $(5\,;\,0)$, de base $\{1,3,4\}$, toujours optimal.</span></li>
+</ol>
+<p>Avec $-y$ au lieu de $y$ : $\eps_0=\min\big(\frac31,\frac75,\frac33\big)=1$, et $x-y=(2,3,2,0,0)$, l'autre sommet optimal. Les deux sens mènent chacun à une extrémité de l'arête optimale.</p>
+</div>
+
+<div class="widget" data-widget="p2glisser"><p class="w-noscript">Figure interactive (nécessite JavaScript).</p></div>
+<p>À observer : cliquez dans le polygone pour placer le point de départ (arrondi au demi), choisissez le coût, puis « Un pas ». Le cadre affiche le support, la direction $y$ du noyau (nulle hors du support), $c\cdot y$, le pas maximal $\eps_0$ et la coordonnée qui s'annule. Avec $c=0$, partez de l'intérieur : deux pas (support $5$, puis $4$, puis $3$) ; avec la direction ↑, un seul pas, car deux coordonnées s'annulent à la fois. Avec $\max x_1+x_2$, partez d'un point de l'arête optimale (en vert) : $c\cdot y=0$, le pas reste sur l'arête et mène à un sommet optimal. Partez d'un point qui n'est pas optimal : $c\cdot y\ne0$ en général, et le widget choisit le sens qui fait <em>baisser</em> le coût ; c'est la version constructive décrite plus bas, un simplexe en germe.</p>
+
+<h3 id="optimum-remarque">Remarque 4.2.7 : un $\Xad$ non vide a toujours un sommet</h3>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, Rem. 4.2.7, p. 124</span></div>
+<p>En appliquant la Proposition 4.2.6 lorsque $c=0$ (toute solution admissible est alors optimale), on voit grâce au Lemme 4.2.5 que dès que $\Xad$ est non-vide, $\Xad$ a au moins un sommet. Cette propriété n'a pas lieu pour des polyèdres généraux (considérer un demi-plan de $\R^2$).</p>
+</div>
+<dl class="decode">
+<dt>$c=0$</dt><dd>Le coût est nul partout : tout point admissible atteint le minimum $0$. Si $\Xad\ne\emptyset$, il existe donc une solution optimale…</dd>
+<dt>« grâce au Lemme 4.2.5 »</dt><dd>… et la Proposition 4.2.6 en donne une basique, c'est-à-dire un sommet. La preuve est constructive : c'est le glissement du widget avec $c=0$.</dd>
+<dt>« polyèdres généraux »</dt><dd>Les polyèdres qui ne sont pas de la forme $\{Ax=b,\ x\ge0\}$, par exemple $\{x : Mx\le d\}$ avec $x$ de signe quelconque.</dd>
+</dl>
+<figure class="fig"><!-- include figures/P02/demi_plan.svg --><figcaption>À gauche, le demi-plan $H=\{x_1+x_2\le1\}$ : tout point est le milieu d'un segment parallèle au bord, donc aucun n'est un sommet. À droite, le quadrant $\R^2_+$, où vivent les variables de la forme standard : une droite qui y entre en ressort toujours, et le coin $0$ est un sommet.</figcaption></figure>
+<p><strong>Pourquoi un demi-plan n'a pas de sommet.</strong> Pour $p\in H$ et tout $t\in\R$, $p\pm t(1,-1)\in H$ : ajouter $t$ à $x_1$ et retirer $t$ à $x_2$ ne change pas $x_1+x_2$. Donc tout point de $H$ est le milieu d'un segment de $H$. Le demi-plan contient des <strong>droites</strong> entières, et un point d'une droite contenue dans l'ensemble n'est jamais un sommet.</p>
+<p><strong>Pourquoi la forme standard l'interdit.</strong> $\Xad$ ne contient aucune droite :</p>
+<ol class="steps">
+<li>$$\text{Supposons } x^0+t\,d\in\Xad \text{ pour tout } t\in\R .$$<span class="why">Une droite de direction $d$ contenue dans $\Xad$.</span></li>
+<li>$$x^0_j+t\,d_j\ge0\quad\text{pour tout } t\in\R \text{ et tout } j .$$<span class="why">Les points de $\Xad$ sont $\ge0$.</span></li>
+<li>$$d_j=0\ \text{ pour tout } j,\ \text{ donc } d=0 .$$<span class="why">Si $d_j>0$, prendre $t\to-\infty$ rend $x^0_j+td_j$ négatif ; si $d_j<0$, prendre $t\to+\infty$.</span></li>
+</ol>
+<p>C'est l'ingrédient caché de la Remarque 4.2.7 : on peut montrer (résultat classique, hors livre) qu'un polyèdre non vide a un sommet si et seulement s'il ne contient aucune droite. La forme standard, avec ses $x\ge0$, est toujours du bon côté.</p>
+<div class="box pitfall"><div class="box-h">Piège — la mise sous forme standard crée des sommets</div>
+<p>Mettez $H$ sous forme standard : $x_1=x_1^+-x_1^-$, $x_2=x_2^+-x_2^-$, une variable d'écart $s$, et l'unique équation $x_1^+-x_1^-+x_2^+-x_2^-+s=1$ ($m=1$, $n=5$). Ce nouveau polyèdre a trois sommets : $x_1^+=1$, $x_2^+=1$ et $s=1$ (les autres variables nulles) ; les bases $\{x_1^-\}$ et $\{x_2^-\}$ donnent $-1<0$, non admissibles. Ils correspondent aux points $(1\,;\,0)$, $(0\,;\,1)$ et $(0\,;\,0)$ de $H$, qui ne sont <em>pas</em> des sommets de $H$. Les réductions de la partie 1 préservent la valeur optimale et les solutions, pas la géométrie : l'application $(x^+,x^-,s)\mapsto x^+-x^-$ n'est pas injective.</p>
+</div>
+
+<div class="box remark" id="note-k-m"><div class="box-h">Note sur les sources — l'idée de preuve « $k>m$ »</div>
+<p>La diapo 5 ne donne d'« idées » que pour les points 1 et 2 du lemme ; il n'y en a pas pour le point 3. Le guide v1 lui attribue pourtant la phrase « si $x$ a $k>m$ composantes non nulles alors on peut trouver $x'=x \bmod \Ker(A)$ de coût identique et dont $k-1$ composantes sont non nulles » : ce passage ne figure pas dans la version de <code>ProgLin.pdf</code> que nous avons (63 pages ; vérifié sur le texte de tout le PDF et sur l'image des diapos 5 à 7). Si vous l'avez noté en cours, retenez qu'il est <strong>incomplet</strong> : réduire le support « tant que $k>m$ » s'arrête dès que $k\le m$, alors qu'un point à $k\le m$ composantes non nulles n'est basique que si ses colonnes sont libres. Contre-exemple : $\Xad=\{x\in\R^3_+ : x_1+x_2=1,\ x_3=0\}$, $c=0$ ; $x=(\frac12,\frac12,0)$ est optimal avec $k=2=m$, mais $a_1=a_2$ : il n'est pas basique, et il faut encore un pas (direction $y=(1,-1,0)$, $\eps_0=\frac12$) pour atteindre le sommet $(1,0,0)$. La bonne condition d'arrêt, celle du livre, est « <strong>colonnes du support libres</strong> ». (« $x'=x\bmod\Ker A$ » signifie $x'-x\in\Ker A$, donc $Ax'=Ax=b$.)</p>
+</div>
+
+<details class="fold more" id="optimum-constructif"><summary>Pour aller plus loin — la même idée prouve l'existence (Lemme 4.2.3), sans topologie</summary><div class="fold-body">
+<p>Le livre démontre le Lemme 4.2.3 (existence d'une solution optimale quand $-\infty<\inf<+\infty$) avec la fermeture d'un cône (partie 1). Le glissement donne une preuve élémentaire. Partons d'un point admissible <em>quelconque</em> $x$, pas forcément optimal, dont les colonnes du support sont liées, et soit $y\ne0$ comme à l'étape 2. On choisit le signe de $y$ pour que $c\cdot y\le0$.</p>
+<ul>
+<li><strong>Si $y$ a une composante négative</strong> : on glisse jusqu'à $\eps_0$ (étape 7). Le support diminue et le coût ne monte pas, $c\cdot z_{\eps_0}=c\cdot x+\eps_0\,c\cdot y\le c\cdot x$.</li>
+<li><strong>Si $y\ge0$ et $c\cdot y<0$</strong> : la demi-droite $x+\eps y$, $\eps\ge0$, est admissible ($Ay=0$, $y\ge0$) et le coût y tend vers $-\infty$ : la valeur est $-\infty$.</li>
+<li><strong>Si $y\ge0$ et $c\cdot y=0$</strong> : on remplace $y$ par $-y$, qui a une composante négative, et l'on est dans le premier cas.</li>
+</ul>
+<p><strong>Conclusion.</strong> Si la valeur est finie, le deuxième cas n'arrive jamais : tout point admissible $x$ est dominé par une solution basique, $c\cdot x\ge c\cdot x^B$. Les solutions basiques sont en nombre fini, donc la meilleure d'entre elles, $x^{B^*}$, vérifie $c\cdot x\ge c\cdot x^{B^*}$ pour tout $x\in\Xad$ : le minimum est atteint, en un sommet. Cela redémontre d'un coup le Lemme 4.2.3 et la Proposition 4.2.6. Choisir à chaque pas une direction qui fait baisser le coût, c'est déjà l'esprit du simplexe (partie 3).</p>
+</div></details>
+
+<div class="box reflex"><div class="box-h">Réflexes</div>
+<ul>
+<li>Montrer qu'un minimum est atteint en un sommet → <strong>réduire le support</strong> : une direction du noyau portée par le support, plate par optimalité, poussée jusqu'au bord.</li>
+<li>Pourquoi $c\cdot y=0$ ? → parce que $x$ est optimal et que $x+\eps y$ et $x-\eps y$ sont <strong>tous deux</strong> admissibles.</li>
+<li>Le pas maximal → $\eps_0=\min_{y_j<0}x_j/(-y_j)$ : la première coordonnée qui touche zéro. (Le même calcul s'appellera « test du rapport » dans le simplexe.)</li>
+<li>Résoudre un petit programme linéaire borné à la main → énumérer les bases admissibles et prendre la meilleure (si la valeur est finie).</li>
+</ul>
+</div>
+
+<div class="box ml"><div class="box-h">En machine learning — la régression en norme $\ell^1$ passe par des points des données</div>
+<p>La régression <em>LAD</em> (<em>least absolute deviations</em>) ajuste $y\approx\varphi(t)\cdot w$ en minimisant $\sum_i\abs{y_i-\varphi_i\cdot w}$ plutôt que la somme des carrés : elle est bien moins sensible aux valeurs aberrantes. C'est un programme linéaire : $\min\sum_i(r_i^++r_i^-)$ sous $\varphi_i\cdot w+r_i^+-r_i^-=y_i$, $r^\pm\ge0$. Sa géométrie est celle de cette section : <strong>si la matrice $\Phi$ des $\varphi_i$ est de rang $p$ (le nombre de paramètres), il existe une solution optimale qui passe exactement par au moins $p$ points des données</strong>.</p>
+<p>La preuve est le glissement de la Proposition 4.2.6. Soit $w$ optimal et $Z$ l'ensemble des $i$ de résidu nul. Si les $\varphi_i$, $i\in Z$, n'engendrent pas $\R^p$, il existe $d\ne0$ avec $\varphi_i\cdot d=0$ pour $i\in Z$. Le long de $w+\eps d$, les résidus de $Z$ restent nuls, les autres gardent leur signe pour $\eps$ petit : la perte est affine en $\eps$, et l'optimalité de $w$ dans les deux sens force une pente nulle (c'est « $c\cdot y=0$ »). On glisse jusqu'à ce qu'un nouveau résidu s'annule (cela arrive, car $\Phi d\ne0$) ; la perte n'a pas changé et $Z$ a grossi. On recommence jusqu'à ce que les $\varphi_i$, $i\in Z$, engendrent $\R^p$, ce qui demande $\card Z\ge p$.</p>
+<p>Exemple vérifié (énumération exacte et HiGHS) : les données $t=(0,1,2,3,4)$, $y=(1,3,2,4,4)$, le modèle $y\approx w_0+w_1t$ ($p=2$). La droite LAD est unique, $y=1+\frac34t$, de perte $\frac52$ : elle passe par $(0\,;\,1)$ et $(4\,;\,4)$. La droite des moindres carrés, $y=1{,}4+0{,}7\,t$, ne passe par aucun point et a une perte $\ell^1$ de $2{,}8$. La <em>régression quantile</em> (même programme linéaire avec des poids $\tau$ et $1-\tau$ sur $r^+$ et $r^-$) a la même propriété.</p>
+</div>
+
+<div class="box ml"><div class="box-h">En machine learning — un plan de transport optimal a au plus $N_1+N_2-1$ cases non nulles</div>
+<p>Le transport optimal discret (Kantorovich) entre un histogramme $a$ sur $N_1$ points et un histogramme $b$ sur $N_2$ points est un programme linéaire : les $N_1N_2$ inconnues $P_{ij}\ge0$ (la masse envoyée de $i$ à $j$), les $N_1+N_2$ contraintes de marges $\sum_jP_{ij}=a_i$, $\sum_iP_{ij}=b_j$, et le coût $\sum_{ij}C_{ij}P_{ij}$. Les contraintes ne sont que de rang $N_1+N_2-1$ (la somme des lignes égale la somme des colonnes : une équation est redondante) ; on en retire une pour être sous forme standard avec $\rg A=m=N_1+N_2-1$. Par la Proposition 4.2.6 et le §3, il existe un plan optimal <strong>basique</strong>, avec <strong>au plus $N_1+N_2-1$ cases non nulles</strong> sur $N_1N_2$ : au plus $199$ sur $10\,000$ pour $N_1=N_2=100$. Les algorithmes exacts (simplexe de réseau, <code>ot.emd</code> de la bibliothèque POT) renvoient un tel plan : avec $a=(\frac15,\frac3{10},\frac12)$, $b=(\frac14,\frac14,\frac14,\frac14)$ et $2000$ coûts entiers aléatoires, <code>ot.emd</code> renvoie toujours au plus $6=3+4-1$ cases non nulles (exactement $6$ pour $802$ coûts, $5$ pour les $1198$ autres : comme $a_3=\frac12$ est la somme de deux $b_j$, le plan peut se couper en deux blocs indépendants, et le sommet est dégénéré, comme à l'<a href="#exo-transport">exercice 6</a>). Ce résultat et sa lecture par les graphes (le support d'un sommet est une forêt) sont développés dans le cours de transport optimal : <a href="../../../Optimal_transport_ML/v2/Lesson02.html#vert-sparse">Lesson 2, « At most $n+m-1$ non-zero entries »</a>.</p>
+</div>
+
+<div class="box app"><div class="box-h">En pratique — le « crossover » après les points intérieurs</div>
+<p>Les méthodes de points intérieurs (partie 4) avancent <em>dans</em> $\Xad$ et s'arrêtent près du « centre » de l'ensemble des solutions optimales, pas en un sommet. Quand ces solutions forment une arête ou une face, le point renvoyé n'est pas basique. Les solveurs enchaînent alors une phase de <strong>crossover</strong> : des « poussées » qui ramènent des variables à leurs bornes sans changer le coût (exactement le glissement de la Proposition 4.2.6), puis quelques itérations du simplexe pour obtenir une base optimale. Vérification avec SciPy 1.18 (HiGHS), sans prétraitement, sur $\max x_1+x_2$ dans le polygone de l'Exercice 4.2.1 : <code>linprog(..., method="highs-ipm", options={"presolve": False, "run_crossover": "off"})</code> renvoie $x\approx(2{,}48\,;\,2{,}52)$, au milieu de l'arête optimale ; avec le crossover (réglage par défaut), $(5\,;\,0)$, un sommet ; le simplexe dual (<code>method="highs-ds"</code>) renvoie l'autre sommet optimal, $(2\,;\,3)$. On veut un sommet pour sa parcimonie, pour redémarrer à chaud, pour l'analyse de sensibilité (partie 5) et pour obtenir des solutions entières dans les problèmes de flots (partie 7). Voir la <a href="Partie04.html#trajectoire-centrale">trajectoire centrale (partie 4)</a>.</p>
+</div>
+
+<div class="quiz"><p>Dans la preuve, pourquoi ne peut-on pas glisser simplement dans la direction $-c$ (celle qui fait le plus baisser le coût) ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>Parce que la direction doit garder $Ax=b$ ($Ay=0$) et ne pas toucher aux coordonnées nulles ($y_j=0$ hors du support) ; $-c$ ne vérifie en général ni l'un ni l'autre. Et si $x$ est optimal, aucune direction admissible ne fait baisser le coût : la preuve cherche une direction <em>plate</em>, pas une direction de descente.</p>
+</div></details></div>
+<div class="quiz"><p>La Proposition 4.2.6 dit-elle que le simplexe trouve l'optimum ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>Non. Elle dit seulement qu'il suffit de chercher parmi les sommets, en nombre fini. Comment les parcourir intelligemment, et comment savoir qu'un sommet est optimal sans regarder tous les autres (les coûts réduits), c'est la partie 3.</p>
+</div></details></div>

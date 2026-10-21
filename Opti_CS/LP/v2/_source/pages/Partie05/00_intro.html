@@ -1,0 +1,108 @@
+<!--
+title: Partie 5 — La dualité : prouver qu'un point est optimal
+short: 5 · Dualité
+description: La dualité en programmation linéaire, pas à pas : Lagrangien et fonction duale, problème dual (4.18), dualité faible, théorème de dualité 4.2.13 et sa preuve (KKT, Farkas), écarts complémentaires, lien avec les coûts réduits, prix ombre, le centre d'appels de la diapo 15 et les Exercices 4.2.7 à 4.2.10.
+subtitle: Diapos 13–15 et Allaire §4.2.4 (p. 131–134). À tout programme linéaire est associé un second programme linéaire, son dual, dont chaque point admissible donne une borne sur la valeur optimale. Les deux valeurs optimales sont égales : on peut certifier un optimum en une ligne de calcul, et lire dans la solution duale le prix de chaque contrainte.
+kicker: Optimisation · Programmation linéaire · guide v2 · partie 5
+-->
+
+<div class="box objectives">
+<div class="box-h">Ce que vous saurez faire après cette page</div>
+<ol>
+<li>Calculer la fonction duale $G(p)=\min_{x\ge0}L(x,p)$ d'un programme linéaire standard, écrire son dual (4.18), et écrire le dual de <strong>n'importe quel</strong> programme linéaire grâce au tableau des règles de passage.</li>
+<li>Démontrer la <strong>dualité faible</strong> $c\cdot x\ge b\cdot p$ en une ligne, et s'en servir pour encadrer une valeur optimale.</li>
+<li>Énoncer le <strong>théorème de dualité</strong> (diapo 14, Théorème 4.2.13), connaître les quatre situations possibles, et refaire la démonstration (par Kuhn–Tucker et par le lemme de Farkas, avec le cas que le livre oublie).</li>
+<li>Utiliser les <strong>écarts complémentaires</strong> pour trouver $p$ à partir de $x$ (ou l'inverse) et certifier qu'un point est optimal.</li>
+<li>Reconnaître dans les <strong>coûts réduits</strong> du simplexe les écarts du dual : $p=B^{-\top}c_B$.</li>
+<li>Lire les variables duales comme des <strong>prix</strong> (prix ombre) et faire une petite analyse de sensibilité.</li>
+<li>Résoudre en entier le <strong>centre d'appels</strong> de la diapo 15 et les Exercices 4.2.7 à 4.2.10 du livre.</li>
+<li>Repérer la dualité en machine learning : potentiels du transport optimal, SVM, jeux à somme nulle, critère d'arrêt des solveurs.</li>
+</ol>
+</div>
+
+<h2 id="start">0. Avant de commencer</h2>
+
+<h3 id="lire">Comment lire cette page</h3>
+<p>La page suit le cours : les diapos 13 à 15, puis la section 4.2.4 du livre d'Allaire. Chaque énoncé du cours est cité fidèlement dans un encadré comme ceux-ci, avec sa référence exacte :</p>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo N</span></div>
+<p>Une citation fidèle des diapos (<a href="../ProgLin.pdf">ProgLin.pdf</a>), dans leurs notations.</p>
+</div>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, Théorème 4.2.13, p. 132</span></div>
+<p>Une citation fidèle du livre (<a href="../OptiAllaire_LP.pdf">OptiAllaire_LP.pdf</a>), avec le numéro de l'énoncé et la page imprimée.</p>
+</div>
+<p>Chaque citation est suivie d'un <strong>décodage</strong> (le sens de chaque symbole), d'un <strong>petit exemple chiffré</strong>, de <strong>l'idée</strong> de la preuve, puis de la <strong>preuve complète</strong>, repliée (le bouton « Tout déplier » en haut ouvre tout). Les autres encadrés :</p>
+<div class="cols">
+<div class="box recall"><div class="box-h">Rappel</div><p>Un prérequis rappelé là où il sert (rang, transposée, Lagrangien, Farkas…), avec un lien vers la page <a href="Rappels.html">Rappels</a>.</p></div>
+<div class="box idea"><div class="box-h">L'idée</div><p>Le cœur d'une preuve en quelques lignes, avant les détails.</p></div>
+<div class="box pitfall"><div class="box-h">Piège</div><p>Une erreur classique, avec un contre-exemple.</p></div>
+<div class="box reflex"><div class="box-h">Réflexe</div><p>« Quand vous voyez … → pensez … ».</p></div>
+<div class="box ml"><div class="box-h">En machine learning</div><p>Où l'idée sert en apprentissage automatique, sur un exemple concret.</p></div>
+<div class="box app"><div class="box-h">En pratique</div><p>Ce que font les solveurs et la recherche opérationnelle.</p></div>
+</div>
+<p>Les figures interactives ont des curseurs, des boutons et des points à déplacer ; le paragraphe « À observer » qui suit chacune dit quoi regarder. <strong>Tous les nombres de la page ont été calculés par des scripts</strong> (fractions exactes, <code>scipy.optimize.linprog</code>, la bibliothèque POT pour le transport optimal).</p>
+
+<h3 id="histoire">L'histoire de la partie en six étapes</h3>
+<p class="tldr">Pour prouver qu'un point est optimal, on fabrique des bornes inférieures en combinant les contraintes ; la meilleure de ces bornes est un nouveau programme linéaire, le dual, et elle tombe exactement sur l'optimum.</p>
+<ol class="chain">
+<li><strong>Le problème (§1).</strong> Vous avez un candidat $\bar x$. Pour prouver qu'il est optimal sans tout énumérer, il faut une <em>borne inférieure</em> sur le coût. En additionnant les contraintes avec des poids bien choisis, on en obtient : chaque jeu de poids $p$ donne la borne $b\cdot p$. Chercher la meilleure borne est un programme linéaire : le <em>dual</em>.</li>
+<li><strong>Le dual, par le Lagrangien (§2).</strong> Le cours le construit ainsi : $L(x,p)=c\cdot x+p\cdot(b-Ax)$, puis $G(p)=\min_{x\ge0}L(x,p)$, qui vaut $p\cdot b$ si $c-A\T p\ge0$ et $-\infty$ sinon. Maximiser $G$, c'est résoudre $\max\{b\cdot p : A\T p\le c\}$.</li>
+<li><strong>La dualité faible (§3).</strong> Pour $x$ et $p$ admissibles, $c\cdot x\ge b\cdot p$, en une ligne. Conséquence : si $c\cdot x=b\cdot p$, les deux sont optimaux.</li>
+<li><strong>Le théorème de dualité (§4).</strong> Dès que l'un des deux problèmes a une valeur finie, les deux valeurs optimales sont atteintes et <em>égales</em> : il n'y a jamais d'écart à l'optimum. Sinon, l'un est non borné et l'autre vide, ou les deux sont vides.</li>
+<li><strong>Les écarts complémentaires et le simplexe (§5, §6).</strong> À l'optimum, $\bar x_j>0$ force $(A\T\bar p)_j=c_j$ : une condition coordonnée par coordonnée qui permet de trouver $\bar p$ à partir de $\bar x$. Les coûts réduits du simplexe sont exactement $c-A\T p$ pour $p=B^{-\top}c_B$ : le simplexe s'arrête quand $p$ devient admissible pour le dual.</li>
+<li><strong>Des prix (§7, §8).</strong> $\bar p_i$ est la dérivée de la valeur optimale par rapport à $b_i$ : le prix d'une unité de plus de la ressource $i$. Sur le centre d'appels de la diapo 15, c'est le coût d'un client de plus sur un intervalle de la journée.</li>
+</ol>
+
+<h3 id="prerequis">Ce qu'il faut savoir avant</h3>
+<p>Ouvrez seulement les rappels dont vous avez besoin. Chacun dit exactement ce qui sert sur cette page.</p>
+
+<details class="fold more" id="rappel-transposee"><summary>Rappel — la transposée et le produit scalaire</summary><div class="fold-body">
+<p>Pour $A\in\Mc_{m\times n}(\R)$, la transposée $A\T\in\Mc_{n\times m}(\R)$ a pour coefficients $(A\T)_{ji}=a_{ij}$ : les lignes de $A$ deviennent les colonnes de $A\T$. La seule propriété utilisée sur cette page :</p>
+$$(A\T p)\cdot x=p\cdot(Ax)\qquad\text{pour tous }p\in\R^m,\ x\in\R^n,$$
+<p>car les deux côtés valent $\sum_{i,j}a_{ij}\,p_i\,x_j$. La $j$-ème composante de $A\T p$ est $a_j\cdot p$, où $a_j$ est la $j$-ème colonne de $A$. Les diapos écrivent ${}^tA$, le livre $A^*$, ce guide $A\T$ : c'est la même matrice. <a href="Rappels.html#transposee">En savoir plus</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-lagrangien"><summary>Rappel — Lagrangien, point-selle, dualité (chapitre 2)</summary><div class="fold-body">
+<p>Pour minimiser $J(v)$ sous des contraintes $F(v)\le0$ (ou $F(v)=0$), on introduit le <em>Lagrangien</em> $L(v,q)=J(v)+q\cdot F(v)$, avec $q\ge0$ pour des inégalités et $q$ quelconque pour des égalités. Le livre définit (Allaire, (2.68)–(2.70), p. 52)</p>
+$$\mathcal J(v)=\sup_{q}L(v,q),\qquad G(q)=\inf_{v}L(v,q),$$
+<p>le problème primal $\inf_v\mathcal J(v)$ (c'est le problème de départ, car $\mathcal J(v)=J(v)$ si $v$ est admissible et $+\infty$ sinon) et le problème dual $\sup_qG(q)$. On a toujours $\inf\sup\ge\sup\inf$ (« dualité faible », Remarque 2.6.11, p. 53). Un <em>point-selle</em> $(u,p)$ vérifie $L(u,q)\le L(u,p)\le L(v,p)$ pour tous $v,q$ (Définition 2.6.1, p. 48) ; le Théorème 2.6.9 (p. 52) dit que c'est équivalent à $\mathcal J(u)=\min\mathcal J=\max G=G(p)$. <a href="Rappels.html#lagrangien">Lagrangien</a>, <a href="Rappels.html#point-selle">point-selle</a>, <a href="Rappels.html#dualite-lagrangienne">dualité lagrangienne</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-kkt"><summary>Rappel — les conditions de Kuhn et Tucker (KKT)</summary><div class="fold-body">
+<p>Si $u$ minimise $J$ sous des contraintes $F_i(v)\le0$ ($1\le i\le M$) <em>qualifiées</em> en $u$, il existe des multiplicateurs $\lambda_i\ge0$ tels que</p>
+$$J'(u)+\sum_{i=1}^M\lambda_iF_i'(u)=0,\qquad \lambda_i=0\ \text{si}\ F_i(u)<0$$
+<p>(Allaire, Théorème 2.5.17, p. 42). Des contraintes <strong>affines</strong> sont toujours qualifiées (Remarque 2.5.16, p. 42) : en programmation linéaire, KKT s'applique sans aucune hypothèse. Dans le cas convexe, ces conditions sont aussi suffisantes (Théorème 2.6.4, p. 49). <a href="Rappels.html#kkt">En savoir plus</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-farkas"><summary>Rappel — le lemme de Farkas</summary><div class="fold-body">
+<p>Forme du livre (Allaire, Lemme 2.5.19, p. 43) : soient $a_1,\dots,a_M\in V$, $K=\{w : \langle a_i,w\rangle\le0\ \forall i\}$ et $\hat K=\{-\sum_i\lambda_ia_i : \lambda_i\ge0\}$. Si $\langle p,w\rangle\ge0$ pour tout $w\in K$, alors $p\in\hat K$. Forme « programmation linéaire », celle qui sert au §4 (prendre pour $a_i$ les colonnes de $\tilde A$ et $p=-\tilde b$) :</p>
+$$\big(\tilde b\cdot w\le0\ \text{ pour tout } w \text{ tel que } \tilde A\T w\le0\big)\ \Longrightarrow\ \exists\,\tilde x\ge0,\ \ \tilde A\tilde x=\tilde b.$$
+<p>En mots : si aucun « séparateur » $w$ n'existe, $\tilde b$ est dans le cône engendré par les colonnes de $\tilde A$. <a href="Rappels.html#farkas">En savoir plus</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-existence"><summary>Rappel — existence d'une solution (Lemme 4.2.3, partie 1)</summary><div class="fold-body">
+<p>Le programme standard $\min\{c\cdot x : Ax=b,\ x\ge0\}$ a une solution optimale <strong>si et seulement si</strong> sa valeur est finie : $-\infty<\inf<+\infty$ (Allaire, Lemme 4.2.3, p. 122). Par convention, $\inf=+\infty$ si $\Xad$ est vide. Sur cette page, « valeur finie » et « a une solution optimale » sont donc synonymes. <a href="Partie01.html#existence">Partie 1, l'existence</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-couts-reduits"><summary>Rappel — bases et coûts réduits (parties 2 et 3)</summary><div class="fold-body">
+<p>Une base $B$ est formée de $m$ colonnes de $A$ formant une matrice inversible ; $N$ désigne les autres colonnes, $x=(x_B,x_N)$, $c=(c_B,c_N)$. La solution basique est $x_N=0$, $x_B=B^{-1}b$. Le coût d'un point admissible s'écrit (Allaire, (4.6), p. 125)</p>
+$$c\cdot x-c\cdot\bar x=\ct_N\cdot x_N,\qquad \ct_N=c_N-N\T B^{-\top}c_B,$$
+<p>et la solution basique est optimale si $\ct_N\ge0$ (Proposition 4.2.8, p. 125). Le simplexe passe de base en base tant qu'un coût réduit est négatif. <a href="Partie02.html#bases">Partie 2, les bases</a> ; <a href="Partie03.html#couts-reduits">partie 3, les coûts réduits</a>.</p>
+</div></details>
+
+<h3 id="notation">Tableau de notation</h3>
+<p>Les diapos, le livre et ce guide n'écrivent pas tout de la même façon. Ce tableau donne les correspondances.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Objet</th><th>Diapos</th><th>Livre</th><th>Ce guide</th></tr></thead>
+<tbody>
+<tr><td>transposée</td><td>${}^tA$</td><td>$A^*$</td><td>$A\T$</td></tr>
+<tr><td>problème primal</td><td>$\min_{Ax=b,\ x\geqslant0}c\cdot x$</td><td>$\inf_{x\in\R^n,\ Ax=b,\ x\ge0}c\cdot x$ (4.15)</td><td>$\min\{c\cdot x : Ax=b,\ x\ge0\}$</td></tr>
+<tr><td>Lagrangien</td><td>$L(x,p)=c\cdot x+p\cdot(b-Ax)$</td><td>idem (4.16)</td><td>idem</td></tr>
+<tr><td>fonction duale</td><td>« coût dual » $G(p)$</td><td>« fonction duale » $G(p)$ (4.17)</td><td>$G(p)$</td></tr>
+<tr><td>problème dual</td><td>$\sup_{{}^tAp\leqslant c}b\cdot p$</td><td>$\sup_{A^*p-c\le0}p\cdot b$ (4.18)</td><td>$\max\{b\cdot p : A\T p\le c\}$</td></tr>
+<tr><td>ensembles admissibles</td><td>—</td><td>$X_{ad}$, $P_{ad}$</td><td>$\Xad$, $\Pad$</td></tr>
+<tr><td>solutions optimales</td><td>$\bar x$, $\bar p$</td><td>$\bar x$, $\bar p$</td><td>$\bar x$, $\bar p$</td></tr>
+<tr><td>écarts du dual</td><td>$c-{}^tAp$</td><td>$c-A^*p$</td><td>$c-A\T p$ (= les coûts réduits en une base, §6)</td></tr>
+<tr><td>coûts réduits</td><td>$\tilde c_N=c_N-{}^t(B^{-1}N)c_B$ (diapo 6)</td><td>$\ct_N=c_N-N^*(B^{-1})^*c_B$ (4.7)</td><td>$\ct_N=c_N-N\T B^{-\top}c_B$</td></tr>
+<tr><td>centre d'appels</td><td>$c$ = clients, $S$ = salaires</td><td>—</td><td>idem (attention : ici $c$ n'est pas le coût, §8)</td></tr>
+</tbody></table></div>
+<p>Code couleur des figures : <span class="be">ensemble admissible primal (bleu)</span>, <span class="al">coût et lignes de niveau (rouge orangé)</span>, <span class="bar">optimum (vert)</span>, <span class="ga">objets duaux : $p$ et $\Pad$ (violet)</span> ; les points non admissibles sont en rose.</p>

@@ -1,0 +1,186 @@
+<h2 id="exercices">6. Exercices du cours, corrigés</h2>
+<p class="tldr">Les diapos 48–63 n'ont pas d'exercice numéroté : chacun de leurs exemples devient ici un exercice, avec des données chiffrées, un indice et une solution complète.</p>
+<p>Le livre ne traite pas ces sujets (il renvoie à sa référence [5], de Bonnans et Gaubert, p. 119–120). Les cinq exercices ci-dessous reprennent, dans l'ordre, ce que les diapos demandent de savoir faire : formuler et encadrer un sac-à-dos (diapos 48–50), le résoudre par séparation-évaluation (diapo 51), écrire le programme binaire du voyageur (diapos 52–54), dérouler la séparation-évaluation sur des tournées (diapos 55–58), traduire des règles logiques (diapos 59–63). Les données sont celles du guide ; tous les nombres ont été vérifiés par énumération et par <code>scipy.optimize.milp</code>. Essayez avant d'ouvrir l'indice, et l'indice avant la solution.</p>
+
+<!-- ============================================================ Ex 1 -->
+<div class="exo" id="exo-d1"><div class="exo-h">Exercice 1 — Formuler et encadrer un sac-à-dos (diapos 48–50) <span class="lvl">★</span></div>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo 50</span></div>
+<p>N objets de poids $p_j$ et d'utilité $u_j$. $\max_{x_j\in\{0,1\},\ p\cdot x\lt L}u\cdot x$. ▶ $x\in\{0,1\}^N$ : variable de décision ▶ Problème NP-complet (difficile). Complexité exponentielle ▶ Démarrage avec une heuristique : algorithme glouton</p>
+</div>
+<p><strong>Énoncé (données du guide).</strong> Cinq objets A, B, C, D, E de poids $p=(2,2,5,6,8)$ et d'utilités $u=(25,22,14,15,17)$ ; capacité $L=12$.</p>
+<ol type="a">
+<li>Écrivez le programme en nombres entiers (avec $p\cdot x\le L$).</li>
+<li>Appliquez l'algorithme glouton.</li>
+<li>Calculez la relaxation continue par la proposition de Dantzig (§2).</li>
+<li>Encadrez l'optimum.</li>
+<li>Avec l'inégalité stricte de la diapo, $p\cdot x\lt12$, l'optimum change-t-il ? (Utilisez le résultat de l'exercice 2, $64$, ou énumérez.)</li>
+</ol>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>Calculez les rapports $u_j/p_j$ : ils sont déjà rangés. Pour la relaxation, cherchez le premier objet qui ne tient plus quand on prend les objets dans l'ordre <em>sans en sauter</em>. Pour (e), « $\lt12$ » avec des poids entiers, c'est « $\le11$ ».</p>
+</div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>(a)</strong></p>
+$$\begin{aligned}\max\ \ &25x_A+22x_B+14x_C+15x_D+17x_E\\ \text{sous}\ \ &2x_A+2x_B+5x_C+6x_D+8x_E\le12,\quad x\in\{0,1\}^5 .\end{aligned}$$
+<p><strong>(b)</strong> Rapports : $12{,}5$ ; $11$ ; $2{,}8$ ; $2{,}5$ ; $2{,}125$.</p>
+<ol class="steps">
+<li>A ($2\le12$) : pris, reste $10$, utilité $25$.<span class="why">Meilleur rapport.</span></li>
+<li>B ($2\le10$) : pris, reste $8$, utilité $47$.<span class="why">Rapport $11$.</span></li>
+<li>C ($5\le8$) : pris, reste $3$, utilité $61$.<span class="why">Rapport $2{,}8$.</span></li>
+<li>D ($6\gt3$) et E ($8\gt3$) : laissés. Glouton : $\{A,B,C\}$, utilité $61$, poids $9$.<span class="why">Plus rien ne tient.</span></li>
+</ol>
+<p><strong>(c)</strong> $p_A+p_B+p_C=9\le12\lt9+p_D=15$ : l'objet critique est D. On prend A, B, C et $x_D=(12-9)/6=\tfrac12$ :</p>
+$$\overline v=25+22+14+\tfrac12\cdot15=68{,}5 .$$
+<p>Certificat (preuve de Dantzig avec $\lambda=u_D/p_D=5/2$) : les bénéfices nets $u_j-\tfrac52p_j$ valent $20$, $17$, $1{,}5$, $0$, $-3$, donc $u\cdot x\le20+17+1{,}5+\tfrac52\cdot12=68{,}5$ pour toute solution relâchée.</p>
+<p><strong>(d)</strong> Les utilités sont entières : $61\le\text{opt}\le68$.</p>
+<p><strong>(e)</strong> Oui. L'optimum avec $\le12$ est $\{A,B,E\}$, de poids exactement $12$ et d'utilité $64$ (exercice 2) ; l'inégalité stricte l'interdit. Avec « $\le11$ », l'énumération donne $\{A,B,D\}$ : poids $10$, utilité $62$. La coquille de la diapo change la réponse.</p>
+</div></details>
+</div>
+
+<!-- ============================================================ Ex 2 -->
+<div class="exo" id="exo-d2"><div class="exo-h">Exercice 2 — L'arbre de séparation-évaluation complet (diapo 51) <span class="lvl">★★</span></div>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo 51</span></div>
+<p>▶ Résolution par un algorithme de type diviser pour reigner : séparation, évaluation et coupe (Branch and bound and cut).</p>
+</div>
+<p><strong>Énoncé.</strong> Résolvez le sac-à-dos de l'exercice 1 par séparation-évaluation : départ du glouton ($61$), évaluation par la relaxation continue, séparation sur la variable fractionnaire, exploration en profondeur avec la branche « $=1$ » d'abord, élagage quand la borne est $\le$ la meilleure valeur connue. Dessinez l'arbre et donnez l'optimum.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>La racine est fractionnaire en D. Dans chaque nœud, retirez d'abord de la capacité les objets fixés à $1$, puis appliquez Dantzig aux objets libres (dans l'ordre A, B, C, D, E privé des objets fixés). L'arbre a $9$ nœuds.</p>
+</div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<ol class="steps">
+<li><strong>Nœud 0</strong> (rien de fixé) : $x=(1,1,1,\tfrac12,0)$, borne $68{,}5\gt61$ → séparer sur D.<span class="why">Exercice 1 (c).</span></li>
+<li><strong>Nœud 1</strong> ($x_D=1$) : reste $12-6=6$ ; A, B ($4$), puis $2/5$ de C : $15+25+22+\tfrac25\cdot14=67{,}6\gt61$ → séparer sur C.<span class="why">$x=(1,1,\tfrac25,1,0)$.</span></li>
+<li><strong>Nœud 2</strong> ($x_D=1$, $x_C=1$) : reste $12-11=1$ ; la moitié de A : $15+14+12{,}5=41{,}5\le61$ → élagué.<span class="why">Avec C et D, le sac est presque plein : rien de bon.</span></li>
+<li><strong>Nœud 3</strong> ($x_D=1$, $x_C=0$) : reste $6$ ; A, B ($4$), puis $2/8$ de E : $15+47+\tfrac14\cdot17=66{,}25\gt61$ → séparer sur E.<span class="why">$x=(1,1,0,1,\tfrac14)$.</span></li>
+<li><strong>Nœud 4</strong> ($x_D=1$, $x_C=0$, $x_E=1$) : poids fixé $14\gt12$ → irréalisable.<span class="why">D et E pèsent ensemble $14$.</span></li>
+<li><strong>Nœud 5</strong> ($x_D=1$, $x_C=0$, $x_E=0$) : A, B ; reste $2$, plus rien de libre : $x=(1,1,0,1,0)$, entier, $62\gt61$ → <strong>nouvelle meilleure : $62$</strong>.<span class="why">Relaxation entière.</span></li>
+<li><strong>Nœud 6</strong> ($x_D=0$) : A, B, C ($9$), puis $3/8$ de E : $61+\tfrac38\cdot17=67{,}375\gt62$ → séparer sur E.<span class="why">$x=(1,1,1,0,\tfrac38)$.</span></li>
+<li><strong>Nœud 7</strong> ($x_D=0$, $x_E=1$) : reste $4$ ; A, B : $x=(1,1,0,0,1)$, entier, $64\gt62$ → <strong>nouvelle meilleure : $64$</strong>.<span class="why">Le sac est plein ($2+2+8=12$).</span></li>
+<li><strong>Nœud 8</strong> ($x_D=0$, $x_E=0$) : A, B, C : $61\le64$ → élagué.<span class="why">C'est la solution du glouton.</span></li>
+</ol>
+<p>L'optimum est $64$, atteint par $\{A,B,E\}$ ; $9$ nœuds évalués. L'arbre :</p>
+<pre><code>0 : 68,5  ─ D=1 → 1 : 67,6  ─ C=1 → 2 : 41,5   élagué (≤ 61)
+          │                 └ C=0 → 3 : 66,25 ─ E=1 → 4 : irréalisable
+          │                                   └ E=0 → 5 : 62 entier (meilleure 62)
+          └ D=0 → 6 : 67,375 ─ E=1 → 7 : 64 entier (meilleure 64)
+                             └ E=0 → 8 : 61     élagué (≤ 64)</code></pre>
+<p>Remarque : le glouton ($61$) était loin ; l'écart initial $68{,}5-61$ a été comblé par $4$ séparations. La relaxation lagrangienne avec $\lambda=5/2$ redonne la borne de la racine ($G(5/2)=68{,}5$).</p>
+</div></details>
+</div>
+
+<!-- ============================================================ Ex 3 -->
+<div class="exo" id="exo-d3"><div class="exo-h">Exercice 3 — Le programme binaire du voyageur pour $N=4$ (diapos 52–54) <span class="lvl">★★</span></div>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo 54</span></div>
+<p>Reformulation : variable de décision binaire $x\in\{0,1\}^{\mathcal A}$. ▶ chaque sommet de la tournée est connecté à 2 arrêtes : $\sum_jx_{ij}=2$ pour tout sommet $i$. ▶ connexité de la tournée complète […] : $(i,j)\in S\cap\mathcal A$, $x_{ij}\leqslant\card(S)-1$. ▶ Problème reformulé : $\min d_{ij}x_{ij}$ sous les 2 contraintes précédentes.</p>
+</div>
+<p><strong>Énoncé.</strong> Quatre villes, distances $d_{12}=4$, $d_{13}=7$, $d_{14}=5$, $d_{23}=3$, $d_{24}=6$, $d_{34}=2$.</p>
+<ol type="a">
+<li>Combien y a-t-il de tournées ? Listez-les avec leurs longueurs.</li>
+<li>Écrivez le programme (V) corrigé (§4) : variables, contraintes de degré, contraintes de sous-tours. Combien de contraintes de sous-tours ?</li>
+<li>Montrez que, pour $N=4$, les contraintes de degré suffisent : leurs solutions binaires sont exactement les tournées. Et en continu ($0\le x_{ij}\le1$) ?</li>
+<li>Résolvez.</li>
+</ol>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>(c) Faites la combinaison « degré de 1 + degré de 2 − degré de 3 − degré de 4 » : beaucoup de variables se simplifient. Vous devez trouver $x_{12}=x_{34}$, puis deux autres égalités du même type.</p>
+</div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>(a)</strong> $(4-1)!/2=3$ tournées : $1\text{-}2\text{-}3\text{-}4$ de longueur $4+3+2+5=14$ ; $1\text{-}2\text{-}4\text{-}3$ de longueur $4+6+2+7=19$ ; $1\text{-}3\text{-}2\text{-}4$ de longueur $7+3+6+5=21$.</p>
+<p><strong>(b)</strong> Six variables $x_{12},x_{13},x_{14},x_{23},x_{24},x_{34}\in\{0,1\}$ ; objectif $\min\ 4x_{12}+7x_{13}+5x_{14}+3x_{23}+6x_{24}+2x_{34}$ ; degrés :</p>
+$$\begin{aligned}x_{12}+x_{13}+x_{14}&=2, & x_{12}+x_{23}+x_{24}&=2,\\ x_{13}+x_{23}+x_{34}&=2, & x_{14}+x_{24}+x_{34}&=2 .\end{aligned}$$
+<p>Sous-tours : pour $\card(S)=2$, les six contraintes $x_{ij}\le1$ ; pour $\card(S)=3$, les quatre contraintes</p>
+$$x_{12}+x_{13}+x_{23}\le2,\quad x_{12}+x_{14}+x_{24}\le2,\quad x_{13}+x_{14}+x_{34}\le2,\quad x_{23}+x_{24}+x_{34}\le2,$$
+<p>soit $10=2^4-4-2$ contraintes de sous-tours.</p>
+<p><strong>(c)</strong></p>
+<ol class="steps">
+<li>$$(\text{deg }1)+(\text{deg }2)-(\text{deg }3)-(\text{deg }4):\quad 2x_{12}-2x_{34}=0 .$$<span class="why">$x_{13}$, $x_{14}$, $x_{23}$, $x_{24}$ apparaissent une fois avec $+$ et une fois avec $-$.</span></li>
+<li>De même, $x_{13}=x_{24}$ et $x_{14}=x_{23}$.<span class="why">Combinaisons $(1)+(3)-(2)-(4)$ et $(1)+(4)-(2)-(3)$.</span></li>
+<li>Posons $a=x_{12}=x_{34}$, $b=x_{13}=x_{24}$, $c=x_{14}=x_{23}$ : les quatre équations de degré se réduisent à $a+b+c=2$.<span class="why">Chaque équation de degré contient une variable de chaque paire.</span></li>
+<li>En binaire, exactement deux de $a,b,c$ valent $1$ : $(a,b,c)=(1,0,1)$ donne les arêtes $12,34,14,23$, la tournée $1\text{-}2\text{-}3\text{-}4$ ; $(1,1,0)$ donne $1\text{-}2\text{-}4\text{-}3$ ; $(0,1,1)$ donne $1\text{-}3\text{-}2\text{-}4$.<span class="why">Trois solutions, les trois tournées : les contraintes de sous-tours sont automatiquement vraies (remarque du §4 : pour $N\le5$, une solution des contraintes de degré ne peut pas avoir deux cycles).</span></li>
+<li>En continu, $\{(a,b,c): a+b+c=2,\ 0\le a,b,c\le1\}$ est le triangle de sommets $(1,1,0)$, $(1,0,1)$, $(0,1,1)$ : ses sommets sont les tournées, et le simplexe en trouve une.<span class="why">L'optimum d'un programme linéaire est atteint en un sommet (partie 2) ; <code>linprog</code> donne bien la tournée de longueur $14$.</span></li>
+</ol>
+<p><strong>(d)</strong> L'objectif devient $(d_{12}+d_{34})a+(d_{13}+d_{24})b+(d_{14}+d_{23})c=6a+13b+8c$ avec $a+b+c=2$ : on prend les deux plus petits coefficients, $a=c=1$, $b=0$ : longueur $14$, tournée $1\text{-}2\text{-}3\text{-}4$.</p>
+</div></details>
+</div>
+
+<!-- ============================================================ Ex 4 -->
+<div class="exo" id="exo-d4"><div class="exo-h">Exercice 4 — Séparation-évaluation sur les tournées (diapos 55–58) <span class="lvl">★★★</span></div>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo 58</span></div>
+<p>▶ Description des tours sous forme d'arbre ▶ calcul d'une borne inférieure $m$ initialisée à l'aide d'une heuristique particulière. ▶ Calcul d'une borne inférieure prévisionnelle en relâchant les contraintes et en utilisant la dualité (relaxation lagrangienne) ▶ Parcours de l'arbre en élagant les branches dont la borne prévisionnelle excède $m$.</p>
+</div>
+<p><strong>Énoncé.</strong> Cinq villes, distances symétriques</p>
+<div class="table-wrap"><table>
+<thead><tr><th>$d_{ij}$</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>—</td><td>3</td><td>4</td><td>2</td><td>7</td></tr>
+<tr><td>2</td><td>3</td><td>—</td><td>4</td><td>6</td><td>3</td></tr>
+<tr><td>3</td><td>4</td><td>4</td><td>—</td><td>5</td><td>8</td></tr>
+<tr><td>4</td><td>2</td><td>6</td><td>5</td><td>—</td><td>6</td></tr>
+<tr><td>5</td><td>7</td><td>3</td><td>8</td><td>6</td><td>—</td></tr>
+</tbody></table></div>
+<ol type="a">
+<li>Point 2 de la diapo : calculez $m$ par le plus proche voisin depuis la ville 1. Est-ce une borne inférieure ou supérieure ?</li>
+<li>Point 3 : on utilise la borne du §3 (longueur du début de tournée + pour la ville courante et chaque ville non visitée, la plus courte arête par laquelle elle peut repartir). Calculez-la à la racine et pour les quatre fils $1\to2$, $1\to3$, $1\to4$, $1\to5$.</li>
+<li>Point 4 : explorez en profondeur, en visitant d'abord le fils de plus petite borne, et élaguez dès que la borne est $\ge m$ (en mettant $m$ à jour). Quelle est la tournée optimale ? Combien de nœuds avez-vous examinés, sur les $65$ de l'arbre complet (feuilles comprises) ?</li>
+</ol>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>Pour un nœud « $1\to j$ », la ville courante $j$ ne peut repartir que vers une ville non visitée ; une ville non visitée $w$ peut repartir vers une autre ville non visitée ou vers $1$ (pour boucler). Le fils le plus prometteur est $1\to3$ (borne $16$) ; il contient une tournée de longueur $19$.</p>
+</div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>(a)</strong> Depuis 1 : la plus proche est 4 ($2$) ; depuis 4 : 3 ($5$, contre $6$ pour 2 et 5) ; depuis 3 : 2 ($4$) ; depuis 2 : 5 ($3$) ; retour $5\to1$ ($7$). Tournée $1\text{-}4\text{-}3\text{-}2\text{-}5$, $m=2+5+4+3+7=21$. C'est une vraie tournée, donc l'optimum est $\le21$ : $m$ est une borne <strong>supérieure</strong> (note du §3 sur la diapo 56).</p>
+<p><strong>(b)</strong> À la racine, chaque ville doit repartir une fois ; plus courtes arêtes : ville 1 : $2$ ; ville 2 : $3$ ; ville 3 : $4$ ; ville 4 : $2$ ; ville 5 : $3$. Borne $14$. Pour les fils :</p>
+<ul>
+<li>$1\to2$ : $3$ + (2 vers $\{3,4,5\}$ : $3$) + (3 vers $\{4,5,1\}$ : $4$) + (4 vers $\{3,5,1\}$ : $2$) + (5 vers $\{3,4,1\}$ : $6$) $=18$ ;</li>
+<li>$1\to3$ : $4+4+3+2+3=16$ (3 vers $\{2,4,5\}$ : $4$ ; 2 vers $\{4,5,1\}$ : $3$ ; 4 vers $\{2,5,1\}$ : $2$ ; 5 vers $\{2,4,1\}$ : $3$) ;</li>
+<li>$1\to4$ : $2+5+3+4+3=17$ ;</li>
+<li>$1\to5$ : $7+3+3+4+2=19$.</li>
+</ul>
+<p><strong>(c)</strong> Ordre de visite (borne entre parenthèses) :</p>
+<ol class="steps">
+<li>Sous-arbre $1\to3$ ($16$) : $1\to3\to2$ ($19\lt21$) puis $1\to3\to2\to5$ ($19$) et la tournée $1\text{-}3\text{-}2\text{-}5\text{-}4$ de longueur $4+4+3+6+2=19$ : <strong>$m=19$</strong>. Ensuite $1\to3\to2\to4$ ($27$), $1\to3\to5$ ($20$), $1\to3\to4$ ($21$) : élagués.<span class="why">Dès qu'on a $m=19$, toute borne $\ge19$ est élaguée.</span></li>
+<li>Sous-arbre $1\to4$ ($17\lt19$) : $1\to4\to3$ ($17$), dont les deux fils valent $21$ : élagués ; $1\to4\to5$ ($18$), dont les fils valent $19$ et $23$ : élagués ; $1\to4\to2$ ($22$) : élagué.<span class="why">Aucune tournée de moins de $19$ ne commence par $1\to4$.</span></li>
+<li>Sous-arbre $1\to2$ ($18\lt19$) : $1\to2\to5$ ($18$), dont les fils valent $21$ et $21$ : élagués ; $1\to2\to3$ ($20$) et $1\to2\to4$ ($25$) : élagués.<span class="why">Idem.</span></li>
+<li>$1\to5$ ($19\ge19$) : élagué sans être exploré.<span class="why">Sa borne égale $m$ : il ne peut pas faire strictement mieux.</span></li>
+</ol>
+<p>La tournée optimale est $1\text{-}3\text{-}2\text{-}5\text{-}4\text{-}1$, de longueur $19$ (l'énumération des $12$ tournées le confirme ; le plus proche voisin perdait $2$). On a examiné $23$ nœuds (la tournée $1\text{-}3\text{-}2\text{-}5\text{-}4$ comprise) sur les $65$ de l'arbre ($1+4+12+24+24$). En explorant les fils dans l'ordre $2,3,4,5$ au lieu de l'ordre des bornes, on en examine $25$ : l'ordre compte peu ici, car la bonne tournée est trouvée tôt dans les deux cas.</p>
+<p><strong>Et la « dualité » du point 3 ?</strong> La borne utilisée ici est une relaxation simple (chaque ville choisit seule son successeur). La diapo pense à une borne plus fine, obtenue par relaxation lagrangienne des contraintes de degré (1-arbres de Held et Karp, §4) ; le principe de l'arbre est le même.</p>
+</div></details>
+</div>
+
+<!-- ============================================================ Ex 5 -->
+<div class="exo" id="exo-d5"><div class="exo-h">Exercice 5 — Traduire des règles logiques (diapos 59–63) <span class="lvl">★</span></div>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo 63</span></div>
+<p>▶ Si $a$ et $b$ ne peuvent pas se produire tous les deux : $x_a+x_b\leqslant1$. ▶ Si au moins des évènement parmi $a$ et $b$ doit se produire : $x_a+x_b\geqslant1$. ▶ Si $a$ se produit alors $b$ doit se produire $x_a\leqslant x_b$. […] ▶ Si $a$ se produit, alors $b$ et/ou $c$ doivent se produire : $x_a\leqslant x_b+x_c$.</p>
+</div>
+<p><strong>Énoncé.</strong> Une équipe choisit parmi cinq projets $P_1,\dots,P_5$, de coûts $(4,3,3,2,5)$ et de valeurs $(9,7,6,3,9)$, avec un budget de $10$. Règles : (i) $P_1$ et $P_2$ sont incompatibles ; (ii) $P_3$ n'a de sens que si $P_1$ est lancé ; (iii) il faut lancer au moins un des projets $P_4$, $P_5$ ; (iv) si $P_5$ est lancé, il faut $P_2$ ou $P_3$ (ou les deux).</p>
+<ol type="a">
+<li>Traduisez chaque règle par une inégalité sur $x_1,\dots,x_5\in\{0,1\}$, en citant la ligne de la diapo utilisée.</li>
+<li>Écrivez le programme complet et résolvez-le. Comparez avec l'optimum sans les règles.</li>
+<li>Que donne la relaxation continue ?</li>
+</ol>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>(ii) est une implication « $P_3\Rightarrow P_1$ » ; (iv) est « $P_5\Rightarrow(P_2$ et/ou $P_3)$ ». Pour (b), énumérez les choix compatibles avec les règles (il y en a $8$), puis gardez ceux qui respectent le budget.</p>
+</div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>(a)</strong></p>
+<ul>
+<li>(i) « pas les deux » : $x_1+x_2\le1$ (diapo 59).</li>
+<li>(ii) « si $P_3$ alors $P_1$ » : $x_3\le x_1$ (diapo 61). Contraposée : sans $P_1$, pas de $P_3$ (diapo 62).</li>
+<li>(iii) « au moins un » : $x_4+x_5\ge1$ (diapo 60).</li>
+<li>(iv) « si $P_5$ alors $P_2$ et/ou $P_3$ » : $x_5\le x_2+x_3$ (diapo 63).</li>
+</ul>
+<p><strong>(b)</strong></p>
+$$\begin{aligned}\max\ \ &9x_1+7x_2+6x_3+3x_4+9x_5\\ \text{sous}\ \ &4x_1+3x_2+3x_3+2x_4+5x_5\le10,\\ &x_1+x_2\le1,\quad x_3\le x_1,\quad x_4+x_5\ge1,\quad x_5\le x_2+x_3,\quad x\in\{0,1\}^5 .\end{aligned}$$
+<p>Les $32$ choix, filtrés par les règles, en laissent $8$ ; le budget en garde $6$ :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>projets</th><th>coût</th><th>valeur</th></tr></thead>
+<tbody>
+<tr><td>$P_2,P_4,P_5$</td><td>10</td><td><strong>19</strong></td></tr>
+<tr><td>$P_1,P_3,P_4$</td><td>9</td><td>18</td></tr>
+<tr><td>$P_2,P_5$</td><td>8</td><td>16</td></tr>
+<tr><td>$P_1,P_4$</td><td>6</td><td>12</td></tr>
+<tr><td>$P_2,P_4$</td><td>5</td><td>10</td></tr>
+<tr><td>$P_4$</td><td>2</td><td>3</td></tr>
+</tbody></table></div>
+<p>Optimum : $\{P_2,P_4,P_5\}$, valeur $19$ (confirmé par <code>milp</code>). Sans les règles, le meilleur choix dans le budget est $\{P_1,P_2,P_3\}$, valeur $22$ : il viole (i) et (iii). Les règles coûtent $3$.</p>
+<p><strong>(c)</strong> La relaxation continue vaut $20$, atteinte par exemple en $x=(1,0,1,\tfrac23,\tfrac13)$ (elle a d'autres solutions optimales) : la règle (iii) est satisfaite « à moitié » par deux fractions ($\tfrac23+\tfrac13=1$) et (iv) par $x_5=\tfrac13\le x_2+x_3=1$. Encadrement $19\le\text{opt}\le20$, et comme les valeurs sont entières, $\text{opt}\in\{19,20\}$ ; la séparation-évaluation (ou l'énumération) tranche : $19$.</p>
+</div></details>
+</div>

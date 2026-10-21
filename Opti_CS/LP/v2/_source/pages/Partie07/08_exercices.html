@@ -1,0 +1,69 @@
+<h2 id="exercices">8. Les exercices du cours, corrigés</h2>
+<p class="tldr">Les deux exercices du livre sur les flots montrent que le flot maximal et le plus court chemin sont des flots de coût minimum ; l'exemple de la diapo 39 applique le simplexe à un transport.</p>
+<p>Essayez chaque exercice avant d'ouvrir l'indice, et l'indice avant la solution. Toutes les valeurs numériques des solutions ont été vérifiées par un script (<code>linprog</code>, énumération, fractions exactes).</p>
+
+<!-- ================================================================ Ex. 4.3.2 -->
+<div class="exo" id="exo-4-3-2"><div class="exo-h">Exercice 4.3.2 — Le flot maximal est un flot de coût minimum <span class="lvl">★★</span></div>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, Exercice 4.3.2, p. 140–141</span></div>
+<p>Montrer que le problème du flot maximal est bien un exemple de problème de flot à coût minimal. Pour cela, on rajoutera un arc reliant $p$ à $s$ au graphe du problème du flot maximal, on annulera les deux flots externes $b_s$ et $b_p$ et on prendra les coûts $c_{ij}=0$ sauf $c_{ps}=-1$.</p>
+</div>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>Notez $G'$ le graphe augmenté. Établissez une correspondance entre les flots admissibles de $s$ à $p$ de valeur $v$ dans $G$ et les flots admissibles de $G'$ (avec $b'=0$) qui ont $x_{ps}=v$. Comparez ensuite les coûts. Pour vérifier Kirchhoff, il suffit de regarder les nœuds $s$ et $p$ : les autres ne voient pas l'arc ajouté.</p>
+</div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>Le nouveau problème.</strong> $G'=(\Nc,\Ac\cup\{(p,s)\})$ ; l'arc $(p,s)$ a une capacité $u_{ps}=+\infty$ et un coût $c_{ps}=-1$ ; tous les autres coûts sont nuls ; les flots extérieurs sont $b'_i=0$ partout. Le problème de flot de coût minimum (P') sur $G'$ est</p>
+$$\min\ -x_{ps}\quad\text{sous}\quad A'x=0,\quad0\le x\le u,$$
+<p>où $A'$ est la matrice d'incidence de $G'$ (celle de $G$ plus une colonne : $+1$ en $p$, $-1$ en $s$). Minimiser $-x_{ps}$, c'est maximiser $x_{ps}$.</p>
+<ol class="steps">
+<li><strong>De $G$ vers $G'$.</strong> Soit $x$ un flot admissible de $s$ à $p$ de valeur $v$ dans $G$ (Kirchhoff avec $b_s=v$, $b_p=-v$). Posons $x_{ps}=v$. En $s$ : $b'_s+\text{entre}=0+x_{ps}=v$ et $\text{sort}=v$ (Kirchhoff en $s$ dans $G$, où rien n'entrait) ✓. En $p$ : $\text{entre}=v$ (Kirchhoff en $p$ dans $G$) et $\text{sort}=x_{ps}=v$ ✓. Ailleurs, rien ne change ✓. C'est un flot admissible de $G'$, de coût $-v$.<span class="why">L'arc retour remplace les deux flots extérieurs : il « ramène » en $s$ ce qui sort en $p$.</span></li>
+<li><strong>De $G'$ vers $G$.</strong> Soit $x$ un flot admissible de $G'$, et $v=x_{ps}\ge0$. Retirons l'arc $(p,s)$. En $s$ : dans $G'$, $0+x_{ps}=\text{sort}$, donc dans $G$, $v+0=\text{sort}$, ce qui est Kirchhoff avec $b_s=v$. En $p$ : $\text{entre}=x_{ps}=v$, c'est Kirchhoff avec $b_p=-v$. On obtient un flot de $s$ à $p$ de valeur $v$ ; son coût dans $G'$ était $-v$.<span class="why">Même calcul dans l'autre sens. On utilise que $s$ n'a pas de prédécesseur et $p$ pas de successeur dans $G$ : les seuls arcs qui arrivent en $s$ ou partent de $p$ dans $G'$ sont l'arc retour.</span></li>
+<li><strong>Conclusion.</strong> Les deux correspondances préservent « coût dans $G'$ $=-$ valeur dans $G$ ». Donc $\min(\text{P}')=-\max v$, et une solution optimale de (P') donne un flot maximal (et réciproquement).<span class="why">Deux problèmes en bijection avec des objectifs opposés.</span></li>
+</ol>
+<p><strong>Conséquences.</strong> (P') est un flot de coût minimum dont la matrice est une matrice d'incidence : si les capacités sont entières, le Théorème 4.3.7 donne un flot maximal <em>entier</em>, et le simplexe le trouve. Si un chemin de $s$ à $p$ n'est fait que d'arcs de capacité infinie, on peut y faire passer autant qu'on veut : $\max v=+\infty$ et $\min(\text{P}')=-\infty$ (c'est le cas « coûts négatifs et capacités infinies » exclu par l'existence du §3).</p>
+<p><strong>Vérification sur le graphe de la diapo 26</strong> (capacités du §3) : <code>linprog</code> appliqué à (P') rend le coût $-7$, avec $x_{ps}=7$ et un flot entier sur chaque arc, comme les chemins augmentants du §5.</p>
+<p><strong>Lien avec la diapo 41.</strong> « On maximise $x_{ps}$, que l'on fait croître à partir de zéro tant qu'il existe une solution admissible » : c'est exactement (P'), lu comme une famille de problèmes d'admissibilité paramétrés par $v=x_{ps}$ ($v=0,\dots,7$ admissibles, $v=8$ non, sur l'exemple).</p>
+</div></details>
+</div>
+
+<!-- ================================================================ Ex. 4.3.3 -->
+<div class="exo" id="exo-4-3-3"><div class="exo-h">Exercice 4.3.3 — Le plus court chemin est un flot de coût minimum <span class="lvl">★★</span></div>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, Exercice 4.3.3, p. 141</span></div>
+<p>On reprend le graphe orienté $G$ avec les deux nœuds, source $s$ et puits $p$, tel que $s$ n'a pas de prédécesseur et $p$ n'a pas de successeur. On munit chaque arc $(i,j)$ d'un coût $c_{ij}\ge0$ qu'on interprète comme une distance entre les nœuds $i$ et $j$. Le problème du chemin de coût minimum est de trouver une suite de nœuds consécutifs sur le graphe qui relient $s$ à $p$ et tels que la somme des coûts le long de ce chemin d'arcs est minimale. Montrer que ce problème peut se modéliser comme un problème de flot à coût minimum avec le choix (4.34) de flots externes pour $v=1$ et des capacités maximales infinies.</p>
+</div>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>Un chemin donne un flot de même coût (une unité sur chacun de ses arcs). Dans l'autre sens, prenez un flot optimal <em>basique</em> : la proposition du §6 dit que c'est un chemin. N'oubliez pas de justifier qu'un flot optimal existe.</p>
+</div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>Le modèle (F).</strong> $\min\ \sum_{(i,j)}c_{ij}x_{ij}$ sous $Ax=b$ avec $b_s=1$, $b_p=-1$, $b_i=0$ ailleurs, et $x\ge0$ (capacités infinies). Notons $L^*$ la longueur d'un plus court chemin de $s$ à $p$ (on suppose $p$ atteignable depuis $s$ ; sinon les deux problèmes sont impossibles).</p>
+<ol class="steps">
+<li><strong>Un chemin est un flot.</strong> Pour un chemin $s=i_0\to i_1\to\dots\to i_k=p$, posons $x=1$ sur ses arcs, $0$ ailleurs. En $s$ : une unité sort, $b_s=1$ ✓. En $p$ : une unité arrive, $b_p=-1$ ✓. En un nœud intermédiaire : une unité entre, une sort ✓. Le coût du flot est la longueur du chemin.<span class="why">Donc la valeur de (F) est $\le L^*$.</span></li>
+<li><strong>(F) a une solution optimale.</strong> Les coûts sont $\ge0$, donc le coût de tout flot est $\ge0$ ; et (F) est admissible (ligne 1).<span class="why">Lemme 4.2.3 (§3, existence) ; puis, par la Prop. 4.2.6, il existe une solution optimale basique.</span></li>
+<li><strong>Une solution basique est un chemin.</strong> La solution optimale basique $x^*$ est l'indicatrice d'un chemin simple $P$ de $s$ à $p$.<span class="why">Proposition du §6 (entier par TU, support sans cycle, décomposition).</span></li>
+<li><strong>Conclusion.</strong> $\text{valeur}(F)=c\cdot x^*=\text{longueur}(P)\ge L^*$, donc $\text{valeur}(F)=L^*$ et $P$ est un plus court chemin.<span class="why">Lignes 1 et 3.</span></li>
+</ol>
+<p><strong>Où sert $c_{ij}\ge0$ ?</strong> À la ligne 2. Si un cycle avait une longueur négative, on pourrait y faire tourner autant d'unités qu'on veut (capacités infinies) : la valeur de (F) serait $-\infty$, et (F) ne décrirait plus un chemin. Avec $c\ge0$, une solution optimale peut contenir, en plus d'un chemin, des cycles de coût nul, mais les solutions <em>basiques</em> n'en contiennent pas.</p>
+<p><strong>Vérification</strong> sur le graphe de la diapo 26 (coûts du §3) : <code>linprog</code> rend $x=1$ sur $(s,1),(1,3),(3,2),(2,4),(4,p)$, de coût $11$, comme Dijkstra (§6).</p>
+<p><strong>Comparaison avec les diapos 44–46.</strong> La diapo 44 impose $x_{ij}\in\{0,1\}$, la diapo 46 relâche en $0\le x_{ij}\le1$ ; le livre prend des capacités infinies. Les deux modèles ont la même valeur optimale : le chemin optimal du livre est admissible pour la diapo, et toute solution de la diapo est admissible pour le livre. La borne $x\le1$ est donc inutile. Elle a même un petit défaut : avec elle, une solution basique optimale peut contenir, en plus du chemin, un cycle saturé de coût nul (note sur les sources du §6), ce qui n'arrive pas avec des capacités infinies.</p>
+</div></details>
+</div>
+
+<!-- ================================================================ Diapo 39 -->
+<div class="exo" id="exo-constructeur"><div class="exo-h">Diapo 39 — Le constructeur automobile <span class="lvl">★★</span></div>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo 39</span></div>
+<p>Un constructeur automobile doit livrer son modèle AA à 2 concessionnaires à partir de 2 usines de production. Les disponibilités aux usines sont respectivement de 100 et 80 unités tandis que les demandes des vendeurs (concessionnaires) sont de 80 et 75. Les coûts $c_{ij}$ de livraison des automobiles (de l'entrepot $i$ vers le concessionnaire $j$), en centaines d'euro sont les suivants : $c_{11}=8$, $c_{12}=15$, $c_{21}=10$, $c_{22}=4$. Résoudre ce problème comme un problème de flot à l'aide de l'agorithme du simplexe. <em>Aide :</em> On introduira un concessionnaire imaginaire qui reçoit tout le stock restant avec un coût de transport nul</p>
+</div>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body">
+<p>Offre $180$, demande $155$ : le concessionnaire imaginaire demande $25$. Cinq nœuds, six arcs, une équation redondante : une base a $4$ arcs. Démarrez au coin nord-ouest. Pour les coûts réduits, calculez des potentiels avec $p_i-p_j=c_{ij}$ sur les arcs de base.</p>
+</div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>La résolution détaillée, avec la matrice, les potentiels et le cycle, est au <a href="#constructeur">§4</a> ; en voici l'essentiel.</p>
+<ol class="steps">
+<li><strong>Modèle.</strong> Nœuds $U_1,U_2,C_1,C_2,C_3$ ($C_3$ imaginaire), $b=(100,80,-80,-75,-25)$ ; arcs $U_iC_j$ de capacité infinie, coûts $(8,15,0)$ depuis $U_1$ et $(10,4,0)$ depuis $U_2$. On supprime l'équation de $C_3$.<span class="why">Remarque 4.3.6 ; rang $4$ de la matrice d'incidence.</span></li>
+<li><strong>Base de départ</strong> (coin nord-ouest) : $x_{U_1C_1}=80$, $x_{U_1C_2}=20$, $x_{U_2C_2}=55$, $x_{U_2C_3}=25$ ; coût $1160$.<span class="why">Remplir le tableau des livraisons de haut en bas et de gauche à droite.</span></li>
+<li><strong>Potentiels</strong> ($p_{C_3}=0$) : $p_{U_2}=0$, $p_{C_2}=-4$, $p_{U_1}=11$, $p_{C_1}=3$. <strong>Coûts réduits</strong> : $\ct_{U_1C_3}=0-11=-11$, $\ct_{U_2C_1}=10+3=13$.<span class="why">$p_i-p_j=c_{ij}$ sur la base, $\ct_{ij}=c_{ij}-(p_i-p_j)$ hors base.</span></li>
+<li><strong>Pivot.</strong> $U_1C_3$ entre ; cycle $U_1C_3\,(+\eps)$, $U_2C_3\,(-\eps)$, $U_2C_2\,(+\eps)$, $U_1C_2\,(-\eps)$ ; $\eps=\min(25,20)=20$, $U_1C_2$ sort. Nouveau flot : $x_{U_1C_1}=80$, $x_{U_1C_3}=20$, $x_{U_2C_2}=75$, $x_{U_2C_3}=5$ ; coût $1160-11\times20=940$.<span class="why">Test du rapport sur les arcs de base qui diminuent.</span></li>
+<li><strong>Optimalité.</strong> Potentiels $p_{U_1}=p_{U_2}=p_{C_3}=0$, $p_{C_1}=-8$, $p_{C_2}=-4$ ; coûts réduits $\ct_{U_1C_2}=11$, $\ct_{U_2C_1}=2$, tous deux $>0$ : optimal, et c'est l'unique optimum.<span class="why">Critère d'optimalité du simplexe.</span></li>
+</ol>
+<p><strong>Réponse.</strong> L'usine 1 livre $80$ voitures au concessionnaire 1, l'usine 2 en livre $75$ au concessionnaire 2 ; il reste $20$ voitures à l'usine 1 et $5$ à l'usine 2. Coût minimal : $940$ centaines d'euros $=94\,000$ €. La solution est entière sans qu'on l'ait imposé (Théorème 4.3.7). Vérifié par <code>linprog</code> et par <code>ot.emd</code> (POT).</p>
+</div></details>
+</div>

@@ -1,0 +1,334 @@
+<h2 id="optimisation">4. Optimisation sous contraintes : Lagrangien, KKT, dualité, Farkas</h2>
+<p class="tldr">Pour minimiser sous contraintes, on donne un prix à chaque contrainte (un multiplicateur) ; à l'optimum, la pente du coût est équilibrée par les « réactions » des contraintes actives (KKT) ; le meilleur jeu de prix est la solution d'un problème dual ; et derrière tout cela il y a un seul fait géométrique : on peut séparer un point d'un convexe fermé (Farkas).</p>
+<p>Cette section reprend les chapitres 2 et 3 du livre d'Allaire, sur lesquels s'appuie le chapitre 4. Deux exemples reviennent : le fil rouge (l'exercice 4.2.1, un programme linéaire) et un problème à une variable, $\min v^2$ sous la contrainte $v\ge1$, que l'on écrit $F(v)=1-v\le0$ ; sa solution est $u=1$, de valeur $1$.</p>
+
+<h3 id="lagrangien">Lagrangien et multiplicateurs</h3>
+<p class="small muted"><strong>Où ça sert :</strong> le Lagrangien du programme linéaire et la fonction duale (<a href="Partie05.html#dual">partie 5</a>, Diapo 13) ; la barrière logarithmique ajoute un terme du même genre (<a href="Partie04.html#barriere">partie 4</a>) ; la relaxation lagrangienne des problèmes entiers (<a href="Partie08.html">partie 8</a>).</p>
+<p>Une contrainte dure (« interdit de sortir ») est difficile à manier. Remplaçons-la par un <em>prix</em> : on a le droit de violer $F_i(v)\le0$, mais chaque unité de violation coûte $\mu_i\ge0$. Le Lagrangien est le coût total, coût d'origine plus amendes.</p>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, Déf. 2.5.20 et Lemme 2.5.21, p. 44</span></div>
+<p>« <strong>Définition 2.5.20</strong> On appelle Lagrangien du problème de minimisation de $J(v)$, sous les contraintes d'inégalité $F(v)\le0$, la fonction $L(v,\mu)$ définie par</p>
+$$\begin{aligned}L(v,\mu)&=J(v)+\sum_{i=1}^M\mu_iF_i(v)=J(v)+\mu\cdot F(v)\\&\forall(v,\mu)\in V\times(\R_+)^M.\end{aligned}$$
+<p>La nouvelle variable positive $\mu\in(\R_+)^M$ est appelée multiplicateur de Lagrange pour la contrainte $F(v)\le0$. »</p>
+<p>« <strong>Lemme 2.5.21</strong> Le problème de minimisation sous contrainte d'inégalité est équivalent à un problème de min-max</p>
+$$\inf_{v\in V,\ F(v)\le0}J(v)=\inf_{v\in V}\ \sup_{\mu\in(\R_+)^M}L(v,\mu).$$
+<p>»</p>
+</div>
+<dl class="decode">
+<dt>$F=(F_1,\dots,F_M)$</dt><dd>les $M$ contraintes, écrites $F_i(v)\le0$ ; $F_i(v)>0$ veut dire « contrainte $i$ violée ».</dd>
+<dt>$\mu_i\ge0$</dt><dd>le prix d'une unité de violation de la contrainte $i$. Pour une contrainte d'égalité $F_i(v)=0$, le multiplicateur est de signe quelconque.</dd>
+<dt>$\sup_\mu L(v,\mu)$</dt><dd>l'adversaire choisit les prix : si $v$ viole une contrainte, il fait monter son prix à l'infini ; sinon, le mieux pour lui est de mettre $\mu_i=0$ là où $F_i(v)<0$.</dd>
+</dl>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo 13</span></div>
+<p>Problème primal $\min_{Ax=b,\ x\geqslant0}c\cdot x$ ; « Lagrangien $L(x,p)=c\cdot x+p\cdot(b-Ax)$ » ; « Coût dual : $G(p)=\min_{x\geqslant0}L(x,p)=p\cdot b$ si $c-{}^tAp\geqslant0$, $-\infty$ sinon. »</p>
+</div>
+<p>Le livre écrit le même Lagrangien, (4.16) p. 131, « où l'on a seulement “dualisé” les contraintes d'égalité » : la contrainte $x\ge0$ est gardée telle quelle, et l'on minimise sur $x\ge0$ seulement.</p>
+<div class="box example"><div class="box-h">Exemples</div>
+<ul>
+<li><strong>Une variable.</strong> Pour $\min v^2$ sous $1-v\le0$ : $L(v,\mu)=v^2+\mu(1-v)$. En $v=2$ (admissible), $L(2,\mu)=4-\mu$, maximal pour $\mu=0$ : $\sup_\mu L(2,\mu)=4=J(2)$. En $v=\frac12$ (non admissible), $L(\frac12,\mu)=\frac14+\frac\mu2\to+\infty$. Le min-max retrouve donc $\inf_{v\ge1}v^2=1$.</li>
+<li><strong>Le programme linéaire (Diapo 13).</strong> En regroupant les termes en $x$ grâce à la <a href="#transposee">transposée</a> :</li>
+</ul>
+$$\begin{aligned}L(x,p)&=c\cdot x+p\cdot b-p\cdot Ax\\&=p\cdot b+(c-A\T p)\cdot x.\end{aligned}$$
+<p>Si $c-A\T p\ge0$, le minimum sur $x\ge0$ est atteint en $x=0$ et vaut $p\cdot b$. Si une composante $(c-A\T p)_j$ est négative, faire tendre $x_j$ vers $+\infty$ envoie $L$ vers $-\infty$. C'est la fonction duale de la diapo.</p>
+</div>
+<details class="fold proof"><summary>Démonstration du Lemme 2.5.21</summary><div class="fold-body">
+<p>Fixons $v$. Si $F(v)\le0$, chaque terme $\mu_iF_i(v)$ est $\le0$ pour $\mu_i\ge0$, et vaut $0$ pour $\mu=0$ : $\sup_\mu L(v,\mu)=J(v)$. Si $F_i(v)>0$ pour un $i$, prendre $\mu_i\to+\infty$ (les autres nuls) donne $\sup_\mu L(v,\mu)=+\infty$. Donc $\sup_\mu L(v,\cdot)$ vaut $J(v)$ sur l'ensemble admissible et $+\infty$ ailleurs, et son infimum sur $V$ est l'infimum de $J$ sur l'ensemble admissible.</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Piège — les signes</div>
+<p>Le livre écrit les contraintes $F(v)\le0$ et ajoute $+\mu\cdot F(v)$ avec $\mu\ge0$. Si une contrainte est écrite $g(v)\ge0$, il faut la retourner ($-g(v)\le0$) avant d'appliquer la formule. Pour des égalités, le signe de $p$ est libre et dépend de l'écriture : $c\cdot x+p\cdot(b-Ax)$ (diapos et livre) ou $c\cdot x+p\cdot(Ax-b)$ donnent des $p$ opposés. Vérifiez toujours la convention avant de comparer deux multiplicateurs.</p>
+</div>
+
+<h3 id="kkt">Conditions de Karush–Kuhn–Tucker (KKT)</h3>
+<p class="small muted"><strong>Où ça sert :</strong> les conditions d'optimalité du programme linéaire, les écarts complémentaires (<a href="Partie05.html#ecarts-complementaires">partie 5</a>) ; la preuve du Lemme 4.2.11 écrit les conditions de KKT du problème avec barrière (<a href="Partie04.html#trajectoire-centrale">partie 4</a>) ; le critère des coûts réduits en est un cas particulier (<a href="Partie03.html#couts-reduits">partie 3</a>).</p>
+<p>Au minimum, on ne peut plus descendre sans sortir. La pente du coût $-J'(u)$, qui pousse vers l'extérieur, est donc compensée par les « murs » que sont les contraintes actives, chacune poussant vers l'intérieur avec une force $\lambda_i\ge0$ le long de sa normale. Les contraintes inactives ne poussent pas : $\lambda_i=0$.</p>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, Déf. 2.5.15, p. 41 ; Th. 2.5.17 et Rem. 2.5.16, p. 42</span></div>
+<p>Ici $K=\{v\in V,\ F_i(v)\le0$ pour $1\le i\le M\}$ (2.44), et $I(u)=\{i : F_i(u)=0\}$ est l'ensemble des contraintes actives.</p>
+<p>« <strong>Définition 2.5.15</strong> On dit que les contraintes (2.44) sont qualifiées en $u\in K$ si et seulement si il existe une direction $\overline w\in V$ telle que l'on ait pour tout $i\in I(u)$ ou bien $\langle F_i'(u),\overline w\rangle<0$, ou bien $\langle F_i'(u),\overline w\rangle=0$ et $F_i$ est affine. »</p>
+<p>« <strong>Théorème 2.5.17</strong> On suppose que $K$ est donné par (2.44), que les fonctions $J$ et $F_1,\dots,F_M$ sont dérivables en $u$ et que les contraintes sont qualifiées en $u$. Alors, si $u$ est un minimum local de $J$ sur $K$, il existe $\lambda_1,\dots,\lambda_M\ge0$, appelés multiplicateurs de Lagrange, tels que</p>
+$$\begin{gathered}J'(u)+\sum_{i=1}^M\lambda_iF_i'(u)=0,\\\lambda_i\ge0,\qquad\lambda_i=0\ \text{si}\ F_i(u)<0,\\\forall i\in\{1,\dots,M\}.\end{gathered}$$
+<p>»</p>
+<p>« <strong>Remarque 2.5.16</strong> […] Bien sûr, si toutes les fonctions $F_i$ sont affines, on peut prendre $\overline w=0$ et les contraintes sont automatiquement qualifiées. »</p>
+</div>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, Th. 2.6.4, p. 49–50</span></div>
+<p>« <strong>Théorème 2.6.4 (de Kuhn et Tucker)</strong> On suppose que les fonctions $J,F_1,\dots,F_M$ sont convexes continues sur $V$ et dérivables sur l'ensemble $K$ […]. On introduit le Lagrangien $L$ associé $L(v,q)=J(v)+q\cdot F(v)$ $\forall(v,q)\in V\times(\R_+)^M$. Soit $u\in K$ un point de $K$ où les contraintes sont qualifiées au sens de la Définition 2.5.15. Alors $u$ est un minimum global de $J$ sur $K$ si et seulement si il existe $p\in(\R_+)^M$ tel que $(u,p)$ soit un point-selle du Lagrangien $L$ sur $V\times(\R_+)^M$ ou, de manière équivalente, tel que</p>
+$$\begin{gathered}F(u)\le0,\qquad p\ge0,\qquad p\cdot F(u)=0,\\J'(u)+\sum_{i=1}^Mp_iF_i'(u)=0.\end{gathered}$$
+<p>»</p>
+</div>
+<dl class="decode">
+<dt>$J'(u)$, $F_i'(u)$</dt><dd>les gradients en $u$ du coût et de la contrainte $i$ ; $F_i'(u)$ est la normale sortante du « mur » $F_i=0$.</dd>
+<dt>qualifiées</dt><dd>il existe une direction qui « rentre » strictement dans les contraintes actives non affines : les contraintes ne dégénèrent pas en $u$. Pour un programme linéaire, toutes les contraintes sont affines : la condition est toujours vraie.</dd>
+<dt>$p\cdot F(u)=0$</dt><dd>les <em class="new">écarts complémentaires</em> : comme $p_i\ge0$ et $F_i(u)\le0$, chaque produit $p_iF_i(u)$ est $\le0$, et leur somme nulle force chacun à être nul : $p_i=0$ ou $F_i(u)=0$.</dd>
+<dt>Th. 2.5.17 / Th. 2.6.4</dt><dd>le premier dit « nécessaire » (tout minimum local vérifie KKT) ; le second ajoute la convexité et obtient « nécessaire et suffisant ».</dd>
+</dl>
+<figure class="fig"><!-- include figures/RAP/kkt.svg --><figcaption>Le fil rouge, $\max x_1+2x_2$, donc $J=-x_1-2x_2$ et $-J'=c=(1,2)$ (flèches rouges). En $(2,3)$, $c$ est dans le cône (violet) engendré par les normales $(-1,2)$ et $(1,1)$ des deux contraintes actives : multiplicateurs $\frac13$ et $\frac43$, positifs, c'est l'optimum. En $(1,\frac52)$, $c$ sort du cône des normales $(-3,2)$ et $(-1,2)$ : un multiplicateur serait négatif.</figcaption></figure>
+<div class="box example"><div class="box-h">Exemple — les multiplicateurs du fil rouge</div>
+<p>Écrivons l'exercice 4.2.1 comme $\min J(x)=-x_1-2x_2$ sous $F_1=-3x_1+2x_2-2\le0$, $F_2=-x_1+2x_2-4\le0$, $F_3=x_1+x_2-5\le0$, $F_4=-x_1\le0$, $F_5=-x_2\le0$. En $u=(2,3)$, seules $F_2$ et $F_3$ sont actives, donc $\lambda_1=\lambda_4=\lambda_5=0$, et</p>
+$$\begin{aligned}&\begin{pmatrix}-1\\-2\end{pmatrix}+\lambda_2\begin{pmatrix}-1\\2\end{pmatrix}+\lambda_3\begin{pmatrix}1\\1\end{pmatrix}=0\\\iff&\left\{\begin{aligned}-1-\lambda_2+\lambda_3&=0\\-2+2\lambda_2+\lambda_3&=0\end{aligned}\right.\\\iff&\lambda_2=\tfrac13,\ \lambda_3=\tfrac43.\end{aligned}$$
+<p>Les deux sont positifs : KKT est vérifié ; le problème est convexe et ses contraintes affines, donc $(2,3)$ est un minimum global (Th. 2.6.4). En $(1,\frac52)$, actives $F_1$ et $F_2$ : le même calcul donne $\lambda_1=-1$, $\lambda_2=2$ ; $\lambda_1<0$, ce n'est pas un minimum.</p>
+<p>Ces nombres reviennent partout : $\frac13$ et $\frac43$ sont les coûts réduits des variables d'écart $x_4$, $x_5$ trouvés au <a href="#blocs">§1</a>, et la solution $p=(0,\frac13,\frac43)$ du dual de l'exercice écrit avec ses inégalités ($\min 2p_1+4p_2+5p_3$ sous $p\ge0$ et $-3p_1-p_2+p_3\ge1$, $2p_1+2p_2+p_3\ge2$), de valeur $2\cdot0+4\cdot\frac13+5\cdot\frac43=8$, égale à l'optimum (<a href="Partie05.html#theoreme-dualite">partie 5</a> ; sous forme standard, avec $c=(-1,-2,0,0,0)$, on trouve les mêmes nombres changés de signe).</p>
+</div>
+<div class="box idea"><div class="box-h">L'idée de la preuve du Th. 2.5.17</div>
+<p>Si $u$ est un minimum, aucune direction qui reste (au premier ordre) dans les contraintes actives ne fait descendre : $\langle J'(u),w\rangle\ge0$ pour tout $w$ tel que $\langle F_i'(u),w\rangle\le0$ ($i$ actif). La qualification sert à justifier ce passage au premier ordre. Le lemme de Farkas (<a href="#farkas">ci-dessous</a>) traduit alors cette propriété en « $-J'(u)$ est une combinaison à coefficients positifs des $F_i'(u)$ actifs ».</p>
+</div>
+<details class="fold proof"><summary>Démonstration (d'après Allaire, p. 42–43)</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\tilde K(u)=\{w : \langle F_i'(u),w\rangle\le0\ \ \forall i\in I(u)\}.$$<span class="why">Les directions qui ne sortent pas des contraintes actives, au premier ordre.</span></li>
+<li>$$\begin{gathered}u+\eps(w+\delta\overline w)\in K\\\text{pour }w\in\tilde K(u),\ \delta>0,\ \eps>0\text{ petit}.\end{gathered}$$<span class="why">Trois cas : contrainte inactive (reste stricte par continuité) ; active avec $\langle F_i'(u),\overline w\rangle<0$ (le terme $\eps\delta\langle F_i'(u),\overline w\rangle$ l'emporte sur le $o(\eps)$) ; active affine (développement exact).</span></li>
+<li>$$\begin{gathered}\langle J'(u),w+\delta\overline w\rangle\ge0,\ \text{puis, avec }\delta\to0,\\\langle J'(u),w\rangle\ge0\quad\forall w\in\tilde K(u).\end{gathered}$$<span class="why">$u$ est un minimum local : $J(u+\eps d)\ge J(u)$ pour $\eps$ petit, et l'on divise par $\eps$ le développement de Taylor.</span></li>
+<li>$$J'(u)=-\sum_{i\in I(u)}\lambda_iF_i'(u),\qquad\lambda_i\ge0.$$<span class="why">Lemme de Farkas avec $a_i=F_i'(u)$ ($i\in I(u)$) et $p=J'(u)$. On pose $\lambda_i=0$ pour les contraintes inactives.</span></li>
+</ol>
+<p>Pour le Th. 2.6.4 (cas convexe), le sens réciproque vient de la convexité de $v\mapsto J(v)+p\cdot F(v)$ : un point où son gradient s'annule en est un minimum global, et l'on conclut par la Proposition 2.6.2 (<a href="#point-selle">ci-dessous</a>).</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pièges</div>
+<ul>
+<li><strong>Sans qualification, pas de multiplicateur.</strong> $\min v$ sous $F(v)=v^2\le0$ : le seul point admissible est $u=0$. Mais $J'(0)=1$ et $F'(0)=0$, et $1+\lambda\cdot0=0$ est impossible. La contrainte n'est pas qualifiée en $0$ (aucune direction avec $F'(0)\overline w<0$, et $F$ n'est pas affine).</li>
+<li><strong>Nécessaire n'est pas suffisant.</strong> Sans convexité, un point KKT peut être un maximum : pour $J(v)=-v^2$ sous $v-1\le0$, le point $v=0$ vérifie KKT avec $\lambda=0$, mais $J$ n'a pas de minimum (elle tend vers $-\infty$).</li>
+<li>Le signe de $\lambda$ dépend de la convention : $\lambda\ge0$ pour des contraintes $F_i\le0$ dans une <em>minimisation</em>. Pour un maximum, ou des contraintes $\ge0$, retournez d'abord le problème.</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">En machine learning — les vecteurs de support d'un SVM</div>
+<p>Le SVM à marge souple, sur des données $(x_i,y_i)$ avec $y_i=\pm1$, résout $\min_{w,b,\xi}\frac12\norm{w}^2+C\sum_i\xi_i$ sous $y_i(w\cdot x_i+b)\ge1-\xi_i$ et $\xi_i\ge0$ : un problème convexe à contraintes affines. KKT donne $w=\sum_i\alpha_iy_ix_i$ avec $0\le\alpha_i\le C$, et les écarts complémentaires imposent $\alpha_i=0$ pour tout exemple strictement au-delà de la marge ($y_i(w\cdot x_i+b)>1$). Le classifieur ne dépend donc que des exemples sur la marge ou à l'intérieur : les <em>vecteurs de support</em>.</p>
+</div>
+
+<div class="quiz"><p>Pour $\min v^2$ sous $F(v)=1-v\le0$, retrouvez le multiplicateur de Lagrange au minimum $u=1$ avec les conditions de KKT.</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>La contrainte est active ($F(1)=0$), affine donc qualifiée. $J'(u)+\lambda F'(u)=2u-\lambda=0$ donne $\lambda=2\ge0$. C'est le $p=2$ du point-selle ci-dessous, et le maximum de la fonction duale.</p>
+</div></details></div>
+
+<h3 id="point-selle">Point-selle</h3>
+<p class="small muted"><strong>Où ça sert :</strong> le théorème de dualité des diapos affirme l'existence d'un point-selle $(\bar x,\bar p)$ du Lagrangien (Diapo 14, <a href="Partie05.html#theoreme-dualite">partie 5</a>) ; c'est le pont entre KKT et dualité.</p>
+<p>Un point-selle est un col de montagne : en suivant la direction $v$, c'est un point bas ; en suivant la direction $q$, c'est un point haut. Le joueur qui minimise en $v$ et celui qui maximise en $q$ sont tous les deux satisfaits : aucun n'a intérêt à bouger seul.</p>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, §2.6.1, Déf. 2.6.1 et Prop. 2.6.2, p. 48</span></div>
+<p>« <strong>Définition 2.6.1</strong> On dit que $(u,p)\in U\times P$ est un point-selle de $L$ sur $U\times P$ si</p>
+$$\forall q\in P\quad L(u,q)\le L(u,p)\le L(v,p)\quad\forall v\in U.$$
+<p>»</p>
+<p>« <strong>Proposition 2.6.2</strong> On suppose que les fonctions $J,F_1,\dots,F_M$ sont continues sur $V$, et que l'ensemble $K$ est défini par (2.36) ou (2.44). On note $P=\R^M$ dans le cas de contraintes d'égalité (2.36) et $P=(\R_+)^M$ dans le cas de contraintes d'inégalité (2.44). Soit $U$ un ouvert de $V$ contenant $K$. Pour $(v,q)\in U\times P$, on pose $L(v,q)=J(v)+q\cdot F(v)$. Supposons que $(u,p)$ soit un point-selle de $L$ sur $U\times P$. Alors $u\in K$ et $u$ est un minimum global de $J$ sur $K$. De plus, si $J$ et $F_1,\dots,F_M$ sont dérivables en $u$, on a $J'(u)+\sum_{i=1}^Mp_iF_i'(u)=0$. »</p>
+</div>
+<figure class="fig"><!-- include figures/RAP/selle.svg --><figcaption>À gauche, les lignes de niveau de $L(v,q)=v^2+q(1-v)$ pour $\min v^2$ sous $1-v\le0$. Le niveau $L=1$ (vert) est formé de deux droites, $v=1$ et $q=1+v$, qui se croisent au point-selle $(1,2)$ : la forme typique d'un col. À droite, la fonction primale $\mathcal J(v)=\sup_qL(v,q)$ et la fonction duale $\mathcal G(q)=\inf_vL(v,q)$ : le minimum de l'une égale le maximum de l'autre, $1$ (<a href="#dualite-lagrangienne">ci-dessous</a>).</figcaption></figure>
+<div class="box example"><div class="box-h">Exemple — vérifier un point-selle</div>
+<p>Pour $L(v,q)=v^2+q(1-v)$ sur $\R\times\R_+$ et $(u,p)=(1,2)$ :</p>
+<ul>
+<li>$L(1,q)=1+q\cdot0=1$ pour tout $q\ge0$ : la première inégalité, $L(1,q)\le L(1,2)=1$, est une égalité (la contrainte est active en $u$, son terme ne dépend pas de $q$) ;</li>
+<li>$L(v,2)=v^2-2v+2=(v-1)^2+1\ge1$ : la seconde est vraie, avec égalité seulement en $v=1$.</li>
+</ul>
+<p>Et l'on retrouve KKT : $J'(1)+p\,F'(1)=2+2\cdot(-1)=0$, avec $p=2\ge0$ et $p\,F(1)=0$.</p>
+</div>
+<details class="fold proof"><summary>Démonstration de la Proposition 2.6.2 (contraintes d'inégalité)</summary><div class="fold-body">
+<ol class="steps">
+<li>$$q\cdot F(u)\le p\cdot F(u)\quad\forall q\ge0.$$<span class="why">Première inégalité du point-selle, après simplification de $J(u)$.</span></li>
+<li>$$F(u)\le0\qquad\text{et}\qquad p\cdot F(u)=0.$$<span class="why">Si $F_i(u)>0$, prendre $q_i\to+\infty$ contredit l'étape 1 : donc $F(u)\le0$, $u\in K$. Avec $q=0$ : $p\cdot F(u)\ge0$ ; or $p\ge0$ et $F(u)\le0$ donnent $p\cdot F(u)\le0$.</span></li>
+<li>$$\begin{aligned}J(u)&=J(u)+p\cdot F(u)\\&\le J(v)+p\cdot F(v)\\&\le J(v)\qquad\forall v\in K.\end{aligned}$$<span class="why">Seconde inégalité du point-selle, puis $p\ge0$ et $F(v)\le0$ pour $v\in K$. Donc $u$ est un minimum global de $J$ sur $K$.</span></li>
+<li>$$J'(u)+p\cdot F'(u)=0.$$<span class="why">La seconde inégalité dit que $u$ minimise $v\mapsto J(v)+p\cdot F(v)$ sur l'ouvert $U$ : le gradient s'y annule.</span></li>
+</ol>
+</div></details>
+<div class="box pitfall"><div class="box-h">Piège</div>
+<p>Les deux inégalités d'un point-selle doivent être vraies pour <strong>tous</strong> les $v$ et tous les $q$, pas seulement près de $(u,p)$. Un point où le gradient de $L$ s'annule n'est pas forcément un point-selle (sans convexité en $v$, ce peut être un maximum en $v$). Pour un problème convexe et qualifié, KKT et point-selle sont équivalents (Th. 2.6.4).</p>
+</div>
+
+<h3 id="dualite-lagrangienne">Dualité lagrangienne</h3>
+<p class="small muted"><strong>Où ça sert :</strong> le programme dual, la dualité faible et le théorème de dualité (<a href="Partie05.html#dual">partie 5</a>) ; la relaxation lagrangienne donne des bornes pour les problèmes entiers (<a href="Partie08.html">partie 8</a>).</p>
+<p>Fixons les prix $q$ et minimisons le Lagrangien en $v$ : on obtient $\mathcal G(q)$, toujours inférieur au vrai minimum (les amendes ne peuvent qu'aider à tricher). Chaque choix de prix donne une borne inférieure ; le <em>problème dual</em> cherche la meilleure.</p>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, §2.6.3, Déf. 2.6.7 et Th. 2.6.9, p. 51–52</span></div>
+<p>Pour un Lagrangien $L$ défini sur $U\times P$ et qui admet un point-selle $(u,p)$ (hypothèse de la Déf. 2.6.7) : « Pour $v\in U$ et $q\in P$, posons</p>
+$$\mathcal J(v)=\sup_{q\in P}L(v,q)\qquad\mathcal G(q)=\inf_{v\in U}L(v,q).$$
+<p>On appelle problème primal le problème de minimisation $\inf_{v\in U}\mathcal J(v)$, et problème dual le problème de maximisation $\sup_{q\in P}\mathcal G(q)$. »</p>
+<p>« <strong>Théorème 2.6.9 (de dualité)</strong> Le couple $(u,p)$ est un point-selle de $L$ sur $U\times P$ si et seulement si</p>
+$$\mathcal J(u)=\min_{v\in U}\mathcal J(v)=\max_{q\in P}\mathcal G(q)=\mathcal G(p).$$
+<p>»</p>
+</div>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, Rem. 2.6.11, p. 53 ; Cor. 2.6.12, p. 54</span></div>
+<p>« Même si le Lagrangien $L$ n'admet pas de point selle sur $U\times P$, on a tout de même l'inégalité élémentaire suivante, dite de dualité faible</p>
+$$\inf_{v\in U}\Big(\sup_{q\in P}L(v,q)\Big)\ge\sup_{q\in P}\Big(\inf_{v\in U}L(v,q)\Big).$$
+<p>[…] La différence (positive) entre les deux membres de l'inégalité (2.75) est appelée saut de dualité. »</p>
+<p>« <strong>Corollaire 2.6.12</strong> On suppose que les fonctions $J,F_1,\dots,F_M$ sont convexes et dérivables sur $V$. Soit $u\in V$ tel que $F(u)\le0$ et les contraintes sont qualifiées en $u$ au sens de la Définition 2.5.15. Alors, si $u$ est un minimum global de $\mathcal J$ sur $V$, il existe $p\in(\R_+)^M$ tel que 1. $p$ est un maximum global de $\mathcal G$ sur $(\R_+)^M$, 2. $(u,p)$ est un point-selle du Lagrangien $L$ sur $V\times(\R_+)^M$, 3. $(u,p)$ vérifie la condition d'optimalité nécessaire et suffisante $F(u)\le0$, $p\ge0$, $p\cdot F(u)=0$, $J'(u)+p\cdot F'(u)=0$. »</p>
+</div>
+<p>Dans le Corollaire 2.6.12, $\mathcal J$ est la fonction primale de la Déf. 2.6.7 : elle vaut $J(v)$ si $F(v)\le0$ et $+\infty$ sinon (formule (2.77) du livre, et premier exemple ci-dessous). « $u$ minimum global de $\mathcal J$ sur $V$ » veut donc dire « $u$ minimum global de $J$ sous les contraintes $F\le0$ ».</p>
+<div class="box remark"><div class="box-h">Note sur les sources — un numéro qui change de nature</div>
+<p>Au chapitre 4, le livre présente le Théorème 4.2.13 comme « un cas particulier du Théorème de dualité 2.6.12 » et conclut sa preuve par « conséquence du Théorème de dualité 2.6.12 » (Allaire, p. 132). Au chapitre 2, le théorème de dualité est le <strong>Théorème 2.6.9</strong> ; le numéro 2.6.12 est un <strong>Corollaire</strong>, qui combine 2.6.9 et le théorème de Kuhn et Tucker 2.6.4 (ci-dessus). C'est bien ce corollaire qui sert (cas convexe, contraintes affines donc qualifiées), mais il faut le chercher sous le nom « Corollaire ». (Dans la citation de la Remarque 2.6.11, « (2.75) » désigne l'inégalité de dualité faible.)</p>
+</div>
+<div class="box example"><div class="box-h">Exemples</div>
+<ul>
+<li><strong>Une variable.</strong> Pour $L(v,q)=v^2+q(1-v)$ : $\mathcal J(v)=v^2$ si $v\ge1$, $+\infty$ sinon (c'est la formule (2.77) du livre : le primal est le problème d'origine). Pour $q\ge0$ fixé, $v^2-qv+q$ est minimal en $v=\frac q2$, donc $\mathcal G(q)=q-\frac{q^2}4$ ; il est maximal en $q=2$, avec $\mathcal G(2)=1=\min\mathcal J$. Pas de saut de dualité.</li>
+<li><strong>Deux variables, et le sens des prix.</strong> Pour $\min v_1^2+v_2^2$ sous $1-v_1-v_2\le0$ : $u=(\frac12,\frac12)$, $J(u)=\frac12$, multiplicateur $\lambda=1$ ; $\mathcal G(q)=q-\frac{q^2}2$, maximal en $q=1$, valeur $\frac12$. Si l'on desserre la contrainte en $1-v_1-v_2\le\eps$, le minimum devient $\frac{(1-\eps)^2}2$, de dérivée $-1=-\lambda$ en $\eps=0$ : le multiplicateur mesure la sensibilité du minimum au niveau de la contrainte (Lemme 2.6.6, p. 50). C'est le « prix ombre » de la <a href="Partie05.html">partie 5</a>.</li>
+<li><strong>Un saut de dualité.</strong> Sur $U=\{0,1\}$ (un problème en nombres entiers), $\min -v$ sous $2v-1\le0$ : seul $v=0$ est admissible, valeur $0$. Mais $\mathcal G(q)=\min(-q,\ q-1)$ est maximal en $q=\frac12$, de valeur $-\frac12<0$. Le saut vaut $\frac12$ : la dualité lagrangienne ne donne qu'une borne, ce qu'exploite la relaxation lagrangienne (<a href="Partie08.html">partie 8</a>).</li>
+<li><strong>Le programme linéaire.</strong> $\mathcal G(p)=p\cdot b$ si $A\T p\le c$, $-\infty$ sinon (<a href="#lagrangien">ci-dessus</a>) : le dual est $\max\{b\cdot p : A\T p\le c\}$ (<a href="Partie05.html#dual">partie 5</a>).</li>
+</ul>
+</div>
+<details class="fold proof"><summary>Démonstration de la dualité faible et du Théorème 2.6.9</summary><div class="fold-body">
+<p><strong>Dualité faible.</strong> Pour tous $v\in U$, $q\in P$ : $\mathcal G(q)=\inf_{v'}L(v',q)\le L(v,q)\le\sup_{q'}L(v,q')=\mathcal J(v)$. Donc tout $\mathcal G(q)$ minore tout $\mathcal J(v)$, et $\sup\mathcal G\le\inf\mathcal J$.</p>
+<p><strong>Théorème 2.6.9, sens direct.</strong> Si $(u,p)$ est un point-selle, posons $L^*=L(u,p)$. La première inégalité donne $\mathcal J(u)=\sup_qL(u,q)=L^*$ ; la seconde, $\mathcal G(p)=\inf_vL(v,p)=L^*$. Avec la dualité faible, $L^*=\mathcal G(p)\le\sup\mathcal G\le\inf\mathcal J\le\mathcal J(u)=L^*$ : tout est égal, et les bornes sont atteintes en $u$ et $p$.</p>
+<p><strong>Réciproque.</strong> Si $\mathcal J(u)=\mathcal G(p)=L^*$, alors $L(u,q)\le\mathcal J(u)=L^*$ pour tout $q$ et $L(v,p)\ge\mathcal G(p)=L^*$ pour tout $v$ ; en prenant $q=p$ et $v=u$, $L(u,p)=L^*$, et ces deux inégalités sont celles du point-selle.</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pièges</div>
+<ul>
+<li>La fonction duale peut valoir $-\infty$ (pour le programme linéaire, dès que $A\T p\le c$ est violée) : le dual se restreint à là où elle est finie.</li>
+<li>Le dual est toujours un problème <em>concave</em> ($\mathcal G$ est un infimum de fonctions affines de $q$), même si le primal ne l'est pas — d'où son intérêt pour obtenir des bornes. Mais l'égalité des valeurs demande des hypothèses (convexité et qualification, ou programme linéaire).</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">En machine learning — l'astuce du noyau vient du dual</div>
+<p>Le dual du SVM (<a href="#kkt">ci-dessus</a>) s'écrit $\max_\alpha\sum_i\alpha_i-\frac12\sum_{i,j}\alpha_i\alpha_jy_iy_j\,x_i\cdot x_j$ sous $0\le\alpha_i\le C$ et $\sum_i\alpha_iy_i=0$. Les données n'y apparaissent que par les produits scalaires $x_i\cdot x_j$ : en les remplaçant par un noyau $k(x_i,x_j)$, on obtient un classifieur non linéaire sans jamais calculer de coordonnées dans l'espace des caractéristiques. C'est la dualité lagrangienne qui rend cela possible.</p>
+</div>
+
+<h3 id="farkas">Le lemme de Farkas</h3>
+<p class="small muted"><strong>Où ça sert :</strong> la preuve des conditions de KKT (<a href="#kkt">ci-dessus</a>) ; dans la preuve du Théorème 4.2.13, l'étape « le dual a une valeur finie, donc $\Xad$ n'est pas vide » (Allaire, p. 133, <a href="Partie05.html#theoreme-dualite">partie 5</a>) ; la fermeture du cône dans le Lemme 4.2.3 vient de sa démonstration (<a href="#cones">§2</a>).</p>
+<p>Un vecteur est soit dans un cône, soit séparé de lui par un hyperplan qui passe par le sommet du cône. Pour un système $Ax=b$, $x\ge0$ : soit il a une solution, soit il existe un « certificat » simple qui prouve qu'il n'en a pas.</p>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, Lemme 2.5.19, p. 43</span></div>
+<p>« <strong>Lemme 2.5.19 (de Farkas)</strong> Soient $a_1,\dots,a_M$ des éléments fixés de $V$. On considère les ensembles</p>
+$$\begin{aligned}\mathcal K&=\big\{w\in V,\ \langle a_i,w\rangle\le0\ \text{pour}\ 1\le i\le M\big\},\\\hat{\mathcal K}&=\Big\{q\in V,\ \exists\lambda_1,\dots,\lambda_M\ge0,\\&\qquad\quad q=-\sum_{i=1}^M\lambda_ia_i\Big\}.\end{aligned}$$
+<p>Alors pour tout $p\in V$, on a l'implication</p>
+$$\langle p,w\rangle\ge0\ \ \forall w\in\mathcal K\ \Longrightarrow\ p\in\hat{\mathcal K}.$$
+<p>(La réciproque étant évidente, il s'agit en fait d'une équivalence.) »</p>
+</div>
+<dl class="decode">
+<dt>$\hat{\mathcal K}$</dt><dd>l'opposé du cône engendré par les $a_i$ : les $-\sum\lambda_ia_i$, $\lambda\ge0$.</dd>
+<dt>$\mathcal K$</dt><dd>les directions $w$ qui font un angle obtus (ou droit) avec tous les $a_i$ — le « cône polaire ».</dd>
+<dt>l'implication</dt><dd>si $p$ fait un angle aigu (ou droit) avec toutes ces directions, alors $-p$ est dans le cône des $a_i$. Contraposée : si $-p$ n'est pas dans le cône, il existe $w\in\mathcal K$ avec $\langle p,w\rangle<0$, un hyperplan $\{w\cdot y=0\}$ qui sépare $-p$ du cône.</dd>
+<dt>« la réciproque étant évidente »</dt><dd>si $p=-\sum\lambda_ia_i$ et $w\in\mathcal K$, alors $\langle p,w\rangle=-\sum\lambda_i\langle a_i,w\rangle\ge0$, somme de termes $\ge0$.</dd>
+</dl>
+<div class="box thm"><div class="box-h">Forme « programmation linéaire » (alternative de Farkas)</div>
+<p>Pour $A\in\Mc_{m\times n}(\R)$ et $b\in\R^m$, <strong>une et une seule</strong> des deux affirmations est vraie :</p>
+<p>(I) il existe $x\ge0$ avec $Ax=b$ ; $\qquad$ (II) il existe $w\in\R^m$ avec $A\T w\le0$ et $b\cdot w>0$.</p>
+<p>On l'obtient du lemme avec $a_i$ = les colonnes de $A$ et $p=-b$. Jamais les deux : si $Ax=b$ avec $x\ge0$ et $A\T w\le0$, alors $b\cdot w=Ax\cdot w=x\cdot A\T w\le0$.</p>
+</div>
+<figure class="fig"><!-- include figures/RAP/farkas.svg --><figcaption>Le cône engendré par $a_1=(2,1)$ et $a_2=(1,3)$ (bleu). À gauche, $b=(5,5)=2a_1+a_2$ est dedans : (I) est vraie. À droite, $b'=(4,1)$ est dehors, et $w=(1,-2)$ est un certificat : le demi-plan $\{w\cdot y\le0\}$ (violet) contient tout le cône, mais pas $b'$.</figcaption></figure>
+<div class="box example"><div class="box-h">Exemple — trouver un certificat</div>
+<p>Avec $A=\begin{pmatrix}2&1\\1&3\end{pmatrix}$ (colonnes $a_1$, $a_2$) et $b'=(4,1)$ : les coordonnées de $b'$ dans la base $(a_1,a_2)$ sont $(\frac{11}5,-\frac25)$ (Cramer, $\det A=5$). Elles sont uniques, et l'une est négative : pas de solution $x\ge0$. Un vecteur orthogonal à $a_1$, du côté opposé à $a_2$, sert de certificat : $w=(1,-2)$ donne</p>
+$$\begin{gathered}A\T w=\begin{pmatrix}a_1\cdot w\\a_2\cdot w\end{pmatrix}=\begin{pmatrix}0\\-5\end{pmatrix}\le0,\\b'\cdot w=4-2=2>0.\end{gathered}$$
+</div>
+<details class="fold proof"><summary>Démonstration (Allaire, p. 43–44)</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\hat{\mathcal K}\ \text{est un convexe fermé non vide.}$$<span class="why">C'est un cône engendré par un nombre fini de vecteurs : la fermeture est la première partie de la preuve du livre (<a href="#cones">§2</a>) ; il contient $0$.</span></li>
+<li>$$\langle p,w\rangle<\alpha<\langle q,w\rangle\quad\forall q\in\hat{\mathcal K}.$$<span class="why">Par l'absurde, supposons $p\notin\hat{\mathcal K}$ : on sépare $p$ de $\hat{\mathcal K}$ (Théorème 5.1.12, <a href="#separation">ci-dessous</a>).</span></li>
+<li>$$\alpha<0\qquad\text{et}\qquad\langle a_i,w\rangle\le0\ \ \forall i.$$<span class="why">$0\in\hat{\mathcal K}$ donne $\alpha<0$. Avec $q=-\lambda a_i$ et $\lambda\to+\infty$, $\alpha<-\lambda\langle a_i,w\rangle$ impose $\langle a_i,w\rangle\le0$.</span></li>
+<li>$$w\in\mathcal K\quad\text{et}\quad\langle p,w\rangle<\alpha<0.$$<span class="why">Contradiction avec l'hypothèse $\langle p,w\rangle\ge0$ pour tout $w\in\mathcal K$.</span></li>
+</ol>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pièges</div>
+<ul>
+<li>Le signe moins de $\hat{\mathcal K}$ : le livre écrit $q=-\sum\lambda_ia_i$. En forme « programmation linéaire », il faut donc prendre $p=-b$, pas $p=b$.</li>
+<li>Sans le signe ($x$ quelconque au lieu de $x\ge0$), le lemme dégénère en algèbre linéaire : $Ax=b$ n'a pas de solution si et seulement si il existe $w$ avec $A\T w=0$ et $b\cdot w\ne0$ (<a href="#transposee">$\Ker A\T$ est orthogonal à $\Ima A$</a>).</li>
+</ul>
+</div>
+<div class="quiz"><p>Le vecteur $b''=(-1,2)$ est-il dans le cône engendré par $a_1=(2,1)$ et $a_2=(1,3)$ ? Si non, donnez un certificat.</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>Ses coordonnées dans $(a_1,a_2)$ sont $(-1,1)$ : $-a_1+a_2=(-1,2)$. La première est négative : non. Certificat : un vecteur orthogonal à $a_2$, du côté opposé à $a_1$, $w=(-3,1)$ : $a_1\cdot w=-5\le0$, $a_2\cdot w=0\le0$, et $b''\cdot w=3+2=5>0$.</p>
+</div></details></div>
+
+<h3 id="separation">Projection sur un convexe et séparation</h3>
+<p class="small muted"><strong>Où ça sert :</strong> c'est le résultat géométrique qui démontre Farkas (<a href="#farkas">ci-dessus</a>), donc KKT et le théorème de dualité (<a href="Partie05.html#theoreme-dualite">partie 5</a>) : la chaîne complète est projection ⇒ séparation ⇒ Farkas ⇒ dualité.</p>
+<p>Si un point est hors d'un convexe fermé, il a un point le plus proche dans ce convexe, et la droite perpendiculaire au segment qui les joint, tracée au milieu, sépare les deux.</p>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, annexe, Th. 5.1.3, p. 189</span></div>
+<p>« <strong>Théorème 5.1.3 (de projection sur un convexe)</strong> Soit $V$ un espace de Hilbert. Soit $K\subset V$ un convexe fermé non vide. Pour tout $x\in V$, il existe un unique $x_K\in K$ tel que $\norm{x-x_K}=\min_{y\in K}\norm{x-y}$. De façon équivalente, $x_K$ est caractérisé par la propriété</p>
+$$\begin{gathered}x_K\in K,\\\langle x_K-x,\,x_K-y\rangle\le0\quad\forall y\in K.\qquad(5.1)\end{gathered}$$
+<p>On appelle $x_K$ la projection orthogonale sur $K$ de $x$. »</p>
+</div>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, annexe, Th. 5.1.12, p. 193</span></div>
+<p>« <strong>Théorème 5.1.12 (Séparation d'un point et d'un convexe)</strong> Soit $K$ une partie convexe non vide et fermée d'un espace de Hilbert $V$, et $x_0\notin K$. Alors il existe un hyperplan fermé de $V$ qui sépare strictement $x_0$ et $K$, c'est-à-dire qu'il existe une forme linéaire $L\in V'$ et $\alpha\in\R$ tels que</p>
+$$L(x_0)<\alpha<L(x)\qquad\forall x\in K.\qquad(5.5)$$
+<p><strong>Démonstration.</strong> Notons $x_K$ la projection de $x_0$ sur $K$. Puisque $x_0\notin K$, on a $x_K-x_0\ne0$. Soit $L$ la forme linéaire définie pour tout $y\in V$ par $L(y)=\langle x_K-x_0,y\rangle$, et soit $\alpha=(L(x_K)+L(x_0))/2$. D'après (5.1), on a $L(x)\ge L(x_K)>\alpha>L(x_0)$ pour tout $x\in K$, ce qui achève la démonstration. »</p>
+</div>
+<dl class="decode">
+<dt>(5.1)</dt><dd>l'angle en $x_K$ entre $x$ et n'importe quel $y\in K$ est obtus : tout $K$ est « derrière » l'hyperplan orthogonal à $x-x_K$ passant par $x_K$.</dd>
+<dt>$V'$</dt><dd>le dual de $V$, les formes linéaires continues ; dans $\R^n$, ce sont les $y\mapsto a\cdot y$.</dd>
+<dt>$L(x_K)>\alpha$</dt><dd>parce que $L(x_K)-L(x_0)=\norm{x_K-x_0}^2>0$ et que $\alpha$ est leur moyenne.</dd>
+</dl>
+<figure class="fig"><!-- include figures/RAP/separation.svg --><figcaption>Le pentagone $K$ du fil rouge et $x_0=(4,4)$. Le point le plus proche est $x_K=(\frac52,\frac52)$, sur le côté $x_1+x_2=5$ (angle droit). La droite violette $y_1+y_2=\frac{13}2$, à mi-chemin, sépare strictement $x_0$ de $K$.</figcaption></figure>
+<div class="box example"><div class="box-h">Exemple — projeter $(4,4)$ sur le pentagone</div>
+<ul>
+<li>Le pied de la perpendiculaire de $(4,4)$ sur la droite $x_1+x_2=5$ est $(4,4)-\frac{8-5}2(1,1)=(\frac52,\frac52)$ ; il est entre les sommets $(2,3)$ et $(5,0)$, donc sur le côté, et c'est $x_K$. Distance : $\frac3{\sqrt2}$.</li>
+<li>Vérification de (5.1) aux sommets : $\langle x_K-x_0,x_K-y\rangle=-\frac32\big(5-(y_1+y_2)\big)$ vaut $0$ en $(2,3)$ et $(5,0)$ et est négatif aux trois autres ; comme c'est une fonction affine de $y$, elle est $\le0$ sur tout $K$.</li>
+<li>Séparation : $L(y)=\langle x_K-x_0,y\rangle=-\frac32(y_1+y_2)$, $L(x_K)=-\frac{15}2$, $L(x_0)=-12$, $\alpha=-\frac{39}4$. Et $L\ge-\frac{15}2$ sur $K$ (minimum de $L$ aux sommets) : $L(x_0)=-12<-\frac{39}4<-\frac{15}2\le L(x)$.</li>
+</ul>
+</div>
+<div class="box pitfall"><div class="box-h">Pièges</div>
+<ul>
+<li><strong>Fermé</strong> est indispensable : un point du bord d'un ouvert convexe ne peut pas être séparé strictement. <strong>Convexe</strong> aussi : un point dans un « trou » d'une couronne n'est séparé par aucune droite.</li>
+<li>Séparer deux convexes fermés disjoints strictement peut échouer s'ils se rapprochent à l'infini : $\{x>0,\ xy\ge1\}$ et $\{y\le0\}$ sont disjoints, mais à distance nulle (<a href="#fermes">§3</a>).</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">En machine learning — la marge maximale</div>
+<p>Pour deux classes séparables linéairement, le SVM à marge dure cherche l'hyperplan séparateur le plus éloigné des deux nuages. On peut montrer qu'il est construit exactement comme dans la preuve du Th. 5.1.12 : on prend les deux points les plus proches des enveloppes convexes des deux classes, et l'hyperplan est la médiatrice de ce segment. La largeur de la marge est la distance entre les deux enveloppes.</p>
+</div>
+
+<div class="quiz"><p>Projetez $x_0=(6,1)$ sur le pentagone du fil rouge, et vérifiez la caractérisation (5.1).</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>Le pied de la perpendiculaire sur $x_1+x_2=5$ est $(6,1)-\frac{7-5}2(1,1)=(5,0)$, le sommet. Donc $x_K=(5,0)$, à distance $\sqrt2$. Vérification : $\langle x_K-x_0,\,x_K-y\rangle=\langle(-1,-1),(5-y_1,-y_2)\rangle=y_1+y_2-5\le0$ pour tout $y\in K$, car $K$ est sous la droite $x_1+x_2=5$.</p>
+</div></details></div>
+
+<h3 id="newton">La méthode de Newton</h3>
+<p class="small muted"><strong>Où ça sert :</strong> l'algorithme de points intérieurs avance par des pas de Newton sur le problème avec barrière (<a href="Partie04.html#trajectoire-centrale">partie 4</a>).</p>
+<p>Pour résoudre $F(u)=0$, on remplace $F$ par sa tangente au point courant et l'on résout l'équation de la tangente. Pour minimiser $J$, on remplace $J$ par son approximation quadratique et l'on prend son minimum. Près de la solution, c'est extraordinairement rapide.</p>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, §3.5.1, (3.90) et Prop. 3.5.1, p. 103</span></div>
+<p>Avec $F=J'$ de classe $C^2$ et $u$ un zéro régulier ($F(u)=0$ et $F'(u)$ inversible) : « Pour un choix initial $u^0\in\R^N$, on calcule</p>
+$$\begin{gathered}u^{n+1}=u^n-\big(F'(u^n)\big)^{-1}F(u^n)\\\text{pour }n\ge0.\qquad(3.90)\end{gathered}$$
+<p>Rappelons que l'on ne calcule pas l'inverse de la matrice $F'(u^n)$ dans (3.90) mais que l'on résout un système linéaire. »</p>
+<p>« <strong>Proposition 3.5.1</strong> […] Il existe un réel $\epsilon>0$ et une constante $0<C<1/\epsilon$ tels que, si $u^0$ est assez proche de $u$ au sens où $\norm{u-u^0}\le\epsilon$, la méthode de Newton définie par (3.90) converge, […]</p>
+$$\begin{gathered}\norm{u^{n+1}-u}\le C\norm{u^n-u}^2\\\text{et}\qquad\norm{u^n-u}\le C^{-1}(C\epsilon)^{2^n}.\end{gathered}$$
+<p>»</p>
+<p>Remarque 3.5.2 : « Le nombre de chiffres significatifs dans l'approximation $u^n$ de la solution $u$ double à chaque itération. »</p>
+</div>
+<p>Pour la minimisation, le livre (p. 103) écrit le développement $J(w)\approx J(v)+J'(v)\cdot(w-v)+\frac12J''(v)(w-v)\cdot(w-v)$ ; le minimum de ce modèle quadratique, si $J''(v)$ est définie positive, est $w=v-(J''(v))^{-1}J'(v)$ : on retrouve (3.90) avec $F=J'$.</p>
+<figure class="fig"><!-- include figures/RAP/newton.svg --><figcaption>À gauche, Newton sur $F(x)=x^2-2$ depuis $x_0=1$ : chaque tangente (vert) coupe l'axe au point suivant. À droite, l'erreur en échelle logarithmique : pour Newton elle passe de $10^{-3}$ à $10^{-6}$ puis à $10^{-12}$ (l'exposant double) ; pour une racine double ($F(x)=x^2$) Newton ne fait que diviser l'erreur par $2$, comme la dichotomie.</figcaption></figure>
+<div class="box example"><div class="box-h">Exemples</div>
+<ul>
+<li><strong>$\sqrt2$.</strong> $x_{n+1}=x_n-\frac{x_n^2-2}{2x_n}$ depuis $x_0=1$ : $1$, $\frac32$, $\frac{17}{12}$, $\frac{577}{408}$, $\frac{665857}{470832}$. Erreurs : $0{,}414$ ; $0{,}0858$ ; $0{,}00245$ ; $2{,}1\cdot10^{-6}$ ; $1{,}6\cdot10^{-12}$.</li>
+<li><strong>Racine double.</strong> Pour $F(x)=x^2$, $x_{n+1}=x_n-\frac{x_n^2}{2x_n}=\frac{x_n}2$ : $1,\frac12,\frac14,\frac18,\dots$ La convergence n'est que géométrique, car $F'(0)=0$ (le livre cite $\norm x^2$, p. 103).</li>
+<li><strong>Une barrière, en miniature.</strong> Minimiser $J(x)=x-\log x$ sur $x>0$ (minimum en $x=1$). Ici $J'(x)=1-\frac1x$, $J''(x)=\frac1{x^2}$, et le pas de Newton donne $x_{n+1}=2x_n-x_n^2$. Depuis $x_0=\frac12$ : $\frac34$, $\frac{15}{16}$, $\frac{255}{256}$, $\frac{65535}{65536}$ — l'erreur $1-x_n$ vaut $\frac12,\frac14,\frac1{16},\frac1{256},\frac1{65536}$ : elle est élevée au carré à chaque pas. Depuis $x_0=2$ : $x_1=0$, hors du domaine ($\log0$ n'existe pas). Newton est une méthode <em>locale</em> ; les méthodes de points intérieurs raccourcissent le pas pour rester dans $x>0$ (<a href="Partie04.html">partie 4</a>).</li>
+</ul>
+</div>
+<details class="fold proof"><summary>Idée de la démonstration de la Proposition 3.5.1</summary><div class="fold-body">
+<p>Comme $F(u)=0$, $u^{n+1}-u=u^n-u-F'(u^n)^{-1}\big(F(u^n)-F(u)\big)$. Le développement de Taylor de $F$ autour de $u^n$ montre que $F(u)-F(u^n)-F'(u^n)(u-u^n)$ est d'ordre $\norm{u^n-u}^2$ (avec une constante $C_2$ qui borne $F''$). Donc $\norm{u^{n+1}-u}\le\frac12C_1C_2\norm{u^n-u}^2$, où $C_1$ borne $\norm{F'(v)^{-1}}$ près de $u$. En posant $C=\frac12C_1C_2$ et $e_n=C\norm{u^n-u}$, on a $e_{n+1}\le e_n^2$, donc $e_n\le e_0^{2^n}$, qui tend vers $0$ très vite dès que $e_0<1$, c'est-à-dire dès que $u^0$ est assez proche de $u$.</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pièges</div>
+<ul>
+<li>Newton cherche les zéros de $J'$ : il peut converger vers un maximum ou un col, pas seulement vers un minimum (Allaire, Rem. 3.5.2).</li>
+<li>La convergence quadratique est <strong>locale</strong> : loin de la solution, Newton peut diverger ou sortir du domaine (exemple ci-dessus).</li>
+<li>Chaque itération résout un système $N\times N$ : de l'ordre de $N^3$ opérations en général (<a href="#grand-o">§6</a>). C'est le prix de la vitesse.</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">En machine learning — les méthodes du second ordre</div>
+<p>La régression logistique se résout classiquement par la méthode de Newton ; chaque pas est un problème de moindres carrés pondérés, d'où le nom d'IRLS (<em>iteratively reweighted least squares</em>), et une dizaine de pas suffisent. Pour un réseau de neurones à $N\approx10^9$ paramètres, la hessienne aurait $N^2\approx10^{18}$ coefficients : impossible à stocker ou à inverser. On utilise alors des méthodes du premier ordre (descente de gradient stochastique, Adam) ou des approximations de la hessienne (quasi-Newton comme L-BFGS, pour des problèmes de taille moyenne), dans l'esprit de la Remarque 3.5.3 du livre.</p>
+</div>
+
+<div class="quiz"><p>Faites un pas de Newton pour $x^2-3=0$ depuis $x_0=2$. Quelle est l'erreur ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>$x_1=2-\frac{4-3}{2\cdot2}=\frac74=1{,}75$, et $\sqrt3\approx1{,}7321$ : l'erreur passe de $0{,}27$ à $0{,}018$. Le pas suivant la ramènerait vers $10^{-4}$ : l'erreur est (à peu près) élevée au carré à chaque pas.</p>
+</div></details></div>
+
+<h3 id="penalisation">Pénalisation extérieure et intérieure</h3>
+<p class="small muted"><strong>Où ça sert :</strong> la méthode de points intérieurs remplace $x\ge0$ par une barrière logarithmique $-\mu\sum_i\log x_i$, une pénalisation intérieure (<a href="Partie04.html#barriere">partie 4</a>).</p>
+<p>Deux façons de se débarrasser d'une contrainte : la remplacer par une amende qui punit d'être sorti (pénalisation <em>extérieure</em>), ou par un mur qui empêche de sortir (pénalisation <em>intérieure</em>, ou barrière). Dans les deux cas, on règle un paramètre pour que le problème sans contrainte approche le vrai.</p>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, §3.4.3, (3.79) et Prop. 3.4.6, p. 98 ; Rem. 3.4.7, p. 99</span></div>
+<p>Pour $\inf_{F(v)\le0}J(v)$ (3.78) et $\eps>0$, « on introduit le problème sans contraintes</p>
+$$\inf_{v\in\R^N}\Big(J(v)+\frac1\eps\sum_{i=1}^M\big[\max(F_i(v),0)\big]^2\Big),\qquad(3.79)$$
+<p>dans lequel on dit que les contraintes $F_i(v)\le0$ sont “pénalisées”. »</p>
+<p>« <strong>Proposition 3.4.6</strong> On suppose que $J$ est continue, strictement convexe, et infinie à l'infini, que les fonctions $F_i$ sont convexes et continues pour $1\le i\le M$, et que l'ensemble $K=\{v\in\R^N,\ F_i(v)\le0\ \forall i\in\{1,\dots,M\}\}$ est non vide. En notant $u$ l'unique solution de (3.78) et, pour $\eps>0$, $u_\eps$ l'unique solution de (3.79), on a alors $\lim_{\eps\to0}u_\eps=u$. »</p>
+<p>Remarque 3.4.7 : c'est « une méthode de pénalisation extérieure, au sens où la solution pénalisée $u_\eps$ ne vérifie en général pas les contraintes. […] A l'opposé de cette approche, il existe une technique de pénalisation intérieure », par exemple</p>
+$$\inf_{v\in\R^N,\ F(v)<0}\Big(J(v)-\eps\sum_{i=1}^M\frac1{F_i(v)}\Big),\qquad(3.82)$$
+<p>« où le deuxième terme est appelée une fonction “barrière” dont le choix n'est pas unique. »</p>
+</div>
+<p>La <a href="Partie04.html">partie 4</a> utilise une autre barrière, $-\mu\sum_i\log x_i$ pour les contraintes $x_i\ge0$ : elle aussi tend vers $+\infty$ au bord.</p>
+<figure class="fig"><!-- include figures/RAP/penalisation.svg --><figcaption>$\min x$ sous $x\ge1$ (zone bleue). À gauche, la pénalisation extérieure pour $\eps=1,\frac12,\frac15$ (du plus clair au plus foncé) : les minimiseurs $1-\frac\eps2$ sont hors de l'ensemble admissible et s'en approchent. À droite, la barrière logarithmique pour $\mu=1,\frac12,\frac15$ : les minimiseurs $1+\mu$ sont admissibles et s'approchent du bord.</figcaption></figure>
+<div class="box example"><div class="box-h">Exemple — $\min x$ sous $1-x\le0$</div>
+<ul>
+<li><strong>Extérieure :</strong> $J_\eps(x)=x+\frac1\eps\max(1-x,0)^2$. Pour $x<1$, $J_\eps'(x)=1-\frac2\eps(1-x)$ s'annule en $u_\eps=1-\frac\eps2$ : $\frac12$, $\frac{19}{20}$, $\frac{199}{200}$ pour $\eps=1,\frac1{10},\frac1{100}$. Toujours non admissible, mais $u_\eps\to1$. Et $\frac2\eps\max(F(u_\eps),0)=1$ pour tout $\eps$ : c'est le multiplicateur $\lambda=1$ de la contrainte (Exercice 3.4.3 du livre).</li>
+<li><strong>Barrière logarithmique :</strong> $x-\mu\log(x-1)$, de dérivée $1-\frac\mu{x-1}$, minimale en $x_\mu=1+\mu$ : $2$, $\frac{11}{10}$, $\frac{101}{100}$ pour $\mu=1,\frac1{10},\frac1{100}$.</li>
+<li><strong>Barrière (3.82) du livre :</strong> $x+\frac\eps{x-1}$, minimale en $1+\sqrt\eps$ : $2$ ; $1{,}316$ ; $1{,}1$.</li>
+</ul>
+</div>
+<details class="fold proof"><summary>Démonstration de la Proposition 3.4.6 (d'après Allaire, p. 98)</summary><div class="fold-body">
+<ol class="steps">
+<li>$$J(u_\eps)\le J_\eps(u_\eps)\le J_\eps(u)=J(u).$$<span class="why">La pénalité $G(v)=\sum\max(F_i(v),0)^2$ est $\ge0$, nulle en $u\in K$, et $u_\eps$ minimise $J_\eps=J+\frac1\eps G$.</span></li>
+<li>$$(u_\eps)\ \text{bornée, donc }u_{\eps_k}\to u^*.$$<span class="why">$J(u_\eps)\le J(u)$ et $J$ est infinie à l'infini ; Bolzano–Weierstrass.</span></li>
+<li>$$\begin{gathered}0\le G(u_{\eps_k})\le\eps_k\big(J(u)-J(u_{\eps_k})\big)\to0,\\\text{donc }G(u^*)=0,\ u^*\in K.\end{gathered}$$<span class="why">On relit l'étape 1 ; $G$ et $J$ sont continues, et $J$ est minorée sur cette suite bornée.</span></li>
+<li>$$J(u^*)\le J(u)\ \Longrightarrow\ u^*=u.$$<span class="why">Passage à la limite dans $J(u_\eps)\le J(u)$ ; $u$ est l'unique minimum sur $K$ (stricte convexité). Toutes les sous-suites ayant la même limite, $u_\eps\to u$.</span></li>
+</ol>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pièges</div>
+<ul>
+<li><strong>Mal conditionné.</strong> Le livre (p. 99) prévient : quand $\eps\to0$, on additionne des termes d'ordre $1$ et d'ordre $\frac1\eps$, et les erreurs d'arrondi explosent. On diminue donc $\eps$ progressivement, en partant de la solution précédente (méthode de continuation) — exactement ce que fait le suivi de la trajectoire centrale (<a href="Partie04.html#trajectoire-centrale">partie 4</a>).</li>
+<li>Extérieure : les solutions approchées ne sont pas admissibles. Intérieure : il faut un point de départ strictement admissible, et le paramètre multiplie la barrière ($\eps\to0$), alors qu'il divise la pénalité extérieure.</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">En machine learning — régulariser, c'est pénaliser</div>
+<p>Entraîner un modèle avec une perte $\mathcal L(\theta)$ et un terme $\lambda\norm\theta^2$ (« <em>weight decay</em> », régression ridge) revient à remplacer la contrainte $\norm\theta^2\le r$ par une pénalité. Pour une perte convexe, une solution $\theta_\lambda$ du problème pénalisé avec $\lambda>0$ est aussi solution du problème contraint avec $r=\norm{\theta_\lambda}^2$ : $\lambda$ y joue le rôle du multiplicateur de KKT. Choisir $\lambda$ par validation croisée, c'est choisir le niveau de la contrainte.</p>
+</div>

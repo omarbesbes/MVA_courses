@@ -1,0 +1,50 @@
+<h2 id="applications">7. Le simplexe aujourd'hui : solveurs et apprentissage</h2>
+<p class="tldr">Le simplexe des solveurs est celui du cours, en version révisée, souvent dual, avec des factorisations mises à jour et des démarrages à chaud ; en apprentissage, il résout le transport optimal (simplexe de réseau) et la régression en norme $\ell^1$, et sa logique des coûts réduits fonde la génération de colonnes.</p>
+
+<h3 id="solveurs">Ce que fait vraiment un solveur</h3>
+<div class="box app"><div class="box-h">En pratique — simplexe révisé, simplexe dual, démarrage à chaud</div>
+<ul>
+<li><strong>Simplexe révisé.</strong> Les solveurs suivent les étapes de la <a href="#algo-enonce">méthode du §3</a>, mais sans tableau : ils résolvent $B^\top p=c_B$ et $Bd=a_i$ avec une factorisation $LU$ mise à jour de $B$ (§6).</li>
+<li><strong>Simplexe dual.</strong> Le simplexe du cours garde $x_B\ge0$ (admissibilité) et cherche $\ct_N\ge0$ (optimalité). Le <em>simplexe dual</em> fait l'inverse : il garde $\ct_N\ge0$ et pivote jusqu'à ce que $x_B\ge0$. C'est le simplexe appliqué au problème dual (<a href="Partie05.html#dual">partie 5</a>). Dans HiGHS, <code>method="highs-ds"</code> désigne un simplexe dual.</li>
+<li><strong>Démarrage à chaud.</strong> Les coûts réduits $\ct_N=c_N-N^\top B^{-\top}c_B$ ne dépendent pas de $b$. Si l'on modifie $b$, l'ancienne base optimale garde donc $\ct_N\ge0$ : soit $x_B=B^{-1}b$ reste $\ge0$, et elle est encore optimale sans aucun pivot ; soit non, et le simplexe dual repart de cette base. Sur l'exercice 4.2.1, avec $b_3=8$ au lieu de $5$, la base finale $\{x_1,x_2,x_3\}$ donne $x_B=(4,4,6)\ge0$ : nouvel optimum $(4\,;4)$, valeur $12$, sans pivot ; avec $b_3=1$, elle donne $(x_2,x_1,x_3)=(\frac53,-\frac23,-\frac{10}3)$, non admissible mais toujours $\ct_N\ge0$ : point de départ idéal pour le simplexe dual (l'optimum est alors $(0\,;1)$). C'est ce qui rend la séparation-évaluation (<a href="Partie08.html#separation-evaluation">partie 8</a>) efficace : chaque sous-problème ne diffère du précédent que par une contrainte.</li>
+<li><strong>Présolve, mise à l'échelle, tolérances.</strong> Avant tout pivot, le solveur simplifie le problème (variables fixées, contraintes redondantes), le met à l'échelle, et travaille en virgule flottante avec des tolérances : « $\ct_j<0$ » devient « $\ct_j<-10^{-7}$ », par exemple.</li>
+</ul>
+<p>Dans <code>scipy</code> : <code>linprog</code> pour les programmes linéaires (HiGHS par défaut, simplexe dual ou points intérieurs), <code>milp</code> pour les programmes en nombres entiers (<a href="Partie06.html">partie 6</a>), qui appelle le même simplexe des milliers de fois.</p>
+</div>
+
+<h3 id="reseau">Le simplexe de réseau et le transport optimal</h3>
+<div class="box ml"><div class="box-h">En machine learning — <code>ot.emd</code>, un simplexe de réseau</div>
+<p>Le transport optimal discret entre deux histogrammes $a\in\R^n$ et $b\in\R^{n'}$ de même masse, avec une matrice de coûts $C$, est le programme linéaire $\min\sum_{ij}C_{ij}P_{ij}$ sous $\sum_jP_{ij}=a_i$, $\sum_iP_{ij}=b_j$, $P\ge0$ (le problème de Kantorovich, <a href="../../../Optimal_transport_ML/v2/Lesson02.html">leçon 2 du cours de transport optimal</a> ; c'est aussi un problème de transport au sens de la <a href="Partie07.html#transport">partie 7</a>). Sa matrice de contraintes est la matrice d'incidence d'un graphe biparti. Pour ces problèmes, le simplexe se simplifie beaucoup : une base correspond à un <strong>arbre couvrant</strong> du graphe biparti ($n+n'-1$ arêtes), les multiplicateurs $p$ se calculent en parcourant l'arbre, et un pivot ajoute une arête et en retire une du cycle ainsi créé. C'est le <em>simplexe de réseau</em>, sans aucune matrice à inverser.</p>
+<p>La fonction <code>ot.emd(a, b, C)</code> de la bibliothèque POT résout ce problème par un simplexe de réseau et renvoie un plan sommet, donc creux. Vérification sur des nuages aléatoires :</p>
+<pre><code>import numpy as np, ot
+rng = np.random.default_rng(0)
+a = rng.random(100); a /= a.sum(); b = rng.random(80); b /= b.sum()
+C = ot.dist(rng.random((100, 2)), rng.random((80, 2)))
+P = ot.emd(a, b, C)
+(P &gt; 1e-12).sum()      # 179 = 100 + 80 - 1 cases non nulles sur 8000</code></pre>
+<p>Le coût obtenu coïncide avec celui de <code>linprog</code> (HiGHS) sur les dix décimales affichées ($0{,}0161623543$). Le plan a exactement $n+n'-1$ cases non nulles : le nombre de variables d'une base, puisque les $n+n'$ contraintes ont une redondance (rang $n+n'-1$).</p>
+</div>
+
+<h3 id="lad">La régression en norme $\ell^1$ : la droite passe par des points de données</h3>
+<div class="box ml"><div class="box-h">En machine learning — régression robuste (LAD) résolue par le simplexe</div>
+<p>On veut ajuster une droite $y\approx a+bx$ à des données $(x_i,y_i)_{i=1}^N$, en minimisant la somme des <strong>valeurs absolues</strong> des résidus (<em>least absolute deviations</em>, LAD) plutôt que celle de leurs carrés. C'est un programme linéaire : on écrit chaque résidu comme différence de deux variables positives, $y_i-a-bx_i=u_i-v_i$ avec $u_i,v_i\ge0$, et l'on résout</p>
+$$\min_{a,b\in\R,\ u,v\ge0}\ \sum_{i=1}^N(u_i+v_i)\qquad\text{sous}\qquad a+bx_i+u_i-v_i=y_i\quad(i=1,\dots,N).$$
+<p>À l'optimum, $u_iv_i=0$ (sinon on diminuerait les deux), donc $u_i+v_i=\abs{y_i-a-bx_i}$.</p>
+<p><strong>Pourquoi la droite passe par des points de données.</strong> Il y a $N$ contraintes d'égalité. Une solution basique a donc au plus $N$ variables non nulles (après avoir écrit $a=a^+-a^-$, $b=b^+-b^-$ ; les colonnes de $a^+$ et $a^-$ sont opposées, elles ne sont jamais en base ensemble). Si $a$ et $b$ sont non nuls, ils occupent deux places, et il reste au plus $N-2$ résidus non nuls : <strong>au moins deux points sont exactement sur la droite</strong>. C'est un sommet. Plus généralement, avec $p$ paramètres, la régression $\ell^1$ a une solution qui passe par $p$ points de données.</p>
+<figure class="fig"><!-- include figures/P03/lad.svg --><figcaption>Sept points, dont un aberrant en $(6\,;18)$. La régression $\ell^1$ (HiGHS, simplexe dual) donne $y=1+x$, valeur $15$, avec des résidus nuls exactement en $x=0$ et $x=5$ (cercles) et cinq variables $u_i$ ou $v_i$ non nulles. Les moindres carrés donnent la pente $\frac{59}{28}\approx2{,}11$, tirée vers le point aberrant.</figcaption></figure>
+<p><strong>Robustesse.</strong> L'optimalité de la droite $\ell^1$ ne dépend que du <em>signe</em> des résidus des points qu'elle ne touche pas. Montez le point aberrant de $18$ à $30$, $100$ ou $1000$ : la droite $\ell^1$ reste $y=1+x$ (vérifié), alors que la pente des moindres carrés passe à $\approx3{,}39$, $10{,}89$ puis $107{,}3$. En remplaçant $\sum(u_i+v_i)$ par $\sum(\tau u_i+(1-\tau)v_i)$, $0<\tau<1$, on obtient la <em>régression quantile</em> (la médiane pour $\tau=\frac12$, qui est la LAD à un facteur près), elle aussi un programme linéaire.</p>
+</div>
+
+<h3 id="generation-colonnes">Génération de colonnes et LPBoost</h3>
+<div class="box ml"><div class="box-h">En machine learning — choisir une colonne parmi une infinité : LPBoost</div>
+<p>Le §2 a montré que le coût réduit d'une variable, $\ct_j=c_j-a_j\cdot p$, ne dépend que de sa colonne et du vecteur $p$ de la base courante. D'où la <em class="new">génération de colonnes</em> : quand un programme linéaire a beaucoup trop de variables pour les écrire toutes (voire une infinité), on le résout sur un petit sous-ensemble de colonnes (le <em>problème maître restreint</em>), on récupère $p$, puis on résout un <em>sous-problème de tarification</em> : trouver, parmi <em>toutes</em> les colonnes possibles, celle de coût réduit le plus négatif. Si elle existe, on l'ajoute et on recommence ; sinon, tous les coûts réduits sont $\ge0$ et la solution du problème restreint est optimale pour le problème complet (Prop. 4.2.8). L'exemple historique est la découpe de rouleaux de papier (Gilmore et Gomory, 1961), où une colonne est un motif de découpe.</p>
+<p><strong>LPBoost</strong> (Demiriz, Bennett et Shawe-Taylor, 2002) applique ce schéma au <em>boosting</em>. Données : des exemples $(x_i,y_i)$ avec $y_i\in\{-1,1\}$, et une famille immense de classifieurs faibles $h:x\mapsto\pm1$ (par exemple tous les arbres de profondeur 1). On cherche des poids $\alpha_h\ge0$, de somme $1$, tels que le vote $\sum_h\alpha_hh(x_i)$ ait le signe de $y_i$ avec une grande marge ; c'est un programme linéaire dont <strong>les colonnes sont les classifieurs faibles</strong> et dont les contraintes sont indexées par les exemples. Les variables duales donnent un poids $u_i\ge0$ à chaque exemple. Le sous-problème de tarification devient : trouver le classifieur faible qui maximise $\sum_iu_iy_ih(x_i)$, c'est-à-dire qui fait le moins d'erreurs pondérées par les $u_i$ — exactement ce que sait faire un algorithme d'apprentissage de classifieurs faibles. On l'ajoute s'il dépasse la valeur duale courante ; sinon, le classifieur combiné est optimal. Les exemples difficiles reçoivent des poids $u_i$ élevés, comme dans AdaBoost, mais ici les poids viennent de la dualité.</p>
+</div>
+
+<div class="box reflex"><div class="box-h">Réflexes</div>
+<ul>
+<li>Quand on vous donne un problème qui change peu (nouveau $b$, nouvelle contrainte) → repartir de l'ancienne base (démarrage à chaud).</li>
+<li>Quand un modèle d'apprentissage est un programme linéaire → sa solution sommet est creuse (au plus $m$ composantes non nulles).</li>
+<li>Quand il y a trop de variables pour les écrire → génération de colonnes : ne générer que les colonnes de coût réduit négatif.</li>
+</ul>
+</div>

@@ -1,0 +1,102 @@
+<h2 id="phase-1">5. Trouver un premier sommet : la phase I <span class="ref">Diapo 11 ; Allaire p. 127, (4.8)</span></h2>
+<p class="tldr">Pour démarrer le simplexe, on résout d'abord un problème auxiliaire dont un sommet est évident : on ajoute une variable artificielle par contrainte et on minimise leur somme ; si le minimum vaut 0, on tient un sommet du vrai problème, sinon l'ensemble admissible est vide.</p>
+
+<h3 id="phase1-probleme">Le problème : $x_B=B^{-1}b\ge0$ n'a rien d'évident</h3>
+<p>Le simplexe part d'un sommet. Choisir $m$ colonnes au hasard donne une base, mais sa solution basique a toutes les chances d'avoir une composante négative (sur l'exercice 4.2.1, 5 bases sur 10 sont dans ce cas). Parfois la structure du problème donne un sommet :</p>
+<ul>
+<li><strong>contraintes « $\le$ » avec $b\ge0$</strong> : les variables d'écart forment la base $\Id$, et $x=0$, écarts $=b\ge0$, est un sommet (exercices 4.2.1, 4.2.3, 4.2.4) ;</li>
+<li><strong>colonnes de l'identité déjà présentes</strong> : dans l'exercice 4.2.5, les colonnes de $x_1$ et $x_2$ forment $\Id$, et $b=(6,4)\ge0$ ;</li>
+<li>le livre cite le problème (4.4), $\min\{c\cdot x : Ax\le b\}$ écrit avec $x=x^+-x^-$ et des écarts $\lambda$, si $b\le0$ : la base $-\Id$ des écarts donne le sommet $(x^+,x^-,\lambda)=(0,0,-b)$.</li>
+</ul>
+<p>Mais avec des contraintes « $\ge$ » ou « $=$ », aucune base ne saute aux yeux. Exemple : $x_1+x_2\ge2$ s'écrit $x_1+x_2-x_3=2$ ; la colonne de $x_3$ est $-e_1$, et la « base des écarts » donnerait $x_3=-2<0$.</p>
+
+<h3 id="phase1-enonce">Le problème auxiliaire : diapo 11 et (4.8)</h3>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo 11</span></div>
+<p><strong>Initialisation :</strong></p>
+<p>• Utiliser l'algorithme du simplexe pour le problème</p>
+$$\min_{\substack{\tilde Ax+y=\tilde b\\(x,y)\ge0}}1\cdot y\qquad(x,y)\in\R^{n+m}$$
+<p>où $\tilde b_i=\abs{b_i}$ et $\tilde A$ correspondant.</p>
+<p>• Initialiser avec $(y_0,x_0)=(\tilde b,0)$ qui est un vecteur admissible basique.</p>
+</div>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, « Initialisation », p. 127</span></div>
+<p>Dans le cas général, on introduit une nouvelle variable $y\in\R^m$, un nouveau vecteur coût $k=(1,\dots,1)$ et un nouveau programme linéaire</p>
+$$\inf_{\substack{x\ge0,\ y\ge0\\Ax+y=b}}k\cdot y,\qquad(4.8)$$
+<p>où on a préalablement multiplié par $-1$ toutes les contraintes d'égalité correspondant à des composantes négatives de $b$ de telles sortes que $b\ge0$. Le vecteur $(x^0,y^0)=(0,b)$ est une solution admissible basique pour ce problème. S'il existe une solution admissible du programme linéaire original (4.1), alors il existe au moins une solution optimale de (4.8) et toutes les solutions optimales $(x,y)$ vérifient nécessairement $y=0$ et $x$ est solution admissible de (4.1). En appliquant l'algorithme du simplexe à (4.8), on trouve ainsi une solution admissible basique pour (4.1) s'il en existe une. S'il n'en existe pas (c'est-à-dire si $\Xad=\emptyset$), on le détecte car le minimum de (4.8) est atteint par un vecteur $(x,y)$ avec $y\ne0$.</p>
+</div>
+<dl class="decode">
+<dt>$y\in\R^m$</dt><dd>Les <em class="new">variables artificielles</em>, une par contrainte : $y_i$ mesure de combien la contrainte $i$ n'est pas satisfaite par $x$, puisque $y=b-Ax$. Elles n'ont aucun sens pour le vrai problème ; on veut les annuler.</dd>
+<dt>$1\cdot y$, $k\cdot y$</dt><dd>Le coût de la phase I : $\sum_iy_i$, la violation totale des contraintes. Il est $\ge0$ puisque $y\ge0$.</dd>
+<dt>$\tilde b_i=\abs{b_i}$, « $\tilde A$ correspondant »</dt><dd>La ligne $i$ de $(A\,|\,b)$ multipliée par $-1$ si $b_i<0$ (la ligne $i$ de $\tilde A$ est $\mathrm{signe}(b_i)$ fois celle de $A$). Le livre dit la même chose en mots. Les solutions de $\tilde Ax=\tilde b$ sont celles de $Ax=b$.</dd>
+<dt>$(y_0,x_0)=(\tilde b,0)$</dt><dd>Le point de départ : $x=0$ et chaque artificielle porte tout le second membre de sa ligne.</dd>
+<dt>phase I, phase II</dt><dd>Résoudre (4.8) s'appelle la <em class="new">phase I</em> ; reprendre ensuite le simplexe avec le vrai coût $c$ depuis la base obtenue s'appelle la <em class="new">phase II</em>.</dd>
+</dl>
+<p><strong>Pourquoi rendre $b\ge0$ ?</strong> Le point de départ est $y=b$. Si un $b_i$ était négatif, on aurait $y_i<0$ : point non admissible. Multiplier la ligne $i$ par $-1$ ne change pas l'ensemble des solutions et rend $b_i>0$.</p>
+<p><strong>Pourquoi $(0,b)$ est-il un sommet de (4.8) ?</strong> La matrice des contraintes de (4.8) est $(A\ \ \Id)$. Les $m$ colonnes des $y$ forment l'identité, une base. Sa solution basique est $x=0$ (hors base) et $y=\Id^{-1}b=b\ge0$ : elle est admissible. Mieux : comme $c_B=(1,\dots,1)$ et $B=\Id$, on a $p=\ind$, et les coûts réduits de départ sont $\ct_j=0-a_j\cdot\ind=-\sum_ia_{ij}$, l'opposé de la somme de la colonne $j$.</p>
+
+<h3 id="phase1-lecture">Lire le résultat de la phase I</h3>
+<div class="box thm"><div class="box-h">Proposition — ce que dit la valeur de (4.8)</div>
+<p>(4.8) a toujours une solution optimale, et sa valeur $v^\star$ est $\ge0$. De plus : $v^\star=0$ si et seulement si $\Xad\ne\emptyset$. Dans ce cas, toute solution optimale $(x,y)$ a $y=0$ et $x\in\Xad$ ; dans le cas contraire, $v^\star>0$ et $\Xad=\emptyset$.</p>
+</div>
+<div class="box idea"><div class="box-h">L'idée</div>
+<p>(4.8) est admissible (le point $(0,b)$) et son coût est minoré par $0$ : il a donc une solution. Un point de $\Xad$ donne une solution de coût $0$ avec $y=0$ ; inversement, un coût $0$ force $y=0$, donc $Ax=b$.</p>
+</div>
+<details class="fold proof"><summary>Démonstration complète</summary><div class="fold-body">
+<ol class="steps">
+<li>(4.8) a une solution optimale, de valeur $v^\star\ge0$.<span class="why">Il est admissible ($(0,b)$) et $k\cdot y=\sum y_i\ge0$ sur son ensemble admissible : son infimum est fini. Un programme linéaire admissible d'infimum fini a une solution (Lemme 4.2.3, <a href="Partie01.html#existence">partie 1</a>) ; le simplexe de phase I, qui ne peut pas conclure « non borné », la trouve en un sommet.</span></li>
+<li>Si $\Xad\ne\emptyset$ : $v^\star=0$.<span class="why">Pour $x\in\Xad$, le point $(x,0)$ vérifie $Ax+0=b$, $x\ge0$ : il est admissible pour (4.8), de coût $0$. Donc $v^\star\le0$, et $v^\star\ge0$ (ligne 1).</span></li>
+<li>Si $v^\star=0$ : toute solution optimale a $y=0$ et $x\in\Xad$.<span class="why">$\sum_iy_i=0$ avec $y_i\ge0$ force $y=0$ ; alors $Ax=b$ et $x\ge0$.</span></li>
+<li>Si $\Xad=\emptyset$ : $v^\star>0$.<span class="why">Contraposée de la ligne 3 : $v^\star=0$ fournirait un point de $\Xad$. <span class="qed">□</span></span></li>
+</ol>
+</div></details>
+<p>Il reste à transformer une solution optimale de valeur $0$ en <em>base</em> admissible du vrai problème. Si la base finale ne contient que des variables $x$, c'est immédiat : elle est formée de $m$ colonnes libres de $A$, et sa solution basique est le point trouvé. Le cas où une variable artificielle reste dans la base (avec la valeur $0$) est traité <a href="#phase1-piege">plus bas</a>.</p>
+<figure class="fig"><!-- include figures/P03/phases.svg --><figcaption>Le simplexe complet : phase I sur le problème auxiliaire (4.8), puis, si sa valeur est nulle, phase II sur le vrai coût depuis la base obtenue.</figcaption></figure>
+
+<h3 id="phase1-exemple">Un exemple complet, phase I puis phase II</h3>
+<div class="box example"><div class="box-h">Exemple — $\min\,2x_1+x_2$ sous $x_1+x_2\ge2$, $x_1-x_2\le1$, $x_2\le3$, $x\ge0$</div>
+<p><strong>Forme standard.</strong> Écrivons les trois contraintes comme des égalités avec des écarts $x_3,x_4,x_5\ge0$, la première sous la forme « $\le$ » $-x_1-x_2\le-2$ :</p>
+$$-x_1-x_2+x_3=-2,\qquad x_1-x_2+x_4=1,\qquad x_2+x_5=3 .$$
+<p>Ici $b=(-2,1,3)$ : la base des écarts donnerait $x_3=-2$. On multiplie la première ligne par $-1$ ($\tilde b=(2,1,3)$) : $x_1+x_2-x_3=2$. On ajoute $y_1,y_2,y_3$ et on minimise $y_1+y_2+y_3$ depuis la base $\{y_1,y_2,y_3\}$, avec la règle du plus négatif.</p>
+<!-- include figures/P03/tab-p1-0.html -->
+<!-- include figures/P03/tab-p1-1.html -->
+<!-- include figures/P03/tab-p1-2.html -->
+<!-- include figures/P03/tab-p1-3.html -->
+<p><strong>Lecture.</strong> Au tableau 0, les coûts réduits sont les opposés des sommes de colonnes ($-2$ pour $x_1$, qui apparaît dans deux lignes). La phase I passe par les points $(x_1\,;x_2)=(0\,;0)\to(1\,;0)\to(\frac32\,;\frac12)\to(\frac32\,;\frac12)$, avec $\sum y_i=6\to4\to\frac52\to0$. Remarquez le tableau 2 : $(\frac32\,;\frac12)$ vérifie déjà les trois contraintes d'origine, mais $y_3=\frac52$ parce que l'écart $x_5$ est encore nul ; le dernier pivot fait entrer $x_5$ à la place de $y_3$ sans bouger $(x_1\,;x_2)$. Valeur $0$ : la base $\{x_1,x_2,x_5\}$ est admissible pour le vrai problème.</p>
+<p><strong>Phase II.</strong> On enlève les colonnes des $y$, on remet le vrai coût $c=(2,1,0,0,0)$ et on recalcule la ligne $\ct$ :</p>
+<!-- include figures/P03/tab-p2-0.html -->
+<!-- include figures/P03/tab-p2-1.html -->
+<p>Un pivot suffit : $x_4$ entre ($\ct_4=-\frac12$), $\eps=3$, $x_1$ sort, et l'on arrive en $(0\,;2)$, de coût $2$, où $\ct_1=\ct_3=1>0$. L'optimum est $(0\,;2)$, valeur $2$ (confirmé par <code>linprog</code>). La phase I n'a donc pas trouvé l'optimum, seulement un sommet de départ : c'est son seul rôle.</p>
+</div>
+
+<div class="widget" data-widget="p3phase1"><p class="w-noscript">Figure interactive (nécessite JavaScript).</p></div>
+<p>À observer : sur l'exemple « réalisable », les points de la phase I (en rose tant que $y\ne0$) partent de $(0\,;0)$, hors du polygone bleu, et y entrent en deux pas ; au 3ᵉ pas, le point ne bouge pas mais $y_3$ s'annule et le point devient vert ; la phase II prend le relais avec le vrai coût et descend en $(0\,;2)$. Le tableau sous la figure est celui de l'étape courante (avec les colonnes des $y$ en phase I). Sur l'exemple « ensemble admissible vide » ($x_1+x_2\ge2$ et $x_1+x_2\le1$), la phase I s'arrête après un pivot, en $(1\,;0)$, avec $\sum y_i=1>0$ : tous les coûts réduits sont $\ge0$, on ne peut pas faire mieux, et c'est la preuve que les deux contraintes sont incompatibles.</p>
+
+<h3 id="phase1-piege">Le piège : une variable artificielle reste dans la base à 0</h3>
+<p>La phase I peut se terminer avec la valeur $0$ mais une variable artificielle encore <strong>en base</strong>, avec la valeur $0$ (la solution est dégénérée). Le point $x$ est bien admissible, mais la base n'est pas une base de $A$. Exemple : $3x_1+x_2+2x_3=1$, $2x_1+x_2+x_3=1$, $x\ge0$. La phase I (plus négatif) s'arrête en $x=(0,1,0)$ après deux pivots, dont le second est ex æquo :</p>
+<!-- include figures/P03/tab-art.html -->
+<p>Regardez la <strong>ligne de la variable artificielle</strong> restée en base, ici $y_2$, dans les colonnes des $x$ :</p>
+<ul>
+<li><strong>si elle contient un coefficient non nul</strong> sur une variable $x_j$ hors base, on pivote sur ce coefficient (quel que soit son signe) : $x_j$ entre, $y_2$ sort. Comme le second membre de cette ligne est $0$, le pas est nul, le point ne bouge pas, et l'admissibilité est préservée. Ici, la ligne de $y_2$ vaut $(-1,0,-1)$ sur $(x_1,x_2,x_3)$ : on peut faire entrer $x_1$ (ou $x_3$), et $\{x_2,x_1\}$ est une base admissible de $A$ avec la même solution $x=(0,1,0)$ ;</li>
+<li><strong>si elle est nulle sur toutes les colonnes des $x$</strong>, la contrainte correspondante est une combinaison des autres : elle est redondante ($\rg A<m$), et on la supprime. Exemple : $x_1+x_2=2$ et $2x_1+2x_2=4$. C'est le cas $\rg A<m$ que la forme standard exclut par hypothèse (<a href="Partie01.html#forme-standard">partie 1</a>), et la phase I le détecte en passant.</li>
+</ul>
+<div class="box pitfall"><div class="box-h">Piège — oublier une artificielle dans la base</div>
+<p>Si l'on passe à la phase II avec une artificielle en base, elle peut redevenir positive au premier pivot : on résoudrait alors un autre problème que le vrai. Il faut l'avoir chassée (ou avoir supprimé sa ligne) avant la phase II. Le livre ne le dit pas ; la diapo non plus.</p>
+</div>
+<details class="fold more"><summary>Pour aller plus loin — la méthode du « grand M »</summary><div class="fold-body">
+<p>Au lieu de deux phases, on peut résoudre en une fois $\min\,c\cdot x+M\sum_iy_i$ sous $Ax+y=b$, $x,y\ge0$, avec une constante $M$ très grande : les artificielles sont tellement chères que l'optimum les annule si c'est possible. C'est simple à écrire mais délicat numériquement (quelle valeur de $M$ ?). La méthode en deux phases du cours évite ce choix.</p>
+</div></details>
+<div class="box reflex"><div class="box-h">Réflexes</div>
+<ul>
+<li>Quand vous voyez des contraintes « $\ge$ » ou « $=$ » → pas de base évidente : phase I.</li>
+<li>Avant la phase I → rendre $b\ge0$ en multipliant des lignes par $-1$.</li>
+<li>Fin de phase I de valeur $>0$ → $\Xad=\emptyset$, c'est fini ; de valeur $0$ → chasser les artificielles restées en base, puis phase II.</li>
+<li>En pratique, n'ajoutez des artificielles que sur les lignes qui n'ont pas déjà une colonne $e_i$ utilisable (un écart avec $b_i\ge0$).</li>
+</ul>
+</div>
+<div class="quiz"><p>Pourquoi la phase I ne peut-elle jamais se terminer par « problème non borné » ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>Son coût $\sum_iy_i$ est $\ge0$ sur tout son ensemble admissible : il ne peut pas tendre vers $-\infty$. Le critère d'infini du §3 ($\ct_i<0$ et $d\le0$) donnerait une demi-droite admissible de coût $\to-\infty$ : impossible. La phase I s'arrête donc toujours sur un sommet optimal (avec Bland, ou sans dégénérescence).</p>
+</div></details></div>
+<div class="quiz"><p>Dans l'exemple complet, on n'a pas besoin de $y_2$ et $y_3$ : pourquoi ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>Les lignes 2 et 3 ont déjà des écarts $x_4$ et $x_5$ de colonnes $e_2$ et $e_3$, avec $b_2=1\ge0$ et $b_3=3\ge0$. On pourrait partir de la base $\{y_1,x_4,x_5\}$ avec une seule artificielle. Le cours (diapo 11 et (4.8)) en met une par ligne, pour avoir une règle générale ; les deux versions sont correctes.</p>
+</div></details></div>

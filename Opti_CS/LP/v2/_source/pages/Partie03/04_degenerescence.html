@@ -1,0 +1,173 @@
+<h2 id="degenerescence">4. Dégénérescence, cyclage et choix du pivot <span class="ref">Allaire p. 126–127</span></h2>
+<p class="tldr">En un sommet dégénéré, un pivot peut avoir un pas nul : la base change, pas le point. Sans dégénérescence le simplexe s'arrête (Lemme 4.2.10) ; avec dégénérescence il peut tourner en rond, sauf avec la règle de Bland. Le nombre de pivots peut être exponentiel, mais il reste modeste en pratique.</p>
+
+<h3 id="pas-nul">Le pas nul : $\eps_k=0$</h3>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, « Dégénérescence et cyclage », p. 126</span></div>
+<p>On a toujours $c\cdot x^{k+1}\le c\cdot x^k$, mais il peut y avoir égalité si la solution admissible basique $x^k$ est dégénérée, auquel cas on trouve que $\eps^k=0$ (si $x^k$ n'est pas dégénérée, la démonstration de la Proposition 4.2.8 garantit une inégalité stricte). On a donc changé de base sans améliorer le coût : c'est le phénomène du cyclage qui peut empêcher l'algorithme de converger. Il existe des moyens de s'en prémunir, mais en pratique le cyclage n'apparaît jamais.</p>
+</div>
+<p>D'après le test du rapport, $\eps_k=\min\{\bar x_r/d_r : d_r>0\}$ est nul exactement quand une variable de base <strong>déjà nulle</strong> a un $d_r>0$ : elle deviendrait négative au moindre pas. Cela n'arrive qu'en un sommet dégénéré. Le pivot a quand même lieu : la variable entrante prend la valeur $\eps_k=0$, la variable sortante (qui valait $0$) quitte la base. On a changé de base, pas de point.</p>
+<div class="box def"><div class="box-h">Définition — pivot dégénéré, cyclage</div>
+<p>Un <em class="new">pivot dégénéré</em> est un pivot de pas $\eps_k=0$ : le sommet et le coût ne changent pas, seule la base change. On dit que le simplexe <em class="new">cycle</em> s'il revient à une base déjà rencontrée. Comme la règle de choix est déterministe, il répète alors indéfiniment la même suite de bases, sans jamais s'arrêter. Tous les pivots d'un cycle sont dégénérés : le coût ne peut pas baisser puis revenir à sa valeur.</p>
+</div>
+<div class="box example"><div class="box-h">Exemple — un pivot dégénéré utile (variante $b_3=\frac72$)</div>
+<p>Reprenons la variante $x_1+x_2\le\frac72$ du §2 avec la règle du plus négatif. Les deux premières itérations sont celles de l'exercice 4.2.1, mais au deuxième test du rapport, $x_4$ et $x_5$ s'annulent en même temps (rapport $1$ pour les deux) : $x_4$ sort (plus petit indice), et $x_5$ reste en base avec la valeur $0$.</p>
+<!-- include figures/P03/tab-deg-1.html -->
+<!-- include figures/P03/tab-deg-2.html -->
+<!-- include figures/P03/tab-deg-3.html -->
+<p>Au tableau 2, le sommet $(1\,;\frac52)$ est déjà optimal, mais la base $\{x_2,x_1,x_5\}$ ne le prouve pas : $\ct_3=-1$ (c'est la base de la Remarque 4.2.9). Le pivot suivant a un pas nul ($0/\frac34=0$) ; il mène à la base $\{x_2,x_1,x_3\}$ du même point, dont les coûts réduits $\frac13$ et $\frac43$ certifient l'optimum. Un pivot dégénéré n'est pas inutile : il change le certificat.</p>
+</div>
+
+<h3 id="lemme-4-2-10">Lemme 4.2.10 : sans dégénérescence, le simplexe s'arrête</h3>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, Lemme 4.2.10, p. 126–127</span></div>
+<p>En l'absence de cyclage, l'algorithme du simplexe parcourt un sous-ensemble des sommets de $\Xad$ en diminuant de façon stricte le coût. Comme il y a un nombre fini de sommets, l'algorithme doit nécessairement trouver un sommet optimal de coût minimal. On a donc démontré le résultat suivant.</p>
+<p><strong>Lemme 4.2.10</strong> Si toutes solutions admissibles basiques $x^k$ produites par l'algorithme du simplexe sont non dégénérées, alors l'algorithme converge en un nombre fini d'étapes.</p>
+</div>
+<dl class="decode">
+<dt>non dégénérées</dt><dd>À chaque itération, $x^k_B>0$ : toutes les variables de base sont strictement positives.</dd>
+<dt>converge en un nombre fini d'étapes</dt><dd>S'arrête : soit sur un sommet où $\ct_N\ge0$ (optimal, Prop. 4.2.8), soit en détectant une arête infinie qui descend (minimum $-\infty$, §3).</dd>
+<dt>« en l'absence de cyclage »</dt><dd>Phrase un peu rapide du livre : sans cyclage mais avec des pivots dégénérés, le coût ne décroît pas strictement à chaque pas. La conclusion reste vraie (voir la remarque après la preuve).</dd>
+</dl>
+<div class="box idea"><div class="box-h">L'idée</div>
+<p>Sans dégénérescence, chaque pas est $>0$, donc le coût baisse strictement. On ne peut donc jamais revenir sur un sommet déjà visité (il aurait un coût plus grand). Comme il n'y a qu'un nombre fini de bases, l'algorithme s'arrête.</p>
+</div>
+<details class="fold proof"><summary>Démonstration complète</summary><div class="fold-body">
+<ol class="steps">
+<li>$$x^k_B>0\ \Longrightarrow\ \eps_k=\min\Big\{\frac{x^k_r}{d_r}:d_r>0\Big\}>0 .$$<span class="why">Chaque rapport est le quotient de deux nombres $>0$ (sauf si l'ensemble est vide : cas non borné, l'algorithme s'arrête).</span></li>
+<li>$$c\cdot x^{k+1}=c\cdot x^k+\eps_k\,\ct_i<c\cdot x^k .$$<span class="why">Pivot (§3) : $\eps_k>0$ et $\ct_i<0$.</span></li>
+<li>$$B^k\ne B^\ell\quad\text{pour }k\ne\ell .$$<span class="why">Une base détermine son sommet ($x_B=B^{-1}b$, $x_N=0$), donc son coût. Les coûts $c\cdot x^0>c\cdot x^1>\cdots$ sont tous distincts, donc les bases aussi.</span></li>
+<li>$$\text{nombre d'itérations}\le\binom nm .$$<span class="why">Il y a au plus $\binom nm$ façons de choisir $m$ colonnes parmi $n$, et l'algorithme n'utilise jamais deux fois la même.</span></li>
+<li>À l'arrêt : soit $\ct_N\ge0$ et le sommet est optimal (Prop. 4.2.8, sens suffisant), soit la colonne entrante est $\le0$ et le minimum vaut $-\infty$ (§3).<span class="why">Ce sont les deux seules façons de sortir de la boucle. <span class="qed">□</span></span></li>
+</ol>
+</div></details>
+<div class="box remark"><div class="box-h">Remarque — le vrai ressort de la preuve</div>
+<p>La preuve n'utilise la non-dégénérescence que pour la ligne 3 : « aucune base ne revient ». Donc, plus généralement : <strong>si le simplexe ne repasse jamais par une même base, il s'arrête en au plus $\binom nm$ pivots</strong>, dégénérés ou non. C'est ce que garantit la règle de Bland. Et par contraposée : un simplexe qui ne s'arrête pas repasse par une base, c'est-à-dire cycle.</p>
+</div>
+
+<h3 id="cyclage">Le cyclage existe : l'exemple de Beale</h3>
+<p>Le livre dit que le cyclage « peut empêcher l'algorithme de converger ». Ce n'est pas une crainte théorique : E. M. L. Beale a publié en 1955 un petit programme linéaire où la règle du plus négatif tourne en rond. Le voici en forme standard ($m=3$, $n=7$) :</p>
+$$\min\ -\tfrac34x_4+20x_5-\tfrac12x_6+6x_7\quad\text{sous}\quad\begin{cases}x_1+\frac14x_4-8x_5-x_6+9x_7=0\\x_2+\frac12x_4-12x_5-\frac12x_6+3x_7=0\\x_3+x_6=1\end{cases},\quad x\ge0 .$$
+<p>La base $\{x_1,x_2,x_3\}$ est l'identité ; sa solution basique $x=(0,0,1,0,0,0,0)$ est admissible et très dégénérée ($x_1=x_2=0$ en base). Appliquons la règle du plus négatif ; en cas d'égalité dans le test du rapport, faisons sortir la variable de plus petit indice (c'est la convention de la figure ci-dessous). Calcul exact :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>$k$</th><th>base $B^k$</th><th>coûts réduits négatifs</th><th>entre</th><th>rapports</th><th>sort</th><th>$\eps$</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>$\{x_1,x_2,x_3\}$</td><td>$\ct_4=-\frac34$, $\ct_6=-\frac12$</td><td>$x_4$</td><td>$0,\ 0,\ $—</td><td>$x_1$</td><td>0</td></tr>
+<tr><td>1</td><td>$\{x_4,x_2,x_3\}$</td><td>$\ct_5=-4$, $\ct_6=-\frac72$</td><td>$x_5$</td><td>—$,\ 0,\ $—</td><td>$x_2$</td><td>0</td></tr>
+<tr><td>2</td><td>$\{x_4,x_5,x_3\}$</td><td>$\ct_6=-2$</td><td>$x_6$</td><td>$0,\ 0,\ 1$</td><td>$x_4$</td><td>0</td></tr>
+<tr><td>3</td><td>$\{x_6,x_5,x_3\}$</td><td>$\ct_1=-2$, $\ct_7=-3$</td><td>$x_7$</td><td>—$,\ 0,\ \frac2{21}$</td><td>$x_5$</td><td>0</td></tr>
+<tr><td>4</td><td>$\{x_6,x_7,x_3\}$</td><td>$\ct_1=-1$, $\ct_4=-\frac12$</td><td>$x_1$</td><td>$0,\ 0,\ $—</td><td>$x_6$</td><td>0</td></tr>
+<tr><td>5</td><td>$\{x_1,x_7,x_3\}$</td><td>$\ct_2=-2$, $\ct_4=-\frac74$</td><td>$x_2$</td><td>—$,\ 0,\ $—</td><td>$x_7$</td><td>0</td></tr>
+<tr><td>6</td><td>$\{x_1,x_2,x_3\}$</td><td colspan="5">retour à la base de départ : le cycle recommence</td></tr>
+</tbody></table></div>
+<p>Six pivots, tous de pas nul, au même point $x=(0,0,1,0,0,0,0)$ de coût $0$ ; puis tout recommence. Pourtant le problème a une solution : $x^\star=(\frac34,0,0,1,0,1,0)$, de coût $-\frac54$ (calculé aussi par <code>linprog</code>). Le simplexe la manque indéfiniment.</p>
+
+<div class="widget" data-widget="p3cyclage"><p class="w-noscript">Figure interactive (nécessite JavaScript).</p></div>
+<p>À observer : avec la règle du plus négatif, chaque « Pivot suivant » fait tourner la base courante (en orange) autour de l'hexagone ; le point $x$, affiché dans le texte, et le coût $0$ ne bougent pas, et tous les pas valent $\eps=0$. Au 6ᵉ pivot on revient à $\{x_1,x_2,x_3\}$ : le message signale le cycle, et le bouton continue de tourner. Avec la règle de Bland, les trois premiers pivots sont les mêmes ; au 4ᵉ, Bland fait entrer $x_1$ ($\ct_1=-2$, le plus petit indice) au lieu de $x_7$ ($\ct_7=-3$, le plus négatif), et quitte l'hexagone ; le 5ᵉ pivot a enfin un pas non nul ($\eps=\frac12$, coût $-\frac12$), et le 6ᵉ atteint l'optimum de coût $-\frac54$. Le tableau sous la figure est celui de la base courante.</p>
+
+<div class="box remark"><div class="box-h">Note sur les sources — « en pratique le cyclage n'apparaît jamais »</div>
+<p>La phrase du livre (p. 126) est à nuancer.</p>
+<ul>
+<li><strong>La dégénérescence, elle, est fréquente.</strong> Les problèmes combinatoires en sont pleins. Exemple : un sommet du problème d'affectation $n\times n$ est une matrice de permutation, avec $n$ coefficients non nuls, alors qu'une base a $2n-1$ variables (le système a $2n$ équations, dont une redondante) : $n-1$ variables de base valent $0$. De longues suites de pivots dégénérés (on parle de <em>stagnation</em>) ralentissent réellement les solveurs.</li>
+<li><strong>Le cyclage proprement dit est rare</strong> dans les problèmes réels, mais il n'est pas impossible : l'exemple de Beale le montre, et les erreurs d'arrondi en virgule flottante peuvent aussi faire tourner un code. Les solveurs s'en protègent donc quand même, par des règles de choix et des perturbations des données.</li>
+</ul>
+<p>Lisez : « en pratique le cyclage est rare, mais la dégénérescence est courante, et les solveurs prennent des précautions contre les deux ».</p>
+</div>
+
+<h3 id="bland">La règle de Bland</h3>
+<div class="box def"><div class="box-h">Définition — règle de Bland (1977)</div>
+<p>Numérotons les variables $x_1,\dots,x_n$. La <em class="new">règle de Bland</em>, ou règle du plus petit indice, choisit :</p>
+<ul>
+<li><strong>la variable entrante</strong> : la variable hors base de <em>plus petit indice</em> parmi celles de coût réduit $<0$ ;</li>
+<li><strong>la variable sortante</strong> : parmi les lignes qui réalisent le minimum du test du rapport, celle dont la variable de base a le <em>plus petit indice</em>.</li>
+</ul>
+</div>
+<div class="box thm"><div class="box-h">Théorème — Bland ne cycle pas</div>
+<p>Avec la règle de Bland, le simplexe ne repasse jamais par une même base. Il s'arrête donc toujours, en au plus $\binom nm$ pivots, sur un sommet optimal ou sur une arête infinie qui descend.</p>
+</div>
+<p>Sur l'exemple de Beale, Bland atteint l'optimum en 6 pivots : $\{x_1,x_2,x_3\}\to\{x_4,x_2,x_3\}\to\{x_4,x_5,x_3\}\to\{x_6,x_5,x_3\}\to\{x_6,x_1,x_3\}\to\{x_6,x_1,x_2\}\to\{x_6,x_1,x_4\}$, avec des pas $0,0,0,0,\frac12,1$ et des coûts $0,0,0,0,0,-\frac12,-\frac54$.</p>
+<details class="fold more"><summary>Pour aller plus loin — la preuve du théorème de Bland</summary><div class="fold-body">
+<p>Supposons que le simplexe avec la règle de Bland cycle, et cherchons une contradiction.</p>
+<ol class="steps">
+<li>Tous les pivots du cycle sont dégénérés et le point $\bar x$ ne bouge pas.<span class="why">Le coût ne fait que décroître au sens large et revient à sa valeur de départ : tous les $\eps_k$ sont nuls.</span></li>
+<li>Appelons <em>instables</em> les variables qui entrent ou sortent au cours du cycle, et soit $x_t$ celle de plus grand indice. Toutes les variables instables valent $0$ en $\bar x$.<span class="why">Chacune est hors base à un moment du cycle, donc nulle en ce point, qui ne change pas.</span></li>
+<li>Considérons le pivot où $x_t$ <strong>sort</strong> (base $B$, variable entrante $x_s$, direction $d=B^{-1}a_s$) et celui où $x_t$ <strong>entre</strong> (base $B'$, multiplicateurs $p'$, coûts réduits $\ct'=c-A^\top p'$).<span class="why">$x_t$ est instable, donc entre et sort au moins une fois dans le cycle.</span></li>
+<li>Soit $w$ le vecteur de $\R^n$ défini par $w_s=1$, $w_{B}=-d$ (sur les variables de base de $B$), $0$ ailleurs. Alors $Aw=0$ et $c\cdot w=\ct_s<0$.<span class="why">C'est la direction $d^{\,s}$ du §2.</span></li>
+<li>$$\ct'\cdot w=c\cdot w-p'\cdot Aw=c\cdot w<0,\qquad\text{donc}\quad\sum_j\ct'_j\,w_j<0 .$$<span class="why">$\ct'=c-A^\top p'$ et $Aw=0$. Il existe donc un indice $q$ avec $\ct'_q\,w_q<0$.</span></li>
+<li>$q\ne s$ et $q\ne t$.<span class="why">Pour $q=s$ : $w_s=1$, et $\ct'_s\ge0$ car $s<t$ est instable et, en $B'$, Bland choisit $t$, le plus petit indice de coût réduit négatif. Pour $q=t$ : $\ct'_t<0$ ($x_t$ entre) et $w_t=-d_t<0$ ($x_t$ sort, donc $d_t>0$), produit $>0$.</span></li>
+<li>$x_q$ est de base dans $B$ mais pas dans $B'$ : elle est instable, donc $q<t$.<span class="why">$w_q\ne0$ avec $q\ne s$ impose que $x_q$ soit de base dans $B$ ; $\ct'_q\ne0$ impose qu'elle soit hors base dans $B'$. Elle sort donc au cours du cycle. Et $t$ est le plus grand indice instable.</span></li>
+<li>$\ct'_q>0$, donc $w_q<0$, c'est-à-dire $d_q>0$ ; et $\bar x_q=0$.<span class="why">$q<t$ et Bland en $B'$ : $\ct'_q\ge0$, et $\ct'_q\ne0$. Puis $\ct'_qw_q<0$. Enfin $x_q$ est instable (ligne 2).</span></li>
+<li>Contradiction.<span class="why">En $B$, la ligne de $x_q$ avait un rapport $\bar x_q/d_q=0$, égal au minimum (qui est $0$), exactement comme la ligne de $x_t$. Bland aurait fait sortir la plus petite des deux, $x_q$, et non $x_t$. <span class="qed">□</span></span></li>
+</ol>
+<p>Autres remèdes classiques : la règle lexicographique, et la perturbation de $b$ en $b+(\eta,\eta^2,\dots,\eta^m)$ avec $\eta>0$ très petit, qui rend tous les sommets non dégénérés.</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Piège — Bland garantit l'arrêt, pas la vitesse</div>
+<p>La règle de Bland est un garde-fou, pas une bonne heuristique : sur des programmes linéaires aléatoires, elle fait beaucoup plus de pivots que la règle du plus négatif (tableau ci-dessous). Les solveurs ne l'utilisent qu'en secours, quand ils détectent une stagnation.</p>
+</div>
+
+<h3 id="choix-pivot">Choisir la variable entrante</h3>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, « Choix du changement de base », p. 127</span></div>
+<p>S'il y a plusieurs composantes du vecteur coût réduit $\ct^k_N$ strictement négatives, il faut faire un choix dans l'algorithme. Plusieurs stratégies sont possibles, mais en général on choisit la plus négative.</p>
+</div>
+<p>Les diapos imposent la plus négative (diapo 9). Ce n'est qu'une heuristique : la pente la plus forte <em>par unité de $x_i$</em> ne dit rien de la longueur de l'arête, ni de la façon dont on mesure $x_i$ (multiplier une variable par 10 change son coût réduit). Les principales règles :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>règle</th><th>variable entrante</th><th>coût d'une itération</th><th>commentaire</th></tr></thead>
+<tbody>
+<tr><td>plus négatif (Dantzig)</td><td>$\min_j\ct_j$</td><td>faible</td><td>celle du cours ; peut cycler (Beale), exponentielle au pire (Klee–Minty)</td></tr>
+<tr><td>plus petit indice (Bland)</td><td>premier $j$ avec $\ct_j<0$</td><td>faible</td><td>ne cycle jamais ; lente en pratique</td></tr>
+<tr><td>plus grande amélioration</td><td>$\max_j\eps_j\abs{\ct_j}$</td><td>un test du rapport par candidat</td><td>va au meilleur voisin ; rarement rentable</td></tr>
+<tr><td>plus forte pente (<em>steepest edge</em>)</td><td>$\min_j\ct_j/\norm{d^{\,j}}$</td><td>maintenir les normes $\norm{d^{\,j}}$</td><td>la vraie pente par unité de longueur ; la règle des solveurs, souvent sous une forme approchée (<em>devex</em>)</td></tr>
+</tbody></table></div>
+<figure class="fig"><!-- include figures/P03/chemins.svg --><figcaption>Sur l'exercice 4.2.1, la règle du plus négatif choisit d'abord $x_2$ (pente $-2$) et fait 3 pivots ; la règle de Bland choisit $x_1$ (premier indice, pente $-1$) et en fait 2. Le chemin le plus court en nombre de pivots n'est pas celui de la plus forte pente initiale.</figcaption></figure>
+
+<h3 id="complexite">Combien d'itérations ? Le cube de Klee et Minty</h3>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, p. 127</span></div>
+<p>A priori le nombre d'itérations de l'algorithme du simplexe peut être aussi grand que le nombre de sommets (qui est exponentiel par rapport au nombre de variables $n$ ; voir l'Exercice 4.2.2). Bien qu'il existe des exemples (académiques) où c'est effectivement le cas, en pratique cet algorithme converge en un nombre d'étapes qui est une fonction polynomiale de $n$.</p>
+</div>
+<div class="box recall"><div class="box-h">Rappel — polynomial ou exponentiel</div>
+<p>Un nombre d'opérations est <em>polynomial</em> s'il est majoré par $Cn^k$ pour des constantes $C$ et $k$ ; il est <em>exponentiel</em> s'il croît comme $2^n$ (ou $a^n$, $a>1$). La différence est énorme : $n^3=10^6$ pour $n=100$, mais $2^{100}\approx1{,}3\times10^{30}$. Voir <a href="Rappels.html#polynomial-exponentiel">la page Rappels</a>.</p>
+</div>
+<p>Les « exemples académiques » sont les <em class="new">cubes de Klee et Minty</em> (1972) : des cubes déformés de dimension $n$, à $2^n$ sommets, sur lesquels la règle du plus négatif, partie de l'origine, visite <strong>tous</strong> les sommets. Une version classique :</p>
+$$\max\ \sum_{j=1}^n2^{\,n-j}x_j\quad\text{sous}\quad\sum_{j=1}^{i-1}2^{\,i-j+1}x_j+x_i\le5^{\,i}\quad(i=1,\dots,n),\qquad x\ge0 .$$
+<p>Pour $n=3$ : $\max\,4x_1+2x_2+x_3$ sous $x_1\le5$, $4x_1+x_2\le25$, $8x_1+4x_2+x_3\le125$.</p>
+<figure class="fig"><!-- include figures/P03/klee-minty.svg --><figcaption>Le cube de Klee et Minty pour $n=3$, en forme standard (trois variables d'écart), parcouru par la règle du plus négatif depuis l'origine : 7 pivots, chacun améliore strictement le coût, et le chemin passe par les $2^3=8$ sommets avant d'atteindre l'optimum $(0,0,125)$ de valeur $125$.</figcaption></figure>
+<p>Nombre de pivots, calculé en fractions exactes avec le simplexe de cette page (départ : base des variables d'écart) :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>$n$</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th></tr></thead>
+<tbody>
+<tr><td>sommets $2^n$</td><td>2</td><td>4</td><td>8</td><td>16</td><td>32</td><td>64</td><td>128</td><td>256</td><td>512</td><td>1024</td></tr>
+<tr><td>pivots, plus négatif</td><td>1</td><td>3</td><td>7</td><td>15</td><td>31</td><td>63</td><td>127</td><td>255</td><td>511</td><td>1023</td></tr>
+<tr><td>pivots, Bland</td><td>1</td><td>3</td><td>5</td><td>9</td><td>15</td><td>25</td><td>41</td><td>67</td><td>109</td><td>177</td></tr>
+</tbody></table></div>
+<p>La règle du plus négatif fait $2^n-1$ pivots : le nombre de pivots double à chaque dimension. La règle de Bland fait moins de pivots sur ces exemples, mais leur nombre croît lui aussi géométriquement : il est multiplié par environ $1{,}6$ à chaque dimension ($\frac{177}{109}\approx1{,}62$). Ce n'est qu'un pire cas. En pratique, le nombre de pivots est modeste : sur des programmes linéaires aléatoires $\max\,c\cdot x$, $Ax\le\ind$, $x\ge0$, avec $A$ et $c$ à coefficients uniformes sur $[0,1]$ et $m=n$ (10 tirages par taille, simplexe en flottants, valeur optimale vérifiée avec HiGHS) :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>$m=n$</th><th>10</th><th>20</th><th>40</th><th>80</th><th>160</th><th>320</th></tr></thead>
+<tbody>
+<tr><td>pivots, plus négatif (moyenne)</td><td>4,6</td><td>9,4</td><td>22,6</td><td>57,1</td><td>185,4</td><td>651,1</td></tr>
+<tr><td>pivots, Bland (moyenne)</td><td>13,5</td><td>38,1</td><td>174,0</td><td>689,2</td><td>4520,8</td><td>22730,9</td></tr>
+<tr><td>itérations du simplexe dual de HiGHS, sans présolve</td><td>8,3</td><td>16,3</td><td>27,5</td><td>52,7</td><td>99,2</td><td>201,9</td></tr>
+</tbody></table></div>
+<p>Pour $m=n=320$, le simplexe du cours fait en moyenne 651 pivots, de l'ordre de $2m$, alors que le nombre de bases candidates est astronomique. C'est ce que le livre appelle une convergence « polynomiale en pratique ».</p>
+<details class="fold more"><summary>Pour aller plus loin — ce que l'on sait de la complexité</summary><div class="fold-body">
+<ul>
+<li>On ne connaît <strong>aucune</strong> règle de pivot dont on sache prouver qu'elle fait toujours un nombre polynomial de pivots ; pour la plupart des règles connues, des exemples à la Klee–Minty ont été construits (pour la règle de Bland : Avis et Chvátal, 1978). C'est un problème ouvert célèbre.</li>
+<li>La programmation linéaire est pourtant un problème <strong>polynomial</strong> : la méthode de l'ellipsoïde (Khachiyan, 1979) puis les méthodes de points intérieurs (Karmarkar, 1984) le prouvent. Ces dernières sont aussi très efficaces en pratique (<a href="Partie04.html">partie 4</a>).</li>
+<li>L'efficacité pratique du simplexe a reçu une explication avec l'<em>analyse lisse</em> (Spielman et Teng, 2004) : si l'on perturbe un peu aléatoirement les données d'un problème quelconque, une variante du simplexe fait en moyenne un nombre polynomial de pivots.</li>
+<li>Question voisine : le <em>diamètre</em> d'un polyèdre (le plus petit nombre d'arêtes entre deux sommets, au pire) est-il polynomial ? La conjecture de Hirsch, qui le bornait par (nombre de facettes) $-$ (dimension), a été réfutée par F. Santos en 2010 ; la version polynomiale reste ouverte.</li>
+</ul>
+</div></details>
+
+<div class="box reflex"><div class="box-h">Réflexes</div>
+<ul>
+<li>Quand vous voyez deux rapports égaux → le sommet d'arrivée est dégénéré ; un pas nul est possible ensuite.</li>
+<li>Quand vous voyez un pas nul → la base change, pas le point ni le coût ; ce n'est pas une erreur.</li>
+<li>Pour garantir l'arrêt (preuve, examen) → règle de Bland, ou « aucune base ne se répète ».</li>
+<li>Quand on vous demande la complexité du simplexe → exponentielle au pire (Klee–Minty), excellente en pratique ; la PL est polynomiale par les points intérieurs.</li>
+</ul>
+</div>
+<div class="quiz"><p>Pourquoi tous les pivots d'un cycle sont-ils forcément dégénérés ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>Le coût décroît au sens large à chaque pivot : $c\cdot x^{k+1}=c\cdot x^k+\eps_k\ct_i\le c\cdot x^k$. Si l'on revient à une base déjà vue, on revient au même point, donc au même coût : la suite des coûts, décroissante, est constante sur le cycle. Chaque terme $\eps_k\ct_i$ est donc nul, et comme $\ct_i<0$, $\eps_k=0$.</p>
+</div></details></div>
+<div class="quiz"><p>Le Lemme 4.2.10 suppose qu'aucun sommet visité n'est dégénéré. Sur l'exercice 4.2.1 ($b_3=5$), cette hypothèse est-elle vérifiée ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>Oui. Les quatre sommets visités ont $x_B=(2,4,5)$, $(1,2,4)$, $(\frac52,1,\frac32)$ et $(3,2,2)$ : toutes les composantes sont $>0$. Plus généralement, aucun des 5 sommets n'est dégénéré (exactement deux droites passent par chacun). Avec $b_3=\frac72$, en revanche, le sommet $(1\,;\frac52)$ est dégénéré, et un pas nul se produit.</p>
+</div></details></div>
