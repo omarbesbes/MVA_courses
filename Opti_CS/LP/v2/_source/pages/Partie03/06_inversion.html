@@ -1,0 +1,71 @@
+<h2 id="inversion-base">6. Ne pas inverser la base à chaque pas <span class="ref">Allaire p. 127–128</span></h2>
+<p class="tldr">Deux bases successives ne diffèrent que d'une colonne : $B^{k+1}=B^kE^k$, où $E^k$ est l'identité dont une colonne est remplacée par $l=(B^k)^{-1}a_i$ ; l'inverse se met donc à jour par un produit très simple, sans nouvelle inversion.</p>
+
+<h3 id="inversion-probleme">Le problème : une inversion par itération coûte cher</h3>
+<p>Chaque itération utilise $B^{-1}$ trois fois : pour $x_B=B^{-1}b$, pour les multiplicateurs $p=B^{-\top}c_B$ et pour la direction $d=B^{-1}a_i$. Résoudre un système $m\times m$ par élimination de Gauss coûte de l'ordre de $m^3$ opérations : un milliard pour $m=1000$, à chaque itération. Or $B^{k+1}$ et $B^k$ ne diffèrent que d'une colonne. On doit pouvoir passer de $(B^k)^{-1}$ à $(B^{k+1})^{-1}$ à bien moindre coût.</p>
+
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, « Inversion de la base », p. 127–128</span></div>
+<p>Tel que nous l'avons décrit l'algorithme du simplexe demande l'inversion à chaque étape de la base $B^k$, ce qui peut être très coûteux pour les problèmes de grande taille (avec beaucoup de contraintes puisque l'ordre de $B^k$ est égal au nombre de contraintes). On peut tirer parti du fait que $B^{k+1}$ ne diffère de $B^k$ que par une colonne pour mettre au point une meilleur stratégie. En effet, si c'est la $j$-ème colonne qui change, on a</p>
+$$B^{k+1}=B^kE^k\quad\text{avec}\quad E^k=\begin{pmatrix}1&&l_1&&\\&\ddots&\vdots&&\\&&l_j&&\\&&\vdots&\ddots&\\&&l_n&&1\end{pmatrix},$$
+<p>et $E^k$ est facile à inverser</p>
+$$(E^k)^{-1}=\frac1{l_j}\begin{pmatrix}1&&-l_1&&\\&\ddots&\vdots&&\\&&1&&\\&&\vdots&\ddots&\\&&-l_n&&1\end{pmatrix}.$$
+<p>On utilise donc la formule, sous forme factorisée,</p>
+$$(B^k)^{-1}=(E^{k-1})^{-1}(E^{k-2})^{-1}\cdots(E^0)^{-1}(B^0)^{-1}.$$
+</div>
+<dl class="decode">
+<dt>$j$</dt><dd>La position, dans la base, de la variable sortante (la ligne $r$ du test du rapport, §3).</dd>
+<dt>$l=(l_1,\dots,l_m)$</dt><dd>Le livre ne le définit pas : c'est $l=(B^k)^{-1}a_i$, la direction $d$ du test du rapport, déjà calculée. En effet $B^kE^k$ a pour colonnes celles de $B^k$, sauf la $j$-ème qui vaut $B^kl=a_i$ : c'est bien $B^{k+1}$.</dd>
+<dt>$l_j$</dt><dd>La case pivot $d_r$ : elle est $>0$ par construction du test du rapport, donc la division par $l_j$ est permise.</dd>
+<dt>forme factorisée</dt><dd>On ne calcule jamais $(B^k)^{-1}$ : on garde la liste des $(E^\ell)^{-1}$ (chacune tient en un vecteur et un indice) et on les applique l'une après l'autre à un vecteur.</dd>
+</dl>
+<div class="box remark"><div class="box-h">Note sur les sources — deux coquilles dans les matrices de la p. 128</div>
+<ol>
+<li><strong>Le facteur $\frac1{l_j}$ ne porte que sur la $j$-ème colonne</strong>, pas sur toute la matrice. Écrit devant la matrice, il diviserait aussi les $1$ de la diagonale par $l_j$, et le produit $E^k\times(\text{matrice imprimée})$ vaudrait $\mathrm{diag}(\frac1{l_j},\dots,1,\dots,\frac1{l_j})$ au lieu de $\Id$. Sur l'exemple ci-dessous ($l_j=2$), on trouve $\mathrm{diag}(\frac12,1,\frac12)$ (vérifié en fractions exactes). La formule juste est : $(E^k)^{-1}$ est l'identité dont la $j$-ème colonne est remplacée par
+$$\Big(-\frac{l_1}{l_j},\ \dots,\ -\frac{l_{j-1}}{l_j},\ \frac1{l_j},\ -\frac{l_{j+1}}{l_j},\ \dots,\ -\frac{l_m}{l_j}\Big).$$</li>
+<li><strong>Les matrices sont d'ordre $m$, pas $n$</strong> : $B^k$ est carrée d'ordre $m$ (le nombre de contraintes, comme le dit le livre lui-même), donc les indices vont de $l_1$ à $l_m$, pas jusqu'à $l_n$.</li>
+</ol>
+</div>
+<div class="box thm"><div class="box-h">Proposition — l'inverse de $E^k$</div>
+<p>Soit $l\in\R^m$ avec $l_j\ne0$ et $E=\Id+(l-e_j)e_j^\top$ (l'identité dont la colonne $j$ est remplacée par $l$). Alors $E^{-1}=\Id-\frac1{l_j}(l-e_j)e_j^\top$, c'est-à-dire l'identité dont la colonne $j$ est remplacée par $e_j-\frac1{l_j}(l-e_j)$, le vecteur ci-dessus.</p>
+</div>
+<details class="fold proof"><summary>Démonstration complète</summary><div class="fold-body">
+<p>Notons $u=l-e_j$ ; alors $e_j^\top u=l_j-1$ et $E=\Id+ue_j^\top$, $F=\Id-\frac1{l_j}ue_j^\top$.</p>
+<ol class="steps">
+<li>$$EF=\Id+ue_j^\top-\tfrac1{l_j}ue_j^\top-\tfrac1{l_j}u\,(e_j^\top u)\,e_j^\top .$$<span class="why">On développe le produit ; le dernier terme est $ue_j^\top\,ue_j^\top$, et $e_j^\top u$ est un nombre.</span></li>
+<li>$$EF=\Id+ue_j^\top\Big(1-\frac1{l_j}-\frac{l_j-1}{l_j}\Big)=\Id+ue_j^\top\cdot\frac{l_j-1-l_j+1}{l_j}=\Id .$$<span class="why">On factorise $ue_j^\top$ et on utilise $e_j^\top u=l_j-1$.</span></li>
+<li>$$Fe_j=e_j-\tfrac1{l_j}u=\Big(-\tfrac{l_1}{l_j},\dots,\tfrac{1}{l_j},\dots,-\tfrac{l_m}{l_j}\Big),\qquad Fe_s=e_s\ (s\ne j).$$<span class="why">$e_j^\top e_s=0$ pour $s\ne j$. La composante $j$ vaut $1-\frac{l_j-1}{l_j}=\frac1{l_j}$. <span class="qed">□</span></span></li>
+</ol>
+</div></details>
+<div class="box intu"><div class="box-h">Intuition — $(E^k)^{-1}$, c'est le pivot du tableau</div>
+<p>Multiplier un vecteur $v$ à gauche par $(E^k)^{-1}$, c'est : diviser sa composante $j$ par $l_j$, puis retrancher $l_s$ fois cette nouvelle composante à chaque composante $s\ne j$. Ce sont exactement les opérations sur les lignes du pivot du tableau (§3) : diviser la ligne pivot par la case pivot, puis annuler la colonne entrante dans les autres lignes. D'où $(B^{k+1})^{-1}A=(E^k)^{-1}(B^k)^{-1}A$ : le nouveau tableau est l'ancien, multiplié à gauche par $(E^k)^{-1}$.</p>
+</div>
+
+<div class="box example"><div class="box-h">Exemple — les mises à jour de l'exercice 4.2.1 ($3\times3$)</div>
+<p>Reprenons le chemin de la règle du plus négatif. La base initiale est $B^0=\Id$ (les écarts).</p>
+<ol class="steps">
+<li>$$\text{Pivot 0 : }l=(2,2,1),\ j=1:\quad E^0=\begin{pmatrix}2&0&0\\2&1&0\\1&0&1\end{pmatrix}=B^1,\qquad(E^0)^{-1}=\begin{pmatrix}\frac12&0&0\\-1&1&0\\-\frac12&0&1\end{pmatrix}.$$<span class="why">$x_2$ entre en position 1 (à la place de $x_3$) ; $l=(B^0)^{-1}a_2=a_2$. Colonne 1 de l'inverse : $(\frac12,-\frac22,-\frac12)$.</span></li>
+<li>$$\text{Pivot 1 : }l=\big(-\tfrac32,2,\tfrac52\big),\ j=2:\quad E^1=\begin{pmatrix}1&-\frac32&0\\0&2&0\\0&\frac52&1\end{pmatrix},\qquad(E^1)^{-1}=\begin{pmatrix}1&\frac34&0\\0&\frac12&0\\0&-\frac54&1\end{pmatrix}.$$<span class="why">$x_1$ remplace $x_4$ en position 2, $l=d$ du §3. Colonne 2 de l'inverse : $\big(\frac{3/2}{2},\frac12,-\frac{5/2}{2}\big)=(\frac34,\frac12,-\frac54)$.</span></li>
+<li>$$B^1E^1=\begin{pmatrix}2&0&0\\2&1&0\\1&0&1\end{pmatrix}\begin{pmatrix}1&-\frac32&0\\0&2&0\\0&\frac52&1\end{pmatrix}=\begin{pmatrix}2&-3&0\\2&-1&0\\1&1&1\end{pmatrix}=(a_2\ a_1\ a_5)=B^2 .$$<span class="why">Colonne 2 : $B^1l=-\frac32a_2+2a_4+\frac52a_5=(-3,-1,1)=a_1$.</span></li>
+<li>$$(B^2)^{-1}=(E^1)^{-1}(E^0)^{-1}=\begin{pmatrix}-\frac14&\frac34&0\\-\frac12&\frac12&0\\\frac34&-\frac54&1\end{pmatrix}.$$<span class="why">Forme factorisée avec $(B^0)^{-1}=\Id$. Contrôle : ce sont les colonnes $x_3,x_4,x_5$ du tableau 2 du §3, qui valent $B^{-1}$ (les colonnes d'écart de $A$ forment $\Id$).</span></li>
+<li>$$\text{Pivot 2 : }l=\big(-\tfrac14,-\tfrac12,\tfrac34\big),\ j=3:\quad(B^3)^{-1}=(E^2)^{-1}(B^2)^{-1}=\begin{pmatrix}0&\frac13&\frac13\\0&-\frac13&\frac23\\1&-\frac53&\frac43\end{pmatrix}.$$<span class="why">$(E^2)^{-1}$ a pour colonne 3 $\big(\frac{1/4}{3/4},\frac{1/2}{3/4},\frac1{3/4}\big)=(\frac13,\frac23,\frac43)$. Le produit coïncide avec les colonnes d'écart du tableau final, et avec l'inverse de $(a_2\ a_1\ a_3)$ calculé directement.</span></li>
+</ol>
+<p><strong>La formule imprimée</strong>, au pivot 1, donnerait $\frac12\begin{pmatrix}1&\frac32&0\\0&1&0\\0&-\frac52&1\end{pmatrix}$, et $E^1$ fois cette matrice vaut $\mathrm{diag}(\frac12,1,\frac12)\ne\Id$.</p>
+</div>
+<p><strong>Ce que l'on gagne.</strong> Chaque $(E^\ell)^{-1}$ se stocke avec $m+1$ nombres (sa colonne et l'indice $j$) et s'applique à un vecteur en environ $2m$ opérations. Après $k$ itérations, appliquer $(B^k)^{-1}$ coûte de l'ordre de $km$ opérations au lieu de $m^3$ pour une inversion. Comme la liste s'allonge et que les erreurs d'arrondi s'accumulent, on repart de temps en temps d'une factorisation fraîche de la base courante (on « réinverse »).</p>
+
+<div class="box app"><div class="box-h">En pratique — du produit des $E^k$ aux factorisations $LU$ mises à jour</div>
+<p>La « forme produit de l'inverse » ci-dessus (Dantzig et Orchard-Hays, 1954) a été la technique des premiers codes. Les solveurs actuels appliquent la même idée sous une forme plus stable :</p>
+<ul>
+<li>ils travaillent en <strong>simplexe révisé</strong> : ils ne forment jamais le tableau $B^{-1}A$ (dense, $m\times n$), mais seulement ce dont l'itération a besoin, en résolvant $B^\top p=c_B$, puis $Bd=a_i$ ;</li>
+<li>ils gardent une <strong>factorisation $LU$</strong> creuse de $B$ (deux matrices triangulaires, que l'on « inverse » par substitution), et la <strong>mettent à jour</strong> après chaque pivot (méthodes de Bartels–Golub, 1969, et de Forrest–Tomlin, 1972) au lieu de la recalculer ; la mise à jour joue le rôle des $E^k$ ;</li>
+<li>ils <strong>refactorisent</strong> périodiquement, pour limiter les erreurs d'arrondi et garder des facteurs creux.</li>
+</ul>
+<p>C'est ainsi que HiGHS (dans <code>scipy</code>) traite des problèmes à des millions de variables : la matrice $A$ est très creuse, et une itération ne coûte presque rien comparée à une inversion.</p>
+</div>
+<div class="box recall"><div class="box-h">Rappel — inverse et système linéaire</div>
+<p>On n'inverse presque jamais une matrice en calcul numérique : pour obtenir $B^{-1}v$, on résout $Bz=v$. Avec une factorisation $B=LU$ ($L$ triangulaire inférieure, $U$ triangulaire supérieure), c'est deux substitutions, $Ly=v$ puis $Uz=y$, de l'ordre de $m^2$ opérations (beaucoup moins si $L$ et $U$ sont creuses). Voir <a href="Rappels.html#inverse-cramer">inverse et Cramer</a> et <a href="Rappels.html#systemes">systèmes linéaires</a>.</p>
+</div>
+<div class="quiz"><p>Pourquoi est-on sûr que $l_j\ne0$, et que $B^{k+1}$ est inversible ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>$l=d=(B^k)^{-1}a_i$ et $j$ est la ligne choisie par le test du rapport, qui ne retient que des $d_r>0$ : donc $l_j>0$. Et $\det B^{k+1}=\det B^k\det E^k=l_j\det B^k\ne0$ ($\det E^k=l_j$ en développant selon les colonnes $e_s$). C'est la preuve du pivot du §3, vue avec $E^k$.</p>
+</div></details></div>

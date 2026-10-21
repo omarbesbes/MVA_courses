@@ -1,0 +1,193 @@
+<h2 id="separation-evaluation">3. Séparation, évaluation (et coupe) <span class="ref">Diapos 51, 55–58</span></h2>
+<p class="tldr">On découpe l'ensemble des solutions en morceaux en fixant des variables (séparation), on calcule pour chaque morceau une borne optimiste par une relaxation (évaluation), et on abandonne tout morceau dont la borne ne bat pas la meilleure solution déjà trouvée (élagage) ; ajouter des inégalités valides (coupes) resserre les bornes.</p>
+
+<h3 id="se-probleme">Le problème</h3>
+<p>L'énumération est hors de portée (§1), mais une borne permet d'éliminer d'un coup des milliers de solutions. Sur le sac-à-dos : si l'on sait déjà remplir le sac pour $42$, et que la relaxation affirme que « tous les sacs sans l'objet C valent au plus $41$ », alors il est inutile d'examiner un seul des $16$ sacs sans C. C'est tout le principe : <strong>diviser pour régner, sans tout explorer</strong>. La méthode s'appelle <em class="new">séparation et évaluation</em> (en anglais <em>branch and bound</em>) ; avec des coupes, <em>branch and cut</em>.</p>
+
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo 58</span></div>
+<p><strong>Algorithme de Séparation, évaluation et coupe</strong></p>
+<p>▶ Description des tours sous forme d'arbre<br>
+▶ calcul d'une borne inférieure $m$ initialisée à l'aide d'une heuristique particulière.<br>
+▶ Calcul d'une borne inférieure prévisionnelle en relâchant les contraintes et en utilisant la dualité (relaxation lagrangienne)<br>
+▶ Parcours de l'arbre en élagant les branches dont la borne prévisionnelle excède $m$.</p>
+</div>
+<p>Les diapos 55 à 57 affichent les mêmes points un à un. Elles viennent juste après le voyageur de commerce (diapos 52–54) : les « tours » sont les tournées du voyageur, et l'on <strong>minimise</strong> une longueur. La diapo 51 annonçait la même méthode pour le sac-à-dos, où l'on <strong>maximise</strong>.</p>
+
+<dl class="decode">
+<dt>« tours sous forme d'arbre »</dt><dd>On construit les tournées pas à pas : la racine est « on part de la ville 1 » ; un nœud est un début de tournée ; ses fils prolongent ce début d'une ville ; les feuilles sont les tournées complètes. Chaque nœud représente <em>l'ensemble</em> des tournées qui commencent ainsi.</dd>
+<dt>$m$ « initialisée à l'aide d'une heuristique »</dt><dd>La longueur d'une tournée trouvée rapidement, par exemple par le plus proche voisin (§4). Pendant le parcours, $m$ est remplacé par toute tournée plus courte rencontrée : c'est la <strong>meilleure valeur connue</strong>.</dd>
+<dt>« borne inférieure prévisionnelle »</dt><dd>Pour un nœud, un nombre qui minore la longueur de <em>toutes</em> les tournées du sous-arbre. On l'obtient en relâchant des contraintes (une relaxation) ; la diapo cite la relaxation lagrangienne, qui utilise la dualité (plus bas).</dd>
+<dt>« élaguer »</dt><dd>Abandonner un nœud sans explorer ses descendants. On le fait quand sa borne inférieure atteint ou dépasse $m$ : aucune tournée du sous-arbre ne peut faire mieux que celle qu'on a déjà.</dd>
+<dt>« coupe »</dt><dd>Une inégalité ajoutée au problème relâché, vraie pour toutes les solutions entières mais violée par la solution relâchée courante (plus bas et §4). Les diapos citent le mot sans le détailler.</dd>
+</dl>
+
+<div class="box remark" id="note-borne-m"><div class="box-h">Note sur les sources — $m$ est une borne <em>supérieure</em></div>
+<p>La diapo 56 appelle $m$ une « borne inférieure ». Pour un problème de <strong>minimisation</strong> (la tournée la plus courte), une heuristique fournit une vraie tournée ; l'optimum est au plus sa longueur : $m$ est une borne <strong>supérieure</strong> de l'optimum. Les bornes <strong>inférieures</strong> viennent des relaxations (point 3 de la diapo). L'élagage du point 4 est cohérent avec cette lecture : on jette une branche quand sa borne inférieure dépasse $m$, la meilleure valeur connue. Vérification sur l'exemple à 4 villes ci-dessous : le plus proche voisin donne $m=14$, la relaxation de la racine donne $11$, et l'optimum vaut $14$ : $11\le14\le m$. Seul le mot « inférieure » du point 2 est à corriger (on peut lire : « la plus petite longueur connue »). Précision : on peut élaguer dès que la borne <em>égale</em> $m$, pas seulement quand elle l'excède, si l'on cherche une seule solution optimale.</p>
+</div>
+
+<div class="box intu"><div class="box-h">Intuition — les deux bornes, selon le sens de l'optimisation</div>
+<div class="table-wrap"><table>
+<thead><tr><th></th><th>borne venant d'une solution connue (heuristique)</th><th>borne venant d'une relaxation</th><th>on élague un nœud si…</th></tr></thead>
+<tbody>
+<tr><td>minimisation (voyageur)</td><td>supérieure : $m$</td><td>inférieure (« prévisionnelle »)</td><td>borne du nœud $\ge m$</td></tr>
+<tr><td>maximisation (sac-à-dos)</td><td>inférieure : meilleure utilité connue</td><td>supérieure</td><td>borne du nœud $\le$ meilleure connue</td></tr>
+</tbody></table></div>
+<p>Moyen mnémotechnique : la relaxation est toujours <strong>optimiste</strong> (elle promet trop), la solution connue est <strong>réaliste</strong> (elle est atteinte). On élague quand la promesse la plus optimiste ne bat pas la réalité.</p>
+</div>
+
+<h3 id="arbre-tournees">L'arbre des tournées sur un voyageur à 4 villes</h3>
+<p>Prenons quatre villes et les distances $d_{12}=4$, $d_{13}=7$, $d_{14}=5$, $d_{23}=3$, $d_{24}=6$, $d_{34}=2$ (symétriques). Il n'y a que trois tournées : $1\text{-}2\text{-}3\text{-}4$ de longueur $4+3+2+5=14$, $1\text{-}2\text{-}4\text{-}3$ de longueur $4+6+2+7=19$ et $1\text{-}3\text{-}2\text{-}4$ de longueur $7+3+6+5=21$. Déroulons les quatre points de la diapo.</p>
+<ol class="steps">
+<li><strong>L'arbre.</strong> Racine « 1 » ; fils « 1→2 », « 1→3 », « 1→4 » ; petits-fils « 1→2→3 »… ; feuilles : les $3!=6$ ordres de visite (chaque tournée apparaît deux fois, une par sens).<span class="why">Point 1 : « description des tours sous forme d'arbre ».</span></li>
+<li><strong>L'heuristique.</strong> Plus proche voisin depuis 1 : $1\to2$ ($4$), $2\to3$ ($3$), $3\to4$ ($2$), retour $4\to1$ ($5$) : $m=14$.<span class="why">Point 2. Ici, par chance, la tournée trouvée est optimale ; l'arbre va le <em>prouver</em>.</span></li>
+<li><strong>La borne d'un nœud.</strong> Si le début de tournée est fixé, il reste à faire partir la ville courante et chaque ville non visitée, chacune par une arête ; chaque départ coûte au moins la plus courte arête permise. Borne = longueur du début + somme de ces minima.<span class="why">Point 3, avec une relaxation très simple (on relâche « les départs forment une seule boucle » : chaque ville choisit son successeur seule). À la racine : $4+3+2+2=11$.</span></li>
+<li><strong>L'élagage.</strong> « 1→3 » a pour borne $7+2+4+5=18\ge14$ : élagué, ses deux tournées ne sont jamais examinées. « 1→2 » ($11$) et « 1→4 » ($13$) sont séparés ; leurs fils ont des bornes $14$, $19$, $21$, $14$, toutes $\ge m=14$ : élagués.<span class="why">Point 4. Toutes les branches sont fermées : aucune tournée ne fait mieux que $14$, et la tournée du plus proche voisin est optimale.</span></li>
+</ol>
+<figure class="fig"><!-- include figures/P08/arbre-tours.svg --><figcaption>L'arbre des tournées à 4 villes. Chaque nœud porte sa borne inférieure (pour les feuilles, la longueur exacte). Avec $m=14$, la recherche examine $8$ nœuds (en bleu et en rose) sur les $16$ de l'arbre ; les nœuds en pointillés ne sont jamais construits. À la profondeur $N-1=3$, la borne est exacte : il ne reste qu'une façon de finir.</figcaption></figure>
+
+<h3 id="se-algorithme">L'algorithme sur le sac-à-dos</h3>
+<p>Le même schéma s'applique à tout programme en variables 0/1. Sur le sac-à-dos (maximisation), un nœud est un ensemble de variables <strong>fixées</strong> à $0$ ou à $1$ ; on l'évalue par la relaxation continue des variables libres (la solution de Dantzig, §2).</p>
+<div class="box method" id="methode-se"><div class="box-h">Méthode — séparation-évaluation pour un problème en variables 0/1 (maximisation)</div>
+<ol>
+<li><strong>Départ.</strong> Meilleure solution connue $x^*$ et sa valeur $v^*$ : celles d'une heuristique (le glouton), ou $v^*=-\infty$. La liste des nœuds à traiter contient la racine (aucune variable fixée).</li>
+<li><strong>Évaluation.</strong> Prendre un nœud de la liste et résoudre sa relaxation continue. Trois cas mettent fin au nœud :
+<ul>
+<li>la relaxation est <strong>irréalisable</strong> (les objets fixés à $1$ pèsent déjà plus que $L$) : on abandonne ;</li>
+<li>sa valeur $b\le v^*$ : <strong>élagage</strong>, le sous-arbre ne contient rien de mieux ;</li>
+<li>sa solution est <strong>entière</strong> : c'est la meilleure solution du sous-arbre ; si $b\gt v^*$, elle devient la meilleure connue.</li>
+</ul></li>
+<li><strong>Séparation.</strong> Sinon, la solution a une variable fractionnaire $x_k$ : on crée deux fils, « $x_k=1$ » et « $x_k=0$ », ajoutés à la liste.</li>
+<li><strong>Fin</strong> quand la liste est vide : $x^*$ est optimale.</li>
+</ol>
+<p>Le choix du nœud suivant (ici en profondeur d'abord, fils « $=1$ » en premier) et celui de la variable de séparation sont libres : ils changent le nombre de nœuds, pas le résultat.</p>
+</div>
+
+<div class="box thm" id="prop-se"><div class="box-h">Proposition — la séparation-évaluation est exacte (ajout du guide)</div>
+<p>Pour un problème en variables 0/1 dont l'ensemble admissible est fini, l'algorithme ci-dessus s'arrête après au plus $2^{N+1}-1$ nœuds, et la meilleure solution connue à la fin est optimale.</p>
+</div>
+<div class="box idea"><div class="box-h">L'idée</div>
+<p>Les ensembles de solutions des nœuds en attente et la meilleure solution connue « couvrent » toujours l'optimum : chaque solution admissible est soit dans un nœud encore en attente, soit dans un nœud fermé dont on sait qu'il ne contient rien de mieux que $v^*$. Quand la liste est vide, plus rien ne bat $v^*$.</p>
+</div>
+<details class="fold proof"><summary>Démonstration complète</summary><div class="fold-body">
+<p><strong>Terminaison.</strong> Chaque séparation fixe une variable de plus : un nœud de profondeur $d$ a $d$ variables fixées, donc la profondeur est au plus $N$. L'arbre binaire de profondeur $N$ a au plus $1+2+\cdots+2^N=2^{N+1}-1$ nœuds, et chacun est traité au plus une fois.</p>
+<p><strong>Exactitude.</strong> On montre que l'énoncé suivant reste vrai à chaque étape : « toute solution admissible $x$ vérifie $u\cdot x\le v^*$, ou bien elle appartient à l'ensemble d'un nœud de la liste ».</p>
+<ol class="steps">
+<li>Au départ, la racine contient toutes les solutions.<span class="why">Aucune variable n'est fixée.</span></li>
+<li>Séparer un nœud ne perd aucune solution.<span class="why">Une solution du nœud a $x_k=0$ ou $x_k=1$ : elle est dans l'un des deux fils.</span></li>
+<li>Fermer un nœud irréalisable ne perd rien.<span class="why">Il ne contient aucune solution admissible : sa relaxation, plus large, n'en a déjà pas.</span></li>
+<li>Fermer un nœud élagué ($b\le v^*$) : ses solutions vérifient $u\cdot x\le b\le v^*$.<span class="why">La relaxation du nœud contient toutes ses solutions entières, donc sa valeur $b$ les majore.</span></li>
+<li>Fermer un nœud dont la relaxation a une solution entière $\bar x$ de valeur $b$ : ses solutions vérifient $u\cdot x\le b$, et après la mise à jour $v^*\ge b$.<span class="why">$\bar x$ est admissible (entière et dans la relaxation), donc $v^*\ge u\cdot\bar x=b$ après comparaison.</span></li>
+<li>Quand la liste est vide, toute solution admissible vérifie $u\cdot x\le v^*$, et $v^*$ est atteint par $x^*$.<span class="why">C'est l'énoncé maintenu, sans la seconde alternative. Si $v^*$ vaut encore $-\infty$, le problème n'a pas de solution admissible.</span></li>
+</ol>
+<p><span class="qed">∎</span></p>
+</div></details>
+
+<div class="box example" id="exemple-arbre"><div class="box-h">Exemple — l'arbre complet du sac-à-dos ($L=14$)</div>
+<p>Départ : le glouton donne $v^*=35$. Profondeur d'abord, fils « $=1$ » d'abord. Les valeurs ont été recalculées en fractions exactes.</p>
+<ol class="steps">
+<li><strong>Nœud 0</strong> (rien de fixé) : Dantzig donne $x=(1,1,\tfrac34,0,0)$, borne $47{,}5\gt35$, fractionnaire en C → on sépare sur C.<span class="why">§2.</span></li>
+<li><strong>Nœud 1</strong> ($x_C=1$) : il reste $14-8=6$ ; A ($4$), puis $2/4$ de B : $22+16+7{,}5=45{,}5\gt35$ → on sépare sur B.<span class="why">Les variables libres sont rangées par rapport : A, B, D, E.</span></li>
+<li><strong>Nœud 2</strong> ($x_C=1$, $x_B=1$) : il reste $2$ ; la moitié de A : $22+15+8=45\gt35$ → on sépare sur A.<span class="why">A ($4$) ne tient plus en entier.</span></li>
+<li><strong>Nœud 3</strong> ($x_C=x_B=x_A=1$) : poids fixé $16\gt14$ → irréalisable.<span class="why">Aucune relaxation ne peut retirer un objet fixé.</span></li>
+<li><strong>Nœud 4</strong> ($x_C=x_B=1$, $x_A=0$) : il reste $2$, D tient exactement : $x=(0,1,1,1,0)$, entier, valeur $41\gt35$ → <strong>nouvelle meilleure : $41$</strong>.<span class="why">Relaxation entière : c'est la meilleure solution de ce sous-arbre.</span></li>
+<li><strong>Nœud 5</strong> ($x_C=1$, $x_B=0$) : il reste $6$ ; A ($4$), D ($2$) : $x=(1,0,1,1,0)$, entier, valeur $42\gt41$ → <strong>nouvelle meilleure : $42$</strong>.<span class="why">Le sac est plein.</span></li>
+<li><strong>Nœud 6</strong> ($x_C=0$) : A, B, D ($10$), puis $4/8$ de E : $16+15+4+6=41\le42$ → élagué.<span class="why">Les $16$ sacs sans C valent tous au plus $41$.</span></li>
+</ol>
+<p>La liste est vide : l'optimum est $42$, atteint par $\{A,C,D\}$, prouvé en évaluant $7$ nœuds (au lieu des $32$ sacs, ou des $63$ nœuds de l'arbre complet).</p>
+</div>
+<figure class="fig"><!-- include figures/P08/arbre.svg --><figcaption>L'arbre de séparation-évaluation du sac-à-dos. Chaque nœud indique son ordre de visite, la borne de sa relaxation, la solution relâchée et la décision. Bleu : séparé ; vert : relaxation entière ; rose : élagué ; gris : irréalisable. La meilleure valeur connue passe de $35$ (glouton) à $41$ puis à $42$.</figcaption></figure>
+
+<div class="widget" data-widget="p8arbre"><p class="w-noscript">Figure interactive (nécessite JavaScript).</p></div>
+<p><strong>À observer :</strong> la figure affiche d'abord l'arbre complet pour les réglages choisis ; « Recommencer » le vide, et chaque clic sur « Étape » évalue un nœud (le texte dit pourquoi on sépare, élague ou garde). Avec les réglages de départ ($L=14$, branche $x=1$ d'abord, départ du glouton), sept clics redonnent l'arbre ci-dessus. Passez à « branche $x=0$ d'abord » : l'arbre a $11$ nœuds, car on explore d'abord les sacs sans C, moins bons. Mettez $L=9$, branche $x=1$ d'abord : partir du glouton ($31$) donne $9$ nœuds, partir de « aucune solution connue » en donne $23$. Une bonne solution de départ et un bon ordre d'exploration font élaguer plus tôt. Pour $L=8$ ou $L=16$, la racine est déjà entière : un seul nœud.</p>
+
+<div class="box pitfall"><div class="box-h">Piège — le sens des inégalités</div>
+<p>En maximisation, on élague quand la borne (supérieure) d'un nœud est <strong>$\le$</strong> la meilleure valeur connue ; en minimisation, quand la borne (inférieure) est <strong>$\ge$</strong> $m$. Inverser le test fait soit tout explorer, soit jeter l'optimum. Autre erreur : utiliser la borne d'un nœud pour un autre nœud. Une borne ne vaut que pour <em>son</em> sous-arbre.</p>
+</div>
+
+<h3 id="relaxation-lagrangienne">La relaxation lagrangienne (diapo 57)</h3>
+<p>La diapo 57 propose de calculer la borne « en relâchant les contraintes et en utilisant la dualité ». L'idée est celle du lagrangien de la <a href="Partie05.html#dual">partie 5</a>, appliquée à un problème en nombres entiers : au lieu de supprimer une contrainte difficile, on la fait passer dans l'objectif avec un prix.</p>
+<div class="box def"><div class="box-h">Définition — relaxation lagrangienne (ajout du guide)</div>
+<p>Soit le problème $v=\max\{u\cdot x : x\in X,\ g(x)\le0\}$, où $X$ est un ensemble « facile » (par exemple $\{0,1\}^N$) et $g(x)\le0$ une contrainte « difficile ». Pour un multiplicateur $\lambda\ge0$, la <em class="new">fonction duale lagrangienne</em> est</p>
+$$G(\lambda)=\max_{x\in X}\ \big(u\cdot x-\lambda\,g(x)\big).$$
+<p>(En minimisation, on écrit $\min_{x\in X}(c\cdot x+\lambda\,g(x))$ et toutes les inégalités s'inversent.)</p>
+</div>
+<div class="box thm"><div class="box-h">Proposition — dualité faible : $G(\lambda)\ge v$ pour tout $\lambda\ge0$</div>
+<p>Pour tout $\lambda\ge0$, $G(\lambda)$ majore l'optimum $v$. La meilleure borne est $\min_{\lambda\ge0}G(\lambda)$, le <em>dual lagrangien</em>.</p>
+</div>
+<details class="fold proof"><summary>Démonstration complète</summary><div class="fold-body">
+<ol class="steps">
+<li>Soit $x$ admissible : $x\in X$ et $g(x)\le0$.<span class="why">Une solution quelconque du problème.</span></li>
+<li>$$u\cdot x\ \le\ u\cdot x-\lambda\,g(x)\ \le\ \max_{y\in X}\big(u\cdot y-\lambda\,g(y)\big)=G(\lambda).$$<span class="why">$\lambda\ge0$ et $g(x)\le0$ donnent $-\lambda g(x)\ge0$ ; puis $x\in X$ est un candidat du maximum.</span></li>
+<li>On prend le maximum sur les $x$ admissibles : $v\le G(\lambda)$.<span class="why">L'inégalité vaut pour chacun.</span></li>
+</ol>
+<p><span class="qed">∎</span></p>
+</div></details>
+<div class="box example"><div class="box-h">Exemple — dualiser la capacité du sac-à-dos</div>
+<p>Avec $X=\{0,1\}^5$ et $g(x)=p\cdot x-L$ :</p>
+$$G(\lambda)=\max_{x\in\{0,1\}^5}\Big(\sum_j(u_j-\lambda p_j)\,x_j\Big)+\lambda L=\lambda L+\sum_j\max(0,\ u_j-\lambda p_j).$$
+<p>Le maximum se calcule objet par objet : on prend $j$ si son bénéfice net $u_j-\lambda p_j$ est positif. Plus de contrainte de capacité : le problème est devenu facile.</p>
+<ul>
+<li>$G(0)=16+15+22+4+12=69$ : sans prix, on prend tout.</li>
+<li>$G(2)=28+8+7+6+0+0=49$.</li>
+<li>$G(\tfrac{11}4)=\tfrac{77}2+5+4=47{,}5$ : c'est le minimum.</li>
+<li>$G(4)=56$ : le prix est si élevé qu'on ne prend rien.</li>
+</ul>
+<p>Le meilleur multiplicateur est le rapport de l'objet critique, et la borne lagrangienne $47{,}5$ égale la borne de la relaxation continue : la démonstration de la proposition de Dantzig (§2) était déjà un calcul de $G(11/4)$.</p>
+</div>
+<figure class="fig"><!-- include figures/P08/lagrange.svg --><figcaption>La fonction duale $G(\lambda)$ du sac-à-dos : affine par morceaux et convexe, avec un coude à chaque rapport $u_j/p_j$. Toutes ses valeurs majorent l'optimum entier $42$ ; son minimum, $47{,}5$ en $\lambda=11/4$, est la meilleure borne lagrangienne. L'écart $47{,}5-42$ est le <em>saut de dualité</em> du problème en nombres entiers.</figcaption></figure>
+<div class="box remark"><div class="box-h">Remarque — quand la relaxation lagrangienne fait mieux que la relaxation continue</div>
+<p>Ici, dualiser l'unique contrainte redonne la relaxation continue : c'est un fait général quand l'ensemble « facile » est $X=\{0,1\}^N$ tout entier. La relaxation lagrangienne devient intéressante quand $X$ garde une structure combinatoire que la relaxation continue perdrait. Pour le voyageur de commerce, on dualise les contraintes de degré et l'on garde pour $X$ les « 1-arbres », faciles à optimiser : c'est la borne de Held et Karp (§4). C'est la « borne prévisionnelle » à laquelle pense la diapo 57. Comme $G$ n'est pas dérivable (elle a des coudes), on la minimise par une méthode de sous-gradient.</p>
+</div>
+
+<h3 id="coupes">Les coupes</h3>
+<p>Le mot « coupe » de la diapo 51 (« séparation, évaluation et coupe ») désigne une autre façon de resserrer la borne : au lieu de découper le problème, on ajoute à la relaxation une inégalité <em class="new">valide</em> (satisfaite par toutes les solutions entières) qui est <strong>violée</strong> par la solution relâchée courante. La relaxation devient plus serrée, sans perdre aucune solution entière.</p>
+<div class="box example" id="exemple-couverture"><div class="box-h">Exemple — une inégalité de couverture tranche le sac-à-dos</div>
+<p>A, B et C pèsent ensemble $4+4+8=16\gt14$ : on ne peut jamais prendre les trois. Donc toute solution entière vérifie</p>
+$$x_A+x_B+x_C\le2 .$$
+<p>La solution relâchée $(1,1,\tfrac34,0,0)$ donne $1+1+\tfrac34=2{,}75\gt2$ : elle viole cette inégalité, qui la « coupe ». Ajoutons-la : la nouvelle relaxation a pour valeur $42$, atteinte en $(1,0,1,1,0)$, une solution <strong>entière</strong>. Elle est donc optimale, sans aucune séparation. Preuve de la borne : pour tout $x$ de la nouvelle relaxation,</p>
+$$u\cdot x\ \le\ \tfrac32\,p\cdot x+10\,(x_A+x_B+x_C)+x_D\ \le\ \tfrac32\cdot14+10\cdot2+1=42,$$
+<p>car coefficient par coefficient $16\le6+10$, $15\le6+10$, $22\le12+10$, $4\le3+1$, $12\le12$, et $x\ge0$, $x_D\le1$. (Les multiplicateurs $\tfrac32$, $10$, $1$ forment une solution du dual, <a href="Partie05.html#dual">partie 5</a>.) Une telle inégalité, $\sum_{j\in C}x_j\le\card(C)-1$ pour un ensemble $C$ d'objets trop lourd, s'appelle une <em class="new">inégalité de couverture</em>.</p>
+</div>
+<details class="fold more"><summary>Pour aller plus loin</summary><div class="fold-body">
+<p><strong>Coupes générales.</strong> Gomory (1958) a montré comment fabriquer une coupe à partir de n'importe quel tableau du simplexe dont une variable de base est fractionnaire : on arrondit les coefficients d'une ligne du tableau. En ajoutant suffisamment de coupes, on finit par décrire l'enveloppe convexe des solutions entières, où le simplexe tombe sur un sommet entier (<a href="Partie06.html">partie 6</a>). En pratique, les coupes seules convergent lentement ; on les combine avec la séparation : c'est le <em>branch and cut</em>, la méthode de tous les solveurs modernes. Pour le voyageur, les coupes sont les contraintes de sous-tours (§4).</p>
+</div></details>
+
+<div class="box app" id="app-milp"><div class="box-h">En pratique — résoudre le sac-à-dos avec <code>scipy.optimize.milp</code></div>
+<p>Les solveurs de programmes linéaires en nombres entiers (<em>MILP</em> : HiGHS, CBC, SCIP, Gurobi, CPLEX, et ceux d'OR-Tools) font tous de la séparation-évaluation avec coupes, enrichie de prétraitements et d'heuristiques. SciPy donne accès à HiGHS :</p>
+<pre><code>import numpy as np
+from scipy.optimize import milp, LinearConstraint, Bounds
+
+u = np.array([16, 15, 22, 4, 12])        # utilités de A, B, C, D, E
+p = np.array([4, 4, 8, 2, 8])            # poids
+L = 14                                    # capacité du sac
+
+res = milp(c=-u,                          # milp minimise : on minimise -u·x
+           constraints=LinearConstraint(p[np.newaxis, :], -np.inf, L),   # p·x &lt;= L
+           integrality=np.ones(5),        # toutes les variables entières
+           bounds=Bounds(0, 1))           # 0 &lt;= x &lt;= 1, donc x binaire
+print(res)</code></pre>
+<p>Sortie obtenue (SciPy 1.18) :</p>
+<pre><code>        message: Optimization terminated successfully. (HiGHS Status 7: Optimal)
+        success: True
+         status: 0
+            fun: -42.0
+              x: [ 1.000e+00 -0.000e+00  1.000e+00  1.000e+00  0.000e+00]
+ mip_node_count: 1
+ mip_dual_bound: -42.0
+        mip_gap: 0.0</code></pre>
+<p>On lit : $x=(1,0,1,1,0)$, utilité $42$ ; <code>mip_dual_bound</code> est la borne prouvée ($-42$, car on a minimisé $-u\cdot x$) et <code>mip_gap</code> l'écart relatif entre la borne et la solution : $0$, l'optimalité est prouvée. <code>mip_node_count: 1</code> : HiGHS a conclu à la racine, grâce à son prétraitement et aux coupes qu'il ajoute lui-même, comme notre inégalité de couverture. Le « $-0$ » est un zéro flottant négatif, sans importance. Avec <code>integrality=np.zeros(5)</code>, la même commande résout la relaxation continue : $x=(1,1,0{,}75,0,0)$, valeur $47{,}5$.</p>
+</div>
+
+<div class="box ml" id="ml-brancher"><div class="box-h">En machine learning — apprendre à brancher</div>
+<p>Le choix de la variable de séparation pèse lourd sur la taille de l'arbre. La règle la plus efficace connue, le <em>strong branching</em>, essaie plusieurs variables candidates en résolvant les relaxations de leurs deux fils, puis garde la meilleure : de bons arbres, mais chaque décision coûte cher. Gasse, Chételat, Ferroni, Charlin et Lodi (<em>Exact combinatorial optimization with graph convolutional neural networks</em>, NeurIPS 2019) entraînent un réseau de neurones sur graphe à <strong>imiter</strong> ces décisions : le problème est codé comme un graphe biparti variables–contraintes, le réseau prédit la variable que le strong branching aurait choisie (perte d'entropie croisée), et il est appelé dans le solveur SCIP à chaque nœud. Sur leurs familles de problèmes test, cela réduit le temps de résolution par rapport à la règle par défaut de SCIP. Deux points de prudence : le solveur reste exact (le réseau ne choisit que l'ordre d'exploration, l'élagage garantit l'optimalité), et le gain dépend de la ressemblance entre les problèmes d'entraînement et ceux à résoudre.</p>
+</div>
+
+<div class="box reflex"><div class="box-h">Réflexe</div>
+<p>Quand vous devez prouver qu'une solution entière est optimale → trouvez une relaxation dont la valeur l'égale. Si elle reste au-dessus (en maximisation), séparez sur une variable fractionnaire ou ajoutez une coupe violée.</p>
+</div>
+
+<div class="quiz"><p>Dans l'arbre du sac-à-dos, pourquoi le nœud 6 ($x_C=0$, borne $41$) est-il élagué, alors que sa relaxation n'est pas entière ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>Parce que la meilleure valeur connue est déjà $42$ quand on l'évalue : tous les sacs sans C valent au plus $41\lt42$. Peu importe que la relaxation soit fractionnaire : on n'a pas besoin de savoir <em>quel</em> sac sans C est le meilleur, seulement qu'aucun ne bat $42$.</p>
+</div></details>
+</div>

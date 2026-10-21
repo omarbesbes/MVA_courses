@@ -1,0 +1,153 @@
+<h2 id="sac-a-dos">2. Le problème du sac-à-dos <span class="ref">Diapos 48–51</span></h2>
+<p class="tldr">Choisir des objets sans dépasser une capacité, en maximisant l'utilité totale : le glouton (meilleur rapport utilité/poids d'abord) donne vite une bonne solution, la relaxation continue (on peut couper un objet) donne une borne exacte à calculer, et l'optimum est entre les deux.</p>
+
+<h3 id="sac-probleme">Le problème</h3>
+<p>Vous partez en randonnée avec un sac qui supporte $14$ kg. Cinq objets vous tentent ; chacun a un poids et une « utilité » (un score : ce qu'il vous apporte). Lesquels emporter pour que l'utilité totale soit la plus grande possible ? Le même problème se pose avec un budget au lieu d'un poids : quels projets financer, quelles publicités acheter, quels exemples faire annoter (encadré ML plus bas). Chaque objet est pris ou laissé : c'est une décision <strong>binaire</strong>.</p>
+
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo 51</span></div>
+<p><strong>Problème du sac-à-dos</strong></p>
+<p>N objets de poids $p_j$ et d'utilité $u_j$.</p>
+$$\max_{x_j\in\{0,1\},\ p\cdot x\lt L}\ u\cdot x$$
+<p>▶ $x\in\{0,1\}^N$ : variable de décision<br>
+▶ Problème NP-complet (difficile). Complexité exponentielle<br>
+▶ Démarrage avec une heuristique : algorithme glouton<br>
+▶ Résolution par un algorithme de type diviser pour reigner : séparation, évaluation et coupe (Branch and bound and cut).</p>
+</div>
+<p>Les diapos 48 à 50 affichent les mêmes lignes une à une ; la diapo 51 est la version complète.</p>
+
+<dl class="decode">
+<dt>$N$, $j$</dt><dd>Le nombre d'objets ; $j\in\{1,\dots,N\}$ numérote les objets.</dd>
+<dt>$p_j$, $p$</dt><dd>Le poids de l'objet $j$ (un nombre $\gt0$) ; $p=(p_1,\dots,p_N)\in\R^N$.</dd>
+<dt>$u_j$, $u$</dt><dd>L'utilité de l'objet $j$ (ce qu'il rapporte, $\ge0$) ; $u=(u_1,\dots,u_N)$.</dd>
+<dt>$L$</dt><dd>La capacité du sac (le poids maximal). La diapo ne la nomme pas : c'est le seul nombre de la contrainte.</dd>
+<dt>$x_j\in\{0,1\}$</dt><dd>La décision : $x_j=1$ si l'on prend l'objet $j$, $x_j=0$ sinon. Le vecteur $x\in\{0,1\}^N$ décrit un sous-ensemble d'objets.</dd>
+<dt>$p\cdot x$</dt><dd>$=\sum_jp_jx_j$ : le poids total des objets pris (seuls les $x_j=1$ comptent).</dd>
+<dt>$u\cdot x$</dt><dd>$=\sum_ju_jx_j$ : l'utilité totale, à maximiser.</dd>
+<dt>« NP-complet », « exponentielle »</dt><dd>Voir le rappel et la note du §1 : on ne connaît pas d'algorithme exact polynomial.</dd>
+<dt>heuristique, glouton</dt><dd>Une méthode rapide qui fournit une bonne solution sans garantie d'optimalité ; le glouton est détaillé plus bas.</dd>
+<dt>« diviser pour régner »</dt><dd>Découper le problème en sous-problèmes plus petits : la séparation-évaluation du §3.</dd>
+</dl>
+
+<div class="box remark" id="note-sac"><div class="box-h">Note sur les sources — la contrainte $p\cdot x\lt L$</div>
+<p>La diapo écrit la contrainte avec une inégalité <strong>stricte</strong>. La formulation usuelle est $p\cdot x\le L$ : le sac rempli exactement à sa capacité est permis. Ce n'est pas un détail. Sur l'exemple ci-dessous ($L=14$), l'optimum est $\{A,C,D\}$, de poids $4+8+2=14$ : avec « $\lt$ », il serait interdit, et l'optimum tomberait à $38$ ($\{A,C\}$, poids $12$ ; vérifié par énumération). Avec des poids entiers, « $p\cdot x\lt L$ » est la même chose que « $p\cdot x\le L-1$ » : c'est un sac de capacité $L-1$. Pour la relaxation continue, « $\lt$ » donnerait en plus un ensemble non fermé, dont le maximum peut ne pas être atteint. Deux autres coquilles : « reigner » pour « régner », et « $L$ » n'est pas défini. Ce guide écrit $\max\{u\cdot x : x\in\{0,1\}^N,\ p\cdot x\le L\}$.</p>
+</div>
+
+<h3 id="sac-exemple">L'exemple de la page</h3>
+<div class="box example"><div class="box-h">Exemple — cinq objets, un sac de capacité 14</div>
+<div class="table-wrap"><table>
+<thead><tr><th>objet $j$</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th></tr></thead>
+<tbody>
+<tr><td>poids $p_j$</td><td>4</td><td>4</td><td>8</td><td>2</td><td>8</td></tr>
+<tr><td>utilité $u_j$</td><td>16</td><td>15</td><td>22</td><td>4</td><td>12</td></tr>
+<tr><td>rapport $u_j/p_j$</td><td>4</td><td>3,75</td><td>2,75</td><td>2</td><td>1,5</td></tr>
+</tbody></table></div>
+<p>Les objets sont rangés par rapport décroissant. Tout prendre pèserait $26$ et rapporterait $69$. Le programme est</p>
+$$\begin{aligned}\max\ \ &16x_A+15x_B+22x_C+4x_D+12x_E\\ \text{sous}\ \ &4x_A+4x_B+8x_C+2x_D+8x_E\le14,\quad x\in\{0,1\}^5 .\end{aligned}$$
+<p>Sur les $2^5=32$ sous-ensembles, $20$ tiennent dans le sac. Le meilleur, trouvé en les essayant tous, est $\{A,C,D\}$ : poids $14$ (sac plein), utilité $16+22+4=42$. Il est unique ; le suivant est $\{B,C,D\}$, d'utilité $41$.</p>
+</div>
+
+<figure class="fig"><!-- include figures/P08/objets.svg --><figcaption>Les cinq objets (en haut) et trois façons de remplir le sac de capacité $14$, dessinées à l'échelle (largeur = poids). Le glouton (or) prend A, B, D et laisse $4$ de vide : $35$. L'optimum (vert) remplit le sac avec A, C, D : $42$. La relaxation continue (violet) prend A, B et les trois quarts de C : $47{,}5$, un majorant de l'optimum.</figcaption></figure>
+
+<h3 id="glouton">L'algorithme glouton</h3>
+<p>Idée naturelle : un objet est « rentable » s'il rapporte beaucoup <em>par kilo</em>. On prend donc les objets par rapport $u_j/p_j$ décroissant, tant qu'ils tiennent.</p>
+<div class="box method"><div class="box-h">Méthode — l'algorithme glouton (diapo 50 : « Démarrage avec une heuristique »)</div>
+<ol>
+<li>Trier les objets par rapport $u_j/p_j$ décroissant.</li>
+<li>Parcourir la liste : si l'objet tient dans la place restante, le prendre ; sinon, le laisser et passer au suivant.</li>
+<li>Renvoyer les objets pris. Coût : un tri, soit de l'ordre de $N\log N$ opérations.</li>
+</ol>
+<p>La diapo ne précise pas l'algorithme ; c'est la version la plus courante. Une variante s'arrête au premier objet qui ne tient pas : elle fait moins bien (ci-dessous).</p>
+</div>
+<div class="box example"><div class="box-h">Exemple — le glouton sur les cinq objets</div>
+<ol class="steps">
+<li>A : poids $4\le14$, on le prend ; il reste $10$, utilité $16$.<span class="why">Meilleur rapport ($4$).</span></li>
+<li>B : poids $4\le10$, on le prend ; il reste $6$, utilité $31$.<span class="why">Rapport $3{,}75$.</span></li>
+<li>C : poids $8\gt6$, on le laisse.<span class="why">Rapport $2{,}75$, mais il ne tient plus.</span></li>
+<li>D : poids $2\le6$, on le prend ; il reste $4$, utilité $35$.<span class="why">Rapport $2$.</span></li>
+<li>E : poids $8\gt4$, on le laisse. Résultat : $\{A,B,D\}$, utilité $35$, poids $10$.<span class="why">Rapport $1{,}5$. Fin de la liste.</span></li>
+</ol>
+<p>L'optimum vaut $42$ : le glouton perd $7$, soit $1/6$ de l'optimum (environ $16{,}7\,\%$). La variante qui s'arrête à C fait pire : $\{A,B\}$, $31$.</p>
+</div>
+<div class="box intu"><div class="box-h">Intuition — pourquoi le glouton se trompe</div>
+<p>Le glouton prend B (excellent rapport) sans voir que B « bloque » C : après A et B, il ne reste que $6$ kg, pas assez pour C. L'optimum renonce à B pour faire entrer C et remplit le sac exactement. Le glouton juge chaque objet <em>seul</em>, alors que la qualité d'un choix dépend de la place qu'il laisse aux autres. Il serait optimal si l'on pouvait couper les objets : c'est exactement la relaxation continue.</p>
+</div>
+
+<div class="box pitfall"><div class="box-h">Piège — le glouton peut être arbitrairement mauvais</div>
+<p>Deux objets et un sac de capacité $L=100$ : l'objet 1 pèse $1$ et vaut $2$ (rapport $2$), l'objet 2 pèse $100$ et vaut $100$ (rapport $1$). Le glouton prend l'objet 1, puis l'objet 2 ne tient plus : utilité $2$. L'optimum prend l'objet 2 seul : $100$. Le rapport $2/100$ peut être rendu aussi petit qu'on veut en augmentant $L$. Un correctif simple garantit au moins la moitié de l'optimum : garder la meilleure des deux solutions « glouton » et « meilleur objet seul » (exercice 2 du §7).</p>
+</div>
+
+<h3 id="relaxation-continue">La relaxation continue : le sac-à-dos fractionnaire</h3>
+<p>Pour avoir une borne supérieure, on relâche $x_j\in\{0,1\}$ en $0\le x_j\le1$ : on a le droit d'emporter une <em>fraction</em> d'objet (pensez à du sable, du riz, de l'or en poudre). C'est un programme linéaire,</p>
+$$\overline{v}=\max\{u\cdot x : p\cdot x\le L,\ 0\le x_j\le1\},$$
+<p>et, comme on maximise sur un ensemble plus grand, $\overline v\ge$ l'optimum entier (<a href="#rappel-relaxation">rappel du §0</a>). On pourrait le résoudre par le simplexe ; il y a beaucoup plus simple.</p>
+
+<div class="box thm" id="prop-dantzig"><div class="box-h">Proposition — le glouton fractionnaire résout la relaxation (Dantzig, 1957 ; ajout du guide)</div>
+<p>Supposons $p_j\gt0$, les objets rangés par rapport décroissant, $u_1/p_1\ge u_2/p_2\ge\cdots\ge u_N/p_N$, et $p_1+\cdots+p_N\gt L$. Soit $k$ le premier objet qui ne tient plus : $p_1+\cdots+p_{k-1}\le L\lt p_1+\cdots+p_k$. Alors</p>
+$$x_1=\cdots=x_{k-1}=1,\qquad x_k=\frac{L-(p_1+\cdots+p_{k-1})}{p_k},\qquad x_{k+1}=\cdots=x_N=0$$
+<p>est une solution optimale de la relaxation continue. On l'appelle la <em class="new">solution de Dantzig</em> ; $k$ est l'objet <em class="new">critique</em>.</p>
+</div>
+<div class="box example"><div class="box-h">Exemple — la borne $47{,}5$</div>
+<p>$p_A+p_B=8\le14\lt p_A+p_B+p_C=16$ : l'objet critique est C. On prend A et B, puis la place restante $14-8=6$ en morceau de C : $x_C=6/8=3/4$. Valeur : $16+15+\tfrac34\cdot22=31+16{,}5=47{,}5$. Donc aucun sac ne rapporte plus que $47{,}5$ ; comme les utilités sont entières, l'optimum entier vaut même au plus $47$. Avec le glouton : $35\le\text{opt}\le47$. (L'optimum, $42$, est bien dans l'intervalle.)</p>
+</div>
+<div class="box idea"><div class="box-h">L'idée</div>
+<p>Fixez un « prix du kilo » $\lambda=u_k/p_k$, le rapport de l'objet critique. Chaque objet rapporte alors un « bénéfice net » $u_j-\lambda p_j$ : positif pour les objets avant $k$, négatif après. Toute solution admissible paie au plus $\lambda L$ pour la place occupée, et gagne au plus la somme des bénéfices positifs. La solution de Dantzig atteint exactement cette somme : elle prend tous les objets à bénéfice positif et remplit le sac.</p>
+</div>
+<details class="fold proof"><summary>Démonstration complète</summary><div class="fold-body">
+<p>Posons $\lambda=u_k/p_k\ge0$. Soit $x$ une solution admissible de la relaxation : $p\cdot x\le L$ et $0\le x_j\le1$.</p>
+<ol class="steps">
+<li>$$u\cdot x=\sum_{j=1}^N(u_j-\lambda p_j)\,x_j+\lambda\,p\cdot x .$$<span class="why">On ajoute et on retranche $\lambda\sum_jp_jx_j=\lambda\,p\cdot x$.</span></li>
+<li>$$u_j-\lambda p_j=p_j\Big(\frac{u_j}{p_j}-\frac{u_k}{p_k}\Big)\ \ \begin{cases}\ge0&\text{si }j\lt k,\\ =0&\text{si }j=k,\\ \le0&\text{si }j\gt k.\end{cases}$$<span class="why">Les rapports sont rangés par ordre décroissant et $p_j\gt0$.</span></li>
+<li>$$\sum_j(u_j-\lambda p_j)\,x_j\ \le\ \sum_{j\lt k}(u_j-\lambda p_j).$$<span class="why">Pour $j\lt k$ : coefficient $\ge0$ et $x_j\le1$. Pour $j\ge k$ : coefficient $\le0$ et $x_j\ge0$, le terme est $\le0$.</span></li>
+<li>$$\lambda\,p\cdot x\le\lambda L .$$<span class="why">$\lambda\ge0$ et $p\cdot x\le L$.</span></li>
+<li>$$u\cdot x\ \le\ \sum_{j\lt k}u_j+\lambda\Big(L-\sum_{j\lt k}p_j\Big)=\sum_{j\lt k}u_j+u_k\,\frac{L-\sum_{j\lt k}p_j}{p_k}.$$<span class="why">On somme les lignes 3 et 4, on développe $\sum_{j\lt k}(u_j-\lambda p_j)$ et on remplace $\lambda$ par $u_k/p_k$.</span></li>
+<li>Le membre de droite est la valeur de la solution de Dantzig, qui est admissible.<span class="why">Ses composantes sont dans $[0,1]$ (car $0\le L-\sum_{j\lt k}p_j\lt p_k$) et son poids vaut exactement $L$.</span></li>
+</ol>
+<p>Toute solution admissible vaut au plus la valeur de la solution de Dantzig, qui est admissible : elle est optimale. <span class="qed">∎</span></p>
+<p><strong>Sur l'exemple</strong>, $\lambda=u_C/p_C=22/8=11/4$ et les bénéfices nets $u_j-\tfrac{11}4p_j$ valent $5$ (A), $4$ (B), $0$ (C), $-\tfrac32$ (D), $-10$ (E). Pour tout $x$ admissible : $u\cdot x\le5+4+\tfrac{11}4\cdot14=9+38{,}5=47{,}5$. Ce $\lambda$ est le multiplicateur de la contrainte de capacité : on le retrouve dans la relaxation lagrangienne (§3) et c'est une variable duale au sens de la <a href="Partie05.html#dual">partie 5</a>.</p>
+</div></details>
+
+<div class="box remark"><div class="box-h">Remarque — une seule composante fractionnaire</div>
+<p>La solution de Dantzig a au plus <strong>une</strong> composante fractionnaire, $x_k$. Ce n'est pas un hasard : c'est un sommet du polyèdre $\{p\cdot x\le L,\ 0\le x\le 1\}$. En un sommet d'un polyèdre de $\R^N$, au moins $N$ contraintes linéairement indépendantes sont actives (<a href="Partie02.html">partie 2</a>) ; une seule n'est pas de la forme $x_j=0$ ou $x_j=1$ (la capacité), donc au moins $N-1$ composantes valent $0$ ou $1$. Il faut donc fixer <em>une</em> variable pour se débarrasser de la fraction : c'est ce que fait la séparation (§3).</p>
+</div>
+
+<div class="widget" data-widget="p8sac"><p class="w-noscript">Figure interactive (nécessite JavaScript).</p></div>
+<p><strong>À observer :</strong> cliquez sur des objets pour remplir votre sac et essayez de battre le glouton ($35$ pour $L=14$) avant d'afficher l'optimum ; $\{A,C,D\}$ donne $42$, et le sac est plein. La relaxation coupe toujours au plus un objet (en violet), et l'on a toujours glouton $\le$ optimum $\le$ relaxation. Faites varier $L$ : pour $L=8$, $16$, $18$ ou $26$, les objets pris par le glouton remplissent exactement le sac, la relaxation est entière et le glouton est optimal ; pour $L=12$, l'optimum vaut $38$ et le glouton $35$.</p>
+
+<div class="box reflex"><div class="box-h">Réflexe</div>
+<p>Quand vous voyez un sac-à-dos → calculez les rapports $u_j/p_j$, rangez, et lisez d'un coup le glouton (borne inférieure) et la solution de Dantzig (borne supérieure). Si les deux coïncident, l'optimum est trouvé.</p>
+</div>
+
+<div class="quiz"><p>Pour $L=12$ (même objets), que donnent le glouton et la relaxation continue ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>Glouton : A (reste $8$), B (reste $4$), C non, D (reste $2$), E non : $\{A,B,D\}$, $35$. Relaxation : A, B, puis $4/8=1/2$ de C : $16+15+11=42$. Donc $35\le\text{opt}\le42$ ; l'énumération donne $38$ ($\{A,C\}$).</p>
+</div></details>
+</div>
+
+<h3 id="programmation-dynamique">Pour aller plus loin : la programmation dynamique</h3>
+<p>Les diapos ne la mentionnent pas, mais c'est la méthode exacte la plus simple quand les poids sont des entiers pas trop grands.</p>
+<details class="fold more" id="pd-detail"><summary>Pour aller plus loin</summary><div class="fold-body">
+<p>Notons $T(k,c)$ la meilleure utilité possible avec les $k$ premiers objets et un sac de capacité $c$ ($c=0,1,\dots,L$). Pour l'objet $k$, deux cas : on ne le prend pas (il reste $T(k-1,c)$), ou on le prend s'il tient (on gagne $u_k$ et il reste la capacité $c-p_k$ pour les $k-1$ premiers). D'où l'<em class="new">équation de Bellman</em></p>
+$$T(k,c)=\max\big(T(k-1,c),\ T(k-1,c-p_k)+u_k\big)\ \ (\text{second terme si }p_k\le c),\qquad T(0,c)=0 .$$
+<p>On remplit un tableau ligne par ligne : $(N+1)\times(L+1)$ cases, chacune en temps constant. Sur l'exemple (lignes : objets considérés ; colonnes : capacité $c$) :</p>
+<div class="table-wrap"><table class="small">
+<thead><tr><th>$k$ \ $c$</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14</th></tr></thead>
+<tbody>
+<tr><td>aucun</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>+ A (4 ; 16)</td><td>0</td><td>0</td><td>0</td><td>0</td><td>16</td><td>16</td><td>16</td><td>16</td><td>16</td><td>16</td><td>16</td><td>16</td><td>16</td><td>16</td><td>16</td></tr>
+<tr><td>+ B (4 ; 15)</td><td>0</td><td>0</td><td>0</td><td>0</td><td>16</td><td>16</td><td>16</td><td>16</td><td>31</td><td>31</td><td>31</td><td>31</td><td>31</td><td>31</td><td>31</td></tr>
+<tr><td>+ C (8 ; 22)</td><td>0</td><td>0</td><td>0</td><td>0</td><td>16</td><td>16</td><td>16</td><td>16</td><td>31</td><td>31</td><td>31</td><td>31</td><td>38</td><td>38</td><td>38</td></tr>
+<tr><td>+ D (2 ; 4)</td><td>0</td><td>0</td><td>4</td><td>4</td><td>16</td><td>16</td><td>20</td><td>20</td><td>31</td><td>31</td><td>35</td><td>35</td><td>38</td><td>38</td><td>42</td></tr>
+<tr><td>+ E (8 ; 12)</td><td>0</td><td>0</td><td>4</td><td>4</td><td>16</td><td>16</td><td>20</td><td>20</td><td>31</td><td>31</td><td>35</td><td>35</td><td>38</td><td>38</td><td><strong>42</strong></td></tr>
+</tbody></table></div>
+<p>La case en bas à droite donne l'optimum, $42$. Pour retrouver les objets, on remonte : $T(5,14)=T(4,14)$, donc E n'est pas pris ; $T(4,14)=42\ne T(3,14)=38$, donc D est pris et l'on passe à $c=12$ ; $T(3,12)=38\ne T(2,12)=31$, donc C est pris, $c=4$ ; $T(2,4)=T(1,4)=16$, B n'est pas pris ; $T(1,4)=16\ne0$, A est pris. Solution : $\{A,C,D\}$.</p>
+<p><strong>Complexité.</strong> Environ $N\times L$ opérations : $5\times15=75$ cases ici. C'est polynomial en $N$ et en la <em>valeur</em> de $L$, mais $L$ s'écrit avec environ $\log_2L$ chiffres binaires : si $L$ a $40$ chiffres, le tableau a $10^{40}$ colonnes. On dit que l'algorithme est <em class="new">pseudo-polynomial</em>. C'est pourquoi le sac-à-dos est NP-complet « au sens faible » (note du §1). La même idée (un tableau de sous-problèmes emboîtés) donne les plus courts chemins de la <a href="Partie07.html#plus-court-chemin">partie 7</a> et l'algorithme de Viterbi.</p>
+</div></details>
+
+<div class="box ml" id="ml-budget"><div class="box-h">En machine learning — choisir sous un budget</div>
+<p>Beaucoup de décisions d'un projet de ML ont la forme d'un sac-à-dos.</p>
+<ul>
+<li><strong>Apprentissage actif sous budget.</strong> On dispose de $N$ exemples non étiquetés ; faire annoter l'exemple $j$ coûte $p_j$ (le temps d'un radiologue, par exemple, plus long pour une IRM que pour une radio) et on estime son apport $u_j$ (l'incertitude du modèle sur cet exemple). Avec un budget $L$, choisir le lot à annoter est un sac-à-dos, que l'on résout en pratique par le glouton $u_j/p_j$ ou par un solveur.</li>
+<li><strong>Sélection de caractéristiques ou de modèles sous contrainte de calcul.</strong> Chaque caractéristique (ou chaque modèle d'un ensemble) a un coût de calcul ou de latence $p_j$ et un gain de précision estimé $u_j$ ; on respecte un budget de latence $L$.</li>
+</ul>
+<p>Limite à garder en tête : le sac-à-dos suppose les gains <strong>additifs</strong>. Deux exemples presque identiques n'apportent pas deux fois plus qu'un seul ; les méthodes d'apprentissage actif par lots corrigent cela (diversité, fonctions sous-modulaires), et le sac-à-dos reste le modèle de base.</p>
+</div>

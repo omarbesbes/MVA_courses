@@ -1,0 +1,64 @@
+<h2 id="borne">1. Le problème : prouver qu'un point est optimal</h2>
+<p class="tldr">En additionnant les contraintes avec des poids bien choisis, on obtient des bornes inférieures sur le coût ; la meilleure de ces bornes s'obtient en résolvant un nouveau programme linéaire : le dual.</p>
+
+<h3 id="borne-question">La question</h3>
+<p>Vous avez résolu un programme linéaire (au dessin, au simplexe, ou un solveur vous a rendu une réponse) et vous tenez un candidat $\bar x$. <strong>Comment convaincre quelqu'un qu'il est optimal</strong>, sans lui demander de refaire tout le calcul ?</p>
+<p>Pour un problème de minimisation, il faut deux choses : une <em>borne supérieure</em> sur la valeur optimale, et c'est facile (le coût de n'importe quel point admissible, par exemple $c\cdot\bar x$) ; et une <em>borne inférieure</em>, c'est-à-dire un argument qui montre qu'<strong>aucun</strong> point admissible ne coûte moins. Si les deux bornes coïncident, le candidat est optimal. Essayer tous les sommets marche en petite dimension (partie 2), mais pour un programme standard à 1000 variables et 500 contraintes, le nombre de bases à examiner peut atteindre $\binom{1000}{500}\approx3\cdot10^{299}$. Il faut une autre idée.</p>
+
+<div class="box example" id="exemple-r"><div class="box-h">Exemple — le problème fil rouge (R)</div>
+<p>Un éleveur mélange deux aliments. L'aliment 1 coûte 3 € le kilo et apporte, par kilo, 2 unités de protéines et 1 unité d'énergie ; l'aliment 2 coûte 2 € le kilo et apporte 1 unité de protéines et 3 unités d'énergie. Il lui faut au moins 8 unités de protéines et 9 unités d'énergie. Avec $x_j$ = nombre de kilos de l'aliment $j$ :</p>
+$$(R)\qquad \min\ 3x_1+2x_2\quad\text{sous}\quad 2x_1+x_2\ge8,\qquad x_1+3x_2\ge9,\qquad x_1\ge0,\ x_2\ge0 .$$
+<p>La région admissible est non bornée ; ses sommets sont $(0,8)$, $(3,2)$ et $(9,0)$, de coûts $16$, $13$ et $27$. Le candidat est $\bar x=(3,2)$, de coût $13$. On sait qu'il est optimal parce qu'on a regardé les trois sommets (et que l'optimum est en un sommet, <a href="Partie02.html#optimum-sommet">partie 2</a>). Peut-on le prouver <em>sans</em> regarder les autres sommets ?</p>
+</div>
+
+<h3 id="borne-combinaisons">Combiner les contraintes</h3>
+<p>Essayons de minorer le coût $3x_1+2x_2$ de <em>tout</em> point admissible. Première tentative, avec la contrainte de protéines seule, multipliée par $\frac32$ :</p>
+<ol class="steps">
+<li>$$\tfrac32(2x_1+x_2)\ge\tfrac32\cdot8,\quad\text{soit}\quad 3x_1+\tfrac32x_2\ge12 .$$<span class="why">On multiplie une inégalité « $\ge$ » par un nombre positif : le sens est conservé.</span></li>
+<li>$$3x_1+2x_2\ \ge\ 3x_1+\tfrac32x_2 .$$<span class="why">La différence vaut $\frac12x_2\ge0$, car $x_2\ge0$ : le coût domine la combinaison, coefficient par coefficient ($3\ge3$ et $2\ge\frac32$), et les variables sont positives.</span></li>
+<li>$$3x_1+2x_2\ \ge\ 12\quad\text{pour tout point admissible.}$$<span class="why">On enchaîne les deux lignes.</span></li>
+</ol>
+<p>Aucun point admissible ne coûte moins de 12. Ce n'est pas encore 13. Généralisons : prenons des poids $p_1\ge0$, $p_2\ge0$ et additionnons $p_1\times$(protéines) $+\ p_2\times$(énergie) :</p>
+$$(2p_1+p_2)\,x_1+(p_1+3p_2)\,x_2\ \ge\ 8p_1+9p_2 .$$
+<p>Si la combinaison est dominée par le coût, c'est-à-dire si $2p_1+p_2\le3$ et $p_1+3p_2\le2$, alors, comme $x\ge0$, $3x_1+2x_2\ge(2p_1+p_2)x_1+(p_1+3p_2)x_2\ge8p_1+9p_2$ : <strong>le nombre $8p_1+9p_2$ est une borne inférieure</strong>. Quelques essais :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>poids $(p_1,p_2)$</th><th>combinaison $(2p_1+p_2)\,x_1+(p_1+3p_2)\,x_2$</th><th>dominée par $3x_1+2x_2$ ?</th><th>borne $8p_1+9p_2$</th></tr></thead>
+<tbody>
+<tr><td>$(1,0)$</td><td>$2x_1+x_2$</td><td class="yes">oui</td><td>$8$</td></tr>
+<tr><td>$(0,\frac23)$</td><td>$\frac23x_1+2x_2$</td><td class="yes">oui</td><td>$6$</td></tr>
+<tr><td>$(\frac32,0)$</td><td>$3x_1+\frac32x_2$</td><td class="yes">oui</td><td>$12$</td></tr>
+<tr><td>$(1,\frac13)$</td><td>$\frac73x_1+2x_2$</td><td class="yes">oui</td><td>$11$</td></tr>
+<tr><td>$(1,1)$</td><td>$3x_1+4x_2$</td><td class="no">non ($4>2$)</td><td>aucune</td></tr>
+<tr><td>$(\frac75,\frac15)$</td><td>$3x_1+2x_2$</td><td class="yes">oui, égalité</td><td>$\mathbf{13}$</td></tr>
+</tbody></table></div>
+<p>Avec $p=(\frac75,\frac15)$, la combinaison reproduit <em>exactement</em> le coût, et la borne vaut 13, le coût de $\bar x$. Donc <strong>aucun point admissible ne coûte moins que 13, et $\bar x$ coûte 13 : $\bar x$ est optimal.</strong> La preuve tient en une ligne, et quelqu'un qui ne connaît que les poids $(\frac75,\frac15)$ peut la vérifier en deux multiplications.</p>
+
+<figure class="fig"><!-- include figures/P05/bornes.svg --><figcaption>Sur une même droite : à gauche (violet) les bornes $8p_1+9p_2$ données par les combinaisons admissibles du tableau, à droite (bleu) les coûts de points admissibles. Les bornes restent toujours à gauche des coûts ; la meilleure borne et le meilleur coût se rejoignent en 13.</figcaption></figure>
+
+<h3 id="borne-meilleure">La meilleure borne est un programme linéaire</h3>
+<p>Chercher la meilleure borne de ce type, c'est résoudre</p>
+$$\max\ 8p_1+9p_2\quad\text{sous}\quad 2p_1+p_2\le3,\qquad p_1+3p_2\le2,\qquad p_1\ge0,\ p_2\ge0 .$$
+<p>C'est encore un programme linéaire : le <em class="new">problème dual</em> de (R). Comparez-le au primal :</p>
+<ul>
+<li>il a une <strong>variable par contrainte</strong> du primal ($p_1$ pour les protéines, $p_2$ pour l'énergie), et une <strong>contrainte par variable</strong> du primal (une par aliment) ;</li>
+<li>le second membre du primal $b=(8,9)$ devient le coût du dual, et le coût du primal $c=(3,2)$ devient le second membre du dual ;</li>
+<li>la matrice est transposée : les lignes de $A=\begin{pmatrix}2&1\\1&3\end{pmatrix}$ sont devenues les colonnes. Ici $A$ est symétrique, ce qui cache un peu la transposition ; on verra des exemples où elle saute aux yeux.</li>
+</ul>
+<p>Comment a-t-on trouvé $(\frac75,\frac15)$ ? En demandant que la combinaison reproduise <em>exactement</em> les coûts des deux aliments : $2p_1+p_2=3$ et $p_1+3p_2=2$. Pourquoi « exactement » ? Parce que les deux variables $\bar x_1=3$ et $\bar x_2=2$ sont non nulles : si un coefficient de la combinaison était strictement plus petit que le coût, l'inégalité de la ligne 2 ci-dessus serait stricte en $\bar x$, et la borne serait strictement sous 13. C'est la règle des <em>écarts complémentaires</em>, au cœur du §5.</p>
+
+<div class="box intu"><div class="box-h">Intuition — le dual est le problème du « certificateur »</div>
+<p>Le primal cherche le point le moins cher. Le dual cherche le meilleur <em>certificat</em> : un jeu de poids qui prouve que l'on ne peut pas descendre plus bas. Les deux problèmes se regardent dans un miroir : chaque point admissible du primal majore la valeur, chaque point admissible du dual la minore (§3), et le théorème de dualité (§4) dit que le meilleur des deux côtés tombe sur le même nombre.</p>
+</div>
+
+<div class="box pitfall"><div class="box-h">Piège — des poids négatifs sur une inégalité</div>
+<p>Multiplier $2x_1+x_2\ge8$ par $-1$ donne $-2x_1-x_2\le-8$ : le sens s'inverse, et on ne peut plus additionner. C'est pourquoi $p\ge0$ ici. Pour une contrainte d'<strong>égalité</strong> $a\cdot x=\beta$, en revanche, n'importe quel poids convient (on peut multiplier une égalité par $-3$) : dans la forme standard du cours, $Ax=b$, les poids $p_i$ sont de signe quelconque (§2).</p>
+</div>
+
+<div class="box reflex"><div class="box-h">Réflexe</div>
+<p>Quand vous voulez <strong>minorer</strong> la valeur d'un problème de minimisation → combinez les contraintes avec des poids qui rendent la combinaison inférieure au coût, coefficient par coefficient. La borne obtenue est le même calcul appliqué au second membre.</p>
+</div>
+
+<div class="quiz"><p>Les poids $p=(2,0)$ donnent $4x_1+2x_2\ge16$. Peut-on en conclure que tout point admissible de (R) coûte au moins 16 ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>Non. La combinaison $4x_1+2x_2$ n'est pas dominée par le coût $3x_1+2x_2$ (coefficient $4>3$) : on ne peut pas passer de $4x_1+2x_2\ge16$ à $3x_1+2x_2\ge16$. D'ailleurs $\bar x=(3,2)$ est admissible et coûte $13<16$. Le poids $p=(2,0)$ n'est pas admissible pour le dual ($2p_1+p_2=4>3$).</p>
+</div></details></div>

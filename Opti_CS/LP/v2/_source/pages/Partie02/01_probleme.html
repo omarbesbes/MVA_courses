@@ -1,0 +1,85 @@
+<h2 id="probleme">1. Le problème : qu'est-ce qu'un sommet, en équations ? <span class="ref">Diapo 4 ; Allaire p. 121–122</span></h2>
+<p class="tldr">La partie 1 a vu l'optimum se placer en un « coin » de $\Xad$ ; pour s'en servir, il faut d'abord une définition précise du mot sommet, puis un moyen de calculer les sommets sans dessin.</p>
+
+<h3 id="probleme-pourquoi">D'où l'on part</h3>
+<p>Sur les deux dessins de la partie 1, la même chose s'est produite. Dans l'exemple (4.5), les plans de niveau du coût balaient l'espace et touchent le triangle $T$ d'abord en un coin, $(3,0,0)$. Dans l'Exercice 4.2.1, les droites $x_1+2x_2=\gamma$ quittent le polygone par le coin $(2\,;\,3)$. Le livre en tire la morale (p. 121) :</p>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, p. 121</span></div>
+<p>Nous verrons qu'il s'agit d'un fait général : un point de minimum (s'il existe) peut toujours se trouver en un des sommets de l'ensemble géométrique des vecteurs $x$ qui vérifient les contraintes. Il “suffit” alors d'énumérer tous les sommets afin de trouver le minimum : c'est précisément ce que fait (de manière intelligente) l'algorithme du simplexe que nous verrons dans la prochaine sous-section.</p>
+</div>
+<p>Pour transformer cette morale en méthode, il faut répondre à deux questions.</p>
+<ol>
+<li><strong>Qu'est-ce qu'un sommet, exactement ?</strong> En dimension 2 on « voit » les coins d'un polygone. En dimension $1000$, on ne voit rien : il faut une définition qui ne dépende pas du dessin.</li>
+<li><strong>Comment calculer les sommets ?</strong> Un ordinateur ne sait pas « regarder les coins ». Il sait résoudre des systèmes linéaires. Il faut donc une description des sommets par des <strong>équations</strong>.</li>
+</ol>
+<p>La réponse de cette page tient en une phrase : <em>un sommet s'obtient en choisissant $m$ colonnes de $A$ (une base), en mettant les $n-m$ autres variables à zéro et en résolvant le système carré qui reste</em> (§2–§3). Et il suffit de chercher l'optimum parmi ces points (§4).</p>
+
+<h3 id="sommet-def">La définition : un point qui n'est au milieu d'aucun segment</h3>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo 4</span></div>
+<p>On note $\Xad=\{x\in\R^n_+,\ Ax=b\}$. C'est un polyèdre. Que sont les faces, arrêtes, etc. ?</p>
+<p><strong>Définition.</strong> 1. Un point $x\in\Xad$ est dit solution admissible. 2. Un sommet de $\Xad$ est appelé solution extrémale.</p>
+</div>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, Déf. 4.2.1, p. 122</span></div>
+<p>L'ensemble $\Xad$ des vecteurs de $\R^n$ qui satisfont les contraintes de (4.1), c'est-à-dire</p>
+$$\Xad=\{x\in\R^n \text{ tel que } Ax=b,\ x\ge0\},$$
+<p>est appelé ensemble des solutions admissibles. On appelle <strong>sommet</strong> ou <strong>point extrémal</strong> de $\Xad$ tout point $x\in\Xad$ qui ne peut pas se décomposer en une combinaison convexe (non triviale) de deux autres points de $\Xad$, c'est-à-dire que, s'il existe $y,z\in\Xad$ et $\theta\in\,]0,1[$ tels que $x=\theta y+(1-\theta)z$, alors $y=z=x$.</p>
+</div>
+<dl class="decode">
+<dt>$\R^n_+$</dt><dd>Les vecteurs à coordonnées $\ge0$ (la diapo écrit $x\in\R^n_+$ là où le livre écrit $x\ge0$).</dd>
+<dt>solution admissible</dt><dd>Un point qui vérifie toutes les contraintes. « Solution » ne veut pas dire « optimale » (Remarque 4.2.2 du livre : une solution optimale est un point admissible qui atteint le minimum).</dd>
+<dt>$x=\theta y+(1-\theta)z$, $\theta\in\,]0,1[$</dt><dd>$x$ est sur le segment $[y,z]$, strictement entre les deux bouts (si $y\ne z$). $\theta$ dit où : $\theta=\frac12$ est le milieu, $\theta$ proche de $1$ est près de $y$.</dd>
+<dt>« alors $y=z=x$ »</dt><dd>La seule façon d'écrire $x$ ainsi est la façon triviale, avec un segment réduit à un point. Autrement dit : <strong>$x$ n'est strictement à l'intérieur d'aucun segment contenu dans $\Xad$</strong>.</dd>
+<dt>sommet, point extrémal, solution extrémale</dt><dd>Trois noms pour la même chose : « sommet » et « point extrémal » dans le livre, « solution extrémale » dans la diapo (qui ne définit pas « sommet » ; c'est le livre qui le fait).</dd>
+</dl>
+
+<p>Le $\theta$ de la définition peut être pris égal à $\frac12$ : c'est la formulation la plus commode, celle que nous utiliserons partout.</p>
+<div class="box thm" id="sommet-milieu"><div class="box-h">Proposition — un sommet est un point qui n'est le milieu d'aucun segment</div>
+<p>Pour $x\in\Xad$, les trois propriétés suivantes sont équivalentes :</p>
+<ol>
+<li>$x$ est un sommet (Déf. 4.2.1) ;</li>
+<li>$x$ n'est le milieu d'aucun segment $[y,z]\subset\Xad$ avec $y\ne z$ ;</li>
+<li>il n'existe aucun vecteur $u\ne0$ tel que $x+u\in\Xad$ <strong>et</strong> $x-u\in\Xad$.</li>
+</ol>
+</div>
+<details class="fold proof"><summary>Démonstration complète</summary><div class="fold-body">
+<p><strong>(2) ⟺ (3).</strong> Les milieux et les vecteurs $u$ se correspondent : $x$ est le milieu de $[y,z]$ exactement quand $y=x+u$ et $z=x-u$ avec $u=\frac{y-z}2$, et $y\ne z\iff u\ne0$.</p>
+<p><strong>(1) ⟹ (2).</strong> Un milieu est une combinaison convexe avec $\theta=\frac12$ : si $x$ était le milieu de $[y,z]$ avec $y\ne z$, la définition d'un sommet serait contredite.</p>
+<p><strong>(2) ⟹ (1).</strong> Par contraposée : supposons $x=\theta y+(1-\theta)z$ avec $y,z\in\Xad$, $y\ne z$, $\theta\in\,]0,1[$. Montrons que $x$ est le milieu d'un (plus petit) segment de $\Xad$.</p>
+<ol class="steps">
+<li>$$\text{On pose } \delta=\min(\theta,1-\theta)>0\ \text{ et }\ u=\delta\,(y-z)\ne0.$$<span class="why">$\theta\in\,]0,1[$ donne $\delta>0$, et $y\ne z$ donne $u\ne0$.</span></li>
+<li>$$x\pm u=z+(\theta\pm\delta)(y-z).$$<span class="why">$x=\theta y+(1-\theta)z=z+\theta(y-z)$, puis on ajoute $\pm\delta(y-z)$.</span></li>
+<li>$$0\le\theta-\delta\quad\text{et}\quad\theta+\delta\le1.$$<span class="why">$\delta\le\theta$ et $\delta\le1-\theta$ par définition du minimum.</span></li>
+<li>$$x+u\in[y,z]\subset\Xad\quad\text{et}\quad x-u\in[y,z]\subset\Xad.$$<span class="why">Les points $z+t(y-z)$ avec $t\in[0,1]$ forment le segment $[y,z]$, contenu dans $\Xad$ qui est convexe (<a href="#rappel-convexite">rappel</a>).</span></li>
+</ol>
+<p>Donc $x$ est le milieu de $[x-u,x+u]$, segment de $\Xad$ non réduit à un point : (2) est faux. <span class="qed">□</span></p>
+</div></details>
+
+<p>La formulation (3) se lit comme un test de mobilité : <strong>un sommet est un point qu'on ne peut pas bouger à la fois dans une direction et dans la direction opposée sans sortir de $\Xad$</strong>. C'est elle qui donnera, au §3, le critère par les équations.</p>
+
+<figure class="fig"><!-- include figures/P02/sommets.svg --><figcaption>À gauche, le polygone de l'Exercice 4.2.1. Le coin $(2\,;\,3)$ est un sommet : aucun segment de $\Xad$ ne le contient en son milieu. Le point $(\frac72\,;\,\frac32)$, sur l'arête $x_1+x_2=5$, est le milieu de $(3\,;\,2)$ et $(4\,;\,1)$ : ce n'est pas un sommet, bien qu'il soit au bord. Le point intérieur $(1\,;\,1)$ est le milieu de segments dans toutes les directions. À droite : pourquoi on peut toujours se ramener à un milieu.</figcaption></figure>
+
+<div class="box example"><div class="box-h">Exemple — tester trois points du polygone de l'Exercice 4.2.1</div>
+<ul>
+<li><strong>$(1\,;\,1)$</strong> : c'est le milieu de $(\frac12\,;\,1)$ et $(\frac32\,;\,1)$, deux points admissibles (vérifiez les trois inégalités : par exemple en $(\frac32\,;\,1)$, $-\frac92+2\le2$, $-\frac32+2\le4$, $\frac52\le5$). Pas un sommet.</li>
+<li><strong>$(\frac72\,;\,\frac32)$</strong> : $\frac72+\frac32=5$, il est sur la droite $x_1+x_2=5$. C'est le milieu de $(3\,;\,2)$ et $(4\,;\,1)$, admissibles. Pas un sommet.</li>
+<li><strong>$(2\,;\,3)$</strong> : il vérifie $-x_1+2x_2=4$ et $x_1+x_2=5$ avec égalité. Si $(2\,;\,3)=\frac12(p+q)$ avec $p,q$ admissibles, alors $-p_1+2p_2\le4$, $-q_1+2q_2\le4$ et la moyenne vaut $4$ : les deux sont des égalités. De même $p_1+p_2=q_1+q_2=5$. Le système $\{-x_1+2x_2=4,\ x_1+x_2=5\}$ a la seule solution $(2\,;\,3)$, donc $p=q=(2\,;\,3)$. C'est un sommet.</li>
+</ul>
+<p>Le troisième raisonnement contient déjà toute l'idée de la page : <strong>un sommet est fixé par les contraintes qui y sont des égalités</strong>, à condition qu'elles déterminent un seul point.</p>
+</div>
+
+<div class="box pitfall"><div class="box-h">Piège — « sommet » ne veut pas dire « point du bord »</div>
+<p>$(\frac72\,;\,\frac32)$ est au bord du polygone mais n'est pas un sommet. Pire : dans l'exemple (4.5), le triangle $T$ est plat dans $\R^3$, donc <em>tous</em> ses points sont au bord de $T$ vu comme partie de $\R^3$ ; il n'a pourtant que trois sommets. La notion de bord dépend de l'espace ambiant, celle de sommet non : elle n'utilise que des segments contenus dans $\Xad$.</p>
+</div>
+
+<div class="box remark"><div class="box-h">Remarque — et les faces, arêtes, etc. ? (la question de la diapo 4)</div>
+<p>La diapo pose la question sans y répondre ; le livre non plus. Pour aller plus loin (résultat classique, hors programme) : les <em>faces</em> de $\Xad$ sont les ensembles $\{x\in\Xad : x_j=0\ \text{pour tout } j\in J\}$ obtenus en annulant certaines coordonnées ($J\subset\{1,\dots,n\}$). Les sommets sont les faces réduites à un point, les <em>arêtes</em> les faces de dimension 1 (segments ou demi-droites). Sur le polygone de l'Exercice 4.2.1, en coordonnées standard (§2), annuler $x_5$ donne l'arête $x_1+x_2=5$, annuler $x_4$ et $x_5$ donne le sommet $(2\,;\,3)$. Nous retrouverons les arêtes au <a href="#combien-aretes">§5</a> : elles relient des bases « voisines ».</p>
+</div>
+
+<div class="quiz"><p>Le point $(\frac52\,;\,\frac52)$ est-il un sommet du polygone de l'Exercice 4.2.1 ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>Non. Il est admissible ($-\frac{15}2+5\le2$, $-\frac52+5\le4$, $\frac52+\frac52=5\le5$) et c'est le milieu de $(2\,;\,3)$ et $(3\,;\,2)$, deux points admissibles de l'arête $x_1+x_2=5$.</p>
+</div></details></div>
+
+<div class="quiz"><p>Quels sont les sommets de l'intervalle $[0,1]\subset\R$ ? d'une droite de $\R^2$ ? d'un disque fermé ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>$[0,1]$ : les deux bouts $0$ et $1$ (tout $t\in\,]0,1[$ est le milieu de $t\pm\min(t,1-t)$). Une droite : aucun (tout point est le milieu de deux autres). Un disque fermé : tous les points du cercle (un disque n'est pas un polyèdre ; ses points extrémaux sont en nombre infini). Pour $\Xad$, nous allons voir qu'il y en a toujours un nombre fini.</p>
+</div></details></div>

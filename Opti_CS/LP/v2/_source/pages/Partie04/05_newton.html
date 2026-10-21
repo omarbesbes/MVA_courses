@@ -1,0 +1,131 @@
+<h2 id="newton">5. Newton sur la barrière : l'algorithme de suivi de chemin <span class="ref">Allaire §3.5, p. 102–106</span></h2>
+<p class="tldr">Pour $\mu$ fixé, la méthode de Newton minimise la fonction pénalisée en résolvant à chaque pas un système linéaire ; près du minimum, l'erreur est élevée au carré à chaque pas. L'algorithme complet diminue $\mu$ petit à petit et fait quelques pas de Newton depuis le point précédent.</p>
+
+<h3 id="newton-rappel">Rappel : la méthode de Newton</h3>
+<div class="box recall"><div class="box-h">Rappel — la méthode de Newton (chapitre 3)</div>
+<p>Pour minimiser $J$ sans contrainte, on approche $J$ près du point courant $v$ par son développement de Taylor d'ordre 2,</p>
+$$J(w)\approx J(v)+J'(v)\cdot(w-v)+\tfrac12J''(v)(w-v)\cdot(w-v),$$
+<p>et l'on prend pour nouveau point le minimum de ce modèle : $w=v-J''(v)^{-1}J'(v)$ si $J''(v)$ est définie positive (Allaire, (3.90)–(3.91), p. 103). On ne calcule jamais l'inverse : on résout le système linéaire $J''(v)\,\Delta=-J'(v)$. <strong>Convergence</strong> (Prop. 3.5.1, p. 103) : si le départ est assez proche d'un zéro régulier $u$ de $J'$, alors $\norm{u^{k+1}-u}\le C\norm{u^k-u}^2$ ; « le nombre de chiffres significatifs […] double à chaque itération » (Rem. 3.5.2). Loin de $u$, Newton peut diverger. <a href="Rappels.html#newton">En savoir plus</a>.</p>
+</div>
+
+<h3 id="newton-1d">En dimension 1 : l'erreur est élevée au carré, exactement</h3>
+<p>Reprenons $f_\mu(x)=-\mu\log x+c\,x$ ($c>0$), dont le minimum est $x^\mu=\mu/c$ (§2).</p>
+<ol class="steps">
+<li>$$x^{+}=x-\frac{f_\mu'(x)}{f_\mu''(x)}=x-\frac{c-\mu/x}{\mu/x^2}=x-\frac{c\,x^2-\mu\,x}\mu=x\Big(2-\frac{c\,x}\mu\Big) .$$<span class="why">Le pas de Newton en dimension 1, avec $f_\mu'=c-\mu/x$ et $f_\mu''=\mu/x^2$ (§2).</span></li>
+<li>$$\text{avec }e:=1-\frac{c\,x}\mu :\qquad e^{+}=1-\frac{c\,x}\mu\Big(2-\frac{c\,x}\mu\Big)=\Big(1-\frac{c\,x}\mu\Big)^2=e^2 .$$<span class="why">$e$ est l'erreur relative, car $c\,x/\mu=x/x^\mu$. Puis l'identité $1-2u+u^2=(1-u)^2$ avec $u=c\,x/\mu$.</span></li>
+<li>Newton converge si et seulement si $\abs{e_0}<1$, c'est-à-dire $0<x_0<2\mu/c$, et alors $e_k=e_0^{2^k}$.<span class="why">Si $\abs{e_0}<1$, $e_0^{2^k}\to0$ très vite ; si $\abs{e_0}\ge1$, $e_k\ge1$ pour $k\ge1$, donc $x_k\le0$ : hors du domaine.</span></li>
+</ol>
+<div class="box example"><div class="box-h">Exemple — $\mu=c=1$, donc $x^\mu=1$ (script <code>v01_barriere1d.py</code>, fractions exactes)</div>
+<ul>
+<li>Depuis $x_0=\frac12$ : $x_1=\frac34$, $x_2=\frac{15}{16}$, $x_3=\frac{255}{256}$, $x_4=\frac{65535}{65536}$. Les erreurs $1-x_k$ valent $\frac12,\frac14,\frac1{16},\frac1{256},\frac1{65536}$ : chaque erreur est le carré de la précédente.</li>
+<li>Depuis $x_0=\frac32$ : $x_1=\frac34$, puis la même suite ($e_0=-\frac12$ et $e_1=\frac14$).</li>
+<li>Depuis $x_0=2=2\mu/c$ : $x_1=0$, sur le bord, où la barrière vaut $+\infty$.</li>
+<li>Depuis $x_0=3$ : $x_1=-3$, hors du domaine ; puis $-15$, $-255$… Le modèle quadratique, qui ne « voit » pas la barrière, a son minimum en $-3$.</li>
+</ul>
+<p>(Cette récurrence $x\mapsto x(2-a\,x)$ est la méthode de Newton classique pour calculer $1/a$ sans division, ici avec $a=c/\mu$.)</p>
+</div>
+<figure class="fig"><!-- include figures/P04/newton1d.svg --><figcaption>Newton sur $f(x)=-\log x+x$ ($\mu=c=1$). À gauche, depuis $x_0=\frac12$ : le modèle quadratique en $x_0$ (pointillés) a son minimum en $x_1=\frac34$, déjà proche du minimum $1$. À droite, depuis $x_0=3$ : le modèle, une parabole qui ignore la barrière, a son minimum en $-3$, hors du domaine $x>0$ (zone grisée). D'où la nécessité de raccourcir le pas.</figcaption></figure>
+
+<h3 id="newton-kkt">Avec la contrainte $Ax=b$ : un système linéaire</h3>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, §3.5.1, (3.93)–(3.96), p. 105–106</span></div>
+<p>On peut adapter la méthode de Newton à la minimisation d'une fonction $J$ avec des contraintes d'égalité. […] la condition nécessaire d'optimalité du Théorème 2.5.6 est</p>
+$$J'(u)+\sum_{i=1}^M\lambda_iG_i'(u)=0,\qquad G_i(u)=0\quad1\le i\le M. \qquad(3.94)$$
+<p>On peut alors résoudre le système (3.94) de $(N+M)$ équations à $(N+M)$ inconnues $(u,\lambda)\in\R^{N+M}$ par une méthode de Newton. […] Il est intéressant d'interpréter cet algorithme comme une méthode de minimisation. […] on a effectué un développement de Taylor à l'ordre deux en $w$ sur le Lagrangien $L(w,\lambda^n)$ et on a linéarisé la contrainte $G(w)$ autour du point $u^n$.</p>
+</div>
+<p>Pour notre barrière, la contrainte $Ax=b$ est déjà linéaire : la « linéariser » ne change rien. Partons d'un point $x\in\Xado$ (donc $Ax=b$, $x>0$) et cherchons un déplacement $\Delta x$ qui garde $A(x+\Delta x)=b$, c'est-à-dire $A\Delta x=0$, et qui minimise le modèle quadratique de $f_\mu$ :</p>
+$$\min_{A\Delta x=0}\ \ \nabla f_\mu(x)\cdot\Delta x+\tfrac12\,\Delta x^\top H\,\Delta x,\qquad\nabla f_\mu(x)=c-\frac\mu x,\qquad H=\mu X^{-2}=\mu\,\mathrm{diag}\Big(\frac1{x_1^2},\dots,\frac1{x_n^2}\Big).$$
+<p>C'est un problème quadratique strictement convexe (§2) sous contraintes affines. Les conditions de Lagrange, avec un multiplicateur que nous notons $p$ (signe de la dualité), donnent le <strong>système de Newton</strong> :</p>
+$$\begin{pmatrix}\mu X^{-2}&-A^\top\\A&0\end{pmatrix}\begin{pmatrix}\Delta x\\p\end{pmatrix}=\begin{pmatrix}-\big(c-\mu X^{-1}e\big)\\0\end{pmatrix},\qquad e=(1,\dots,1).$$
+<dl class="decode">
+<dt>première ligne</dt><dd>$c-A^\top p-\frac\mu x+\mu X^{-2}\Delta x=0$ : c'est la condition d'optimalité (4.12′), $c-A^\top p=\frac\mu x$, linéarisée en $x+\Delta x$ (car $\frac\mu{x+\Delta x}\approx\frac\mu x-\mu\frac{\Delta x}{x^2}$). On fait donc exactement Newton sur le système (3.94) du livre.</dd>
+<dt>deuxième ligne</dt><dd>$A\Delta x=0$ : on reste sur $\{Ax=b\}$.</dd>
+<dt>$p$</dt><dd>Une nouvelle estimation de la variable duale. Au point central, elle est égale à $p^\mu$.</dd>
+<dt>taille</dt><dd>$(n+m)\times(n+m)$ ; mais on peut le réduire (ci-dessous).</dd>
+</dl>
+<div class="box method"><div class="box-h">Méthode — les « équations normales »</div>
+<ol class="steps">
+<li>$$\Delta x=\frac{X^2}\mu\Big(A^\top p-c+\frac\mu x\Big)=x+\frac{X^2(A^\top p-c)}\mu .$$<span class="why">Première ligne, multipliée par $X^2/\mu$ ($X^2\cdot\frac\mu x=\mu x$, d'où le terme $x$).</span></li>
+<li>$$(AX^2A^\top)\,p=AX^2c-\mu\,b .$$<span class="why">On écrit $A\Delta x=0$ : $Ax+AX^2(A^\top p-c)/\mu=0$, on multiplie par $\mu$ et on utilise $Ax=b$.</span></li>
+</ol>
+<p>On résout ce système $m\times m$ (symétrique défini positif, puisque $\rg A=m$ et $X^2>0$), puis on lit $\Delta x$. C'est ce que font les solveurs : une factorisation de Cholesky de $AX^2A^\top$ par itération, en exploitant le fait que $A$ est creuse.</p>
+</div>
+<div class="box example"><div class="box-h">Exemple — un pas de Newton à la main</div>
+<p>Le segment : $\min x_1+2x_2$ sous $x_1+x_2=1$, $x\ge0$ ($n=2$, $m=1$, optimum $(1,0)$). Prenons $\mu=\frac23$, dont le point central est $x^\mu=(\frac23,\frac13)$ avec $p^\mu=0$ (vérification : $s=c-p\,(1,1)=(1,2)$ et $x_1s_1=x_2s_2=\frac23$). Partons de $x=(\frac12,\frac12)$.</p>
+<ol class="steps">
+<li>$$\nabla f_\mu(x)=c-\frac\mu x=\Big(1-\frac43,\ 2-\frac43\Big)=\Big(-\frac13,\ \frac23\Big),\qquad H=\frac23\,\mathrm{diag}(4,4)=\frac83\,I .$$<span class="why">$\mu/x_i=\frac23\cdot2$ et $\mu/x_i^2=\frac23\cdot4$.</span></li>
+<li>$$A\Delta x=0\ \Rightarrow\ \Delta x=(d,\,-d) .$$<span class="why">$A=(1\ \ 1)$.</span></li>
+<li>$$\tfrac83d-p=\tfrac13,\qquad-\tfrac83d-p=-\tfrac23 .$$<span class="why">Première ligne du système, composante par composante : $H\Delta x-A^\top p=-\nabla f_\mu(x)$.</span></li>
+<li>$$\tfrac{16}3d=1\ \Rightarrow\ d=\tfrac3{16},\qquad p=\tfrac83\cdot\tfrac3{16}-\tfrac13=\tfrac16 .$$<span class="why">On soustrait les deux équations, puis on reporte.</span></li>
+<li>$$x^{+}=\Big(\frac12+\frac3{16},\ \frac12-\frac3{16}\Big)=\Big(\frac{11}{16},\ \frac5{16}\Big)=(0{,}6875\,;\,0{,}3125) .$$<span class="why">Pas plein ($t=1$) : le point reste intérieur. Vérification par les équations normales : $AX^2A^\top=\frac14+\frac14=\frac12$ et $AX^2c-\mu b=\frac14+\frac24-\frac23=\frac1{12}$, donc $p=\frac16$.</span></li>
+</ol>
+<p>L'erreur sur $x_1$ passe de $\frac23-\frac12\approx1{,}7\cdot10^{-1}$ à $2{,}1\cdot10^{-2}$, puis, aux pas suivants, $9{,}7\cdot10^{-4}$, $2{,}0\cdot10^{-6}$, $8{,}2\cdot10^{-12}$ (script <code>v05_segment.py</code>, fractions exactes) : la convergence quadratique. L'estimation duale passe de $\frac16$ à $\frac1{438}\approx0{,}0023$, puis vers $p^\mu=0$.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Piège — le pas plein peut sortir du domaine</div>
+<p>Même départ $(\frac12,\frac12)$, mais $\mu=\frac18$ : le calcul donne $d=1$ et $x^{+}=(\frac32,-\frac12)$, hors de $\{x>0\}$. Avec $\mu=\frac14$ : $d=\frac12$ et $x^{+}=(1,0)$, sur le bord. Le modèle quadratique ne voit pas que la barrière devient infinie. Règle simple (celle des figures de cette page) : partir de $t=1$ et <strong>diviser $t$ par 2 tant que $x+t\Delta x$ n'est pas $>0$ ou que $f_\mu$ n'a pas diminué</strong>. Les solveurs utilisent des variantes (fraction de la distance au bord, typiquement $t=\min(1,\ 0{,}99\,t_{\max})$).</p>
+</div>
+<div class="widget" data-widget="p4newton"><p class="w-noscript">Figure interactive (nécessite JavaScript).</p></div>
+<p><strong>À observer :</strong> avec $\mu=0{,}1$ et le départ au centre analytique, cliquez « Un pas de Newton » plusieurs fois. Les deux premiers pas sont raccourcis ($t=\frac1{16}$ puis $t=\frac14$), l'erreur reste vers $2{,}3$ puis tombe à $0{,}12$ ; ensuite les pas sont pleins ($t=1$) et l'erreur décroît de plus en plus vite : $5{,}3\cdot10^{-2}$, $2{,}7\cdot10^{-2}$, $1{,}4\cdot10^{-2}$, $3{,}9\cdot10^{-3}$, $2{,}9\cdot10^{-4}$, $1{,}6\cdot10^{-6}$, $2\cdot10^{-11}$ — le nombre de chiffres exacts double à la fin. Cochez « pas pur » : depuis le centre analytique, le tout premier pas mène hors du polygone (vers $(10{,}7\,;\,6{,}5)$). Depuis « près du bord (4,8 ; 0,1) », le pas pur fait deux pas valables puis sort ; le pas amorti converge en 8 pas. Cliquez dans le polygone pour choisir d'autres départs, et changez $\mu$ : pour $\mu=10$, le minimum est près du centre et le pas pur converge depuis le centre analytique ($1{,}2\cdot10^{-2}$, $4{,}8\cdot10^{-5}$, $8\cdot10^{-12}$).</p>
+
+<h3 id="newton-suivi">L'algorithme de suivi de chemin</h3>
+<p>Minimiser $f_\mu$ très précisément pour un $\mu$ fixé ne sert à rien : $x^\mu$ n'est qu'une étape. L'algorithme utilise le fait que $x^\mu$ dépend continûment de $\mu$ : le point central pour $\mu$ est un excellent départ pour Newton au $\mu$ suivant, un peu plus petit.</p>
+<div class="box method"><div class="box-h">Méthode — l'algorithme de suivi de chemin (barrière primale)</div>
+<ol>
+<li><strong>Départ</strong> : un point $x\in\Xado$, proche de $x^{\mu_0}$ pour un $\mu_0>0$ ; une précision $\eps$ ; un facteur $\sigma\in\,]0,1[$.</li>
+<li><strong>Tant que</strong> $n\mu>\eps$ :
+<ol>
+<li>$\mu\leftarrow\sigma\mu$ ;</li>
+<li>faire $k$ pas de Newton amortis pour $f_\mu$ depuis le $x$ courant (ou jusqu'à ce que le pas de Newton soit négligeable).</li>
+</ol></li>
+<li><strong>Rendre</strong> $x$, et $p$ (l'estimation duale du dernier système de Newton) : si $s=c-A^\top p\ge0$, l'écart calculé $c\cdot x-b\cdot p$ certifie la précision.</li>
+</ol>
+</div>
+<div class="box intu"><div class="box-h">Intuition — pourquoi ne pas prendre $\mu$ tout de suite petit ?</div>
+<p>Pour $\mu$ minuscule, $f_\mu$ ressemble au coût linéaire partout sauf dans des couches très fines le long des bords, où elle remonte brutalement. Newton, lancé de loin, propose des pas énormes qu'il faut raccourcir sans cesse : il rampe. En diminuant $\mu$ progressivement, on reste dans la zone où Newton converge vite (le « bassin de convergence quadratique » de la Prop. 3.5.1), et chaque problème est facile parce que le précédent a fait le travail.</p>
+</div>
+<figure class="fig"><!-- include figures/P04/suivi.svg --><figcaption>Un suivi de chemin sur le polygone : départ en $x^{\mu_0}$, $\mu_0=1$ ; à chaque étape $\mu$ est multiplié par $\sigma=0{,}3$, puis deux pas de Newton amortis sont faits (flèches dorées). Les itérés restent près de leurs cibles $x^{\mu_k}$ (cercles) et remontent la trajectoire jusqu'à l'optimum.</figcaption></figure>
+<figure class="fig"><!-- include figures/P04/ecart.svg --><figcaption>Le même calcul, en échelle logarithmique : $n\mu_k=5\times0{,}3^k$ (noir) et la vraie erreur $c\cdot x_k-v^\star$ (or), pour $k=0,\dots,13$. Les deux décroissent géométriquement (des droites de pente $\log_{10}0{,}3$) et l'erreur reste sous $n\mu_k$ : après 13 étapes et 26 pas de Newton, l'erreur vaut $2{,}4\cdot10^{-7}$ pour $n\mu=8\cdot10^{-7}$.</figcaption></figure>
+<p>Le choix de $\sigma$ et du nombre $k$ de pas de Newton par valeur de $\mu$ est un compromis. Voici, pour le polygone, le nombre d'étapes et de pas de Newton nécessaires pour atteindre $n\mu\le10^{-6}$ depuis $\mu_0=1$ (script <code>v11_widget_numbers.py</code>, même algorithme que la figure interactive ci-dessous) :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>$\sigma$</th><th>étapes</th><th>$k=1$ pas par $\mu$</th><th>$k=2$ pas par $\mu$</th><th>jusqu'au centre</th></tr></thead>
+<tbody>
+<tr><td>$0{,}5$</td><td>23</td><td>23 pas, erreur $2{,}5\cdot10^{-7}$</td><td>46 pas, $2{,}4\cdot10^{-7}$</td><td>72 pas, $2{,}4\cdot10^{-7}$</td></tr>
+<tr><td>$0{,}3$</td><td>13</td><td>13 pas, $4{,}9\cdot10^{-7}$</td><td>26 pas, $2{,}4\cdot10^{-7}$</td><td>78 pas, $3{,}2\cdot10^{-7}$</td></tr>
+<tr><td>$0{,}1$</td><td>7</td><td>7 pas, <strong>$3{,}1\cdot10^{-3}$</strong> (décroché)</td><td>14 pas, $1{,}7\cdot10^{-7}$</td><td>49 pas, $2{,}0\cdot10^{-7}$</td></tr>
+<tr><td>$0{,}01$</td><td>4</td><td>4 pas, <strong>$5{,}0\cdot10^{-2}$</strong> (décroché)</td><td>8 pas, <strong>$6{,}3\cdot10^{-5}$</strong> (décroché)</td><td>35 pas, $2{,}0\cdot10^{-8}$</td></tr>
+</tbody></table></div>
+<p>Lecture : si l'on ne fait qu'un ou deux pas par valeur de $\mu$, il faut diminuer $\mu$ prudemment ; sinon l'itéré « décroche » de la trajectoire, les pas sont sans cesse raccourcis ($t\approx10^{-3}$ et moins), et l'erreur reste très au-dessus de $n\mu$. Si l'on recentre complètement à chaque étape, n'importe quel $\sigma$ marche, et les petits $\sigma$ coûtent même moins de pas au total. Les variantes théoriques « à pas courts » prennent $\sigma=1-\delta/\sqrt n$ (avec une constante $\delta$ de l'ordre de $0{,}1$) et un seul pas de Newton plein : elles restent toujours dans le bassin de convergence et atteignent la précision $\eps$ en $O\big(\sqrt n\,\log(n\mu_0/\eps)\big)$ itérations (résultat admis, hors du livre).</p>
+<div class="widget" data-widget="p4suivi"><p class="w-noscript">Figure interactive (nécessite JavaScript).</p></div>
+<p><strong>À observer :</strong> avec $\sigma=0{,}3$ et 2 pas par $\mu$ (réglage initial), cliquez « Étape suivante » : les itérés dorés remontent la trajectoire, et en bas la courbe dorée (vraie erreur) descend parallèlement à la noire ($n\mu$), en dessous d'elle ; la courbe violette (écart certifié $c\cdot x-b\cdot p$) la suit. « Tout dérouler » : 13 étapes, 26 pas de Newton, erreur $2{,}4\cdot10^{-7}$. Passez à $\sigma=0{,}1$ avec 1 pas : dès la première étape le pas est tronqué ($t=\frac18$), puis de plus en plus ($\frac1{64}$, $\frac1{256}$…) ; l'itéré traîne loin de la trajectoire, la courbe dorée descend bien moins vite que la noire, et les points violets disparaissent à partir de la deuxième étape (l'estimation duale n'est plus admissible : pas de certificat) ; le message final signale le décrochage (erreur $3{,}1\cdot10^{-3}$). Choisissez « jusqu'au centre » : tout rentre dans l'ordre, avec 49 pas de Newton.</p>
+
+<h3 id="newton-complexite">Combien d'itérations en pratique ?</h3>
+<p>La théorie garantit $O(\sqrt n\,\log(1/\eps))$ itérations pour les variantes à pas courts. En pratique, les solveurs font beaucoup mieux : de l'ordre de 10 à 50 itérations, <strong>presque indépendamment de la taille</strong>. Nous l'avons mesuré avec le solveur HiGHS de <code>scipy</code>, prétraitement désactivé (scripts <code>v08_tailles.py</code> et <code>v12_transport_sizes.py</code>) :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>problème</th><th>$n$ (variables)</th><th>points intérieurs : itérations</th><th>simplexe dual : itérations</th></tr></thead>
+<tbody>
+<tr><td>PL aléatoires denses, $m=n/2$</td><td>20</td><td>8 à 10</td><td>18 à 23</td></tr>
+<tr><td></td><td>100</td><td>12 à 14</td><td>135 à 138</td></tr>
+<tr><td></td><td>500</td><td>17 à 18</td><td>972 à 1049</td></tr>
+<tr><td></td><td>1000</td><td>19 à 23</td><td>2489 à 2724</td></tr>
+<tr><td>transport $k\times k$, $m=2k$</td><td>100</td><td>8</td><td>24</td></tr>
+<tr><td></td><td>900</td><td>12</td><td>78</td></tr>
+<tr><td></td><td>10 000</td><td>18</td><td>297</td></tr>
+<tr><td></td><td>40 000</td><td>18</td><td>576</td></tr>
+<tr><td></td><td>250 000</td><td>25</td><td>1415</td></tr>
+</tbody></table></div>
+<p>Le nombre d'itérations de points intérieurs est multiplié par 3 quand la taille est multipliée par 2500 ; celui du simplexe croît à peu près comme la taille. <strong>Mais une itération n'est pas un pivot</strong> : une itération de points intérieurs résout un système $m\times m$ (la factorisation de $AX^2A^\top$), un pivot ne fait qu'une mise à jour de rang 1. Sur les problèmes de transport ci-dessus, le simplexe dual reste d'ailleurs plus rapide en temps ($0{,}9$ s contre $3$ s pour $n=250\,000$ sur notre machine) : la structure de réseau le favorise. Le §6 fait le bilan.</p>
+<div class="box app"><div class="box-h">En pratique — appeler une méthode de points intérieurs avec <code>scipy</code></div>
+<p>La fonction <code>scipy.optimize.linprog</code> appelle le solveur libre HiGHS ; l'option <code>method="highs-ipm"</code> choisit sa méthode de points intérieurs, <code>"highs-ds"</code> son simplexe dual, <code>"highs"</code> le choix automatique.</p>
+<pre><code>from scipy.optimize import linprog
+A = [[-3, 2, 1, 0, 0], [-1, 2, 0, 1, 0], [1, 1, 0, 0, 1]]
+r = linprog([-1, -2, 0, 0, 0], A_eq=A, b_eq=[2, 4, 5], bounds=(0, None), method="highs-ipm")
+print(r.x, r.fun, r.nit, r.eqlin.marginals)
+# [2. 3. 2. 0. 0.]  -8.0  5  [ 0.  -0.333  -1.333]</code></pre>
+<p>Cinq itérations, le sommet $(2,3)$, et les multiplicateurs <code>marginals</code> $=(0,-\frac13,-\frac43)$ : exactement notre $p^\star$, dans la convention de la dualité. Le résultat est un sommet exact, et non un point intérieur approché : HiGHS a fait un <em>crossover</em> après les points intérieurs (§6). Avec le coût $c=(-1,-1)$, il rend le sommet $(5,0)$, alors que notre suivi de chemin tend vers $(4{,}105\,;\,0{,}895)$.</p>
+</div>
+<div class="box remark"><div class="box-h">Remarque — ce que font vraiment les solveurs</div>
+<p>L'algorithme du livre est une méthode de barrière <em>primale</em> : on ne fait varier que $x$, et $p$ sort du système de Newton. Les solveurs utilisent des méthodes <em>primales-duales</em> : ils appliquent Newton directement au système de la trajectoire centrale ($Ax=b$, $A^\top p+s=c$, $x_is_i=\mu$) en les trois inconnues $(x,p,s)$, avec une règle de prédiction-correction (Mehrotra, 1992) qui choisit $\mu$ automatiquement à chaque itération. Le cœur du calcul reste le même : un système linéaire de la forme $AD A^\top$ avec une matrice diagonale $D>0$.</p>
+</div>
+<div class="quiz"><p>Vérifiez-vous : en dimension 1, avec $\mu=\frac1{10}$ et $c=1$, que donne un pas de Newton pur depuis $x_0=\frac12$ ? Et depuis $x_0=\frac18$ ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>$x^{+}=x(2-c\,x/\mu)$. Depuis $\frac12$ : $\frac12(2-5)=-\frac32$, hors du domaine ($x_0\ge2\mu/c=\frac15$). Depuis $\frac18$ : $\frac18(2-\frac54)=\frac3{32}=0{,}09375$, puis $\frac{51}{512}\approx0{,}09961$, $0{,}0999985$… vers $x^\mu=\frac1{10}$ ; l'erreur relative passe de $-\frac14$ à $\frac1{16}$, $\frac1{256}$… (script <code>v01_barriere1d.py</code>).</p>
+</div></details></div>

@@ -1,0 +1,192 @@
+<h2 id="modeliser">1. Pourquoi la programmation linéaire : modéliser <span class="ref">Allaire §4.1, p. 119–120</span></h2>
+<p class="tldr">Un programme linéaire, c'est minimiser ou maximiser une fonction linéaire de quelques nombres sous des contraintes linéaires ; pour en écrire un, on répond à trois questions : que décide-t-on, que veut-on optimiser, qu'est-ce qui limite ?</p>
+
+<h3 id="pl-quoi">Des problèmes où tout est linéaire</h3>
+<p>Une usine décide combien fabriquer de chaque produit, une raffinerie dans quelles proportions mélanger ses bases, un transporteur combien envoyer sur chaque route, un centre d'appels combien d'opérateurs placer sur chaque tranche horaire. Dans tous ces problèmes, les décisions sont des <strong>nombres</strong>, et le coût comme les limites sont des <strong>sommes de termes proportionnels</strong> à ces nombres : deux fois plus de bureaux, deux fois plus d'heures de machine et deux fois plus de profit. C'est le cadre de la programmation linéaire, et c'est par lui que le livre ouvre le chapitre.</p>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, §4.1, p. 119</span></div>
+<p>Ce chapitre est consacré à la <strong>programmation linéaire</strong> qui permet de résoudre efficacement les problèmes d'optimisation où les contraintes et le critère s'expriment linéairement en fonction des variables (voir l'Exemple 1.2.1). Ce type de problème est extrêmement fréquent dans le domaine de la <strong>recherche opérationnelle</strong> (ou plus simplement RO). La RO est l'ensemble des méthodes scientifiques qui permettent de modéliser et analyser des situations complexes afin de prendre des décisions, sinon optimales, du moins les plus efficaces possibles. […] Au delà des (nombreux) cas où le modèle d'optimisation (fonction objectif et contraintes) est linéaire, rappelons que la programmation linéaire est aussi une brique de base dans de nombreux algorithmes d'optimisation qui linéarisent les problèmes à résoudre.</p>
+</div>
+<p>Le livre ajoute qu'il ne traitera ni la modélisation ni les heuristiques, « ce qui représente souvent une part importante de la pratique en RO ». Comme c'est pourtant ce que l'on vous demandera en exercice (le centre d'appels de la diapo 15, le constructeur automobile de la diapo 39), cette section est un <strong>ajout pédagogique</strong> : on y apprend à écrire un programme linéaire.</p>
+
+<div class="box def"><div class="box-h">Définition — programme linéaire (formulation générale)</div>
+<p>Un <em class="new">programme linéaire</em> (PL) est un problème d'optimisation de la forme</p>
+$$\text{minimiser (ou maximiser)}\quad c\cdot x=c_1x_1+\dots+c_nx_n\qquad\text{sur }x\in\R^n,$$
+<p>sous un <strong>nombre fini</strong> de contraintes, chacune de la forme $a\cdot x\le\beta$, $a\cdot x\ge\beta$ ou $a\cdot x=\beta$ (avec $a\in\R^n$ et $\beta\in\R$ donnés). Les $x_j$ sont les <em class="new">variables de décision</em>, $c\cdot x$ la <em class="new">fonction objectif</em> (ou coût, ou critère).</p>
+</div>
+<dl class="decode">
+<dt>$c\cdot x$</dt><dd>Le coût : une somme de termes « coefficient × variable ». Ajouter une constante ($c\cdot x+7$) ne change pas les points optimaux, seulement la valeur : on l'oublie.</dd>
+<dt>$a\cdot x\le\beta$</dt><dd>Une contrainte : une autre somme pondérée des variables, comparée à un nombre. Les inégalités sont <strong>larges</strong>. Une inégalité stricte casserait tout : $\inf\{x : x>0\}=0$ n'est pas atteint.</dd>
+<dt>« linéaire »</dt><dd>Pas de produit de deux variables, pas de puissance, pas de valeur absolue, pas de « si… alors… » : chaque variable n'apparaît qu'au premier degré, multipliée par un nombre connu.</dd>
+</dl>
+
+<div class="box example"><div class="box-h">Exemple — linéaire ou pas ?</div>
+<div class="table-wrap"><table>
+<thead><tr><th>contrainte</th><th>linéaire ?</th><th>pourquoi</th></tr></thead>
+<tbody>
+<tr><td>$3x_1-2x_2\le7$</td><td>oui</td><td>somme pondérée, comparée à un nombre</td></tr>
+<tr><td>$x_1x_2\le4$</td><td>non</td><td>produit de deux variables</td></tr>
+<tr><td>$\abs{x_1}\le3$</td><td>oui, après réécriture</td><td>équivaut à $-3\le x_1\le3$, deux contraintes linéaires</td></tr>
+<tr><td>$\max(x_1,x_2)\le5$</td><td>oui, après réécriture</td><td>équivaut à $x_1\le5$ et $x_2\le5$</td></tr>
+<tr><td>$\min(x_1,x_2)\le5$</td><td>non</td><td>équivaut à « $x_1\le5$ <em>ou</em> $x_2\le5$ » : une réunion de deux demi-plans, qui n'est pas convexe</td></tr>
+<tr><td>$x_1/x_2\le2$ avec $x_2>0$</td><td>oui, après réécriture</td><td>on multiplie par $x_2>0$ : $x_1-2x_2\le0$</td></tr>
+</tbody></table></div>
+<p>Retenez la ligne $\min(x_1,x_2)\le5$ : un « ou » entre contraintes ne s'écrit pas en programmation linéaire continue. Il faudra des variables entières (<a href="Partie08.html#modelisation-logique">partie 8</a>).</p>
+</div>
+
+<h3 id="atelier">Un exemple complet, construit pas à pas : l'atelier</h3>
+<p>Cet exemple n'est pas dans le cours ; il sert de fil rouge à la page. Un atelier de menuiserie fabrique des <strong>bureaux</strong> et des <strong>étagères</strong>. Chaque semaine, il dispose de 100 heures de machine, de 70 heures de main-d'œuvre et de 180 panneaux de bois. Les besoins et les profits sont :</p>
+<div class="table-wrap"><table>
+<thead><tr><th></th><th>heures de machine</th><th>heures de main-d'œuvre</th><th>panneaux de bois</th><th>profit</th></tr></thead>
+<tbody>
+<tr><td>un bureau</td><td>2</td><td>1</td><td>1</td><td>40 €</td></tr>
+<tr><td>une étagère</td><td>1</td><td>1</td><td>3</td><td>30 €</td></tr>
+<tr><td><strong>disponible par semaine</strong></td><td>100</td><td>70</td><td>180</td><td></td></tr>
+</tbody></table></div>
+<p>Combien de bureaux et d'étagères fabriquer chaque semaine pour gagner le plus possible ?</p>
+<ol class="steps">
+<li><strong>Que décide-t-on ?</strong> Deux nombres : $x_1$ = nombre de bureaux fabriqués par semaine, $x_2$ = nombre d'étagères fabriquées par semaine.<span class="why">Une variable par décision, avec son unité (pièces) et sa période (la semaine). Test : connaissant $x_1$ et $x_2$, on peut calculer le profit et vérifier chaque limite.</span></li>
+<li><strong>Que veut-on optimiser ?</strong> Le profit hebdomadaire, en euros :
+$$40x_1+30x_2\quad\text{à maximiser.}$$<span class="why">Chaque bureau rapporte 40 €, chaque étagère 30 €, et les profits s'ajoutent. C'est linéaire parce que le profit par pièce ne dépend pas de la quantité (pas de remise sur volume).</span></li>
+<li><strong>Qu'est-ce qui limite ?</strong> Chaque ressource : « ce que l'on consomme $\le$ ce que l'on a ».
+$$\begin{aligned}2x_1+x_2&\le100&&\text{(heures de machine)}\\x_1+x_2&\le70&&\text{(heures de main-d'œuvre)}\\x_1+3x_2&\le180&&\text{(panneaux de bois)}\end{aligned}$$<span class="why">Un bureau prend 2 h de machine et une étagère 1 h : $x_1$ bureaux et $x_2$ étagères prennent $2x_1+x_2$ heures. Chaque ligne est homogène : des heures avec des heures, des panneaux avec des panneaux.</span></li>
+<li><strong>La contrainte qu'on oublie :</strong> $x_1\ge0$, $x_2\ge0$.<span class="why">On ne fabrique pas un nombre négatif de bureaux. Le texte ne le dit pas, le modèle doit le dire (voir les pièges plus bas).</span></li>
+</ol>
+<p>Le programme linéaire de l'atelier est donc</p>
+$$\begin{aligned}\max\quad&40x_1+30x_2\\\text{s.c.}\quad&2x_1+x_2\le100,\quad x_1+x_2\le70,\quad x_1+3x_2\le180,\\&x_1\ge0,\quad x_2\ge0.\end{aligned}$$
+<p>(« s.c. » se lit « sous les contraintes ».) Avec deux variables, on peut le <strong>dessiner</strong> : chaque contrainte garde un demi-plan, et leur intersection est un polygone, l'ensemble des plans de production possibles. Le profit est constant le long des droites $40x_1+30x_2=k$ (les <em>lignes de niveau</em>), toutes parallèles ; on cherche la plus haute qui touche encore le polygone. La méthode est détaillée au §3 ; voici le résultat.</p>
+<figure class="fig"><!-- include figures/P01/atelier.svg --><figcaption>L'atelier. En bleu, les plans de production admissibles (cinq inégalités). En orange, deux lignes de niveau du profit : $40x_1+30x_2=1200$ (pointillé) et $40x_1+30x_2=2400$ (trait plein), perpendiculaires à $c=(40,30)$. La ligne de niveau 2400 ne touche le polygone qu'au sommet $(30,40)$.</figcaption></figure>
+<div class="box example"><div class="box-h">Exemple — la solution de l'atelier, vérifiée sommet par sommet</div>
+<p>Le polygone a cinq sommets. Le profit en chacun :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>sommet $(x_1,x_2)$</th><th>contraintes actives (égalités)</th><th>profit $40x_1+30x_2$</th></tr></thead>
+<tbody>
+<tr><td>$(0,0)$</td><td>$x_1=0$, $x_2=0$</td><td>0 €</td></tr>
+<tr><td>$(50,0)$</td><td>machines, $x_2=0$</td><td>2000 €</td></tr>
+<tr><td>$(30,40)$</td><td>machines, main-d'œuvre</td><td><strong>2400 €</strong></td></tr>
+<tr><td>$(15,55)$</td><td>main-d'œuvre, bois</td><td>2250 €</td></tr>
+<tr><td>$(0,60)$</td><td>bois, $x_1=0$</td><td>1800 €</td></tr>
+</tbody></table></div>
+<p>Par exemple, $(30,40)$ résout $2x_1+x_2=100$, $x_1+x_2=70$ : en soustrayant, $x_1=30$, puis $x_2=40$. Il vérifie le bois : $30+3\cdot40=150\le180$. <strong>Optimum : 30 bureaux et 40 étagères, 2400 € par semaine.</strong> On verra au §3 et dans la <a href="Partie02.html#optimum-sommet">partie 2</a> pourquoi il suffit de regarder les sommets.</p>
+<p><strong>Lecture.</strong> À l'optimum, les machines et la main-d'œuvre sont <em>saturées</em> (utilisées à 100 %), tandis qu'il reste $180-150=30$ panneaux de bois. Les ressources saturées sont les goulots d'étranglement : on verra dans la <a href="Partie05.html#dual">partie 5</a> qu'une heure de machine de plus rapporterait 10 € et une heure de main-d'œuvre 20 €, alors qu'un panneau de plus ne rapporte rien. Enfin, l'optimum tombe ici sur des nombres entiers : c'est de la chance (voir la <a href="Partie06.html#relaxation">partie 6</a>).</p>
+</div>
+
+<div class="box app"><div class="box-h">En pratique — l'atelier avec <code>scipy.optimize.linprog</code></div>
+<p>Un solveur fait ce calcul pour des millions de variables. Avec Python, <code>linprog</code> (qui appelle le solveur libre HiGHS) <strong>minimise</strong> $c\cdot x$ sous $A_{ub}x\le b_{ub}$ : pour maximiser le profit, on minimise son opposé.</p>
+<pre><code>from scipy.optimize import linprog
+
+# max 40 x1 + 30 x2  &lt;=&gt;  min -40 x1 - 30 x2
+c = [-40, -30]
+A_ub = [[2, 1],    # machines
+        [1, 1],    # main-d'oeuvre
+        [1, 3]]    # bois
+b_ub = [100, 70, 180]
+res = linprog(c, A_ub=A_ub, b_ub=b_ub, bounds=[(0, None), (0, None)], method="highs")
+print(res.status, res.message)
+print("x =", res.x, " profit =", -res.fun)
+print("écarts =", res.slack)</code></pre>
+<p>Sortie réelle (SciPy 1.18) :</p>
+<pre><code>0 Optimization terminated successfully. (HiGHS Status 7: Optimal)
+x = [30. 40.]  profit = 2400.000000000001
+écarts = [ 0.  0. 30.]</code></pre>
+<p>Trois remarques. Le statut 0 signifie « optimum trouvé » (le §5 donne les autres). Les <code>écarts</code> sont les ressources inutilisées : 0 h, 0 h et 30 panneaux, comme ci-dessus. Enfin, le profit affiché $2400{,}000000000001$ rappelle qu'un solveur calcule en virgule flottante : la valeur exacte est 2400.</p>
+</div>
+
+<h3 id="methode-modelisation">La méthode en trois questions</h3>
+<div class="box method"><div class="box-h">Méthode — écrire un programme linéaire</div>
+<ol>
+<li><strong>Variables : que décide-t-on ?</strong> Une variable par décision, avec son unité et sa période (« $x_{ij}$ = tonnes envoyées de l'entrepôt $i$ au client $j$ par jour »). Test : si je connais les valeurs des variables, puis-je calculer le coût et vérifier chaque contrainte ?</li>
+<li><strong>Objectif : que veut-on minimiser ou maximiser ?</strong> L'écrire comme une somme « coût unitaire × variable ». Vérifier que les coûts unitaires ne dépendent pas des quantités.</li>
+<li><strong>Contraintes : qu'est-ce qui limite ?</strong> Les ressources (« consommé $\le$ disponible »), les besoins (« fourni $\ge$ demandé »), les bilans (« entrées $=$ sorties »), les signes ($x\ge0$) et les bornes ($x_j\le u_j$).</li>
+<li><strong>Vérifier.</strong> Chaque contrainte est homogène (mêmes unités des deux côtés). Un plan évident (tout à zéro, par exemple) est-il admissible quand il devrait l'être ? Un plan absurde est-il bien exclu ?</li>
+</ol>
+</div>
+
+<h3 id="familles">D'autres familles de problèmes</h3>
+<p>La même méthode s'applique à quatre familles classiques, que vous retrouverez dans les exercices et les parties suivantes.</p>
+<ul>
+<li><strong>Le régime alimentaire</strong> (Stigler, 1945, l'un des premiers PL résolus). On dispose d'aliments $j$ de coût $c_j$ par portion, contenant $a_{ij}$ unités du nutriment $i$ ; il faut au moins $b_i$ unités de chaque nutriment. Variables : $x_j$ = portions de l'aliment $j$. Programme : $\min c\cdot x$ sous $Ax\ge b$, $x\ge0$. Un exemple chiffré est l'<a href="#exo-regime">exercice 1</a>.</li>
+<li><strong>Le mélange</strong> (<em>blending</em>). Une raffinerie mélange des bases pour obtenir un carburant de qualité imposée au moindre coût ; une usine d'aliments pour animaux mélange des céréales. Les proportions sont les variables, et une contrainte d'égalité fixe la quantité totale (<a href="#exo-melange">exercice 2</a>).</li>
+<li><strong>Le transport.</strong> Des entrepôts $i$ (offres $s_i$), des clients $j$ (demandes $d_j$), un coût $c_{ij}$ par unité transportée de $i$ à $j$. Variables : $x_{ij}\ge0$, la quantité envoyée de $i$ à $j$. Programme :
+$$\min\sum_{i,j}c_{ij}x_{ij}\quad\text{s.c.}\quad\sum_jx_{ij}\le s_i\ \ \text{(offre de }i\text{)},\qquad\sum_ix_{ij}\ge d_j\ \ \text{(demande de }j\text{)},\qquad x\ge0.$$
+C'est un problème de flot, traité dans la <a href="Partie07.html#transport">partie 7</a> avec le constructeur automobile de la diapo 39.</li>
+<li><strong>Le centre d'appels</strong> (diapo 15), un problème de couverture :</li>
+</ul>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo 15</span></div>
+<p><strong>Exemple.</strong> Soit un centre d'appels téléphoniques de paramètres</p>
+<ul>
+<li>$c_t$, le nombre de clients devant être servis à l'instant $t$ où $t\in[0,T]$ ;</li>
+<li>$k$ tranches horaires de travail $[\alpha_i,\beta_i]$ pour $1\leqslant i\leqslant k$ avec $0\leqslant\alpha_i<\beta_i\leqslant T$ ;</li>
+<li>$S_i$, le salaire perçu sur la tranche $i$.</li>
+</ul>
+<p>On veut minimiser le coût total sous la contrainte de service satisfait.</p>
+<ol><li>Introduire des variables et exprimer les contraintes et le coût comme un programme linéaire. […]</li></ol>
+</div>
+<p>Avec la méthode : la décision est le nombre $y_i\ge0$ d'opérateurs embauchés sur la tranche $i$ ; le coût est $\sum_iS_iy_i$ ; la contrainte de service dit qu'à chaque instant $t$, les opérateurs présents (ceux dont la tranche contient $t$) sont au moins $c_t$, en supposant qu'un opérateur sert un client à la fois :</p>
+$$\min\sum_{i=1}^kS_iy_i\quad\text{s.c.}\quad\sum_{i\,:\,t\in[\alpha_i,\beta_i]}y_i\ \ge\ c_t\ \ \text{pour tout }t,\qquad y\ge0.$$
+<p>Il y a une infinité d'instants $t$, mais le membre de gauche ne change qu'aux bornes des tranches : il suffit d'une contrainte par intervalle « à nombre d'opérateurs constant ». La question 2 de la diapo (résoudre le dual) est traitée dans la <a href="Partie05.html#centre-appels">partie 5</a>, et la version en nombres entiers d'opérateurs dans la <a href="Partie06.html">partie 6</a>.</p>
+
+<div class="box app"><div class="box-h">En pratique — la recherche opérationnelle aujourd'hui</div>
+<p>Les programmes linéaires sont l'outil de base de la planification industrielle : plans de production, mélanges (raffineries, alimentation animale, sidérurgie), logistique et transport, affectation de personnel et de créneaux, réseaux de télécommunication et d'énergie. Les modèles réels ont couramment des centaines de milliers de variables. Le travail se fait en trois temps : on <strong>écrit le modèle</strong> avec un langage de modélisation (PuLP ou Pyomo en Python, JuMP en Julia, CVXPY pour l'optimisation convexe), on le confie à un <strong>solveur</strong> (HiGHS, libre et intégré à SciPy ; CBC ; Gurobi, CPLEX ou Xpress, commerciaux), puis on <strong>analyse la solution</strong> : quelles contraintes sont saturées, combien rapporterait une ressource de plus (les variables duales de la <a href="Partie05.html">partie 5</a>). Les solveurs implémentent le simplexe (<a href="Partie03.html">partie 3</a>) et les méthodes de points intérieurs (<a href="Partie04.html">partie 4</a>).</p>
+</div>
+
+<h3 id="pieges-modelisation">Les pièges de modélisation</h3>
+<div class="box pitfall"><div class="box-h">Piège — mélanger les unités</div>
+<p>Chaque contrainte compare des quantités de même nature. « $2x_1+x_2\le100$ » compte des heures de machine des deux côtés. Si un bureau prend 30 minutes de vernissage, il faut écrire $0{,}5x_1$ heures, ou tout passer en minutes (et le second membre aussi). Réflexe : lisez chaque contrainte à voix haute avec ses unités.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Piège — oublier une contrainte</div>
+<p>Le solveur exploite tout ce que le modèle ne lui interdit pas. Deux exemples vérifiés :</p>
+<ul>
+<li><strong>Oublier une ressource.</strong> Sans la main-d'œuvre, l'atelier « optimal » devient $(24,52)$, avec 2520 € de profit… mais il demande $24+52=76$ heures de main-d'œuvre sur 70 disponibles : il est irréalisable.</li>
+<li><strong>Oublier $x\ge0$.</strong> Ajoutons au régime de l'<a href="#exo-regime">exercice 1</a> un aliment 3, coûtant 10 € la portion et apportant 5 unités de chaque nutriment. Sans $x_3\ge0$, le modèle « revend » de l'aliment 3 : retirer une portion fait économiser 10 €, et l'on compense les nutriments perdus avec 2 portions d'aliment 1 et 1 portion d'aliment 2, qui coûtent 8 €. On gagne 2 € à chaque tour : la valeur est $-\infty$. Avec $x_3\ge0$, l'optimum est $(3,2,0)$, de coût 13.</li>
+</ul>
+<p>Le premier oubli donne une réponse fausse mais plausible, le second une réponse absurde ; les deux viennent du modèle, pas du solveur.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Piège — une non-linéarité cachée</div>
+<p>Méfiez-vous des expressions suivantes : un <strong>produit</strong> de deux variables (prix × quantité quand le prix est une décision), une <strong>division</strong> par une variable, une <strong>puissance</strong>, un coût <strong>fixe</strong> (« 500 € si l'on ouvre l'usine, quel que soit le volume »), une condition <strong>logique</strong> (« si… alors… », « ou »). Aucune ne s'écrit directement. Certaines se ramènent à du linéaire (le maximum et la valeur absolue, ci-dessous ; un rapport à dénominateur positif, comme dans le tableau plus haut) ; les coûts fixes et la logique demandent des variables entières (<a href="Partie08.html#modelisation-logique">partie 8</a>). Et si les variables doivent être entières (des opérateurs, des camions), le modèle continu n'est qu'une relaxation (<a href="Partie06.html#relaxation">partie 6</a>).</p>
+</div>
+
+<h3 id="linearisation">Linéariser une valeur absolue ou un maximum</h3>
+<p>Beaucoup de problèmes demandent de minimiser un <strong>écart</strong> : la plus grande erreur, ou la somme des erreurs en valeur absolue. Ces objectifs ne sont pas linéaires, mais une astuce les ramène à un programme linéaire : remplacer la fonction par une nouvelle variable $t$ qui la <em>majore</em>.</p>
+<div class="box thm"><div class="box-h">Proposition — la variable épigraphe (ajout pédagogique)</div>
+<p>Soit $f(x)=\max_{1\le k\le K}\big(\alpha_k\cdot x+\beta_k\big)$, un maximum de fonctions affines, et $X$ un ensemble. Alors</p>
+$$\inf_{x\in X}f(x)\;=\;\inf\Big\{t\ :\ x\in X,\ t\in\R,\ \ t\ge\alpha_k\cdot x+\beta_k\ \text{pour }k=1,\dots,K\Big\},$$
+<p>et $\bar x$ est optimal à gauche si et seulement si $(\bar x,f(\bar x))$ est optimal à droite. En particulier, avec $\abs{u}=\max(u,-u)$ :</p>
+$$\min_x\sum_{i=1}^N\abs{r_i(x)}\quad\leadsto\quad\min_{x,\,t}\sum_{i=1}^Nt_i\quad\text{s.c.}\quad -t_i\le r_i(x)\le t_i\quad(i=1,\dots,N),$$
+<p>pour des fonctions affines $r_i$ : un programme linéaire si $X$ est un polyèdre.</p>
+</div>
+<dl class="decode">
+<dt>$t$</dt><dd>Une variable ajoutée, qui joue le rôle de $f(x)$. Les contraintes disent seulement $t\ge f(x)$, mais comme on minimise $t$, il « descend » jusqu'à $f(x)$.</dd>
+<dt>$t\ge\alpha_k\cdot x+\beta_k$ pour tout $k$</dt><dd>« $t$ est au-dessus de chacune des $K$ fonctions », c'est-à-dire au-dessus de leur maximum. Ce sont $K$ contraintes linéaires en $(x,t)$.</dd>
+<dt>épigraphe</dt><dd>L'ensemble $\{(x,t) : t\ge f(x)\}$, « ce qui est au-dessus du graphe ». Pour un maximum de fonctions affines, c'est une intersection de demi-espaces (figure ci-dessous).</dd>
+</dl>
+<figure class="fig"><!-- include figures/P01/epigraphe.svg --><figcaption>À gauche : $\{(x,t) : t\ge\abs{x}\}$ est l'intersection des demi-plans $t\ge x$ et $t\ge-x$. À droite : l'épigraphe de $g(x)=\max(2-x,\ \frac x2+\frac12,\ 2x-4)$ est l'intersection de trois demi-plans ; son point le plus bas, $(1,1)$, donne $\min g=1$, atteint en $x=1$.</figcaption></figure>
+<details class="fold proof"><summary>Démonstration complète</summary><div class="fold-body">
+<ol class="steps">
+<li>Si $(x,t)$ vérifie les contraintes, alors $t\ge\max_k(\alpha_k\cdot x+\beta_k)=f(x)\ge\inf_Xf$.<span class="why">$t$ majore chacune des $K$ quantités, donc leur maximum.</span></li>
+<li>Donc l'infimum de droite est $\ge\inf_Xf$.<span class="why">On passe à l'infimum sur $(x,t)$ dans la ligne 1.</span></li>
+<li>Pour tout $x\in X$, le couple $(x,f(x))$ vérifie les contraintes et vaut $f(x)$.<span class="why">$f(x)\ge\alpha_k\cdot x+\beta_k$ pour chaque $k$, par définition du maximum.</span></li>
+<li>Donc l'infimum de droite est $\le f(x)$ pour tout $x$, donc $\le\inf_Xf$ : les deux infima sont égaux.<span class="why">On passe à l'infimum sur $x$ dans la ligne 3.</span></li>
+<li>Si $\bar x$ minimise $f$, $(\bar x,f(\bar x))$ atteint la valeur commune (ligne 3). Réciproquement, si $(\bar x,\bar t)$ est optimal, $f(\bar x)\le\bar t=\inf_Xf\le f(\bar x)$ : $\bar x$ minimise $f$ et $\bar t=f(\bar x)$.<span class="why">Lignes 1 et 4.</span></li>
+<li>Pour une somme, on applique le même raisonnement terme à terme avec une variable $t_i\ge\abs{r_i(x)}$ par terme, c'est-à-dire $t_i\ge r_i(x)$ et $t_i\ge-r_i(x)$.<span class="why">Minimiser $\sum t_i$ pousse chaque $t_i$ vers sa borne $\abs{r_i(x)}$ : si un $t_i$ était strictement au-dessus, on le baisserait et la somme diminuerait.</span></li>
+</ol>
+</div></details>
+<div class="box example"><div class="box-h">Exemple — $\min g$ avec $g(x)=\max(2-x,\ \frac x2+\frac12,\ 2x-4)$</div>
+<p>Le programme linéaire est $\min t$ sous $t\ge2-x$, $t\ge\frac x2+\frac12$, $t\ge2x-4$ ($x$ et $t$ libres). Les deux premières droites se coupent quand $2-x=\frac x2+\frac12$, soit $x=1$, $t=1$ ; la troisième y vaut $2\cdot1-4=-2\le1$. On vérifie sur quelques valeurs : $g(0)=2$, $g(1)=1$, $g(2)=\frac32$, $g(3)=2$. Le solveur renvoie $(x,t)=(1,1)$.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Piège — l'astuce ne marche que dans le « bon sens »</div>
+<p>On peut <strong>minimiser</strong> un maximum (ou une somme de valeurs absolues), ou imposer $\max_k(\dots)\le\beta$. On ne peut pas <strong>maximiser</strong> $\abs{x}$, ni imposer $\abs{x}\ge1$ (qui veut dire « $x\le-1$ ou $x\ge1$ », un ensemble non convexe). Essayez : pour $\max\abs{x}$ sur $[-1,2]$, la recette donne $\max t$ sous $t\ge x$, $t\ge-x$ ; rien n'empêche $t$ de monter, le solveur répond « non borné », alors que la vraie réponse est $2$. La raison : $t\ge f(x)$ ne force $t=f(x)$ que si l'on pousse $t$ vers le bas.</p>
+</div>
+<div class="box reflex"><div class="box-h">Réflexe</div>
+<ul>
+<li>Quand vous voyez $\min\max$ ou $\min\sum\abs{\cdot}$ → introduisez une variable $t$ (ou $t_i$) qui majore, et minimisez-la.</li>
+<li>Quand vous voyez $\max\abs{\cdot}$, $\abs{\cdot}\ge\cdot$, « ou », un coût fixe → ce n'est pas un PL continu ; pensez variables entières.</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">En machine learning — la régression en norme $\ell^1$ est un programme linéaire</div>
+<p>Ajuster une droite $y\approx wx+b$ à des données $(x_i,y_i)$ en minimisant $\sum_i\abs{y_i-(wx_i+b)}$ (régression LAD, <em>least absolute deviations</em>) est exactement le cas « somme de valeurs absolues » : variables $w,b,t_1,\dots,t_N$, objectif $\sum t_i$, contraintes $-t_i\le y_i-wx_i-b\le t_i$. Contrairement aux moindres carrés, elle résiste aux points aberrants. Exemple chiffré et figure au <a href="#lad">§6</a>.</p>
+</div>
+
+<div class="quiz"><p>Un fabricant veut minimiser le plus grand des retards de trois commandes, $\max(r_1,r_2,r_3)$, où chaque $r_i$ est une fonction affine des décisions. Comment l'écrire ? Et s'il voulait maximiser le plus petit des profits de ses trois usines ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>Retard : $\min t$ sous $t\ge r_1$, $t\ge r_2$, $t\ge r_3$ (plus les autres contraintes) — un $\min\max$, linéarisable. Profit : $\max\min(p_1,p_2,p_3)=-\min\max(-p_1,-p_2,-p_3)$, c'est aussi le bon sens : $\max u$ sous $u\le p_1$, $u\le p_2$, $u\le p_3$. Maximiser un minimum est aussi permis que minimiser un maximum.</p>
+</div></details></div>

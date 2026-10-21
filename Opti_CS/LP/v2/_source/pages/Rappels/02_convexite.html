@@ -1,0 +1,211 @@
+<h2 id="convexite">2. Convexité</h2>
+<p class="tldr">L'ensemble admissible d'un programme linéaire est un polyèdre convexe ; s'il est borné, c'est l'enveloppe convexe de ses sommets, et une fonction linéaire y atteint donc son minimum en un sommet ; enfin, un cône engendré par un nombre fini de vecteurs est fermé. Ces trois faits portent tout le cours.</p>
+
+<h3 id="ensembles-convexes">Ensembles convexes, combinaisons convexes</h3>
+<p class="small muted"><strong>Où ça sert :</strong> l'ensemble admissible est convexe, ce qui donne la géométrie du cours (<a href="Partie01.html#geometrie">partie 1</a>) et fait qu'un optimum local est global (<a href="Partie03.html">partie 3</a>) ; l'ensemble des points <em>entiers</em> n'est pas convexe, d'où la difficulté des <a href="Partie06.html">parties 6</a> et <a href="Partie08.html">8</a>.</p>
+<p>Un ensemble est convexe quand on peut aller en ligne droite de n'importe quel point à n'importe quel autre sans en sortir. Pour l'optimisation, c'est ce qui empêche les « fausses vallées » : on ne peut pas être bloqué dans un coin qui n'est pas le meilleur.</p>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, Déf. 5.1.2, p. 189</span></div>
+<p>« Un ensemble $K\subset V$ est dit convexe si, pour tout $x,y\in K$ et tout réel $\theta\in[0,1]$, l'élément $(\theta x+(1-\theta)y)$ appartient à $K$. »</p>
+</div>
+<dl class="decode">
+<dt>$V$</dt><dd>l'espace ambiant ; pour nous $V=\R^n$ (le livre se place dans un espace de Hilbert, ce qui ne change rien ici).</dd>
+<dt>$\theta x+(1-\theta)y$</dt><dd>quand $\theta$ parcourt $[0,1]$, ce point parcourt le segment $[y,x]$ : $\theta=0$ donne $y$, $\theta=1$ donne $x$, $\theta=\frac12$ le milieu.</dd>
+</dl>
+<div class="box def"><div class="box-h">Combinaisons convexes (rappel standard)</div>
+<ul>
+<li>Une <em class="new">combinaison convexe</em> de $x_1,\dots,x_k$ est un point $\lambda_1x_1+\dots+\lambda_kx_k$ avec des poids $\lambda_i\ge0$ de somme $1$ : une moyenne pondérée, un « centre de gravité ».</li>
+<li>Un ensemble convexe contient toutes les combinaisons convexes de ses points (pas seulement celles de deux points).</li>
+<li>Une intersection d'ensembles convexes est convexe. Sont convexes : les demi-espaces, les hyperplans, les sous-espaces affines, les boules, les polyèdres (<a href="#polyedres">ci-dessous</a>), $\Xad$.</li>
+</ul>
+</div>
+<figure class="fig"><!-- include figures/RAP/convexes.svg --><figcaption>À gauche, le pentagone du fil rouge : tout segment entre deux de ses points y reste. Au milieu, un ensemble en forme de L : un segment en sort (partie rose). À droite, les points entiers du pentagone (en or) : le milieu de deux d'entre eux n'est pas entier, l'ensemble n'est pas convexe.</figcaption></figure>
+<div class="box example"><div class="box-h">Exemple</div>
+<p>Les points $(0,0)$ et $(2,3)$ sont admissibles pour l'exercice 4.2.1. Leur milieu $(1,\frac32)$ aussi : $-3+3=0\le2$, $-1+3=2\le4$, $1+\frac32=\frac52\le5$, et ses coordonnées sont positives. En revanche, pour les solutions <em>entières</em> d'un problème, les points $(0,1)$ et $(1,2)$ peuvent être admissibles sans que leur milieu $(\frac12,\frac32)$ soit une solution entière.</p>
+</div>
+<details class="fold proof"><summary>Démonstration : $\Xad$ est convexe, et les combinaisons convexes restent dedans</summary><div class="fold-body">
+<p><strong>$\Xad$ est convexe.</strong> Si $Ax=b$, $Ay=b$, $x\ge0$, $y\ge0$ et $\theta\in[0,1]$, alors $A(\theta x+(1-\theta)y)=\theta b+(1-\theta)b=b$, et $\theta x+(1-\theta)y\ge0$ comme somme de vecteurs positifs à coefficients positifs.</p>
+<p><strong>Combinaisons de $k$ points</strong>, par récurrence sur $k$. Si $\lambda_k=1$, le point est $x_k$. Sinon,</p>
+$$\sum_{i=1}^k\lambda_ix_i=(1-\lambda_k)\underbrace{\sum_{i=1}^{k-1}\frac{\lambda_i}{1-\lambda_k}\,x_i}_{\in K\text{ par récurrence}}+\lambda_kx_k,$$
+<p>car les poids $\frac{\lambda_i}{1-\lambda_k}$ sont positifs, de somme $1$ ; c'est une combinaison convexe de deux points de $K$.</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pièges</div>
+<ul>
+<li>Une <strong>réunion</strong> de convexes n'est pas convexe en général (deux intervalles disjoints).</li>
+<li>L'ensemble des points entiers d'un polyèdre n'est jamais convexe dès qu'il a au moins deux points : c'est la source de toute la difficulté des programmes en nombres entiers.</li>
+<li>« Convexe » pour un <em>ensemble</em> et « convexe » pour une <em>fonction</em> sont deux notions différentes (<a href="#fonctions-convexes">ci-dessous</a>), reliées par l'épigraphe.</li>
+</ul>
+</div>
+
+<h3 id="polyedres">Demi-espaces et polyèdres</h3>
+<p class="small muted"><strong>Où ça sert :</strong> $\Xad$ est un polyèdre (<a href="Partie01.html#geometrie">partie 1</a>) ; les diapos 19–24 parlent des polyèdres $\{Ax\le b\}$ et de leur enveloppe convexe entière (<a href="Partie06.html">partie 6</a>).</p>
+<p>Chaque contrainte linéaire $a\cdot x\le\beta$ coupe l'espace en deux par un hyperplan et garde un côté. Un polyèdre, c'est ce qui reste quand on a coupé un nombre fini de fois.</p>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo 20</span></div>
+<p>« $P$ Polyèdre : il existe $A\in\Mc_{m\times n}$ et $b\in\R^m$ tels que $P=\{x,\ Ax\leqslant b\}$. »</p>
+</div>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, p. 122</span></div>
+<p>« On vérifie facilement que l'ensemble $X_{ad}$ est, d'une part convexe, d'autre part un polyèdre (éventuellement vide). Rappelons qu'un polyèdre est une intersection finie de demi-espaces de $\R^n$. »</p>
+</div>
+<div class="box def"><div class="box-h">Définitions (rappel standard)</div>
+<ul>
+<li>Pour $a\in\R^n$ non nul et $\beta\in\R$ : l'<em class="new">hyperplan</em> $\{x : a\cdot x=\beta\}$ (une droite dans le plan), et le <em class="new">demi-espace</em> $\{x : a\cdot x\le\beta\}$. Le vecteur $a$ est normal à l'hyperplan et pointe vers l'extérieur du demi-espace.</li>
+<li>Un <em class="new">polyèdre</em> est une intersection finie de demi-espaces : $\{x : Ax\le b\}$, une ligne de $A$ par demi-espace. Un polyèdre borné s'appelle un <em class="new">polytope</em>.</li>
+<li>Un polyèdre est convexe (intersection de convexes) et fermé (<a href="#fermes">§3</a>).</li>
+<li>$\Xad=\{Ax=b,\ x\ge0\}$ est un polyèdre : $Ax=b$ équivaut aux deux familles $Ax\le b$ et $-Ax\le-b$, et $x\ge0$ s'écrit $-x\le0$.</li>
+</ul>
+</div>
+<figure class="fig"><!-- include figures/RAP/polyedre.svg --><figcaption>L'ensemble admissible de l'exercice 4.2.1 (bleu) : l'intersection de cinq demi-plans, trois contraintes et $x_1\ge0$, $x_2\ge0$. Ses cinq sommets sont les intersections de deux droites de contraintes qui vérifient toutes les autres. Le point rose, au milieu d'un côté, n'est pas un sommet.</figcaption></figure>
+<div class="box example"><div class="box-h">Exemple — trouver les sommets du pentagone</div>
+<p>Intersecter deux à deux les cinq droites donne au plus $\binom52=10$ points (<a href="#denombrement">§6</a>). Par exemple, $-x_1+2x_2=4$ et $x_1+x_2=5$ donnent $3x_2=9$, soit $(2,3)$, qui vérifie aussi $-3\cdot2+2\cdot3=0\le2$ : c'est un sommet. En revanche, $-3x_1+2x_2=2$ et $x_1+x_2=5$ donnent $(\frac85,\frac{17}5)$, qui viole $-x_1+2x_2\le4$ ($-\frac85+\frac{34}5=\frac{26}5>4$) : pas un sommet. Il en reste cinq : $(0,0)$, $(5,0)$, $(2,3)$, $(1,\frac52)$, $(0,1)$. Ce sont exactement les cinq bases admissibles du <a href="#bases-coordonnees">tableau du §1</a>.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pièges</div>
+<ul>
+<li><strong>Deux écritures.</strong> Les diapos 19–24 écrivent les polyèdres $\{Ax\le b\}$, le livre travaille sur la forme standard $\{Ax=b,\ x\ge0\}$. Les deux décrivent la même famille d'ensembles (à un changement de variables près, <a href="Partie01.html#forme-standard">partie 1</a>), mais pas avec la même matrice $A$ : attention en passant de l'un à l'autre.</li>
+<li>Un polyèdre peut être <strong>vide</strong> ou <strong>non borné</strong> : $\{x\ge0 : x_2-x_1\le1\}$ contient toute la demi-droite $\{(t,0) : t\ge0\}$.</li>
+</ul>
+</div>
+<div class="quiz"><p>Écrivez $\Xad=\{x\in\R^n : Ax=b,\ x\ge0\}$ sous la forme $\{x : Mx\le d\}$.</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>On empile les trois familles d'inégalités : $M=\begin{pmatrix}A\\-A\\-\Id\end{pmatrix}$ (de taille $(2m+n)\times n$) et $d=\begin{pmatrix}b\\-b\\0\end{pmatrix}$. C'est la preuve que $\Xad$ est un polyèdre.</p>
+</div></details></div>
+
+<h3 id="points-extremaux">Points extrémaux (sommets)</h3>
+<p class="small muted"><strong>Où ça sert :</strong> définition des sommets de $\Xad$ et le théorème « sommets = solutions basiques » (<a href="Partie02.html#sommets-basiques">partie 2</a>) ; l'optimum est en un sommet (<a href="Partie02.html#optimum-sommet">partie 2</a>) ; les points extrêmes des matrices doublement stochastiques sont les permutations (<a href="Partie07.html#affectation">partie 7</a>).</p>
+<p>Un sommet est un « coin » : un point qui n'est au milieu d'aucun segment de l'ensemble. On ne peut pas l'obtenir en mélangeant deux autres points admissibles.</p>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, Déf. 4.2.1, p. 122</span></div>
+<p>« On appelle sommet ou point extrémal de $X_{ad}$ tout point $\overline x\in X_{ad}$ qui ne peut pas se décomposer en une combinaison convexe (non triviale) de deux autres points de $X_{ad}$, c'est-à-dire que, s'il existe $y,z\in X_{ad}$ et $\theta\in]0,1[$ tels que $\overline x=\theta y+(1-\theta)z$, alors $y=z=\overline x$. »</p>
+</div>
+<p>Les diapos disent « Un sommet de $X_{ad}$ est appelé solution extrémale » (Diapo 4). La même définition a un sens pour tout ensemble convexe : on parle de <em class="new">point extrémal</em> (ou point extrême).</p>
+<div class="box thm"><div class="box-h">Caractérisation dans un polyèdre (rappel standard)</div>
+<p>Soit $P=\{x\in\R^n : a_i\cdot x\le b_i,\ i=1,\dots,p\}$ et $x\in P$. Une contrainte est <em class="new">active</em> en $x$ si $a_i\cdot x=b_i$. Alors $x$ est un sommet de $P$ si et seulement si, parmi les vecteurs $a_i$ des contraintes actives en $x$, il y en a $n$ linéairement indépendants. En particulier, un polyèdre a un nombre fini de sommets.</p>
+</div>
+<div class="box example"><div class="box-h">Exemple</div>
+<ul>
+<li>En $(2,3)$, les contraintes actives sont $-x_1+2x_2\le4$ et $x_1+x_2\le5$, de normales $(-1,2)$ et $(1,1)$, indépendantes : $2=n$ normales, c'est un sommet.</li>
+<li>Le point $m=(\frac32,\frac{11}4)$ ne rend active que $-x_1+2x_2\le4$ ($-\frac32+\frac{11}2=4$ ; les autres valent $1<2$ et $\frac{17}4<5$). Une seule normale : pas un sommet, et en effet $m=\frac12(1,\frac52)+\frac12(2,3)$.</li>
+<li>Un demi-plan $\{x_2\ge0\}$ n'a aucun sommet : en chaque point, au plus une contrainte est active.</li>
+</ul>
+</div>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, Rem. 4.2.7, p. 124</span></div>
+<p>« En appliquant la Proposition 4.2.6 lorsque $c=0$ (toute solution admissible est alors optimale), on voit grâce au Lemme 4.2.5 que dès que $X_{ad}$ est non-vide, $X_{ad}$ a au moins un sommet. Cette propriété n'a pas lieu pour des polyèdres généraux (considérer un demi-plan de $\R^2$). »</p>
+</div>
+<p>La différence vient de $x\ge0$ : $\Xad$ ne contient aucune droite entière, alors qu'un demi-plan en contient. C'est une raison de travailler sous forme standard.</p>
+<details class="fold proof"><summary>Démonstration de la caractérisation</summary><div class="fold-body">
+<p><strong>Moins de $n$ normales actives indépendantes ⇒ pas un sommet.</strong> Les normales actives engendrent alors un sous-espace de dimension $<n$ ; il existe $d\ne0$ orthogonal à toutes ($a_i\cdot d=0$ pour $i$ actif). Pour $\eps>0$ assez petit, $x\pm\eps d\in P$ : les contraintes actives restent des égalités, et les inactives, strictes en $x$, le restent par continuité. Alors $x=\frac12(x+\eps d)+\frac12(x-\eps d)$ avec deux points distincts de $P$.</p>
+<p><strong>$n$ normales actives indépendantes ⇒ sommet.</strong> Si $x=\theta y+(1-\theta)z$ avec $y,z\in P$ et $0<\theta<1$, alors pour chaque $i$ actif, $b_i=a_i\cdot x=\theta\,a_i\cdot y+(1-\theta)\,a_i\cdot z$ avec $a_i\cdot y\le b_i$ et $a_i\cdot z\le b_i$ : il faut l'égalité partout. Donc $y$ et $z$ résolvent le même système carré inversible formé de $n$ normales indépendantes, comme $x$ : $y=z=x$.</p>
+<p>Le premier geste, « perturber dans une direction qui ne touche pas les contraintes actives », est celui de la preuve des parties 2 (« perturber dans le noyau »).</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Piège</div>
+<p>« Sommet », « point extrémal » et « solution basique admissible » désignent le même objet pour $\Xad$, mais ce sont trois définitions différentes : géométrique (un coin), convexe (pas un milieu), algébrique (des colonnes indépendantes). Il faut un théorème pour passer de l'une à l'autre (<a href="Partie02.html#sommets-basiques">partie 2</a>). Et un convexe qui n'est pas un polyèdre peut avoir une infinité de points extrémaux : tous les points du cercle pour un disque.</p>
+</div>
+
+<h3 id="enveloppe-convexe">Enveloppe convexe, Minkowski, Carathéodory</h3>
+<p class="small muted"><strong>Où ça sert :</strong> « l'optimum est en un sommet » et « $P$ est l'enveloppe convexe de ses sommets » (<a href="Partie02.html#optimum-sommet">partie 2</a>, Diapo 20) ; l'enveloppe convexe des points entiers d'un polyèdre et la relaxation (<a href="Partie06.html#relaxation">partie 6</a>) ; les matrices doublement stochastiques (<a href="Partie07.html#affectation">partie 7</a>).</p>
+<p>Partez de quelques points et « tendez un élastique » autour : vous obtenez leur enveloppe convexe, le plus petit convexe qui les contient. Pour un polygone, ce sont les sommets qui suffisent à tout reconstruire.</p>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo 20</span></div>
+<p><strong>Définition.</strong> « L'enveloppe convexe d'un ensemble est le plus petit ensemble convexe le contenant. »</p>
+<p><strong>Lemme.</strong> « $P$ est l'enveloppe convexe de ses sommets $S$ (points basiques). Pour $J$ convexe $\min_PJ=\min_SJ$. »</p>
+</div>
+<div class="box remark"><div class="box-h">Note sur les sources</div>
+<p>Les deux points du lemme demandent une correction. (1) « $P$ est l'enveloppe convexe de ses sommets » n'est vrai que si $P$ est <strong>borné</strong> : le quadrant $\{x\ge0\}$ a un seul sommet, $0$, et l'enveloppe convexe de $\{0\}$ est $\{0\}$. (2) « Pour $J$ convexe » doit se lire « pour $J$ <strong>concave</strong> (ou linéaire) » : $J(x)=x^2$ est convexe sur $P=[-1,1]$, son minimum vaut $0$ en $x=0$, alors qu'aux sommets $\pm1$ elle vaut $1$ (voir <a href="#fonctions-convexes">ci-dessous</a>). Le cas utile au cours, $J$ linéaire, est juste.</p>
+</div>
+<div class="box thm"><div class="box-h">Enveloppe convexe, Minkowski, Carathéodory (rappel standard)</div>
+<ul>
+<li>L'<em class="new">enveloppe convexe</em> $\conv(S)$ est l'ensemble de toutes les combinaisons convexes d'un nombre fini de points de $S$.</li>
+<li><strong>Minkowski</strong> (version polytope) : un polyèdre <em>borné</em> est l'enveloppe convexe de ses sommets, qui sont en nombre fini. Plus généralement, un convexe compact de $\R^n$ est l'enveloppe convexe de ses points extrémaux.</li>
+<li><strong>Carathéodory</strong> : dans $\R^d$, un point de $\conv(S)$ est combinaison convexe d'au plus $d+1$ points de $S$. Dans le plan, tout point d'un polygone est dans un triangle formé de trois de ses sommets.</li>
+</ul>
+</div>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, Rem. 4.3.10, p. 142</span></div>
+<p>« On peut aussi montrer (théorème de Minkowski) que l'ensemble des matrices doublement stochastiques est l'enveloppe convexe de ses points extrêmes. Par linéarité de la fonction coût, on en déduit qu'il existe des solutions qui sont des matrices de permutation, autrement dit des solutions optimales entières. »</p>
+</div>
+<div class="box example"><div class="box-h">Exemple — écrire $(2,2)$ avec les sommets du pentagone</div>
+<p>Le point $P=(2,2)$ est dans le pentagone. Coupons celui-ci en triangles depuis le sommet $V_1=(0,0)$ : $P$ tombe dans le triangle $V_1V_2V_3$ avec $V_2=(5,0)$, $V_3=(2,3)$, et ses poids (coordonnées barycentriques) sont</p>
+$$P=\tfrac15\,(0,0)+\tfrac2{15}\,(5,0)+\tfrac23\,(2,3)=\Big(\tfrac23+\tfrac43,\ 2\Big)=(2,2).$$
+<p>Trois sommets suffisent, comme le dit Carathéodory ($d=2$). La décomposition n'est pas unique : avec le triangle $(5,0),(2,3),(1,\frac52)$, on trouve $P=\frac29(5,0)+\frac19(2,3)+\frac23(1,\frac52)$.</p>
+</div>
+<div class="widget" data-widget="rapConvexe"><p class="w-noscript">Figure interactive (nécessite JavaScript).</p></div>
+<p><strong>À observer :</strong> déplacez le point $P$. Les poids de ses trois sommets s'affichent (les autres sont nuls) : ils sont positifs et de somme $1$ tant que $P$ est dans le pentagone ; dès que $P$ sort, un poids devient négatif (en rose). Changez le sommet de départ de la triangulation : les poids changent, $P$ non. Tournez ensuite la direction du coût $c$ : la valeur $c\cdot P$ est la moyenne pondérée des $c\cdot V_i$, donc elle est au moins égale au plus petit d'entre eux. La droite de niveau qui passe par le meilleur sommet (en vert) laisse tout le pentagone d'un seul côté : le minimum d'une fonction linéaire est atteint en un sommet.</p>
+<details class="fold proof"><summary>Démonstration de Carathéodory, et idée de Minkowski</summary><div class="fold-body">
+<p><strong>Carathéodory.</strong></p>
+<ol class="steps">
+<li>$$x=\sum_{k=1}^mt_ks_k,\qquad t_k>0,\quad\sum_kt_k=1,\quad m>d+1.$$<span class="why">On part d'une combinaison qui utilise trop de points (on a retiré ceux de poids nul).</span></li>
+<li>$$\sum_{k=1}^m\mu_ks_k=0,\qquad\sum_{k=1}^m\mu_k=0,\qquad\mu\ne0.$$<span class="why">Les $m-1>d$ vecteurs $s_k-s_1$ ($k\ge2$) de $\R^d$ sont liés : $\sum_{k\ge2}\mu_k(s_k-s_1)=0$ avec des $\mu_k$ non tous nuls ; on pose $\mu_1=-\sum_{k\ge2}\mu_k$. Comme les $\mu_k$ sont de somme nulle sans être tous nuls, l'un d'eux est $>0$.</span></li>
+<li>$$x=\sum_k\big(t_k-\tau\mu_k\big)s_k,\qquad\tau=\min_{\mu_k>0}\frac{t_k}{\mu_k}.$$<span class="why">Retrancher $\tau$ fois la relation de l'étape 2 ne change ni $x$ ni la somme des poids. Ce choix de $\tau$ garde tous les poids $\ge0$ et en annule au moins un : c'est un « test du rapport ».</span></li>
+<li>$$\text{on recommence jusqu'à }m\le d+1.$$<span class="why">Chaque tour retire un point.</span></li>
+</ol>
+<p><strong>Minkowski (idée, polytope dans le plan).</strong> Soit $x$ dans le polygone. Une droite passant par $x$ coupe le bord en deux points $y$, $z$, et $x$ est sur le segment $[y,z]$. Chacun de $y$, $z$ est sur un côté, donc combinaison convexe des deux sommets de ce côté. Donc $x$ est combinaison convexe de sommets. En dimension $n$, on fait une récurrence : les « côtés » sont des polytopes de dimension plus petite, dont les sommets sont des sommets de $P$.</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pièges</div>
+<ul>
+<li><strong>Borné</strong> : sans cette hypothèse, l'enveloppe convexe des sommets peut être bien plus petite que $P$ (le quadrant). Pour un polyèdre non borné sans droite, il faut ajouter des directions : $P=\conv(\text{sommets})+\text{cône des directions de récession}$ (théorème de Minkowski–Weyl).</li>
+<li>L'enveloppe convexe des points entiers d'un polyèdre, $\conv(P\cap\Z^n)$, est en général strictement plus petite que $P$. Quand elles coïncident (matrices totalement unimodulaires, Diapo 21), la relaxation donne directement une solution entière (<a href="Partie06.html#unimodularite">partie 6</a>).</li>
+</ul>
+</div>
+
+<h3 id="fonctions-convexes">Fonctions convexes, concaves, linéaires</h3>
+<p class="small muted"><strong>Où ça sert :</strong> une fonction linéaire (ou concave) atteint son minimum sur un polytope en un sommet (<a href="Partie02.html#optimum-sommet">partie 2</a>, Diapo 20) ; la barrière logarithmique est strictement convexe, d'où l'unicité de $x_\mu$ (<a href="Partie04.html#barriere">partie 4</a>) ; la fonction duale est concave (<a href="Partie05.html#dual">partie 5</a>).</p>
+<p>Une fonction convexe a une seule « vallée » : sa courbe est sous ses cordes. Pour la minimiser, c'est la meilleure situation possible — mais son minimum peut être à l'intérieur. Une fonction concave, ou linéaire, fait l'inverse : sur un polytope, elle est minimale en un sommet. C'est la raison pour laquelle le simplexe se contente de visiter des sommets.</p>
+<div class="box def"><div class="box-h">Définitions et propriétés (rappel standard)</div>
+<ul>
+<li>$f$ est <em class="new">convexe</em> sur un convexe $C$ si $f(\theta x+(1-\theta)y)\le\theta f(x)+(1-\theta)f(y)$ pour $x,y\in C$, $\theta\in[0,1]$ ; <em class="new">strictement convexe</em> si l'inégalité est stricte pour $x\ne y$ et $0<\theta<1$ ; <em class="new">concave</em> si $-f$ est convexe. Une fonction affine $x\mapsto c\cdot x+d$ est à la fois convexe et concave.</li>
+<li><strong>Inégalité de Jensen (finie)</strong> : si $f$ est convexe, $f\big(\sum\lambda_ix_i\big)\le\sum\lambda_if(x_i)$ pour des poids $\lambda_i\ge0$ de somme $1$ ; l'inégalité est inversée pour $f$ concave.</li>
+<li>Pour $f$ deux fois dérivable : convexe si et seulement si sa hessienne est semi-définie positive ($f''\ge0$ en dimension $1$).</li>
+<li>Un minimum local d'une fonction convexe sur un convexe est global ; une fonction strictement convexe a au plus un point de minimum.</li>
+<li><strong>Sommets et extrema.</strong> Sur un polytope de sommets $V_1,\dots,V_k$ : une fonction concave (en particulier linéaire) atteint son <em>minimum</em> en un sommet ; une fonction convexe atteint son <em>maximum</em> en un sommet, mais son minimum peut être intérieur.</li>
+</ul>
+</div>
+<figure class="fig"><!-- include figures/RAP/fonctions.svg --><figcaption>Sur l'intervalle $[-1,1]$ (un polytope de dimension $1$, de sommets $\pm1$) : une fonction linéaire et une fonction concave sont minimales en un sommet ; la fonction convexe $x^2$ est minimale à l'intérieur, en $0$ (point vert). C'est le contre-exemple au « pour $J$ convexe » de la Diapo 20.</figcaption></figure>
+<div class="box example"><div class="box-h">Exemple — trois fonctions sur le pentagone</div>
+<div class="table-wrap"><table>
+<thead><tr><th>fonction</th><th>$(0,0)$</th><th>$(5,0)$</th><th>$(2,3)$</th><th>$(1,\frac52)$</th><th>$(0,1)$</th><th>minimum sur le pentagone</th></tr></thead>
+<tbody>
+<tr><td>linéaire $-x_1-2x_2$</td><td>$0$</td><td>$-5$</td><td>$-8$</td><td>$-6$</td><td>$-2$</td><td>$-8$, au sommet $(2,3)$</td></tr>
+<tr><td>concave $-(x_1-1)^2-(x_2-1)^2$</td><td>$-2$</td><td>$-17$</td><td>$-5$</td><td>$-\frac94$</td><td>$-1$</td><td>$-17$, au sommet $(5,0)$</td></tr>
+<tr><td>convexe $(x_1-1)^2+(x_2-1)^2$</td><td>$2$</td><td>$17$</td><td>$5$</td><td>$\frac94$</td><td>$1$</td><td>$0$, au point intérieur $(1,1)$</td></tr>
+</tbody></table></div>
+<p>Pour la convexe, le meilleur sommet vaut $1$, mais le minimum $0$ est atteint en $(1,1)$, qui est admissible et n'est pas un sommet. Son maximum, lui, est bien en un sommet : $17$ en $(5,0)$.</p>
+</div>
+<details class="fold proof"><summary>Démonstration : une fonction concave est minimale en un sommet</summary><div class="fold-body">
+<p>Soit $x$ un point du polytope. Par Minkowski, $x=\sum_i\lambda_iV_i$ avec $\lambda_i\ge0$, $\sum\lambda_i=1$. Si $f$ est concave, Jensen donne</p>
+$$f(x)=f\Big(\sum_i\lambda_iV_i\Big)\ \ge\ \sum_i\lambda_if(V_i)\ \ge\ \sum_i\lambda_i\min_jf(V_j)=\min_jf(V_j).$$
+<p>Le minimum sur le polytope est donc atteint en un sommet. Pour $f$ linéaire, la première inégalité est une égalité. Pour $f$ convexe, Jensen va dans l'autre sens et l'argument ne marche plus : il prouve seulement que le <em>maximum</em> est en un sommet.</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Piège — « convexe ⇒ minimum en un sommet » est faux</div>
+<p>C'est l'erreur de la Diapo 20 : il faut <em>concave</em>. Retenez l'image : une fonction convexe est une cuvette, son fond peut être n'importe où ; une fonction concave est un dôme, elle descend vers les bords. Une fonction linéaire est les deux : son minimum <em>et</em> son maximum sont en des sommets.</p>
+</div>
+<div class="box ml"><div class="box-h">En machine learning — des pertes convexes, des modèles qui ne le sont pas</div>
+<p>Les moindres carrés, la régression logistique, les SVM et la régression en norme $\ell^1$ minimisent une perte convexe en les paramètres : un minimum local trouvé par descente de gradient est global, et deux méthodes différentes trouvent la même valeur optimale. La régression $\ell^1$ et le SVM en norme $\ell^1$ sont même des programmes linéaires (<a href="Partie01.html">partie 1</a>). Un réseau de neurones, en revanche, n'est pas convexe en ses poids : plusieurs minima locaux de valeurs différentes peuvent coexister, et l'initialisation compte.</p>
+</div>
+
+<h3 id="cones">Cônes, cône engendré, fermeture</h3>
+<p class="small muted"><strong>Où ça sert :</strong> l'existence d'une solution optimale dès que la valeur est finie (Lemme 4.2.3, <a href="Partie01.html#existence">partie 1</a>) repose sur la fermeture d'un cône engendré par un nombre fini de vecteurs ; le lemme de Farkas (<a href="#farkas">§4</a>) parle de ce même cône ; KKT : le gradient est dans le cône des normales actives (<a href="#kkt">§4</a>).</p>
+<p>Un cône est un ensemble stable par « agrandissement » : si $x$ y est, $2x$, $10x$, $\frac12x$ aussi. Le cône engendré par les colonnes de $A$ est exactement l'ensemble des seconds membres $b$ pour lesquels $Ax=b$, $x\ge0$ a une solution.</p>
+<div class="box def"><div class="box-h">Définitions et théorème (rappel standard)</div>
+<ul>
+<li>$C$ est un <em class="new">cône</em> si $x\in C$ et $\lambda\ge0$ entraînent $\lambda x\in C$ ; un cône convexe est stable par sommes.</li>
+<li>Le <em class="new">cône engendré</em> par $a_1,\dots,a_n$ est $\{x_1a_1+\dots+x_na_n : x_i\ge0\}=\{Ax : x\ge0\}$. Ainsi $\Xad\ne\emptyset$ si et seulement si $b$ est dans le cône engendré par les colonnes de $A$.</li>
+<li><strong>Théorème.</strong> Un cône engendré par un nombre fini de vecteurs est fermé.</li>
+</ul>
+</div>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, preuve du Lemme 4.2.3, p. 122</span></div>
+<p>« La suite $\mathcal Ax^k$ appartient au cône suivant $C=\big\{\sum_{i=1}^nx_i\mathcal A_i$ avec $x_i\ge0\big\}$, où les $\mathcal A_i$ sont les colonnes de la matrice $\mathcal A$. D'après le Lemme de Farkas 2.5.19 le cône $C$ est fermé […] »</p>
+</div>
+<p>Ici $\mathcal A=\begin{pmatrix}c^*\\A\end{pmatrix}$ (la ligne $c\T$ au-dessus de $A$) et $(x^k)$ est une suite minimisante : $\mathcal Ax^k=(c\cdot x^k,\,Ax^k)=(c\cdot x^k,\,b)$. Les diapos résument : « On utilise que l'ensemble admissible est un cône fermé et que $x\to c\cdot x$ est continue » (Diapo 5).</p>
+<div class="box remark"><div class="box-h">Note sur les sources</div>
+<p>(1) L'énoncé du lemme de Farkas 2.5.19 ne dit pas que le cône est fermé : c'est la <em>première étape de sa démonstration</em> (Allaire, p. 43, « Commençons par montrer que $\hat{\mathcal K}$ est fermé »). La référence du livre renvoie donc à la preuve, pas à l'énoncé. (2) Dans la Diapo 5, l'ensemble qui est un cône fermé n'est pas l'ensemble admissible (qui n'est un cône que si $b=0$) mais le cône $\{(c\cdot x,Ax) : x\ge0\}$, image de $\R^n_+$ par $\mathcal A$.</p>
+</div>
+<div class="box example"><div class="box-h">Exemple — enlever un générateur de trop</div>
+<p>Avec $a_1=(1,0)$, $a_2=(1,1)$, $a_3=(0,1)$, on a $(2,3)=1\,a_1+1\,a_2+2\,a_3$, et les générateurs sont liés : $a_1-a_2+a_3=0$. Retranchons $t=\min(\frac11,\frac21)=1$ fois cette relation (on ne regarde que les coefficients positifs de la relation, ceux de $a_1$ et $a_3$) :</p>
+$$(2,3)=(1-1)\,a_1+(1+1)\,a_2+(2-1)\,a_3=2\,a_2+1\,a_3.$$
+<p>Il ne reste que deux générateurs, indépendants. Tout point du cône s'écrit ainsi avec des générateurs indépendants : c'est la clé de la fermeture.</p>
+</div>
+<details class="fold proof"><summary>Idée de la démonstration de la fermeture (Allaire, preuve du Lemme 2.5.19)</summary><div class="fold-body">
+<ol class="steps">
+<li>$$a_1,\dots,a_n\ \text{indépendants :}\quad q_k=\sum_ix_i^{(k)}a_i\to q\ \Longrightarrow\ x^{(k)}\to x,\ x\ge0,\ q=\sum_ix_ia_i.$$<span class="why">Sur l'espace engendré, les coordonnées dépendent continûment (linéairement) du point ; des limites de nombres $\ge0$ sont $\ge0$. Le cône est fermé.</span></li>
+<li>$$\text{générateurs liés :}\quad C=\bigcup_{i_0=1}^n\ \mathrm{cône}\big(a_i,\ i\ne i_0\big).$$<span class="why">Comme dans l'exemple, une relation $\sum\mu_ia_i=0$ avec un $\mu_i>0$ permet d'annuler un coefficient de toute écriture : chaque point de $C$ est dans le cône d'une sous-famille à $n-1$ vecteurs.</span></li>
+<li>$$C\ \text{est une réunion finie de fermés, donc fermé.}$$<span class="why">Par récurrence sur le nombre de générateurs, chaque cône de la réunion est fermé.</span></li>
+</ol>
+</div></details>
+<div class="box pitfall"><div class="box-h">Piège — la fermeture n'a rien d'automatique</div>
+<p>« Nombre fini de générateurs » est essentiel. Le cône convexe $\{(x,y) : x>0,\ y>0\}\cup\{(0,0)\}$ n'est pas fermé. Et l'image d'un fermé par une application linéaire peut ne pas être fermée : la projection sur l'axe horizontal du fermé $\{x>0,\ xy\ge1\}$ est $]0,+\infty[$ (<a href="#fermes">§3</a>). La fermeture de $\{Ax : x\ge0\}$ est donc un vrai théorème, propre aux cônes polyédriques.</p>
+</div>

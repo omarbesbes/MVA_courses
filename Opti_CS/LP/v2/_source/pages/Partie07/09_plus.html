@@ -1,0 +1,199 @@
+<h2 id="plus">9. Exercices supplémentaires</h2>
+<p class="tldr">Onze exercices gradués, de ★ (application directe) à ★★★ (il faut une idée), pour s'entraîner sur les matrices d'incidence, les flots, le transport, le flot maximal, Dijkstra et l'affectation.</p>
+
+<div class="exo" id="exo-incidence"><div class="exo-h">Exercice 1 — Une matrice d'incidence à la main <span class="lvl">★</span></div>
+<p>Le graphe a quatre nœuds $a,b,c,d$ et cinq arcs $(a,b)$, $(a,c)$, $(b,c)$, $(b,d)$, $(c,d)$. On prend $b=(3,0,0,-3)$ (dans l'ordre $a,b,c,d$).</p>
+<ol>
+<li>Écrire la matrice d'incidence $A$ (convention du cours).</li>
+<li>Vérifier que $x=(x_{ab},x_{ac},x_{bc},x_{bd},x_{cd})=(2,1,1,1,2)$ est un flot.</li>
+<li>Quel est le rang de $A$ ? Quelle équation peut-on supprimer ?</li>
+<li>Trouver d'autres flots. Pourquoi y en a-t-il une infinité ?</li>
+<li>Combien d'arcs comporte une base ? Donner la solution basique associée aux arcs $(a,b)$, $(b,c)$, $(c,d)$.</li>
+</ol>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Une colonne par arc, $+1$ au départ, $-1$ à l'arrivée. Pour 4, cherchez un cycle en oubliant le sens des arcs.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<ol class="steps">
+<li>$$A=\begin{array}{c|ccccc}&(a,b)&(a,c)&(b,c)&(b,d)&(c,d)\\\hline a&1&1&0&0&0\\b&-1&0&1&1&0\\c&0&-1&-1&0&1\\d&0&0&0&-1&-1\end{array}$$<span class="why">$+1$ au nœud de départ, $-1$ au nœud d'arrivée.</span></li>
+<li>$$Ax=(2+1,\ -2+1+1,\ -1-1+2,\ -1-2)=(3,0,0,-3)=b,\quad x\ge0.$$<span class="why">Ligne par ligne : sort $-$ entre.</span></li>
+<li>$\rg A=3$ : les colonnes somment à $0$, donc $\rg A\le3$, et les trois premières lignes sont indépendantes (calcul). On peut supprimer n'importe quelle équation, par exemple celle de $d$.<span class="why">Graphe connexe à $4$ nœuds : rang $4-1$.</span></li>
+<li>$$x(t)=(2+t,\ 1-t,\ 1+t,\ 1,\ 2),\quad-1\le t\le1.$$<span class="why">On ajoute $t$ le long du cycle non orienté $a\to b\to c$, en revenant par l'arc $(a,c)$ parcouru à l'envers ($-t$). Chaque nœud du cycle gagne et perd $t$. Pour $t=1$ : $(3,0,2,1,2)$ ; pour $t=-1$ : $(1,2,0,1,2)$ ; il faut $x\ge0$.</span></li>
+<li>Une base a $3$ arcs (le rang). Avec $(a,b),(b,c),(c,d)$ : $x=(3,0,3,0,3)$.<span class="why">Ces trois arcs forment un arbre (un chemin) ; Kirchhoff force $3$ unités le long de $a\to b\to c\to d$. Vérification : $Ax=(3,0,0,-3)$. C'est un sommet, entier comme prévu.</span></li>
+</ol>
+</div></details>
+</div>
+
+<div class="exo" id="exo-flot-main"><div class="exo-h">Exercice 2 — Compléter un flot avec Kirchhoff <span class="lvl">★</span></div>
+<p>Sur le graphe de la diapo 26, avec $b_s=6$, $b_p=-6$ et $b_i=0$ ailleurs, on impose $x_{s1}=4$, $x_{12}=3$, $x_{23}=1$ et $x_{21}=x_{24}=x_{32}=x_{42}=0$.</p>
+<ol>
+<li>Calculer les cinq autres composantes avec la loi de Kirchhoff.</li>
+<li>Ce flot respecte-t-il les capacités du §3 ? Quel est son coût (coûts du §3) ?</li>
+<li>Existe-t-il un flot admissible de valeur $6$ pour ces capacités ?</li>
+</ol>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Commencez par les nœuds où il ne reste qu'une inconnue : $s$, puis $1$, puis $3$, puis $2$ et $4$. Pour 3, le §5 répond.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<ol class="steps">
+<li>$$x_{s3}=6-x_{s1}=2.$$<span class="why">Nœud $s$ : $b_s=\text{sort}=x_{s1}+x_{s3}$.</span></li>
+<li>$$x_{13}=x_{s1}+x_{21}-x_{12}=4+0-3=1.$$<span class="why">Nœud $1$ : entre $=$ sort.</span></li>
+<li>$$x_{34}=x_{s3}+x_{13}+x_{23}-x_{32}=2+1+1-0=4.$$<span class="why">Nœud $3$.</span></li>
+<li>$$\begin{aligned}x_{2p}&=x_{12}+x_{32}+x_{42}-x_{21}-x_{23}-x_{24}=3+0+0-0-1-0=2,\\x_{4p}&=x_{24}+x_{34}-x_{42}=0+4-0=4.\end{aligned}$$<span class="why">Nœuds $2$ et $4$. Contrôle en $p$ : $x_{2p}+x_{4p}=6=-b_p$ ✓.</span></li>
+</ol>
+<p>2. Non : $x_{12}=3>u_{12}=2$ et $x_{34}=4>u_{34}=3$. Kirchhoff est vérifiée, mais ce n'est pas un flot admissible pour ces capacités. Son coût serait $4\cdot2+2\cdot5+3\cdot6+1\cdot2+1\cdot1+2\cdot7+4\cdot6+4\cdot2=85$.</p>
+<p>3. Oui, puisque le flot maximal vaut $7$ (§5). Par exemple, le flot obtenu après la troisième étape des chemins augmentants : $x_{s1}=2$, $x_{s3}=4$, $x_{12}=2$, $x_{2p}=4$, $x_{32}=2$, $x_{34}=2$, $x_{4p}=2$, les autres à $0$.</p>
+</div></details>
+</div>
+
+<div class="exo" id="exo-somme"><div class="exo-h">Exercice 3 — Quand un flot existe-t-il ? <span class="lvl">★</span></div>
+<p>Trois nœuds $1,2,3$ et deux arcs $(1,2)$, $(3,2)$, de capacité infinie.</p>
+<ol>
+<li>Pour $b=(1,-2,1)$, trouver un flot.</li>
+<li>Pour $b=(1,1,-2)$, la somme est nulle. Existe-t-il un flot ?</li>
+<li>Pour quels $b$ existe-t-il un flot ?</li>
+</ol>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Écrivez Kirchhoff en chaque nœud ; il n'y a que deux inconnues.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>Kirchhoff : au nœud $1$, $b_1=x_{12}$ ; au nœud $3$, $b_3=x_{32}$ ; au nœud $2$, $b_2+x_{12}+x_{32}=0$.</p>
+<ol>
+<li>$x_{12}=1$, $x_{32}=1$ : au nœud $2$, $-2+1+1=0$ ✓.</li>
+<li>Non : il faudrait $x_{32}=b_3=-2<0$. Rien ne peut arriver au nœud $3$ (aucun arc n'y entre), donc il ne peut rien consommer. $\sum b_i=0$ est nécessaire, pas suffisant.</li>
+<li>Exactement quand $b_1\ge0$, $b_3\ge0$ et $b_2=-(b_1+b_3)$ : alors $x_{12}=b_1$, $x_{32}=b_3$ convient, et ces conditions sont imposées par Kirchhoff et $x\ge0$.</li>
+</ol>
+</div></details>
+</div>
+
+<div class="exo" id="exo-transport-deseq"><div class="exo-h">Exercice 4 — Un transport où la demande dépasse l'offre <span class="lvl">★★</span></div>
+<p>Deux usines ont des stocks $30$ et $20$ ; trois clients demandent $25$, $15$ et $20$. Les coûts unitaires sont $c=\begin{pmatrix}4&6&9\\5&3&7\end{pmatrix}$ (lignes : usines, colonnes : clients). Chaque unité non livrée au client $j$ coûte une pénalité $\pi_j$.</p>
+<ol>
+<li>Modéliser comme un flot de coût minimum.</li>
+<li>Résoudre pour $\pi=(10,6,12)$. Quel client est lésé ?</li>
+<li>Même question pour $\pi=(8,8,8)$.</li>
+</ol>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>La demande ($60$) dépasse l'offre ($50$) : ajoutez une usine fictive de stock $10$, dont le coût vers le client $j$ est $\pi_j$. Vous pouvez résoudre avec <code>ot.emd</code> ou <code>linprog</code>, ou à la main par le coin nord-ouest et les potentiels.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>Modèle.</strong> Nœuds $U_1,U_2,U_3$ ($U_3$ fictive, stock $10$) et $C_1,C_2,C_3$ ; $b=(30,20,10,-25,-15,-20)$, de somme nulle ; arcs $U_iC_j$ de capacité infinie, de coûts $c_{ij}$ pour $i=1,2$ et $\pi_j$ pour $i=3$. Ce que l'usine fictive « livre » au client $j$ est la demande non satisfaite de $j$.</p>
+<p><strong>$\pi=(10,6,12)$.</strong> Le plan optimal (unique) est</p>
+$$\begin{array}{c|ccc}&C_1&C_2&C_3\\\hline U_1&25&0&5\\U_2&0&5&15\\U_3&0&10&0\end{array}\qquad\text{coût }25\cdot4+5\cdot9+5\cdot3+15\cdot7+10\cdot6=325.$$
+<p>Le client $2$, dont la pénalité est la plus faible, n'est servi qu'à $5$ sur $15$. Coût de transport réel $265$, pénalités $60$.</p>
+<p><strong>$\pi=(8,8,8)$.</strong> Le plan optimal (unique) devient $U_1\to C_1$ : $25$, $U_1\to C_3$ : $5$, $U_2\to C_2$ : $15$, $U_2\to C_3$ : $5$, et $10$ unités manquent au client $3$ ; coût $225+80=305$. À pénalité égale, on lèse le client le plus cher à servir ($c_{13}=9$, $c_{23}=7$). Les deux plans sont entiers, comme prévu ; vérifiés par <code>ot.emd</code> et <code>linprog</code>.</p>
+</div></details>
+</div>
+
+<div class="exo" id="exo-diamant"><div class="exo-h">Exercice 5 — Pourquoi il faut pouvoir « retirer » du flot <span class="lvl">★★</span></div>
+<p>Le graphe a quatre nœuds $s,a,b,p$ et cinq arcs $(s,a)$, $(s,b)$, $(a,b)$, $(a,p)$, $(b,p)$, tous de capacité $1$.</p>
+<ol>
+<li>Quel est le flot maximal ? Donner toutes les coupes minimales.</li>
+<li>On commence par le chemin $s\to a\to b\to p$. Montrer que, si l'on n'utilise que des arcs « à l'endroit » non saturés, on ne peut plus rien augmenter.</li>
+<li>Terminer l'algorithme des chemins augmentants avec le graphe résiduel complet.</li>
+</ol>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>La coupe $\{s\}$ a une capacité $2$. Après le premier chemin, regardez l'arc $(a,b)$ : on peut l'utiliser à l'envers.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<ol class="steps">
+<li>Flot maximal $2$ ; coupes minimales $\{s\}$, $\{s,b\}$ et $\{s,a,b\}$, de capacité $2$ ; la coupe $\{s,a\}$ a une capacité $3$.<span class="why">$\mathrm{cap}(\{s\})=u_{sa}+u_{sb}=2$ ; $\{s,b\}$ : $u_{sa}+u_{bp}=2$ ; $\{s,a,b\}$ : $u_{ap}+u_{bp}=2$ ; $\{s,a\}$ : $u_{sb}+u_{ab}+u_{ap}=3$. Le flot $x_{sa}=x_{sb}=x_{ap}=x_{bp}=1$, $x_{ab}=0$ atteint $2$.</span></li>
+<li>Après $s\to a\to b\to p$ (goulot $1$) : $(s,a)$, $(a,b)$, $(b,p)$ sont saturés. Arcs non saturés : $(s,b)$ et $(a,p)$. Depuis $s$, on atteint $b$, mais de $b$ ne part aucun arc non saturé : bloqué à la valeur $1$, alors que le maximum est $2$.<span class="why">Le premier chemin a « mal » utilisé l'arc $(a,b)$.</span></li>
+<li>Dans le graphe résiduel, l'arc $(a,b)$ portant $1$ donne une arête $b\to a$ de capacité $1$. Chemin augmentant : $s\to b\to a\to p$, goulot $1$ : on ajoute $1$ sur $(s,b)$ et $(a,p)$ et on <em>retire</em> $1$ de $(a,b)$. Résultat : $x_{sa}=x_{sb}=x_{ap}=x_{bp}=1$, $x_{ab}=0$, valeur $2$.<span class="why">Plus aucun chemin augmentant : depuis $s$, les arcs $(s,a)$ et $(s,b)$ sont saturés. $S=\{s\}$, coupe de capacité $2$.</span></li>
+</ol>
+<p>C'est ce que fait le parcours en profondeur dans la figure interactive du §5, à sa sixième étape.</p>
+</div></details>
+</div>
+
+<div class="exo" id="exo-dijkstra"><div class="exo-h">Exercice 6 — Dijkstra à la main <span class="lvl">★★</span></div>
+<p>Cinq nœuds $s,a,b,c,p$ ; arcs et coûts : $(s,a)$ : $4$, $(s,b)$ : $1$, $(b,a)$ : $2$, $(a,c)$ : $1$, $(b,c)$ : $5$, $(c,p)$ : $3$, $(a,p)$ : $6$. Dérouler l'algorithme de Dijkstra depuis $s$, donner le plus court chemin vers $p$ et un certificat de son optimalité.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Tenez un tableau des étiquettes ; à chaque étape, fixez la plus petite étiquette provisoire. Le certificat : les distances finales vérifient $d(j)\le d(i)+c_{ij}$ sur tous les arcs.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<div class="table-wrap"><table>
+<thead><tr><th>Étape</th><th>On fixe</th><th>Relâchements</th><th>$d(s),d(a),d(b),d(c),d(p)$</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>$s$ ($0$)</td><td>$a$ : $4$ ; $b$ : $1$</td><td>$0,4,1,\infty,\infty$</td></tr>
+<tr><td>2</td><td>$b$ ($1$)</td><td>$a$ : $1+2=3<4$ ; $c$ : $1+5=6$</td><td>$0,3,1,6,\infty$</td></tr>
+<tr><td>3</td><td>$a$ ($3$)</td><td>$c$ : $3+1=4<6$ ; $p$ : $3+6=9$</td><td>$0,3,1,4,9$</td></tr>
+<tr><td>4</td><td>$c$ ($4$)</td><td>$p$ : $4+3=7<9$</td><td>$0,3,1,4,7$</td></tr>
+<tr><td>5</td><td>$p$ ($7$)</td><td>—</td><td>$0,3,1,4,7$</td></tr>
+</tbody></table></div>
+<p>Plus court chemin : $s\to b\to a\to c\to p$, de longueur $1+2+1+3=7$. Certificat : avec $d=(0,3,1,4,7)$, on a $d(a)=3\le0+4$, $d(b)=1\le0+1$, $d(a)=3\le1+2$, $d(c)=4\le3+1$, $d(c)=4\le1+5$, $d(p)=7\le4+3$, $d(p)=7\le3+6$ : $d(j)\le d(i)+c_{ij}$ sur tous les arcs. Le long d'un chemin quelconque de $s$ à $p$, en sommant ces inégalités, la longueur est $\ge d(p)-d(s)=7$.</p>
+</div></details>
+</div>
+
+<div class="exo" id="exo-hongrois"><div class="exo-h">Exercice 7 — Une affectation qui demande l'étape de couverture <span class="lvl">★★</span></div>
+<p>Résoudre par la méthode hongroise l'affectation de coûts $C=\begin{pmatrix}3&2&6\\3&8&4\\9&1&7\end{pmatrix}$, et vérifier par énumération.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Après les réductions, les lignes $1$ et $3$ n'ont de zéro que dans la colonne $2$ : pas de $3$ zéros indépendants. Couvrez les zéros par deux traits et ajustez.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\begin{pmatrix}3&2&6\\3&8&4\\9&1&7\end{pmatrix}\xrightarrow{\text{lignes : }-2,-3,-1}\begin{pmatrix}1&0&4\\0&5&1\\8&0&6\end{pmatrix}\xrightarrow{\text{colonnes : }-0,-0,-1}\begin{pmatrix}1&0&3\\0&5&0\\8&0&5\end{pmatrix}$$<span class="why">Minima des lignes $2,3,1$ ; puis minima des colonnes $0,0,1$.</span></li>
+<li>Zéros : $(1,2)$, $(2,1)$, $(2,3)$, $(3,2)$. Au plus deux indépendants.<span class="why">Les lignes $1$ et $3$ ont toutes deux leur seul zéro en colonne $2$.</span></li>
+<li>Couverture par deux traits : la ligne $2$ et la colonne $2$. Plus petit coefficient non couvert : $\delta=\min(1,3,8,5)=1$.<span class="why">Les cases non couvertes sont aux lignes $1,3$ et colonnes $1,3$.</span></li>
+<li>$$\begin{pmatrix}0&0&2\\0&6&0\\7&0&4\end{pmatrix}$$<span class="why">On retranche $1$ aux cases non couvertes et on ajoute $1$ à la case couverte deux fois, $(2,2)$.</span></li>
+<li>Zéros indépendants : $(1,1)$, $(2,3)$, $(3,2)$ : $\sigma=(1,3,2)$, coût $3+4+1=8$.<span class="why">Un zéro par ligne et par colonne.</span></li>
+</ol>
+<p>Énumération des $6$ permutations : $(1,3,2)$ : $8$ ; $(3,1,2)$ : $10$ ; $(2,1,3)$ : $12$ ; $(2,3,1)$ : $15$ ; $(1,2,3)$ : $18$ ; $(3,2,1)$ : $23$. L'optimum $8$ est unique. Certificat dual : les réductions totalisent $2+3+1+0+0+1=7$, et l'ajustement augmente la borne de $\delta\times(N-\text{nombre de traits})=1\times(3-2)=1$ : $7+1=8$.</p>
+</div></details>
+</div>
+
+<div class="exo" id="exo-dijkstra-negatif"><div class="exo-h">Exercice 8 — Pourquoi Dijkstra échoue avec des coûts négatifs <span class="lvl">★★</span></div>
+<p>Quatre nœuds $s,a,b,p$ ; arcs $(s,a)$ : $1$, $(s,b)$ : $2$, $(b,a)$ : $-2$, $(a,p)$ : $1$.</p>
+<ol>
+<li>Dérouler Dijkstra. Quelle distance annonce-t-il pour $p$ ? Quelle est la vraie ?</li>
+<li>Où la preuve du §6 tombe-t-elle en défaut ?</li>
+<li>On ajoute $2$ à tous les coûts pour les rendre $\ge0$, puis on applique Dijkstra. Obtient-on le plus court chemin du problème initial ?</li>
+</ol>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Énumérez les deux chemins de $s$ à $p$. Pour 3, comptez les arcs de chaque chemin.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<ol class="steps">
+<li>On fixe $s$ ($d(a)=1$, $d(b)=2$), puis $a$ ($d=1$ ; $d(p)=2$), puis $b$ ($d=2$ ; l'arc $(b,a)$ donnerait $0<1$ mais $a$ est déjà fixé), puis $p$ ($d=2$).<span class="why">Dijkstra annonce $2$, par $s\to a\to p$.</span></li>
+<li>Le vrai plus court chemin est $s\to b\to a\to p$, de longueur $2-2+1=1$.<span class="why">Il n'y a que deux chemins : $s\to a\to p$ ($2$) et $s\to b\to a\to p$ ($1$).</span></li>
+<li>La ligne 3 de la preuve suppose que la fin d'un chemin, de $y$ à $v$, a une longueur $\ge0$. Ici, quand on fixe $a$, le chemin $s\to b\to a$ sort de la zone fixée en $b$ ($d(b)=2\ge d(a)=1$), mais sa fin $b\to a$ coûte $-2$.<span class="why">C'est l'unique endroit où $c\ge0$ sert.</span></li>
+<li>Avec les coûts $3,4,0,3$ : $s\to a\to p$ coûte $6$, $s\to b\to a\to p$ coûte $7$. Dijkstra (correct cette fois) rend $s\to a\to p$, qui n'est <strong>pas</strong> le plus court chemin du problème initial.<span class="why">Ajouter $k$ à chaque arc ajoute $k\times(\text{nombre d'arcs})$ à chaque chemin : les chemins longs en nombre d'arcs sont pénalisés, l'ordre change.</span></li>
+</ol>
+<p>Avec des coûts négatifs sans cycle négatif, on utilise Bellman–Ford, qui trouve ici $d(p)=1$.</p>
+</div></details>
+</div>
+
+<div class="exo" id="exo-rang"><div class="exo-h">Exercice 9 — Le rang d'une matrice d'incidence <span class="lvl">★★★</span></div>
+<p>Soit $A$ la matrice d'incidence d'un graphe orienté à $m$ nœuds, et $k$ le nombre de ses composantes connexes (en oubliant le sens des arcs). Montrer que $\rg A=m-k$. En déduire combien d'équations sont redondantes dans un problème de flot.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Calculez le noyau de $A^\top$ : pour $y\in\R^m$, que vaut la composante de $A^\top y$ associée à l'arc $(i,j)$ ? Puis $\rg A=m-\dim\Ker A^\top$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<ol class="steps">
+<li>$$(A^\top y)_{(i,j)}=\sum_kA_{k,(i,j)}y_k=y_i-y_j.$$<span class="why">La colonne de l'arc $(i,j)$ a un $+1$ en $i$, un $-1$ en $j$.</span></li>
+<li>$$A^\top y=0\iff y_i=y_j\ \text{pour tout arc }(i,j).$$<span class="why">Ligne 1.</span></li>
+<li>$A^\top y=0$ si et seulement si $y$ est constant sur chaque composante connexe.<span class="why">Deux nœuds d'une même composante sont reliés par une chaîne d'arcs (parcourus dans un sens ou dans l'autre) ; l'égalité se propage le long de la chaîne. Réciproquement, un $y$ constant par composante vérifie la ligne 2, car un arc relie deux nœuds de la même composante.</span></li>
+<li>$$\dim\Ker A^\top=k,\qquad\rg A=\rg A^\top=m-\dim\Ker A^\top=m-k.$$<span class="why">Une base du noyau : les indicatrices des $k$ composantes. Puis le théorème du rang pour $A^\top$ (qui a $m$ colonnes), et $\rg A=\rg A^\top$ (<a href="Rappels.html#rang">rappel sur le rang</a>).</span></li>
+</ol>
+<p>Dans un problème de flot, il y a donc exactement $k$ équations redondantes, une par composante. Elles sont compatibles si et seulement si $\sum_{i\in C}b_i=0$ pour chaque composante $C$ (sinon aucun flot n'existe) : c'est (4.27), composante par composante. Pour le graphe de la diapo 26, $k=1$ et $\rg A=5$ ; pour l'Exercice 1, $\rg A=3$.</p>
+</div></details>
+</div>
+
+<div class="exo" id="exo-dual-coupe"><div class="exo-h">Exercice 10 — Flot maximal = coupe minimale par la dualité <span class="lvl">★★★</span></div>
+<p>On note (P) le flot maximal $\max\{v : Ax=v(e_s-e_p),\ 0\le x\le u\}$ et (D) le programme $\min\{\sum u_{ij}d_{ij} : d_{ij}\ge\mu_i-\mu_j,\ \mu_s-\mu_p=1,\ d\ge0\}$ du §5.</p>
+<ol>
+<li>Montrer que toute coupe $S$ donne une solution admissible de (D) de valeur $\mathrm{cap}(S)$.</li>
+<li>Soit $(\mu,d)$ une solution optimale de (D). Pour $\theta\in\,]\mu_p,\mu_s]$, on pose $S_\theta=\{i : \mu_i\ge\theta\}$. Montrer que $\int_{\mu_p}^{\mu_s}\mathrm{cap}(S_\theta)\,\mathrm{d}\theta\le\sum u_{ij}d_{ij}$.</li>
+<li>En déduire, avec la dualité forte, que la valeur maximale d'un flot est égale à la capacité minimale d'une coupe.</li>
+</ol>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Pour 2, échangez la somme et l'intégrale : l'arc $(i,j)$ compte dans $\mathrm{cap}(S_\theta)$ exactement quand $\mu_j<\theta\le\mu_i$. Mesurez cet ensemble de $\theta$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<ol class="steps">
+<li>Avec $\mu=\ind_S$ et $d_{ij}=1$ si $i\in S$, $j\notin S$, $0$ sinon : $\mu_s-\mu_p=1-0=1$ ; si $i\in S$, $j\notin S$, $\mu_i-\mu_j=1=d_{ij}$ ; sinon $\mu_i-\mu_j\le0\le d_{ij}$. Valeur : $\sum_{i\in S,j\notin S}u_{ij}=\mathrm{cap}(S)$.<span class="why">Vérification directe des contraintes.</span></li>
+<li>$$\begin{aligned}\int_{\mu_p}^{\mu_s}\mathrm{cap}(S_\theta)\,\mathrm{d}\theta&=\sum_{(i,j)}u_{ij}\,\big|\{\theta\in\,]\mu_p,\mu_s] : \mu_j<\theta\le\mu_i\}\big|\\&\le\sum_{(i,j)}u_{ij}\max(0,\mu_i-\mu_j)\le\sum_{(i,j)}u_{ij}d_{ij}.\end{aligned}$$<span class="why">L'arc $(i,j)$ va de $S_\theta$ vers son complémentaire exactement quand $\mu_i\ge\theta>\mu_j$ ; cet intervalle a une longueur $\le\max(0,\mu_i-\mu_j)\le d_{ij}$ ; et $u\ge0$.</span></li>
+<li>L'intervalle $]\mu_p,\mu_s]$ est de longueur $1$, donc il existe $\theta$ avec $\mathrm{cap}(S_\theta)\le\sum u_{ij}d_{ij}=\min(\text{D})$. Or $S_\theta$ contient $s$ ($\mu_s\ge\theta$) et pas $p$ ($\mu_p<\theta$) : c'est une coupe.<span class="why">Une fonction d'intégrale $\le M$ sur un intervalle de longueur $1$ prend une valeur $\le M$.</span></li>
+<li>$$\max(\text{P})=\min(\text{D})\ \ge\ \min_S\mathrm{cap}(S)\ \ge\ \max(\text{P}).$$<span class="why">Dualité forte (partie 5 ; (P) est admissible, $x=0$, et borné) ; puis la ligne 3 donne une coupe de capacité $\le\min(\text{D})$, d'où « $\min_S\mathrm{cap}(S)\le\min(\text{D})$ » ; enfin la ligne 1 donne « $\min(\text{D})\le\min_S\mathrm{cap}(S)$ », et la dualité faible (ou le §5) « $\max(\text{P})\le\min_S\mathrm{cap}(S)$ ». Tout est égal.</span></li>
+</ol>
+<p>Cette preuve n'utilise ni l'algorithme des chemins augmentants ni la totale unimodularité, et vaut pour des capacités réelles.</p>
+</div></details>
+</div>
+
+<div class="exo" id="exo-birkhoff"><div class="exo-h">Exercice 11 — Décomposer une matrice doublement stochastique <span class="lvl">★★</span></div>
+<p>Soit $D=\begin{pmatrix}\frac12&\frac12&0\\\frac14&\frac14&\frac12\\\frac14&\frac14&\frac12\end{pmatrix}$.</p>
+<ol>
+<li>Vérifier que $D$ est doublement stochastique.</li>
+<li>L'écrire comme moyenne pondérée de matrices de permutation : chercher une permutation dans le support de $D$, en retirer le plus grand multiple possible, recommencer.</li>
+<li>Avec la matrice $C$ de l'exemple du §7, calculer $\sum c_{ij}D_{ij}$ et le comparer à $11$.</li>
+</ol>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Première permutation : l'identité ($D_{11},D_{22},D_{33}>0$), de poids $\min(\frac12,\frac14,\frac12)=\frac14$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<ol class="steps">
+<li>Lignes : $\frac12+\frac12+0=1$, $\frac14+\frac14+\frac12=1$ (deux fois) ; colonnes : $\frac12+\frac14+\frac14=1$ (deux fois), $0+\frac12+\frac12=1$ ; coefficients $\ge0$.<span class="why">Définition (4.36).</span></li>
+<li>$$D-\tfrac14P_{(1,2,3)}=\begin{pmatrix}\frac14&\frac12&0\\\frac14&0&\frac12\\\frac14&\frac14&\frac14\end{pmatrix}.$$<span class="why">On retire $\frac14$ de l'identité. Il reste une matrice dont lignes et colonnes somment à $\frac34$.</span></li>
+<li>Puis $\sigma=(1,3,2)$ (cases $\frac14,\frac12,\frac14$, poids $\frac14$), puis $\sigma=(2,1,3)$ (poids $\frac14$), puis $\sigma=(2,3,1)$ (poids $\frac14$), et il ne reste rien :<span class="why">À chaque étape, le support contient une permutation (théorème de Hall) et au moins une case s'annule.</span></li>
+<li>$$D=\tfrac14\big(P_{(1,2,3)}+P_{(1,3,2)}+P_{(2,1,3)}+P_{(2,3,1)}\big).$$<span class="why">Les poids sont $\ge0$ et somment à $1$ : $D$ est dans l'enveloppe convexe des permutations.</span></li>
+<li>$$\sum c_{ij}D_{ij}=\tfrac14(15+14+13+11)=\tfrac{53}4=13{,}25\ge11.$$<span class="why">Coûts des quatre permutations (tableau du §7) ; par linéarité, le coût de $D$ est leur moyenne. Calcul direct : $6\cdot\frac12+2\cdot\frac12+3\cdot\frac14+1\cdot\frac14+5\cdot\frac12+4\cdot\frac14+3\cdot\frac14+8\cdot\frac12=\frac{53}4$.</span></li>
+</ol>
+</div></details>
+</div>

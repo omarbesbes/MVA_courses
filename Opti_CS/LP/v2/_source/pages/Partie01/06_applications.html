@@ -1,0 +1,66 @@
+<h2 id="applications">6. La programmation linéaire en machine learning et en pratique</h2>
+<p class="tldr">Dès qu'une perte est linéaire par morceaux (valeur absolue, perte « pinball », perte charnière) et la régularisation en norme $\ell^1$, l'apprentissage est un programme linéaire ; le transport optimal discret en est un aussi.</p>
+<p>Cette section est un <strong>ajout</strong> : le cours n'en parle pas, mais ce sont des applications classiques et exactes des §1 (linéarisation) et §2 (forme standard). Chaque nombre a été recalculé par <code>linprog</code>.</p>
+
+<h3 id="lad">La régression en norme $\ell^1$ (LAD)</h3>
+<p><strong>Le problème.</strong> On ajuste une droite $y\approx wx+b$ à des données $(x_i,y_i)$, $i=1,\dots,N$. Les moindres carrés minimisent $\sum_i(y_i-wx_i-b)^2$ : un point aberrant, dont l'erreur est élevée au carré, tire toute la droite vers lui. La régression LAD (<em>least absolute deviations</em>) minimise $\sum_i\abs{y_i-wx_i-b}$ : les grosses erreurs pèsent moins.</p>
+<div class="box def"><div class="box-h">Le programme linéaire de la régression LAD</div>
+$$\min_{w,\,b,\,t}\ \sum_{i=1}^Nt_i\qquad\text{s.c.}\qquad -t_i\ \le\ y_i-(wx_i+b)\ \le\ t_i,\qquad i=1,\dots,N.$$
+<p>Variables : $w,b$ (libres) et $t_1,\dots,t_N$ ; $2N$ inégalités. À l'optimum, $t_i=\abs{y_i-wx_i-b}$ (§1). Pour $d$ variables explicatives, remplacez $wx_i$ par $w\cdot x_i$, $w\in\R^d$.</p>
+</div>
+<div class="box example"><div class="box-h">Exemple — six points, dont un aberrant</div>
+<p>Données : $(0,1)$, $(1,2)$, $(2,3)$, $(3,3)$, $(4,5)$, $(5,12)$. Le dernier point est aberrant.</p>
+<ul>
+<li><strong>LAD</strong> : $w=1$, $b=1$, c'est-à-dire $y=x+1$. Résidus $y_i-(x_i+1)$ : $0,0,0,-1,0,6$ ; somme des valeurs absolues $7$. Aucune autre droite ne fait mieux (le solveur, et une énumération exacte des droites passant par deux points, donnent la même solution, unique).</li>
+<li><strong>Moindres carrés</strong> : $w=\frac{64}{35}\approx1{,}83$, $b=-\frac5{21}\approx-0{,}24$ ; somme des $\abs{\text{résidus}}\approx9{,}49$. Sans le point aberrant, les moindres carrés donneraient $w=\frac9{10}$, $b=1$ : c'est le sixième point qui a presque doublé la pente.</li>
+<li><strong>Robustesse</strong> : remplacez $12$ par $20$, puis par $100$. La droite LAD ne bouge pas ($y=x+1$) ; la pente des moindres carrés passe à $2{,}97$, puis à $14{,}4$.</li>
+</ul>
+</div>
+<figure class="fig"><!-- include figures/P01/lad.svg --><figcaption>Régression LAD (vert) et moindres carrés (violet, pointillé) sur six points dont un aberrant. La droite LAD passe exactement par quatre des points ; ses résidus (pointillés verts) sont $0,0,0,-1,0,6$.</figcaption></figure>
+<div class="box intu"><div class="box-h">Intuition — pourquoi la droite LAD passe par des points de données</div>
+<p>Le programme a $N+2$ variables $(w,b,t)$ et $2N$ inégalités, deux par point. En un sommet de ce polyèdre, au moins $N+2$ inégalités indépendantes sont actives (la version « inégalités » de la notion de sommet, <a href="Partie02.html#sommets-basiques">partie 2</a>). Or les deux inégalités du point $i$ ne sont actives ensemble que si $t_i=y_i-wx_i-b=-t_i$, c'est-à-dire si le résidu $i$ est nul. Avec $N$ paires et au moins $N+2$ inégalités actives, au moins deux paires le sont entièrement : <strong>il existe toujours une droite LAD optimale qui passe par au moins deux points de données</strong> (dès que les $x_i$ ne sont pas tous égaux). Ici elle en traverse quatre, parce que quatre points sont alignés. C'est aussi pourquoi, pour un modèle constant ($y\approx b$), LAD donne une <em>médiane</em> (<a href="#exo-mediane">exercice 7</a>).</p>
+</div>
+
+<h3 id="quantile">La régression quantile</h3>
+<p>Prédire la moyenne ne suffit pas toujours : un gestionnaire de stock veut la demande qu'on ne dépassera que 1 fois sur 10 (le quantile 0,9). La <em>régression quantile</em> (Koenker et Bassett, 1978) remplace la valeur absolue par la perte « pinball », asymétrique, pour un niveau $\tau\in]0,1[$ :</p>
+$$\rho_\tau(r)=\max\big(\tau r,\ (\tau-1)r\big)=\begin{cases}\tau\,r&\text{si }r\ge0,\\(1-\tau)\,\abs{r}&\text{si }r<0.\end{cases}$$
+<p>Pour $\tau=\frac12$, c'est $\frac12\abs{r}$. Le programme linéaire coupe chaque résidu en partie positive et négative, comme au §2 : $y_i-(w\cdot x_i+b)=u_i-v_i$ avec $u_i,v_i\ge0$, et l'on minimise $\sum_i\big(\tau u_i+(1-\tau)v_i\big)$. À l'optimum, $u_i$ et $v_i$ ne sont pas tous deux positifs (sinon on les diminuerait tous les deux d'autant, ce qui baisse le coût), donc $\tau u_i+(1-\tau)v_i=\rho_\tau(r_i)$.</p>
+<div class="box example"><div class="box-h">Exemple — le quantile d'un échantillon par programmation linéaire</div>
+<p>Modèle constant $y\approx q$ sur l'échantillon $1,2,3,3,5,12$ : on minimise $\sum_i\rho_\tau(y_i-q)$.</p>
+<ul>
+<li>$\tau=\frac12$ : le programme linéaire donne $q=3$, la <strong>médiane</strong>, avec la perte $\frac12\big(2+1+0+0+2+9\big)=7$.</li>
+<li>$\tau=0{,}8$ : la perte vaut $8{,}6$ en $q=4$, $7{,}8$ en $q=5$ et $8{,}0$ en $q=6$ ; le programme linéaire donne $q=5$. C'est le <strong>quantile 0,8</strong> de l'échantillon : 5 valeurs sur 6 (83 %) sont $\le5$, et 4 sur 6 (67 %) sont $<5$.</li>
+</ul>
+</div>
+<div class="box ml"><div class="box-h">En machine learning — intervalles de prédiction</div>
+<p>En entraînant deux régressions quantiles, pour $\tau=0{,}1$ et $\tau=0{,}9$, on obtient un intervalle qui contient la vraie valeur environ 8 fois sur 10 : c'est ainsi qu'on produit des prévisions avec incertitude (demande, énergie, temps de trajet). Les bibliothèques de <em>gradient boosting</em> et les réseaux de neurones utilisent la même perte pinball, minimisée par gradient ; pour un modèle linéaire, c'est exactement un programme linéaire, résolu de façon exacte.</p>
+</div>
+
+<h3 id="svm-l1">Le SVM en norme $\ell^1$ et la perte charnière</h3>
+<p>Un classifieur linéaire prédit le signe de $w\cdot x+b$ pour des étiquettes $y_i\in\{-1,+1\}$. Le SVM pénalise les points mal classés ou trop près de la frontière avec la <em>perte charnière</em> (<em>hinge loss</em>) $\max\big(0,\ 1-y_i(w\cdot x_i+b)\big)$. Le SVM classique la combine avec $\norm{w}_2^2$, ce qui donne un programme <em>quadratique</em>. Avec la norme $\ell^1$ (Bradley et Mangasarian, 1998 ; Zhu, Rosset, Hastie et Tibshirani, 2003), tout est linéaire :</p>
+$$\min_{w,\,b,\,\xi}\ \sum_{j=1}^d\abs{w_j}+C\sum_{i=1}^N\xi_i\qquad\text{s.c.}\qquad \xi_i\ge1-y_i(w\cdot x_i+b),\quad\xi_i\ge0 .$$
+<p>Les $\xi_i$ sont des variables épigraphes pour la perte charnière (un maximum de deux fonctions affines, §1), et l'on écrit $w=w^+-w^-$ pour $\abs{w_j}=w_j^++w_j^-$ (§2).</p>
+<div class="box example"><div class="box-h">Exemple — la norme $\ell^1$ sélectionne les variables</div>
+<p>Six points du plan : la classe $+1$ en $(0,2)$, $(2,3)$, $(4,2)$, la classe $-1$ en $(0,0)$, $(2,1)$, $(4,0)$. Avec $C=10$ (ou $C=1$), le programme linéaire donne $w=(0,2)$, $b=-3$ et tous les $\xi_i=0$ : la règle est « classe $+1$ si $2x_2-3>0$ ». La première coordonnée est <strong>ignorée</strong> ($w_1=0$) : elle ne sert pas à séparer les classes, et la norme $\ell^1$ l'a mise exactement à zéro. Les marges $y_i(w\cdot x_i+b)$ valent $1,3,1,3,1,3$. Pourquoi $\norm{w}_1=2$ est le mieux qu'on puisse faire sans erreur ($\xi=0$) : en retranchant les contraintes des points $(0,2)$ et $(2,1)$, puis $(4,2)$ et $(2,1)$, on obtient $-2w_1+w_2\ge2$ et $2w_1+w_2\ge2$ ; leur somme donne $w_2\ge2$, donc $\norm{w}_1\ge2$, avec égalité seulement si $w_1=0$. Le solveur confirme qu'accepter des $\xi_i>0$ ne fait pas mieux, pour $C=10$ comme pour $C=1$.</p>
+</div>
+<div class="box ml"><div class="box-h">En machine learning — pourquoi l'$\ell^1$ rend les modèles creux</div>
+<p>L'optimum d'un programme linéaire est en un sommet, et un sommet a beaucoup de coordonnées nulles (<a href="Partie02.html#bases">partie 2</a>) : c'est l'explication géométrique de la parcimonie des pénalités $\ell^1$ (SVM $\ell^1$, <em>basis pursuit</em> en acquisition comprimée, et, hors PL, le Lasso). Le prix à payer : la solution peut changer brutalement quand les données bougent, quand $c$ franchit une normale (widget du §3).</p>
+</div>
+
+<h3 id="transport-optimal">Le transport optimal discret</h3>
+<div class="box ml"><div class="box-h">En machine learning — Kantorovich est un programme linéaire</div>
+<p>Pour comparer deux histogrammes $a\in\R^n_+$ et $b\in\R^p_+$ (de même masse), placés en des points $x_i$ et $y_j$, le transport optimal cherche la façon la moins chère de déplacer l'un sur l'autre :</p>
+$$\min_{P\in\R^{n\times p}}\ \sum_{i,j}C_{ij}P_{ij}\qquad\text{s.c.}\qquad\sum_jP_{ij}=a_i,\quad\sum_iP_{ij}=b_j,\quad P\ge0,$$
+<p>avec $C_{ij}$ le coût de déplacement d'une unité de $x_i$ à $y_j$ (par exemple $\norm{x_i-y_j}^2$). C'est un PL sous forme standard, avec une équation redondante (§2). Sa valeur, pour $C_{ij}=\norm{x_i-y_j}^p$, donne la distance de Wasserstein $W_p^p$, utilisée pour comparer des distributions (des nuages de points, des images vues comme histogrammes, des mots plongés dans un espace vectoriel). La fonction <code>ot.emd</code> de la bibliothèque POT le résout par un simplexe de réseau (<a href="Partie07.html">partie 7</a>). Le lien avec votre cours de transport optimal : <a href="../../../Optimal_transport_ML/v2/Lesson02.html#couplings-lp">Lesson 2</a> (couplages, programme linéaire, sommets = permutations). Un exemple $2\times2$ est l'<a href="#exo-transport">exercice 11</a>.</p>
+</div>
+
+<h3 id="solveurs">Ce que fait vraiment un solveur</h3>
+<div class="box app"><div class="box-h">En pratique — dans la boîte noire</div>
+<ul>
+<li><strong>Prétraitement</strong> (<em>presolve</em>) : le solveur supprime les lignes redondantes, fixe les variables évidentes, détecte certaines incompatibilités. C'est la version automatique de l'hypothèse $\rg A=m$ du §2.</li>
+<li><strong>Forme interne</strong> : il ajoute ses propres variables d'écart et gère directement les bornes $\ell_j\le x_j\le u_j$ sans les transformer (le tableau du §2 est la version « papier »).</li>
+<li><strong>Algorithme</strong> : simplexe (primal ou dual, <a href="Partie03.html">partie 3</a>) ou points intérieurs (<a href="Partie04.html">partie 4</a>), souvent les deux. Les solutions du simplexe sont des sommets ; celles des points intérieurs, au milieu d'une face optimale, sont ensuite « poussées » vers un sommet (<em>crossover</em>).</li>
+<li><strong>Tolérances</strong> : tout est en virgule flottante, avec des tolérances de l'ordre de $10^{-7}$ sur les contraintes ; d'où le $2400{,}000000000001$ du §1. Pour un résultat exact sur un petit problème, on recalcule le sommet trouvé en fractions.</li>
+<li><strong>Réponse</strong> : un statut (optimal, irréalisable, non borné — les trois issues du §4), une solution, les écarts, et les variables duales (« prix » des contraintes, <a href="Partie05.html">partie 5</a>).</li>
+</ul>
+</div>

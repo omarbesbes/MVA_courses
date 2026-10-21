@@ -1,0 +1,143 @@
+<h2 id="affectation">7. L'affectation <span class="ref">Allaire §4.3.3, p. 141–142 ; Diapo 35</span></h2>
+<p class="tldr">Affecter $N$ tâches à $N$ machines au moindre coût est un problème combinatoire ($N!$ possibilités) qui se résout pourtant comme un simple programme linéaire : les sommets du polytope des matrices doublement stochastiques sont exactement les permutations.</p>
+
+<h3 id="affectation-pb">Le problème (4.35)</h3>
+<p>Les diapos ne font que citer les « affectations » parmi les applications (diapo 35) ; le livre développe le sujet. Il le présente comme un problème de « mariages » :</p>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, §4.3.3, (4.35), p. 141</span></div>
+<p>Rappelons le problème d'affectation, ou bien de mariage, tel que présenté dans l'Exemple 1.2.2. On a $N$ femmes, indicées par $1\le i\le N$, et $N$ hommes, indicés par $1\le j\le N$, avec une variable d'accord $a_{ij}\in\R^+$ qui indique l'attirance de $i$ pour $j$. On cherche une permutation $\sigma$ dans l'ensemble des permutations $\mathcal S_N$ de $\{1,\dots,N\}$ qui réalise le maximum de $\displaystyle\max_{\sigma\in\mathcal S_N}\sum_{i=1}^Na_{i\sigma(i)}$. Bien sûr, comme le cardinal de l'ensemble $\mathcal S_N$ est $N!$, il est illusoire de vouloir résoudre ce problème d'affectation en énumérant simplement toutes les possibilités. […]</p>
+<p>Si on introduit les variables de décision $v_{ij}$, qui vaut $1$ s'il y a mariage entre la femme $i$ et l'homme $j$ et $0$ sinon, on peut réécrire ce problème comme</p>
+$$\max_{(v_{ij})}\Big(\sum_{i=1}^N\sum_{j=1}^Na_{ij}v_{ij}\Big)\qquad(4.35)$$
+<p>sous les contraintes $v_{ij}=0$ ou $1$, $\ \sum_{j=1}^Nv_{ij}=1$, $\ \sum_{i=1}^Nv_{ij}=1$ pour $1\le i,j\le N$. Les deux dernières contraintes égalité indiquent que chaque femme trouvera un mari et chaque homme une épouse (comme on maximise la réussite des mariages, on aurait pu écrire ces contraintes comme des inégalités aussi). Les matrices $v=(v_{ij})_{1\le i,j\le N}$ qui vérifient ces contraintes sont précisément les matrices correspondantes aux permutations $\sigma\in\mathcal S_N$.</p>
+</div>
+<p>Le modèle est le même quels que soient les objets appariés. Dans ce guide, nous l'appliquons à des <strong>tâches</strong> et des <strong>machines</strong> (ou des élèves et des projets), et nous <strong>minimisons</strong> un coût $c_{ij}$ (une durée, un prix) au lieu de maximiser un accord : il suffit de prendre $c_{ij}=-a_{ij}$.</p>
+<dl class="decode">
+<dt>$\sigma\in\Sc_N$</dt><dd>une permutation : la tâche $i$ va sur la machine $\sigma(i)$, chaque machine reçoit exactement une tâche. Il y en a $N!$ : $6$ pour $N=3$, $24$ pour $N=4$, $3\,628\,800$ pour $N=10$, environ $2{,}4\cdot10^{18}$ pour $N=20$.</dd>
+<dt>$v_{ij}\in\{0,1\}$</dt><dd>$v_{ij}=1$ si la tâche $i$ va sur la machine $j$.</dd>
+<dt>$\sum_jv_{ij}=1$</dt><dd>chaque tâche (chaque ligne de $v$) a exactement une machine.</dd>
+<dt>$\sum_iv_{ij}=1$</dt><dd>chaque machine (chaque colonne) a exactement une tâche.</dd>
+<dt>matrice de permutation</dt><dd>une matrice de $0$ et de $1$ avec un seul $1$ par ligne et par colonne ; $v_{i\sigma(i)}=1$. Alors $\sum_{ij}c_{ij}v_{ij}=\sum_ic_{i\sigma(i)}$.</dd>
+</dl>
+<div class="box example" id="exemple-affectation"><div class="box-h">Exemple — trois tâches, trois machines</div>
+<p>Les durées $c_{ij}$ (en heures) de la tâche $i$ sur la machine $j$ :</p>
+$$C=\begin{array}{c|ccc}&M_1&M_2&M_3\\\hline T_1&6&2&7\\T_2&3&1&5\\T_3&4&3&8\end{array}$$
+<div class="table-wrap"><table>
+<thead><tr><th>$\sigma=(\sigma(1),\sigma(2),\sigma(3))$</th><th>affectation</th><th>durée totale</th></tr></thead>
+<tbody>
+<tr><td>$(2,3,1)$</td><td>$T_1\to M_2$, $T_2\to M_3$, $T_3\to M_1$</td><td>$2+5+4=11$</td></tr>
+<tr><td>$(3,2,1)$</td><td>$T_1\to M_3$, $T_2\to M_2$, $T_3\to M_1$</td><td>$7+1+4=12$</td></tr>
+<tr><td>$(2,1,3)$</td><td>$T_1\to M_2$, $T_2\to M_1$, $T_3\to M_3$</td><td>$2+3+8=13$</td></tr>
+<tr><td>$(3,1,2)$</td><td>$T_1\to M_3$, $T_2\to M_1$, $T_3\to M_2$</td><td>$7+3+3=13$</td></tr>
+<tr><td>$(1,3,2)$</td><td>$T_1\to M_1$, $T_2\to M_3$, $T_3\to M_2$</td><td>$6+5+3=14$</td></tr>
+<tr><td>$(1,2,3)$</td><td>$T_1\to M_1$, $T_2\to M_2$, $T_3\to M_3$</td><td>$6+1+8=15$</td></tr>
+</tbody></table></div>
+<p>L'optimum est $\sigma=(2,3,1)$, de durée $11$, et il est unique. L'approche gloutonne (« prendre la plus petite durée, puis la plus petite parmi les tâches et machines restantes ») commence par $T_2\to M_2$ (durée $1$), puis $T_3\to M_1$ ($4$), et doit finir par $T_1\to M_3$ ($7$) : $12$, pas optimal. Placer la tâche la plus rapide là où elle est la plus rapide peut gêner les autres.</p>
+</div>
+
+<h3 id="affectation-relax">La relaxation : les matrices doublement stochastiques (4.36)</h3>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, (4.36), p. 141–142</span></div>
+<p>Si maintenant on relâche (ou relaxe) la contrainte $v_{ij}=0$ ou $1$, en $0\le v_{ij}\le1$, les matrices qui vérifient les contraintes relaxées</p>
+$$0\le v_{ij}\le1,\qquad\sum_{j=1}^Nv_{ij}=1,\qquad\sum_{i=1}^Nv_{ij}=1\quad\text{pour }1\le i,j\le N\qquad(4.36)$$
+<p>sont appelées <strong>matrices doublement stochastiques</strong>. Le problème (4.35) sous les contraintes (4.36) est un simple programme linéaire qu'on peut résoudre par l'algorithme du simplexe. Il est même posé sous forme standard car la contrainte $v_{ij}\le1$ est inutile au vu des contraintes égalité. Modulo le changement du max en min (il suffit de changer le signe des coûts $a_{ij}$), le problème (4.35) sous les contraintes (4.36) est un exemple de problème de transport qui, comme discuté à la Remarque 4.3.6, est un cas particulier de problème de flot à coût minimum.</p>
+</div>
+<dl class="decode">
+<dt>doublement stochastique</dt><dd>une matrice à coefficients $\ge0$ dont chaque ligne <em>et</em> chaque colonne somme à $1$. « Stochastique » : chaque ligne est une loi de probabilité ; « doublement » : chaque colonne aussi.</dd>
+<dt>relaxation</dt><dd>on agrandit l'ensemble admissible (les permutations deviennent des « affectations fractionnaires » : la tâche $1$ passe la moitié de son temps sur $M_2$ et l'autre moitié sur $M_3$…). Le minimum sur un ensemble plus grand est plus petit ou égal ; tout l'enjeu est de montrer qu'il est égal.</dd>
+<dt>un transport</dt><dd>tâches = entrepôts de stock $1$, machines = clients de demande $1$, $c_{ij}$ = coût de livraison.</dd>
+</dl>
+<p><strong>Pourquoi $v_{ij}\le1$ est inutile.</strong></p>
+<ol class="steps">
+<li>$$v_{ij}=1-\sum_{k\ne j}v_{ik}\le1.$$<span class="why">La ligne $i$ somme à $1$ et les autres termes $v_{ik}$ sont $\ge0$.</span></li>
+</ol>
+<p>Le programme relâché est donc $\min\sum c_{ij}v_{ij}$ sous $v\ge0$ et « lignes et colonnes de somme $1$ », sous forme standard. Deux exemples de matrices doublement stochastiques : la matrice uniforme $J/3$ (tous les coefficients valent $\frac13$), de coût $\frac13\sum_{ij}c_{ij}=\frac{39}3=13$ ; et la moyenne de deux matrices de permutation. Le solveur <code>linprog</code>, appliqué au programme relâché de l'exemple, rend exactement la matrice de la permutation $(2,3,1)$, de coût $11$ : la relaxation n'a rien coûté.</p>
+
+<h3 id="affectation-tu">Pourquoi la relaxation ne perd rien (4.37)</h3>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, (4.37), p. 142</span></div>
+<p>Pour montrer que ses solutions sont en fait entières, nous écrivons les contraintes égalité dans (4.36) sous la forme</p>
+$$\sum_{j=1}^Nv_{ij}=1\ \text{ pour }1\le i\le N,\qquad0=\sum_{i=1}^Nv_{ij}-1\ \text{ pour }1\le j\le N,$$
+<p>où on a effectué la même astuce que dans la Remarque 4.3.6 pour que la contrainte de mariage pour chaque homme $j$ ressemble à la loi des nœuds de Kirchoff. On peut alors résumer ces contraintes d'égalité par $Av=b$ avec $b\in\R^{2N}$ le vecteur dont les $N$ premières composantes sont égales à $1$ et les $N$ dernières égales à $-1$ et $A\in\Z^{2N\times N^2}$ est une matrice dont chacune des colonnes a exactement un élément égal à $1$, un autre égal à $-1$ et tous les autres nuls. Le programme linéaire relaxé est donc</p>
+$$\max_{v\ge0,\ Av=b}\Big(\sum_{i=1}^N\sum_{j=1}^Na_{ij}v_{ij}\Big).\qquad(4.37)$$
+<p>En vertu du Lemme 4.3.5 de Poincaré, la matrice $A$ est totalement unimodulaire. Par conséquent, la Proposition 4.3.3 garantit que les solutions optimales de (4.37) sont entières. Autrement dit, il suffit d'appliquer l'algorithme du simplexe au programme linéaire relaxé (4.37), sans aucune précaution particulière, pour résoudre le problème d'affectation qui est de nature combinatoire !</p>
+</div>
+<p>Pour $N=3$, avec les variables dans l'ordre $v_{11},v_{12},v_{13},v_{21},\dots,v_{33}$ :</p>
+$$A=\begin{array}{c|ccccccccc}&v_{11}&v_{12}&v_{13}&v_{21}&v_{22}&v_{23}&v_{31}&v_{32}&v_{33}\\\hline T_1&1&1&1&0&0&0&0&0&0\\T_2&0&0&0&1&1&1&0&0&0\\T_3&0&0&0&0&0&0&1&1&1\\M_1&-1&0&0&-1&0&0&-1&0&0\\M_2&0&-1&0&0&-1&0&0&-1&0\\M_3&0&0&-1&0&0&-1&0&0&-1\end{array},\qquad b=\begin{pmatrix}1\\1\\1\\-1\\-1\\-1\end{pmatrix}.$$
+<dl class="decode">
+<dt>l'astuce de signe</dt><dd>sans elle, la colonne de $v_{ij}$ aurait deux $+1$ (ligne de la tâche $i$, ligne de la machine $j$) et le critère de Poincaré ne s'appliquerait pas tel quel. En multipliant les $N$ lignes « machines » par $-1$, chaque colonne a un $+1$ et un $-1$ : c'est la matrice d'incidence du graphe biparti tâches → machines.</dd>
+<dt>Poincaré, puis Prop. 4.3.3</dt><dd>$A$ est TU et $b$ entier, donc toute solution basique est entière (le script vérifie que toutes les sous-matrices carrées de la matrice ci-dessus ont un déterminant dans $\{-1,0,1\}$). Comme pour tout flot, $\rg A=2N-1=5$ : une équation est redondante.</dd>
+<dt>le simplexe suffit</dt><dd>il ne visite que des solutions basiques, donc des matrices de permutation.</dd>
+</dl>
+<div class="box remark"><div class="box-h">Note sur les sources</div>
+<p>« La Proposition 4.3.3 garantit que les solutions optimales de (4.37) sont entières » est trop fort, et le livre lui-même met en garde contre cette lecture (Remarque 4.3.4, p. 136) : la Prop. 4.3.3 dit que les solutions <em>basiques</em> sont entières. Quand deux permutations sont optimales, toutes les matrices sur le segment qui les joint sont optimales, et elles ne sont pas entières. Contre-exemple minimal : $N=2$ et des coûts tous égaux ; alors <em>toute</em> matrice doublement stochastique, par exemple celle dont les quatre coefficients valent $\frac12$, est optimale. À lire : « (4.37) a une solution optimale entière, et le simplexe en trouve une ».</p>
+</div>
+
+<h3 id="birkhoff">Le théorème de Birkhoff–von Neumann (Remarque 4.3.10)</h3>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, Remarque 4.3.10, p. 142</span></div>
+<p>Il existe une autre preuve du caractère entier des solutions optimales de (4.37) (voir [5]). L'ensemble des matrices doublement stochastiques, c'est-à-dire qui vérifient (4.36), est un ensemble convexe compact dont on peut montrer (théorème de Birkhoff – von Neumann) que les points extrêmes sont précisément les matrices de permutations. On peut aussi montrer (théorème de Minkowski) que l'ensemble des matrices doublement stochastiques est l'enveloppe convexe de ses points extrêmes. Par linéarité de la fonction coût, on en déduit qu'il existe des solutions qui sont des matrices de permutation, autrement dit des solutions optimales entières.</p>
+</div>
+<div class="box recall"><div class="box-h">Rappel — points extrêmes, enveloppe convexe, Minkowski</div>
+<p>Un <em>point extrême</em> d'un convexe $K$ est un point qui n'est le milieu d'aucun segment non trivial de $K$ (pour un polyèdre : un sommet). L'<em>enveloppe convexe</em> d'un ensemble est l'ensemble des moyennes pondérées (à poids $\ge0$ de somme $1$) de ses points. <strong>Minkowski</strong> : un convexe compact de $\R^d$ est l'enveloppe convexe de ses points extrêmes. Conséquence utilisée partout dans le cours : une fonction <em>linéaire</em> atteint son minimum sur un tel convexe en un point extrême, car la valeur en une moyenne pondérée est la moyenne pondérée des valeurs. <a href="Rappels.html#points-extremaux">Points extrêmes</a>, <a href="Rappels.html#enveloppe-convexe">enveloppe convexe</a>.</p>
+</div>
+<dl class="decode">
+<dt>$B_N$</dt><dd>le <em>polytope de Birkhoff</em> : l'ensemble des matrices $N\times N$ doublement stochastiques, un polyèdre convexe et compact de dimension $(N-1)^2$.</dd>
+<dt>« points extrêmes = permutations »</dt><dd>les sommets de $B_N$ sont exactement les $N!$ matrices de permutation.</dd>
+<dt>Minkowski</dt><dd>toute matrice doublement stochastique est une moyenne pondérée de matrices de permutation (« décomposition de Birkhoff »).</dd>
+<dt>« par linéarité »</dt><dd>si $D=\sum_k\lambda_kP_{\sigma_k}$, alors $\text{coût}(D)=\sum_k\lambda_k\,\text{coût}(P_{\sigma_k})\ge\min_k\text{coût}(P_{\sigma_k})$ : une affectation fractionnaire ne fait jamais mieux que la meilleure des permutations qui la composent.</dd>
+</dl>
+<figure class="fig"><!-- include figures/P07/birkhoff.svg --><figcaption>À gauche, $B_2$ : les matrices doublement stochastiques $2\times2$ forment un segment dont les extrémités sont les deux permutations. À droite, une « ombre » plane de $B_3$ (de dimension $4$) : on projette chaque matrice $v$ sur deux coordonnées, son coût $\sum c_{ij}v_{ij}$ pour la matrice $C$ de l'exemple, et $2v_{22}+3v_{32}$ (choisie pour que les six permutations restent visibles). L'ombre est l'hexagone des six permutations ; $J/3$ est au centre, de coût $13$, la moyenne des six coûts. Le coût minimal sur tout le polytope est atteint au sommet le plus à gauche, $\sigma=(2,3,1)$.</figcaption></figure>
+<div class="box idea"><div class="box-h">L'idée de la preuve de Birkhoff–von Neumann</div>
+<p>Une matrice de permutation est un point extrême : ses coefficients valent $0$ ou $1$, et une moyenne de deux matrices doublement stochastiques différentes a forcément un coefficient strictement entre $0$ et $1$. Réciproquement, un point extrême de $B_N$ est une solution basique de $\{Av=b,\ v\ge0\}$ (les sommets d'un polyèdre en forme standard sont ses solutions basiques, <a href="Partie02.html#sommets-basiques">partie 2</a>), donc il est entier par totale unimodularité, donc c'est une matrice de $0$ et de $1$ avec un $1$ par ligne et par colonne : une permutation. La preuve « historique », sans programmation linéaire, construit la décomposition à la main : on trouve une permutation dans le support de $D$ (théorème de Hall), on en retire le plus grand multiple possible, et on recommence (Exercice supplémentaire 11).</p>
+</div>
+
+<div class="widget" data-widget="p7affectation"><p class="w-noscript">Figure interactive (nécessite JavaScript).</p></div>
+<p><strong>À observer :</strong> à gauche, la matrice des coûts de quatre tâches sur quatre machines (le nombre en gras) et, en bleu, la matrice doublement stochastique $D(t)=(1-t)D_0+tP$ : plus la case est foncée, plus $D_{ij}$ est grand (sa valeur est écrite en dessous) ; le cadre vert marque la permutation optimale. À droite, les coûts des $24$ permutations (un point par permutation, empilés quand ils sont égaux) et, en rouge, le coût de $D(t)$. Avec $D_0=J/4$ et $t=0{,}4$ vers la permutation optimale, le coût vaut $0{,}6\times34+0{,}4\times18=27{,}6$. Faites glisser $t$ : le losange rouge se déplace <em>en ligne droite</em> de $34$ (la moyenne des $24$ permutations, qui est le coût de $J/4$) vers $18$ (le minimum, trouvé par l'algorithme hongrois, $\sigma=(1,2,4,3)$). Il n'est jamais à gauche du point vert : aucune matrice doublement stochastique ne bat la meilleure permutation. Choisissez « Vers : la permutation gloutonne » : on arrive à $24$, pas à $18$. Le départ « mélange de 3 permutations » a pour coût la moyenne pondérée de leurs coûts ($\frac12\cdot27+\frac13\cdot27+\frac16\cdot44\approx29{,}83$). « Nouveau tirage » change les coûts : le cadre vert (hongrois) tombe toujours sur le point le plus à gauche.</p>
+
+<h3 id="hongrois">L'algorithme hongrois en pratique</h3>
+<p>Le simplexe résout l'affectation, mais un algorithme dédié fait beaucoup mieux : la <em>méthode hongroise</em> (Kuhn, 1955, d'après des travaux des mathématiciens hongrois Kőnig et Egerváry ; Munkres, 1957), qui demande $O(N^3)$ opérations dans ses versions modernes, contre $N!$ permutations à énumérer. Son principe est dual : on modifie les coûts sans changer la permutation optimale, jusqu'à voir une affectation de coût réduit nul.</p>
+<div class="box method"><div class="box-h">Méthode — la méthode hongroise à la main</div>
+<ol>
+<li><strong>Réduire les lignes</strong> : retrancher à chaque ligne son minimum. <strong>Réduire les colonnes</strong> : retrancher à chaque colonne son minimum. (Retrancher une constante à une ligne ou une colonne change le coût de <em>toutes</em> les permutations de la même quantité : la permutation optimale ne change pas.)</li>
+<li>Chercher $N$ zéros <em>indépendants</em> (un par ligne et par colonne). Si on les trouve, c'est l'affectation optimale.</li>
+<li>Sinon, couvrir tous les zéros avec le moins possible de lignes et de colonnes (il en faut moins de $N$). Soit $\delta$ le plus petit coefficient non couvert : le retrancher à tous les coefficients non couverts, l'ajouter à ceux qui sont couverts deux fois. Retour en 2.</li>
+</ol>
+</div>
+<div class="box example"><div class="box-h">Exemple — la méthode hongroise sur les trois tâches</div>
+<ol class="steps">
+<li>$$\begin{pmatrix}6&2&7\\3&1&5\\4&3&8\end{pmatrix}\xrightarrow{\ \text{lignes : }-2,\,-1,\,-3\ }\begin{pmatrix}4&0&5\\2&0&4\\1&0&5\end{pmatrix}$$<span class="why">Minimum de chaque ligne : $2$, $1$, $3$.</span></li>
+<li>$$\xrightarrow{\ \text{colonnes : }-1,\,-0,\,-4\ }\begin{pmatrix}3&0&1\\1&0&0\\0&0&1\end{pmatrix}$$<span class="why">Minimum de chaque colonne de la matrice précédente : $1$, $0$, $4$.</span></li>
+<li>Zéros indépendants : $(T_1,M_2)$, $(T_2,M_3)$, $(T_3,M_1)$.<span class="why">Un zéro par ligne et par colonne : c'est la permutation $\sigma=(2,3,1)$.</span></li>
+<li>$$\text{coût}=c_{12}+c_{23}+c_{31}=2+5+4=11=\underbrace{2+1+3}_{\text{lignes}}+\underbrace{1+0+4}_{\text{colonnes}}.$$<span class="why">Le coût de la permutation dans la matrice réduite est $0$ ; on a retranché $11$ en tout à chaque permutation.</span></li>
+</ol>
+<p>Le total des réductions est un <strong>certificat d'optimalité</strong> : avec $u=(2,1,3)$ (lignes) et $w=(1,0,4)$ (colonnes), on a $u_i+w_j\le c_{ij}$ pour toutes les cases (la matrice réduite est $\ge0$), donc toute permutation coûte au moins $\sum u_i+\sum w_j=11$. C'est une solution duale admissible du programme relâché (<a href="Partie05.html#dual">partie 5</a>), de même valeur que la permutation trouvée : dualité faible, donc optimalité. Ici l'étape 3 de la méthode n'a pas servi ; l'<a href="#exo-hongrois">Exercice supplémentaire 7</a> en a besoin.</p>
+</div>
+
+<div class="box app"><div class="box-h">En pratique — <code>scipy.optimize.linear_sum_assignment</code></div>
+<pre><code>import numpy as np
+from scipy.optimize import linear_sum_assignment
+C = np.array([[6, 2, 7], [3, 1, 5], [4, 3, 8]])
+lignes, colonnes = linear_sum_assignment(C)
+lignes, colonnes        # (array([0, 1, 2]), array([1, 2, 0]))
+C[lignes, colonnes].sum()   # 11</code></pre>
+<p>La tâche $T_1$ va sur $M_2$, $T_2$ sur $M_3$, $T_3$ sur $M_1$ (indices à partir de $0$). La fonction accepte aussi des matrices rectangulaires (plus de machines que de tâches) et l'option <code>maximize=True</code> pour la version « accords » du livre. Les applications classiques : affecter des personnes à des postes, des véhicules à des courses, des enseignants à des créneaux d'un emploi du temps, des pistes à des détections en suivi d'objets.</p>
+</div>
+
+<div class="box ml"><div class="box-h">En machine learning — l'appariement hongrois de DETR</div>
+<p>Le détecteur d'objets DETR (Carion et al., 2020) prédit d'un coup un ensemble de $N$ boîtes (par exemple $N=100$), plus que d'objets dans l'image. Pour calculer la perte, il faut d'abord décider quelle prédiction correspond à quel objet réel : c'est une affectation. Le coût d'appariement entre l'objet $k$ et la prédiction $\ell$ combine la probabilité prédite de la bonne classe (à maximiser) et la distance entre les boîtes (à minimiser) ; DETR utilise la distance $\ell^1$ et la perte GIoU, nous ne gardons ici que $\ell^1$, avec un poids $5$. Exemple : deux objets (un chat, un chien), quatre prédictions.</p>
+$$\text{coût}=-\hat p+5\,\norm{b-\hat b}_1=\begin{array}{c|cccc}&\text{préd. }1&\text{préd. }2&\text{préd. }3&\text{préd. }4\\\hline\text{chat}&-0{,}4&3{,}9&0{,}15&3{,}3\\\text{chien}&4{,}4&0{,}2&2{,}7&-0{,}45\end{array}$$
+<p><code>linear_sum_assignment</code> apparie le chat à la prédiction 1 et le chien à la prédiction 4 (coût total $-0{,}85$). La perte d'entraînement est alors calculée sur ces paires ; les prédictions 2 et 3 non appariées sont entraînées à prédire la classe « pas d'objet ». Remarquez la prédiction 3 : elle est presque aussi bonne que la 1 pour le chat (coût $0{,}15$), mais l'affectation ne donne qu'une prédiction par objet, et la perte apprend au réseau à ne pas produire de doublons. C'est ce qui permet à DETR de se passer de l'étape de suppression des doublons (<em>non-maximum suppression</em>) des détecteurs classiques.</p>
+</div>
+
+<div class="box ml"><div class="box-h">En machine learning — Birkhoff–von Neumann et le transport optimal</div>
+<p>Dans le cours <em>Optimal Transport for ML</em>, l'affectation est le problème de Monge discret (<a href="../../../Optimal_transport_ML/v2/Lesson01.html#assign">leçon 1</a>) : apparier $N$ points sources à $N$ points cibles en minimisant $\sum_ic(x_i,y_{\sigma(i)})$. La relaxation de Kantorovich entre deux mesures uniformes $\frac1N\sum\delta_{x_i}$ et $\frac1N\sum\delta_{y_j}$ cherche un plan $P$ dont les lignes et les colonnes somment à $\frac1N$ : à un facteur $N$ près, une matrice doublement stochastique. Le théorème de Birkhoff–von Neumann dit alors que <strong>Monge = Kantorovich</strong> pour des poids uniformes : il existe un plan optimal qui est une permutation (<a href="../../../Optimal_transport_ML/v2/Lesson02.html#bvn">leçon 2, §6</a>, avec la <a href="../../../Optimal_transport_ML/v2/Lesson02.html#bvn-decomp">décomposition d'une matrice bistochastique</a>). En pratique, <code>ot.emd</code> appliqué à deux nuages de même taille et à poids uniformes rend une matrice de permutation (divisée par $N$) : un appariement, utilisé par exemple pour comparer un nuage généré à un nuage de données.</p>
+</div>
+
+<div class="box reflex"><div class="box-h">Réflexes</div>
+<ul>
+<li>Quand vous voyez « chaque … à exactement un … » avec un coût par paire → une affectation : <code>linear_sum_assignment</code>, ou la méthode hongroise à la main.</li>
+<li>Relâcher $v\in\{0,1\}$ en $v\ge0$ ne perd rien pour une affectation : matrice d'incidence (après l'astuce de signe), Birkhoff–von Neumann.</li>
+<li>Pour prouver qu'une affectation est optimale → exhibez des $u_i,w_j$ avec $u_i+w_j\le c_{ij}$ partout et égalité sur les cases choisies.</li>
+</ul>
+</div>
+
+<div class="quiz"><p>Une matrice doublement stochastique $3\times3$ peut-elle avoir un coût strictement inférieur à $11$ pour la matrice $C$ de l'exemple ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>Non. Par Birkhoff–von Neumann, elle s'écrit $\sum_k\lambda_kP_{\sigma_k}$ avec $\lambda_k\ge0$, $\sum\lambda_k=1$, donc son coût est $\sum_k\lambda_k\,\text{coût}(\sigma_k)\ge\min_\sigma\text{coût}(\sigma)=11$. Autre preuve, sans Birkhoff : le certificat dual $u=(2,1,3)$, $w=(1,0,4)$ donne $\sum_{ij}c_{ij}v_{ij}\ge\sum_{ij}(u_i+w_j)v_{ij}=\sum_iu_i+\sum_jw_j=11$ pour toute matrice doublement stochastique $v$.</p>
+</div></details></div>

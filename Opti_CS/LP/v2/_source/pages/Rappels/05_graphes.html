@@ -1,0 +1,114 @@
+<h2 id="graphes">5. Graphes</h2>
+<p class="tldr">Un graphe orienté, ce sont des nœuds et des flèches ; la partie 7 y fait circuler des flots, et le plus court chemin y est à la fois un programme linéaire et un algorithme très rapide, celui de Dijkstra.</p>
+
+<h3 id="graphes-orientes">Graphes orientés, arcs, degrés</h3>
+<p class="small muted"><strong>Où ça sert :</strong> les problèmes de flots, la loi de Kirchhoff et la matrice d'incidence (<a href="Partie07.html#flots">partie 7</a>) ; le voyageur de commerce (<a href="Partie08.html#voyageur">partie 8</a>).</p>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapos 26–30</span></div>
+<p><strong>Définition.</strong> « Graphe orienté : $G=(\Nc,\Ac)$ où $\Ac\subset\Nc\times\Nc$ » ; « $m$ noeuds et $n$ arcs » ; « $(i,j)\in\Ac$ : arc orienté de $i$ à $j$ » ; « Capacité $u_{ij}\geqslant0$ » ; « Coût : $c_{ij}$ » ; « Flot extérieur $b_i$ en $i$ entrant ou sortant ».</p>
+</div>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, §4.3.2, p. 137</span></div>
+<p>« On introduit donc un graphe orienté $G=(\mathcal N,\mathcal A)$ où $\mathcal N$ est l'ensemble des nœuds, numérotés de $1$ à $m$, et $\mathcal A\subset\mathcal N\times\mathcal N$ est l'ensemble des arcs ou arêtes qui relient deux nœuds distincts. […] Le graphe est dit orienté car l'arc $(i,j)$ n'est pas le même que l'arc $(j,i)$ […]. Tous les nœuds ne sont pas forcément reliés entre eux par un arc et on note $n$ le nombre total d'arcs. »</p>
+</div>
+<div class="box def"><div class="box-h">Vocabulaire (rappel standard)</div>
+<ul>
+<li>Pour un arc $(i,j)$ : $i$ est son origine, $j$ son extrémité ; $j$ est un <em class="new">successeur</em> de $i$, et $i$ un <em class="new">prédécesseur</em> de $j$.</li>
+<li>Le <em class="new">degré sortant</em> $d^+(i)$ est le nombre d'arcs qui partent de $i$, le <em class="new">degré entrant</em> $d^-(i)$ le nombre d'arcs qui y arrivent. Chaque arc a une origine et une extrémité, donc $\sum_id^+(i)=\sum_id^-(i)=n$.</li>
+<li>La <em class="new">matrice d'incidence nœuds-arcs</em>, de taille $m\times n$ (une ligne par nœud, une colonne par arc), vaut $+1$ à l'origine de l'arc et $-1$ à son extrémité (formule (4.30) du livre) : chaque colonne contient exactement un $+1$ et un $-1$, et la ligne $i$ contient $d^+(i)$ fois $+1$ et $d^-(i)$ fois $-1$.</li>
+</ul>
+</div>
+<figure class="fig"><!-- include figures/RAP/graphe.svg --><figcaption>Le graphe d'exemple de cette section : $6$ nœuds (une source $s$, un puits $p$), $9$ arcs, avec leur coût. Les degrés sortants ($d^+$) et entrants ($d^-$) sont notés près des nœuds ; chacune des deux sommes vaut $9$.</figcaption></figure>
+<div class="box example"><div class="box-h">Exemple — les degrés et une ligne de Kirchhoff</div>
+<p>Dans le graphe de la figure, $d^+=(2,1,3,2,1,0)$ et $d^-=(0,2,1,2,2,2)$ pour $(s,a,b,c,d,p)$ : les deux sommes valent $9=n$. La ligne du nœud $b$ dans la matrice d'incidence a trois $+1$ (arcs $b\to a$, $b\to c$, $b\to d$) et un $-1$ (arc $s\to b$) : la loi de Kirchhoff en $b$ s'écrit $b_b+x_{sb}=x_{ba}+x_{bc}+x_{bd}$ (ce qui entre égale ce qui sort, <a href="Partie07.html#flots">partie 7</a>).</p>
+</div>
+<div class="box remark"><div class="box-h">Remarque — les mêmes lettres que pour un programme linéaire</div>
+<p>Les diapos et le livre notent $m$ le nombre de nœuds et $n$ le nombre d'arcs. Ce n'est pas un hasard : la matrice d'incidence est la matrice $A\in\Mc_{m\times n}$ du programme linéaire de flot, avec une équation (Kirchhoff) par nœud et une variable (le flot $x_{ij}$) par arc.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pièges</div>
+<ul>
+<li>L'arc $(i,j)$ n'est pas l'arc $(j,i)$ : dans un graphe orienté, on ne remonte pas une flèche.</li>
+<li>Le livre dit « arcs ou arêtes » ; en théorie des graphes, « arête » désigne plutôt un lien <em>non orienté</em>. Dans ce cours, tous les graphes sont orientés.</li>
+<li>Le signe des colonnes de la matrice d'incidence dépend de la convention ($+1$ au départ dans le livre) ; changer de convention change le signe de $b$ dans $Ax=b$.</li>
+</ul>
+</div>
+
+<h3 id="chemins-cycles">Chemins, cycles, arbres, connexité</h3>
+<p class="small muted"><strong>Où ça sert :</strong> chemins de coût minimum et flots (<a href="Partie07.html#plus-court-chemin">partie 7</a>) ; les sous-tours du voyageur de commerce sont des cycles (<a href="Partie08.html#voyageur">partie 8</a>) ; l'arbre de la séparation-évaluation (<a href="Partie08.html#separation-evaluation">partie 8</a>).</p>
+<div class="box def"><div class="box-h">Définitions (rappel standard)</div>
+<ul>
+<li>Un <em class="new">chemin</em> de $i_0$ à $i_k$ est une suite de nœuds $i_0,i_1,\dots,i_k$ avec $(i_{l},i_{l+1})\in\Ac$ pour chaque $l$ ; il est <em>élémentaire</em> s'il ne passe pas deux fois par le même nœud. Son coût est $\sum_lc_{i_li_{l+1}}$.</li>
+<li>Un <em class="new">cycle</em> (ou <em>circuit</em>) est un chemin qui revient à son point de départ ($i_k=i_0$). En oubliant l'orientation, on parle de chaîne et de cycle non orienté.</li>
+<li>Un graphe est <em class="new">connexe</em> si deux nœuds quelconques sont reliés par une chaîne (sans tenir compte du sens des arcs), <em>fortement connexe</em> s'ils sont reliés par un chemin orienté dans les deux sens.</li>
+<li>Un <em class="new">arbre</em> est un graphe connexe sans cycle (non orienté). Un arbre à $m$ nœuds a exactement $m-1$ arcs. Un <em>arbre couvrant</em> d'un graphe est un arbre qui utilise tous ses nœuds et certains de ses arcs.</li>
+</ul>
+</div>
+<div class="box example"><div class="box-h">Exemple — dans le graphe de la figure</div>
+<ul>
+<li>Il y a $7$ chemins de $s$ à $p$ : $s\,a\,c\,d\,p$ (coût $9$), $s\,a\,c\,p$ ($11$), $s\,b\,a\,c\,d\,p$ ($8$), $s\,b\,a\,c\,p$ ($10$), $s\,b\,c\,d\,p$ ($10$), $s\,b\,c\,p$ ($12$), $s\,b\,d\,p$ ($10$). Le moins cher, de coût $8$, a le plus d'arcs.</li>
+<li>Le graphe n'a aucun cycle orienté (aucun chemin ne revient à son départ), mais il a des cycles non orientés, par exemple $s\to a$, $b\to a$, $s\to b$.</li>
+<li>Les arcs $s\to b$, $b\to a$, $a\to c$, $c\to d$, $d\to p$ forment un arbre couvrant : $6$ nœuds, $5=6-1$ arcs. C'est l'arbre des plus courts chemins trouvé par Dijkstra (<a href="#dijkstra">ci-dessous</a>).</li>
+</ul>
+</div>
+<details class="fold proof"><summary>Démonstration : un arbre à $m$ nœuds a $m-1$ arcs</summary><div class="fold-body">
+<p>Par récurrence sur $m$ ; pour $m=1$, aucun arc. Pour $m\ge2$, un arbre a une <em>feuille</em>, un nœud touché par un seul arc : prenez une chaîne élémentaire de longueur maximale ; son dernier nœud n'a pas d'autre voisin dans la chaîne (sinon il y aurait un cycle) ni hors de la chaîne (sinon on pourrait l'allonger). Retirer la feuille et son arc laisse un arbre à $m-1$ nœuds (toujours connexe, toujours sans cycle), qui a $m-2$ arcs par récurrence. Donc l'arbre de départ en a $m-1$.</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pièges</div>
+<ul>
+<li>Un <strong>cycle de coût négatif</strong> rend le plus court chemin non borné : on peut tourner indéfiniment et faire baisser le coût. C'est l'équivalent, pour les graphes, d'un programme linéaire de valeur $-\infty$.</li>
+<li>Connexe ne veut pas dire fortement connexe : $s\to a$ seul est connexe, mais on ne va pas de $a$ à $s$.</li>
+</ul>
+</div>
+<details class="fold more"><summary>Pour aller plus loin — arbres et bases des flots</summary><div class="fold-body">
+<p>Pour un graphe connexe à $m$ nœuds, la matrice d'incidence est de rang $m-1$ (une loi de Kirchhoff est redondante, <a href="#rang">§1</a>), et les ensembles de $m-1$ colonnes qui forment une base correspondent exactement aux arbres couvrants. Le « simplexe de réseau » utilisé pour le transport optimal (cours <em>Optimal Transport for ML</em>) va ainsi d'arbre couvrant en arbre couvrant : voir la <a href="../../../Optimal_transport_ML/v2/Lesson02.html">leçon 2</a> de ce cours.</p>
+</div></details>
+<div class="quiz"><p>Combien d'arcs a un arbre couvrant d'un graphe à $10$ nœuds ? Et combien d'arcs faut-il retirer, au minimum, au graphe de la figure pour qu'il n'ait plus aucun cycle non orienté ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>Un arbre couvrant à $10$ nœuds a $9$ arcs. Le graphe de la figure a $9$ arcs et $6$ nœuds ; un arbre couvrant en garde $5$ : il faut en retirer au moins $9-5=4$ (et en retirer $4$ bien choisis suffit, par exemple pour garder l'arbre de Dijkstra).</p>
+</div></details></div>
+
+<h3 id="dijkstra">L'algorithme de Dijkstra</h3>
+<p class="small muted"><strong>Où ça sert :</strong> le chemin de coût minimum, cas particulier de flot à coût minimum (<a href="Partie07.html#plus-court-chemin">partie 7</a>, Diapos 44–46, Ex. 4.3.3).</p>
+<p>Pour aller de $s$ à $p$ au moindre coût, on peut écrire un programme linéaire (le chemin est un flot d'une unité). Mais quand les coûts sont positifs, un algorithme glouton fait beaucoup mieux : on fixe les nœuds un par un, du plus proche au plus lointain, comme une tache d'huile qui s'étend depuis $s$.</p>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo 46</span></div>
+<p>« <strong>Définition</strong> Un chemin de coût minimum sur un graphe muni d'une source et d'un puits est un flot de coût minimum tel que $x_{ij}\in\{0,1\}$ et $b_s=-b_p=1$ et $b_i=0$ sinon. » […] « L'algorithme du simplexe donne la solution optimale en relaxant les contraintes : $0\leqslant x_{ij}\leqslant1$. Cependant l'algorithme de parcourt de graphe de Dijkstra est meilleur (complexité plus petite). Application : itinéraire optimal sur google maps »</p>
+</div>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, Ex. 4.3.3, p. 141</span></div>
+<p>« On munit chaque arc $(i,j)$ d'un coût $c_{ij}\ge0$ qu'on interprète comme une distance entre les nœuds $i$ et $j$. Le problème du chemin de coût minimum est de trouver une suite de nœuds consécutifs sur le graphe qui relient $s$ à $p$ et tels que la somme des coûts le long de ce chemin d'arcs est minimale. »</p>
+</div>
+<div class="box method"><div class="box-h">Méthode — l'algorithme de Dijkstra (rappel standard)</div>
+<p>Données : un graphe orienté, une source $s$, des coûts $c_{ij}\ge0$.</p>
+<ol>
+<li><strong>Initialisation :</strong> $d(s)=0$ et $d(i)=+\infty$ pour $i\ne s$ ; aucun nœud n'est <em>fixé</em>.</li>
+<li><strong>Choix :</strong> parmi les nœuds non fixés, prendre $i$ de plus petite étiquette $d(i)$, et le fixer.</li>
+<li><strong>Relâchement :</strong> pour chaque arc $(i,j)$ avec $j$ non fixé, si $d(i)+c_{ij}<d(j)$, poser $d(j)\leftarrow d(i)+c_{ij}$ et $\mathrm{pred}(j)\leftarrow i$.</li>
+<li>Recommencer en 2 jusqu'à ce que tous les nœuds (ou le puits) soient fixés. Le chemin se lit à l'envers avec $\mathrm{pred}$.</li>
+</ol>
+<p>Coût : $O(m^2)$ opérations avec un simple tableau ($m$ nœuds), $O\big((n+m)\log m\big)$ avec un tas ($n$ arcs).</p>
+</div>
+<div class="box example"><div class="box-h">Exemple — Dijkstra déroulé sur le graphe de la figure</div>
+<div class="table-wrap"><table>
+<thead><tr><th>étape</th><th>nœud fixé</th><th>$d(s)$</th><th>$d(a)$</th><th>$d(b)$</th><th>$d(c)$</th><th>$d(d)$</th><th>$d(p)$</th><th>mises à jour</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>—</td><td>$0$</td><td>$\infty$</td><td>$\infty$</td><td>$\infty$</td><td>$\infty$</td><td>$\infty$</td><td>initialisation</td></tr>
+<tr><td>1</td><td>$s$</td><td><strong>0</strong></td><td>$4$</td><td>$1$</td><td>$\infty$</td><td>$\infty$</td><td>$\infty$</td><td>$a\leftarrow0+4$, $b\leftarrow0+1$</td></tr>
+<tr><td>2</td><td>$b$</td><td><strong>0</strong></td><td>$3$</td><td><strong>1</strong></td><td>$6$</td><td>$9$</td><td>$\infty$</td><td>$a\leftarrow1+2<4$, $c\leftarrow1+5$, $d\leftarrow1+8$</td></tr>
+<tr><td>3</td><td>$a$</td><td><strong>0</strong></td><td><strong>3</strong></td><td><strong>1</strong></td><td>$4$</td><td>$9$</td><td>$\infty$</td><td>$c\leftarrow3+1<6$</td></tr>
+<tr><td>4</td><td>$c$</td><td><strong>0</strong></td><td><strong>3</strong></td><td><strong>1</strong></td><td><strong>4</strong></td><td>$7$</td><td>$10$</td><td>$d\leftarrow4+3<9$, $p\leftarrow4+6$</td></tr>
+<tr><td>5</td><td>$d$</td><td><strong>0</strong></td><td><strong>3</strong></td><td><strong>1</strong></td><td><strong>4</strong></td><td><strong>7</strong></td><td>$8$</td><td>$p\leftarrow7+1<10$</td></tr>
+<tr><td>6</td><td>$p$</td><td><strong>0</strong></td><td><strong>3</strong></td><td><strong>1</strong></td><td><strong>4</strong></td><td><strong>7</strong></td><td><strong>8</strong></td><td>fin</td></tr>
+</tbody></table></div>
+<p>En gras, les étiquettes fixées. Le plus court chemin est $s\to b\to a\to c\to d\to p$, de coût $1+2+1+3+1=8$ (le moins cher des $7$ chemins listés <a href="#chemins-cycles">plus haut</a>). Le programme linéaire de flot correspondant ($b_s=1$, $b_p=-1$, $x\ge0$), résolu par <code>linprog</code>, donne la même valeur $8$ et un flot qui vaut $1$ exactement sur ces cinq arcs.</p>
+</div>
+<div class="widget" data-widget="rapDijkstra"><p class="w-noscript">Figure interactive (nécessite JavaScript).</p></div>
+<p><strong>À observer :</strong> chaque clic sur « Étape suivante » fixe un nœud (il devient vert) et relâche ses arcs sortants (en orange) ; les étiquettes $d$ qui baissent sont signalées. Les arcs verts sont les prédécesseurs : à la fin, ils forment l'arbre des plus courts chemins, et l'étiquette de $p$ vaut $8$. Avec l'exemple « un coût négatif », Dijkstra fixe $a$ à $2$ dès la deuxième étape, alors que le chemin $s\to b\to a$ coûte $3-2=1$ : la règle « le plus proche est définitif » n'est plus vraie.</p>
+<details class="fold proof"><summary>Pourquoi l'étiquette d'un nœud fixé est la bonne distance</summary><div class="fold-body">
+<p>On montre par récurrence que, quand un nœud $i$ est fixé, $d(i)$ est le coût d'un plus court chemin de $s$ à $i$. Prenons un chemin quelconque de $s$ à $i$, et soit $(k,j)$ son premier arc qui quitte l'ensemble des nœuds déjà fixés ($k$ fixé, $j$ non fixé). Le morceau jusqu'à $k$ coûte au moins $d(k)$ (récurrence), donc le morceau jusqu'à $j$ coûte au moins $d(k)+c_{kj}\ge d(j)$ (car l'arc $(k,j)$ a été relâché quand $k$ a été fixé). Comme $i$ a été choisi de plus petite étiquette, $d(j)\ge d(i)$. Et la suite du chemin, de $j$ à $i$, coûte $\ge0$ <strong>parce que les coûts sont positifs</strong>. Le chemin coûte donc au moins $d(i)$, qui est atteint par le chemin des prédécesseurs.</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Piège — les coûts négatifs</div>
+<p>Avec $s\to a$ (coût $2$), $s\to b$ ($3$), $b\to a$ ($-2$), Dijkstra fixe $a$ avec $d(a)=2$ avant d'avoir regardé $b$, alors que $s\to b\to a$ coûte $1$. Avec des coûts de signe quelconque (mais sans cycle négatif), on utilise l'algorithme de Bellman–Ford, en $O(mn)$, ou le programme linéaire, qui accepte des coûts négatifs (le livre autorise $c_{ij}<0$, p. 137).</p>
+</div>
+<div class="box ml"><div class="box-h">En machine learning — Viterbi est un plus court chemin</div>
+<p>Dans un modèle de Markov caché (étiquetage de mots, reconnaissance de la parole), la suite d'états la plus probable maximise un produit de probabilités. En prenant $-\log$, cela devient un chemin de coût minimum dans un graphe en couches (un nœud par état et par instant, coûts $-\log p\ge0$). Ce graphe n'a pas de cycle : l'algorithme de Viterbi le parcourt couche par couche en programmation dynamique, en $O(TK^2)$ pour $T$ instants et $K$ états.</p>
+</div>
+<div class="box app"><div class="box-h">En pratique — les calculateurs d'itinéraire</div>
+<p>« Itinéraire optimal sur google maps », dit la Diapo 46. Sur un réseau routier de millions de nœuds, les calculateurs d'itinéraire utilisent des variantes de Dijkstra : A* (qui oriente la recherche vers la destination grâce à une estimation de la distance restante) et des prétraitements du graphe (hiérarchies de contraction) qui permettent de répondre en quelques millisecondes.</p>
+</div>

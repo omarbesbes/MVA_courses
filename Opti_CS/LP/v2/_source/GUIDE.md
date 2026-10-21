@@ -160,7 +160,7 @@ sont calculées dans le script. Couleurs : classes CSS uniquement (traits `c1…
 les thèmes clair et sombre. **Code couleur de la PL** : ensemble admissible $\Xad$ = 1 (bleu : aplat `a1`, bord `c1`),
 coût / lignes de niveau / direction $c$ = 2 (rouge orangé), optimum / sommet courant / chemin du simplexe = 3 (vert),
 objets duaux ($p$, ensemble $\Pad$) = 5 (violet), points entiers = 4 (or), solutions non admissibles = 6 (rose) ou
-gris ; droites de contraintes en gris (`cm thin`) avec leur étiquette. Texte en Unicode dans les SVG (x₁, ≤, ε, ℝ…),
+gris ; droites de contraintes en gris (`cm thin`) avec leur étiquette. Dans le texte HTML, les classes `col1` … `col6` écrivent un mot dans la couleur correspondante. Texte en Unicode dans les SVG (x₁, ≤, ε, ℝ…),
 jamais `_` ni `^`. Au moins **cinq** figures par partie.
 
 **Figures interactives** : `widgets/PartieNN.js`, un fragment de code inséré par le build dans la portée de `app.js`,

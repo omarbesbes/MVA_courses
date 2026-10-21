@@ -1,0 +1,120 @@
+<h2 id="complexite">6. Complexité et dénombrement</h2>
+<p class="tldr">Un polyèdre peut avoir un nombre astronomique de sommets, le simplexe peut (rarement) en visiter énormément, et certains problèmes entiers n'ont probablement aucun algorithme rapide : pour en parler, il faut savoir compter et comparer des croissances.</p>
+
+<h3 id="grand-o">La notation $O$ et le coût d'un algorithme</h3>
+<p class="small muted"><strong>Où ça sert :</strong> le coût d'une itération du simplexe et de l'inversion de la base (<a href="Partie03.html">partie 3</a>), d'un pas de Newton (<a href="Partie04.html">partie 4</a>), de Dijkstra et de l'algorithme hongrois (<a href="Partie07.html">partie 7</a>) ; comparer une énumération exhaustive à une méthode plus fine (<a href="Partie08.html">partie 8</a>).</p>
+<p>On mesure un algorithme par le nombre d'opérations élémentaires (additions, multiplications, comparaisons) qu'il effectue dans le pire des cas, en fonction de la taille des données. On ne garde que l'ordre de grandeur : c'est la notation $O$.</p>
+<div class="box def"><div class="box-h">Définition (rappel standard)</div>
+<p>$f(n)=O\big(g(n)\big)$ s'il existe $C>0$ et $n_0$ tels que $\abs{f(n)}\le C\,g(n)$ pour tout $n\ge n_0$ : à partir d'un certain rang, $f$ ne croît pas plus vite que $g$, à une constante près. On écrit $f=\Theta(g)$ si de plus $g=O(f)$.</p>
+</div>
+<div class="table-wrap"><table>
+<thead><tr><th>Opération du cours</th><th>Coût</th></tr></thead>
+<tbody>
+<tr><td>un pivot de Gauss–Jordan sur un tableau $m\times(n+1)$ (une itération du simplexe sous forme de tableau)</td><td>$O(mn)$</td></tr>
+<tr><td>résoudre un système $m\times m$, calculer un déterminant par élimination</td><td>$O(m^3)$</td></tr>
+<tr><td>calculer un déterminant par la formule de Leibniz ($m!$ produits de $m$ facteurs)</td><td>$O(m\cdot m!)$</td></tr>
+<tr><td>un pas de Newton en dimension $N$ (un système $N\times N$)</td><td>$O(N^3)$</td></tr>
+<tr><td>Dijkstra, $m$ nœuds, $n$ arcs</td><td>$O(m^2)$, ou $O\big((n+m)\log m\big)$ avec un tas</td></tr>
+<tr><td>algorithme hongrois (affectation $n\times n$)</td><td>$O(n^3)$</td></tr>
+<tr><td>énumérer toutes les solutions basiques</td><td>$\binom nm$ systèmes, soit $O\big(\binom nm m^3\big)$</td></tr>
+</tbody></table></div>
+<div class="box example"><div class="box-h">Exemple — compter les opérations d'un pivot</div>
+<p>Pivoter sur un tableau de $m$ lignes et $n+1$ colonnes : $n+1$ divisions (la ligne du pivot), puis, pour chacune des $m-1$ autres lignes, $n+1$ multiplications et $n+1$ soustractions, soit $(n+1)+2(m-1)(n+1)$ opérations. Pour le fil rouge ($m=3$, $n=5$) : $6+24=30$. Pour $m=100$ contraintes et $n=200$ variables : $39\,999$ par pivot, environ $4\cdot10^6$ pour $100$ pivots — quelques millisecondes.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pièges</div>
+<ul>
+<li>$O$ est une <strong>borne supérieure</strong> qui cache les constantes : un algorithme en $O(n^2)$ avec une grosse constante peut être plus lent qu'un $O(n^3)$ pour les tailles qui vous intéressent.</li>
+<li>Le <strong>pire cas</strong> n'est pas le cas typique : le simplexe a un pire cas exponentiel (<a href="#polynomial-exponentiel">ci-dessous</a>) et se comporte très bien en pratique.</li>
+</ul>
+</div>
+
+<h3 id="polynomial-exponentiel">Polynomial ou exponentiel</h3>
+<p class="small muted"><strong>Où ça sert :</strong> le nombre de sommets peut être exponentiel (Ex. 4.2.2, <a href="Partie02.html">partie 2</a>) ; énumérer les sommets est hors de question, d'où le simplexe (<a href="Partie03.html">partie 3</a>) ; le sac-à-dos et le voyageur de commerce (<a href="Partie08.html">partie 8</a>).</p>
+<p>Un algorithme est <em class="new">polynomial</em> si son coût est $O(n^k)$ pour un $k$ fixé ; <em class="new">exponentiel</em> s'il croît comme $2^n$, $n!$ ou $\binom n{n/2}$. La différence n'est pas une question de vitesse de l'ordinateur : c'est une question de ce qui est faisable du tout.</p>
+<div class="box example"><div class="box-h">Le tableau à retenir (temps à $10^9$ opérations par seconde)</div>
+<div class="table-wrap"><table>
+<thead><tr><th>$f(n)$</th><th>$n=10$</th><th>$n=20$</th><th>$n=30$</th><th>$n=50$</th><th>$n=100$</th></tr></thead>
+<tbody>
+<tr><td>$n^3$</td><td>$10^3$ : 1 µs</td><td>$8\,000$ : 8 µs</td><td>$27\,000$ : 27 µs</td><td>$1{,}25\cdot10^5$ : 125 µs</td><td>$10^6$ : 1 ms</td></tr>
+<tr><td>$2^n$</td><td>$1\,024$ : 1 µs</td><td>$1{,}05\cdot10^6$ : 1 ms</td><td>$1{,}07\cdot10^9$ : 1,1 s</td><td>$1{,}13\cdot10^{15}$ : 13 jours</td><td>$1{,}27\cdot10^{30}$ : $4\cdot10^{13}$ ans</td></tr>
+<tr><td>$\binom{n}{n/2}$</td><td>$252$ : 0,25 µs</td><td>$1{,}85\cdot10^5$ : 0,18 ms</td><td>$1{,}55\cdot10^8$ : 0,16 s</td><td>$1{,}26\cdot10^{14}$ : 1,5 jour</td><td>$1{,}01\cdot10^{29}$ : $3{,}2\cdot10^{12}$ ans</td></tr>
+<tr><td>$n!$</td><td>$3{,}6\cdot10^6$ : 3,6 ms</td><td>$2{,}4\cdot10^{18}$ : 77 ans</td><td>$2{,}7\cdot10^{32}$ : $8\cdot10^{15}$ ans</td><td>$3{,}0\cdot10^{64}$ : $10^{48}$ ans</td><td>$9{,}3\cdot10^{157}$ : $3\cdot10^{141}$ ans</td></tr>
+</tbody></table></div>
+<p>Pour comparer : l'âge de l'Univers est d'environ $1{,}4\cdot10^{10}$ ans. En une heure, on traite $n^3$ jusqu'à $n=15\,326$, mais $2^n$ seulement jusqu'à $n=41$, $\binom n{n/2}$ jusqu'à $44$ et $n!$ jusqu'à $15$. Avec une machine mille fois plus rapide : $n^3$ jusqu'à $153\,261$ (dix fois plus), mais $2^n$ jusqu'à $51$ (dix de plus), $\binom n{n/2}$ jusqu'à $54$ et $n!$ jusqu'à $17$.</p>
+</div>
+<div class="widget" data-widget="rapCroissance"><p class="w-noscript">Figure interactive (nécessite JavaScript).</p></div>
+<p><strong>À observer :</strong> l'axe vertical est logarithmique (chaque graduation multiplie par $10^{10}$) : $n^3$ y est presque plat, $2^n$ est une droite, $n!$ s'incurve vers le haut. Déplacez $n$ : les temps de calcul s'affichent. Les droites horizontales marquent une seconde, une heure, un an et l'âge de l'Univers. Cochez « machine 1000 fois plus rapide » : toutes les courbes de temps descendent de trois graduations de $\log_{10}$ ; pour $n^3$, le $n$ atteignable en une heure est multiplié par dix, pour $2^n$ il n'augmente que de dix.</p>
+<div class="box remark"><div class="box-h">Remarque — le simplexe, polynomial ou exponentiel ?</div>
+<p>Avec la règle du coût réduit le plus négatif, il existe des polyèdres (des cubes déformés, Klee et Minty, 1972) où le simplexe visite les $2^n$ sommets : son pire cas est exponentiel. Pourtant, en pratique, il fait de l'ordre de quelques fois $m$ itérations. La programmation linéaire elle-même est polynomiale : la méthode de l'ellipsoïde (Khachiyan, 1979) puis les méthodes de points intérieurs (Karmarkar, 1984, <a href="Partie04.html">partie 4</a>) l'ont montré.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Piège</div>
+<p>« Exponentiel » ne veut pas dire « très grand nombre d'opérations » mais « nombre qui croît comme $a^n$ ». Pour $n=9$, $2^n=512$ est plus petit que $n^3=729$ ; pour $n=30$, il est environ $40\,000$ fois plus grand. Ce qui compte, c'est le comportement quand la taille augmente.</p>
+</div>
+
+<h3 id="np">P, NP, NP-complet en mots simples</h3>
+<p class="small muted"><strong>Où ça sert :</strong> le sac-à-dos et le voyageur de commerce sont NP-complets (<a href="Partie08.html#sac-a-dos">partie 8</a>, Diapo 49) ; la programmation linéaire en nombres entiers aussi, alors que la programmation linéaire continue est polynomiale (<a href="Partie06.html">partie 6</a>).</p>
+<p>La théorie de la complexité classe les problèmes, pas les algorithmes. Elle parle de <em>problèmes de décision</em>, dont la réponse est oui ou non : « existe-t-il un choix d'objets de poids au plus $L$ et d'utilité au moins $U$ ? » plutôt que « quelle est l'utilité maximale ? ».</p>
+<div class="box def"><div class="box-h">Les définitions, sans fausse rigueur (rappel standard)</div>
+<ul>
+<li><strong>P</strong> : les problèmes de décision qu'un algorithme <em>résout</em> en temps polynomial. Exemples : un système linéaire a-t-il une solution ? un programme linéaire a-t-il une valeur $\le v$ ? un plus court chemin coûte-t-il moins de $v$ ?</li>
+<li><strong>NP</strong> : les problèmes dont on peut <em>vérifier</em> une réponse « oui » en temps polynomial, si quelqu'un fournit un certificat. Pour le sac-à-dos, le certificat est la liste des objets choisis : on additionne poids et utilités. NP signifie « polynomial non déterministe », pas « non polynomial ». Tout problème de P est dans NP.</li>
+<li><strong>NP-complet</strong> : un problème de NP auquel tous les problèmes de NP se ramènent en temps polynomial. S'il existait un algorithme polynomial pour un seul problème NP-complet, il y en aurait un pour tous. Le sac-à-dos, le voyageur de commerce (en version décision) et la programmation linéaire en nombres entiers sont NP-complets (Karp, 1972).</li>
+<li><strong>P = NP ?</strong> On ne sait pas. La plupart des chercheurs pensent que non, mais personne ne l'a démontré : on ne connaît simplement aucun algorithme polynomial pour les problèmes NP-complets. La version « optimisation » d'un problème NP-complet est dite <em>NP-difficile</em>.</li>
+</ul>
+</div>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo 49</span></div>
+<p>« Problème du sac-à-dos. $N$ objets de poids $p_j$ et d'utilité $u_j$. $\max_{x_j\in\{0,1\},\ p\cdot x<L}u\cdot x$. $x\in\{0,1\}^N$ : variable de décision. Problème NP-complet (difficile). Complexité exponentielle »</p>
+</div>
+<div class="box remark"><div class="box-h">Note sur les sources</div>
+<p>Trois précisions sur cette diapo. (1) C'est la version décision du sac-à-dos qui est NP-complète ; la version maximisation est NP-difficile. (2) « Complexité exponentielle » veut dire : tous les algorithmes exacts connus sont exponentiels dans le pire cas ; ce n'est pas démontré (ce serait $\mathrm P\ne\mathrm{NP}$). Le sac-à-dos a même un algorithme de programmation dynamique en $O(NL)$ pour des poids entiers, exponentiel seulement en le nombre de chiffres de $L$. (3) La contrainte s'écrit d'habitude $p\cdot x\le L$ ; avec l'inégalité stricte de la diapo, un sac rempli exactement à $L$ serait interdit (dans l'exemple ci-dessous, l'optimum pèse exactement $L$).</p>
+</div>
+<div class="box example"><div class="box-h">Exemple — un petit sac-à-dos</div>
+<p>Quatre objets de poids $(5,4,3,2)$ et d'utilités $(10,7,5,3)$, capacité $L=10$.</p>
+<ul>
+<li><strong>Énumérer :</strong> $2^4=16$ sous-ensembles, dont $13$ tiennent dans le sac. Le meilleur est $\{1,3,4\}$ : poids $5+3+2=10$, utilité $10+5+3=18$.</li>
+<li><strong>Vérifier un certificat :</strong> « oui, on peut atteindre $18$ : voici $\{1,3,4\}$ ». Deux additions suffisent à le vérifier — le problème est dans NP.</li>
+<li><strong>Glouton :</strong> par utilité par kilo décroissante ($2$, $\frac74$, $\frac53$, $\frac32$), on prend les objets $1$ et $2$ (poids $9$), puis ni $3$ ni $4$ ne rentrent : utilité $17<18$. Une heuristique rapide, pas forcément optimale.</li>
+<li><strong>Relaxation :</strong> avec $0\le x_j\le1$, l'optimum est $x=(1,1,\frac13,0)$, de valeur $\frac{56}3\approx18{,}67$. Les utilités étant entières, l'optimum entier est au plus $\lfloor\frac{56}3\rfloor=18$ (<a href="#arrondi">§7</a>) : le $18$ trouvé est donc optimal. C'est l'idée de la séparation-évaluation (<a href="Partie08.html#separation-evaluation">partie 8</a>).</li>
+</ul>
+</div>
+<div class="box pitfall"><div class="box-h">Pièges</div>
+<ul>
+<li>« NP » ne veut pas dire « non polynomial ».</li>
+<li>« NP-complet » ne veut pas dire que chaque exemple est difficile : les solveurs résolvent des sacs-à-dos de milliers d'objets en un instant. La difficulté porte sur le pire cas et sur la croissance avec la taille.</li>
+<li>La programmation linéaire continue est dans P ; c'est l'ajout de la contrainte « $x$ entier » qui rend le problème NP-difficile en général — sauf structure particulière (matrices totalement unimodulaires, <a href="Partie06.html#unimodularite">partie 6</a>).</li>
+</ul>
+</div>
+<div class="box app"><div class="box-h">En pratique — les solveurs face aux problèmes NP-difficiles</div>
+<p>Les solveurs de programmation linéaire en nombres entiers (CBC via PuLP, <code>scipy.optimize.milp</code> avec HiGHS, Gurobi, CPLEX) combinent séparation-évaluation, plans coupants et heuristiques. Ils trouvent souvent l'optimum de problèmes industriels à des milliers de variables, et sinon ils donnent une solution avec un écart garanti à l'optimum (l'écart entre la meilleure solution et la meilleure borne). Le pire cas reste exponentiel.</p>
+</div>
+
+<h3 id="denombrement">Dénombrement : permutations, coefficients binomiaux</h3>
+<p class="small muted"><strong>Où ça sert :</strong> le nombre de bases est au plus $\binom nm$ (<a href="Partie02.html">partie 2</a>) ; le cube a $2^{n-m}$ sommets (Ex. 4.2.2, <a href="Partie02.html">partie 2</a>) ; $n!$ affectations (<a href="Partie07.html#affectation">partie 7</a>) ; $2^N$ choix pour le sac-à-dos, $\frac{(N-1)!}2$ tournées (<a href="Partie08.html#voyageur">partie 8</a>).</p>
+<div class="box thm"><div class="box-h">Les formules (rappel standard)</div>
+<ul>
+<li>Le nombre de façons d'<strong>ordonner</strong> $n$ objets (de permutations) est $n!=1\cdot2\cdots n$.</li>
+<li>Le nombre de <strong>sous-ensembles</strong> d'un ensemble à $n$ éléments est $2^n$ (pour chaque élément : dedans ou dehors).</li>
+<li>Le nombre de sous-ensembles à $k$ éléments est le <strong>coefficient binomial</strong></li>
+</ul>
+$$\binom nk=\frac{n!}{k!\,(n-k)!},\qquad\binom nk=\binom n{n-k},\qquad\binom nk=\binom{n-1}{k-1}+\binom{n-1}k\ \ (\text{Pascal}).$$
+<ul>
+<li><strong>Stirling :</strong> $n!\approx\sqrt{2\pi n}\,(n/e)^n$, et $\binom{2n}n\approx\frac{4^n}{\sqrt{\pi n}}$ : le plus grand coefficient binomial croît comme une exponentielle.</li>
+</ul>
+</div>
+<div class="box example"><div class="box-h">Exemples</div>
+<ul>
+<li><strong>Les bases du fil rouge :</strong> choisir $3$ colonnes parmi $5$, $\binom53=\frac{5!}{3!\,2!}=10$ façons ; ici les dix sont des bases, et cinq sont admissibles (<a href="#bases-coordonnees">tableau du §1</a>).</li>
+<li><strong>Les paires de $\{1,2,3,4\}$ :</strong> $\binom42=6$ : $\{1,2\},\{1,3\},\{1,4\},\{2,3\},\{2,4\},\{3,4\}$.</li>
+<li><strong>Tournées du voyageur de commerce :</strong> avec $N$ villes, on fixe la ville de départ (les rotations donnent la même tournée) et on identifie un sens et l'autre : $\frac{(N-1)!}2$ tournées. Pour $N=5$ : $12$ (vérifié par énumération des $4!=24$ ordres) ; $N=10$ : $181\,440$ ; $N=20$ : $6{,}1\cdot10^{16}$.</li>
+<li><strong>Stirling :</strong> $10!=3\,628\,800$ et $\sqrt{20\pi}\,(10/e)^{10}\approx3\,598\,696$, à $0{,}8\,\%$ près ; $\binom{20}{10}=184\,756$ et $4^{10}/\sqrt{10\pi}\approx187\,079$.</li>
+</ul>
+</div>
+<details class="fold proof"><summary>Démonstration de la formule de $\binom nk$</summary><div class="fold-body">
+<p>Rangez les $n$ objets dans un ordre ($n!$ façons) et gardez les $k$ premiers. Chaque sous-ensemble de taille $k$ est obtenu $k!\,(n-k)!$ fois : autant que de façons d'ordonner les $k$ premiers et les $n-k$ derniers. Donc $\binom nk=\frac{n!}{k!(n-k)!}$. Pascal : un sous-ensemble à $k$ éléments contient l'élément $n$ (il reste $k-1$ éléments à choisir parmi $n-1$) ou ne le contient pas ($k$ parmi $n-1$).</p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pièges</div>
+<ul>
+<li>Ordonné ou non : $\binom nk$ compte des <em>ensembles</em> ; les suites ordonnées de $k$ objets distincts sont $\frac{n!}{(n-k)!}$, $k!$ fois plus nombreuses.</li>
+<li>$\binom nm$ n'est qu'une borne sur le nombre de sommets : beaucoup de choix de $m$ colonnes ne sont pas des bases, ou pas admissibles. Mais le nombre de sommets peut rester exponentiel : $2^{n-m}$ pour le cube de l'Ex. 4.2.2.</li>
+</ul>
+</div>

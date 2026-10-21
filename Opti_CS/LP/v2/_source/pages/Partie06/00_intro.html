@@ -1,0 +1,115 @@
+<!--
+title: Partie 6 — Nombres entiers et totale unimodularité
+short: 6 · Nombres entiers
+description: Programmation linéaire en nombres entiers pas à pas : la relaxation et sa borne, pourquoi arrondir ne suffit pas (diapo 18), polyèdres à sommets entiers, Lemme 4.3.1 (déterminant ±1), matrices totalement unimodulaires (Prop. 4.3.3), critère de Poincaré (Lemme 4.3.5), matrices d'intervalles (Ex. 4.3.1) et centre d'appels en nombres entiers (diapo 24).
+subtitle: Quand la solution doit être entière (des colis, des personnes, des oui/non), le problème devient combinatoire. Cette page montre pourquoi arrondir la solution continue ne suffit pas, puis le « petit miracle » du cours : quand la matrice est totalement unimodulaire, le simplexe rend directement une solution entière.
+kicker: Optimisation · Programmation linéaire · guide v2 · partie 6
+-->
+
+<div class="box objectives">
+<div class="box-h">Ce que vous saurez faire après cette page</div>
+<ol>
+<li>Écrire un programme linéaire en nombres entiers (4.24), sa <strong>relaxation</strong>, et démontrer en une ligne que la relaxation donne une <strong>borne</strong> : $\min_{P}c\cdot x\le\min_{P\cap\Z^n}c\cdot x$.</li>
+<li>Refaire entièrement l'exemple de la diapo 18 (optimum continu $(5{,}9\,;\,0)$, arrondi, optimum entier $(1,4)$, écarts) et expliquer pourquoi <strong>arrondir ne suffit pas</strong>, avec un exemple où aucun arrondi n'est admissible.</li>
+<li>Dessiner l'<strong>enveloppe convexe</strong> des points entiers d'un polygone, et démontrer que si tous les sommets de $P$ sont entiers, alors $\min_P c\cdot x=\min_{P\cap\Z^n}c\cdot x$ ; corriger les deux énoncés imprécis de la diapo 20.</li>
+<li>Démontrer le <strong>Lemme 4.3.1</strong> (pour $A$ entière inversible : $A^{-1}b\in\Z^n$ pour tout $b\in\Z^n$ $\iff$ $\det A=\pm1$) par les formules de Cramer, et l'illustrer avec le réseau $A\Z^2$.</li>
+<li>Définir une matrice <strong>unimodulaire</strong> et <strong>totalement unimodulaire</strong> (TU), donner des exemples et des non-exemples, démontrer la <strong>Proposition 4.3.3</strong> (solutions basiques entières) et passer de la forme $\{Ax\le b\}$ des diapos à la forme standard du livre.</li>
+<li>Démontrer le <strong>critère de Poincaré</strong> (Lemme 4.3.5) par récurrence, et reconnaître les matrices d'incidence de graphes orientés.</li>
+<li>Résoudre l'<strong>Exercice 4.3.1</strong> (matrices d'intervalles) et le <strong>centre d'appels</strong> de la diapo 24 en nombres entiers, en vérifiant que le simplexe rend $(5,8,4)$ sans qu'on lui demande d'entiers.</li>
+</ol>
+</div>
+
+<h2 id="start">0. Avant de commencer</h2>
+
+<h3 id="lire">Comment lire cette page</h3>
+<p>La page suit les diapos 17 à 24 du cours et la section 4.3 du livre d'Allaire (p. 134–137). Chaque énoncé du cours est cité fidèlement dans un encadré comme celui-ci, avec sa référence exacte :</p>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo N ou Allaire, Lemme 4.3.N, p. N</span></div>
+<p>La citation fidèle de la diapo ou du livre, dans leur notation.</p>
+</div>
+<p>Il est toujours suivi d'un <strong>décodage</strong> (le sens de chaque symbole, en mots), du <strong>problème qu'il résout</strong>, d'un <strong>petit exemple chiffré</strong>, de <strong>l'idée de la preuve</strong>, puis de la <strong>preuve complète</strong>, repliée (cliquez pour l'ouvrir ; le bouton « Tout déplier » en haut de la page ouvre tout). Les autres encadrés :</p>
+<div class="cols">
+<div class="box def"><div class="box-h">Définition</div><p>Un objet nouveau, défini précisément.</p></div>
+<div class="box thm"><div class="box-h">Proposition</div><p>Un résultat, avec ses hypothèses.</p></div>
+<div class="box example"><div class="box-h">Exemple</div><p>Des nombres que l'on vérifie à la main.</p></div>
+<div class="box pitfall"><div class="box-h">Piège</div><p>Une erreur classique.</p></div>
+<div class="box reflex"><div class="box-h">Réflexe</div><p>« Quand vous voyez … → pensez … ».</p></div>
+<div class="box remark"><div class="box-h">Note sur les sources</div><p>Une coquille ou une imprécision des diapos ou du livre, avec sa vérification.</p></div>
+</div>
+<p>Trois autres sortes d'encadrés relient la page au reste :</p>
+<div class="cols">
+<div class="box recall"><div class="box-h">Rappel</div><p>Un prérequis rappelé là où il sert, avec un lien vers la <a href="Rappels.html">page Rappels</a> ou la partie où on l'a vu.</p></div>
+<div class="box ml"><div class="box-h">En machine learning</div><p>Où l'idée sert en apprentissage automatique, sur un exemple concret.</p></div>
+<div class="box app"><div class="box-h">En pratique</div><p>Ce que font les solveurs et la recherche opérationnelle.</p></div>
+</div>
+<p>Les figures interactives ont des curseurs, des menus et des boutons : manipulez-les, le texte « À observer » qui suit chacune dit quoi regarder. <strong>Tous les nombres de cette page ont été calculés par ordinateur</strong> (fractions exactes, énumération des points entiers, simplexe exact, <code>scipy.optimize.linprog</code> et <code>milp</code>).</p>
+
+<h3 id="histoire">L'histoire de la partie en six étapes</h3>
+<p class="tldr">Imposer « $x$ entier » rend le problème combinatoire. On ne sait pas le résoudre en général, mais si tous les sommets du polyèdre sont entiers, le problème continu donne la réponse entière ; et des déterminants égaux à $\pm1$ garantissent exactement cela.</p>
+<ol class="chain">
+<li><strong>Le problème (§1).</strong> On veut $\min c\cdot x$ sur les points <em>entiers</em> d'un polyèdre $P$. Plus de gradient, et une énumération exponentielle. Mais en oubliant la contrainte « entier » (la <em>relaxation</em>), on obtient gratuitement une borne.</li>
+<li><strong>Arrondir ne suffit pas (§2).</strong> L'exemple de la diapo 18 : l'optimum continu est $(5{,}9\,;\,0)$, l'optimum entier est $(1,4)$, à l'autre bout du triangle. Un arrondi peut même sortir de $P$.</li>
+<li><strong>Des sommets entiers suffisent (§3).</strong> Un programme linéaire a un optimum en un sommet (partie 2). Si tous les sommets de $P$ sont entiers, cet optimum est entier : $\min_P=\min_{P\cap\Z^n}$. C'est le cœur de l'affaire.</li>
+<li><strong>Cramer (§4).</strong> Un sommet résout un système carré $Bx=b$, et $x_i=\det B_i/\det B$. Avec des données entières, $\det B=\pm1$ garantit $x$ entier pour tout $b$ entier — et c'est le seul cas (Lemme 4.3.1).</li>
+<li><strong>Totale unimodularité (§5–§6).</strong> Il faut que <em>toutes</em> les sous-matrices carrées aient un déterminant $0$ ou $\pm1$ : la matrice est <em>totalement unimodulaire</em>. Alors toutes les solutions basiques sont entières (Prop. 4.3.3), et le simplexe ne voit que des entiers. Le critère de Poincaré reconnaît ces matrices colonne par colonne.</li>
+<li><strong>Des exemples qui comptent (§7).</strong> Les matrices d'intervalles (Ex. 4.3.1) et le centre d'appels de la diapo 24 : le simplexe rend $(5,8,4)$ opérateurs, sans qu'on lui demande d'entiers. La partie 7 fera de même pour tous les problèmes de flots.</li>
+</ol>
+
+<h3 id="prerequis">Ce qu'il faut savoir</h3>
+<p>Ouvrez seulement les rappels dont vous avez besoin. Chacun dit exactement ce qui sert sur cette page.</p>
+
+<details class="fold more" id="rappel-sommets"><summary>Rappel — sommets, solutions basiques, optimum en un sommet (partie 2)</summary><div class="fold-body">
+<p>En forme standard, $\Xad=\{x\in\R^n : Ax=b,\ x\ge0\}$ avec $A\in\Mc_{m\times n}(\R)$ de rang $m$. Une <em>base</em> est un choix de $m$ colonnes de $A$ formant une matrice $B$ inversible ; la <em>solution basique</em> associée est $x_B=B^{-1}b$, $x_N=0$ (les autres composantes nulles). Elle est admissible si $x_B\ge0$. Deux résultats de la partie 2 servent ici :</p>
+<ul>
+<li><strong>Les sommets de $\Xad$ sont exactement ses solutions basiques admissibles</strong> (Allaire, Lemme 4.2.5) ;</li>
+<li><strong>si le programme linéaire a une solution optimale, il en a une qui est basique</strong>, c'est-à-dire un sommet (Allaire, Prop. 4.2.6).</li>
+</ul>
+<p>Pour un polyèdre écrit $P=\{x : Ax\le b\}$ (la forme des diapos), un sommet est un point de $P$ où $n$ contraintes <em>linéairement indépendantes</em> sont actives (égalités) : il est la solution d'un système carré $A_Ix=b_I$, où $A_I$ est formée de $n$ lignes de $A$. <strong>Utilisé ici</strong> : partout, car tout l'argument consiste à montrer que les sommets sont entiers.</p>
+<p class="small">Plus de détails : <a href="Partie02.html#sommets-basiques">sommets et solutions basiques</a>, <a href="Partie02.html#optimum-sommet">optimum en un sommet</a> ; <a href="Rappels.html#points-extremaux">points extrémaux</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-det"><summary>Rappel — déterminant : développement, produit, matrices entières</summary><div class="fold-body">
+<ul>
+<li><strong>Développement selon une colonne $j$</strong> : $\det M=\sum_i(-1)^{i+j}m_{ij}\det M_{ij}$, où $M_{ij}$ est $M$ privée de la ligne $i$ et de la colonne $j$. Si la colonne $j$ n'a qu'un coefficient non nul $m_{ij}$, il reste $\det M=(-1)^{i+j}m_{ij}\det M_{ij}$. Même chose selon une ligne.</li>
+<li><strong>Produit et transposée</strong> : $\det(MN)=\det M\det N$, $\det M\T=\det M$, et $\det M^{-1}=1/\det M$.</li>
+<li><strong>Matrices entières</strong> : le déterminant est une somme de produits de coefficients (formule de Leibniz, $\det M=\sum_{\sigma}\varepsilon(\sigma)\prod_i m_{i\sigma(i)}$), donc <strong>le déterminant d'une matrice à coefficients entiers est un entier</strong>.</li>
+<li><strong>Lignes liées</strong> : si une combinaison non triviale des lignes est nulle (par exemple si les lignes ont une somme nulle), $\det M=0$. Une colonne nulle donne aussi $\det M=0$.</li>
+</ul>
+<p class="small">Plus de détails : <a href="Rappels.html#determinant">le déterminant</a>, <a href="Rappels.html#transposee">la transposée</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-cramer"><summary>Rappel — formules de Cramer et comatrice</summary><div class="fold-body">
+<p>Si $A\in\Mc_n(\R)$ est inversible, la solution de $Ax=b$ est donnée composante par composante par</p>
+$$x_i=\frac{\det A_i}{\det A},\qquad A_i=A\ \text{dont la $i$-ème colonne est remplacée par } b .$$
+<p>De même $A^{-1}=\frac1{\det A}\,\mathrm{com}(A)\T$, où la comatrice $\mathrm{com}(A)$ a pour coefficients les cofacteurs $(-1)^{i+j}\det A_{ij}$. En dimension 2 :</p>
+$$\begin{pmatrix}a&b\\c&d\end{pmatrix}^{-1}=\frac1{ad-bc}\begin{pmatrix}d&-b\\-c&a\end{pmatrix}.$$
+<p><strong>Utilisé ici</strong> au §4 : si $A$ et $b$ sont entiers, $\det A_i$ et les cofacteurs sont entiers, donc tout le problème est de savoir par quoi on divise.</p>
+<p class="small">Plus de détails : <a href="Rappels.html#inverse-cramer">inverse et formules de Cramer</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-simplexe"><summary>Rappel — le simplexe ne visite que des solutions basiques (partie 3)</summary><div class="fold-body">
+<p>Le simplexe part d'une base admissible et, à chaque itération, échange une colonne de la base contre une autre (la variable entrante, choisie par un coût réduit négatif, remplace la variable sortante, choisie par le test du rapport). Chaque solution qu'il calcule est donc une <strong>solution basique admissible</strong> $x_B=B^{-1}b$, $x_N=0$, c'est-à-dire un sommet. <strong>Utilisé ici</strong> : si toutes les solutions basiques sont entières, le simplexe ne rencontre que des entiers, y compris sa réponse finale (Remarque 4.3.4, §5).</p>
+<p class="small">Plus de détails : <a href="Partie03.html#algorithme">l'algorithme du simplexe</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-arrondi"><summary>Rappel — partie entière, arrondi, divisibilité</summary><div class="fold-body">
+<p>$\lfloor t\rfloor$ (partie entière, ou arrondi par défaut) est le plus grand entier $\le t$ ; $\lceil t\rceil$ (arrondi par excès) le plus petit entier $\ge t$. Exemples : $\lfloor5{,}9\rfloor=5$, $\lceil5{,}9\rceil=6$, $\lfloor-1{,}5\rfloor=-2$. La partie fractionnaire est $t-\lfloor t\rfloor\in[0,1[$ (elle sert aux coupes de Gomory, exercice 10). Un point $x\in\R^n$ a au plus $2^n$ « arrondis » obtenus en choisissant $\lfloor x_i\rfloor$ ou $\lceil x_i\rceil$ pour chaque coordonnée. Divisibilité : si $d$ et $e$ sont des entiers avec $de=1$, alors $d=\pm1$ (seuls diviseurs de $1$ dans $\Z$).</p>
+<p class="small">Plus de détails : <a href="Rappels.html#arrondi">arrondis</a>, <a href="Rappels.html#arithmetique">arithmétique</a>.</p>
+</div></details>
+
+<h3 id="notation">Tableau de notation</h3>
+<p>Les diapos et le livre n'écrivent pas le problème de la même façon. Voici comment lire chaque symbole de la page.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Objet</th><th>Diapos</th><th>Livre (Allaire)</th><th>Ce guide</th></tr></thead>
+<tbody>
+<tr><td>polyèdre</td><td>$P=\{x,\ Ax\leqslant b\}$, $A\in\Mc_{m\times n}$, $b\in\R^m$</td><td>$\Xad=\{x : Ax=b,\ x\ge0\}$ (forme standard)</td><td>les deux, selon la source citée</td></tr>
+<tr><td>problème en nombres entiers</td><td>$\min_{x\in P\cap\Z^n}c\cdot x$ (diapo 17)</td><td>(4.24) : $\inf\{c\cdot x : x\in\Z^n,\ Ax=b,\ x\ge0\}$</td><td>$\min_{P\cap\Z^n}c\cdot x$</td></tr>
+<tr><td>problème relaxé</td><td>$\min_{x\in P}c\cdot x$</td><td>(4.1), « problème relaxé, ou relâché »</td><td>la relaxation</td></tr>
+<tr><td>sommets</td><td>$S$, « points basiques »</td><td>solutions basiques admissibles</td><td>sommets $=$ solutions basiques</td></tr>
+<tr><td>enveloppe convexe</td><td>« le plus petit ensemble convexe le contenant »</td><td>—</td><td>$\conv(E)$ ; $P_I=\conv(P\cap\Z^n)$</td></tr>
+<tr><td>unimodulaire</td><td>$A$ inversible avec $\det A=\pm1$</td><td>$A\in\Z^{n\times n}$, $\det A=\pm1$ (Déf. 4.3.2)</td><td>idem (coefficients entiers)</td></tr>
+<tr><td>totalement unimodulaire</td><td>« toute sous-matrice carrée est unimodulaire ou non inversible »</td><td>« toute sous-matrice carrée extraite est de déterminant $\pm1$ ou $0$ »</td><td>TU</td></tr>
+<tr><td>transposée</td><td>${}^tA$</td><td>$A^*$</td><td>$A\T$</td></tr>
+<tr><td>ensembles de matrices</td><td>$\Mc_{m\times n}$</td><td>$\Z^{m\times n}$ (entières)</td><td>$\Mc_{m\times n}(\R)$, $\Z^{m\times n}$</td></tr>
+<tr><td>arrondis</td><td>« arrondir » (diapo 18)</td><td>—</td><td>$\lfloor t\rfloor$, $\lceil t\rceil$</td></tr>
+</tbody></table></div>
+<p><strong>Code couleur des figures</strong> (le même dans toutes les parties) : <span class="be">l'ensemble admissible $P$ en bleu</span>, <span class="al">le coût, ses lignes de niveau et sa direction $c$ en rouge orangé</span>, <span class="bar">l'optimum continu (et les sommets entiers) en vert</span>, <span style="color:var(--s4);font-weight:650">les points entiers et l'enveloppe convexe des points entiers en or</span>, <span style="color:var(--s6);font-weight:650">ce qui n'est pas admissible en rose</span> ; les droites de contraintes sont grises.</p>

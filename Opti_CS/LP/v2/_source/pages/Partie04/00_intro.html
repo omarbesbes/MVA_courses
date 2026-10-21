@@ -1,0 +1,116 @@
+<!--
+title: Partie 4 — Les méthodes de points intérieurs
+short: 4 · Points intérieurs
+description: Les algorithmes de points intérieurs pour la programmation linéaire, pas à pas : barrière logarithmique, problème pénalisé, Lemme 4.2.11 et sa preuve, trajectoire centrale et écart de dualité nμ, méthode de Newton et suivi de chemin, comparaison avec le simplexe, Exercice 4.2.6 corrigé.
+subtitle: Au lieu de longer le bord du polyèdre comme le simplexe, on le traverse par l'intérieur, en suivant une courbe lisse qui mène à l'optimum. La section 4.2.3 du livre (p. 129–131), décodée symbole par symbole, démontrée ligne par ligne et essayée sur de petits exemples calculés exactement.
+kicker: Optimisation · Programmation linéaire · guide v2 · partie 4
+-->
+
+<div class="box objectives">
+<div class="box-h">Ce que vous saurez faire après cette page</div>
+<ol>
+<li>Expliquer pourquoi on cherche une autre méthode que le simplexe (nombre de pivots exponentiel au pire), et ce que veut dire « points intérieurs ».</li>
+<li>Écrire le <strong>potentiel logarithmique</strong> $\pi(x)=-\sum_i\log x_i$ et le <strong>problème pénalisé</strong> (4.11), et calculer son minimum $x^\mu$ sur de petits exemples : en dimension 1 ($x^\mu=\mu/c$), sur un segment, sur le triangle (4.5) du livre.</li>
+<li>Énoncer le <strong>Lemme 4.2.11</strong> et refaire seul sa preuve : existence par une suite minimisante, intérieur, unicité par stricte convexité, conditions d'optimalité (4.12), borne sur $A^\top p^\mu$, passage à la limite.</li>
+<li>Reconnaître la <strong>trajectoire centrale</strong> $x_is_i=\mu$ et démontrer que l'<strong>écart de dualité</strong> vaut exactement $n\mu$ : c'est le certificat d'arrêt de l'algorithme.</li>
+<li>Calculer un <strong>pas de Newton</strong> sur la barrière avec la contrainte $Ax=b$ (système linéaire de type KKT), et décrire l'algorithme de <strong>suivi de chemin</strong>.</li>
+<li>Comparer honnêtement simplexe et points intérieurs, et dire ce que font les solveurs (HiGHS, MOSEK, Gurobi, le « crossover »).</li>
+<li>Résoudre l'<strong>Exercice 4.2.6</strong> (les deux contre-exemples) et les exercices supplémentaires.</li>
+</ol>
+</div>
+
+<h2 id="start">0. Avant de commencer</h2>
+
+<h3 id="comment-lire">Comment lire cette page</h3>
+<div class="box remark"><div class="box-h">Cette partie n'est pas dans les diapos</div>
+<p>Les méthodes de points intérieurs sont traitées dans le <strong>livre</strong> (Allaire, §4.2.3, p. 129–131), mais <strong>pas dans les diapos</strong> du cours (<code>ProgLin.pdf</code>). Elles font donc partie du programme du livre, pas forcément de celui de l'examen : <strong>vérifiez auprès de votre enseignant</strong> (ou dans les annales) si elles sont exigibles. Même si elles ne le sont pas, cette page vaut le détour : elle réunit le chapitre 2 (existence, convexité, multiplicateurs de Lagrange), le chapitre 3 (méthode de Newton, pénalisation) et la dualité de la <a href="Partie05.html">partie 5</a>, et elle décrit ce que font réellement les solveurs modernes sur les grands problèmes.</p>
+</div>
+<p>Chaque énoncé du livre est cité dans un encadré comme celui-ci, avec sa référence exacte (numéro et page imprimée) :</p>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, Lemme 4.2.11, p. 129</span></div>
+<p>Une citation fidèle, dans la notation du livre.</p>
+</div>
+<p>Il est suivi d'un <strong>décodage</strong> (le sens de chaque symbole), du <strong>problème qu'il résout</strong>, d'un <strong>petit exemple chiffré</strong>, de l'<strong>idée</strong> de la preuve, puis de la <strong>preuve complète</strong>, repliée (cliquez pour l'ouvrir ; le bouton « tout déplier » en haut de la page ouvre tout). Les autres encadrés :</p>
+<div class="cols">
+<div class="box def"><div class="box-h">Définition</div><p>Un objet nouveau, énoncé précisément.</p></div>
+<div class="box thm"><div class="box-h">Proposition</div><p>Un résultat, avec ses hypothèses.</p></div>
+<div class="box intu"><div class="box-h">Intuition</div><p>L'image à garder en tête.</p></div>
+<div class="box example"><div class="box-h">Exemple</div><p>Des nombres vérifiables à la main.</p></div>
+<div class="box pitfall"><div class="box-h">Piège</div><p>Une erreur classique.</p></div>
+<div class="box reflex"><div class="box-h">Réflexe</div><p>« Quand vous voyez … → pensez … ».</p></div>
+<div class="box recall"><div class="box-h">Rappel</div><p>Un prérequis rappelé là où il sert, avec un lien vers la page <a href="Rappels.html">Rappels</a>.</p></div>
+<div class="box ml"><div class="box-h">En machine learning</div><p>Où l'idée sert en apprentissage automatique.</p></div>
+<div class="box app"><div class="box-h">En pratique</div><p>Ce que font les solveurs.</p></div>
+</div>
+<p>Les figures interactives ont des curseurs et des boutons : manipulez-les, le texte « À observer » qui suit chaque figure dit quoi regarder. <strong>Tous les nombres de cette page ont été calculés par un script</strong> (fractions exactes quand c'est possible, méthode de Newton en double précision sinon, et le solveur HiGHS de <code>scipy</code> pour les comptes d'itérations).</p>
+
+<h3 id="histoire">L'histoire de la partie en six étapes</h3>
+<p class="tldr">On remplace la contrainte $x\ge0$, qui rend le problème combinatoire, par un « mur mou » qui devient infini au bord ; on obtient un problème lisse et strictement convexe ; on le résout par la méthode de Newton ; et on amollit le mur petit à petit.</p>
+<ol class="chain">
+<li><strong>Pourquoi (§1).</strong> Le simplexe longe le bord du polyèdre, de sommet en sommet. Il est excellent en pratique, mais il existe des exemples où il visite un nombre exponentiel de sommets. Khachian (1979) puis Karmarkar (1984) ont donné des algorithmes <em>polynomiaux</em> ; ceux de Karmarkar et de ses successeurs passent par l'<strong>intérieur</strong>.</li>
+<li><strong>La barrière (§2).</strong> On ajoute au coût $c\cdot x$ le terme $\mu\pi(x)=-\mu\sum_i\log x_i$, qui explose quand une composante $x_i$ tend vers $0$. Le minimum $x^\mu$ du problème pénalisé (4.11) reste à l'intérieur ; en dimension 1, $x^\mu=\mu/c$.</li>
+<li><strong>Le Lemme 4.2.11 (§3).</strong> Si l'intérieur $\Xado$ de l'ensemble admissible est borné et non vide, $x^\mu$ existe, est unique, et tend vers la solution $x^0$ du programme linéaire quand $\mu\to0$. La preuve combine compacité, stricte convexité et multiplicateurs de Lagrange.</li>
+<li><strong>La trajectoire centrale (§4).</strong> Les conditions d'optimalité de (4.11) s'écrivent $x_is_i=\mu$ pour tout $i$ : ce sont les écarts complémentaires de la dualité, « perturbés » de $\mu$. Conséquence : l'écart entre le coût primal et le coût dual vaut exactement $n\mu$. On sait donc à tout moment à quelle distance de l'optimum on est.</li>
+<li><strong>Newton et le suivi de chemin (§5).</strong> On ne calcule jamais $x^\mu$ exactement : on diminue $\mu$, on fait un ou quelques pas de Newton depuis le point précédent, et on recommence. Une vingtaine d'itérations suffisent en pratique, presque indépendamment de la taille.</li>
+<li><strong>Simplexe ou points intérieurs ? (§6).</strong> Deux outils complémentaires : l'un rend un sommet exact et redémarre vite, l'autre traverse les très grands problèmes en peu d'itérations et rend un point approché avec un certificat. Les solveurs combinent les deux (« crossover »).</li>
+</ol>
+
+<h3 id="prerequis">Ce qu'il faut savoir</h3>
+<p>Ouvrez seulement les rappels dont vous avez besoin. Chacun dit exactement ce qui sert ici.</p>
+
+<details class="fold more" id="rappel-pl"><summary>Rappel — le programme linéaire standard et ses sommets (parties 1 à 3)</summary><div class="fold-body">
+<p>Le programme linéaire standard est</p>
+$$\min\ c\cdot x\quad\text{sous}\quad Ax=b,\ x\ge0,\qquad A\in\Mc_{m\times n}(\R),\ \rg A=m\le n .$$
+<p>Son ensemble admissible $\Xad=\{x\in\R^n : Ax=b,\ x\ge0\}$ est un polyèdre convexe. S'il existe une solution optimale, il en existe une en un <strong>sommet</strong>, c'est-à-dire une solution basique : $m$ composantes « en base », les $n-m$ autres nulles (<a href="Partie02.html#optimum-sommet">partie 2</a>). Le simplexe passe d'un sommet à un sommet voisin en améliorant le coût, grâce aux coûts réduits (<a href="Partie03.html#algorithme">partie 3</a>). <strong>Sert ici</strong> : pour comparer, et parce que la solution vers laquelle tendent les points intérieurs est (souvent) un sommet.</p>
+</div></details>
+
+<details class="fold more" id="rappel-convexe"><summary>Rappel — fonctions convexes et strictement convexes</summary><div class="fold-body">
+<p>Une fonction $J$ est <em>convexe</em> sur un convexe $K$ si $J(\theta y+(1-\theta)z)\le\theta J(y)+(1-\theta)J(z)$ pour tous $y,z\in K$ et $\theta\in[0,1]$, et <em>strictement convexe</em> si l'inégalité est stricte dès que $y\ne z$ et $\theta\in\,]0,1[$. Pour une fonction deux fois dérivable sur un ouvert convexe : hessienne <strong>définie positive</strong> partout $\Rightarrow$ strictement convexe. Une fonction strictement convexe a <strong>au plus un</strong> point de minimum sur un convexe (Allaire, Prop. 2.3.4, p. 19). <strong>Sert ici</strong> : $-\log$ est strictement convexe, donc $x^\mu$ est unique (§2 et §3).</p>
+<p class="small">En savoir plus : <a href="Rappels.html#fonctions-convexes">fonctions convexes</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-compacite"><summary>Rappel — suites minimisantes et compacité</summary><div class="fold-body">
+<p>Une <em>suite minimisante</em> de $J$ sur $K$ est une suite $x^k\in K$ telle que $J(x^k)\to\inf_KJ$ ; il en existe toujours (définition de l'infimum). En dimension finie, une suite <strong>bornée</strong> a une sous-suite <strong>convergente</strong> (Bolzano–Weierstrass), et si $K$ est fermé la limite est dans $K$. C'est la « méthode directe » du Théorème 2.2.1 d'Allaire (p. 15) : $K$ fermé non vide, $J$ continue et infinie à l'infini $\Rightarrow$ $J$ atteint son minimum. <strong>Sert ici</strong> : dans la preuve du Lemme 4.2.11 (§3), où l'ensemble $\Xado$ n'est <em>pas</em> fermé et où il faut refaire l'argument à la main.</p>
+<p class="small">En savoir plus : <a href="Rappels.html#compacite">compacité</a>, <a href="Rappels.html#suites-minimisantes">suites minimisantes</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-lagrange"><summary>Rappel — multiplicateurs de Lagrange et conditions de Kuhn–Tucker</summary><div class="fold-body">
+<p><strong>Contraintes d'égalité</strong> (Allaire, Th. 2.5.6, p. 34) : si $u$ est un minimum local de $J$ sous les contraintes $F_i(v)=0$ ($1\le i\le M$) et si les gradients $F_i'(u)$ sont linéairement indépendants, il existe des réels $\lambda_1,\dots,\lambda_M$ tels que $J'(u)+\sum_i\lambda_iF_i'(u)=0$. Pour des contraintes affines $Ax=b$ avec $\rg A=m$ : il existe $\lambda\in\R^m$ avec $\nabla J(u)+A^\top\lambda=0$ (le signe de $\lambda$ est libre : on peut aussi écrire $\nabla J(u)-A^\top p=0$ avec $p=-\lambda$).</p>
+<p><strong>Programme linéaire</strong> (Allaire, Th. 4.2.13, (4.20), p. 132) : $x$ est optimal pour (4.15) et $p$ pour son dual si et seulement si</p>
+$$Ax=b,\quad x\ge0,\quad A^\top p\le c,\quad x\cdot(c-A^\top p)=0 .$$
+<p><strong>Sert ici</strong> : les conditions d'optimalité (4.12) du problème pénalisé, et leur limite quand $\mu\to0$ (§3, §4).</p>
+<p class="small">En savoir plus : <a href="Rappels.html#lagrangien">Lagrangien</a>, <a href="Rappels.html#kkt">conditions de Kuhn–Tucker</a>, <a href="Partie05.html#theoreme-dualite">théorème de dualité (partie 5)</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-dualite"><summary>Rappel — le dual et la dualité faible (partie 5)</summary><div class="fold-body">
+<p>Le dual du programme standard est $\max\{b\cdot p : A^\top p\le c\}$, $p\in\R^m$. On note $s=c-A^\top p$ l'<em>écart dual</em> (un vecteur de $\R^n$) : $p$ est admissible pour le dual si et seulement si $s\ge0$. <strong>Dualité faible</strong> : si $x$ est admissible pour le primal et $p$ pour le dual,</p>
+$$c\cdot x-b\cdot p=c\cdot x-(Ax)\cdot p=x\cdot(c-A^\top p)=x\cdot s\ \ge0 .$$
+<p>Donc $b\cdot p\le\min\le c\cdot x$ : tout couple admissible encadre la valeur optimale, à $x\cdot s$ près. <strong>Sert ici</strong> : c'est ce calcul de trois lignes qui donne l'écart $n\mu$ (§4).</p>
+<p class="small">En savoir plus : <a href="Partie05.html#dualite-faible">dualité faible</a>, <a href="Partie05.html#ecarts-complementaires">écarts complémentaires</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-newton-court"><summary>Rappel — la méthode de Newton</summary><div class="fold-body">
+<p>Pour minimiser une fonction $J$ deux fois dérivable, on remplace $J$ près du point courant $u$ par son développement de Taylor d'ordre 2, et on prend le minimum de ce modèle quadratique : $u^{+}=u-J''(u)^{-1}J'(u)$ (Allaire, (3.90), p. 103). Près d'un minimum où la hessienne est inversible, l'erreur est <strong>élevée au carré</strong> à chaque pas (Prop. 3.5.1) : le nombre de chiffres exacts double. Loin du minimum, rien n'est garanti : il faut parfois raccourcir le pas. <strong>Sert ici</strong> : c'est le moteur de l'algorithme (§5), où il est rappelé en détail.</p>
+<p class="small">En savoir plus : <a href="Rappels.html#newton">méthode de Newton</a>.</p>
+</div></details>
+
+<h3 id="notation">Notation</h3>
+<p>Le livre note la transposée $A^*$ ; ce guide écrit $A^\top$. Les diapos ne traitent pas ce sujet.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Ce guide</th><th>Livre</th><th>Sens</th></tr></thead>
+<tbody>
+<tr><td>$\min\{c\cdot x : Ax=b,\ x\ge0\}$</td><td>(4.9)</td><td>Le programme linéaire standard ; $A$ de taille $m\times n$, $\rg A=m$.</td></tr>
+<tr><td>$\Xad$, $\Xado$</td><td>$X_{ad}$, $X^0_{ad}$</td><td>Ensemble admissible $\{Ax=b,\ x\ge0\}$ et son « intérieur » $\{Ax=b,\ x>0\}$ (toutes les composantes strictement positives).</td></tr>
+<tr><td>$\pi(x)=-\sum_i\log x_i$</td><td>(4.10)</td><td>Le potentiel logarithmique (la « barrière »), défini pour $x>0$. Ici $\log$ est le logarithme népérien.</td></tr>
+<tr><td>$\mu>0$</td><td>$\mu$</td><td>Le paramètre de pénalisation : le poids de la barrière.</td></tr>
+<tr><td>$f_\mu(x)=\mu\pi(x)+c\cdot x$</td><td>(4.11)</td><td>La fonction pénalisée (le nom $f_\mu$ est de ce guide).</td></tr>
+<tr><td>$x^\mu$</td><td>$x^\mu$</td><td>L'unique minimum de (4.11). Dans les figures interactives : $x(\mu)$.</td></tr>
+<tr><td>$x^0$</td><td>$x^0$</td><td>La solution optimale du programme linéaire (la limite de $x^\mu$).</td></tr>
+<tr><td>$\frac1x$, $\frac\mu x$</td><td>$\frac1x$</td><td>Le vecteur de composantes $\frac1{x_i}$ (resp. $\frac\mu{x_i}$).</td></tr>
+<tr><td>$p^\mu$</td><td>$-p^\mu$ (!)</td><td>Le multiplicateur de Lagrange de $Ax=b$, <strong>avec le signe de la dualité</strong> (partie 5) : $c-A^\top p^\mu=\frac\mu{x^\mu}$. Le livre écrit (4.12) avec l'autre signe (§3).</td></tr>
+<tr><td>$s=c-A^\top p$</td><td>—</td><td>L'écart dual ; $s^\mu=c-A^\top p^\mu$.</td></tr>
+<tr><td>$X=\mathrm{diag}(x)$, $e=(1,\dots,1)$</td><td>—</td><td>Notations de la méthode de Newton (§5).</td></tr>
+<tr><td>$\sigma\in\,]0,1[$</td><td>—</td><td>Le facteur de réduction de $\mu$ à chaque étape de l'algorithme (§5).</td></tr>
+</tbody></table></div>
+
+<h3 id="couleurs">Code couleur des figures</h3>
+<p>Comme dans tout le guide : <span style="color:var(--s1)">ensemble admissible en bleu</span>, <span style="color:var(--s2)">coût, lignes de niveau et fonction pénalisée en rouge orangé</span>, <span style="color:var(--s3)">optimum et chemin du simplexe en vert</span>, <span style="color:var(--s5)">objets duaux en violet</span>, <span style="color:var(--s6)">points non admissibles en rose</span>. Propre à cette page : la <strong>trajectoire centrale</strong> est tracée dans la couleur du texte (noir en thème clair, blanc en thème sombre), et les <span style="color:var(--s4)">itérés de Newton en or</span>.</p>

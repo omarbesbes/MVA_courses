@@ -1,0 +1,97 @@
+<!--
+title: Partie 7 — Flots, transport et affectation
+short: 7 · Flots
+description: Partie 7 du guide d'étude v2 du cours de programmation linéaire (CentraleSupélec) : graphes et flots, loi de Kirchhoff, matrice d'incidence totalement unimodulaire, flot de coût minimum à solution entière, transport (le constructeur automobile), flot maximal et coupe minimale, plus court chemin et Dijkstra, affectation et matrices doublement stochastiques.
+subtitle: Les diapos 26 à 46 et les sections 4.3.2–4.3.3 du livre d'Allaire, pas à pas. Un réseau devient un programme linéaire dont la matrice a un +1 et un −1 par colonne ; c'est pourquoi le simplexe livre des solutions entières sans qu'on les demande. Transport, flot maximal, plus court chemin et affectation en sont quatre cas particuliers, chacun avec son exemple chiffré.
+kicker: Optimisation · Programmation linéaire · guide v2 · partie 7
+-->
+
+<div class="box objectives">
+<div class="box-h">Ce que vous saurez faire après cette page</div>
+<ol>
+<li>Lire un graphe orienté muni de capacités, de coûts et de flots extérieurs, écrire la <strong>loi de Kirchhoff</strong> en chaque nœud et vérifier qu'un vecteur est un flot admissible.</li>
+<li>Écrire la <strong>matrice d'incidence</strong> d'un graphe, réécrire Kirchhoff sous la forme $Ax=b$, expliquer pourquoi cette matrice est totalement unimodulaire (critère de Poincaré) et pourquoi son rang vaut $m-1$.</li>
+<li>Poser un <strong>flot de coût minimum</strong> sous forme standard (avec des variables d'écart de capacité) et démontrer que, si les données sont entières, le simplexe rend un flot optimal entier (Théorème 4.3.7, preuve complétée).</li>
+<li>Reconnaître un <strong>problème de transport</strong> comme un flot sur un graphe biparti, ajouter un client fictif, et résoudre l'exemple du constructeur automobile par le simplexe : base, potentiels, coûts réduits, cycle, pivot.</li>
+<li>Modéliser le <strong>flot maximal</strong> (un arc retour de coût $-1$) et le <strong>plus court chemin</strong> (une unité de flot de $s$ à $p$) comme des flots de coût minimum ; dérouler à la main les chemins augmentants et l'algorithme de Dijkstra ; certifier un flot maximal par une coupe minimale.</li>
+<li>Modéliser l'<strong>affectation</strong>, la relâcher en matrices doublement stochastiques, expliquer pourquoi la relaxation ne perd rien (totale unimodularité, Birkhoff–von Neumann), et appliquer la méthode hongroise.</li>
+<li>Reconnaître ces problèmes en machine learning : transport optimal discret (POT), appariement des prédictions de DETR, coupes de graphes pour la segmentation, décodage de Viterbi.</li>
+</ol>
+</div>
+
+<h2 id="start">0. Avant de commencer</h2>
+
+<h3 id="comment-lire">Comment lire cette page</h3>
+<p>La page suit les diapos 26 à 46 du cours et les sections 4.3.2 et 4.3.3 du livre d'Allaire (p. 137–142). Chaque énoncé du cours apparaît dans un encadré comme celui-ci, avec sa référence exacte :</p>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo N</span></div>
+<p>Une citation fidèle de la diapo (N est la page du PDF <a href="../ProgLin.pdf"><code>ProgLin.pdf</code></a> où le passage est complet : les diapos 26 à 46 se complètent ligne après ligne).</p>
+</div>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, Théorème 4.3.7, p. 140</span></div>
+<p>Une citation fidèle du livre (<a href="../OptiAllaire_LP.pdf"><code>OptiAllaire_LP.pdf</code></a>), avec le numéro de l'énoncé et la page imprimée.</p>
+</div>
+<p>Chaque citation est suivie d'un <strong>décodage</strong> (le sens de chaque symbole, en mots), d'un <strong>exemple chiffré</strong>, de l'<strong>idée</strong> de la preuve, puis de la <strong>preuve complète</strong>, repliée. Presque tous les exemples se passent sur <strong>le même graphe</strong>, celui de la diapo 26 (six nœuds, douze arcs) : on lui ajoute des capacités et des coûts au fil des sections. Tous les nombres de la page ont été calculés par des scripts (fractions exactes, <code>scipy.optimize.linprog</code>, <code>scipy.sparse.csgraph</code>, la bibliothèque POT).</p>
+
+<h3 id="histoire">L'histoire de la partie en sept étapes</h3>
+<p class="tldr">Un réseau est un graphe ; ce qui y circule est un flot, conservé en chaque nœud ; cette conservation s'écrit avec une matrice qui a un $+1$ et un $-1$ par colonne, et cette seule propriété rend entières toutes les solutions basiques.</p>
+<ol class="chain">
+<li><strong>Des réseaux (§1).</strong> Routes, tuyaux, câbles, livraisons, affectations : des quantités circulent sur les arcs d'un graphe, avec des capacités et des coûts.</li>
+<li><strong>Les flots (§2).</strong> Un flot met un nombre $x_{ij}\ge0$ sur chaque arc. Il est admissible si, en chaque nœud, ce qui entre égale ce qui sort (loi de Kirchhoff), et si aucun arc ne dépasse sa capacité.</li>
+<li><strong>La matrice d'incidence (§3).</strong> Kirchhoff s'écrit $Ax=b$. Chaque colonne de $A$ a un $+1$ (départ de l'arc) et un $-1$ (arrivée) : c'est le critère de Poincaré, donc $A$ est totalement unimodulaire. Conséquence : avec des données entières, le simplexe rend un flot optimal <em>entier</em>, sans rien imposer.</li>
+<li><strong>Le transport (§4).</strong> Des usines, des clients, des arcs usine → client : un flot sur un graphe biparti. L'exemple du constructeur automobile, résolu par le simplexe.</li>
+<li><strong>Le flot maximal (§5).</strong> Faire passer le plus possible de la source au puits. Un arc retour de coût $-1$ en fait un flot de coût minimum ; sa valeur est la capacité d'une coupe minimale.</li>
+<li><strong>Le plus court chemin (§6).</strong> Une unité de flot de $s$ à $p$ : le chemin le moins cher est un flot de coût minimum, et l'algorithme de Dijkstra le trouve plus vite quand les coûts sont positifs.</li>
+<li><strong>L'affectation (§7).</strong> Un transport où chaque offre et chaque demande vaut $1$. Relâcher « $0$ ou $1$ » en « entre $0$ et $1$ » ne perd rien : les sommets du polytope des matrices doublement stochastiques sont les permutations.</li>
+</ol>
+
+<h3 id="prerequis">Ce qu'il faut savoir</h3>
+<p>Ouvrez seulement les rappels dont vous avez besoin. Chacun dit exactement ce qui sert sur cette page.</p>
+
+<details class="fold more" id="rappel-standard"><summary>Rappel — forme standard, solutions basiques, simplexe (parties 1 à 3)</summary><div class="fold-body">
+<p>Un programme linéaire sous <em>forme standard</em> s'écrit $\min\{c\cdot x : Ax=b,\ x\ge0\}$ avec $A\in\Mc_{m\times n}(\R)$ et, hypothèse permanente du cours, $\rg A=m$ (les $m$ équations sont indépendantes). Une <em>base</em> est un choix de $m$ colonnes formant une matrice $B$ inversible ; la <em>solution basique</em> associée met $x_N=0$ hors base et $x_B=B^{-1}b$. Trois faits servent ici :</p>
+<ul>
+<li>les solutions basiques admissibles sont exactement les sommets de $\Xad$ ; s'il existe une solution optimale, il en existe une basique (Allaire, Prop. 4.2.6, p. 123) ;</li>
+<li>le simplexe passe d'une solution basique admissible à une autre ; il calcule les <em>coûts réduits</em> $\ct_N=c_N-N^\top B^{-\top}c_B$, fait entrer une variable de coût réduit négatif et sortir celle que désigne le test du rapport ; il s'arrête quand tous les coûts réduits sont $\ge0$ ;</li>
+<li>un programme linéaire admissible dont la valeur est minorée a une solution optimale (Allaire, Lemme 4.2.3, p. 122).</li>
+</ul>
+<p class="small">Pour approfondir : <a href="Partie01.html#forme-standard">forme standard</a>, <a href="Partie01.html#existence">existence</a>, <a href="Partie02.html#sommets-basiques">sommets = solutions basiques</a>, <a href="Partie02.html#optimum-sommet">optimum en un sommet</a>, <a href="Partie03.html#couts-reduits">coûts réduits</a>, <a href="Partie03.html#algorithme">l'algorithme</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-tu"><summary>Rappel — totale unimodularité et critère de Poincaré (partie 6)</summary><div class="fold-body">
+<p>Une matrice entière est <em>totalement unimodulaire</em> (TU) si toutes ses sous-matrices carrées ont un déterminant égal à $-1$, $0$ ou $1$ (Allaire, Déf. 4.3.2, p. 135). Trois résultats de la partie 6 servent ici :</p>
+<ul>
+<li><strong>Prop. 4.3.3</strong> : si $A$ est TU et $b$ entier, toute solution basique de $\{Ax=b,\ x\ge0\}$ est entière. (Preuve : $x_B=B^{-1}b$ et, par les formules de Cramer, chaque coordonnée est un quotient d'un déterminant entier par $\det B=\pm1$.)</li>
+<li><strong>Lemme 4.3.5 (Poincaré)</strong> : une matrice à coefficients $0$, $\pm1$, avec <em>au plus un</em> $+1$ et <em>au plus un</em> $-1$ par colonne, est TU.</li>
+<li>Une sous-matrice d'une matrice TU est TU ; changer le signe d'une ligne ou ajouter une ligne (ou une colonne) de la matrice identité préserve la propriété.</li>
+</ul>
+<p class="small">Pour approfondir : <a href="Partie06.html#unimodularite">totale unimodularité</a>, <a href="Partie06.html#poincare">le critère de Poincaré</a>, <a href="Rappels.html#determinant">déterminants</a>, <a href="Rappels.html#inverse-cramer">formules de Cramer</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-dualite"><summary>Rappel — dualité (partie 5)</summary><div class="fold-body">
+<p>Le dual de $\min\{c\cdot x : Ax=b,\ x\ge0\}$ est $\max\{b\cdot p : A^\top p\le c\}$. <strong>Dualité faible</strong> : pour $x$ et $p$ admissibles, $b\cdot p\le c\cdot x$. <strong>Dualité forte</strong> : si l'un des deux a une solution optimale, l'autre aussi, et les valeurs sont égales. <strong>Écarts complémentaires</strong> : à l'optimum, $x_j>0\Rightarrow(A^\top p)_j=c_j$. Pour une matrice d'incidence, la contrainte duale de l'arc $(i,j)$ s'écrit $p_i-p_j\le c_{ij}$ : les variables duales sont des « potentiels » attachés aux nœuds. Cela servira au transport (§4), au flot maximal (§5) et à Dijkstra (§6).</p>
+<p class="small">Pour approfondir : <a href="Partie05.html#dual">le dual</a>, <a href="Partie05.html#theoreme-dualite">le théorème de dualité</a>, <a href="Partie05.html#ecarts-complementaires">les écarts complémentaires</a>.</p>
+</div></details>
+
+<details class="fold more" id="rappel-graphes"><summary>Rappel — graphes orientés, chemins, cycles</summary><div class="fold-body">
+<p>Un <em>graphe orienté</em> est un ensemble de nœuds et d'arcs, chaque arc $(i,j)$ allant de $i$ (son départ) vers $j$ (son arrivée). $j$ est un <em>successeur</em> de $i$, $i$ un <em>prédécesseur</em> de $j$. Un <em>chemin</em> de $s$ à $p$ est une suite d'arcs $(s,i_1),(i_1,i_2),\dots,(i_{k-1},p)$ ; il est <em>simple</em> s'il ne repasse pas par un nœud. Un <em>cycle</em> est un chemin qui revient à son départ. En oubliant le sens des arcs, on parle de <em>chaîne</em>, de <em>cycle non orienté</em>, de graphe <em>connexe</em> et d'<em>arbre</em> (graphe connexe sans cycle non orienté ; un arbre à $m$ nœuds a $m-1$ arêtes).</p>
+<p class="small">Pour approfondir : <a href="Rappels.html#graphes-orientes">graphes orientés</a>, <a href="Rappels.html#chemins-cycles">chemins et cycles</a>, <a href="Rappels.html#dijkstra">l'algorithme de Dijkstra</a>.</p>
+</div></details>
+
+<h3 id="notation">Tableau de notation</h3>
+<p>Les diapos et le livre utilisent presque les mêmes symboles. Les écarts :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Objet</th><th>Diapos 26–46</th><th>Livre (Allaire §4.3.2–4.3.3)</th><th>Ce guide</th></tr></thead>
+<tbody>
+<tr><td>graphe orienté</td><td>$G=(\Nc,\Ac)$, $\Ac\subset\Nc\times\Nc$, $m$ nœuds, $n$ arcs</td><td>$G=(N,A)$, nœuds numérotés de $1$ à $m$</td><td>$G=(\Nc,\Ac)$</td></tr>
+<tr><td>arc de $i$ vers $j$</td><td>$(i,j)$ ; sur la figure : <code>[s,1]</code>, <code>[1,2]</code>…</td><td>$(i,j)$</td><td>$(i,j)$</td></tr>
+<tr><td>capacité</td><td>$u_{ij}\ge0$</td><td>$u_{ij}\in\R_+\cup\{+\infty\}$</td><td>$u_{ij}$, éventuellement $+\infty$</td></tr>
+<tr><td>coût unitaire</td><td>$c_{ij}$</td><td>$c_{ij}\in\R$ (négatif permis)</td><td>$c_{ij}$</td></tr>
+<tr><td>flot extérieur</td><td>$b_i$ « entrant ou sortant »</td><td>$b_i\in\R$ : entrant si $b_i>0$, sortant si $b_i<0$</td><td>$b_i$</td></tr>
+<tr><td>flot</td><td>$x\in\R^n_+$ (« flot admissible » = Kirchhoff + capacités)</td><td>$x\in\R^n$ ; « flot » = Kirchhoff + $x\ge0$ ; « admissible » = en plus $x\le u$</td><td>comme le livre</td></tr>
+<tr><td>matrice d'incidence</td><td>$A_{i,l}$, $l$ un arc</td><td>$A_{i,(j,k)}$ (4.30)</td><td>$A$ ; ses colonnes sont indexées par les arcs</td></tr>
+<tr><td>source, puits</td><td>$s$, $p$</td><td>$s$, $p$</td><td>$s$, $p$</td></tr>
+<tr><td>affectation</td><td>(simple mention, diapo 35)</td><td>$N$ femmes, $N$ hommes, accord $a_{ij}$, $\max$</td><td>$N$ tâches, $N$ machines, coût $c_{ij}$, $\min$</td></tr>
+<tr><td>transposée</td><td>${}^tA$</td><td>$A^*$</td><td>$A^\top$</td></tr>
+<tr><td>loi des nœuds</td><td>« Kirchoff »</td><td>« Kirchoff »</td><td>Kirchhoff (le nom du physicien)</td></tr>
+</tbody></table></div>
+<p>Attention à un double emploi : dans ce chapitre, $m$ et $n$ comptent les <strong>nœuds</strong> et les <strong>arcs</strong>. C'est cohérent avec la forme standard : le programme linéaire du flot a une équation par nœud ($m$ lignes) et une variable par arc ($n$ colonnes).</p>
+<p><strong>Code couleur des figures.</strong> Nœuds en bleu ; flot qui circule, arcs de base, chemins et optimum en vert ; coûts, arcs saturés et arcs entrants en rouge orangé ; arcs vides en gris pointillé ; objets du côté « puits » et potentiels en violet ; nœud où Kirchhoff est violée en rose.</p>

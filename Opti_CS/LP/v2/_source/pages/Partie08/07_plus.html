@@ -1,0 +1,159 @@
+<h2 id="plus">7. Exercices supplémentaires</h2>
+<p class="tldr">Onze exercices gradués, de ★ (application directe) à ★★★ (une idée à trouver) : gloutons, bornes, arbres, coupes, sous-tours, contraintes logiques et big-M.</p>
+<p>Ces exercices ne viennent pas du cours : ils entraînent les gestes de la partie. Les solutions ont été vérifiées par énumération, en fractions exactes, et par <code>linprog</code> / <code>milp</code>.</p>
+
+<!-- ============================================================ S1 -->
+<div class="exo" id="sup-1"><div class="exo-h">Exercice 1 — Trois gloutons <span class="lvl">★</span></div>
+<p>Sur les cinq objets du §2 ($p=(4,4,8,2,8)$, $u=(16,15,22,4,12)$, $L=14$), appliquez trois gloutons : par utilité décroissante, par poids croissant, par rapport $u_j/p_j$ décroissant (on prend chaque objet qui tient encore). Lequel gagne ici ? Trouvez un exemple à trois objets où le glouton par utilité est battu par le glouton par rapport.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Pour le contre-exemple, prenez un gros objet de grande utilité mais de mauvais rapport, et deux objets moyens qui remplissent bien le sac ensemble.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<ul>
+<li><strong>Par utilité</strong> (C, A, B, E, D) : C ($8$, reste $6$), A ($4$, reste $2$), B non, E non, D ($2$, reste $0$) : $\{A,C,D\}$, $42$ — l'optimum, par chance.</li>
+<li><strong>Par poids</strong> (D, A, B, C, E) : D (reste $12$), A ($8$), B ($4$), C non, E non : $\{A,B,D\}$, $35$.</li>
+<li><strong>Par rapport</strong> : $\{A,B,D\}$, $35$ (§2).</li>
+</ul>
+<p>Aucun glouton n'est toujours le meilleur. Contre-exemple au glouton par utilité : $L=12$, objets de poids $(10,6,6)$ et d'utilités $(10,9,9)$. Par utilité : le premier objet ($10$), puis plus rien ne tient : $10$. Par rapport ($1$ ; $1{,}5$ ; $1{,}5$) : les deux derniers, $18$, qui est l'optimum.</p>
+</div></details>
+</div>
+
+<!-- ============================================================ S2 -->
+<div class="exo" id="sup-2"><div class="exo-h">Exercice 2 — Réparer le glouton : au moins la moitié de l'optimum <span class="lvl">★★</span></div>
+<p>On suppose que chaque objet tient seul dans le sac ($p_j\le L$). Soit $G$ la valeur du glouton (par rapport) et $u_{\max}=\max_ju_j$. Montrez que $\max(G,u_{\max})\ge\frac12\,\text{opt}$. Vérifiez sur l'exemple du §2 et sur l'exemple « piège » du §2 ($L=100$).</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Comparez $G$ et $u_{\max}$ à la valeur $\overline v$ de la solution de Dantzig, qui majore l'optimum.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>Si tous les objets tiennent ensemble, le glouton les prend tous et $G=\text{opt}$. Sinon, soit $k$ l'objet critique.</p>
+<ol class="steps">
+<li>$$\text{opt}\le\overline v=\sum_{j\lt k}u_j+x_ku_k\le\sum_{j\lt k}u_j+u_k .$$<span class="why">Proposition de Dantzig (§2) et $x_k\le1$.</span></li>
+<li>$$\sum_{j\lt k}u_j\le G .$$<span class="why">Le glouton prend les objets $1,\dots,k-1$ (ils tiennent tous ensemble), puis éventuellement d'autres.</span></li>
+<li>$$u_k\le u_{\max} .$$<span class="why">Définition du maximum.</span></li>
+<li>$$\text{opt}\le G+u_{\max}\le2\max(G,u_{\max}) .$$<span class="why">On somme les lignes 1 à 3.</span></li>
+</ol>
+<p>Exemple du §2 : $\max(35,22)=35\ge42/2=21$. Exemple piège : $G=2$, $u_{\max}=100$, $\max=100=\text{opt}$. Le facteur $\tfrac12$ ne peut pas être amélioré : avec $L=2$ et trois objets de poids $(\eps,1,1)$ et d'utilités $(2\eps,1,1)$, le glouton prend le premier (rapport $2$) puis le deuxième, et le troisième ne tient plus : $G=1+2\eps$ ; $u_{\max}=1$ ; l'optimum prend les deux derniers : $2$. Le rapport $(1+2\eps)/2$ tend vers $\tfrac12$ (pour $\eps=\tfrac1{10}$ : $1{,}2$ contre $2$).</p>
+</div></details>
+</div>
+
+<!-- ============================================================ S3 -->
+<div class="exo" id="sup-3"><div class="exo-h">Exercice 3 — Programmation dynamique à la main <span class="lvl">★</span></div>
+<p>Trois objets de poids $(3,4,2)$ et d'utilités $(4,5,3)$, sac de capacité $6$. Remplissez le tableau $T(k,c)$ du §2 ($k=0,\dots,3$, $c=0,\dots,6$), lisez l'optimum, retrouvez les objets. Comparez avec le glouton et la relaxation continue.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>$T(k,c)=\max\big(T(k-1,c),\,T(k-1,c-p_k)+u_k\big)$, le second terme seulement si $p_k\le c$. Rapports : $\tfrac43$, $\tfrac54$, $\tfrac32$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<div class="table-wrap"><table>
+<thead><tr><th>$k$ \ $c$</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>1 (3 ; 4)</td><td>0</td><td>0</td><td>0</td><td>4</td><td>4</td><td>4</td><td>4</td></tr>
+<tr><td>2 (4 ; 5)</td><td>0</td><td>0</td><td>0</td><td>4</td><td>5</td><td>5</td><td>5</td></tr>
+<tr><td>3 (2 ; 3)</td><td>0</td><td>0</td><td>3</td><td>4</td><td>5</td><td>7</td><td><strong>8</strong></td></tr>
+</tbody></table></div>
+<p>Optimum $T(3,6)=8$. Remontée : $T(3,6)=8\ne T(2,6)=5$, l'objet 3 est pris, $c=4$ ; $T(2,4)=5\ne T(1,4)=4$, l'objet 2 est pris, $c=0$ ; l'objet 1 ne l'est pas. Solution $\{2,3\}$, poids $6$. Glouton (objet 3, puis 1, puis 2 ne tient plus) : $7$. Relaxation : objets 3 et 1 ($5$), puis $\tfrac14$ de l'objet 2 : $7+\tfrac54=8{,}25$. Encadrement $7\le8\le8{,}25$.</p>
+</div></details>
+</div>
+
+<!-- ============================================================ S4 -->
+<div class="exo" id="sup-4"><div class="exo-h">Exercice 4 — L'ordre d'exploration compte <span class="lvl">★★</span></div>
+<p>Refaites l'arbre de séparation-évaluation du §3 (sac-à-dos, $L=14$, départ du glouton $35$) en explorant la branche « $=0$ » <em>avant</em> la branche « $=1$ ». Combien de nœuds ? Pourquoi plus que $7$ ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Vous commencez par les sacs sans C. Tant que vous n'avez pas trouvé $42$, la meilleure valeur connue reste $35$ et l'on élague peu.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<ol class="steps">
+<li>Nœud 0 : $47{,}5$, séparer sur C.<span class="why">Comme au §3.</span></li>
+<li>Nœud 1 ($x_C=0$) : A, B, D, $\tfrac12$ E : $41\gt35$, séparer sur E.<span class="why">Borne $16+15+4+6$.</span></li>
+<li>Nœud 2 ($x_C=0$, $x_E=0$) : A, B, D : $35\le35$, élagué.<span class="why">Relaxation entière, mais elle ne bat pas le glouton (c'est sa solution).</span></li>
+<li>Nœud 3 ($x_C=0$, $x_E=1$) : reste $6$ ; A, puis $\tfrac12$ B : $35{,}5\gt35$, séparer sur B.<span class="why">$12+16+7{,}5$.</span></li>
+<li>Nœuds 4 ($x_B=0$ : A, D, E, $32$) et 5 ($x_B=1$ : B, E, $\tfrac12$ A, $35$) : élagués.<span class="why">$32\le35$ et $35\le35$.</span></li>
+<li>Nœud 6 ($x_C=1$) : $45{,}5$, séparer sur B.<span class="why">Comme le nœud 1 du §3.</span></li>
+<li>Nœud 7 ($x_C=1$, $x_B=0$) : A, C, D, $42$ entier : nouvelle meilleure.<span class="why">Le sac plein.</span></li>
+<li>Nœud 8 ($x_C=1$, $x_B=1$) : $45\gt42$, séparer sur A ; nœud 9 ($x_A=0$) : $41\le42$, élagué ; nœud 10 ($x_A=1$) : irréalisable.<span class="why">Poids fixé $16\gt14$.</span></li>
+</ol>
+<p>$11$ nœuds au lieu de $7$ : la bonne solution ($42$) est trouvée tard, et pendant tout le sous-arbre « $x_C=0$ » on compare à $35$ seulement. Explorer d'abord la branche que la relaxation préfère (ici $x_C=1$, puisque $x_C=\tfrac34$) donne en général de bonnes solutions plus tôt.</p>
+</div></details>
+</div>
+
+<!-- ============================================================ S5 -->
+<div class="exo" id="sup-5"><div class="exo-h">Exercice 5 — Relaxation lagrangienne et relaxation continue du sac-à-dos <span class="lvl">★★★</span></div>
+<p>Soit $G(\lambda)=\lambda L+\sum_j\max(0,\,u_j-\lambda p_j)$ la fonction duale obtenue en dualisant la capacité (§3), avec $p_j\gt0$, des rapports $r_j=u_j/p_j$ rangés par ordre décroissant et $\sum_jp_j\gt L$. Montrez que $G$ est convexe, affine par morceaux, et que son minimum sur $\lambda\ge0$ est atteint en $\lambda=r_k$ ($k$ l'objet critique), où il vaut la valeur $\overline v$ de la relaxation continue.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Chaque $\lambda\mapsto\max(0,u_j-\lambda p_j)$ est convexe (maximum de deux fonctions affines). Entre deux rapports consécutifs, calculez la pente de $G$ : elle vaut $L-\sum_{j : r_j\gt\lambda}p_j$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<ol class="steps">
+<li>$G$ est convexe et affine par morceaux.<span class="why">Somme de la fonction affine $\lambda L$ et de fonctions $\max(0,u_j-\lambda p_j)$, maxima de deux fonctions affines ; les coudes sont aux $r_j$.</span></li>
+<li>Sur un intervalle sans rapport $r_j$, $G'(\lambda)=L-\sum_{j : r_j\gt\lambda}p_j$.<span class="why">Le terme $j$ vaut $u_j-\lambda p_j$ (pente $-p_j$) si $r_j\gt\lambda$, et $0$ sinon.</span></li>
+<li>Juste avant $r_k$ : $\{j : r_j\gt\lambda\}\supset\{1,\dots,k\}$, pente $\le L-\sum_{j\le k}p_j\lt0$. Juste après $r_k$ : $\{j : r_j\gt\lambda\}\subset\{1,\dots,k-1\}$, pente $\ge L-\sum_{j\lt k}p_j\ge0$.<span class="why">Définition de l'objet critique : $\sum_{j\lt k}p_j\le L\lt\sum_{j\le k}p_j$.</span></li>
+<li>$G$ décroît jusqu'à $r_k$ et croît après : son minimum est en $\lambda=r_k$.<span class="why">Une fonction convexe dont la pente change de signe en un point y atteint son minimum.</span></li>
+<li>$$G(r_k)=r_kL+\sum_{j\lt k}(u_j-r_kp_j)=\sum_{j\lt k}u_j+u_k\frac{L-\sum_{j\lt k}p_j}{p_k}=\overline v .$$<span class="why">Les termes $j\ge k$ sont nuls ($u_j-r_kp_j\le0$) ; on développe.</span></li>
+</ol>
+<p>Sur l'exemple : $G(11/4)=47{,}5$ (§3). Sur l'exercice 1 du §6 : $G(5/2)=30+20+17+1{,}5=68{,}5$. La meilleure borne lagrangienne est donc exactement la borne de Dantzig : pour le sac-à-dos, dualiser la capacité n'apporte rien de plus que relâcher l'intégrité, mais l'explique (le prix du kilo $r_k$ est la variable duale de la capacité).</p>
+</div></details>
+</div>
+
+<!-- ============================================================ S6 -->
+<div class="exo" id="sup-6"><div class="exo-h">Exercice 6 — Des coupes de couverture qui ne suffisent pas <span class="lvl">★★★</span></div>
+<p>Reprenez le sac-à-dos de l'exercice 1 du §6 ($p=(2,2,5,6,8)$, $u=(25,22,14,15,17)$, $L=12$), dont la relaxation donne $(1,1,1,\tfrac12,0)$ et $68{,}5$. (a) Trouvez toutes les <em>couvertures minimales</em> : les ensembles $C$ d'objets trop lourds ($\sum_{j\in C}p_j\gt12$) dont tout sous-ensemble strict tient. (b) Lesquelles sont violées par la solution relâchée ? (c) Ajoutez l'inégalité de couverture de $\{A,C,D\}$ : que devient la borne ? Et avec toutes les couvertures minimales ? Conclusion ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Les paires trop lourdes : $C+E=13$, $D+E=14$. Les triplets : cherchez ceux qui contiennent C et D ($11$) plus un petit objet. Une couverture $C$ donne $\sum_{j\in C}x_j\le\card(C)-1$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>(a)</strong> Paires : $\{C,E\}$ ($13$) et $\{D,E\}$ ($14$). Triplets sans E : $\{A,C,D\}$ et $\{B,C,D\}$ ($13$), minimaux car $\{C,D\}$ ($11$), $\{A,C\}$, $\{A,D\}$… tiennent. Tout ensemble plus gros contient l'une de ces quatre. Couvertures minimales : $CE$, $DE$, $ACD$, $BCD$.</p>
+<p><strong>(b)</strong> En $x=(1,1,1,\tfrac12,0)$ : $x_C+x_E=1\le1$, $x_D+x_E=\tfrac12\le1$ : non violées ; $x_A+x_C+x_D=2{,}5\gt2$ et $x_B+x_C+x_D=2{,}5\gt2$ : violées.</p>
+<p><strong>(c)</strong> Avec $x_A+x_C+x_D\le2$ : la relaxation (<code>linprog</code>) donne $67{,}375$, en $(1,1,1,0,\tfrac38)$. Avec les quatre couvertures : $67$, en $(1,1,\tfrac23,\tfrac13,\tfrac13)$. L'optimum entier est $64$ (exercice 2 du §6). Les coupes resserrent la borne, mais ne la ferment pas : il faut encore séparer. C'est l'ordinaire du <em>branch and cut</em> ; l'exemple du §3, où une seule coupe suffisait, était un cas favorable.</p>
+</div></details>
+</div>
+
+<!-- ============================================================ S7 -->
+<div class="exo" id="sup-7"><div class="exo-h">Exercice 7 — Compter et réduire les contraintes de sous-tours <span class="lvl">★</span></div>
+<p>(a) Combien (V) a-t-il de contraintes de sous-tours pour $N=6$, $N=10$ ? (b) Montrez qu'en présence des contraintes de degré, la contrainte de $S$ et celle de son complémentaire $\Nc\setminus S$ sont équivalentes. (c) Pour des $x$ binaires, montrez que les contraintes des $S$ à deux villes sont automatiques. Combien de contraintes restent utiles pour $N=6$ ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>(b) Sommez les contraintes de degré des villes de $S$ : vous obtenez $2\card(S)=2x(E(S))+x(\delta(S))$, où $x(\delta(S))$ compte les arêtes qui traversent la frontière (repli « Pour aller plus loin » du §4).</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>(a)</strong> Une par $S$ avec $2\le\card(S)\le N-1$ : $2^N-N-2$, soit $56$ pour $N=6$ et $1\,012$ pour $N=10$.</p>
+<p><strong>(b)</strong> En sommant les degrés : $x(E(S))\le\card(S)-1\iff x(\delta(S))\ge2$. Or $\delta(S)=\delta(\Nc\setminus S)$ (une arête qui traverse la frontière la traverse dans les deux sens), donc les deux contraintes disent « $x(\delta(S))\ge2$ ».</p>
+<p><strong>(c)</strong> Pour $S=\{i,j\}$, la contrainte est $x_{ij}\le1$ : vraie pour une variable binaire. Pour $N=6$, les $S$ à $4$ villes sont équivalents à leurs complémentaires à $2$ villes (automatiques), les $S$ à $5$ villes à des singletons (la contrainte $x(\delta(\{v\}))\ge2$ est la contrainte de degré). Restent les $S$ à $3$ villes : $\binom63=20$, regroupés par paires complémentaires, soit $10$ contraintes utiles, une par façon de couper les villes en deux triangles. C'est cohérent avec le §4 : les seules solutions des degrés qui ne sont pas des tournées sont les $10$ paires de triangles.</p>
+</div></details>
+</div>
+
+<!-- ============================================================ S8 -->
+<div class="exo" id="sup-8"><div class="exo-h">Exercice 8 — Une relaxation fractionnaire qui respecte tous les sous-tours <span class="lvl">★★</span></div>
+<p>Six villes ; les arêtes $\{1,4\}$, $\{2,5\}$, $\{3,6\}$ coûtent $1$ ; les arêtes des triangles $\{1,2,3\}$ et $\{4,5,6\}$ coûtent $10$ ; les autres coûtent $100$. Soit $\bar x$ qui vaut $1$ sur les trois arêtes à $1$ et $\tfrac12$ sur les six arêtes des triangles. (a) Vérifiez que $\bar x$ satisfait les contraintes de degré et calculez son coût. (b) Montrez que toute tournée coûte au moins $42$, et trouvez-en une. (c) Vérifiez que $\bar x$ satisfait la contrainte de sous-tour de $S=\{1,2,3\}$. Qu'en conclure ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>(b) Une tournée traverse la frontière entre $\{1,2,3\}$ et $\{4,5,6\}$ un nombre pair de fois, au moins deux.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>(a)</strong> Ville 1 : $\bar x_{14}+\bar x_{12}+\bar x_{13}=1+\tfrac12+\tfrac12=2$ ; idem pour les autres. Coût : $3\cdot1+6\cdot\tfrac12\cdot10=33$.</p>
+<p><strong>(b)</strong> Une tournée a $6$ arêtes et traverse la frontière $2$, $4$ ou $6$ fois. Avec $4$ ou $6$ traversées, elle utilise une arête à $100$ (il n'y a que trois arêtes à $1$ qui traversent) : coût $\ge100$. Avec $2$ traversées, elle utilise au mieux deux arêtes à $1$, et ses $4$ autres arêtes sont dans les triangles (coût $10$) : $2+40=42$. Exemple : $1\text{-}2\text{-}3\text{-}6\text{-}5\text{-}4\text{-}1$.</p>
+<p><strong>(c)</strong> $\bar x_{12}+\bar x_{13}+\bar x_{23}=\tfrac32\le2$ : satisfaite. Le script vérifie que $\bar x$ satisfait les $50$ contraintes de sous-tours ; la relaxation continue de (V) vaut $33$, contre $42$ pour l'optimum. Conclusion : la relaxation de (V) n'est pas toujours entière ; son écart avec l'optimum peut être grand ($42/33\approx1{,}27$), et l'on a besoin d'autres coupes (le « peigne » du §4) ou de séparation.</p>
+</div></details>
+</div>
+
+<!-- ============================================================ S9 -->
+<div class="exo" id="sup-9"><div class="exo-h">Exercice 9 — Linéariser « et » et « ou exclusif » <span class="lvl">★★</span></div>
+<p>(a) Montrez que, pour $x_a,x_b,y\in\{0,1\}$, les inégalités $y\le x_a$, $y\le x_b$, $y\ge x_a+x_b-1$ forcent $y=x_ax_b$. (b) Montrez que $z\le x_a+x_b$, $z\ge x_a-x_b$, $z\ge x_b-x_a$, $z\le2-x_a-x_b$ forcent $z=1$ si et seulement si $x_a\ne x_b$. (c) À quoi sert (a) dans un modèle où l'objectif contient un terme $c\,x_ax_b$ ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Quatre lignes de table de vérité à chaque fois : pour chaque $(x_a,x_b)$, listez les valeurs de $y$ (ou $z$) permises.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<div class="table-wrap"><table>
+<thead><tr><th>$(x_a,x_b)$</th><th>contraintes sur $y$</th><th>$y$ permis</th><th>contraintes sur $z$</th><th>$z$ permis</th></tr></thead>
+<tbody>
+<tr><td>$(0,0)$</td><td>$y\le0$, $y\ge-1$</td><td>$0$</td><td>$z\le0$</td><td>$0$</td></tr>
+<tr><td>$(0,1)$</td><td>$y\le0$, $y\ge0$</td><td>$0$</td><td>$z\ge1$, $z\le1$</td><td>$1$</td></tr>
+<tr><td>$(1,0)$</td><td>$y\le0$</td><td>$0$</td><td>$z\ge1$</td><td>$1$</td></tr>
+<tr><td>$(1,1)$</td><td>$y\le1$, $y\ge1$</td><td>$1$</td><td>$z\le0$</td><td>$0$</td></tr>
+</tbody></table></div>
+<p>Dans chaque ligne, une seule valeur est permise, la bonne (vérifié par le script). (c) Un produit $x_ax_b$ rend l'objectif non linéaire ; on le remplace par une nouvelle variable $y$ avec les trois inégalités (a) : le modèle redevient un programme linéaire en nombres entiers. Si $c\gt0$ en minimisation (ou $c\lt0$ en maximisation), seule l'inégalité $y\ge x_a+x_b-1$ est utile ; dans l'autre sens, seules $y\le x_a$ et $y\le x_b$ le sont.</p>
+</div></details>
+</div>
+
+<!-- ============================================================ S10 -->
+<div class="exo" id="sup-10"><div class="exo-h">Exercice 10 — Big-M et coûts fixes : la borne en fonction de $M$ <span class="lvl">★★</span></div>
+<p>Reprenez l'exemple des deux machines du §5 : $\min\ y_1+2y_2+20x_1+5x_2$ sous $y_1+y_2\ge8$, $y_i\le Mx_i$, $0\le y_i\le10$, $x_i\in\{0,1\}$. (a) Pour $M\ge8$, calculez la valeur de la relaxation continue en fonction de $M$. (b) Pour quelles valeurs de $M$ le modèle est-il correct ? (c) Que vaut la borne quand $M\to\infty$ ?</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>Dans la relaxation, le solveur prend $x_i=y_i/M$ (le plus petit possible). Le coût de l'unité produite sur la machine $i$ devient $c_i+f_i/M$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>(a)</strong> À $y$ fixé, le meilleur $x$ relâché est $x_i=y_i/M$ (il faut $x_i\ge y_i/M$, et $x_i\le1$ tient car $y_i\le8\le M$ dans une solution optimale). Le coût devient $(1+\tfrac{20}M)y_1+(2+\tfrac5M)y_2$, minimal en mettant les $8$ unités sur la machine la moins chère en apparence :</p>
+$$\text{borne}(M)=8\min\Big(1+\frac{20}M,\ 2+\frac5M\Big).$$
+<p>Vérification : $M=8$ : $8\min(3{,}5\,;\,2{,}625)=21$ ; $M=10$ : $8\min(3\,;\,2{,}5)=20$ ; $M=100$ : $8\min(1{,}2\,;\,2{,}05)=9{,}6$ (valeurs confirmées par <code>milp</code> avec <code>integrality</code> nulle).</p>
+<p><strong>(b)</strong> Le modèle est correct dès que $M$ ne coupe aucune solution optimale. Comme produire plus de $8$ ne sert à rien, $M\ge8$ suffit ; $M\ge10$ (la capacité) est correct sans aucun raisonnement. Pour $M\lt8$, la machine 2 seule ne peut plus produire $8$ : avec $M=5$, le solveur répond $36$ au lieu de $21$.</p>
+<p><strong>(c)</strong> Pour $M\ge15$, c'est la machine 1 qui paraît la moins chère ($1+20/M\le2+5/M$), et la borne $8+160/M$ tend vers $8$ : le coût fixe disparaît de la relaxation. Plus $M$ est grand, plus la borne est mauvaise, plus l'arbre de séparation-évaluation est grand.</p>
+</div></details>
+</div>
+
+<!-- ============================================================ S11 -->
+<div class="exo" id="sup-11"><div class="exo-h">Exercice 11 — Un neurone ReLU : choisir $M$ <span class="lvl">★★</span></div>
+<p>L'entrée d'un neurone vérifie $-3\le x\le1$. (a) Quel est le plus petit $M$ pour lequel l'encodage $y\ge x$, $y\ge0$, $y\le x+M(1-z)$, $y\le Mz$, $z\in\{0,1\}$ est correct ? (b) Que se passe-t-il pour $x=-3$ avec $M=2$ ? (c) Comparez, en $x=0$, la plus grande valeur de $y$ permise par la relaxation continue ($0\le z\le1$) de cet encodage (avec le $M$ de (a)) et de l'encodage $y\le x-l(1-z)$, $y\le uz$ avec $l=-3$, $u=1$.</p>
+<details class="fold hint"><summary>Indice</summary><div class="fold-body"><p>(a) Le cas $z=0$ demande $x\ge-M$, le cas $z=1$ demande $x\le M$. (c) Éliminez $z$ : la première relaxation donne $y\le(x+M)/2$, la seconde $y\le u(x-l)/(u-l)$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p><strong>(a)</strong> Il faut $M\ge\max(\abs{l},u)=\max(3,1)=3$ (§5) : $M=3$.</p>
+<p><strong>(b)</strong> Avec $z=0$ : $y\ge0$ et $y\le x+M=-1$, impossible. Avec $z=1$ : $y\ge0$ et $y\le x=-3$, impossible. L'entrée $x=-3$ est déclarée impossible : toutes les entrées $x\lt-2$ disparaissent du modèle, et une vérification fondée sur lui serait fausse.</p>
+<p><strong>(c)</strong> Encodage big-M ($M=3$) : il faut $z\ge y/3$ et $z\le1-(y-x)/3$, donc $y\le(x+3)/2$ : en $x=0$, $y\le1{,}5$. Encodage serré : $y\le uz=z$ demande $z\ge y$, et $y\le x+3(1-z)$ demande $z\le1-(y-x)/3$ ; un tel $z$ existe si $y\le1-(y-x)/3$, soit $y\le(x+3)/4=u(x-l)/(u-l)$ : en $x=0$, $y\le0{,}75$. La vraie valeur est $\max(0,0)=0$. Le second encodage est l'enveloppe convexe (le triangle de la figure du §5) ; le premier, deux fois plus lâche ici. Valeurs confirmées par <code>linprog</code>.</p>
+</div></details>
+</div>

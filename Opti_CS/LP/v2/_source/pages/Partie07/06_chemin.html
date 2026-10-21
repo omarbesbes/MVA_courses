@@ -1,0 +1,134 @@
+<h2 id="plus-court-chemin">6. Le chemin de coût minimum <span class="ref">Diapos 44–46 ; Allaire Ex. 4.3.3, p. 141</span></h2>
+<p class="tldr">Un chemin de $s$ à $p$, c'est une unité de flot qui part de $s$ et arrive en $p$ : le plus court chemin est un flot de coût minimum, et l'algorithme de Dijkstra le trouve bien plus vite que le simplexe quand les coûts sont positifs.</p>
+
+<h3 id="chemin-def">Un chemin est une unité de flot</h3>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo 46</span></div>
+<p><strong>Définition.</strong> Un <em>chemin de coût minimum</em> sur un graphe muni d'une source et d'un puits est un flot de coût minimum tel que $x_{ij}\in\{0,1\}$ et $b_s=-b_p=1$ et $b_i=0$ sinon.</p>
+<p><strong>Remarques</strong></p>
+<ul>
+<li>Les solutions optimales sont connexes car si $x_{ji}=1$ alors $x'_{ij}=1$ pour un certain $j'\ne j$ par admissibilité.</li>
+<li>L'algorithme du simplexe donne la solution optimale en relaxant les contraintes : $0\leqslant x_{ij}\leqslant1$. Cependant l'algorithme de parcourt de graphe de Dijkstra est meilleur (complexité plus petite).</li>
+</ul>
+<p>Application : itinéraire optimal sur google maps</p>
+</div>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, Exercice 4.3.3, p. 141</span></div>
+<p>On reprend le graphe orienté $G$ avec les deux nœuds, source $s$ et puits $p$, tel que $s$ n'a pas de prédécesseur et $p$ n'a pas de successeur. On munit chaque arc $(i,j)$ d'un coût $c_{ij}\ge0$ qu'on interprète comme une distance entre les nœuds $i$ et $j$. Le problème du chemin de coût minimum est de trouver une suite de nœuds consécutifs sur le graphe qui relient $s$ à $p$ et tels que la somme des coûts le long de ce chemin d'arcs est minimale. Montrer que ce problème peut se modéliser comme un problème de flot à coût minimum avec le choix (4.34) de flots externes pour $v=1$ et des capacités maximales infinies.</p>
+</div>
+<dl class="decode">
+<dt>$x_{ij}\in\{0,1\}$</dt><dd>$x_{ij}=1$ si le chemin emprunte l'arc $(i,j)$, $0$ sinon.</dd>
+<dt>$b_s=-b_p=1$</dt><dd>une unité (un voyageur, un véhicule) part de $s$ et arrive en $p$ ; en tout autre nœud, ce qui arrive repart.</dd>
+<dt>$c\cdot x$</dt><dd>la somme des coûts des arcs empruntés : la longueur du chemin.</dd>
+<dt>« en relaxant : $0\leqslant x_{ij}\leqslant1$ »</dt><dd>on oublie que $x$ doit valoir $0$ ou $1$ ; le Théorème 4.3.7 (capacités $u_{ij}=1$, $b$ entier) garantit que le simplexe rend quand même un sommet entier. Le livre prend, lui, des capacités infinies ($u_{ij}=+\infty$) : c'est l'Exercice 4.3.3.</dd>
+<dt>« connexes »</dt><dd>les arcs utilisés par une solution optimale forment un ensemble d'un seul tenant, de $s$ à $p$ : un vrai chemin, pas des morceaux épars.</dd>
+</dl>
+<p>Sur le graphe de la diapo 26, avec les coûts du tableau du §3 ($c_{s1}=2$, $c_{s3}=5$, $c_{12}=6$, $c_{13}=2$, $c_{21}=1$, $c_{23}=1$, $c_{24}=3$, $c_{2p}=7$, $c_{32}=2$, $c_{34}=6$, $c_{42}=1$, $c_{4p}=2$), il y a $11$ chemins simples de $s$ à $p$ (le script les énumère). Les trois plus courts :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Chemin</th><th>Longueur</th></tr></thead>
+<tbody>
+<tr><td>$s\to1\to3\to2\to4\to p$</td><td>$2+2+2+3+2=11$</td></tr>
+<tr><td>$s\to1\to3\to4\to p$</td><td>$2+2+6+2=12$</td></tr>
+<tr><td>$s\to3\to2\to4\to p$</td><td>$5+2+3+2=12$</td></tr>
+</tbody></table></div>
+<p>Le plus court chemin emprunte cinq arcs, alors que les chemins « directs » à trois arcs coûtent $13$ ($s\to3\to4\to p$), $14$ ($s\to3\to2\to p$) ou $15$ ($s\to1\to2\to p$). Le programme linéaire $\min\{c\cdot x : Ax=e_s-e_p,\ x\ge0\}$, résolu par <code>linprog</code> sans contrainte d'intégrité, rend $x=1$ exactement sur les arcs $(s,1)$, $(1,3)$, $(3,2)$, $(2,4)$, $(4,p)$ et $0$ ailleurs : le chemin de longueur $11$.</p>
+
+<div class="box remark"><div class="box-h">Note sur les sources</div>
+<p><strong>Une coquille.</strong> La diapo 46 (comme la 45) écrit « si $x_{ji}=1$ alors $x'_{ij}=1$ pour un certain $j'\ne j$ ». Le prime est mal placé : il faut lire $x_{ij'}=1$, un arc qui <em>part</em> de $i$ vers un autre nœud $j'$. Vérification : si $x_{ji}=1$ et $i\ne p$, alors $b_i=0$ ($i\ne s$, car $s$ n'a pas de prédécesseur), et Kirchhoff en $i$ donne $\sum_kx_{ik}=\sum_kx_{ki}\ge x_{ji}=1$ : au moins un arc sortant $(i,j')$ porte $1$. Ce qui arrive en $i$ en repart, donc en suivant l'unité depuis $s$ on trace un chemin jusqu'à $p$.</p>
+<p><strong>Une précision.</strong> « $j'\ne j$ » n'est pas automatique : si l'arc $(i,j)$ existe, l'unité pourrait repartir vers $j$ (un aller-retour). Avec des coûts strictement positifs, une solution optimale ne fait jamais cela (l'aller-retour coûte $c_{ji}+c_{ij}>0$ pour rien). Avec des coûts seulement $\ge0$, une solution optimale peut contenir, en plus du chemin, un cycle de coût nul éventuellement disjoint du chemin : elle n'est alors plus connexe. Ce qui reste toujours vrai : les solutions <em>basiques</em> sont des chemins (ci-dessous), et c'est ce que rend le simplexe.</p>
+</div>
+
+<h3 id="chemin-basique">Pourquoi une solution basique est un chemin</h3>
+<div class="box thm"><div class="box-h">Proposition — sommets du problème du plus court chemin</div>
+<p>Toute solution basique admissible de $\{Ax=e_s-e_p,\ x\ge0\}$ est l'indicatrice d'un chemin simple de $s$ à $p$ : $x_{ij}=1$ sur les arcs du chemin, $0$ ailleurs. (Ici $e_s-e_p$ est le vecteur $b$ de (4.34) avec $v=1$.)</p>
+</div>
+<div class="box idea"><div class="box-h">L'idée</div>
+<p>Une solution basique est entière (Th. 4.3.7) et son support ne contient aucun cycle (les colonnes d'un cycle sont liées, §3). Or un flot entier d'une unité de $s$ à $p$ se décompose en un chemin plus des cycles : sans cycle, il ne reste que le chemin.</p>
+</div>
+<details class="fold proof"><summary>Démonstration complète</summary><div class="fold-body">
+<p>Soit $x$ une solution basique admissible.</p>
+<ol class="steps">
+<li>$x$ est entier, $x\in\N^n$.<span class="why">Théorème 4.3.7 (ou directement : $A$ est TU, $b=e_s-e_p$ entier, Prop. 4.3.3).</span></li>
+<li>Le support de $x$ (les arcs où $x_{ij}>0$) ne contient aucun cycle, même en oubliant le sens des arcs.<span class="why">Les colonnes du support d'une solution basique sont linéairement indépendantes, et les colonnes d'un cycle sont liées (Pour aller plus loin du §3).</span></li>
+<li>Partant de $s$, on suit des arcs du support jusqu'à $p$ : on obtient un chemin $P$.<span class="why">Un arc sortant de $s$ porte du flot ($b_s=1$). En tout nœud $i\notin\{s,p\}$ atteint, Kirchhoff ($b_i=0$) donne un arc sortant de flot $>0$. On ne repasse jamais par un nœud déjà vu, sinon le support contiendrait un cycle (ligne 2) ; le graphe est fini, donc on finit en $p$.</span></li>
+<li>$y=x-\ind_P$ vérifie $y\ge0$ et $Ay=0$.<span class="why">$x\ge1$ sur les arcs de $P$ (entier et $>0$), et $A\ind_P=e_s-e_p=Ax$ (une unité le long d'un chemin vérifie Kirchhoff avec $b=e_s-e_p$).</span></li>
+<li>$y=0$, donc $x=\ind_P$.<span class="why">Si $y\ne0$, partons d'un arc où $y>0$ : avec $b=0$, tout nœud où $y$ entre a un arc sortant où $y>0$ ; on finit par revenir sur un nœud déjà vu, ce qui donne un cycle dans le support de $y$, inclus dans celui de $x$ : contradiction avec la ligne 2.</span></li>
+</ol>
+<p>Conséquence : le simplexe appliqué au problème relâché, qui s'arrête sur une solution basique optimale, rend un plus court chemin. C'est la deuxième remarque de la diapo 46.</p>
+</div></details>
+
+<h3 id="dijkstra">L'algorithme de Dijkstra</h3>
+<p>Le simplexe marche, mais la diapo le dit : l'algorithme de Dijkstra (1959) est « meilleur ». Il exploite deux choses que le simplexe ignore : les coûts sont $\ge0$, et l'on cherche en fait les plus courts chemins depuis $s$ vers <em>tous</em> les nœuds à la fois.</p>
+<div class="box recall"><div class="box-h">Rappel — l'algorithme de Dijkstra</div>
+<p>Chaque nœud $i$ porte une <em>étiquette</em> $d(i)$, la longueur du meilleur chemin de $s$ à $i$ trouvé jusqu'ici, et un <em>prédécesseur</em>. Au départ $d(s)=0$ et $d(i)=+\infty$ ailleurs. À chaque étape : on <strong>fixe</strong> le nœud $v$ non encore fixé d'étiquette la plus petite ; puis on <strong>relâche</strong> chaque arc $(v,j)$ vers un nœud non fixé : si $d(v)+c_{vj}<d(j)$, on pose $d(j)=d(v)+c_{vj}$ et $v$ devient le prédécesseur de $j$. On s'arrête quand tous les nœuds atteignables sont fixés. <a href="Rappels.html#dijkstra">Rappels : Dijkstra</a>.</p>
+</div>
+<div class="box example"><div class="box-h">Exemple — Dijkstra sur le graphe de la diapo 26</div>
+<div class="table-wrap"><table>
+<thead><tr><th>Étape</th><th>On fixe</th><th>Arcs relâchés</th><th>Étiquettes $d(s),d(1),d(2),d(3),d(4),d(p)$</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>$s$ ($d=0$)</td><td>$s\to1$ : $0+2=2$ ; $s\to3$ : $0+5=5$</td><td>$0,\ 2,\ \infty,\ 5,\ \infty,\ \infty$</td></tr>
+<tr><td>2</td><td>$1$ ($d=2$)</td><td>$1\to2$ : $2+6=8$ ; $1\to3$ : $2+2=4<5$</td><td>$0,\ 2,\ 8,\ 4,\ \infty,\ \infty$</td></tr>
+<tr><td>3</td><td>$3$ ($d=4$)</td><td>$3\to2$ : $4+2=6<8$ ; $3\to4$ : $4+6=10$</td><td>$0,\ 2,\ 6,\ 4,\ 10,\ \infty$</td></tr>
+<tr><td>4</td><td>$2$ ($d=6$)</td><td>$2\to4$ : $6+3=9<10$ ; $2\to p$ : $6+7=13$ ($2\to1$, $2\to3$ : déjà fixés)</td><td>$0,\ 2,\ 6,\ 4,\ 9,\ 13$</td></tr>
+<tr><td>5</td><td>$4$ ($d=9$)</td><td>$4\to p$ : $9+2=11<13$ ($4\to2$ : déjà fixé)</td><td>$0,\ 2,\ 6,\ 4,\ 9,\ 11$</td></tr>
+<tr><td>6</td><td>$p$ ($d=11$)</td><td>aucun arc ne part de $p$</td><td>$0,\ 2,\ 6,\ 4,\ 9,\ 11$</td></tr>
+</tbody></table></div>
+<p>En remontant les prédécesseurs depuis $p$ : $p\leftarrow4\leftarrow2\leftarrow3\leftarrow1\leftarrow s$. Le plus court chemin est $s\to1\to3\to2\to4\to p$, de longueur $11$, comme l'énumération et le programme linéaire. En prime, on a les plus courts chemins vers tous les nœuds.</p>
+</div>
+<figure class="fig"><!-- include figures/P07/arbre.svg --><figcaption>L'arbre des plus courts chemins depuis $s$ (arcs verts) : chaque nœud y est relié à son prédécesseur final, et $d$ est sa distance à $s$. Les arcs gris ne servent à aucun plus court chemin.</figcaption></figure>
+<div class="widget" data-widget="p7dijkstra"><p class="w-noscript">Figure interactive (nécessite JavaScript).</p></div>
+<p><strong>À observer :</strong> à chaque « Étape suivante », le nœud fixé (vert, cerclé) est celui d'étiquette provisoire la plus petite, et les arcs relâchés passent en rouge ; le texte refait le calcul « $d(v)+c=\dots$ ». On retrouve les six lignes du tableau. Une étiquette fixée ne change plus jamais, et l'arbre vert grandit d'un arc à chaque étape. Choisissez maintenant « avec un coût négatif » ($c_{13}=-2$, $c_{s3}=1$) : à l'étape 2, l'algorithme fixe $3$ avec $d(3)=1$ ; à l'étape 3, il découvre l'arc $1\to3$, qui donnerait $2-2=0<1$, mais $3$ est déjà fixé : le texte signale « ignoré ! ». À la fin, Dijkstra annonce $d(p)=8$ par $s\to3\to2\to4\to p$, alors que le vrai plus court chemin, $s\to1\to3\to2\to4\to p$, coûte $7$.</p>
+
+<h4 id="dijkstra-preuve">Pourquoi Dijkstra est juste, et où sert $c_{ij}\ge0$</h4>
+<div class="box idea"><div class="box-h">L'idée</div>
+<p>Quand on fixe le nœud $v$ d'étiquette minimale, tout autre chemin vers $v$ doit sortir de la zone déjà fixée par un arc vers un nœud $y$ non fixé ; il a déjà coûté au moins $d(y)\ge d(v)$ en arrivant en $y$, et la suite du trajet de $y$ à $v$ ne peut pas faire baisser ce coût, <em>parce que les coûts sont $\ge0$</em>.</p>
+</div>
+<details class="fold proof"><summary>Démonstration complète</summary><div class="fold-body">
+<p>Notons $\delta(i)$ la vraie distance de $s$ à $i$ (longueur d'un plus court chemin) et $F$ l'ensemble des nœuds fixés. Montrons par récurrence l'invariant : pour tout $i\in F$, $d(i)=\delta(i)$ ; et pour tout $j\notin F$, $d(j)$ est la longueur d'un plus court chemin de $s$ à $j$ dont tous les nœuds, sauf $j$, sont dans $F$.</p>
+<ol class="steps">
+<li>Au départ, on fixe $s$ avec $d(s)=0=\delta(s)$, puis on relâche ses arcs.<span class="why">$\delta(s)=0$ car les coûts sont $\ge0$ (un chemin de $s$ à $s$ coûte au moins $0$). La seconde partie de l'invariant découle des relâchements.</span></li>
+<li>Soit $v$ le nœud non fixé d'étiquette minimale, et $Q$ un chemin quelconque de $s$ à $v$. Soit $(x,y)$ le premier arc de $Q$ qui sort de $F$ ($x\in F$, $y\notin F$).<span class="why">$Q$ part de $s\in F$ et arrive en $v\notin F$ : il sort de $F$ au moins une fois.</span></li>
+<li>$$\text{longueur}(Q)\ \ge\ \text{longueur}(Q\text{ de }s\text{ à }y)\ \ge\ d(y)\ \ge\ d(v).$$<span class="why">Première inégalité : la portion de $Q$ de $y$ à $v$ a une longueur $\ge0$ car <strong>tous les coûts sont $\ge0$</strong> (c'est le seul endroit où l'hypothèse sert). Deuxième : la portion de $s$ à $y$ n'utilise que des nœuds de $F$ avant $y$, et $d(y)$ est le minimum de ces longueurs (invariant). Troisième : $v$ a l'étiquette minimale.</span></li>
+<li>$d(v)=\delta(v)$ : on peut fixer $v$.<span class="why">Ligne 3 pour tout chemin $Q$ : $\delta(v)\ge d(v)$ ; et $d(v)$ est la longueur d'un vrai chemin, donc $d(v)\ge\delta(v)$.</span></li>
+<li>Après le relâchement des arcs sortant de $v$, l'invariant est vrai pour $F\cup\{v\}$.<span class="why">Un plus court chemin vers $j$ passant par $F\cup\{v\}$ soit ne passe pas par $v$ (étiquette inchangée), soit finit par $v\to j$ (longueur $d(v)+c_{vj}$, prise en compte par le relâchement). Un chemin qui passerait par $v$ puis reviendrait dans $F$ avant $j$ n'est pas meilleur, car ce nœud de $F$ était déjà à distance $\le d(v)$.</span></li>
+</ol>
+<p>Avec un coût négatif, la ligne 3 tombe : la portion de $y$ à $v$ peut <em>diminuer</em> la longueur, et un chemin passant par un nœud encore non fixé peut battre l'étiquette de $v$. C'est exactement ce que montre le préréglage « avec un coût négatif » de la figure interactive, et l'<a href="#exo-dijkstra-negatif">Exercice supplémentaire 8</a>.</p>
+</div></details>
+<p><strong>Les étiquettes sont un certificat dual.</strong> À la fin, pour <em>tout</em> arc $(i,j)$, on a $d(j)\le d(i)+c_{ij}$ (sinon le relâchement de $(i,j)$ aurait baissé $d(j)$), avec égalité sur les arcs de l'arbre. Autrement dit, $\pi_i=-d(i)$ est une solution admissible du dual $\max\{b\cdot\pi : A^\top\pi\le c\}$ (la contrainte de l'arc $(i,j)$ est $\pi_i-\pi_j\le c_{ij}$), de valeur $\pi_s-\pi_p=d(p)$ : la dualité faible prouve qu'aucun chemin ne fait mieux que $d(p)$. Sur l'exemple, les « coûts réduits » $c_{ij}-(d(j)-d(i))$ valent $0$ sur les cinq arcs de l'arbre et $1,2,5,3,2,1,4$ sur $(s,3)$, $(1,2)$, $(2,1)$, $(2,3)$, $(2,p)$, $(3,4)$, $(4,2)$ : tous $\ge0$. Le solveur <code>linprog</code> rend d'ailleurs, comme multiplicateurs des contraintes de Kirchhoff, $(6,4,0,2,-3,-5)$ pour $(s,1,2,3,4,p)$ : à une constante près, ce sont les opposés des distances $(0,2,6,4,9,11)$.</p>
+
+<div class="box pitfall"><div class="box-h">Piège — Dijkstra et les coûts négatifs</div>
+<p>Avec un seul coût négatif, Dijkstra peut se tromper (figure interactive ci-dessus). Ajouter une même constante à tous les coûts pour les rendre positifs ne répare rien : cela pénalise les chemins qui ont beaucoup d'arcs, et change donc le plus court chemin (Exercice supplémentaire 8). Avec des coûts négatifs mais sans cycle de coût négatif, on utilise l'algorithme de Bellman–Ford, plus lent ; avec un cycle de coût négatif atteignable, le « plus court chemin » n'a plus de sens (on tourne indéfiniment, la valeur du programme linéaire à capacités infinies est $-\infty$).</p>
+</div>
+
+<div class="box app"><div class="box-h">En pratique — Dijkstra, complexité, Google Maps</div>
+<p>Avec une file de priorité (un tas binaire), Dijkstra coûte de l'ordre de $(m+n)\log m$ opérations pour $m$ nœuds et $n$ arcs ; le simplexe n'a pas de garantie polynomiale de ce type. Dans <code>scipy</code> :</p>
+<pre><code>import numpy as np
+from scipy.sparse import csr_matrix
+from scipy.sparse.csgraph import dijkstra
+noeuds = ["s", "1", "2", "3", "4", "p"]
+W = np.zeros((6, 6))                              # W[i, j] = c_ij
+for (i, j), c in {("s","1"): 2, ("s","3"): 5, ("1","2"): 6, ("1","3"): 2, ("2","1"): 1,
+                  ("2","3"): 1, ("2","4"): 3, ("2","p"): 7, ("3","2"): 2, ("3","4"): 6,
+                  ("4","2"): 1, ("4","p"): 2}.items():
+    W[noeuds.index(i), noeuds.index(j)] = c
+dist, pred = dijkstra(csr_matrix(W), directed=True, indices=0, return_predecessors=True)
+dist   # array([ 0.,  2.,  6.,  4.,  9., 11.])
+pred   # array([-9999, 0, 3, 1, 2, 4])   (prédécesseurs : 1←s, 2←3, 3←1, 4←2, p←4)</code></pre>
+<p>Attention : quand la matrice creuse est construite à partir d'un tableau dense comme ici, une case nulle signifie « pas d'arc » ; un arc de coût exactement $0$ doit alors être représenté autrement. Les calculateurs d'itinéraires routiers (l'application citée par la diapo, Google Maps, en est un) reposent sur des variantes de Dijkstra accélérées par un prétraitement du réseau (recherche A* guidée par une estimation de la distance restante, hiérarchies de contraction) ; leurs détails exacts ne sont pas publics.</p>
+</div>
+
+<div class="box ml"><div class="box-h">En machine learning — le décodage de Viterbi est un plus court chemin</div>
+<p>Dans un modèle de Markov caché (HMM), ou un CRF linéaire, on cherche la suite d'états cachés la plus probable étant donné les observations : étiquetage morpho-syntaxique, reconnaissance de la parole, alignement de séquences. Exemple jouet : deux états, Soleil et Pluie, de lois initiales $(0{,}6\,;\,0{,}4)$, de transitions $P(\text{S}\to\text{S})=0{,}7$, $P(\text{S}\to\text{P})=0{,}3$, $P(\text{P}\to\text{S})=0{,}4$, $P(\text{P}\to\text{P})=0{,}6$, et des émissions (promenade, courses, ménage) de probabilités $(0{,}6\,;\,0{,}3\,;\,0{,}1)$ par temps sec et $(0{,}1\,;\,0{,}4\,;\,0{,}5)$ par temps de pluie. On observe « promenade, ménage, courses ». Maximiser un produit de probabilités, c'est minimiser la somme des $-\ln$ : on construit un <em>treillis</em> (un nœud par instant et par état), chaque arc portant le coût $-\ln(\text{transition}\times\text{émission})\ge0$, et l'on cherche le plus court chemin du départ à la fin. Les coûts sont positifs, donc Dijkstra s'applique ; comme le treillis n'a pas de cycle, on fait encore plus simple en le parcourant instant par instant : c'est l'algorithme de Viterbi (programmation dynamique). Ici, <code>scipy.sparse.csgraph.dijkstra</code> sur le treillis et l'énumération des $2^3=8$ suites donnent la même réponse : Soleil, Pluie, Pluie, de probabilité $0{,}6\times0{,}6\times0{,}3\times0{,}5\times0{,}6\times0{,}4=0{,}01296$, soit un chemin de longueur $-\ln0{,}01296\approx4{,}346$.</p>
+<figure class="fig"><!-- include figures/P07/treillis.svg --><figcaption>Le treillis du décodage : un nœud par instant et par état caché ; le chemin vert est la suite d'états la plus probable.</figcaption></figure>
+</div>
+
+<div class="box reflex"><div class="box-h">Réflexes</div>
+<ul>
+<li>Quand vous voyez « itinéraire », « suite de décisions de coût minimal », « séquence la plus probable » → un plus court chemin (une unité de flot de $s$ à $p$).</li>
+<li>Coûts $\ge0$ → Dijkstra ; coûts quelconques sans cycle négatif → Bellman–Ford ; graphe sans cycle → programmation dynamique dans l'ordre topologique.</li>
+<li>Pour certifier un plus court chemin → donnez les distances $d(i)$ : $d(j)\le d(i)+c_{ij}$ sur tous les arcs, égalité le long du chemin.</li>
+</ul>
+</div>
+
+<div class="quiz"><p>Pourquoi le modèle de l'Exercice 4.3.3 peut-il prendre des capacités <em>infinies</em>, alors que la diapo impose $x_{ij}\le1$ ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>Parce qu'une solution basique est l'indicatrice d'un chemin simple (proposition ci-dessus) : elle vérifie automatiquement $x_{ij}\in\{0,1\}$. La contrainte $x\le1$ ne change donc pas la valeur optimale (si les coûts sont $\ge0$). Sans elle, le problème est même déjà sous forme standard, sans variables d'écart.</p>
+</div></details></div>

@@ -1,0 +1,181 @@
+<h2 id="algorithme">3. L'algorithme du simplexe <span class="ref">Diapos 9–10 ; Allaire p. 126</span></h2>
+<p class="tldr">Tant qu'un coût réduit est négatif, on fait entrer la variable correspondante, on avance le long de l'arête jusqu'à ce qu'une variable de base s'annule (test du rapport), et on échange les deux variables dans la base ; si rien ne s'annule, le minimum vaut $-\infty$.</p>
+
+<h3 id="algo-enonce">L'énoncé : diapos 9–10 et livre</h3>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo 9</span></div>
+<p><strong>Algorithme du simplexe.</strong> On veut résoudre $\displaystyle\min_{Ax=b,\ x\ge0}c\cdot x$, $x\in\R^n$, $A\in\Mc_{m\times n}$.</p>
+<p>1) Soit $x_k$ un point admissible basique : $A_k=[B_k\ N_k]$, $c_k=(c_{k,B},c_{k,N})$. Calcul du coût réduit</p>
+$$\ct_k=c_{k,N}-{}^tN_k\,{}^tB_k^{-1}c_{k,B}.$$
+<p>▶ Si $\ct_k\ge0$ alors $x_k$ est une solution basique optimale.<br>▶ Sinon soit $i$ l'indice de la composante la plus négative de $\ct_k$.</p>
+</div>
+<div class="box course"><div class="box-h">Dans le cours <span class="ref">Diapo 10</span></div>
+<p>2) Notons $a_i$ la colonne de $A_k$ (en fait $N_k$) correspondante et posons</p>
+$$x_k(\eps)=\big(x_{k,B}(\eps),x_{k,N}(\eps)\big),\qquad x_{k,N}(\eps)=\eps e_i,\qquad x_{k,B}(\eps)=B_k^{-1}(b-\eps a_i).$$
+<p>3) Soit on peut choisir $\eps>0$ aussi grand que l'on veut et alors le problème n'est pas borné inférieurement,</p>
+<p>4) Soit il existe $\eps_k$ maximal tel que $x_k(\eps_k)$ soit admissible mais pas $x_k(\eps)$ pour $\eps>\eps_k$. Ceci signifie qu'une composante $j\ne i$ de $x_{k,B}(\eps_k)$ est nulle. On pose $x_{k+1}=x_k(\eps_k)$ et on réordonne la base en échangeant les colonnes $i$ et $j$ de $A$.</p>
+</div>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, Algorithme du simplexe, p. 126</span></div>
+<p>— Initialisation (phase I) : on cherche une base initiale $B^0$ telle que la solution basique associée $x^0$ soit admissible $x^0=\begin{pmatrix}(B^0)^{-1}b\\0\end{pmatrix}\ge0$.</p>
+<p>— Itérations (phase II) : à l'étape $k\ge0$, on dispose d'une base $B^k$ et d'une solution basique admissible $x^k$. On calcule le coût réduit $\ct^k_N=c^k_N-(N^k)^*(B^{k^{-1}})^*c^k_B$. Si $\ct^k_N\ge0$, alors $x^k$ est optimal et l'algorithme est fini. Sinon, il existe une variable hors-base d'indice $i$ telle que $(\ct_N\cdot e_i)<0$, et on note $a_i$ la colonne correspondante de $A$. On pose $x^k(\eps)=(x^k_B(\eps),x^k_N(\eps))$ avec $x^k_N(\eps)=\eps e_i$, $x^k_B(\eps)=(B^k)^{-1}(b-\eps a_i)$.</p>
+<p>— Soit on peut choisir $\eps>0$ aussi grand que l'on veut avec $x^k(\eps)\in\Xad$. Dans ce cas, le minimum du programme linéaire est $-\infty$.</p>
+<p>— Soit il existe une valeur maximale $\eps^k\ge0$ et un indice $j$ tels que la $j$-ème composante de $x^k(\eps^k)$ s'annule. On obtient ainsi une nouvelle solution admissible basique $x^{k+1}=x^k(\eps^k)$, correspondant à une nouvelle base $B^{k+1}$ déduite de $B^k$ en remplaçant sa $j$-ème colonne par la colonne $a_i$. La solution admissible $x^{k+1}$ a un coût inférieur ou égal à celui de $x^k$.</p>
+</div>
+<dl class="decode">
+<dt>$A_k=[B_k\ N_k]$</dt><dd>La matrice $A$ dont les colonnes ont été rangées à l'itération $k$ : d'abord les $m$ colonnes de base, puis les autres. Seul l'ordre change d'une itération à l'autre.</dd>
+<dt>$i$, « la plus négative »</dt><dd>La variable <em class="new">entrante</em> : une variable hors base de coût réduit négatif. Les diapos imposent la plus négative (<em>règle de Dantzig</em>) ; le livre en prend une quelconque (§4, <a href="#choix-pivot">choix du pivot</a>).</dd>
+<dt>$x_k(\eps)$</dt><dd>Le point qui glisse le long de l'arête : $x_i=\eps$, les autres variables hors base nulles, $x_B=x_{k,B}-\eps\,B_k^{-1}a_i$ (la « Remarque essentielle », §2).</dd>
+<dt>$\eps_k$</dt><dd>Le <em class="new">pas</em> : la plus grande valeur de $\eps$ pour laquelle $x_k(\eps)$ reste admissible. Sa formule est le test du rapport, ci-dessous. Il peut être nul (sommet dégénéré, §4).</dd>
+<dt>$j$</dt><dd>La variable <em class="new">sortante</em> : une variable de base qui s'annule en $\eps=\eps_k$. « $j\ne i$ » va de soi : $x_i=\eps_k$ n'est pas une variable de base.</dd>
+<dt>« échanger les colonnes $i$ et $j$ »</dt><dd>$a_i$ prend la place de $a_j$ dans la base ($B_{k+1}$ = $B_k$ dont la colonne $a_j$ est remplacée par $a_i$), et $a_j$ passe hors base. C'est le <em class="new">pivot</em>.</dd>
+</dl>
+<div class="box remark"><div class="box-h">Diapos et livre</div>
+<p>Les deux algorithmes sont les mêmes. Différences : (1) la diapo 9 impose la composante la plus négative, le livre n'importe quelle composante négative (il recommande la plus négative p. 127) ; (2) le livre nomme les deux phases (initialisation = phase I, itérations = phase II), les diapos traitent l'initialisation à part (diapo 11) ; (3) le livre écrit $\eps^k\ge0$ et note que le coût baisse « ou reste égal », ce qui annonce la dégénérescence ; (4) <strong>aucun des deux n'écrit la formule de $\eps_k$</strong> : c'est le test du rapport, qu'il faut savoir écrire.</p>
+</div>
+<div class="box method"><div class="box-h">Méthode — une itération du simplexe</div>
+<ol>
+<li><strong>Coûts réduits.</strong> Résoudre $B^\top p=c_B$ ; $\ct_j=c_j-a_j\cdot p$ hors base. Si tous sont $\ge0$ : optimal, fin.</li>
+<li><strong>Entrée.</strong> Choisir $i$ avec $\ct_i<0$ (le plus négatif, dans le cours).</li>
+<li><strong>Direction.</strong> Résoudre $Bd=a_i$, c'est-à-dire $d=B^{-1}a_i\in\R^m$.</li>
+<li><strong>Test du rapport.</strong> Si $d\le0$ : non borné, fin. Sinon $\eps_k=\min\{x_{B,r}/d_r\ :\ d_r>0\}$, atteint en une ligne $r$ ; la variable de base de la ligne $r$ sort.</li>
+<li><strong>Mise à jour.</strong> $x_B\leftarrow x_B-\eps_k d$, $x_i\leftarrow\eps_k$ ; dans la base, $x_i$ remplace la variable de la ligne $r$ ; le coût baisse de $\eps_k\abs{\ct_i}$.</li>
+</ol>
+</div>
+
+<h3 id="test-rapport">Combien avancer : le test du rapport</h3>
+<p>On a choisi la variable entrante $i$ et calculé $d=B^{-1}a_i$. Le point $x(\eps)$ est admissible tant que toutes ses composantes sont $\ge0$. Déroulons la condition.</p>
+<ol class="steps">
+<li>$$x_N(\eps)=\eps e_i\ge0\quad\text{pour tout }\eps\ge0 .$$<span class="why">Les variables hors base valent $0$ ou $\eps$ : elles ne limitent rien. Seules les variables de base peuvent devenir négatives.</span></li>
+<li>$$x_B(\eps)=\bar x_B-\eps\,d\ge0\iff\bar x_r-\eps\,d_r\ge0\quad\text{pour chaque ligne }r=1,\dots,m .$$<span class="why">$x_B(\eps)=B^{-1}(b-\eps a_i)=B^{-1}b-\eps B^{-1}a_i$, composante par composante.</span></li>
+<li>$$d_r\le0:\quad\bar x_r-\eps d_r\ge\bar x_r\ge0\quad\text{pour tout }\eps\ge0 .$$<span class="why">Si $d_r\le0$, la variable $x_{B,r}$ croît ou reste constante quand $\eps$ augmente : elle ne s'annulera jamais.</span></li>
+<li>$$d_r>0:\quad\bar x_r-\eps d_r\ge0\iff\eps\le\frac{\bar x_r}{d_r}.$$<span class="why">On divise par $d_r>0$ sans changer le sens de l'inégalité. Le rapport $\bar x_r/d_r$ est l'instant où $x_{B,r}$ s'annule.</span></li>
+<li>$$\eps_k=\min\Big\{\frac{\bar x_r}{d_r}\ :\ d_r>0\Big\}.$$<span class="why">Il faut respecter toutes les lignes à la fois : on prend le plus petit des rapports. La ligne $r$ qui le réalise donne la variable sortante. Si aucun $d_r$ n'est $>0$, il n'y a pas de minimum : c'est le cas non borné.</span></li>
+</ol>
+<div class="box def"><div class="box-h">Définition — test du rapport, variable sortante</div>
+<p>Le <em class="new">test du rapport</em> (en anglais <em>ratio test</em>) calcule le pas $\eps_k=\min\{\bar x_r/d_r : d_r>0\}$ où $d=B^{-1}a_i$. Une ligne $r$ qui réalise ce minimum désigne la <em class="new">variable sortante</em> : la variable de base $x_{B,r}$, qui vaut $0$ en $\eps=\eps_k$. Si plusieurs lignes réalisent le minimum (<em>ex æquo</em>), plusieurs variables de base s'annulent en même temps : le sommet d'arrivée est dégénéré (§4).</p>
+</div>
+<figure class="fig"><!-- include figures/P03/rapport.svg --><figcaption>Deuxième itération de l'exercice 4.2.1 : depuis $(0\,;1)$ (base $\{x_2,x_4,x_5\}$), $x_1$ entre et $d=B^{-1}a_1=(-\frac32,2,\frac52)$. À gauche, les trois variables de base en fonction de $\eps$ : $x_2$ croît ($d<0$, pas de rapport), $x_4$ s'annule en $\eps=2/2=1$, $x_5$ en $\eps=4/\frac52=\frac85$. Le premier zéro gagne : $\eps_1=1$, $x_4$ sort. À droite, le même pas dans le plan : au-delà de $\eps=1$, le point franchit la droite $x_4=0$ et quitte le polygone.</figcaption></figure>
+
+<div class="widget" data-widget="p3rapport"><p class="w-noscript">Figure interactive (nécessite JavaScript).</p></div>
+<p>À observer : choisissez un sommet de départ et une variable entrante, puis faites glisser $\eps$. Le point $x(\eps)$ suit l'arête ; à droite, les barres montrent les variables de base $x_B(\eps)=\bar x_B-\eps d$, et l'encadré vert entoure celle qui bloque. Avec le préréglage (départ $(0\,;1)$, $x_1$ entre), les rapports sont $1$ et $\frac85$ : au-delà de $\eps=1$, la barre de $x_4$ devient négative (rose) et le point sort du polygone. Depuis $(0\,;0)$ avec $x_1$ entrant, un seul rapport existe ($x_5$ : $5/1=5$), car $d=(-3,-1,1)$ a deux composantes négatives. Choisissez une variable entrante de coût réduit positif (par exemple $x_3$ depuis $(0\,;1)$, $\ct_3=1$) : l'arête existe, mais le coût monte. Enfin, avec le polygone « sans $x_1+x_2\le5$ » et le départ $(0\,;0)$, $x_1$ entrant donne $d=(-3,-1)\le0$ : aucun rapport, on avance indéfiniment et le coût $-\eps$ tend vers $-\infty$.</p>
+
+<h3 id="non-borne">Le cas non borné</h3>
+<div class="box thm"><div class="box-h">Proposition — un critère d'infini</div>
+<p>Si, en un sommet $\bar x$ de base $B$, une variable hors base $i$ vérifie $\ct_i<0$ et $d=B^{-1}a_i\le0$, alors $x(\eps)\in\Xad$ pour tout $\eps\ge0$ et $c\cdot x(\eps)=c\cdot\bar x+\eps\,\ct_i\to-\infty$. Le programme linéaire n'a pas de solution : $\inf_{\Xad}c\cdot x=-\infty$.</p>
+</div>
+<details class="fold proof"><summary>Démonstration complète</summary><div class="fold-body">
+<ol class="steps">
+<li>$$x_B(\eps)=\bar x_B-\eps d\ge\bar x_B\ge0,\qquad x_N(\eps)=\eps e_i\ge0 .$$<span class="why">$d\le0$ et $\eps\ge0$ donnent $-\eps d\ge0$ composante par composante.</span></li>
+<li>$$Ax(\eps)=b .$$<span class="why">Remarque essentielle (§2) : $Ad^{\,i}=0$.</span></li>
+<li>$$c\cdot x(\eps)=c\cdot\bar x+\eps\,\ct_i\xrightarrow[\eps\to+\infty]{}-\infty .$$<span class="why">Formule (4.6) avec $x_N=\eps e_i$, et $\ct_i<0$. Un infimum égal à $-\infty$ n'est atteint par aucun point : pas de solution optimale (comparer avec le Lemme 4.2.3, <a href="Partie01.html#existence">partie 1</a>). <span class="qed">□</span></span></li>
+</ol>
+</div></details>
+<div class="box example"><div class="box-h">Exemple — le polygone de l'exercice 4.2.1 sans la contrainte $x_1+x_2\le5$</div>
+<p>Il reste $-3x_1+2x_2+x_3=2$, $-x_1+2x_2+x_4=4$ ($m=2$, $n=4$), coût $-x_1-2x_2$. Au sommet $(0\,;0)$, base $\{x_3,x_4\}$ : $\ct_1=-1$ et $d=B^{-1}a_1=a_1=(-3,-1)\le0$. Donc $x(\eps)=(\eps,0,2+3\eps,4+\eps)$ est admissible pour tout $\eps\ge0$, de coût $-\eps\to-\infty$ : la demi-droite $\{(\eps\,;0)\}$ est une arête infinie qui descend. La règle de Bland (qui fait entrer $x_1$) le voit dès la première itération. La règle du plus négatif fait d'abord entrer $x_2$, passe par $(0\,;1)$ puis $(1\,;\frac52)$, où $x_3$ entre avec $d=(-\frac14,-\frac12)\le0$ : arête infinie le long de la droite $x_4=0$, même conclusion.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Piège — une arête infinie qui monte ne prouve rien</div>
+<p>$d\le0$ dit seulement que l'arête est infinie. Si $\ct_i\ge0$, le coût monte (ou reste constant) le long de cette arête : on ne conclut rien. Le critère d'infini demande les deux conditions, $\ct_i<0$ <strong>et</strong> $d\le0$. L'exercice 4.2.5 (§8) a un ensemble admissible non borné et pourtant une solution optimale.</p>
+</div>
+
+<h3 id="pivot">Changer de base : le pivot</h3>
+<p>Supposons le pas $\eps_k$ fini, atteint en la ligne $r$ ; notons $x_j$ la variable de base de cette ligne. La nouvelle base $B'$ est $B$ dont la colonne $a_j$ (en position $r$) est remplacée par $a_i$. Trois choses sont à vérifier : $B'$ est bien une base, $x(\eps_k)$ est sa solution basique, et le coût a baissé.</p>
+<div class="box thm"><div class="box-h">Proposition — le pivot donne un nouveau sommet</div>
+<p>(a) $B'$ est inversible, et $\det B'=d_r\det B$ avec $d_r>0$. (b) $x^{k+1}=x(\eps_k)$ est la solution basique de $B'$, et elle est admissible : c'est un sommet. (c) $c\cdot x^{k+1}=c\cdot x^k+\eps_k\,\ct_i\le c\cdot x^k$, avec égalité si et seulement si $\eps_k=0$.</p>
+</div>
+<details class="fold proof"><summary>Démonstration complète</summary><div class="fold-body">
+<ol class="steps">
+<li>$$B^{-1}B'=E,\qquad E=\Id\text{ dont la colonne }r\text{ est remplacée par }d .$$<span class="why">La colonne $s\ne r$ de $B'$ est celle de $B$, et $B^{-1}$ la transforme en $e_s$ ; la colonne $r$ de $B'$ est $a_i$, et $B^{-1}a_i=d$.</span></li>
+<li>$$\det E=d_r,\qquad\det B'=\det B\cdot d_r\ne0 .$$<span class="why">On développe $\det E$ selon chaque colonne $e_s$ ($s\ne r$) : il ne reste que le coefficient $d_r$. Et $d_r>0$ car la ligne $r$ a été choisie parmi les $d_r>0$. Cette matrice $E$ est le $E^k$ du livre (§6).</span></li>
+<li>$$x_j(\eps_k)=\bar x_r-\eps_kd_r=0,\qquad x_\ell(\eps_k)=0\ \text{pour les autres }\ell\text{ hors base}.$$<span class="why">Par définition de $\eps_k=\bar x_r/d_r$ ; les autres variables hors base n'ont pas bougé. Les variables hors base de $B'$ sont celles de $B$ moins $x_i$, plus $x_j$ : toutes nulles en $x(\eps_k)$.</span></li>
+<li>$$Ax(\eps_k)=b,\qquad x(\eps_k)\ge0 .$$<span class="why">Remarque essentielle, et choix de $\eps_k$ (test du rapport). Un point qui vérifie $Ax=b$ et dont les variables hors base de $B'$ sont nulles est la solution basique de $B'$ (elle est unique, car $B'$ est inversible) ; elle est admissible : c'est un sommet (<a href="Partie02.html#sommets-basiques">partie 2</a>).</span></li>
+<li>$$c\cdot x^{k+1}=c\cdot x^k+\eps_k\,\ct_i .$$<span class="why">(4.6) avec $x_N=\eps_ke_i$. Comme $\ct_i<0$ et $\eps_k\ge0$, le coût baisse, strictement si $\eps_k>0$. <span class="qed">□</span></span></li>
+</ol>
+</div></details>
+<p>« On réordonne la base en échangeant les colonnes $i$ et $j$ de $A$ » (diapo 10) dit exactement cela : dans $A_{k+1}=[B_{k+1}\ N_{k+1}]$, la colonne $a_i$ est passée dans le bloc de base, à la place de $a_j$, et $a_j$ dans le bloc hors base.</p>
+
+<h3 id="tableau">Le tableau du simplexe : une aide de calcul</h3>
+<p>Ni les diapos ni le livre ne présentent de tableau : ils écrivent l'algorithme avec $B^{-1}$. Le <em class="new">tableau</em> est une façon commode, et classique, de ranger les calculs quand on fait le simplexe à la main. C'est ici une aide pédagogique, pas un énoncé du cours.</p>
+<figure class="fig"><!-- include figures/P03/anatomie.svg --><figcaption>Le tableau d'une base $B$ : en haut, une ligne par variable de base, avec $B^{-1}A$ et $B^{-1}b=\bar x_B$ ; en bas, la ligne des coûts réduits $\ct^\top=c^\top-c_B^\top B^{-1}A$ (nulle sur les colonnes de base) et, dans le coin, $-c\cdot\bar x$.</figcaption></figure>
+<p>Tout ce dont l'itération a besoin s'y lit directement :</p>
+<ul>
+<li>la ligne $\ct$ donne la variable entrante (le coût réduit le plus négatif) ;</li>
+<li>la colonne de $x_i$ dans le haut du tableau est $B^{-1}a_i=d$, la direction ;</li>
+<li>la colonne $x_B$ divisée par $d$ (sur les $d_r>0$) donne les rapports ; le plus petit désigne la <em class="new">case pivot</em> $d_r$ ;</li>
+<li>le coin donne le coût, au signe près.</li>
+</ul>
+<div class="box method"><div class="box-h">Méthode — un pivot sur le tableau</div>
+<ol>
+<li>Diviser la ligne $r$ (ligne pivot) par la case pivot $d_r$.</li>
+<li>Pour chaque autre ligne, <strong>y compris la ligne $\ct$</strong> : lui retrancher sa valeur dans la colonne $i$ multipliée par la nouvelle ligne $r$. La colonne $i$ devient le vecteur $e_r$ (et $0$ dans la ligne $\ct$).</li>
+<li>Changer l'étiquette de la ligne $r$ : $x_i$ remplace la variable sortante.</li>
+</ol>
+<p>Ce sont les opérations de Gauss–Jordan qui transforment $B^{-1}A$ en $B'^{-1}A$ (les opérations sur les lignes reviennent à multiplier à gauche par $E^{-1}$, §6).</p>
+</div>
+<details class="fold more"><summary>Pourquoi le coin contient $-c\cdot\bar x$, et pourquoi le pivot met la ligne $\ct$ à jour</summary><div class="fold-body">
+<p>Partons de la ligne $(c^\top\ |\ 0)$ et retranchons-lui $p^\top(A\ |\ b)$, une combinaison des lignes de contraintes, avec $p=B^{-\top}c_B$ : on obtient $(c^\top-p^\top A\ |\ -p\cdot b)$. Le premier bloc est le vecteur des coûts réduits (nul sur la base), et $p\cdot b=c_B\cdot B^{-1}b=c\cdot\bar x$. Inversement, toute ligne de la forme « $(c^\top|0)$ moins une combinaison des lignes de $(A|b)$ » qui s'annule sur les colonnes de base est celle-là (la combinaison est imposée par $B^\top p=c_B$). Or un pivot retranche à la ligne $\ct$ un multiple d'une ligne du tableau, elle-même combinaison des lignes de $(A|b)$, et annule la colonne entrante : la nouvelle ligne est donc exactement celle de la nouvelle base. C'est pourquoi on la traite comme les autres lignes.</p>
+</div></details>
+
+<h3 id="iteration">Une itération entièrement détaillée</h3>
+<p>Reprenons la deuxième itération de l'exercice 4.2.1, au sommet $(0\,;1)$, base $\{x_2,x_4,x_5\}$, d'abord avec les matrices, puis avec le tableau.</p>
+<p><strong>Avec les matrices.</strong></p>
+<ol class="steps">
+<li>$$B=(a_2\ a_4\ a_5)=\begin{pmatrix}2&0&0\\2&1&0\\1&0&1\end{pmatrix},\quad B^{-1}=\begin{pmatrix}\frac12&0&0\\-1&1&0\\-\frac12&0&1\end{pmatrix},\quad\bar x_B=B^{-1}b=\begin{pmatrix}1\\2\\4\end{pmatrix}.$$<span class="why">On vérifie $BB^{-1}=\Id$ ; avec $b=(2,4,5)$ : $x_2=1$, $x_4=4-2=2$, $x_5=5-1=4$.</span></li>
+<li>$$p=B^{-\top}c_B=(-1,0,0),\qquad\ct_1=-4,\quad\ct_3=1 .$$<span class="why">Calcul du §2 (<a href="#cr-exemple">exemple</a>). Un seul coût réduit est négatif : $x_1$ entre (c'est aussi le plus négatif).</span></li>
+<li>$$d=B^{-1}a_1=B^{-1}\begin{pmatrix}-3\\-1\\1\end{pmatrix}=\begin{pmatrix}-\frac32\\2\\\frac52\end{pmatrix}.$$<span class="why">Produit matrice-vecteur : $\frac12(-3)=-\frac32$ ; $-1(-3)+1(-1)=2$ ; $-\frac12(-3)+1=\frac52$.</span></li>
+<li>$$\text{rapports}:\ x_2:\ d<0\ (\text{—}),\quad x_4:\ \tfrac22=1,\quad x_5:\ \tfrac{4}{5/2}=\tfrac85\qquad\Longrightarrow\qquad\eps_1=1,\ x_4\text{ sort}.$$<span class="why">Test du rapport sur les $d_r>0$ seulement.</span></li>
+<li>$$\bar x_B-\eps_1d=\begin{pmatrix}1\\2\\4\end{pmatrix}-\begin{pmatrix}-\frac32\\2\\\frac52\end{pmatrix}=\begin{pmatrix}\frac52\\0\\\frac32\end{pmatrix},\qquad x_1=\eps_1=1 .$$<span class="why">Mise à jour ; $x_4$ s'annule comme prévu et devient hors base ; $x_1$ prend sa place.</span></li>
+<li>$$x^2=\big(1,\tfrac52,0,0,\tfrac32\big),\quad\text{base }\{x_2,x_1,x_5\},\quad c\cdot x^2=-2+1\cdot(-4)=-6 .$$<span class="why">Coût : $c\cdot x^1+\eps_1\ct_1$. Contrôle direct : $-1-2\cdot\frac52=-6$. Le nouveau sommet est $(1\,;\frac52)$.</span></li>
+</ol>
+<p><strong>Avec le tableau.</strong> Le tableau de la base $\{x_2,x_4,x_5\}$ (tableau 1 ci-dessous) contient déjà tout : la colonne de $x_1$ est $d=(-\frac32,2,\frac52)$, la colonne $x_B$ est $(1,2,4)$, la ligne $\ct$ porte $\ct_1=-4$ et $\ct_3=1$, et le coin vaut $2=-c\cdot x^1$.</p>
+<!-- include figures/P03/tab-421-1.html -->
+<p>On pivote sur la case verte ($2$, ligne $x_4$, colonne $x_1$) :</p>
+<ol class="steps">
+<li>$$L_{x_4}\leftarrow\tfrac12L_{x_4}=\big(1,\ 0,\ -\tfrac12,\ \tfrac12,\ 0\ \big|\ 1\big).$$<span class="why">Diviser la ligne pivot par la case pivot. Cette ligne devient celle de $x_1$.</span></li>
+<li>$$L_{x_2}\leftarrow L_{x_2}+\tfrac32L_{x_1}=\big(0,\ 1,\ -\tfrac14,\ \tfrac34,\ 0\ \big|\ \tfrac52\big).$$<span class="why">Annuler $-\frac32$ dans la colonne $x_1$ : $\frac12+\frac32(-\frac12)=-\frac14$, $0+\frac32\cdot\frac12=\frac34$, $1+\frac32\cdot1=\frac52$.</span></li>
+<li>$$L_{x_5}\leftarrow L_{x_5}-\tfrac52L_{x_1}=\big(0,\ 0,\ \tfrac34,\ -\tfrac54,\ 1\ \big|\ \tfrac32\big).$$<span class="why">$-\frac12-\frac52(-\frac12)=\frac34$, $0-\frac52\cdot\frac12=-\frac54$, $4-\frac52=\frac32$.</span></li>
+<li>$$L_{\ct}\leftarrow L_{\ct}+4L_{x_1}=\big(0,\ 0,\ -1,\ 2,\ 0\ \big|\ 6\big).$$<span class="why">Même opération sur la ligne des coûts : $1+4(-\frac12)=-1$, $0+4\cdot\frac12=2$, $2+4=6$. Le coin vaut $6=-c\cdot x^2$.</span></li>
+</ol>
+<p>On obtient le tableau 2 (ci-dessous) : nouveau sommet $(1\,;\frac52)$, de coût $-6$, et un nouveau coût réduit négatif, $\ct_3=-1$ : on continue.</p>
+
+<h3 id="deroule">Le déroulé complet sur l'exercice 4.2.1</h3>
+<p>On part du sommet $(0\,;0)$ : la base des variables d'écart $\{x_3,x_4,x_5\}$ est l'identité, $\bar x_B=b=(2,4,5)\ge0$ est admissible, et comme $c_B=0$, le tableau initial est simplement $(A\,|\,b)$ avec la ligne $(c\,|\,0)$. Règle du plus négatif, comme dans les diapos.</p>
+<!-- include figures/P03/tab-421-0.html -->
+<!-- include figures/P03/tab-421-1.html -->
+<!-- include figures/P03/tab-421-2.html -->
+<!-- include figures/P03/tab-421-3.html -->
+<p><strong>Lecture du tableau final.</strong> Les coûts réduits hors base sont $\ct_4=\frac13$ et $\ct_5=\frac43$, tous deux $>0$ : le sommet $(2\,;3)$ est l'optimum, unique, de coût $-8$ ; le maximum de $x_1+2x_2$ vaut $8$ (même résultat que la méthode graphique de la <a href="Partie01.html">partie 1</a>). Bonus : comme les colonnes d'écart de $A$ forment l'identité et que $c_3=c_4=c_5=0$, leurs coûts réduits valent $\ct_{2+r}=0-e_r\cdot p=-p_r$. On lit donc $p=-(0,\frac13,\frac43)$ sur la ligne $\ct$. Le vecteur $(0,\frac13,\frac43)$, de valeur $2\cdot0+4\cdot\frac13+5\cdot\frac43=8$, est la solution du problème dual (<a href="Partie05.html#dual">partie 5</a>) : le simplexe l'a calculé sans qu'on le demande.</p>
+
+<div class="widget" data-widget="p3simplexe"><p class="w-noscript">Figure interactive (nécessite JavaScript).</p></div>
+<p>À observer : avec les réglages par défaut ($c=(-1,-2)$, règle du plus négatif), « Itération suivante » parcourt $(0\,;0)\to(0\,;1)\to(1\,;\frac52)\to(2\,;3)$ et le tableau sous la figure reproduit exactement les quatre tableaux ci-dessus ; en chaque sommet, les deux arêtes portent leur coût réduit (en rouge si elles descendent), et le cercle vert vide montre où mène le pivot. La règle de Bland fait entrer $x_1$ d'abord et arrive en $(2\,;3)$ en deux pivots, par $(5\,;0)$. Avec $c=(-1,-1)$, l'algorithme s'arrête en $(5\,;0)$ avec $\ct_2=0$ : l'arête vers $(2\,;3)$ a un coût constant ($-5$), tous ses points sont optimaux. Avec $c=(1,2)$ (l'exercice 4.2.3 tel qu'imprimé), le départ est déjà optimal. Avec $b_3=\frac72$, le test du rapport de la deuxième itération est ex æquo ($x_4$ et $x_5$ : rapport $1$) ; on arrive sur le sommet dégénéré $(1\,;\frac52)$, et l'itération suivante est un pivot dégénéré, $\eps=0$ : la base change, le point ne bouge pas (§4).</p>
+
+<div class="box app"><div class="box-h">En pratique — le même calcul avec <code>scipy</code> (HiGHS)</div>
+<p>Depuis la version 1.9 de SciPy, <code>scipy.optimize.linprog</code> appelle par défaut le solveur libre HiGHS (<code>method="highs"</code>, qui choisit entre <code>"highs-ds"</code>, un simplexe dual, et <code>"highs-ipm"</code>, des points intérieurs) :</p>
+<pre><code>from scipy.optimize import linprog
+r = linprog(c=[-1, -2], A_ub=[[-3, 2], [-1, 2], [1, 1]], b_ub=[2, 4, 5], method="highs-ds")
+r.x, r.fun, r.ineqlin.marginals    # [2. 3.]  -8.0  [-0. -0.333 -1.333]</code></pre>
+<p>On retrouve l'optimum $(2\,;3)$, le coût $-8$ et, dans <code>marginals</code>, le vecteur $p=(0,-\frac13,-\frac43)$ lu sur le tableau final. Deux différences avec la page : on donne les inégalités directement (le solveur ajoute lui-même les variables d'écart), et HiGHS commence par un <em>présolve</em> qui simplifie le problème ; sur ce petit exemple, le présolve suffit et <code>r.nit</code> vaut $0$. Avec <code>options={"presolve": False}</code>, le simplexe dual fait 3 itérations.</p>
+</div>
+
+<div class="box pitfall"><div class="box-h">Pièges du test du rapport</div>
+<ul>
+<li><strong>Diviser par un $d_r\le0$.</strong> Un rapport $\bar x_r/d_r$ avec $d_r<0$ est négatif ou infini, et n'a pas de sens : cette variable de base ne s'annule jamais. On ne garde que les $d_r>0$.</li>
+<li><strong>Prendre le plus grand rapport.</strong> On prend le plus <em>petit</em> : au-delà, une variable de base est déjà négative.</li>
+<li><strong>Confondre les rôles.</strong> La variable entrante est choisie sur la ligne $\ct$ (une colonne) ; la variable sortante par le test du rapport (une ligne). La case pivot est toujours $>0$.</li>
+<li><strong>Oublier de mettre à jour la ligne $\ct$.</strong> Elle se pivote comme les autres ; sinon les coûts réduits de l'itération suivante sont faux.</li>
+</ul>
+</div>
+<div class="box reflex"><div class="box-h">Réflexes</div>
+<ul>
+<li>Quand vous voyez une colonne entrante → calculez $d=B^{-1}a_i$ (ou lisez-la dans le tableau), puis les rapports sur les $d_r>0$ seulement.</li>
+<li>Quand vous voyez $\ct_i<0$ et une colonne $d\le0$ → problème non borné ; donnez la demi-droite $x(\eps)$ en certificat.</li>
+<li>Quand vous voyez deux rapports égaux → le prochain sommet est dégénéré ; attendez-vous à un pas nul.</li>
+<li>Pour contrôler un tableau → la colonne de chaque variable de base est un vecteur $e_r$, la ligne $\ct$ y vaut $0$, le coin vaut $-c\cdot x$.</li>
+</ul>
+</div>
+<div class="quiz"><p>Dans le tableau 2 ci-dessus, $x_3$ entre. Pourquoi les lignes $x_2$ et $x_1$ ne donnent-elles pas de rapport, et que vaut $\eps_2$ ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>La colonne de $x_3$ vaut $d=(-\frac14,-\frac12,\frac34)$ sur les lignes $(x_2,x_1,x_5)$ : seuls $d_3=\frac34>0$ compte. Quand $x_3$ croît, $x_2$ et $x_1$ croissent ($-\eps d_r>0$) ; seul $x_5$ décroît. $\eps_2=\frac{3/2}{3/4}=2$, $x_5$ sort, le coût passe de $-6$ à $-6+2\cdot(-1)=-8$.</p>
+</div></details></div>
+<div class="quiz"><p>Depuis $(0\,;0)$, pourquoi la règle du plus négatif ne choisit-elle pas l'arête qui mène le plus loin ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>Elle ne regarde que les pentes $\ct_1=-1$ et $\ct_2=-2$, pas les longueurs des arêtes. L'arête de $x_2$ est plus raide mais s'arrête à $\eps=1$ (gain $2$) ; celle de $x_1$ va jusqu'à $\eps=5$ (gain $5$). Connaître la longueur demanderait de faire le test du rapport pour chaque candidat : c'est la règle de « la plus grande amélioration » (§4), plus coûteuse par itération.</p>
+</div></details></div>

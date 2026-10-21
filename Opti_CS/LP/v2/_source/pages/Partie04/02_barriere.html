@@ -1,0 +1,131 @@
+<h2 id="barriere">2. La barrière logarithmique <span class="ref">Allaire (4.9)–(4.11), p. 129</span></h2>
+<p class="tldr">On ajoute au coût $c\cdot x$ le terme $-\mu\sum_i\log x_i$, infini au bord : le minimum $x^\mu$ du problème obtenu est strictement à l'intérieur, se calcule en annulant un gradient, et glisse vers la solution du programme linéaire quand $\mu\to0$.</p>
+
+<h3 id="barriere-enonce">Le potentiel logarithmique et le problème pénalisé</h3>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, §4.2.3, (4.9)–(4.11), p. 129</span></div>
+<p>Décrivons cette méthode sur le programme linéaire standard</p>
+$$\inf_{x\in\R^n\ \text{tel que}\ Ax=b,\ x\ge0}\ c\cdot x. \qquad(4.9)$$
+<p>On définit un potentiel logarithmique pour $x>0$</p>
+$$\pi(x)=-\sum_{i=1}^n\log x_i. \qquad(4.10)$$
+<p>Pour un paramètre de pénalisation $\mu>0$, on introduit le problème strictement convexe</p>
+$$\min_{x\in\R^n\ \text{tel que}\ Ax=b,\ x>0}\ \mu\pi(x)+c\cdot x. \qquad(4.11)$$
+<p>Remarquons qu'en pratique la contrainte $x>0$ n'en est pas une car elle n'est jamais active : quand on minimise (4.11) on ne peut pas « s'approcher » du bord de $x>0$ sous peine de faire « exploser » le potentiel $\pi(x)$ vers $+\infty$. Il s'agit donc d'un exemple de méthode de <strong>pénalisation intérieure</strong>.</p>
+<p>Le principe de l'algorithme de trajectoire centrale est de minimiser (4.11) par une méthode de Newton pour des valeurs de plus en plus petites de $\mu$. En effet, lorsque $\mu$ tend vers zéro, le problème pénalisé (4.11) tend vers le programme linéaire (4.9).</p>
+</div>
+<dl class="decode">
+<dt>(4.9)</dt><dd>Le programme linéaire standard du chapitre, le même que (4.1). Sa difficulté est la contrainte $x\ge0$ : à l'optimum, certaines composantes sont nulles, et il faut deviner lesquelles.</dd>
+<dt>$\pi(x)=-\sum_i\log x_i$</dt><dd>Une somme de $n$ termes, un par composante. Chaque terme $-\log x_i$ est grand quand $x_i$ est petit : $-\log x_i\to+\infty$ quand $x_i\to0^+$. Il n'est défini que pour $x_i>0$. Il est négatif quand $x_i>1$ (et il tend vers $-\infty$, mais lentement, quand $x_i\to+\infty$).</dd>
+<dt>« potentiel », « barrière »</dt><dd>Deux noms pour la même chose : une énergie qui repousse $x$ loin du bord $\{x_i=0\}$, comme un mur.</dd>
+<dt>$\mu>0$</dt><dd>La hauteur du mur. Grand $\mu$ : la barrière domine, $x^\mu$ est loin des bords. Petit $\mu$ : le coût domine, $x^\mu$ s'approche du bord, là où est la solution du programme linéaire.</dd>
+<dt>$\mu\pi(x)+c\cdot x$</dt><dd>La fonction pénalisée, notée $f_\mu(x)$ dans ce guide : le coût, plus le prix à payer pour s'approcher du bord.</dd>
+<dt>« strictement convexe »</dt><dd>Démontré plus bas : c'est ce qui donne l'unicité du minimum $x^\mu$.</dd>
+<dt>« $x>0$ n'en est pas une »</dt><dd>Le minimum, s'il existe, a toutes ses composantes $>0$ ; on le trouve donc en annulant le gradient (avec seulement le multiplicateur de $Ax=b$), comme si $x>0$ n'était pas là.</dd>
+<dt>pénalisation intérieure</dt><dd>Les points approchés restent <em>admissibles</em> (à l'intérieur), par opposition à la pénalisation extérieure du chapitre 3 (rappel ci-dessous).</dd>
+<dt>« (4.11) tend vers (4.9) »</dt><dd>Une phrase d'intuition, pas un énoncé : le sens précis est le Lemme 4.2.11 (§3), $x^\mu\to x^0$.</dd>
+</dl>
+<div class="box recall"><div class="box-h">Rappel — pénalisation extérieure et intérieure (chapitre 3)</div>
+<p>Pour $\min J(v)$ sous $F_i(v)\le0$, la <em>pénalisation extérieure</em> minimise sans contrainte $J(v)+\frac1\eps\sum_i[\max(F_i(v),0)]^2$ (Allaire, (3.79) et Prop. 3.4.6, p. 98) : on <strong>punit</strong> la violation, les solutions $u_\eps$ ne sont en général pas admissibles, seule leur limite l'est. La <em>pénalisation intérieure</em> (Rem. 3.4.7, p. 99) ajoute une <strong>barrière</strong>, une fonction qui tend vers $+\infty$ quand $F_i(v)\to0^-$ (le livre y prend $-\eps\sum_i1/F_i(v)$) : on <strong>interdit</strong> d'approcher le bord, toutes les solutions sont admissibles. La Rem. 3.4.7 se termine par : « Nous étudierons un exemple de pénalisation intérieure à la Sous-section 4.2.3 » — c'est cette page, avec $F_i(x)=-x_i$ et la barrière $-\log$. <a href="Rappels.html#penalisation">En savoir plus</a>.</p>
+</div>
+
+<h3 id="barriere-1d">En dimension 1 : le minimum est $\mu/c$</h3>
+<p>Le plus petit programme linéaire possible : $n=1$, pas de contrainte d'égalité,</p>
+$$\min\ c\,x\quad\text{sous}\quad x\ge0,\qquad c>0 .$$
+<p>Sa solution est $x^0=0$, sur le bord : le coût augmente avec $x$, on prend $x$ le plus petit possible. Le problème pénalisé est $\min_{x>0}f_\mu(x)$ avec $f_\mu(x)=-\mu\log x+c\,x$.</p>
+<ol class="steps">
+<li>$$f_\mu'(x)=-\frac\mu x+c .$$<span class="why">La dérivée de $\log x$ est $\frac1x$ ; celle de $c\,x$ est $c$.</span></li>
+<li>$$f_\mu'(x)=0\iff x=\frac\mu c .$$<span class="why">On multiplie $-\frac\mu x+c=0$ par $x>0$. Comme $\mu>0$ et $c>0$, ce point est bien dans le domaine $x>0$.</span></li>
+<li>$$f_\mu''(x)=\frac\mu{x^2}>0\ \text{ pour tout }x>0 .$$<span class="why">Dérivée de $-\mu x^{-1}$. Donc $f_\mu$ est strictement convexe sur $]0,+\infty[$, et un point où la dérivée s'annule est son unique minimum global.</span></li>
+<li>$$x^\mu=\frac\mu c,\qquad f_\mu(x^\mu)=\mu-\mu\log\frac\mu c,\qquad c\,x^\mu=\mu .$$<span class="why">On remplace $x$ par $\mu/c$ dans $-\mu\log x+c\,x$.</span></li>
+<li>$$x^\mu=\frac\mu c\ \xrightarrow[\mu\to0]{}\ 0=x^0 .$$<span class="why">Le minimum glisse vers le bord, qui est la solution du programme linéaire. Il ne l'atteint jamais pour $\mu>0$.</span></li>
+</ol>
+<p>Numériquement, avec $c=1$ : $\mu=1,\ \frac12,\ \frac14,\ \frac18$ donnent $x^\mu=1,\ \frac12,\ \frac14,\ \frac18$ et $f_\mu(x^\mu)\approx1$ ; $0{,}8466$ ; $0{,}5966$ ; $0{,}3849$. Le coût $c\,x^\mu=\mu$ est exactement l'erreur commise sur la valeur optimale (qui vaut $0$) : retenez-le, c'est le cas $n=1$ de l'écart $n\mu$ du §4.</p>
+<figure class="fig"><!-- include figures/P04/barrieres.svg --><figcaption>La fonction pénalisée $f_\mu(x)=-\mu\log x+x$ ($c=1$) pour $\mu=1,\frac12,\frac14$, et le coût seul $c\,x=x$ (gris, $\mu=0$). Chaque courbe monte vers $+\infty$ au bord $x=0$ (la barrière) et à l'infini (le coût). Son minimum $x^\mu=\mu$ (vert) se rapproche du bord quand $\mu$ diminue, et les courbes se rapprochent de la droite $x$.</figcaption></figure>
+<div class="widget" data-widget="p4barriere1d"><p class="w-noscript">Figure interactive (nécessite JavaScript).</p></div>
+<p><strong>À observer :</strong> avec $c=1$, faites glisser $\log_{10}\mu$ de $0{,}6$ à $-2$ : le point vert $x(\mu)=\mu/c$ file vers $0$, et la courbe rouge se colle à la droite grise $c\,x$, sauf dans une zone de plus en plus étroite près de $0$ où elle remonte à $+\infty$. Augmentez $c$ : le minimum se rapproche du bord ($\mu/c$ diminue) car pénétrer dans le domaine coûte plus cher. Cochez « montrer la barrière seule » : la courbe violette $-\mu\log x$ décroît sans fin, c'est le coût $c\,x$ qui crée le minimum. Ramenez $c$ à $0$ : plus de minimum (la courbe descend vers $-\infty$), alors que le programme linéaire « $\min 0$ » a des solutions — c'est exactement le premier contre-exemple de l'<a href="#exercices">exercice 4.2.6</a>. Avec $c<0$, le programme linéaire lui-même n'est pas borné.</p>
+
+<h3 id="barriere-convexite">Pourquoi le problème pénalisé est strictement convexe</h3>
+<div class="box recall"><div class="box-h">Rappel — convexité stricte et unicité</div>
+<p>Si une fonction deux fois dérivable sur un ouvert convexe a une hessienne définie positive en tout point, elle est strictement convexe ; une fonction strictement convexe a au plus un point de minimum sur un ensemble convexe (Allaire, Prop. 2.3.4, p. 19). Et pour une fonction convexe, un point où le gradient (sur le sous-espace des contraintes) s'annule est un minimum global. <a href="Rappels.html#fonctions-convexes">En savoir plus</a>.</p>
+</div>
+<div class="box thm"><div class="box-h">Proposition — stricte convexité de la fonction pénalisée</div>
+<p>Pour tout $\mu>0$, la fonction $f_\mu(x)=\mu\pi(x)+c\cdot x$ est strictement convexe sur l'ouvert $\{x\in\R^n : x>0\}$, et l'ensemble $\Xado=\{x : Ax=b,\ x>0\}$ est convexe. Donc (4.11) a <strong>au plus une</strong> solution.</p>
+</div>
+<details class="fold proof"><summary>Démonstration complète</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\frac{\partial f_\mu}{\partial x_i}(x)=-\frac\mu{x_i}+c_i,\qquad\frac{\partial^2f_\mu}{\partial x_i\,\partial x_j}(x)=\begin{cases}\mu/x_i^2&\text{si }i=j,\\0&\text{sinon.}\end{cases}$$<span class="why">Chaque terme $-\mu\log x_i+c_ix_i$ ne dépend que de $x_i$ : la hessienne est diagonale. Le terme linéaire $c\cdot x$ n'apporte rien à la hessienne.</span></li>
+<li>$$d^\top\nabla^2f_\mu(x)\,d=\mu\sum_{i=1}^n\frac{d_i^2}{x_i^2}>0\quad\text{pour tout }d\ne0 .$$<span class="why">Une somme de carrés à coefficients $\mu/x_i^2>0$ est nulle seulement si tous les $d_i$ sont nuls. La hessienne $\mu\,\mathrm{diag}(1/x_i^2)$ est donc définie positive : $f_\mu$ est strictement convexe sur l'ouvert convexe $\{x>0\}$.</span></li>
+<li>$\Xado$ est convexe.<span class="why">Si $Ay=Az=b$, $y>0$, $z>0$ et $\theta\in[0,1]$, alors $A(\theta y+(1-\theta)z)=b$ et $\theta y+(1-\theta)z>0$ (somme de nombres $\ge0$ dont l'un est $>0$, composante par composante).</span></li>
+<li>Si $y\ne z$ étaient deux minimums de $f_\mu$ sur $\Xado$, de valeur $v$, le milieu $\frac{y+z}2\in\Xado$ vérifierait $f_\mu\big(\frac{y+z}2\big)<\frac12f_\mu(y)+\frac12f_\mu(z)=v$ : contradiction.<span class="why">Stricte convexité, puis convexité de $\Xado$. C'est la Prop. 2.3.4 du livre.</span></li>
+</ol>
+<p>L'<em>existence</em> d'un minimum n'est pas acquise pour autant : c'est l'objet du Lemme 4.2.11 (§3), et elle peut échouer (exercice 4.2.6, et le cas $c=0$ du widget ci-dessus).</p>
+</div></details>
+
+<h3 id="barriere-triangle">Un exemple entièrement calculé : le triangle (4.5)</h3>
+<p>Reprenons le premier exemple du livre, où $n=3$ et $m=1$ : une seule contrainte d'égalité, donc un seul multiplicateur.</p>
+<div class="box course"><div class="box-h">Dans le livre <span class="ref">Allaire, (4.5), p. 121</span></div>
+$$\min_{\substack{x_1\ge0,\ x_2\ge0,\ x_3\ge0\\ 2x_1+x_2+3x_3=6}}\ x_1+4x_2+2x_3 . \qquad(4.5)$$
+<p>[…] c'est un triangle plan $T$.</p>
+</div>
+<p>Les trois sommets de $T$ sont $(3,0,0)$, $(0,6,0)$ et $(0,0,2)$, de coûts $3$, $24$ et $4$ : l'optimum est $x^0=(3,0,0)$, de valeur $3$.</p>
+<div class="box remark"><div class="box-h">Note sur les sources</div>
+<p>Le livre écrit (p. 121) que le point de minimum de (4.5) est « le sommet $(0,3,0)$ ». C'est une coquille : $(0,3,0)$ n'est même pas dans $T$ ($2\cdot0+3+3\cdot0=3\ne6$). Le minimum est $(3,0,0)$, de coût $3$ ; les deux autres sommets coûtent $24$ et $4$ (vérification par énumération et par <code>linprog</code>, script <code>v02_triangle.py</code> ; voir aussi la <a href="Partie01.html#geometrie">partie 1</a>).</p>
+</div>
+<p><strong>Les conditions d'optimalité.</strong> Ici $a=(2,1,3)$ (la seule ligne de $A$), $b=6$, $c=(1,4,2)$. Le minimum $x^\mu$ de (4.11) est intérieur ; la seule contrainte qui compte est $a\cdot x=6$, et le §3 justifiera qu'il existe un réel $p$ (le multiplicateur de Lagrange) tel que le gradient de $f_\mu$ soit proportionnel à $a$ :</p>
+$$c_i-\frac\mu{x_i}-a_i\,p=0\qquad(i=1,2,3),\qquad\text{c'est-à-dire}\qquad x_i=\frac\mu{c_i-a_i\,p}\ \text{ avec }\ c_i-a_ip>0 .$$
+<p>On reporte dans la contrainte $2x_1+x_2+3x_3=6$ :</p>
+$$\mu\Big(\frac2{1-2p}+\frac1{4-p}+\frac3{2-3p}\Big)=6\qquad\Longleftrightarrow\qquad\mu=\frac6{\dfrac2{1-2p}+\dfrac1{4-p}+\dfrac3{2-3p}} .$$
+<div class="box method"><div class="box-h">Méthode — choisir $p$, lire $\mu$</div>
+<p>Pour $\mu$ donné, trouver $p$ demande de résoudre une équation de degré 3. Dans l'autre sens, c'est immédiat : on <strong>choisit</strong> $p$ (avec $c_i-a_ip>0$ pour tout $i$, ici $p<\frac12$), on <strong>lit</strong> $\mu$ par la formule ci-dessus, puis $x_i=\mu/(c_i-a_ip)$. Tout est rationnel si $p$ l'est.</p>
+</div>
+<p>Avec $p=0$ :</p>
+<ol class="steps">
+<li>$$c-a\,p=(1,\ 4,\ 2),\qquad\frac21+\frac14+\frac32=\frac{15}4 .$$<span class="why">$p=0$ : les écarts $c_i-a_ip$ sont les coûts eux-mêmes.</span></li>
+<li>$$\mu=\frac6{15/4}=\frac85 .$$<span class="why">La formule de $\mu$.</span></li>
+<li>$$x^\mu=\Big(\frac{8/5}1,\ \frac{8/5}4,\ \frac{8/5}2\Big)=\Big(\frac85,\ \frac25,\ \frac45\Big) .$$<span class="why">$x_i=\mu/(c_i-a_ip)$.</span></li>
+<li>$$2\cdot\frac85+\frac25+3\cdot\frac45=\frac{16+2+12}5=6,\qquad c\cdot x^\mu=\frac85+\frac85+\frac85=\frac{24}5 .$$<span class="why">Vérification de la contrainte, et coût. Remarquez que chaque terme $c_ix_i$ vaut $\mu$ : c'est parce que $p=0$ (au §4, on verra que $x_i(c_i-a_ip)=\mu$ toujours).</span></li>
+</ol>
+<p>En faisant de même pour d'autres valeurs de $p$ (script <code>v02_triangle.py</code>, fractions exactes) :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>$p$</th><th>$\mu$</th><th>$x^\mu$</th><th>$c\cdot x^\mu$</th></tr></thead>
+<tbody>
+<tr><td>$\to-\infty$</td><td>$\to+\infty$</td><td>$\to(1,\ 2,\ \frac23)$</td><td>$\to\frac{31}3\approx10{,}33$</td></tr>
+<tr><td>$-1$</td><td>$\frac{45}{11}\approx4{,}09$</td><td>$(\frac{15}{11},\ \frac9{11},\ \frac9{11})$</td><td>$\frac{69}{11}\approx6{,}27$</td></tr>
+<tr><td>$0$</td><td>$\frac85=1{,}6$</td><td>$(\frac85,\ \frac25,\ \frac45)$</td><td>$\frac{24}5=4{,}8$</td></tr>
+<tr><td>$\frac14$</td><td>$\frac9{10}=0{,}9$</td><td>$(\frac95,\ \frac6{25},\ \frac{18}{25})$</td><td>$\frac{21}5=4{,}2$</td></tr>
+<tr><td>$\frac25$</td><td>$\frac{216}{505}\approx0{,}428$</td><td>$(\frac{216}{101},\ \frac{12}{101},\ \frac{54}{101})\approx(2{,}139\,;\,0{,}119\,;\,0{,}535)$</td><td>$\frac{372}{101}\approx3{,}683$</td></tr>
+<tr><td>$\frac{49}{100}$</td><td>$\approx0{,}0566$</td><td>$\approx(2{,}832\,;\,0{,}0161\,;\,0{,}107)$</td><td>$\approx3{,}110$</td></tr>
+<tr><td>$\to\frac12$</td><td>$\to0$</td><td>$\to(3,\ 0,\ 0)=x^0$</td><td>$\to3$</td></tr>
+</tbody></table></div>
+<p>Trois choses à lire dans ce tableau.</p>
+<ul>
+<li><strong>$p\mapsto\mu$ est une bijection décroissante</strong> de $]-\infty,\frac12[$ sur $]0,+\infty[$ : chaque terme $\frac{a_i}{c_i-a_ip}$ est croissant en $p$ (car $a_i>0$), donc leur somme aussi, de $0$ (en $-\infty$) à $+\infty$ (quand $p\to\frac12$, le terme $\frac2{1-2p}$ explose). À chaque $\mu>0$ correspond donc un seul $p$, et un seul point $x^\mu$, comme le promet la stricte convexité.</li>
+<li><strong>Pour $\mu$ grand</strong>, $x^\mu$ tend vers $(1,2,\frac23)$, le point de $T$ qui maximise $\log x_1+\log x_2+\log x_3$ : le <em class="new">centre analytique</em> de $T$ (la barrière seule compte). On le vérifie : $x_i=\mu/(c_i-a_ip)\approx\mu/(-a_ip)$ quand $p\to-\infty$, proportionnel à $1/a_i$, et la contrainte donne $x_i=2/a_i$.</li>
+<li><strong>Pour $\mu\to0$</strong>, $p\to\frac12$ : $x_2$ et $x_3$ s'annulent, $x_1\to3$, et $c\cdot x^\mu\to3$, la valeur optimale. Le multiplicateur $p$ tend vers $\frac12$, la solution du dual $\max\{6p : 2p\le1,\ p\le4,\ 3p\le2\}$ (§4).</li>
+</ul>
+<p>Dans l'autre sens, pour $\mu$ donné on résout l'équation en $p$ numériquement (une dichotomie suffit, la fonction est monotone) : $\mu=1$ donne $p\approx0{,}2158$ et $x^\mu\approx(1{,}759\,;\,0{,}264\,;\,0{,}739)$ ; $\mu=0{,}01$ donne $p\approx0{,}4983$ et $x^\mu\approx(2{,}969\,;\,0{,}0029\,;\,0{,}0198)$.</p>
+<figure class="fig"><!-- include figures/P04/triangle45.svg --><figcaption>Le triangle $T$ de (4.5), dessiné dans son plan (chaque point est placé selon ses coordonnées barycentriques $(\frac{x_1}3,\frac{x_2}6,\frac{x_3}2)$). La trajectoire centrale part du centre analytique $(1,2,\frac23)$ et descend vers le sommet optimal $(3,0,0)$ ; les points a, b, c sont les valeurs exactes du tableau pour $p=0,\frac14,\frac25$. Elle longe le côté $x_2=0$ : la composante $x_2$, la plus chère ($c_2=4$), s'annule la première.</figcaption></figure>
+
+<div class="box ml"><div class="box-h">En machine learning — la régularisation entropique du transport optimal</div>
+<p>Le transport optimal discret entre deux histogrammes $a$ et $b$ est un programme linéaire : minimiser $\sum_{ij}C_{ij}P_{ij}$ sur les matrices $P\ge0$ de marges $a$ et $b$ (<a href="../../../Optimal_transport_ML/v2/Lesson07.html">cours de transport optimal, leçon 7</a>). Sa version <em>entropique</em> ajoute $\eps\sum_{ij}P_{ij}\log P_{ij}$ et se résout par l'algorithme de Sinkhorn. La ressemblance avec la barrière est réelle :</p>
+<ul>
+<li>dans les deux cas, on <strong>lisse</strong> un programme linéaire par un terme strictement convexe, séparable (une somme de fonctions d'une seule variable), qui garde la solution <strong>strictement positive</strong> et la rend <strong>unique</strong> ;</li>
+<li>dans les deux cas, l'optimum s'écrit composante par composante en fonction de l'écart dual $s=c-A^\top p$ : $x_i=\mu/s_i$ pour la barrière, $P_{ij}=\exp(-s_{ij}/\eps)$ pour l'entropie (avec $s_{ij}=C_{ij}-f_i-g_j$, où $f,g$ sont les potentiels duaux, à un facteur constant près selon la normalisation de l'entropie) ;</li>
+<li>dans les deux cas, quand le paramètre tend vers $0$, la solution tend vers une solution optimale du programme linéaire, et vers une solution « centrale » quand il y en a plusieurs : le centre analytique de la face optimale pour la barrière, le plan de plus grande entropie pour Sinkhorn (<a href="../../../Optimal_transport_ML/v2/Lesson07.html#limits">leçon 7, §3</a>).</li>
+</ul>
+<p>Les différences sont tout aussi nettes. Le terme $x\log x$ <strong>ne tend pas vers l'infini</strong> au bord (il vaut $0$ en $0$) : ce n'est pas une barrière ; c'est sa <em>pente</em> $\log x+1\to-\infty$ qui interdit $x=0$. Et on ne fait pas tendre $\eps$ vers $0$ : on garde un $\eps$ fixé, assez grand pour que Sinkhorn (des mises à l'échelle alternées des lignes et des colonnes, des produits matrice-vecteur, idéal sur GPU) converge vite, et on accepte un plan approché, flou. La méthode de barrière, elle, fait tendre $\mu\to0$ avec Newton (des systèmes linéaires) pour obtenir la solution exacte à $n\mu$ près.</p>
+</div>
+
+<div class="box pitfall"><div class="box-h">Piège — « la contrainte $x>0$ n'en est pas une », mais l'algorithme doit la respecter</div>
+<p>La phrase du livre parle du <em>minimum</em> $x^\mu$ : il est intérieur, on le caractérise sans multiplicateur pour $x>0$. Mais un algorithme qui calcule $x^\mu$ peut très bien proposer un point avec une composante négative, où $\log$ n'est pas défini. Un pas de Newton « pur » le fait dès qu'on part trop loin (§5) : il faut alors raccourcir le pas.</p>
+</div>
+<div class="box reflex"><div class="box-h">Réflexe</div>
+<p>Quand vous voyez $-\mu\sum_i\log x_i$ → pensez : à l'optimum, $x_i=\mu/s_i$, où $s_i$ est la « pente » du coût dans la direction $i$ (l'écart dual). Pour un problème en dimension 1 : $x^\mu=\mu/c$.</p>
+</div>
+<div class="quiz"><p>Vérifiez-vous : pour le programme linéaire $\min 2x$, $x\ge0$, calculez $x^\mu$ et l'erreur $c\,x^\mu-0$ pour $\mu=\frac12$.</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>$x^\mu=\mu/c=\frac{1/2}2=\frac14$, et $c\,x^\mu=2\cdot\frac14=\frac12=\mu$. L'erreur sur la valeur optimale vaut $\mu$, quel que soit $c>0$ : c'est l'écart $n\mu$ du §4 avec $n=1$.</p>
+</div></details></div>
+<div class="quiz"><p>Vérifiez-vous : dans le tableau du triangle, pourquoi doit-on prendre $p<\frac12$ et pas seulement $p<4$ ?</p>
+<details class="fold sol"><summary>Réponse</summary><div class="fold-body">
+<p>Il faut $x_i=\mu/(c_i-a_ip)>0$ pour les trois indices, donc $1-2p>0$, $4-p>0$ et $2-3p>0$, soit $p<\frac12$, $p<4$, $p<\frac23$. La plus forte est $p<\frac12$. (Ce sont exactement les contraintes du dual, $A^\top p\le c$, mais strictes : §4.)</p>
+</div></details></div>
