@@ -129,7 +129,11 @@
       if (unb) base = [2.2, 1.2];
       else if (opt.length === 2) base = [(V[opt[0]][0] + V[opt[1]][0]) / 2, (V[opt[0]][1] + V[opt[1]][1]) / 2];
       else base = V[opt[0]];
-      var cu = Math.hypot(c[0], c[1]), tip = [base[0] + 0.85 * c[0] / cu, base[1] + 0.85 * c[1] / cu];
+      var cu = Math.hypot(c[0], c[1]), ux = c[0] / cu, uy = c[1] / cu, len = 0.85;
+      // la flèche reste dans le cadre (en (0, 0), c peut pointer vers l'extérieur du graphique)
+      if (ux < -1e-9) len = Math.min(len, (base[0] - BOX[0] - 0.15) / -ux);
+      if (uy < -1e-9) len = Math.min(len, (base[1] - BOX[2] - 0.15) / -uy);
+      var tip = [base[0] + len * ux, base[1] + len * uy];
       pl.seg(base[0], base[1], tip[0], tip[1], "ln c2", { "marker-end": mk });
       pl.text(tip[0], tip[1], "c", "tx-b t2", "start", 6, -4);
       if (unb) {
@@ -214,9 +218,20 @@
         if (Lpx > 1 && Lpx < 70) {   // segment court (x près d'un sommet) : étiquette au-delà du pied, dans le prolongement
           var th = dirs[k] * Math.PI / 180; ox = Math.cos(th); oy = Math.sin(th); m = f;
         }
+        if (Lpx <= 1) {
+          // x est sur la droite (k) : on la surligne en vert, et « sₖ = 0 » s'écrit sous son étiquette (k), loin du point
+          var sg = lineInBox(h[0], h[1], h[2], BOX);
+          if (sg) {
+            pl.seg(sg[0][0], sg[0][1], sg[1][0], sg[1][1], "ln c3", { style: "stroke-width:1.6px", "stroke-opacity": 0.8 });
+            var top = sg[0][1] > sg[1][1] ? sg[0] : sg[1];
+            if (k === 2) top = sg[0][1] < sg[1][1] ? sg[0] : sg[1];
+            // (1) est raide : on écrit à droite de la droite ; (2) à gauche, sous « (2) » ; (3) au-dessus de « (3) »
+            pl.text(top[0], top[1], names[2 + k] + " = 0", "tx-s t3", k === 1 ? "end" : "start", k === 1 ? -6 : 6, k === 2 ? -20 : 28);
+          }
+          return;
+        }
         var anchor = ox > 0.3 ? "start" : ox < -0.3 ? "end" : "middle";
-        var off = Lpx <= 1 ? 17 : 9;   // x sur la droite : on s'écarte du disque du point
-        pl.text(m[0], m[1], names[2 + k] + " = " + p1num(sl[k]), "tx-s " + (sl[k] >= -1e-12 ? "t3" : "t6"), anchor, off * ox, -off * oy + 4 + (oy < -0.3 ? 4 : 0));
+        pl.text(m[0], m[1], names[2 + k] + " = " + p1num(sl[k]), "tx-s " + (sl[k] >= -1e-12 ? "t3" : "t6"), anchor, 9 * ox, -9 * oy + 4 + (oy < -0.3 ? 4 : 0));
       });
       pl.seg(x[0], x[1], 0, x[1], x[0] >= 0 ? "ln c3 thin dash" : "ln c6 thin dash");
       pl.seg(x[0], x[1], x[0], 0, x[1] >= 0 ? "ln c3 thin dash" : "ln c6 thin dash");
