@@ -203,7 +203,7 @@
         pl.seg(x[0], x[1], f[0], f[1], cls, { style: "stroke-width:2.6px" });
         pl.dot(f[0], f[1], 3, sl[k] >= -1e-12 ? "f3" : "f6");
         // étiquette au milieu du segment, décalée perpendiculairement (en pixels)
-        var m = [(x[0] + f[0]) / 2, (x[1] + f[1]) / 2], px = pl.tx(f[0]) - pl.tx(x[0]), py = pl.ty(f[1]) - pl.ty(x[1]), L = Math.hypot(px, py) || 1;
+        var m = [x[0] + 0.7 * (f[0] - x[0]), x[1] + 0.7 * (f[1] - x[1])], px = pl.tx(f[0]) - pl.tx(x[0]), py = pl.ty(f[1]) - pl.ty(x[1]), L = Math.hypot(px, py) || 1;
         var nx = -py / L, ny = px / L; if (nx < 0) { nx = -nx; ny = -ny; }
         pl.text(m[0], m[1], names[2 + k] + " = " + p1num(sl[k]), "tx-s " + (sl[k] >= -1e-12 ? "t3" : "t6"), "start", 6 * nx + 2, 10 * ny + 4);
       });
