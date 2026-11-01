@@ -30,7 +30,7 @@ Recalcul indépendant avec numpy et le solveur HiGHS de SciPy (scripts dans `ver
 | Frontière S2 : gain max 0,97 sur A, 0,40 sur l'uniforme | 0,972 (à B = 0,51 B_max, soit +28,6 %) et 0,400 | ✓ |
 | « jusqu'à 26 % » (résumé) | à B = 0,3 B_max : l'optimum est 26,3 % plus rapide que A, A perd 20,8 % | ✗ corrigé |
 | « plus d'un quart » (conclusion) | perte de A : 20,8 % à 0,3 B_max, 22,2 % au pire | ✗ corrigé |
-| λ = pente de la frontière | S2 : écart ≤ 0,28 % ; encadrement exact (voir plus bas) : 208 tests, aucune violation | ✓ |
+| λ = pente de la frontière | S2 : écart ≤ 0,28 % ; encadrement exact (voir plus bas) : 268 tests (S2, S3 et 60 instances aléatoires), aucune violation au-delà de 1e-12 | ✓ |
 | Unimodalité (multi-départs) | 30 départs : écart ≤ 9e-16 ; grille fine pour γ = 3 et 4 : aucun point meilleur | ✓ |
 | Ordre 2 en S2 (hessienne restreinte à la face active) | valeur propre −2,28 < 0 : vrai maximum local | ✓ |
 | « La frontière E\*(B) est convexe » | convexe en S2, **non convexe en S3** (d² min = −0,21) | ✗ corrigé |
