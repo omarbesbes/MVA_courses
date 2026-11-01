@@ -4,6 +4,8 @@ Relecture du rapport préliminaire (version HTML/PDF du binôme), avec vérifica
 La version corrigée et mise en forme est `rapport_dm.tex` (PDF compilé : `rapport_dm.pdf`, 18 pages annexes comprises).
 Les numéros de figures ci-dessous sont ceux de la version LaTeX.
 
+**Version courte** : `rapport_dm_court.tex` (PDF : `rapport_dm_court.pdf`, 9 pages). Elle garde les mêmes modèles, résultats et démonstrations, mais sans les exemples numériques, la validation détaillée, trois figures (structure, cycle, données réelles) et l'annexe de reproduction.
+
 ## Verdict
 
 Le travail est **correct sur le fond** et d'un niveau nettement supérieur aux trois DM d'exemple : ceux-là traitent un problème quadratique classique en quelques pages de notebook, alors que le vôtre combine un PL avec simplexe et dualité, un problème non concave avec KKT et gradient projeté, des preuves complètes et des données réelles.
