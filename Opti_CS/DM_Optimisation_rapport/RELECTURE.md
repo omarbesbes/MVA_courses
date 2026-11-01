@@ -118,7 +118,7 @@ Les données réelles (§4) n'ont pas pu être revérifiées, faute des fichiers
 3. **(Optionnel) Une contrainte non linéaire.** Mesurer la déviation par une divergence (KL, χ², ‖r − p‖₂²) au lieu de la variation totale. La partie I devient un problème convexe à contrainte non linéaire, avec multiplicateurs de Lagrange. C'est un quatrième critère d'originalité (« contraintes non linéaires »), mais c'est un vrai travail supplémentaire.
 
 4. **Mise en forme finale.**
-   - Mettre les deux noms (le rapport porte « [Nom Prénom] ») et éventuellement une ligne sur la répartition du travail.
+   - Mettre les deux noms (ligne `\author` de `rapport_dm.tex`, qui porte encore « Prénom Nom 1 » et « Prénom Nom 2 ») et éventuellement une ligne sur la répartition du travail.
    - Raccourcir : déplacer une partie du §2.5 en annexe.
 
 ## Scripts de vérification (`verification/`)
