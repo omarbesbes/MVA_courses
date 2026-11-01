@@ -1,0 +1,692 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}[hidden]{display:none!important}</style>
+<title>Flashcards d'optimisation</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout : une colonne centrée posée sur une feuille quadrillée Seyès ; la carte est une copie avec sa marge rouge. */
+:root {
+  --bg: #eef2f8;
+  --grid: rgba(64, 104, 186, 0.10);
+  --grid-strong: rgba(64, 104, 186, 0.20);
+  --card: #ffffff;
+  --ink: #1b2340;
+  --muted: #586282;
+  --accent: #2944a8;
+  --accent-soft: #e2e8f8;
+  --red: #c4303b;
+  --red-soft: #fbe6e7;
+  --known: #22764a;
+  --known-soft: #e1f2e8;
+  --rule: #d3dbea;
+  --shadow: 0 1px 2px rgba(27, 35, 64, 0.06), 0 8px 24px rgba(27, 35, 64, 0.08);
+  --font-read: "Spectral", Georgia, "Times New Roman", serif;
+  --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121626; --grid: rgba(140, 168, 255, 0.05); --grid-strong: rgba(140, 168, 255, 0.10);
+    --card: #1a2034; --ink: #e4e8f5; --muted: #9aa4c2; --accent: #8ea6ff; --accent-soft: #252f4f;
+    --red: #ff8a90; --red-soft: #3a2230; --known: #72d39f; --known-soft: #1e3a2f; --rule: #2d3653;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121626; --grid: rgba(140, 168, 255, 0.05); --grid-strong: rgba(140, 168, 255, 0.10);
+  --card: #1a2034; --ink: #e4e8f5; --muted: #9aa4c2; --accent: #8ea6ff; --accent-soft: #252f4f;
+  --red: #ff8a90; --red-soft: #3a2230; --known: #72d39f; --known-soft: #1e3a2f; --rule: #2d3653;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(var(--grid-strong) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-strong) 1px, transparent 1px),
+    linear-gradient(var(--grid) 1px, transparent 1px);
+  background-size: 32px 32px, 32px 32px, 32px 8px;
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.wrap {
+  max-width: 780px;
+  margin: 0 auto;
+  padding-block: 28px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid;
+  gap: 20px;
+}
+.eyebrow {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+h1 {
+  margin: 4px 0 6px;
+  font-family: var(--font-read);
+  font-weight: 600;
+  font-size: clamp(1.7rem, 4vw, 2.2rem);
+  line-height: 1.15;
+  text-wrap: balance;
+}
+.lede { margin: 0; color: var(--muted); max-width: 62ch; }
+.progress {
+  margin-top: 14px;
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--rule);
+}
+.progress span { display: block; height: 100%; transition: width 0.25s ease; }
+.progress .p-known { background: var(--known); }
+.progress .p-review { background: var(--red); }
+.stats {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.stats b { color: var(--ink); font-weight: 600; }
+.controls { display: grid; gap: 12px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; }
+button {
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 7px 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+button:hover { border-color: var(--accent); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button[disabled] { opacity: 0.45; cursor: default; }
+.chip { border-radius: 999px; padding: 5px 12px; font-size: 13px; }
+.chip .n { color: var(--muted); font-variant-numeric: tabular-nums; margin-left: 4px; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--card); }
+.chip[aria-pressed="true"] .n { color: inherit; opacity: 0.8; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; background: var(--card); }
+.seg button { border: 0; border-radius: 0; padding: 7px 12px; font-size: 13px; }
+.seg button + button { border-left: 1px solid var(--rule); }
+.seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.confirm {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  background: var(--red-soft); color: var(--ink);
+  border: 1px solid var(--red); border-radius: 8px; padding: 8px 12px; font-size: 14px;
+}
+.confirm .danger { background: var(--red); border-color: var(--red); color: var(--card); }
+
+/* Carte */
+.card {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 20px 22px 22px 52px;
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.card::before {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0; left: 34px;
+  width: 1.5px;
+  background: var(--red);
+  opacity: 0.55;
+}
+.meta { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 12px; color: var(--muted); }
+.type {
+  font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--accent); background: var(--accent-soft); border-radius: 4px; padding: 2px 7px;
+}
+.type.t-piege { color: var(--red); background: var(--red-soft); }
+.ref { font-family: var(--font-mono); font-size: 12px; color: var(--ink); }
+.count { margin-left: auto; font-variant-numeric: tabular-nums; }
+.q {
+  font-family: var(--font-read);
+  font-size: 1.28rem;
+  line-height: 1.45;
+  font-weight: 500;
+  max-width: 62ch;
+  text-wrap: pretty;
+}
+.reveal {
+  justify-self: start;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--card);
+  font-weight: 600;
+  padding: 9px 16px;
+}
+.reveal:hover { filter: brightness(1.08); }
+.a { border-top: 1px dashed var(--rule); padding-top: 14px; min-width: 0; }
+.alabel {
+  margin: 0 0 6px;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--known);
+}
+.abody { font-family: var(--font-read); font-size: 1.06rem; line-height: 1.6; max-width: 64ch; overflow-wrap: anywhere; }
+.abody ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+.abody p { margin: 0; }
+.abody b { font-weight: 600; }
+.status {
+  position: absolute; top: 18px; right: 20px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--rule);
+}
+.status.s-known { background: var(--known); }
+.status.s-review { background: var(--red); }
+.meta .count { padding-right: 18px; }
+.grade { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.grade button { padding: 11px 12px; font-weight: 600; font-size: 15px; }
+.again { color: var(--red); border-color: var(--red); background: var(--red-soft); }
+.known { color: var(--known); border-color: var(--known); background: var(--known-soft); }
+.nav { display: flex; justify-content: space-between; gap: 10px; }
+.keys { margin: 0; font-size: 12px; color: var(--muted); text-align: center; }
+.empty {
+  background: var(--card); border: 1px dashed var(--rule); border-radius: 10px;
+  padding: 28px 22px; text-align: center; color: var(--muted);
+}
+.empty strong { display: block; color: var(--ink); font-family: var(--font-read); font-size: 1.2rem; margin-bottom: 6px; }
+
+/* Liste */
+.list { display: grid; gap: 10px; }
+.item {
+  background: var(--card); border: 1px solid var(--rule); border-radius: 10px;
+  padding: 12px 16px; min-width: 0;
+}
+.item summary { cursor: pointer; list-style: none; display: grid; gap: 6px; }
+.item summary::-webkit-details-marker { display: none; }
+.item summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
+.item .q { font-size: 1.05rem; }
+.item .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--rule); }
+.item .dot.s-known { background: var(--known); }
+.item .dot.s-review { background: var(--red); }
+.item .a { margin-top: 10px; }
+
+@media (max-width: 520px) {
+  .card { padding: 16px 16px 18px 34px; }
+  .card::before { left: 22px; }
+  .q { font-size: 1.14rem; }
+  .keys { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Cours d'optimisation · G. Allaire</p>
+    <h1>Flashcards d'optimisation</h1>
+    <p class="lede">Hypothèses, conclusions et différences subtiles entre les théorèmes. Réponds de tête, affiche la réponse, puis note-toi honnêtement : les cartes « à revoir » reviennent dans le filtre du même nom.</p>
+    <div class="progress" aria-hidden="true"><span class="p-known" id="pKnown"></span><span class="p-review" id="pReview"></span></div>
+    <p class="stats" id="stats"></p>
+  </header>
+
+  <section class="controls" aria-label="Filtres">
+    <div class="chips" role="group" aria-label="Chapitre" id="chapters"></div>
+    <div class="row">
+      <div class="seg" role="group" aria-label="Cartes à afficher" id="modes"></div>
+      <div class="tools">
+        <button id="shuffle" type="button">Mélanger</button>
+        <button id="view" type="button">Voir la liste</button>
+        <button id="reset" type="button">Réinitialiser</button>
+      </div>
+    </div>
+    <div class="confirm" id="confirm" hidden>
+      <span>Effacer toute ta progression ?</span>
+      <button id="confirmYes" class="danger" type="button">Effacer</button>
+      <button id="confirmNo" type="button">Annuler</button>
+    </div>
+  </section>
+
+  <main>
+    <section id="cardView" aria-label="Carte">
+      <div style="display:grid;gap:14px" id="cardWrap">
+        <article class="card" id="card">
+          <span class="status" id="cStatus" title=""></span>
+          <div class="meta">
+            <span class="type" id="cType"></span>
+            <span class="ref" id="cRef"></span>
+            <span id="cCh"></span>
+            <span class="count" id="cCount"></span>
+          </div>
+          <div class="q" id="cQ"></div>
+          <button id="reveal" class="reveal" type="button">Afficher la réponse</button>
+          <div class="a" id="cA" hidden aria-live="polite">
+            <p class="alabel">Réponse</p>
+            <div class="abody" id="cAbody"></div>
+          </div>
+        </article>
+        <div class="grade" id="grade" hidden>
+          <button id="again" class="again" type="button">À revoir</button>
+          <button id="known" class="known" type="button">Je savais</button>
+        </div>
+        <nav class="nav" aria-label="Navigation">
+          <button id="prev" type="button">← Précédente</button>
+          <button id="next" type="button">Suivante →</button>
+        </nav>
+        <p class="keys">Clavier : Espace = réponse · 1 = à revoir · 2 = je savais · ← → = naviguer</p>
+      </div>
+      <div class="empty" id="empty" hidden></div>
+    </section>
+    <section id="listView" class="list" aria-label="Liste des cartes" hidden></section>
+  </main>
+</div>
+
+<script>
+const CH = { all: "Tout", exist: "Existence", optim: "Optimalité", dual: "Dualité", algo: "Algorithmes", pl: "PL et entiers", inf: "Dim. infinie" };
+const MODES = { all: "Toutes", todo: "Pas encore sues", review: "À revoir" };
+
+const CARDS = [
+  { ch: "exist", type: "Hypothèses", ref: "Th 2.2.1",
+    q: `Th 2.2.1 (dimension finie) : hypothèses exactes et conclusion ?`,
+    a: `<ul><li><b>Hyp.</b> K ⊂ ℝ<sup>N</sup> fermé non vide ; J continue (ou sci) et coercive (« infinie à l'infini ») sur K.</li><li><b>Concl.</b> J admet au moins un minimum sur K, et toute suite minimisante a une sous-suite qui converge vers un minimum.</li><li>Ni convexité, ni unicité.</li></ul>` },
+  { ch: "exist", type: "Vrai ou faux", ref: "§2.3.1",
+    q: `Vrai ou faux : dans un Hilbert de dimension infinie, K fermé borné non vide et J continue suffisent pour qu'un minimum existe.`,
+    a: `<p><b>Faux.</b> En dimension infinie, un fermé borné n'est pas compact. Contre-exemple dans ℓ² : J(x) = (‖x‖² − 1)² + Σ x<sub>i</sub>²/i ; la suite x<sup>n</sup> = e<sub>n</sub> donne J → 0, valeur jamais atteinte. Il faut de la convexité (Th 2.3.9) ou une compacité.</p>` },
+  { ch: "exist", type: "Comparer", ref: "Th 2.3.8 / 2.3.9",
+    q: `Th 2.3.8 et Th 2.3.9 : qu'est-ce qui change dans les hypothèses et dans la conclusion ?`,
+    a: `<ul><li><b>2.3.8</b> : J <b>α-convexe</b> continue sur K convexe fermé non vide ⇒ existence <b>et unicité</b>, plus l'estimation ‖v − u‖² ≤ (4/α)(J(v) − J(u)). La coercivité est inutile (l'α-convexité la donne).</li><li><b>2.3.9</b> : J <b>convexe</b>, continue <b>et coercive</b> ⇒ existence <b>seulement</b>. Preuve par convergence faible.</li></ul>` },
+  { ch: "exist", type: "Conclusion", ref: "Prop 2.3.4",
+    q: `Quelle hypothèse donne l'unicité du minimum ? Que dit-on si J est seulement convexe ?`,
+    a: `<ul><li>J <b>strictement convexe</b> sur K convexe ⇒ <b>au plus un</b> minimum.</li><li>J seulement convexe : l'ensemble des minima est convexe (il peut contenir tout un segment).</li><li>α-convexe ⇒ strictement convexe ⇒ convexe.</li></ul>` },
+  { ch: "exist", type: "Vrai ou faux", ref: "Prop 2.3.4",
+    q: `Vrai ou faux : J strictement convexe sur K convexe fermé ⇒ J a un minimum sur K.`,
+    a: `<p><b>Faux.</b> e<sup>x</sup> sur ℝ est strictement convexe et n'a pas de minimum. La stricte convexité donne l'<b>unicité</b>, pas l'existence. Pour l'existence : coercivité (Th 2.3.9) ou α-convexité (Th 2.3.8).</p>` },
+  { ch: "exist", type: "Piège", ref: "Prop 2.3.4",
+    q: `« Pour J convexe, tout minimum local est global. » Quelle hypothèse manque ?`,
+    a: `<p><b>K convexe.</b> Sur un ensemble non convexe (une sphère, une réunion de deux intervalles), une fonction convexe peut avoir des minima locaux qui ne sont pas globaux.</p>` },
+  { ch: "exist", type: "Hypothèses", ref: "Prop 2.4.5",
+    q: `Donne trois caractérisations de « J est α-convexe » quand J est différentiable (puis C²).`,
+    a: `<ul><li>J(v) ≥ J(u) + ⟨J′(u), v − u⟩ + (α/2)‖v − u‖²</li><li>⟨J′(u) − J′(v), u − v⟩ ≥ α‖u − v‖²</li><li>(C²) J″(u)(w, w) ≥ α‖w‖² pour tous u, w</li><li>Équivalent : J − (α/2)‖·‖² est convexe (Ex 2.3.4).</li></ul>` },
+  { ch: "exist", type: "Conclusion", ref: "Ex 2.3.5",
+    q: `J(x) = ½Ax·x − b·x avec A symétrique : quand est-elle convexe, strictement convexe, α-convexe ?`,
+    a: `<ul><li>Convexe ⇔ A ≥ 0 (semi-définie positive).</li><li>Strictement convexe ⇔ A > 0 ⇔ α-convexe, avec α = λ<sub>min</sub>(A).</li><li>J′ est L-lipschitzienne avec L = λ<sub>max</sub>(A).</li></ul>` },
+  { ch: "exist", type: "Vrai ou faux", ref: "Déf 2.3.6",
+    q: `Vrai ou faux : strictement convexe ⇒ α-convexe.`,
+    a: `<p><b>Faux</b> en général : x⁴ (J″(0) = 0) et e<sup>x</sup> (J″ → 0 en −∞) sont strictement convexes sans être fortement convexes. C'est vrai pour les quadratiques en dimension finie.</p>` },
+
+  { ch: "optim", type: "Hypothèses", ref: "Th 2.5.1",
+    q: `Inéquation d'Euler (Th 2.5.1) : hypothèses ? Est-ce une condition nécessaire, suffisante, ou les deux ?`,
+    a: `<ul><li><b>Hyp.</b> K <b>convexe</b>, J différentiable en u.</li><li>u minimum local ⇒ ⟨J′(u), v − u⟩ ≥ 0 pour tout v ∈ K : condition <b>nécessaire</b>.</li><li>Si de plus J est <b>convexe</b> : <b>nécessaire et suffisante</b> (minimum global).</li><li>Aucune qualification à vérifier.</li></ul>` },
+  { ch: "optim", type: "Conclusion", ref: "Rq 2.5.2",
+    q: `Quand l'inéquation d'Euler se réduit-elle à l'équation J′(u) = 0 ?`,
+    a: `<p>Quand K = V, ou quand u est <b>intérieur</b> à K. Si K est un sous-espace affine, elle devient une égalité : J′(u) est orthogonal à la direction de K.</p>` },
+  { ch: "optim", type: "Piège", ref: "Th 2.5.1 / Prop 2.5.5",
+    q: `Quelle différence entre « ⟨J′(u), v − u⟩ ≥ 0 pour tout v ∈ K » et « ⟨J′(u), w⟩ ≥ 0 pour tout w ∈ K(u) » ?`,
+    a: `<ul><li>La première : K <b>convexe</b>, v parcourt les <b>points</b> de K (Th 2.5.1).</li><li>La seconde : K quelconque, w parcourt les <b>directions</b> du cône tangent K(u) (Prop 2.5.5) ; seulement nécessaire.</li><li>Ne pas mélanger points et directions : « v − u avec v ∈ K(u) » n'a pas de sens.</li></ul>` },
+  { ch: "optim", type: "Hypothèses", ref: "Th 2.5.6",
+    q: `Th 2.5.6 (Lagrange, contraintes d'égalité) : toutes les hypothèses et la conclusion ?`,
+    a: `<ul><li><b>Hyp.</b> K = {F<sub>i</sub>(v) = 0, 1 ≤ i ≤ M} ; J dérivable en u ; F<sub>i</sub> de classe C¹ au voisinage de u ; (F<sub>i</sub>′(u)) <b>linéairement indépendants</b> (cas régulier) ; u minimum local.</li><li><b>Concl.</b> ∃! λ ∈ ℝ<sup>M</sup> : J′(u) + Σ λ<sub>i</sub>F<sub>i</sub>′(u) = 0.</li><li>λ de signe quelconque et <b>unique</b>. Condition seulement nécessaire.</li></ul>` },
+  { ch: "optim", type: "Piège", ref: "Rq 2.5.8",
+    q: `Contraintes non linéaires dont les gradients F<sub>i</sub>′(u) sont liés : que peut-il arriver ?`,
+    a: `<p>Le théorème peut échouer. J(v) = v, F(v) = v² sur ℝ : K = {0}, F′(0) = 0, J′(0) = 1, donc aucun λ ne vérifie J′ + λF′ = 0. Le cône tangent {0} est plus petit que ker F′(0) = ℝ.</p>` },
+  { ch: "optim", type: "Comparer", ref: "Ex 2.5.7 / Rq 2.6.5",
+    q: `Contraintes d'égalité <b>affines</b> dont les gradients sont liés : les multiplicateurs existent-ils ?`,
+    a: `<p><b>Oui, mais ils ne sont pas uniques.</b> K est un sous-espace affine, donc K(u) = ker F′(u) sans hypothèse, et (∩ a<sub>i</sub><sup>⊥</sup>)<sup>⊥</sup> = Vect(a<sub>i</sub>). Sur une copie : une égalité affine = deux inégalités affines, qualifiées (Rq 2.6.5, Rq 2.5.16), puis KKT. Exemple : x + y = 1 et 2x + 2y = 2.</p>` },
+  { ch: "optim", type: "Hypothèses", ref: "Prop 2.5.13",
+    q: `Condition d'ordre 2 avec contraintes d'égalité : quelle hessienne, testée sur quelles directions ?`,
+    a: `<p>(J″(u) + Σ λ<sub>i</sub>F<sub>i</sub>″(u))(w, w) ≥ 0 pour tout w ∈ ker F′(u) = ∩ ker F<sub>i</sub>′(u). C'est la hessienne du <b>Lagrangien</b>, sur l'espace <b>tangent</b> seulement, et non J″ sur tout V. Hyp. : J et F<sub>i</sub> de classe C², gradients libres. Condition nécessaire.</p>` },
+  { ch: "optim", type: "Hypothèses", ref: "Déf 2.5.15",
+    q: `Définition 2.5.15 : quand des contraintes d'inégalité F<sub>i</sub>(v) ≤ 0 sont-elles qualifiées en u ?`,
+    a: `<p>S'il existe une direction w telle que, pour tout i <b>actif</b> (F<sub>i</sub>(u) = 0) : ⟨F<sub>i</sub>′(u), w⟩ < 0, ou ⟨F<sub>i</sub>′(u), w⟩ = 0 si F<sub>i</sub> est affine. Les contraintes inactives ne comptent pas.</p>` },
+  { ch: "optim", type: "Hypothèses", ref: "Rq 2.5.16 · 2.5.25 · 2.5.27",
+    q: `Cite trois conditions qui garantissent la qualification des contraintes d'inégalité.`,
+    a: `<ul><li>Les gradients des contraintes <b>actives</b> sont libres (Rq 2.5.25).</li><li>Toutes les F<sub>i</sub> sont <b>affines</b> : prendre w = 0 (Rq 2.5.16).</li><li><b>Slater</b> : F<sub>i</sub> convexes et ∃ v avec F<sub>i</sub>(v) < 0, ou = 0 si F<sub>i</sub> affine (Rq 2.5.27). Pas besoin de connaître u.</li></ul>` },
+  { ch: "optim", type: "Conclusion", ref: "Th 2.5.17",
+    q: `KKT (Th 2.5.17) : écris la conclusion complète, et rappelle les hypothèses.`,
+    a: `<p>∃ λ ∈ ℝ<sup>M</sup> : J′(u) + Σ λ<sub>i</sub>F<sub>i</sub>′(u) = 0, <b>λ ≥ 0</b>, F(u) ≤ 0, <b>λ·F(u) = 0</b> (λ<sub>i</sub> = 0 si F<sub>i</sub>(u) < 0). Hyp. : J et F<sub>i</sub> dérivables en u, contraintes qualifiées en u, u minimum local. Condition nécessaire.</p>` },
+  { ch: "optim", type: "Comparer", ref: "Th 2.5.6 / 2.5.17 / 2.5.24",
+    q: `Multiplicateurs : qu'est-ce qui distingue Lagrange (égalités), KKT (inégalités) et le cas mixte ?`,
+    a: `<ul><li><b>Lagrange</b> : λ ∈ ℝ (signe libre), unique (gradients libres).</li><li><b>KKT</b> : λ ≥ 0, écarts complémentaires, unicité non garantie (sauf si les gradients actifs sont libres).</li><li><b>Mixte</b> : μ libre pour les égalités, λ ≥ 0 pour les inégalités.</li></ul>` },
+  { ch: "optim", type: "Piège", ref: "Th 2.5.17",
+    q: `Pour quel problème exact le signe « λ ≥ 0 » de KKT est-il valable ?`,
+    a: `<p>Pour un <b>min</b> de J sous des contraintes écrites <b>F ≤ 0</b>, avec le terme + λ·F′. Sinon, se ramener à cette forme : max J = −min(−J) ; F ≥ 0 devient −F ≤ 0 ; x ≥ 0 devient −x ≤ 0, ce qui donne J′(x) − λ = 0.</p>` },
+  { ch: "optim", type: "Hypothèses", ref: "Th 2.5.24",
+    q: `Contraintes mixtes (Th 2.5.24) : quelle est la condition de qualification ?`,
+    a: `<p>Les gradients (G<sub>j</sub>′(u)) des égalités sont libres <b>et</b> il existe w ∈ ∩ ker G<sub>j</sub>′(u) avec ⟨F<sub>i</sub>′(u), w⟩ < 0 pour tout i actif. Version plus forte, plus facile à vérifier : (G<sub>j</sub>′(u), F<sub>i</sub>′(u) pour i actif) libre. Conclusion : μ ∈ ℝ<sup>N</sup>, λ ≥ 0, λ·F = 0.</p>` },
+  { ch: "optim", type: "Vrai ou faux", ref: "Th 2.5.17 / 2.6.4",
+    q: `Vrai ou faux : un point qui vérifie les conditions KKT est toujours un minimum.`,
+    a: `<p><b>Faux.</b> KKT est une condition nécessaire (sous qualification). Elle devient <b>suffisante</b> quand J et les F<sub>i</sub> sont convexes (Kuhn–Tucker, Th 2.6.4). Sans convexité, un point KKT peut être un maximum local ou un col.</p>` },
+  { ch: "optim", type: "Hypothèses", ref: "Th 2.6.4",
+    q: `Théorème de Kuhn–Tucker (Th 2.6.4) : hypothèses et conclusion ?`,
+    a: `<ul><li><b>Hyp.</b> J et F<sub>i</sub> <b>convexes</b>, continues, dérivables sur K ; contraintes qualifiées en u ∈ K.</li><li><b>Concl.</b> u minimum global ⇔ ∃ p ≥ 0 tel que (u, p) soit un point-selle du Lagrangien ⇔ KKT.</li><li>Ne vise que des inégalités (une égalité affine = deux inégalités affines).</li></ul>` },
+  { ch: "optim", type: "Piège", ref: "Prop 2.6.2",
+    q: `Si (u, p) est un point-selle du Lagrangien, que peut-on conclure ? Faut-il de la convexité ?`,
+    a: `<p>u ∈ K et u est un <b>minimum global</b> de J sur K, <b>sans</b> hypothèse de convexité (Prop 2.6.2). Si J et F sont dérivables, J′(u) + p·F′(u) = 0. La convexité sert pour la <b>réciproque</b> (Kuhn–Tucker).</p>` },
+  { ch: "optim", type: "Conclusion", ref: "Lemme 2.5.12 / 2.6.6",
+    q: `Que mesure un multiplicateur λ<sub>i</sub> (sensibilité) ?`,
+    a: `<p>λ<sub>i</sub> = −∂J<sub>min</sub>/∂ε<sub>i</sub>, où J<sub>min</sub>(ε) est le minimum sous F ≤ ε (ou F = ε), si J<sub>min</sub> est dérivable. En KKT, λ ≥ 0 : relâcher une contrainte ne peut que faire baisser le minimum. C'est un prix marginal.</p>` },
+
+  { ch: "dual", type: "Vrai ou faux", ref: "Cor 2.6.12",
+    q: `Vrai ou faux : si u minimise J sur K = {F ≤ 0}, il existe toujours un point-selle du Lagrangien.`,
+    a: `<p><b>Faux</b> en général : il peut y avoir un saut de dualité. L'existence du point-selle est garantie dans le cas convexe et qualifié (Kuhn–Tucker, Cor 2.6.12).</p>` },
+  { ch: "dual", type: "Hypothèses", ref: "Rq 2.6.11",
+    q: `Dualité faible : sous quelles hypothèses est-elle vraie ?`,
+    a: `<p><b>Aucune.</b> On a toujours sup<sub>q</sub> inf<sub>v</sub> 𝓛(v, q) ≤ inf<sub>v</sub> sup<sub>q</sub> 𝓛(v, q). L'écart s'appelle le saut de dualité.</p>` },
+  { ch: "dual", type: "Conclusion", ref: "Th 2.6.9",
+    q: `Théorème de dualité 2.6.9 : énoncé ?`,
+    a: `<p>(u, p) est un point-selle de 𝓛 ⇔ 𝒥(u) = min 𝒥 = max G = G(p), avec 𝒥(v) = sup<sub>q</sub> 𝓛(v, q) et G(q) = inf<sub>v</sub> 𝓛(v, q). Pas de convexité dans l'énoncé : c'est l'<b>existence</b> du point-selle qui la demande.</p>` },
+  { ch: "dual", type: "Vrai ou faux", ref: "§2.6.3",
+    q: `Vrai ou faux : la fonction duale G(q) = inf<sub>v</sub> 𝓛(v, q) n'est concave que si J est convexe.`,
+    a: `<p><b>Faux.</b> G est <b>toujours</b> concave : c'est un infimum de fonctions affines en q. Le problème dual (max de G sur q ≥ 0) a des contraintes très simples, ce qu'exploite Uzawa.</p>` },
+  { ch: "dual", type: "Comparer", ref: "Th 4.2.13 / Cor 2.6.12",
+    q: `Dualité forte : quelle différence entre la PL (Th 4.2.13) et le cas convexe général ?`,
+    a: `<ul><li><b>PL</b> : si l'un des deux problèmes a une valeur finie, les deux ont des solutions et min = max, <b>sans qualification</b> (contraintes affines). Primal à −∞ ⇒ dual vide.</li><li><b>Convexe général</b> : il faut la qualification (Cor 2.6.12) pour garantir le point-selle.</li></ul>` },
+  { ch: "dual", type: "Conclusion", ref: "Th 4.2.13",
+    q: `Écarts complémentaires en PL (forme standard) : que disent-ils ?`,
+    a: `<p>x·(c − A<sup>T</sup>p) = 0 : x<sub>j</sub> > 0 ⇒ (A<sup>T</sup>p)<sub>j</sub> = c<sub>j</sub> ; une contrainte duale non saturée impose x<sub>j</sub> = 0. Pour x et p admissibles, c'est équivalent à l'optimalité des deux.</p>` },
+
+  { ch: "algo", type: "Hypothèses", ref: "Th 3.2.6",
+    q: `Gradient à pas fixe (Th 3.2.6) : hypothèses, pas admissibles, conclusion ?`,
+    a: `<p>J <b>α-convexe</b> différentiable, J′ <b>L-lipschitzienne</b> ; 0 < μ < <b>2α/L²</b> ⇒ ‖u<sub>n</sub> − u‖ ≤ γ<sup>n</sup>‖u<sub>0</sub> − u‖ avec γ = √(1 − 2αμ + μ²L²) < 1 : convergence géométrique.</p>` },
+  { ch: "algo", type: "Comparer", ref: "Prop 3.3.1 / 3.2.9",
+    q: `Pas fixe : quand peut-on prendre μ < 2/L au lieu de μ < 2α/L² ?`,
+    a: `<ul><li><b>Prop 3.3.1</b> : ℝ<sup>N</sup>, J de classe C² et α-convexe : 0 < μ < 2/L, μ<sub>opt</sub> = 2/(L + α), γ = (L − α)/(L + α).</li><li><b>Prop 3.2.9</b> : ℝ<sup>N</sup>, J strictement convexe et coercive : 0 < μ < 2/L, convergence sans vitesse.</li><li>2α/L² : le cas général (Hilbert), preuve par contraction.</li></ul>` },
+  { ch: "algo", type: "Vrai ou faux", ref: "Ex 3.2.6 / 3.2.7",
+    q: `Vrai ou faux : pour J de classe C¹ à gradient L-lipschitzien et 0 < μ < 2/L, le gradient à pas fixe converge vers un minimum.`,
+    a: `<p><b>Faux</b> sans convexité : J(u<sub>n</sub>) décroît et J′(u<sub>n</sub>) → 0, mais la limite peut être un col. Exemple : J = ½x₁² + ¼x₂⁴ − ½x₂², départ (1, 0) : convergence vers O, qui n'est pas un minimum.</p>` },
+  { ch: "algo", type: "Hypothèses", ref: "Th 3.2.1",
+    q: `Gradient à pas optimal (Th 3.2.1) : quelle hypothèse sur J′, et quelle propriété des directions successives ?`,
+    a: `<p>J α-convexe et J′ lipschitzienne <b>sur tout borné</b> (plus faible que globalement). Deux directions successives sont orthogonales : ⟨J′(u<sub>n+1</sub>), J′(u<sub>n</sub>)⟩ = 0, d'où le zig-zag.</p>` },
+  { ch: "algo", type: "Comparer", ref: "Prop 3.3.3 / 3.3.7",
+    q: `J convexe mais pas fortement convexe, J′ L-lipschitzienne : quelles vitesses de convergence ?`,
+    a: `<p>Gradient à pas fixe : J(u<sub>n</sub>) − J(u) = O(1/n) (Prop 3.3.3). Nesterov (μ ≤ 1/L) : O(1/n²), vitesse optimale (Prop 3.3.7). Aucune vitesse sur ‖u<sub>n</sub> − u‖ : J peut être très plate près du minimum.</p>` },
+  { ch: "algo", type: "Hypothèses", ref: "Prop 3.3.17",
+    q: `Gradient conjugué : pour quel problème, et avec quel résultat ?`,
+    a: `<p>J(x) = ½Ax·x − b·x avec A symétrique <b>définie positive</b>. Convergence <b>exacte en au plus N itérations</b> ; vitesse en ((√κ − 1)/(√κ + 1))<sup>n</sup> avec κ = λ<sub>N</sub>/λ₁. Aucun paramètre à régler ; directions A-conjuguées.</p>` },
+  { ch: "algo", type: "Piège", ref: "Prop 3.3.23",
+    q: `Sous-gradient : quelles conditions sur les pas ρ<sub>k</sub> ?`,
+    a: `<p>ρ<sub>k</sub> → 0, <b>Σρ<sub>k</sub> = ∞</b> et <b>Σρ<sub>k</sub>² < ∞</b> (par ex. ρ<sub>k</sub> = (k + 1)<sup>−1/2−ε</sup>). La slide écrit « ℓ¹ et pas ℓ² » : c'est l'inverse. Hyp. : J convexe, coercive, localement lipschitzienne. Ce n'est pas une méthode de descente ; vitesse O(k<sup>−1/2+ε</sup>).</p>` },
+  { ch: "algo", type: "Hypothèses", ref: "Lemme 3.3.32",
+    q: `Algorithme proximal : quelle condition sur le pas τ ?`,
+    a: `<p><b>Aucune</b> : τ > 0 quelconque, car c'est un gradient implicite. J convexe ; si J est α-convexe, ‖x<sub>k</sub> − x*‖² ≤ (1 + 2τα)<sup>−k</sup>‖x<sub>0</sub> − x*‖².</p>` },
+  { ch: "algo", type: "Hypothèses", ref: "Prop 3.5.1",
+    q: `Méthode de Newton (Prop 3.5.1) : hypothèses et type de convergence ?`,
+    a: `<p>F de classe C², u zéro <b>régulier</b> (F′(u) inversible), u<sub>0</sub> <b>assez proche</b> de u ⇒ ‖u<sub>n+1</sub> − u‖ ≤ C‖u<sub>n</sub> − u‖² : convergence quadratique <b>locale</b>. Elle n'est pas globale ; en minimisation, elle peut converger vers un maximum ou un col ; si le zéro n'est pas régulier (F = ‖x‖²), elle n'est que géométrique.</p>` },
+  { ch: "algo", type: "Comparer", ref: "Th 3.4.1 / 3.4.3",
+    q: `Gradient projeté et Uzawa : dans 0 < μ < 2α/L², de quelle fonction vient la constante L ?`,
+    a: `<ul><li><b>Projeté</b> (Th 3.4.1) : L = constante de Lipschitz de <b>J′</b> ; K convexe fermé, avec P<sub>K</sub> calculable.</li><li><b>Uzawa</b> (Th 3.4.3) : L = constante de Lipschitz des <b>contraintes F</b> (F convexe) ; J α-convexe. u<sub>n</sub> → u, mais <b>pas forcément p<sub>n</sub></b>.</li></ul>` },
+  { ch: "algo", type: "Comparer", ref: "Rq 3.4.2 / 3.4.7",
+    q: `Faisable ou infaisable : classe le gradient projeté, Uzawa, la pénalisation extérieure et la barrière.`,
+    a: `<ul><li><b>Faisables</b> (les itérés restent dans K) : gradient projeté, barrière (pénalisation intérieure).</li><li><b>Infaisables</b> (seule la limite est dans K) : Uzawa, pénalisation extérieure.</li></ul>` },
+  { ch: "algo", type: "Hypothèses", ref: "Prop 3.4.6",
+    q: `Pénalisation extérieure (Prop 3.4.6) : hypothèses pour avoir u<sub>ε</sub> → u ?`,
+    a: `<p>J continue, <b>strictement convexe</b>, coercive ; F<sub>i</sub> convexes continues ; K ≠ ∅. En plus (Ex 3.4.3, contraintes qualifiées et gradients actifs libres) : (2/ε)max(F<sub>i</sub>(u<sub>ε</sub>), 0) → λ<sub>i</sub>. Mal conditionné quand ε → 0.</p>` },
+  { ch: "algo", type: "Comparer", ref: "Lemme 3.4.8",
+    q: `Lagrangien augmenté : quel avantage sur la pénalisation ?`,
+    a: `<p>Pas besoin de faire tendre μ vers l'infini. Si la condition d'ordre 2 stricte est vérifiée et F′(v*) est de rang M, alors pour μ assez grand, v* minimise localement 𝓛<sub>aug</sub>(·, λ*, μ) (Lemme 3.4.8). Mieux conditionné ; mise à jour λ ← λ + μF(v).</p>` },
+
+  { ch: "pl", type: "Piège", ref: "Prop 4.2.8",
+    q: `Simplexe : le critère c̃<sub>N</sub> ≥ 0 est-il nécessaire, suffisant, ou les deux ?`,
+    a: `<p><b>Toujours suffisant.</b> Nécessaire seulement si la solution basique est <b>non dégénérée</b> (B<sup>−1</sup>b > 0). En cas de dégénérescence, on peut être optimal avec un coût réduit négatif.</p>` },
+  { ch: "pl", type: "Hypothèses", ref: "Lemme 4.2.3",
+    q: `Programmation linéaire : à quelle condition existe-t-il une solution optimale ?`,
+    a: `<p>Si et seulement si la valeur optimale est <b>finie</b> (−∞ < inf < +∞). Pas besoin de compacité : le cône {Σ x<sub>i</sub>A<sub>i</sub>, x ≥ 0} est fermé (Farkas). Et s'il y a un optimum, il y en a un en un sommet (Prop 4.2.6).</p>` },
+  { ch: "pl", type: "Piège", ref: "Prop 4.3.3",
+    q: `A totalement unimodulaire et b entier : quelles solutions sont entières ?`,
+    a: `<p>Toutes les <b>solutions basiques</b> (les sommets), quel que soit c, même non entier. <b>Pas</b> toutes les solutions optimales : un barycentre de deux sommets optimaux est optimal et peut être fractionnaire.</p>` },
+  { ch: "pl", type: "Hypothèses", ref: "Lemme 4.3.5",
+    q: `Condition de Poincaré pour la totale unimodularité : énoncé ? Est-ce une condition nécessaire et suffisante ?`,
+    a: `<p>Coefficients dans {0, ±1}, avec <b>au plus un +1 et au plus un −1 par colonne</b> ⇒ TU. C'est une condition <b>suffisante</b> seulement. Exemple type : matrice d'incidence d'un graphe orienté. Les matrices d'intervalles sont TU sans la vérifier.</p>` },
+  { ch: "pl", type: "Comparer", ref: "Déf 4.3.2",
+    q: `Unimodulaire ou totalement unimodulaire : quelle différence ?`,
+    a: `<ul><li><b>Unimodulaire</b> : matrice <b>carrée</b> entière de déterminant ±1 ⇔ A<sup>−1</sup>b est entier pour tout b entier.</li><li><b>Totalement unimodulaire</b> : matrice quelconque dont <b>toute sous-matrice carrée</b> a un déterminant dans {0, ±1}.</li></ul>` },
+  { ch: "pl", type: "Hypothèses", ref: "Th 4.3.7",
+    q: `Flot de coût minimum (Th 4.3.7) : à quelles conditions a-t-on une solution optimale entière ?`,
+    a: `<p>Flots extérieurs b et capacités u <b>entiers</b> (c quelconque) ⇒ les solutions basiques sont entières, donc le simplexe donne un flot optimal entier. Existence : problème admissible et (c ≥ 0 ou u < ∞).</p>` },
+  { ch: "pl", type: "Piège", ref: "Séparation-évaluation",
+    q: `Séparation-évaluation en minimisation : qui donne la borne inférieure, qui donne la borne supérieure ?`,
+    a: `<p>La <b>relaxation</b> donne une borne <b>inférieure</b> (elle est optimiste). Une <b>heuristique</b> (une solution réalisable) donne une borne <b>supérieure</b> m ; la slide dit « inférieure ». On élague un nœud dont la borne est ≥ m. En maximisation, tout s'inverse.</p>` },
+
+  { ch: "inf", type: "Comparer", ref: "Déf 2.4.1 / Rq 2.4.3",
+    q: `Gâteaux ou Fréchet : quelle différence, et laquelle implique l'autre ?`,
+    a: `<ul><li><b>Gâteaux</b> : pour chaque direction w fixée, (J(u + tw) − J(u))/t → ℓ(w) quand t → 0.</li><li><b>Fréchet</b> : J(u + w) = J(u) + ℓ(w) + o(‖w‖), uniformément en w.</li><li>Fréchet ⇒ Gâteaux, pas l'inverse (x⁶/((y − x²)² + x⁸) en 0). Méthode : calculer avec Gâteaux, puis majorer le reste par Hölder.</li></ul>` },
+  { ch: "inf", type: "Piège", ref: "Rq 2.4.2",
+    q: `Pourquoi écrire « ⟨J′(u), v⟩ = … pour tout v » plutôt que « ∇J(u) = … » dans W<sup>1,4</sup> ?`,
+    a: `<p>Le théorème de Riesz, qui identifie V′ et V, n'existe que dans un <b>Hilbert</b>. W<sup>1,4</sup> est un Banach non hilbertien : J′(u) reste une forme linéaire de V′, et l'équation d'Euler s'écrit sous forme faible.</p>` },
+  { ch: "inf", type: "Piège", ref: "Th 2.5.6 / 2.5.1",
+    q: `Peut-on appliquer Lagrange à la contrainte ponctuelle « u(x) ≥ ψ(x) presque partout » ?`,
+    a: `<p><b>Non.</b> Lagrange et KKT supposent un nombre <b>fini</b> de contraintes (F : V → ℝ<sup>M</sup>). Une contrainte ponctuelle en est une infinité. On utilise la <b>convexité</b> de K et l'inéquation d'Euler (problème de l'obstacle).</p>` },
+  { ch: "inf", type: "Comparer", ref: "Lax–Milgram / Th 2.3.8",
+    q: `Lax–Milgram et Th 2.3.8 : quel lien ?`,
+    a: `<p>Lax–Milgram : V Hilbert, a bilinéaire continue <b>coercive</b> (pas forcément symétrique), ℓ continue ⇒ ∃! u : a(u, v) = ℓ(v) pour tout v. Si a est symétrique, c'est l'équation d'Euler de min ½a(v, v) − ℓ(v), que le Th 2.3.8 résout puisque cette J est α-convexe.</p>` }
+];
+CARDS.forEach((c, i) => { c.id = "c" + String(i + 1).padStart(2, "0"); });
+
+const KEY = "opti-flashcards-v1";
+function load() {
+  try { const s = JSON.parse(localStorage.getItem(KEY) || "{}"); return s && typeof s === "object" ? s : {}; }
+  catch (e) { return {}; }
+}
+const saved = load();
+const state = {
+  ch: CH[saved.ch] ? saved.ch : "all",
+  mode: MODES[saved.mode] ? saved.mode : "all",
+  view: saved.view === "list" ? "list" : "cards",
+  status: saved.status && typeof saved.status === "object" ? saved.status : {},
+  order: CARDS.map((_, i) => i),
+  shuffled: false,
+  idx: 0,
+  revealed: false,
+  confirming: false
+};
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify({ ch: state.ch, mode: state.mode, view: state.view, status: state.status })); }
+  catch (e) { /* stockage indisponible : la page fonctionne sans */ }
+}
+
+const $ = (id) => document.getElementById(id);
+function inMode(c) {
+  const s = state.status[c.id];
+  if (state.mode === "todo") return s !== "known";
+  if (state.mode === "review") return s === "review";
+  return true;
+}
+function deck() {
+  return state.order.map((i) => CARDS[i]).filter((c) => (state.ch === "all" || c.ch === state.ch) && inMode(c));
+}
+function statusLabel(s) { return s === "known" ? "Sue" : s === "review" ? "À revoir" : "Pas encore notée"; }
+
+function renderStats() {
+  const total = CARDS.length;
+  let k = 0, r = 0;
+  CARDS.forEach((c) => { if (state.status[c.id] === "known") k++; else if (state.status[c.id] === "review") r++; });
+  $("pKnown").style.width = (100 * k / total) + "%";
+  $("pReview").style.width = (100 * r / total) + "%";
+  $("stats").innerHTML = "<b>" + k + "</b> sues · <b>" + r + "</b> à revoir · <b>" + (total - k - r) + "</b> pas encore notées, sur " + total + " cartes";
+}
+
+function renderControls() {
+  const chips = $("chapters");
+  chips.innerHTML = "";
+  Object.keys(CH).forEach((key) => {
+    const n = key === "all" ? CARDS.length : CARDS.filter((c) => c.ch === key).length;
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "chip";
+    b.id = "ch-" + key;
+    b.setAttribute("aria-pressed", String(state.ch === key));
+    b.innerHTML = CH[key] + '<span class="n">' + n + "</span>";
+    b.addEventListener("click", () => { state.ch = key; state.idx = 0; state.revealed = false; save(); render(); });
+    chips.appendChild(b);
+  });
+  const modes = $("modes");
+  modes.innerHTML = "";
+  Object.keys(MODES).forEach((key) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.id = "mode-" + key;
+    b.setAttribute("aria-pressed", String(state.mode === key));
+    b.textContent = MODES[key];
+    b.addEventListener("click", () => { state.mode = key; state.idx = 0; state.revealed = false; save(); render(); });
+    modes.appendChild(b);
+  });
+  $("shuffle").textContent = state.shuffled ? "Ordre du cours" : "Mélanger";
+  $("view").textContent = state.view === "list" ? "Voir les cartes" : "Voir la liste";
+  $("confirm").hidden = !state.confirming;
+}
+
+function emptyMessage() {
+  if (state.mode === "review") return "<strong>Aucune carte à revoir ici</strong>Les cartes que tu marques « À revoir » apparaissent dans ce filtre.";
+  if (state.mode === "todo") return "<strong>Tout est su dans ce chapitre</strong>Passe à « Toutes » pour réviser à nouveau, ou choisis un autre chapitre.";
+  return "<strong>Aucune carte</strong>Change de chapitre ou de filtre.";
+}
+
+function renderCard() {
+  const d = deck();
+  const has = d.length > 0;
+  $("cardWrap").hidden = !has;
+  $("empty").hidden = has;
+  if (!has) { $("empty").innerHTML = emptyMessage(); return; }
+  if (state.idx >= d.length) state.idx = 0;
+  if (state.idx < 0) state.idx = d.length - 1;
+  const c = d[state.idx];
+  const s = state.status[c.id];
+  const t = $("cType");
+  t.textContent = c.type;
+  t.className = "type" + (c.type === "Piège" ? " t-piege" : "");
+  $("cRef").textContent = c.ref;
+  $("cCh").textContent = CH[c.ch];
+  $("cCount").textContent = (state.idx + 1) + " / " + d.length;
+  $("cQ").innerHTML = c.q;
+  $("cAbody").innerHTML = c.a;
+  $("cA").hidden = !state.revealed;
+  $("reveal").hidden = state.revealed;
+  $("grade").hidden = !state.revealed;
+  const st = $("cStatus");
+  st.className = "status" + (s === "known" ? " s-known" : s === "review" ? " s-review" : "");
+  st.title = statusLabel(s);
+  st.setAttribute("aria-label", statusLabel(s));
+  $("prev").disabled = d.length < 2;
+  $("next").disabled = d.length < 2;
+}
+
+function renderList() {
+  const d = deck();
+  const box = $("listView");
+  box.innerHTML = "";
+  if (!d.length) {
+    const e = document.createElement("div");
+    e.className = "empty";
+    e.innerHTML = emptyMessage();
+    box.appendChild(e);
+    return;
+  }
+  d.forEach((c) => {
+    const s = state.status[c.id];
+    const det = document.createElement("details");
+    det.className = "item";
+    det.innerHTML =
+      '<summary><span class="meta"><span class="dot' + (s === "known" ? " s-known" : s === "review" ? " s-review" : "") + '" title="' + statusLabel(s) + '"></span>' +
+      '<span class="type' + (c.type === "Piège" ? " t-piege" : "") + '">' + c.type + '</span><span class="ref">' + c.ref + "</span><span>" + CH[c.ch] + "</span></span>" +
+      '<span class="q">' + c.q + "</span></summary>" +
+      '<div class="a"><p class="alabel">Réponse</p><div class="abody">' + c.a + "</div></div>";
+    box.appendChild(det);
+  });
+}
+
+function render() {
+  renderStats();
+  renderControls();
+  const list = state.view === "list";
+  $("cardView").hidden = list;
+  $("listView").hidden = !list;
+  if (list) renderList(); else renderCard();
+}
+
+function grade(value) {
+  const d = deck();
+  if (!d.length || !state.revealed) return;
+  const c = d[state.idx];
+  state.status[c.id] = value;
+  save();
+  const after = deck();
+  const stillThere = after.length > state.idx && after[state.idx] && after[state.idx].id === c.id;
+  if (stillThere) state.idx += 1;
+  if (state.idx >= after.length) state.idx = 0;
+  state.revealed = false;
+  render();
+}
+function move(step) {
+  const d = deck();
+  if (!d.length) return;
+  state.idx = (state.idx + step + d.length) % d.length;
+  state.revealed = false;
+  renderCard();
+}
+function shuffle() {
+  if (state.shuffled) {
+    state.order = CARDS.map((_, i) => i);
+    state.shuffled = false;
+  } else {
+    const o = CARDS.map((_, i) => i);
+    for (let i = o.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [o[i], o[j]] = [o[j], o[i]]; }
+    state.order = o;
+    state.shuffled = true;
+  }
+  state.idx = 0;
+  state.revealed = false;
+  render();
+}
+
+$("reveal").addEventListener("click", () => { state.revealed = true; renderCard(); $("known").focus({ preventScroll: true }); });
+$("again").addEventListener("click", () => grade("review"));
+$("known").addEventListener("click", () => grade("known"));
+$("prev").addEventListener("click", () => move(-1));
+$("next").addEventListener("click", () => move(1));
+$("shuffle").addEventListener("click", shuffle);
+$("view").addEventListener("click", () => { state.view = state.view === "list" ? "cards" : "list"; save(); render(); });
+$("reset").addEventListener("click", () => { state.confirming = true; renderControls(); $("confirmNo").focus(); });
+$("confirmNo").addEventListener("click", () => { state.confirming = false; renderControls(); });
+$("confirmYes").addEventListener("click", () => {
+  state.status = {};
+  state.confirming = false;
+  state.idx = 0;
+  state.revealed = false;
+  save();
+  render();
+});
+
+document.addEventListener("keydown", (e) => {
+  if (state.view !== "cards" || e.altKey || e.ctrlKey || e.metaKey) return;
+  const tag = (e.target && e.target.tagName) || "";
+  if (tag === "INPUT" || tag === "TEXTAREA") return;
+  if (e.key === " " || e.key === "Enter") {
+    if (tag === "BUTTON" && e.target.id !== "reveal" && e.key === "Enter") return;
+    if (!state.revealed && deck().length) { e.preventDefault(); state.revealed = true; renderCard(); }
+    else if (e.key === " ") e.preventDefault();
+  } else if (e.key === "ArrowRight") { e.preventDefault(); move(1); }
+  else if (e.key === "ArrowLeft") { e.preventDefault(); move(-1); }
+  else if (e.key === "1" && state.revealed) { grade("review"); }
+  else if (e.key === "2" && state.revealed) { grade("known"); }
+});
+
+render();
+</script>
+
+</html>

@@ -1,0 +1,283 @@
+% Rappels : espaces de fonctions et optimisation en dimension infinie
+% (complement a la fiche d'examen, cours d'optimisation CentraleSupelec -- G. Allaire)
+% Compilation : pdflatex rappels_dimension_infinie.tex
+\documentclass[10pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[french]{babel}
+\usepackage[a4paper,margin=15mm,top=13mm,bottom=15mm]{geometry}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{booktabs,array}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage[most]{tcolorbox}
+\usepackage[colorlinks=true,linkcolor=MidnightBlue]{hyperref}
+\setlist{nosep,leftmargin=1.4em}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{3pt}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\sca}[2]{\langle #1,#2\rangle}
+\newcommand{\nr}[1]{\|#1\|}
+\newcommand{\eps}{\varepsilon}
+\newcommand{\dd}{\,\mathrm{d}x}
+\newcommand{\Lg}{\mathcal{L}}
+\renewcommand{\div}{\operatorname{div}}
+\newcommand{\Hz}{H^1_0(\Omega)}
+\newcommand{\T}{^{\top}}
+
+\definecolor{cM}{HTML}{1E7B34}
+\definecolor{cP}{HTML}{C0392B}
+\definecolor{cR}{HTML}{1F4E79}
+\newtcolorbox{methode}[1][]{colback=cM!5,colframe=cM!70!black,fonttitle=\bfseries,title={Méthode#1},left=4pt,right=4pt,top=2pt,bottom=2pt,breakable}
+\newtcolorbox{piege}[1][]{colback=cP!5,colframe=cP!80!black,fonttitle=\bfseries,title={Piège#1},left=4pt,right=4pt,top=2pt,bottom=2pt,breakable}
+\newtcolorbox{retenir}[1][]{colback=cR!5,colframe=cR!80!black,fonttitle=\bfseries,title={À retenir#1},left=4pt,right=4pt,top=2pt,bottom=2pt,breakable}
+
+\begin{document}
+\begin{center}
+{\Large\bfseries Optimisation en dimension infinie}\\[2pt]
+{\large Rappels sur les espaces de fonctions et méthodes de calcul}\\[2pt]
+{\small Complément à la fiche d'examen -- cours d'optimisation (G. Allaire), chap.~2 et §3.5.3}
+\end{center}
+
+\begin{retenir}[ : la démarche d'un exercice type « minimiser $J(u)=\int_\Omega F(x,u,\nabla u)\dd$ »]
+\begin{enumerate}
+\item \textbf{Choisir l'espace} $V$ et sa norme : là où $J$ est finie et où les conditions au bord ont un sens (§\ref{sec:choixV}).
+\item \textbf{Existence} : convexité + coercivité + continuité (souvent admise à l'examen) (§\ref{sec:existence}).
+\item \textbf{Dériver} $J$ : dérivée directionnelle $\frac{\mathrm d}{\mathrm dt}J(u+tv)|_{t=0}$, puis justifier Fréchet par Hölder (§\ref{sec:deriver}--\ref{sec:frechet}).
+\item \textbf{Écrire la condition d'optimalité} : Euler ($J'(u)=0$), inéquation d'Euler ($K$ convexe), Lagrange ou KKT (nombre fini de contraintes intégrales) en \textbf{vérifiant la qualification} (§\ref{sec:contraintes}).
+\item \textbf{Forme faible $\to$ forme forte} : intégration par parties, lemme fondamental, conditions au bord naturelles (§\ref{sec:forte}).
+\item \textbf{Valeur du multiplicateur} : tester avec $v=u$ (§\ref{sec:mult}).
+\item \textbf{Algorithme} : gradient (attention au produit scalaire !), Newton = équation variationnelle (§\ref{sec:algo}).
+\end{enumerate}
+\end{retenir}
+
+%==================================================================
+\section{Espaces de fonctions : le minimum vital}
+%==================================================================
+\subsection{Banach, Hilbert, dual}
+\begin{itemize}
+\item \textbf{Banach} : espace vectoriel normé \emph{complet}. \textbf{Hilbert} : Banach dont la norme vient d'un produit scalaire, $\nr v=\sca vv^{1/2}$.
+\item \textbf{Dual} $V'$ : formes linéaires continues $\ell$, avec $|\ell(v)|\le C\nr v_V$. La dérivée $J'(u)$ est un élément de $V'$.
+\item \textbf{Riesz} (Hilbert seulement) : tout $\ell\in V'$ s'écrit $\ell(v)=\sca pv$ pour un unique $p\in V$. C'est ce qui permet d'appeler $J'(u)$ un « gradient ». \emph{Dans un Banach non hilbertien} (par ex. $W^{1,4}$), on garde $J'(u)$ comme forme linéaire et on écrit les équations « pour tout $v$ ».
+\item \textbf{Réflexif} : $V''=V$. Les $L^p$ et $W^{1,p}$ avec $1<p<\infty$ le sont ; c'est ce qui permet d'extraire des sous-suites faiblement convergentes (Lemme 2.3.13), donc d'étendre les théorèmes d'existence (Rq 2.3.11).
+\item \textbf{Normes équivalentes} ($c\nr v_1\le\nr v_2\le C\nr v_1$) : même topologie, même dual, \textbf{même dérivée de Fréchet}. Seules les constantes changent.
+\end{itemize}
+
+\subsection{Les espaces \texorpdfstring{$L^p$}{Lp} et l'inégalité de Hölder}
+$L^p(\Omega)=\{u:\int_\Omega|u|^p<\infty\}$, $\nr u_p=(\int|u|^p)^{1/p}$ pour $1\le p<\infty$ ; $\nr u_\infty=\operatorname{sup\,ess}|u|$. Seul $L^2$ est un Hilbert ($\sca uv=\int uv$).
+
+\begin{retenir}[ : Hölder et le « comptage d'exposants »]
+\[\int_\Omega|fg|\le\nr f_p\,\nr g_{p'}\qquad\text{avec }\frac1p+\frac1{p'}=1\qquad(p=p'=2:\ \text{Cauchy--Schwarz}).\]
+\textbf{Généralisé} : $\displaystyle\int|f_1\cdots f_k|\le\nr{f_1}_{p_1}\cdots\nr{f_k}_{p_k}$ si $\dfrac1{p_1}+\cdots+\dfrac1{p_k}=1$.\\
+\textbf{Règle pratique} : un produit de $p$ facteurs, chacun dans $L^p$, est intégrable. Exemple dans $L^4$ : $\int u^2v^2\le\nr u_4^2\nr v_4^2$, $\int|u||v|^3\le\nr u_4\nr v_4^3$, $\int|\nabla u|^3|\nabla v|\le\nr{\nabla u}_4^3\nr{\nabla v}_4$.\\
+\textbf{Puissance} : $\nr{|v|^k}_{q}=\nr v_{kq}^k$ (par ex. $\nr{|v|^3}_{4/3}=\nr v_4^3$).
+\end{retenir}
+\begin{itemize}
+\item \textbf{Inclusions sur $\Omega$ borné} : si $p\le q$, $L^q\subset L^p$ et $\nr f_p\le|\Omega|^{\frac1p-\frac1q}\nr f_q$ (Hölder sur $|f|^p\cdot1$). Exemple : $\nr v_2\le|\Omega|^{1/4}\nr v_4$. \emph{Faux sur $\Omega$ non borné.}
+\item \textbf{Young} : $ab\le\frac{a^p}p+\frac{b^{p'}}{p'}$, et $ab\le\frac{a^2}{2\eps}+\frac{\eps b^2}2$. \textbf{Minkowski} : $\nr{f+g}_p\le\nr f_p+\nr g_p$.
+\item \textbf{Dual} : $(L^p)'=L^{p'}$ pour $1\le p<\infty$ ; $\ell(v)=\int fv$ avec $f\in L^{p'}$.
+\end{itemize}
+
+\subsection{Dérivée faible, espaces de Sobolev}
+\begin{itemize}
+\item \textbf{Dérivée faible} : $g=\partial_iu$ au sens faible si $\int_\Omega u\,\partial_i\varphi=-\int_\Omega g\,\varphi$ pour toute $\varphi\in C^\infty_c(\Omega)$ (« intégration par parties sans terme de bord »).
+\item $W^{1,p}(\Omega)=\{u\in L^p,\ \nabla u\in L^p\}$, norme $\nr u_{W^{1,p}}=\nr u_p+\nr{\nabla u}_p$ : Banach, réflexif si $1<p<\infty$.
+\item $H^1(\Omega)=W^{1,2}$ : \textbf{Hilbert}, $\sca uv_{H^1}=\int uv+\nabla u\cdot\nabla v$.
+\item $W^{1,p}_0(\Omega)$ = adhérence de $C^\infty_c(\Omega)$ = fonctions de trace nulle (« $u=0$ sur $\partial\Omega$ »). $H^1_0=W^{1,2}_0$.
+\item \textbf{Trace} : pour $\Omega$ régulier, $u\mapsto u|_{\partial\Omega}$ est continue de $W^{1,p}(\Omega)$ dans $L^p(\partial\Omega)$. Les valeurs ponctuelles n'ont en général \emph{pas} de sens : en dimension $d\ge2$, une fonction de $H^1$ peut être non bornée ($\log\log\frac1{|x|}$ près de 0 dans le disque). \textbf{En dimension 1}, $H^1(a,b)\subset C([a,b])$ : $u(0)$, $u(L)$ ont un sens.
+\end{itemize}
+
+\subsection{Les trois inégalités clés}
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}>{\raggedright}p{0.2\linewidth}>{\raggedright}p{0.43\linewidth}>{\raggedright\arraybackslash}p{0.3\linewidth}@{}}
+\toprule
+\textbf{Résultat} & \textbf{Énoncé} & \textbf{Sert à}\\\midrule
+\textbf{Poincaré} & $\Omega$ borné, $u\in W^{1,p}_0$ : $\nr u_p\le C_P\nr{\nabla u}_p$. Donc $\nr{\nabla u}_p$ est une norme équivalente sur $W^{1,p}_0$. \emph{Faux sur $W^{1,p}$} (constantes). & coercivité de $\int|\nabla u|^2$ sur $H^1_0$ ; contrôler $u$ par $\nabla u$.\\
+\textbf{Sobolev} & ($\Omega$ régulier, ou $W^{1,p}_0$) $W^{1,p}\subset L^{p^*}$, $p^*=\frac{dp}{d-p}$ si $p<d$ ; $L^q$ pour tout $q<\infty$ si $p=d$ ; $C^0$ si $p>d$. & vérifier que $J$ est finie : par ex. $H^1\subset L^4$ ssi $d\le4$.\\
+\textbf{Rellich} & $\Omega$ borné : $W^{1,p}_0\subset L^q$ \textbf{compacte} pour $q<p^*$ (en particulier $q=p$). & existence avec contrainte non convexe ($\nr u_2=1$) : borné dans $W^{1,p}$ $\Rightarrow$ sous-suite convergente dans $L^2$.\\
+\bottomrule
+\end{tabular}
+\end{center}
+Lien utile : pour $p=2$, la meilleure constante est $C_P^2=1/\lambda_1$, où $\lambda_1$ est la première valeur propre de $-\Delta$ (exemple~\ref{ex:rayleigh}).
+
+\subsection{Intégration par parties et lemme fondamental}
+\begin{itemize}
+\item \textbf{Formule de Green} : pour un champ $\sigma$ et une fonction $v$,
+\[\int_\Omega\sigma\cdot\nabla v=-\int_\Omega(\div\sigma)\,v+\int_{\partial\Omega}(\sigma\cdot n)\,v .\]
+Avec $\sigma=\nabla u$ : $\int\nabla u\cdot\nabla v=-\int\Delta u\,v+\int_{\partial\Omega}\frac{\partial u}{\partial n}v$. En 1D : $\int_a^bu'v'=-\int_a^bu''v+[u'v]_a^b$.
+\item \textbf{Lemme fondamental du calcul des variations} : si $h\in L^1_{loc}$ et $\int_\Omega hv=0$ pour toute $v\in C^\infty_c(\Omega)$, alors $h=0$ presque partout. C'est lui qui fait passer de « pour tout $v$ » à une équation ponctuelle.
+\end{itemize}
+
+%==================================================================
+\section{Optimiser sur un espace de fonctions : les techniques}
+%==================================================================
+\subsection{Choisir l'espace \texorpdfstring{$V$}{V}}\label{sec:choixV}
+\begin{itemize}
+\item \textbf{Règle} : l'énergie dicte l'espace. $\int|\nabla u|^p+|u|^p$ $\to W^{1,p}$ ; $\int|\nabla u|^2$ $\to H^1$.
+\item \textbf{Condition $u=0$ sur $\partial\Omega$ imposée} $\to$ $V=W^{1,p}_0$. Condition $u=g$ sur $\partial\Omega$ $\to$ $K=g+W^{1,p}_0$ (espace \emph{affine}) : les directions de variation $v$ sont dans $W^{1,p}_0$.
+\item \textbf{Pas de condition au bord dans $V$} ($V=H^1$) $\to$ une condition au bord \emph{naturelle} apparaîtra dans l'équation (§\ref{sec:forte}).
+\item \textbf{Vérifier que $J$ est finie et que les contraintes ont un sens sur $V$} : Hölder, inclusions $L^q\subset L^p$, Sobolev.
+\item \textbf{Norme} : prendre la norme usuelle ($\nr u_p+\nr{\nabla u}_p$) évite d'avoir à citer Poincaré.
+\end{itemize}
+
+\subsection{Existence (et pourquoi elle peut échouer)}\label{sec:existence}
+\begin{itemize}
+\item \textbf{Dimension infinie} : un fermé borné n'est \emph{pas} compact ; le Th 2.2.1 ne s'applique plus.
+\item \textbf{Th 2.3.8} : $K$ convexe fermé non vide d'un Hilbert, $J$ $\alpha$-convexe continue $\Rightarrow$ existence, unicité, et $\nr{v-u}^2\le\frac4\alpha(J(v)-J(u))$.
+\item \textbf{Th 2.3.9} : $J$ convexe, continue, coercive sur $K$ convexe fermé $\Rightarrow$ existence (Hilbert ou Banach réflexif). Clé : convexe + continue $\Rightarrow$ faiblement sci (Lemme 2.3.15).
+\item \textbf{Lax--Milgram} : $V$ Hilbert, $a$ bilinéaire continue \emph{coercive} ($a(v,v)\ge\alpha\nr v^2$), $\ell\in V'$ $\Rightarrow$ $\exists!\,u$ : $a(u,v)=\ell(v)$ pour tout $v$. Si $a$ est symétrique, c'est l'équation d'Euler de $\min\frac12a(v,v)-\ell(v)$.
+\item \textbf{Contre-exemple (Ex 2.3.2)} : $J_h(v)=\int_0^1(|v'|-h)^2+v^2$. Des fonctions en « dents de scie » de pente $\pm h$ donnent $J_h\to0$, mais $J_h(u)=0$ est impossible. Cause : l'intégrande n'est \textbf{pas convexe en $v'$}. Leçon : on a besoin de la convexité de $F$ en $\nabla u$.
+\item \textbf{Contrainte non convexe} ($\nr u_2=1$) : il faut une compacité (Rellich) ; en devoir, l'existence est en général admise.
+\end{itemize}
+
+\subsection{Dériver une fonctionnelle intégrale}\label{sec:deriver}
+\begin{methode}[ : dérivée de $J(u)=\int_\Omega F(x,u,\nabla u)\dd$, avec $F=F(x,s,\xi)$]
+\textbf{Calcul rapide (Gâteaux).} On dérive sous l'intégrale en $t=0$ :
+\[\sca{J'(u)}v=\frac{\mathrm d}{\mathrm dt}J(u+tv)\Big|_{t=0}=\int_\Omega\partial_sF(x,u,\nabla u)\,v+\nabla_\xi F(x,u,\nabla u)\cdot\nabla v .\]
+Règle de la chaîne ponctuelle : pour $\varphi:\R^d\to\R$, $\frac{\mathrm d}{\mathrm dt}\varphi(a+tb)|_{t=0}=\nabla\varphi(a)\cdot b$ ; par exemple $\nabla_\xi\big(\frac1p|\xi|^p\big)=|\xi|^{p-2}\xi$.\\
+\textbf{Autre façon} : développer $J(u+v)$, trier les termes selon leur degré en $v$, garder le degré 1.\\
+\textbf{Test de cohérence} : $\sca{J'(u)}v$ doit être \textbf{linéaire en $v$}. Un $|\nabla v|^2$ restant signale une erreur.
+\end{methode}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Intégrande $F$} & \textbf{$\sca{J'(u)}v$} & \textbf{terme dans l'équation forte}\\\midrule
+$\frac12|\nabla u|^2$ & $\int\nabla u\cdot\nabla v$ & $-\Delta u$\\
+$\frac1p|\nabla u|^p$ & $\int|\nabla u|^{p-2}\nabla u\cdot\nabla v$ & $-\div(|\nabla u|^{p-2}\nabla u)$ ($p$-Laplacien)\\
+$\frac12a(x)|\nabla u|^2$ & $\int a\nabla u\cdot\nabla v$ & $-\div(a\nabla u)$\\
+$\sqrt{1+|\nabla u|^2}$ (aire) & $\int\frac{\nabla u\cdot\nabla v}{\sqrt{1+|\nabla u|^2}}$ & $-\div\Big(\frac{\nabla u}{\sqrt{1+|\nabla u|^2}}\Big)$\\
+$\frac12u^2$, \ $\frac1p|u|^p$ & $\int uv$, \ $\int|u|^{p-2}uv$ & $u$, \ $|u|^{p-2}u$\\
+$f\,u$, \ $\frac12(u-f)^2$ & $\int fv$, \ $\int(u-f)v$ & $f$, \ $u-f$\\
+$u\log u$ & $\int(\log u+1)v$ & $\log u+1$\\
+bord : $\frac12\int_{\partial\Omega}u^2$ & $\int_{\partial\Omega}uv$ & condition au bord (Robin)\\
+\bottomrule
+\end{tabular}
+\end{center}
+\textbf{Forme abstraite} : $J(u)=\frac12a(u,u)-\ell(u)$ $\Rightarrow$ $\sca{J'(u)}v=a(u,v)-\ell(v)$ et $J''(u)(v,w)=a(v,w)$ (Ex 2.4.2, 2.4.6).\\
+\textbf{1D} : $J(u)=\int_a^bF(x,u,u')$ $\Rightarrow$ équation d'Euler--Lagrange classique $-\big(\partial_{u'}F\big)'+\partial_uF=0$.
+
+\textbf{Dérivée seconde.} Même recette en dérivant une fois de plus :
+\[J''(u)(v,w)=\int\partial^2_{ss}F\,vw+\partial_s\nabla_\xi F\cdot(v\nabla w+w\nabla v)+\nabla^2_\xi F\,\nabla v\cdot\nabla w .\]
+Pour $F=\frac1p|\xi|^p$ : $\nabla^2_\xi F=|\xi|^{p-2}I+(p-2)|\xi|^{p-4}\xi\xi\T$, d'où, pour $\int|\nabla u|^4$,
+$J''(u)(v,w)=4\int\big[|\nabla u|^2\nabla v\cdot\nabla w+2(\nabla u\cdot\nabla v)(\nabla u\cdot\nabla w)\big]$ (\textbf{deux} termes).
+
+\textbf{Homogénéité} : si $J(tu)=t^pJ(u)$, alors $\sca{J'(u)}u=pJ(u)$ et $J''(u)(u,\cdot)=(p-1)J'(u)$ (identité d'Euler). Très utile pour trouver un multiplicateur ou simplifier un pas de Newton.
+
+\subsection{Justifier la différentiabilité de Fréchet}\label{sec:frechet}
+La dérivée de Gâteaux donne une forme \emph{candidate} $\ell$. Pour conclure à $J'(u)=\ell$ (Déf 2.4.1), il reste deux vérifications.
+\begin{enumerate}
+\item \textbf{$\ell$ est continue sur $V$} : Hölder. Ex. $|\int|\nabla u|^2\nabla u\cdot\nabla v|\le\nr{\nabla u}_4^3\nr{\nabla v}_4$.
+\item \textbf{Le reste $R(v)=J(u+v)-J(u)-\ell(v)$ est un $o(\nr v_V)$} : on écrit $R$ (développement exact si $F$ est polynomiale, Taylor avec reste intégral sinon), on majore chaque terme par Hölder, on obtient $|R(v)|\le C(\nr v_V^2+\cdots)$, donc $R(v)/\nr v_V\to0$.
+\end{enumerate}
+\begin{retenir}[ : la règle d'or]
+Si $F$ est un polynôme de degré $p$ en $(u,\nabla u)$, on travaille dans $W^{1,p}$ : chaque terme est un produit de $p$ facteurs de $L^p$, Hölder généralisé majore tout, et un terme qui contient $k$ fois $v$ est en $O(\nr v^k)$. Plus généralement : croissance $|F|\le C(1+|s|^p+|\xi|^p)$ et $|\partial F|\le C(1+|s|^{p-1}+|\xi|^{p-1})$ $\Rightarrow$ $J\in C^1(W^{1,p})$.
+\end{retenir}
+
+\subsection{Les contraintes en dimension infinie}\label{sec:contraintes}
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}>{\raggedright}p{0.24\linewidth}>{\raggedright}p{0.4\linewidth}>{\raggedright\arraybackslash}p{0.3\linewidth}@{}}
+\toprule
+\textbf{Type de contrainte} & \textbf{Condition d'optimalité} & \textbf{Outil du cours}\\\midrule
+aucune ($K=V$) & $\sca{J'(u)}v=0$ pour tout $v\in V$ & Euler (Rq 2.5.2)\\
+affine : $u=g$ sur $\partial\Omega$ & $\sca{J'(u)}v=0$ pour tout $v\in W^{1,p}_0$ (directions tangentes) & Euler sur un sous-espace affine (Ex 2.5.7)\\
+convexe : $u\ge\psi$ p.p. (obstacle) & $\sca{J'(u)}{v-u}\ge0$ pour tout $v\in K$ & inéquation d'Euler (Th 2.5.1)\\
+intégrale égalité : $\int g(u)=c$ & $\exists\lambda\in\R$ : $\sca{J'(u)}v+\lambda\int g'(u)v=0$ & Lagrange (Th 2.5.6), $M=1$\\
+intégrale inégalité : $\int g(u)\le c$ & idem avec $\lambda\ge0$ et $\lambda\big(\int g(u)-c\big)=0$ & KKT (Th 2.5.17)\\
+\bottomrule
+\end{tabular}
+\end{center}
+\begin{piege}
+\begin{itemize}
+\item Lagrange et KKT supposent un \textbf{nombre fini} de contraintes ($F:V\to\R^M$). Une contrainte \emph{ponctuelle} ($u(x)\ge\psi(x)$ pour tout $x$) en est une infinité : on passe par la convexité de $K$ et l'inéquation d'Euler.
+\item \textbf{Qualification} : pour une contrainte intégrale $G(u)=\int g(u)-c$, il faut $G'(u)\ne0$, c'est-à-dire trouver un $v$ avec $\int g'(u)v\ne0$. Pour $\int u^2=1$ : $\sca{G'(u)}u=2\ne0$.
+\item Si $K$ n'est pas convexe (sphère $\nr u_2=1$), la condition est seulement \textbf{nécessaire} : d'autres points critiques existent (les autres « fonctions propres »).
+\item Inégalité intégrale : examiner d'abord le cas $\lambda=0$ (contrainte inactive = minimum sans contrainte).
+\end{itemize}
+\end{piege}
+
+\subsection{De la forme faible à la forme forte}\label{sec:forte}
+\begin{methode}[ : passer de « pour tout $v$ » à une EDP]
+\begin{enumerate}
+\item \textbf{Intégrer par parties} pour enlever toutes les dérivées de $v$ (Green avec $\sigma=\nabla_\xi F$) :
+$\int\sigma\cdot\nabla v=-\int(\div\sigma)v+\int_{\partial\Omega}(\sigma\cdot n)v$.
+\item \textbf{Prendre $v\in C^\infty_c(\Omega)$} (nulle au bord) et appliquer le lemme fondamental : on obtient l'\textbf{équation dans $\Omega$}, par exemple $-\div(\nabla_\xi F)+\partial_sF=0$.
+\item \textbf{Prendre $v$ quelconque dans $V$} : il ne reste que le terme de bord. Si $V$ n'impose rien au bord, on obtient la \textbf{condition naturelle} $\sigma\cdot n=0$ sur $\partial\Omega$ (Neumann).
+\end{enumerate}
+\textbf{Conditions essentielles vs naturelles} : $u=0$ sur $\partial\Omega$ est mise \emph{dans l'espace} ($W_0$) ; $\partial_nu=0$ (ou $\partial_nu+u=0$ avec un terme de bord dans $J$) \emph{sort du calcul}.
+\end{methode}
+\begin{piege}
+La forme forte suppose $u$ assez régulière (pour que $\div\sigma$ ait un sens). Donner d'abord la forme faible (rigoureuse), puis la forme forte « si $u$ est régulière ».
+\end{piege}
+
+\subsection{Trouver le multiplicateur}\label{sec:mult}
+Tester l'équation avec $v=u$, puis utiliser la contrainte et l'homogénéité.
+Exemple (exercice 3 du devoir) : $4\int(|\nabla u|^4+u^4)+2\lambda\int u^2=0$ et $\int u^2=1$ donnent $\lambda=-2J(u)$.
+
+\subsection{Algorithmes en dimension infinie}\label{sec:algo}
+\begin{itemize}
+\item \textbf{Gradient : il faut choisir un produit scalaire.} $J'(u)\in V'$ n'est pas une fonction ; la direction de descente est le $g$ (représentant de Riesz) tel que $(g,v)=\sca{J'(u)}v$ pour tout $v$ (Rq 3.2.4).
+\begin{itemize}
+\item \emph{Gradient $L^2$} : $g$ = résidu de la forme forte (par ex. $-\Delta u-f$). Demande de la régularité ; après discrétisation (pas $h$), le conditionnement est en $1/h^2$ et le pas doit être minuscule.
+\item \emph{Gradient $H^1_0$ (« de Sobolev »)} : $g\in H^1_0$ solution de $\int\nabla g\cdot\nabla v=\sca{J'(u)}v$ pour tout $v$ (un problème de Poisson à chaque itération) : c'est un préconditionnement. Pour $J=\frac12\int|\nabla u|^2-\int fu$, un seul pas avec $\mu=1$ donne la solution exacte.
+\end{itemize}
+\item \textbf{Newton (§3.5.3)} : $u^{n+1}=u^n+w$, où $w\in V$ résout l'\textbf{équation variationnelle linéaire}
+$J''(u^n)(w,v)=-\sca{J'(u^n)}v$ pour tout $v$ (Lax--Milgram si $J''(u^n)$ est coercive). Avec une contrainte $G(u)=0$ : Newton sur $\Lg'(u,\lambda)=0$, inconnues $(w,q)$, équation $\Lg''(u^n,\lambda^n)(v,p;w,q)=-\sca{\Lg'(u^n,\lambda^n)}{(v,p)}$ pour tout $(v,p)$.
+\item \textbf{Uzawa} avec une contrainte intégrale : $u^n=\operatorname{argmin}_v\Lg(v,\lambda^n)$, puis $\lambda^{n+1}=\max\big(0,\lambda^n+\mu G(u^n)\big)$ ($\lambda$ est un simple réel).
+\item \textbf{Pénalisation} : obstacle $\to$ $J(u)+\frac1\eps\int\max(0,\psi-u)^2$.
+\item \textbf{En pratique} : éléments finis $V_h\subset V$ de dimension $N$, on se ramène à $\R^N$ et à tous les résultats de dimension finie. Attention, les constantes $\alpha$ et $L$ peuvent dépendre de $h$ (Rq 3.3.6).
+\end{itemize}
+
+%==================================================================
+\section{Exemples types corrigés}
+%==================================================================
+\paragraph{Exemple 1 -- Dirichlet (Poisson).} $\min_{\Hz}J(u)=\frac12\int|\nabla u|^2-\int fu$, avec $f\in L^2$.
+Existence et unicité : $a(u,v)=\int\nabla u\cdot\nabla v$ est coercive sur $\Hz$ (Poincaré), donc $J$ est $\alpha$-convexe (Th 2.3.8, ou Lax--Milgram).
+Euler : $\int\nabla u\cdot\nabla v=\int fv$ pour tout $v\in\Hz$. Forme forte : $-\Delta u=f$ dans $\Omega$, $u=0$ sur $\partial\Omega$.
+
+\paragraph{Exemple 2 -- Neumann (condition naturelle).} $\min_{H^1(\Omega)}\frac12\int(|\nabla u|^2+u^2)-\int fu$ (coercive pour la norme $H^1$, sans Poincaré).
+Euler : $\int\nabla u\cdot\nabla v+uv=\int fv$ pour tout $v\in H^1$. Green puis $v\in C^\infty_c$ : $-\Delta u+u=f$ ; puis $v$ quelconque : $\int_{\partial\Omega}\partial_nu\,v=0$, donc $\partial_nu=0$ sur $\partial\Omega$.
+(Sans le terme $u^2$, il faut $\int f=0$, obtenu en prenant $v=1$, et $u$ n'est unique qu'à une constante près.)
+
+\paragraph{Exemple 3 -- Première valeur propre (quotient de Rayleigh).}\label{ex:rayleigh}
+$\min J(u)=\int|\nabla u|^2$ sur $\{u\in\Hz,\ \int u^2=1\}$. Qualification : $\sca{G'(u)}u=2\ne0$.
+Lagrange : $2\int\nabla u\cdot\nabla v+2\lambda\int uv=0$ ; avec $v=u$, $\lambda=-J(u)$.
+Forme forte : $-\Delta u=J(u)\,u$, $u=0$ sur $\partial\Omega$ : $u$ est une fonction propre et le minimum est $\lambda_1$, la plus petite valeur propre. On en déduit Poincaré : $\int u^2\le\frac1{\lambda_1}\int|\nabla u|^2$. (Analogue en dimension finie : Ex 2.5.11.)
+
+\paragraph{Exemple 4 -- Énergie en $L^4$ (exercice du devoir).} $\min\int|\nabla u|^4+u^4$ sur $\{u\in W^{1,4}_0,\ \nr u_2=1\}$.
+On a $\sca{J'(u)}v=4\int\big(|\nabla u|^2\nabla u\cdot\nabla v+u^3v\big)$ et $\lambda=-2J(u)$.
+Forme forte : $-\div(|\nabla u|^2\nabla u)+u^3=J(u)\,u$, $u=0$ sur $\partial\Omega$. Solution unique seulement au signe près ($J(-u)=J(u)$).
+
+\paragraph{Exemple 5 -- Problème de l'obstacle (contrainte convexe ponctuelle).}
+$K=\{v\in\Hz,\ v\ge\psi\text{ p.p.}\}$ (convexe fermé), $J(v)=\frac12\int|\nabla v|^2-\int fv$.
+Inéquation d'Euler : $\int\nabla u\cdot\nabla(v-u)\ge\int f(v-u)$ pour tout $v\in K$.
+Avec $v=u+\varphi$, $\varphi\ge0$ : $-\Delta u-f\ge0$. Là où $u>\psi$, on peut aussi prendre $v=u-\eps\varphi$ : égalité.
+D'où le système de \textbf{complémentarité} $u\ge\psi$, $-\Delta u\ge f$, $(-\Delta u-f)(u-\psi)=0$, analogue continu de $\lambda\ge0$, $F\le0$, $\lambda\cdot F=0$.
+Après discrétisation, $K$ devient un pavé et $P_K=\max(\cdot,\psi_i)$ composante par composante (gradient projeté).
+
+\paragraph{Exemple 6 -- Une dimension (Ex 2.5.4).} $\min\int_0^L\frac\mu2|u'|^2-fu$ avec $u(0)=u(L)=0$.
+On obtient $-\mu u''=f$, $u(0)=u(L)=0$, donc $u(x)=\frac1\mu\int_0^LG(x,y)f(y)\,\mathrm dy$ avec $G(x,y)=\frac{\min(x,y)\,(L-\max(x,y))}L$ : solution unique.
+Autres résultats du livre : Didon (Ex 2.5.12) $\to$ arc de cercle ; entropie de Boltzmann (Ex 2.5.15) $\to$ Maxwellienne ; régularisation (Ex 2.5.18) $\to$ $-\Delta u+\lambda(u-f)=0$, $\lambda\ge0$.
+
+%==================================================================
+\section{Pièges classiques}
+%==================================================================
+\begin{enumerate}
+\item Écrire « $\nabla J(u)$ » dans un Banach non hilbertien : on écrit $\sca{J'(u)}v$ pour tout $v$.
+\item Oublier de vérifier que $J$ est \textbf{finie} sur $V$ (exposants, Sobolev) et que les contraintes y sont continues.
+\item Fonctions test : $v$ doit être dans le même espace que les variations admissibles ($W^{1,p}_0$ si $u$ est imposée au bord), pas « $v\in C^1(\Omega)$ ».
+\item Inégalités de Hölder dégénérées : toujours vérifier l'\textbf{homogénéité} (les deux membres doivent avoir le même degré en $v$). $\nr v_2\le|\Omega|^{1/2}\nr v_4^2$ est faux ; c'est $\nr v_2^2\le|\Omega|^{1/2}\nr v_4^2$.
+\item En dérivant : oublier un $t^2$ dans $|\nabla u+t\nabla v|^2=|\nabla u|^2+2t\nabla u\cdot\nabla v+t^2|\nabla v|^2$, ou oublier le second terme $2(\nabla u\cdot\nabla w)\nabla u$ en dérivant $|\nabla u|^2\nabla u$.
+\item Appliquer Lagrange à une contrainte ponctuelle (infinité de contraintes).
+\item Oublier la qualification ($G'(u)\ne0$) ou dire que la condition est suffisante alors que $K$ n'est pas convexe.
+\item Donner directement la forme forte sans parler de régularité, ou oublier la condition au bord naturelle quand $V=H^1$.
+\item Conclure à l'existence en dimension infinie avec « fermé borné donc compact ».
+\item Unicité annoncée alors que $J$ et $K$ sont symétriques ($J(-u)=J(u)$) : unicité au signe près.
+\end{enumerate}
+\end{document}
