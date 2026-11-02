@@ -1,0 +1,141 @@
+% Fiche d'examen -- Integration stochastique B : VERSION "VRAIMENT MANUSCRITE".
+% Meme contenu (fiche_contenu.tex). Deux etapes :
+%  1) ce fichier (LuaLaTeX) : mise en page avec irregularites (manuscrit/manuscrit.lua) :
+%     espacement aleatoire entre lettres et mots, pas de cesure, chaque glyphe (texte et maths)
+%     legerement tourne / etire / incline / decale, cadres de titres, symboles et doubles barres
+%     (E, P, R, F, G, T) traces a main levee. Les encres sont des couleurs "marqueurs"
+%     (bleu pur, rouge pur, vert pur, noir, magenta = crayon) que l'etape 2 remplace.
+%  2) manuscrit/reencrage.py : rendu 600 dpi, deformations elastiques multi-echelles,
+%     reencrage au stylo (largeur et pression variables), traits de colonnes au crayon.
+% Compilation (depuis ce dossier) :
+%   lualatex fiche_integration_sto_realiste.tex
+%   python3 manuscrit/reencrage.py fiche_integration_sto_realiste.pdf
+\documentclass[a4paper]{article}
+\usepackage[a4paper,margin=4.5mm,top=4mm,bottom=4mm]{geometry}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage[mathcal]{euler}
+\usepackage[no-math]{fontspec}
+\setmainfont{Kalam}[Path=./polices/,Extension=.ttf,UprightFont=*-Regular,BoldFont=*-Bold,ItalicFont=*-Regular,BoldItalicFont=*-Bold]
+\usepackage{multicol}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{ragged2e}
+\usepackage{tikz}
+\usetikzlibrary{calc}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+\setlength{\columnsep}{2.6mm}
+\setlength{\columnseprule}{0.35pt}
+\setlength{\multicolsep}{0pt}
+\setlength{\abovedisplayskip}{0pt}\setlength{\belowdisplayskip}{0pt}
+\setlength{\abovedisplayshortskip}{0pt}\setlength{\belowdisplayshortskip}{0pt}
+\setlength{\arraycolsep}{1.5pt}
+\setlength{\tabcolsep}{1.5pt}
+\renewcommand{\arraystretch}{0.95}
+\thickmuskip=2mu plus 2mu \medmuskip=1.5mu plus 1mu \thinmuskip=1.5mu
+\hyphenpenalty=10000 % a la main, on ne coupe pas les mots
+
+% ---------- irregularites (Lua) ----------
+\directlua{dofile("manuscrit/manuscrit.lua"); manuscrit.enable()}
+\AddToHook{shipout/before}{\directlua{manuscrit.page(\the\ShipoutBox)}}
+\pgfmathsetseed{4242}
+
+% ---------- maths : tout en Euler (noms d'operateurs et \mathrm compris) ----------
+\makeatletter
+\renewcommand{\operator@font}{\mathgroup\symletters}
+\makeatother
+\DeclareMathAlphabet{\mathrm}{U}{eur}{m}{n}
+\AtBeginDocument{\DeclareSymbolFont{operators}{OT1}{cmr}{m}{n}\SetSymbolFont{operators}{bold}{OT1}{cmr}{bx}{n}%
+  \DeclareMathAlphabet{\mathbf}{U}{eur}{b}{n}}
+
+% ---------- encres (marqueurs, remplacees par les vraies couleurs a l'etape 2) ----------
+\definecolor{encre}{RGB}{0,0,255}    % stylo bleu
+\definecolor{cA}{RGB}{255,0,0}       % stylo rouge
+\definecolor{cB}{RGB}{255,0,0}
+\definecolor{cP}{RGB}{255,0,0}
+\definecolor{cK}{RGB}{0,255,0}       % stylo vert
+\definecolor{noir}{RGB}{0,0,0}       % stylo noir
+\definecolor{crayon}{RGB}{255,0,255} % crayon a papier (traits de colonnes)
+\renewcommand{\columnseprulecolor}{\color{crayon}}
+\newcommand{\hcol}{cA}
+
+% ---------- traces a main levee ----------
+\tikzset{main/.style={line width=0.42pt,line cap=round,line join=round,x=1em,y=1em}}
+\newcommand{\handstar}{\tikz[main,baseline={(0,-0.31em)}]{\pgfmathsetmacro{\hr}{90+9*rand}% (pas de "rand" dans un rayon polaire : TikZ y lit "and")
+  \draw (\hr:{0.34+0.04*(2*rnd-1)}) -- (\hr+144:{0.34+0.04*(2*rnd-1)}) -- (\hr+288:{0.34+0.04*(2*rnd-1)})
+     -- (\hr+432:{0.34+0.04*(2*rnd-1)}) -- (\hr+576:{0.34+0.04*(2*rnd-1)}) -- (\hr+722+7*rand:{0.36+0.05*(2*rnd-1)});}}
+\newcommand{\handtri}{\tikz[main,baseline=0pt]{\draw ({0.02*rand},{0.02*rand}) -- ({0.31+0.03*rand},{0.63+0.03*rand})
+     -- ({0.63+0.03*rand},{0.02*rand}) -- ({-0.05+0.03*rand},{0.03*rand});}}
+\newcommand{\handarrow}{\tikz[main,baseline=0pt]{\draw (0,{0.28+0.03*rand}) .. controls (0.36,{0.30+0.04*rand}) .. (0.72,0.29);
+     \draw ({0.52+0.03*rand},{0.47+0.03*rand}) -- (0.73,0.29) -- ({0.53+0.03*rand},{0.12+0.03*rand});}}
+\newcommand{\handcheck}{\tikz[main,baseline=0pt]{\draw (0,{0.30+0.04*rand}) -- ({0.2+0.02*rand},0.02) -- ({0.62+0.03*rand},{0.66+0.05*rand});}}
+\renewcommand{\checkmark}{\handcheck}
+% lettre a double barre (E, P, R, F, G, T) : la lettre manuscrite + un second trait a la main
+\newdimen\bbw \newdimen\bbh \newdimen\bbx
+% lettre a double barre (E, P, R, F, G, T, 1) : la lettre manuscrite + un second trait a la main,
+% parallele au jambage (incline comme l'ecriture)
+\newcommand{\HandBBbox}[1]{\setbox0\hbox{#1}\bbw=\wd0 \bbh=\fontcharht\font`#1\relax
+  \bbx=0.21em \ifx T#1\bbx=0.52\bbw\fi \ifx 1#1\bbx=0.58\bbw\fi
+  \rlap{\box0}\kern\bbx
+  \makebox[0pt][l]{\tikz[baseline=0pt,line width=0.42pt,line cap=round]\draw ({0.012em*rand},{0.04*\bbh})
+     .. controls ({0.06*\bbh+0.02em*rand},{0.5*\bbh}) .. ({0.12*\bbh+0.02em*rand},{0.97*\bbh});}%
+  \kern-\bbx\kern\bbw}
+\renewcommand{\mathbb}[1]{\text{\HandBBbox{#1}}}
+% cote de cadre : debord aux coins, legere courbure
+\newcommand{\handh}[2]{\draw ($#1+({-0.4pt-0.9pt*rnd},{0.35pt*rand})$) .. controls ($#1!0.5!#2+({0.3pt*rand},{0.55pt*rand})$) .. ($#2+({0.4pt+0.9pt*rnd},{0.35pt*rand})$);}
+\newcommand{\handv}[2]{\draw ($#1+({0.35pt*rand},{-0.4pt-0.8pt*rnd})$) .. controls ($#1!0.5!#2+({0.45pt*rand},{0.2pt*rand})$) .. ($#2+({0.35pt*rand},{0.4pt+0.8pt*rnd})$);}
+
+% ---------- macros (identiques aux autres versions) ----------
+\newcommand{\R}{\mathbb{R}}\newcommand{\N}{\mathbb{N}}\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\E}{\mathbb{E}}\newcommand{\PP}{\mathbb{P}}
+\newcommand{\cF}{\mathcal F}\newcommand{\cG}{\mathcal G}\newcommand{\cA}{\mathcal A}\newcommand{\cB}{\mathcal B}\newcommand{\cP}{\mathcal P}
+\newcommand{\Nn}{\mathcal N}
+\newcommand{\ind}{\text{\HandBBbox{1}}}
+\newcommand{\dd}{\mathrm d}
+\newcommand{\br}[1]{\langle #1\rangle}
+\newcommand{\Var}{\operatorname{Var}}\newcommand{\Cov}{\operatorname{Cov}}
+\newcommand{\nr}[1]{\|#1\|}
+\newcommand{\tmax}{t_{\max}}
+\newcommand{\eps}{\varepsilon}
+\newcommand{\mq}{\text{m.q.}}
+\newcommand{\ps}{\text{p.s.}}
+
+% ---------- mise en forme ----------
+\newcommand{\basefs}{7.15}\newcommand{\baselsk}{8.0}
+\newcommand{\RectoFont}{\renewcommand{\basefs}{7.15}\renewcommand{\baselsk}{8.0}\fontsize{\basefs}{\baselsk}\selectfont}
+\newcommand{\VersoFont}{\renewcommand{\basefs}{7.55}\renewcommand{\baselsk}{8.45}\fontsize{\basefs}{\baselsk}\selectfont}
+\newcommand{\TitreFont}{\fontsize{8.4}{9}\selectfont}
+\newcommand{\PetitFont}{\fontsize{5.6}{6.4}\selectfont}
+\newcommand{\LegSt}{{\color{cP}\handstar}}\newcommand{\LegPg}{\handtri}\newcommand{\LegMt}{\handarrow}
+% titre de section : cadre trace a la main ; la taille d'ecriture varie un peu d'une section a l'autre
+\newcommand{\Sec}[1]{\par\vspace{2.4pt}\noindent\begin{tikzpicture}[baseline=(n.base)]
+  \node[anchor=west,inner xsep=2.2pt,inner ysep=1.5pt,font=\bfseries,text=\hcol,align=left] (n) at (0,0) {#1};
+  \pgfmathsetmacro{\ext}{1.5+6*rnd}% le cadre depasse plus ou moins le titre, comme a la main
+  \coordinate (se) at ($(n.south east)+(\ext pt,0)$); \coordinate (ne) at ($(n.north east)+(\ext pt,0)$);
+  \useasboundingbox (n.south west) rectangle (ne);
+  \begin{scope}[\hcol,line width=0.42pt,line cap=round]
+    \handh{(n.south west)}{(se)}\handh{(n.north west)}{(ne)}%
+    \handv{(n.south west)}{(n.north west)}\handv{(se)}{(ne)}%
+  \end{scope}
+\end{tikzpicture}\par\vspace{1.2pt}%
+  \pgfmathsetmacro{\fsf}{1+0.02*rand}\pgfmathsetmacro{\fsA}{\basefs*\fsf}\pgfmathsetmacro{\fsB}{\baselsk*\fsf}%
+  \fontsize{\fsA}{\fsB}\selectfont}
+\newcommand{\B}{\par\noindent\hangindent=0.8em\hangafter=1\makebox[0.8em][l]{\raisebox{-0.32ex}{\fontsize{11.5}{11.5}\selectfont•}}}
+\newcommand{\Th}[1]{\textbf{\color{noir}#1}}
+\newcommand{\St}{{\color{cP}\handstar}\kern0.08em}
+\newcommand{\Pg}{\par\noindent{\color{cP}\handtri}\kern0.15em}
+\newcommand{\Mt}{\par\noindent{\color{cK}\handarrow}\kern0.12em}
+\newcommand{\pg}[1]{{\color{cP}#1}}
+\newcommand{\cq}[1]{{\color{cP}[coquille poly : #1]}}
+\renewcommand{\emph}[1]{\underline{#1}} % a la main : on souligne au lieu de l'italique
+% rature : le texte barre de deux traits rapides, puis on continue
+\newcommand{\raturebox}[1]{\tikz[baseline=(r.base)]{\node[inner sep=0pt,outer sep=0pt] (r) {#1};
+  \draw[line width=0.45pt,line cap=round] ($(r.west)+({-0.6pt},{-0.5pt+0.3pt*rand})$) -- ($(r.east)+({0.6pt},{0.5pt+0.3pt*rand})$);
+  \draw[line width=0.45pt,line cap=round] ($(r.west)+({-0.4pt},{0.6pt+0.3pt*rand})$) -- ($(r.east)+({0.7pt},{-0.3pt+0.3pt*rand})$);}\kern0.18em}
+\newcommand{\rature}[1]{\ifmmode\text{\raturebox{$#1$}}\else\raturebox{#1}\fi}
+
+\begin{document}
+\color{encre}
+\RectoFont
+\input{fiche_contenu}
+\end{document}
