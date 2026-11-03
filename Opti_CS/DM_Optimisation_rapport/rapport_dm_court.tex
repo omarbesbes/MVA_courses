@@ -10,6 +10,9 @@
 \usepackage[a4paper,margin=2.2cm]{geometry}
 \usepackage{amsmath,amssymb,amsthm,mathtools}
 \usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{positioning}
+\usepackage{pifont}
 \usepackage{booktabs,tabularx,array}
 \usepackage{enumitem}
 \usepackage[dvipsnames]{xcolor}
@@ -51,10 +54,12 @@
 \maketitle
 
 \begin{abstract}
-En décodage spéculatif, un petit modèle (le \emph{draft}) propose des tokens qu'un grand modèle (le \emph{target}) vérifie en une seule passe.
-\textbf{(I)} Vérifier un token est un programme linéaire de transport : notre simplexe et un certificat dual explicite montrent que l'acceptation maximale vaut $1-\TV(p,q)$ ; tolérer une déviation $\varepsilon$ de la loi émise la porte à $\min(1,1-\TV+\varepsilon)$, avec un prix dual de~1.
-\textbf{(II)} Répartir un budget de déviation entre les positions d'un bloc drafté est un problème \emph{non concave} sous contraintes linéaires, que nous traitons par les conditions KKT et le gradient projeté.
-Comme un rejet termine le bloc, le budget doit aller d'abord aux \textbf{premières} positions, même plus sensibles : dans un scénario typique, l'allocation optimale est 26\,\% plus rapide qu'un modèle qui ignore cette structure.
+Les grands modèles de langage (LLM), qui animent les assistants conversationnels, écrivent un texte morceau de mot par morceau de mot, et chaque morceau coûte un calcul complet du modèle : la génération est lente.
+Le \emph{décodage spéculatif} l'accélère : un petit modèle rapide (le \emph{draft}) propose plusieurs morceaux d'avance, et le grand modèle (le \emph{target}) les vérifie tous en un seul calcul.
+Ce DM, issu de notre projet de recherche en apprentissage automatique, étudie deux problèmes d'optimisation posés par cette vérification.
+\textbf{(I)} Vérifier un morceau proposé est un programme linéaire de transport : notre simplexe et un certificat dual montrent que la probabilité d'acceptation maximale vaut $1-\TV(p,q)$, et qu'une petite déviation $\varepsilon$ tolérée sur le texte produit la porte à $\min(1,1-\TV+\varepsilon)$.
+\textbf{(II)} Répartir un budget de déviation entre les positions d'un bloc proposé est un problème \emph{non concave} sous contraintes linéaires, que nous traitons par les conditions KKT et le gradient projeté.
+Comme un rejet interrompt le bloc, il faut dévier d'abord sur les \textbf{premières} positions : dans un scénario typique, on va ainsi 26\,\% plus vite qu'avec une règle qui ignore cette structure.
 \end{abstract}
 
 \begin{center}
@@ -73,23 +78,135 @@ Originalité & \textbf{méthode du simplexe}, \textbf{mise en œuvre de la duali
 \end{center}
 
 %=====================================================================
-\section{Contexte et notations}\label{sec:contexte}
+\section{Introduction : accélérer un modèle de langage}\label{sec:contexte}
 %=====================================================================
-À chaque position, le target définit une loi $p$ sur le vocabulaire et le draft une loi $q$.
-La règle de Leviathan et al.~\cite{leviathan} (proposée indépendamment par Chen et al.~\cite{chen}) accepte le token drafté $x\sim q$ avec probabilité $\min(1,p_x/q_x)$ ; en cas de rejet, elle ré-échantillonne dans $(p-q)_+$ normalisée, et la loi émise est alors exactement $p$.
-Le draft propose un bloc de $\gamma$ tokens, que le target vérifie en \emph{une} passe ; le premier rejet termine le bloc, et la vitesse se mesure par le nombre moyen de tokens produits par passe du target.
-On note $\TV(p,q)=\tfrac12\nr{p-q}_1$ et $\beta(p,q)=\sum_i\min(p_i,q_i)=1-\TV(p,q)$.
+\subsection{Un modèle de langage, vu par un optimiseur}\label{sec:llm}
+Un texte est découpé en \textbf{tokens} : des mots ou des morceaux de mots, pris dans un vocabulaire fixe de $n$ éléments ($n\approx150\,000$ pour les modèles utilisés ici).
+Un \textbf{modèle de langage} est une fonction qui associe au début d'un texte une loi de probabilité $p\in\Delta_n=\{p\in\R_+^n:\sum_ip_i=1\}$ sur le token suivant.
+Par exemple (valeurs illustratives), après « Le chat dort sur le », un modèle pourrait donner :
+\begin{center}\small
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+token suivant & \tok{canapé} & \tok{lit} & \tok{tapis} & \tok{toit} & autres\\
+probabilité & 0,40 & 0,25 & 0,20 & 0,05 & 0,10\\
+\bottomrule
+\end{tabular}
+\end{center}
+Pour écrire, on tire un token selon $p$, on l'ajoute au texte et l'on recommence : c'est la génération \textbf{autorégressive}.
+Chaque token demande une \textbf{passe} du modèle, c'est-à-dire un calcul complet d'un réseau de neurones qui compte des milliards de paramètres, et ces passes sont séquentielles, puisque chaque token dépend des précédents.
+Une réponse de 500 tokens coûte 500 passes successives : c'est le goulot d'étranglement.
+Un fait technique permet d'aller plus vite : en \emph{une} passe, le modèle calcule la loi du token suivant à \emph{toutes} les positions d'un texte donné (c'est ainsi qu'il est entraîné). Vérifier $\gamma$ tokens déjà écrits coûte donc à peu près autant que d'en générer un seul.
 
-Une vérification \emph{avec perte}~\cite{fuzzy} accepte plus souvent, au prix d'une déformation de la loi émise.
-Sur GSM8K, avec Qwen2.5-0.5B comme draft et Qwen2.5-1.5B comme target, la plupart des rejets portent sur des \textbf{synonymes} sans effet sur la réponse (\tok{determine} contre \tok{find}), et quelques-uns sur des \textbf{pivots} qui orientent le raisonnement (\tok{not} contre \tok{left}, c'est-à-dire « ce qui est utilisé » contre « ce qui reste »).
-Relâcher la vérification sur les premiers fait gagner de la vitesse sans risque ; sur les seconds, il ne faut pas. Ce DM formalise ce compromis.
+\subsection{Le décodage spéculatif : un petit modèle propose, le grand vérifie}\label{sec:specdec}
+On dispose de deux modèles : le \textbf{target}, grand et lent, dont on veut la qualité (ici Qwen2.5-1.5B, de loi $p$), et le \textbf{draft}, petit et rapide (Qwen2.5-0.5B, de loi $q$).
+À chaque étape, le draft propose un \textbf{bloc} de $\gamma$ tokens, l'un après l'autre, ce qui est peu coûteux.
+Le target les examine tous en une seule passe et les accepte de gauche à droite tant qu'ils passent la vérification.
+Au premier rejet, il remplace le token rejeté par le sien et jette la fin du bloc ; si tout est accepté, il ajoute un token de plus.
+Une passe du target produit donc entre 1 et $\gamma+1$ tokens au lieu d'un seul (figure~\ref{fig:specdec}), et la \textbf{vitesse} se mesure par le nombre moyen de tokens produits par passe du target.
+Sur les solutions de deux problèmes de mathématiques du jeu de données GSM8K, le target produit ainsi en moyenne 4,76 et 4,59 tokens par passe.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  tok/.style={draw, rounded corners=2pt, minimum height=6.5mm, inner xsep=4pt, font=\ttfamily\small},
+  acc/.style={tok, fill=ForestGreen!12, draw=ForestGreen!80!black},
+  rej/.style={tok, fill=red!10, draw=red!75!black},
+  tgt/.style={tok, fill=MidnightBlue!12, draw=MidnightBlue},
+  jet/.style={tok, fill=gray!8, draw=gray!50, text=gray},
+  titre/.style={font=\small\bfseries, anchor=west},
+  expl/.style={font=\small, align=left, anchor=west},
+  node distance=1.6mm]
+\node[titre] at (-0.1,1.1) {Passe 1 : tout le bloc est accepté};
+\node[acc, anchor=west] (a1) at (0,0) {out};
+\node[acc, right=of a1] (a2) {how};
+\node[acc, right=of a2] (a3) {many};
+\node[acc, right=of a3] (a4) {miles};
+\node[acc, right=of a4] (a5) {Brian};
+\node[tgt, right=3mm of a5] (a6) {+1};
+\foreach \i in {1,...,5} \node[font=\small, text=ForestGreen!80!black, above=0.2mm of a\i] {\ding{51}};
+\node[expl] at (8.0,0) {5 tokens acceptés + 1 token du target\\$=$ \textbf{6 tokens} pour une passe};
+\node[titre] at (-0.1,-0.9) {Passe 2 : rejet en position 3};
+\node[acc, anchor=west] (b1) at (0,-2) {the};
+\node[acc, right=of b1] (b2) {distance};
+\node[rej, right=of b2] (b3) {Brian};
+\node[jet, right=of b3] (b4) {\dots};
+\node[jet, right=of b4] (b5) {\dots};
+\foreach \i in {1,2} \node[font=\small, text=ForestGreen!80!black, above=0.2mm of b\i] {\ding{51}};
+\node[font=\small, text=red!75!black, above=0.2mm of b3] {\ding{55}};
+\node[font=\scriptsize, text=gray, above=0.4mm of b4.north east] {jetés};
+\node[tgt, below=4mm of b3] (b3t) {Sof};
+\draw[->, MidnightBlue] (b3.south) -- (b3t.north);
+\node[font=\scriptsize, text=MidnightBlue, right=1mm of b3t] {choix du target};
+\node[expl] at (8.0,-2) {2 tokens acceptés + 1 correction du target\\$=$ \textbf{3 tokens} pour une passe};
+\end{tikzpicture}
+\caption{Deux passes réelles sur un problème GSM8K (« Sofie marche deux fois plus que Brian\dots »), avec Qwen2.5-0.5B comme draft et Qwen2.5-1.5B comme target. Le draft propose 5 tokens ; le target les vérifie en une passe, en acceptant chaque token qui coïncide avec son propre choix (vert). Au premier désaccord (rouge), il émet son token (bleu) et jette la fin du bloc (gris). Sans draft, chaque passe ne produirait qu'un token.}
+\label{fig:specdec}
+\end{figure}
+
+\subsection{Une règle de vérification qui ne change pas le texte produit}\label{sec:regle}
+La figure~\ref{fig:specdec} utilise la vérification la plus simple : le target accepte un token s'il coïncide avec son choix le plus probable.
+Pour échantillonner, c'est-à-dire tirer chaque token au hasard selon $p$ (ce qui donne des textes variés), la règle de Leviathan et al.~\cite{leviathan}, proposée indépendamment par Chen et al.~\cite{chen}, accepte le token $x$ proposé par le draft avec probabilité $\min(1,p_x/q_x)$ ; en cas de rejet, le target tire son token selon $(p-q)_+$ renormalisé.
+Le texte produit suit alors \emph{exactement} la loi $p$ du target : on va plus vite sans rien changer à la qualité.
+
+Prenons un vocabulaire de trois tokens (\tok{canapé}, \tok{lit}, \tok{tapis}), avec $p=(0{,}5;0{,}3;0{,}2)$ pour le target et $q=(0{,}2;0{,}3;0{,}5)$ pour le draft.
+\begin{itemize}
+\item Si le draft propose \tok{canapé} (probabilité 0,2) ou \tok{lit} (0,3), le target les veut au moins aussi souvent ($p_x\ge q_x$) : il accepte toujours.
+\item Si le draft propose \tok{tapis} (probabilité 0,5), que le target ne veut qu'avec probabilité 0,2, il l'accepte avec probabilité $0{,}2/0{,}5=0{,}4$. Sinon (probabilité $0{,}5\times0{,}6=0{,}3$), il émet \tok{canapé}, le seul token que le draft propose moins souvent que lui.
+\end{itemize}
+Le texte produit contient \tok{canapé} avec probabilité $0{,}2+0{,}3=0{,}5$, \tok{lit} avec probabilité $0{,}3$ et \tok{tapis} avec probabilité $0{,}5\times0{,}4=0{,}2$ : c'est bien $p$.
+Le token proposé est accepté avec probabilité $0{,}2+0{,}3+0{,}2=0{,}7=\sum_x\min(p_x,q_x)$.
+\textbf{Peut-on accepter plus souvent, tout en produisant exactement $p$ ?} C'est la partie I : la réponse est non, et la question est un programme linéaire.
+
+\subsection{Relâcher la vérification, mais où ?}\label{sec:ou}
+Si l'on tolère que le texte produit s'écarte un peu de $p$, on peut accepter plus souvent : dans l'exemple, accepter toujours \tok{tapis} porte l'acceptation à 1, mais le texte suit alors la loi $q$ du petit modèle.
+Entre les deux, une \textbf{déviation} $\varepsilon$ (l'écart permis entre la loi du texte produit et $p$, mesuré en variation totale) donne une acceptation $\min(1,0{,}7+\varepsilon)$ (proposition~\ref{prop:perte}).
+Cette vérification \emph{avec perte}~\cite{fuzzy} soulève deux questions.
+
+\textbf{Toutes les positions ne se valent pas pour la qualité.}
+Sur GSM8K, la plupart des rejets portent sur des \textbf{synonymes} sans effet sur la réponse (\tok{determine} contre \tok{find}).
+Quelques-uns portent sur des \textbf{pivots} qui orientent le raisonnement : dans la figure~\ref{fig:specdec}, le draft parle de la distance de Brian là où le target parle de celle de Sofie, et la suite du calcul en dépend ; ailleurs, il écrit « is \tok{not} » au lieu de « is \tok{left} », c'est-à-dire ce qui est utilisé au lieu de ce qui reste.
+Dévier sur un synonyme ne coûte rien, mais dévier sur un pivot fausse la réponse : on attribue à chaque position une \textbf{sensibilité} $s_t$, le coût en qualité d'une unité de déviation.
+
+\textbf{Toutes les positions ne se valent pas pour la vitesse.}
+Un rejet interrompt le bloc : les premières positions conditionnent l'accès aux suivantes.
+Avec $\gamma=3$ et des probabilités d'acceptation $(0{,}9;0{,}5;0{,}8)$, une passe produit en moyenne $1+0{,}9+0{,}9\times0{,}5+0{,}9\times0{,}5\times0{,}8=2{,}71$ tokens (formule du §\ref{sec:modeleII}) : la position 3, pourtant facile, n'est atteinte qu'une fois sur deux.
+Gagner $0{,}1$ d'acceptation en position 2 rapporte $0{,}162$ token par passe, contre $0{,}045$ en position 3.
+
+Ce DM cherche donc \textbf{où dépenser un budget de déviation} pour aller le plus vite possible à perte de qualité donnée, compromis entre sensibilité et position.
+Nous en tirons deux problèmes d'optimisation, traités avec les outils du cours :
+\begin{itemize}
+\item \textbf{partie I (une position)} : la meilleure règle de vérification, exacte ou avec déviation $\varepsilon$, est la solution d'un programme linéaire, que l'on résout par le simplexe et la dualité ;
+\item \textbf{partie II (un bloc)} : la meilleure répartition d'un budget de déviation entre les $\gamma$ positions est un problème non concave sous contraintes linéaires ; on écrit les conditions KKT et on le résout par gradient projeté.
+\end{itemize}
+
+\begin{center}\small
+\begin{tabularx}{\linewidth}{@{}>{\raggedright}p{0.2\linewidth}X@{}}
+\toprule
+\textbf{Terme} & \textbf{Sens dans ce DM}\\\midrule
+token & mot ou morceau de mot, élément d'un vocabulaire de taille $n$\\
+target, draft & grand modèle, de loi $p$ sur le token suivant ; petit modèle, de loi $q$\\
+passe & un calcul du target ; il vérifie tout un bloc en une passe\\
+bloc, $\gamma$ & suite de $\gamma$ tokens proposés par le draft, interrompue au premier rejet\\
+acceptation & probabilité qu'un token proposé soit accepté ; sans déviation, au mieux $\beta(p,q)=\sum_x\min(p_x,q_x)$\\
+$\TV(p,q)$ & variation totale $\tfrac12\sum_x|p_x-q_x|$ (on montre que $\beta=1-\TV$)\\
+déviation $\varepsilon$ & écart permis, en variation totale, entre la loi du texte produit et $p$\\
+sensibilité $s_t$ & coût en qualité d'une unité de déviation à la position $t$\\
+\bottomrule
+\end{tabularx}
+\end{center}
 
 %=====================================================================
 \section{Partie I : vérifier un token est un programme linéaire}
 %=====================================================================
+\noindent\emph{En bref.} Pour une position, on cherche la règle de vérification qui accepte le plus souvent le token du draft tout en produisant exactement la loi $p$ du target (§\ref{sec:regle}). Une règle est décrite par une matrice de probabilités, et la question devient un programme linéaire ; on en déduit ensuite ce que rapporte une déviation $\varepsilon$.
+
 \subsection{Modèle}\label{sec:modeleI}
 Une règle de vérification (exacte ou non) est décrite par la loi jointe du couple (token proposé, token émis) : $\pi\in\R_+^{n\times n}$, $\pi_{xy}=\Prob(\text{le draft propose }x\text{ et l'on émet }y)$. On accepte exactement quand $y=x$ : l'acceptation est la trace de $\pi$. Le draft propose selon $q$ (lignes) et la règle est exacte si le token émis suit $p$ (colonnes) :
 \[(P_0)\qquad \max_{\pi\ge0}\ \sum_x\pi_{xx}\quad\text{s.c.}\quad \sum_y\pi_{xy}=q_x\ \ (x=1,\dots,n),\qquad \sum_x\pi_{xy}=p_y\ \ (y=1,\dots,n).\]
+Dans l'exemple du §\ref{sec:regle} (ordre \tok{canapé}, \tok{lit}, \tok{tapis} ; lignes : token proposé, colonnes : token émis), la règle de Leviathan correspond à
+\[\pi^L=\begin{pmatrix}0{,}2&0&0\\0&0{,}3&0\\\mathbf{0{,}3}&0&0{,}2\end{pmatrix} :\]
+la case en gras se lit « le draft propose \tok{tapis}, le target rejette et émet \tok{canapé} ». Les lignes somment à $q$, les colonnes à $p$, et la trace vaut $0{,}7$.
+
 En forme standard ($\min c\cdot x$, $Ax=b$, $x\ge0$), $c=-\vecop(I_n)$, $b=(q,p)\in\R^{2n}$, et $A\in\{0,1\}^{2n\times n^2}$ a une colonne par variable $\pi_{xy}$, avec un 1 sur la ligne $x$ et un 1 sur la ligne $n+y$.
 \begin{itemize}
 \item \textbf{Flot.} En multipliant par $-1$ les $n$ lignes « colonne », chaque colonne de $A$ a un $+1$ et un $-1$ : c'est la matrice d'incidence d'un graphe biparti orienté, totalement unimodulaire par le lemme de Poincaré (Lemme~4.3.5) ; changer le signe d'une ligne ne change que des signes de déterminants, donc $A$ est TU. Comme $b$ n'est pas entier, cela ne sert pas à l'intégrité, mais situe $(P_0)$ parmi les problèmes de flot du cours.
@@ -158,12 +275,14 @@ Pour $(\pi,r,t)$ admissible, $\pi$ couple $q$ et $r$ : par la proposition~\ref{p
 %=====================================================================
 \section{Partie II : répartir le budget entre les positions d'un bloc}
 %=====================================================================
+\noindent\emph{En bref.} On dispose maintenant d'un budget de déviation pour tout un bloc. Dévier à la position $t$ augmente son acceptation (partie I) mais coûte $s_t$ par unité en qualité ; on cherche la répartition qui maximise le nombre moyen de tokens par passe du target, à budget de qualité donné (§\ref{sec:ou}).
+
 \subsection{Modèle}\label{sec:modeleII}
 Un bloc compte $\gamma$ positions. La position $t$ a une acceptation exacte $a_t=\beta(p_t,q_t)\in(0,1)$ et une \textbf{sensibilité} $s_t>0$ (baisse de qualité de la réponse par unité de déviation). Les variables sont les déviations $\varepsilon\in\R^\gamma$, sous trois hypothèses : (H1) acceptations indépendantes, comme dans~\cite{leviathan} ; (H2) perte de qualité additive, $\sum_ts_t\varepsilon_t$ ; (H3) par la proposition~\ref{prop:perte}, relâcher la position $t$ de $\varepsilon_t$ donne l'acceptation $\alpha_t=a_t+\varepsilon_t$, avec $0\le\varepsilon_t\le u_t:=1-a_t$ (la \emph{marge}).
 
 Le bloc s'arrête au premier rejet : « au moins $k$ acceptés » signifie « les $k$ premiers acceptés », de probabilité $P_k=\alpha_1\cdots\alpha_k$ ($P_0=1$). Avec $\Esp[N]=\sum_{k\ge1}\Prob(N\ge k)$ et le token que le target émet à la fin de chaque passe, le nombre moyen de tokens par passe vaut
 \[E(\varepsilon)=1+\sum_{k=1}^{\gamma}\prod_{j=1}^{k}(a_j+\varepsilon_j),\qquad (Q_B)\quad \max_{\varepsilon\in K}E(\varepsilon),\quad K=\{0\le\varepsilon\le u,\ s\cdot\varepsilon\le B\}.\]
-Les contraintes sont affines. On compare au \textbf{modèle A}, qui ignore la structure en bloc et maximise $\sum_t\alpha_t$ (un sac à dos fractionnaire).
+C'est la formule de l'exemple du §\ref{sec:ou}. Les contraintes sont affines. On compare au \textbf{modèle A}, qui ignore la structure en bloc et maximise $\sum_t\alpha_t$ (un sac à dos fractionnaire).
 
 \subsection{Existence et structure}\label{sec:existenceII}
 $K$ est un polyèdre non vide ($0\in K$) et compact, $E$ est continue : un maximum existe (Th.~2.2.1).
