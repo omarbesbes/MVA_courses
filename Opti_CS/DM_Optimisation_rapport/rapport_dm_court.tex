@@ -69,7 +69,7 @@ Comme un rejet interrompt le bloc, il faut dévier d'abord sur les \textbf{premi
 \textbf{Attendu du DM} & \textbf{Où} \\\midrule
 Modélisation & §\ref{sec:modeleI} (PL), §\ref{sec:modeleII} (allocation)\\
 Existence et unicité & §\ref{sec:existenceI} (PL : non-unicité caractérisée), §\ref{sec:existenceII} (non-concavité, cas $\gamma=2$)\\
-Théorèmes du cours, conditions d'optimalité & dualité en PL (§\ref{sec:dualite}), KKT, Th.~2.5.17 (§\ref{sec:kkt}), Euler, Th.~2.5.1 (annexe~\ref{app:convergence})\\
+Théorèmes du cours~\cite{allaire}, conditions d'optimalité & dualité en PL (§\ref{sec:dualite}), conditions de Karush-Kuhn-Tucker (§\ref{sec:kkt}), inéquation d'Euler (annexe~\ref{app:convergence})\\
 Algorithme et convergence & simplexe en deux phases (§\ref{sec:simplexe}), gradient projeté (§\ref{sec:algoII}, annexe~\ref{app:convergence})\\
 Plusieurs minima locaux ? & objectif non concave, multi-départs (§\ref{sec:algoII})\\
 Originalité & \textbf{méthode du simplexe}, \textbf{mise en œuvre de la dualité} (certificat, prix duaux)\\
@@ -209,13 +209,13 @@ la case en gras se lit « le draft propose \tok{tapis}, le target rejette et ém
 
 En forme standard ($\min c\cdot x$, $Ax=b$, $x\ge0$), $c=-\vecop(I_n)$, $b=(q,p)\in\R^{2n}$, et $A\in\{0,1\}^{2n\times n^2}$ a une colonne par variable $\pi_{xy}$, avec un 1 sur la ligne $x$ et un 1 sur la ligne $n+y$.
 \begin{itemize}
-\item \textbf{Flot.} En multipliant par $-1$ les $n$ lignes « colonne », chaque colonne de $A$ a un $+1$ et un $-1$ : c'est la matrice d'incidence d'un graphe biparti orienté, totalement unimodulaire par le lemme de Poincaré (Lemme~4.3.5) ; changer le signe d'une ligne ne change que des signes de déterminants, donc $A$ est TU. Comme $b$ n'est pas entier, cela ne sert pas à l'intégrité, mais situe $(P_0)$ parmi les problèmes de flot du cours.
+\item \textbf{Flot.} En multipliant par $-1$ les $n$ lignes « colonne », chaque colonne de $A$ a un $+1$ et un $-1$ : c'est la matrice d'incidence d'un graphe biparti orienté, totalement unimodulaire d'après le lemme de Poincaré vu en cours ; changer le signe d'une ligne ne change que des signes de déterminants, donc $A$ est TU. Comme $b$ n'est pas entier, cela ne sert pas à l'intégrité, mais situe $(P_0)$ parmi les problèmes de flot du cours.
 \item \textbf{Rang.} Les $n$ lignes du haut et les $n$ lignes du bas ont la même somme $(1,\dots,1)$, donc $\rg(A)\le2n-1$ ; sans la ligne « colonne 1 », les colonnes de $\pi_{11}$, des $\pi_{1y}$ ($y\ge2$) et des $\pi_{x1}$ ($x\ge2$) engendrent $\R^{2n-1}$, donc $\rg(A)=2n-1$. Le cours supposant $A$ de rang plein, le code retire une ligne avant le simplexe.
 \item \textbf{Compatibilité.} Le système exige $\sum_xq_x=\sum_yp_y$ ; les lois réelles (sommes $1\pm10^{-6}$ en float32) sont donc renormalisées.
 \end{itemize}
 
 \subsection{Existence, valeur et (non-)unicité}\label{sec:existenceI}
-L'ensemble admissible est non vide (couplage indépendant $\pi_{xy}=q_xp_y$) et borné ($0\le\pi_{xy}\le q_x$) : c'est un polyèdre compact, et le maximum de l'objectif linéaire est atteint (Th.~2.2.1), en un sommet (Prop.~4.2.6).
+L'ensemble admissible est non vide (couplage indépendant $\pi_{xy}=q_xp_y$) et borné ($0\le\pi_{xy}\le q_x$) : c'est un polyèdre compact, et le maximum de l'objectif linéaire est atteint (théorème de Weierstrass), en un sommet d'après le théorème fondamental de la programmation linéaire.
 
 \begin{proposition}[valeur de $(P_0)$]\label{prop:valeur}
 La valeur de $(P_0)$ vaut $\beta(p,q)=1-\TV(p,q)$. Les solutions optimales sont exactement les $\pi\ge0$ telles que $\pi_{xx}=\min(p_x,q_x)$ et dont la partie hors diagonale a pour marges $(q-p)_+$ (lignes) et $(p-q)_+$ (colonnes). La solution est unique si et seulement si l'un de ces deux vecteurs a au plus une composante non nulle.
@@ -234,14 +234,14 @@ proposer $x$ et l'accepter a probabilité $q_x\min(1,p_x/q_x)=\min(p_x,q_x)$ ; p
 \end{proof}
 
 \subsection{Dualité : un certificat d'optimalité explicite}\label{sec:dualite}
-Le dual de $\min\{c\cdot x:Ax=b,\ x\ge0\}$ est $\max\{b\cdot\mu:A^\top\mu\le c\}$ (Th.~4.2.13). Avec $\mu=(\varphi,\psi)$ (multiplicateurs des lignes et des colonnes), $(A^\top\mu)_{xy}=\varphi_x+\psi_y$ et $c_{xy}=-\delta_{xy}$ :
+D'après le cours, le dual de $\min\{c\cdot x:Ax=b,\ x\ge0\}$ est $\max\{b\cdot\mu:A^\top\mu\le c\}$. Avec $\mu=(\varphi,\psi)$ (multiplicateurs des lignes et des colonnes), $(A^\top\mu)_{xy}=\varphi_x+\psi_y$ et $c_{xy}=-\delta_{xy}$ :
 \[(D_0)\qquad \max_{\varphi,\psi}\ q\cdot\varphi+p\cdot\psi\quad\text{s.c.}\quad \varphi_x+\psi_y\le-\delta_{xy}\quad\forall x,y.\]
 Pour $\pi$ et $\mu$ admissibles, $c\cdot\pi\ge(A^\top\mu)\cdot\pi=\mu\cdot b$ (dualité faible) : une égalité certifie l'optimalité des deux.
 Posons $S=\{x:q_x\le p_x\}$, $\varphi_x=-1$ si $x\in S$ et $0$ sinon, $\psi_y=0$ si $y\in S$ et $-1$ sinon. Sur la diagonale, exactement l'un des deux vaut $-1$, donc $\varphi_x+\psi_x=-1$ ; hors diagonale, $\varphi_x+\psi_y\le0$ : $(\varphi,\psi)$ est admissible, de valeur $-\sum_{x\in S}q_x-\sum_{y\notin S}p_y=-\beta=c\cdot\pi^L$. Les deux sont donc optimaux, ce qui redémontre la proposition~\ref{prop:valeur}.
 Les écarts complémentaires ($\pi_{xy}>0\Rightarrow\varphi_x+\psi_y=c_{xy}$) se vérifient sur $\pi^L$ : une case hors diagonale non nulle a $q_x>p_x$ et $p_y>q_y$, donc $\varphi_x+\psi_y=0=c_{xy}$. \emph{Lecture :} $\varphi_x=-1$ marque les tokens que le draft propose « trop peu » ($q_x\le p_x$), toujours acceptés.
 
 \subsection{Simplexe révisé en deux phases, et validation}\label{sec:simplexe}
-Le simplexe est programmé comme dans le cours. Avec la base $\cB$ et les hors-base $\cN$ : $x_\cB=A_\cB^{-1}b$, multiplicateurs $\mu=A_\cB^{-\top}c_\cB$, coûts réduits $\tilde c_\cN=c_\cN-A_\cN^\top\mu$ ; si $\tilde c_\cN\ge0$, la base est optimale (Prop.~4.2.8) ; sinon, la variable de coût réduit le plus négatif entre, et le test du ratio $\theta^*=\min\{x_{\cB,i}/d_i:d_i>0\}$, avec $d=A_\cB^{-1}A_j$, désigne la variable sortante. La phase~1 (variables artificielles) fournit une base admissible, ou prouve que le problème ne l'est pas. Les bases sont très dégénérées ($2n-1$ variables de base, souvent nulles) : pour exclure le cyclage, on passe à la règle de Bland après $2m$ pivots dégénérés consécutifs ($m=2n-1$ contraintes). Les multiplicateurs de la base finale donnent le dual (§\ref{sec:perte}).
+Le simplexe est programmé comme dans le cours. Avec la base $\cB$ et les hors-base $\cN$ : $x_\cB=A_\cB^{-1}b$, multiplicateurs $\mu=A_\cB^{-\top}c_\cB$, coûts réduits $\tilde c_\cN=c_\cN-A_\cN^\top\mu$ ; si $\tilde c_\cN\ge0$, la base est optimale (critère d'optimalité du simplexe) ; sinon, la variable de coût réduit le plus négatif entre, et le test du ratio $\theta^*=\min\{x_{\cB,i}/d_i:d_i>0\}$, avec $d=A_\cB^{-1}A_j$, désigne la variable sortante. La phase~1 (variables artificielles) fournit une base admissible, ou prouve que le problème ne l'est pas. Les bases sont très dégénérées ($2n-1$ variables de base, souvent nulles) : pour exclure le cyclage, on passe à la règle de Bland après $2m$ pivots dégénérés consécutifs ($m=2n-1$ contraintes). Les multiplicateurs de la base finale donnent le dual (§\ref{sec:perte}).
 
 \textbf{Validation.} Sur 300 paires synthétiques ($n=3$ à $12$, lois de Dirichlet plus ou moins piquées), notre simplexe, le solveur HiGHS de SciPy et la formule $\beta$ coïncident à $4{,}4\times10^{-16}$ près ; sur 320 paires réelles (Qwen2.5, réduites aux 6 tokens les plus probables de chaque modèle plus une case « autres »), à $3{,}5\times10^{-11}$ près, au niveau de la tolérance du test d'optimalité (figure~\ref{fig:lp}a). Des tests unitaires vérifient l'admissibilité duale, la dualité forte et le certificat $(\varphi,\psi)$. Le nombre d'itérations croît environ comme $n^{1{,}7}$ : pour un vrai vocabulaire ($n\approx150\,000$, plus de $2\times10^{10}$ variables), on utilise la formule fermée, que le simplexe sert à valider. Enfin, le simplexe renvoie un sommet (8 cases non nulles, au plus $2n-1=9$) et $\pi^L$ en a 11 : deux optimums distincts, comme le prévoit la proposition~\ref{prop:valeur} (figure~\ref{fig:lp}b-c).
 
@@ -285,11 +285,11 @@ Le bloc s'arrête au premier rejet : « au moins $k$ acceptés » signifie « le
 C'est la formule de l'exemple du §\ref{sec:ou}. Les contraintes sont affines. Ce problème est le \textbf{modèle B} (« bloc »). On le compare à un modèle plus naïf, le \textbf{modèle A} (« additif ») : il fait comme si chaque position était vérifiée séparément, le rejet de l'une n'empêchant pas de vérifier les suivantes, et maximise donc $\sum_t\alpha_t$ sous les mêmes contraintes. C'est un sac à dos fractionnaire, qui relâche d'abord les positions les moins sensibles. Dans l'exemple du §\ref{sec:ou}, A voit le même gain ($+0{,}1$) en position 2 ou 3, alors que le vrai gain vaut $0{,}162$ contre $0{,}045$.
 
 \subsection{Existence et structure}\label{sec:existenceII}
-$K$ est un polyèdre non vide ($0\in K$) et compact, $E$ est continue : un maximum existe (Th.~2.2.1, dont l'hypothèse de coercivité est vraie par vacuité sur un borné, puisqu'aucune suite n'y tend vers l'infini).
+$K$ est un polyèdre non vide ($0\in K$) et compact, $E$ est continue : un maximum existe (théorème de Weierstrass ; l'hypothèse de coercivité du théorème d'existence du cours est vraie par vacuité sur un borné, puisqu'aucune suite n'y tend vers l'infini).
 $\alpha_t$ n'apparaît, linéairement, que dans les $P_k$ avec $k\ge t$, d'où
 \[\partial_tE=P_{t-1}\,T_t>0,\qquad T_t=1+\alpha_{t+1}+\alpha_{t+1}\alpha_{t+2}+\dots+\alpha_{t+1}\cdots\alpha_\gamma,\]
 produit de la \textbf{probabilité d'atteindre} la position $t$ et du \textbf{nombre de tokens} que son acceptation débloque.
-$E$ est affine en chaque variable, donc $\partial^2_{tt}E=0$, et pour $i<j$, $\partial^2_{ij}E=P_{i-1}\big(\prod_{i<k<j}\alpha_k\big)T_j>0$. La hessienne, symétrique, non nulle et de trace nulle, a une valeur propre $>0$ en tout point : \textbf{$E$ n'est pas concave}, et les résultats d'unicité par convexité (Prop.~2.3.4, Th.~2.3.8) ne s'appliquent pas. Les dérivées croisées positives rendent les positions \textbf{complémentaires} : relâcher l'une fait atteindre plus souvent les suivantes.
+$E$ est affine en chaque variable, donc $\partial^2_{tt}E=0$, et pour $i<j$, $\partial^2_{ij}E=P_{i-1}\big(\prod_{i<k<j}\alpha_k\big)T_j>0$. La hessienne, symétrique, non nulle et de trace nulle, a une valeur propre $>0$ en tout point : \textbf{$E$ n'est pas concave}, et les résultats d'unicité du cours, fondés sur la convexité stricte ou forte, ne s'appliquent pas. Les dérivées croisées positives rendent les positions \textbf{complémentaires} : relâcher l'une fait atteindre plus souvent les suivantes.
 
 \begin{lemme}[concavité le long des échanges]\label{lem:echange}
 Pour $i\ne j$, la direction $d=s_je_i-s_ie_j$ conserve le coût, et $h\mapsto E(\varepsilon+hd)$ est un trinôme strictement concave.
@@ -329,9 +329,9 @@ Si $\alpha_t<\alpha_{t+1}$ à l'optimum, échanger $\varepsilon_t$ et $\varepsil
 \end{figure}
 
 \subsection{Conditions d'optimalité (KKT)}\label{sec:kkt}
-Les contraintes s'écrivent $F_i(\varepsilon)\le0$ : budget $s\cdot\varepsilon-B$ (multiplicateur $\lambda$), bornes $-\varepsilon_t$ et $\varepsilon_t-u_t$ (multiplicateurs $\mu^0_t,\mu^1_t$). Elles sont affines, donc qualifiées en tout point : la définition~2.5.15 autorise l'égalité $\sca{\nabla F_i}{w}=0$ pour les contraintes affines, et $w=0$ convient (Rq.~2.5.16). Le Th.~2.5.17, appliqué à $J=-E$, donne en tout maximum local de $E$ des $\lambda,\mu^0,\mu^1\ge0$ tels que
+Les contraintes s'écrivent $F_i(\varepsilon)\le0$ : budget $s\cdot\varepsilon-B$ (multiplicateur $\lambda$), bornes $-\varepsilon_t$ et $\varepsilon_t-u_t$ (multiplicateurs $\mu^0_t,\mu^1_t$). Elles sont affines, donc qualifiées en tout point : la qualification, au sens du cours, autorise l'égalité $\sca{\nabla F_i}{w}=0$ pour les contraintes affines, et $w=0$ convient. Le théorème de Karush-Kuhn-Tucker, appliqué à $J=-E$, donne en tout maximum local de $E$ des $\lambda,\mu^0,\mu^1\ge0$ tels que
 \[\nabla E(\varepsilon)=\lambda s-\mu^0+\mu^1,\qquad \lambda(s\cdot\varepsilon-B)=0,\quad \mu^0_t\varepsilon_t=0,\quad \mu^1_t(u_t-\varepsilon_t)=0.\]
-Ces conditions sont \textbf{seulement nécessaires} : $J$ n'est pas convexe, donc le théorème de Kuhn--Tucker (Th.~2.6.4) ne s'applique pas.
+Ces conditions sont \textbf{seulement nécessaires} : $J$ n'est pas convexe, donc le théorème de Kuhn--Tucker, qui les rend suffisantes dans le cas convexe, ne s'applique pas.
 
 \paragraph{Règle de seuil.} Avec le \textbf{rendement} $\rho_t=\partial_tE/s_t$ (tokens gagnés par unité de qualité perdue) : $\rho_t=\lambda$ si $0<\varepsilon_t<u_t$, $\rho_t\le\lambda$ si $\varepsilon_t=0$, $\rho_t\ge\lambda$ si $\varepsilon_t=u_t$. On relâche les positions dont le rendement dépasse le prix $\lambda$. Pour le modèle A, $\rho_t=1/s_t$ : on sature les positions par sensibilité croissante (sac à dos). Pour le modèle B, $\rho_t=P_{t-1}T_t/s_t$ dépend de la \textbf{place} : une position précoce est atteinte souvent et débloque beaucoup de tokens. C'est pourquoi le budget va au début du bloc.
 
@@ -339,17 +339,17 @@ Ces conditions sont \textbf{seulement nécessaires} : $J$ n'est pas convexe, don
 \begin{equation}\label{eq:encadrement}
 \frac{E^*(B)-E^*(B-h)}{h}\ \le\ \lambda\ \le\ \frac{E^*(B+h)-E^*(B)}{h}.
 \end{equation}
-Là où $E^*$ est dérivable, $\lambda=dE^*/dB$ : c'est l'analogue du lemme~2.6.6 du cours, qui suppose la convexité, obtenu ici grâce à la seule structure multilinéaire de $E$.
+Là où $E^*$ est dérivable, $\lambda=dE^*/dB$ : c'est l'interprétation des multiplicateurs comme prix marginaux, vue en cours sous hypothèse de convexité, obtenue ici grâce à la seule structure multilinéaire de $E$.
 
 \subsection{Algorithme : gradient projeté, et question des maxima locaux}\label{sec:algoII}
 On utilise le gradient projeté du cours, en montée : $\varepsilon_{k+1}=P_K\big(\varepsilon_k+\tau\nabla E(\varepsilon_k)\big)$.
 
-\textbf{Projection.} $P_K(y)$ minimise $\tfrac12\nr{z-y}^2$, fortement convexe : elle existe et est unique (Th.~2.3.8). En dualisant le budget avec $\nu\ge0$, le problème se sépare et donne $z_t(\nu)=\clip(y_t-\nu s_t,0,u_t)$. On prend $\nu=0$ si $s\cdot z(0)\le B$ ; sinon, $\Phi(\nu)=s\cdot z(\nu)$ décroît continûment de $\Phi(0)>B$ à $0$, et une dichotomie trouve $\Phi(\nu)=B$. Avec les multiplicateurs des bornes $\omega^0_t=(\nu s_t-y_t)_+$ et $\omega^1_t=(y_t-\nu s_t-u_t)_+$, $(z(\nu),\nu,\omega^0,\omega^1)$ vérifie KKT pour ce problème convexe à contraintes affines, où ces conditions sont suffisantes (Th.~2.6.4) : $z(\nu)=P_K(y)$.
+\textbf{Projection.} $P_K(y)$ minimise $\tfrac12\nr{z-y}^2$, fortement convexe, sur le convexe fermé $K$ : d'après le cours, elle existe et est unique. En dualisant le budget avec $\nu\ge0$, le problème se sépare et donne $z_t(\nu)=\clip(y_t-\nu s_t,0,u_t)$. On prend $\nu=0$ si $s\cdot z(0)\le B$ ; sinon, $\Phi(\nu)=s\cdot z(\nu)$ décroît continûment de $\Phi(0)>B$ à $0$, et une dichotomie trouve $\Phi(\nu)=B$. Avec les multiplicateurs des bornes $\omega^0_t=(\nu s_t-y_t)_+$ et $\omega^1_t=(y_t-\nu s_t-u_t)_+$, $(z(\nu),\nu,\omega^0,\omega^1)$ vérifie KKT pour ce problème convexe à contraintes affines, où ces conditions sont suffisantes (théorème de Kuhn--Tucker) : $z(\nu)=P_K(y)$.
 
 \textbf{Pas.} Sur $K$, $\alpha\in[0,1]^\gamma$ donne $|\partial^2_{ij}E|\le\gamma-\max(i,j)+1$ ; la norme de Frobenius majorant la norme de la hessienne, $\nabla E$ est $L$-lipschitzien sur $K$ avec
 \[L=\Big(\sum_{i\ne j}\big(\gamma-\max(i,j)+1\big)^2\Big)^{1/2},\qquad\text{et l'on prend }\tau=1/L.\]
 
-\textbf{Convergence.} Le Th.~3.4.1 suppose $J$ $\alpha$-convexe et ne s'applique pas, pas plus qu'Uzawa (Th.~3.4.3). On montre en annexe~\ref{app:convergence}, avec l'inéquation d'Euler, que $E(\varepsilon_k)$ croît, que les pas tendent vers 0 et que toute valeur d'adhérence vérifie KKT : c'est la meilleure garantie générale pour un problème non concave.
+\textbf{Convergence.} Le théorème de convergence du gradient projeté vu en cours suppose $J$ fortement convexe et ne s'applique pas, pas plus que celui de l'algorithme d'Uzawa. On montre en annexe~\ref{app:convergence}, avec l'inéquation d'Euler, que $E(\varepsilon_k)$ croît, que les pas tendent vers 0 et que toute valeur d'adhérence vérifie KKT : c'est la meilleure garantie générale pour un problème non concave.
 
 \textbf{Global ou local ?} Sur 100 instances aléatoires ($\gamma\in\{3,4,6,8\}$), 20 départs aléatoires chacune aboutissent à la même valeur, à $1{,}8\times10^{-15}$ près (résidu KKT $\le2{,}9\times10^{-10}$) : nous n'avons \textbf{jamais observé deux maxima locaux distincts}. Le problème est non concave mais, empiriquement, unimodal ; l'unicité n'est démontrée que pour $\gamma=2$.
 
@@ -397,7 +397,7 @@ L'encadrement~\eqref{eq:encadrement} explique ces deux formes. Pour $B<s\cdot u$
 %=====================================================================
 Notons $g=\nabla E(\varepsilon_k)$, $\varepsilon^+=\varepsilon_{k+1}=P_K(\varepsilon_k+\tau g)$, $d=\varepsilon^+-\varepsilon_k$, et $0<\tau<2/L$.
 \begin{enumerate}
-\item \textbf{Projection.} $P_K(y)$ minimise la fonction convexe $\tfrac12\nr{z-y}^2$ sur le convexe $K$ ; l'inéquation d'Euler (Th.~2.5.1), nécessaire et ici suffisante, donne
+\item \textbf{Projection.} $P_K(y)$ minimise la fonction convexe $\tfrac12\nr{z-y}^2$ sur le convexe $K$ ; l'inéquation d'Euler, nécessaire et ici suffisante, donne
 \begin{equation*}\label{eq:A1}
 z^*=P_K(y)\iff z^*\in K\ \text{ et }\ \sca{z^*-y}{w-z^*}\ge0\quad\forall w\in K.\tag{A.1}
 \end{equation*}
@@ -417,6 +417,6 @@ Rien ne garantit que $\bar\varepsilon$ soit le maximum \emph{global}, ni que tou
 \bibitem{yin} M.~Yin, M.~Chen, K.~Huang, M.~Wang. \emph{A Theoretical Perspective for Speculative Decoding Algorithm}. NeurIPS 2024.
 \bibitem{fuzzy} M.~Holsman, Y.~Huang, B.~Dhingra. \emph{Fuzzy Speculative Decoding for a Tunable Accuracy-Runtime Tradeoff}. Findings of ACL 2025.
 \bibitem{secure} Y.~Zhang, Z.~Wang, N.~Gong, Y.~Yang. \emph{Secure Speculative Decoding for Large Language Models}. {\NoAutoSpacing arXiv:2610.08678}, 2026.
-\bibitem{allaire} G.~Allaire. \emph{Analyse numérique et optimisation}. Éditions de l'École polytechnique (numérotation des théorèmes reprise du cours).
+\bibitem{allaire} G.~Allaire. \emph{Analyse numérique et optimisation}. Éditions de l'École polytechnique.
 \end{thebibliography}
 \end{document}

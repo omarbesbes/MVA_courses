@@ -70,7 +70,7 @@ Résultat principal : comme un rejet termine le bloc, le budget doit aller en pr
 \textbf{Attendu du DM} & \textbf{Où} \\\midrule
 Modélisation (variables, objectif, contraintes) & §\ref{sec:contexte}, §\ref{sec:modeleI}, §\ref{sec:modeleII}\\
 Existence et unicité & §\ref{sec:existenceI} (PL), §\ref{sec:existenceII} (compacité, non-concavité, cas $\gamma=2$)\\
-Théorèmes du cours, conditions d'optimalité & dualité en PL (§\ref{sec:dualite}), conditions KKT, Th.~2.5.17 (§\ref{sec:kkt}), inéquation d'Euler, Th.~2.5.1 (annexe~\ref{app:convergence})\\
+Théorèmes du cours~\cite{allaire}, conditions d'optimalité & dualité en PL (§\ref{sec:dualite}), conditions de Karush-Kuhn-Tucker (§\ref{sec:kkt}), inéquation d'Euler (annexe~\ref{app:convergence})\\
 Choix de l'algorithme et convergence & simplexe en deux phases (§\ref{sec:simplexe}), gradient projeté (§\ref{sec:algoII} et annexe~\ref{app:convergence})\\
 Plusieurs minima locaux ? & §\ref{sec:algoII} : objectif non concave, multi-départs systématiques\\
 Points d'originalité & \textbf{méthode du simplexe}, \textbf{mise en œuvre de la dualité} (certificat, prix duaux), objectif non concave\\
@@ -143,13 +143,13 @@ $\begin{array}{r|ccc|ccc|ccc|c}
 
 \paragraph{Trois propriétés de $A$.}
 \begin{enumerate}
-\item \textbf{Structure de flot.} Chaque colonne contient exactement deux 1 : $\pi_{xy}$ intervient dans la contrainte « ligne $x$ » et dans la contrainte « colonne $y$ ». En multipliant par $-1$ les $n$ lignes « colonne », chaque colonne contient un $+1$ et un $-1$ : c'est la matrice d'incidence d'un graphe orienté biparti (tokens proposés $\to$ tokens émis), totalement unimodulaire par le lemme de Poincaré (Lemme~4.3.5) ; changer le signe d'une ligne ne change que le signe des déterminants, donc $A$ est aussi TU. Comme $b=(q,p)$ n'est pas entier, cette propriété ne sert pas ici à l'intégrité : elle situe simplement $(P_0)$ parmi les problèmes de flot du cours.
+\item \textbf{Structure de flot.} Chaque colonne contient exactement deux 1 : $\pi_{xy}$ intervient dans la contrainte « ligne $x$ » et dans la contrainte « colonne $y$ ». En multipliant par $-1$ les $n$ lignes « colonne », chaque colonne contient un $+1$ et un $-1$ : c'est la matrice d'incidence d'un graphe orienté biparti (tokens proposés $\to$ tokens émis), totalement unimodulaire d'après le lemme de Poincaré vu en cours ; changer le signe d'une ligne ne change que le signe des déterminants, donc $A$ est aussi TU. Comme $b=(q,p)$ n'est pas entier, cette propriété ne sert pas ici à l'intégrité : elle situe simplement $(P_0)$ parmi les problèmes de flot du cours.
 \item \textbf{Rang.} $\rg(A)=2n-1$. La somme des $n$ lignes du haut et celle des $n$ lignes du bas valent toutes deux $(1,\dots,1)$ : une ligne est redondante, donc $\rg(A)\le2n-1$. Réciproquement, si l'on retire la contrainte « colonne 1 », les $2n-1$ colonnes associées à $\pi_{11}$, aux $\pi_{1y}$ ($y\ge2$) et aux $\pi_{x1}$ ($x\ge2$) engendrent tous les vecteurs de base de $\R^{2n-1}$ : $\rg(A)=2n-1$. Le cours suppose $A$ de rang égal à son nombre de lignes ; le code retire donc une ligne avant le simplexe.
 \item \textbf{Compatibilité.} Le système n'a de solution que si $\sum_xq_x=\sum_yp_y$ (les deux valent la masse totale $\sum_{x,y}\pi_{xy}$), ce qui est vrai pour deux lois. Sur les données réelles, les sommes valent $1\pm10^{-6}$ (arrondis du softmax en float32) : on renormalise, faute de quoi le PL est réellement non admissible.
 \end{enumerate}
 
 \subsection{Existence, valeur et (non-)unicité}\label{sec:existenceI}
-\paragraph{Existence.} L'ensemble admissible est \textbf{non vide} (le couplage indépendant $\pi_{xy}=q_xp_y$ vérifie $\sum_yq_xp_y=q_x$ et $\sum_xq_xp_y=p_y$) et \textbf{borné} ($0\le\pi_{xy}\le\sum_{y'}\pi_{xy'}=q_x\le1$). C'est donc un polyèdre compact ; l'objectif est linéaire, donc continu, et le maximum est atteint (Th.~2.2.1). La Prop.~4.2.6 du cours garantit de plus l'existence d'une \textbf{solution basique optimale} (un sommet du polyèdre). La figure~\ref{fig:lp} illustre la proposition ci-dessous : valeur du PL (a, voir le §\ref{sec:validation}) et deux solutions optimales distinctes (b-c).
+\paragraph{Existence.} L'ensemble admissible est \textbf{non vide} (le couplage indépendant $\pi_{xy}=q_xp_y$ vérifie $\sum_yq_xp_y=q_x$ et $\sum_xq_xp_y=p_y$) et \textbf{borné} ($0\le\pi_{xy}\le\sum_{y'}\pi_{xy'}=q_x\le1$). C'est donc un polyèdre compact ; l'objectif est linéaire, donc continu, et le maximum est atteint (théorème de Weierstrass). D'après le théorème fondamental de la programmation linéaire, il existe de plus une \textbf{solution basique optimale}, c'est-à-dire un sommet du polyèdre. La figure~\ref{fig:lp} illustre la proposition ci-dessous : valeur du PL (a, voir le §\ref{sec:validation}) et deux solutions optimales distinctes (b-c).
 
 \begin{figure}[htbp]
 \centering
@@ -214,7 +214,7 @@ la case en gras se lit « le draft propose 3 alors que le target préfère 1 : o
 \end{exemple}
 
 \subsection{Dualité : un certificat d'optimalité explicite}\label{sec:dualite}
-\paragraph{Écriture du dual.} Le dual de $\min\{c\cdot x:Ax=b,\ x\ge0\}$ est $\max\{b\cdot\mu:A^\top\mu\le c\}$ (Th.~4.2.13). On note $\mu=(\varphi,\psi)\in\R^n\times\R^n$, où $\varphi_x$ est le multiplicateur de la contrainte « ligne $x$ » et $\psi_y$ celui de « colonne $y$ ». La colonne de $A$ associée à $\pi_{xy}$ contient un 1 sur la ligne $x$ et un 1 sur la ligne $n+y$, donc $(A^\top\mu)_{xy}=\varphi_x+\psi_y$ ; de plus $c_{xy}=-\delta_{xy}$ et $b\cdot\mu=q\cdot\varphi+p\cdot\psi$. D'où
+\paragraph{Écriture du dual.} D'après le cours, le dual de $\min\{c\cdot x:Ax=b,\ x\ge0\}$ est $\max\{b\cdot\mu:A^\top\mu\le c\}$. On note $\mu=(\varphi,\psi)\in\R^n\times\R^n$, où $\varphi_x$ est le multiplicateur de la contrainte « ligne $x$ » et $\psi_y$ celui de « colonne $y$ ». La colonne de $A$ associée à $\pi_{xy}$ contient un 1 sur la ligne $x$ et un 1 sur la ligne $n+y$, donc $(A^\top\mu)_{xy}=\varphi_x+\psi_y$ ; de plus $c_{xy}=-\delta_{xy}$ et $b\cdot\mu=q\cdot\varphi+p\cdot\psi$. D'où
 \[(D_0)\qquad \max_{\varphi,\psi}\ q\cdot\varphi+p\cdot\psi\quad\text{s.c.}\quad \varphi_x+\psi_y\le-\delta_{xy}\quad\forall x,y.\]
 
 \paragraph{Dualité faible, en une ligne.} Pour $\pi$ admissible et $\mu$ dual admissible, $c-A^\top\mu\ge0$ et $\pi\ge0$, donc
@@ -240,7 +240,7 @@ $S=\{1,2\}$, donc $\varphi=(-1,-1,0)$ et $\psi=(0,0,-1)$ ; valeur duale $-(0{,}2
 Le simplexe est programmé comme dans le cours (\texttt{specdm/simplex.py}). À chaque itération, avec l'ensemble de base $\cB$ (matrice $A_\cB$) et l'ensemble hors base $\cN$ :
 \begin{enumerate}
 \item solution de base $x_\cB=A_\cB^{-1}b$ et multiplicateurs $\mu=A_\cB^{-\top}c_\cB$ ;
-\item coûts réduits $\tilde c_\cN=c_\cN-A_\cN^\top\mu$ ; si $\tilde c_\cN\ge0$, la base est optimale (Prop.~4.2.8) ;
+\item coûts réduits $\tilde c_\cN=c_\cN-A_\cN^\top\mu$ ; si $\tilde c_\cN\ge0$, la base est optimale (critère d'optimalité du simplexe) ;
 \item sinon, la variable entrante $j$ a le coût réduit le plus négatif (règle de Dantzig) ; direction $d=A_\cB^{-1}A_j$, et le long de $x_\cB(\theta)=x_\cB-\theta d$ le coût baisse de $|\tilde c_j|\theta$ ;
 \item test du ratio : $\theta^*=\min\{x_{\cB,i}/d_i:d_i>0\}$ ; si aucun $d_i>0$, le problème n'est pas borné, sinon la variable qui s'annule sort de la base.
 \end{enumerate}
@@ -352,7 +352,7 @@ $P_1=0{,}9$, $P_2=0{,}45$, $P_3=0{,}36$, donc $E=2{,}71$ tokens par passe. Le fa
 \end{exemple}
 
 \subsection{Existence, structure et unicité}\label{sec:existenceII}
-\paragraph{Existence.} $K$ est un polyèdre non vide ($0\in K$ car $B\ge0$), fermé et borné ($0\le\varepsilon\le u$), donc compact ; $J=-E$ est un polynôme, donc continu. Le théorème~2.2.1 donne donc au moins un minimum de $J$, c'est-à-dire un maximum de $E$. Son hypothèse de coercivité (« infinie à l'infini » : $\nr{\varepsilon_n}\to+\infty\Rightarrow J(\varepsilon_n)\to+\infty$ pour toute suite de $K$) est vraie par vacuité, car aucune suite d'un ensemble borné ne tend vers l'infini : on retrouve le théorème de Weierstrass, selon lequel une fonction continue sur un compact atteint son minimum.
+\paragraph{Existence.} $K$ est un polyèdre non vide ($0\in K$ car $B\ge0$), fermé et borné ($0\le\varepsilon\le u$), donc compact ; $J=-E$ est un polynôme, donc continu. Par le théorème de Weierstrass (une fonction continue sur un compact atteint son minimum), $J$ admet au moins un minimum, c'est-à-dire $E$ un maximum. C'est le théorème d'existence du cours, dont l'hypothèse de coercivité (« infinie à l'infini » : $\nr{\varepsilon_n}\to+\infty\Rightarrow J(\varepsilon_n)\to+\infty$ pour toute suite de $K$) est vraie par vacuité sur un ensemble borné, puisqu'aucune suite n'y tend vers l'infini.
 
 \paragraph{Gradient.} $\alpha_t$ n'apparaît que dans les $P_k$ avec $k\ge t$, et linéairement : $\partial P_k/\partial\alpha_t=P_k/\alpha_t$ pour $k\ge t$, $0$ sinon. Comme $\partial\alpha_t/\partial\varepsilon_t=1$,
 \[\partial_tE=\sum_{k\ge t}\frac{P_k}{\alpha_t}=P_{t-1}\big(1+\alpha_{t+1}+\alpha_{t+1}\alpha_{t+2}+\dots+\alpha_{t+1}\cdots\alpha_\gamma\big)=P_{t-1}\,T_t,\]
@@ -367,7 +367,7 @@ où $P_{t-1}$ est la \textbf{probabilité d'atteindre} la position $t$ et $T_t$ 
 $E=1+\alpha_1+\alpha_1\alpha_2$, $\nabla E=(1+\alpha_2,\alpha_1)$ et $H=\begin{psmallmatrix}0&1\\1&0\end{psmallmatrix}$, de valeurs propres $\pm1$. Sur la diagonale $\varepsilon_1=\varepsilon_2$ : $E(0;0)=1{,}75$, $E(0{,}5;0{,}5)=3$, mais $E(0{,}25;0{,}25)=2{,}3125$, \emph{sous} la corde $(1{,}75+3)/2=2{,}375$ ; une fonction concave serait au-dessus.
 \end{exemple}
 
-\paragraph{Lecture.} $\partial^2_{ij}E>0$ signifie que relâcher une position augmente la valeur marginale des autres (on atteint plus souvent les suivantes) : les positions sont \textbf{complémentaires}. Conséquence : les résultats d'unicité par convexité (Prop.~2.3.4, Th.~2.3.8) ne s'appliquent pas, et l'on ne peut pas exclure a priori plusieurs maxima locaux.
+\paragraph{Lecture.} $\partial^2_{ij}E>0$ signifie que relâcher une position augmente la valeur marginale des autres (on atteint plus souvent les suivantes) : les positions sont \textbf{complémentaires}. Conséquence : les résultats d'unicité du cours, fondés sur la convexité stricte ou forte, ne s'appliquent pas, et l'on ne peut pas exclure a priori plusieurs maxima locaux.
 
 \begin{lemme}[concavité le long des échanges]\label{lem:echange}
 Pour deux positions $i\ne j$, la direction $d=s_je_i-s_ie_j$ conserve le coût ($s\cdot d=0$), et $h\mapsto E(\varepsilon+hd)$ est un trinôme strictement concave.
@@ -433,12 +433,12 @@ borne haute, position $t$ & $\varepsilon_t-u_t$ & $e_t$ & $\mu^1_t\ge0$\\
 \end{tabular}
 \end{center}
 
-\paragraph{Qualification.} Toutes les $F_i$ sont affines. La définition~2.5.15 demande une direction $w$ telle que $\sca{\nabla F_i}{w}<0$ pour chaque contrainte active, l'égalité $\sca{\nabla F_i}{w}=0$ étant permise pour les contraintes affines : $w=0$ convient (Rq.~2.5.16). Les contraintes sont qualifiées en tout point de $K$.
+\paragraph{Qualification.} Toutes les $F_i$ sont affines. La qualification, au sens du cours, demande une direction $w$ telle que $\sca{\nabla F_i}{w}<0$ pour chaque contrainte active, l'égalité $\sca{\nabla F_i}{w}=0$ étant permise pour les contraintes affines : $w=0$ convient. On sait d'ailleurs que des contraintes affines sont toujours qualifiées : elles le sont en tout point de $K$.
 
-\paragraph{Conditions KKT} (Th.~2.5.17, appliqué à $J=-E$). En tout minimum local de $J$ (maximum local de $E$), il existe $\lambda,\mu^0,\mu^1\ge0$ tels que
+\paragraph{Conditions KKT} (théorème de Karush-Kuhn-Tucker, appliqué à $J=-E$). En tout minimum local de $J$ (maximum local de $E$), il existe $\lambda,\mu^0,\mu^1\ge0$ tels que
 \[\nabla J+\lambda s-\sum_t\mu^0_te_t+\sum_t\mu^1_te_t=0\quad\Longleftrightarrow\quad \nabla E(\varepsilon)=\lambda s-\mu^0+\mu^1,\]
 avec les écarts complémentaires $\lambda(s\cdot\varepsilon-B)=0$, $\mu^0_t\varepsilon_t=0$ et $\mu^1_t(u_t-\varepsilon_t)=0$.
-Ces conditions sont \textbf{seulement nécessaires} : $J$ n'est pas convexe, donc le théorème de Kuhn--Tucker (Th.~2.6.4), qui les rendrait suffisantes, ne s'applique pas. Un point KKT peut a priori être un maximum local non global, ou un point selle.
+Ces conditions sont \textbf{seulement nécessaires} : $J$ n'est pas convexe, donc le théorème de Kuhn--Tucker, qui les rend suffisantes pour un problème convexe, ne s'applique pas. Un point KKT peut a priori être un maximum local non global, ou un point selle.
 
 \paragraph{Lecture coordonnée par coordonnée.} Notons $\rho_t=\partial_tE/s_t$ le \textbf{rendement} de la position $t$ (tokens gagnés par unité de qualité perdue). La $t$-ième équation s'écrit $\partial_tE=\lambda s_t-\mu^0_t+\mu^1_t$ :
 \begin{itemize}
@@ -456,24 +456,24 @@ C'est une \textbf{règle de seuil} : on relâche les positions dont le rendement
 \begin{equation}\label{eq:encadrement}
 \frac{E^*(B)-E^*(B-h)}{h}\ \le\ \lambda\ \le\ \frac{E^*(B+h)-E^*(B)}{h}.
 \end{equation}
-Là où $E^*$ est dérivable, $\lambda=dE^*/dB$. C'est l'analogue du lemme~2.6.6 du cours, qui suppose la convexité ; ici, la structure multilinéaire de $E$ suffit. On le retrouve pour $\gamma=2$ (proposition~\ref{prop:gamma2}) et numériquement en S2, à 0,5\,\% près (figure~\ref{fig:frontiere}c).
+Là où $E^*$ est dérivable, $\lambda=dE^*/dB$. C'est l'interprétation des multiplicateurs comme prix marginaux, vue en cours sous hypothèse de convexité ; ici, la structure multilinéaire de $E$ suffit. On le retrouve pour $\gamma=2$ (proposition~\ref{prop:gamma2}) et numériquement en S2, à 0,5\,\% près (figure~\ref{fig:frontiere}c).
 
 \subsection{Algorithme : gradient projeté, et question des maxima locaux}\label{sec:algoII}
 $K$ est convexe et la projection sur $K$ se calcule presque explicitement : on choisit le \textbf{gradient projeté} du cours, en montée,
 \[\varepsilon_{k+1}=P_K\big(\varepsilon_k+\tau\nabla E(\varepsilon_k)\big).\]
 
-\paragraph{1. Calcul de la projection $z=P_K(y)$.} C'est la solution de $\min_{z\in K}\tfrac12\nr{z-y}^2$, fonction fortement convexe : elle existe et est unique (Th.~2.3.8). On dualise seulement la contrainte de budget, avec un multiplicateur $\nu\ge0$ :
+\paragraph{1. Calcul de la projection $z=P_K(y)$.} C'est la solution de $\min_{z\in K}\tfrac12\nr{z-y}^2$, fonction fortement convexe sur le convexe fermé $K$ : d'après le cours, elle existe et est unique. On dualise seulement la contrainte de budget, avec un multiplicateur $\nu\ge0$ :
 \[\min_{0\le z\le u}\ \tfrac12\nr{z-y}^2+\nu(s\cdot z-B)=\sum_t\Big[\tfrac12(z_t-y_t)^2+\nu s_tz_t\Big]-\nu B.\]
 Le problème se sépare coordonnée par coordonnée : chaque terme est une parabole de minimum libre en $y_t-\nu s_t$, et sur $[0,u_t]$ le minimum est ce point ramené dans l'intervalle :
 \[z_t(\nu)=\clip(y_t-\nu s_t,\ 0,\ u_t).\]
 Si $s\cdot z(0)\le B$, on prend $\nu=0$. Sinon, $\Phi(\nu)=s\cdot z(\nu)$ est continue et décroissante, $\Phi(0)>B$ et $\Phi(\nu)=0\le B$ pour $\nu$ grand : le théorème des valeurs intermédiaires donne $\nu$ tel que $\Phi(\nu)=B$, calculé par dichotomie.
-Dans les deux cas, $(z(\nu),\nu)$ vérifie les conditions KKT du problème de projection, avec le multiplicateur $\nu\ge0$ du budget ($\nu(s\cdot z(\nu)-B)=0$) et les multiplicateurs $\omega^0_t=(\nu s_t-y_t)_+$ et $\omega^1_t=(y_t-\nu s_t-u_t)_+$ des bornes : dans chacun des trois cas du clip, on vérifie $z_t-y_t+\nu s_t-\omega^0_t+\omega^1_t=0$ et les écarts complémentaires. Ce problème étant convexe à contraintes affines, ces conditions sont suffisantes (Th.~2.6.4) : $z(\nu)=P_K(y)$. C'est un problème dual de dimension~1.
+Dans les deux cas, $(z(\nu),\nu)$ vérifie les conditions KKT du problème de projection, avec le multiplicateur $\nu\ge0$ du budget ($\nu(s\cdot z(\nu)-B)=0$) et les multiplicateurs $\omega^0_t=(\nu s_t-y_t)_+$ et $\omega^1_t=(y_t-\nu s_t-u_t)_+$ des bornes : dans chacun des trois cas du clip, on vérifie $z_t-y_t+\nu s_t-\omega^0_t+\omega^1_t=0$ et les écarts complémentaires. Ce problème étant convexe à contraintes affines, ces conditions sont suffisantes (théorème de Kuhn--Tucker) : $z(\nu)=P_K(y)$. C'est un problème dual de dimension~1.
 
 \paragraph{2. Choix du pas.} Sur $K$, on a $\alpha\in[0,1]^\gamma$, donc $P_{i-1}\le1$, $\prod\alpha_k\le1$ et $T_j\le\gamma-j+1$ (somme de $\gamma-j+1$ produits $\le1$). D'où $|\partial^2_{ij}E|\le\gamma-\max(i,j)+1$ et, puisque $\nr{H}_2\le\nr{H}_F$,
 \[\nr{\nabla E(x)-\nabla E(y)}\le L\nr{x-y}\quad(x,y\in K),\qquad L=\Big(\sum_{i\ne j}\big(\gamma-\max(i,j)+1\big)^2\Big)^{1/2}.\]
 Pour $\gamma=2$, $L=\sqrt2$ (la vraie norme de $H$ vaut 1) ; pour $\gamma=8$, $L\approx25{,}9$. On prend $\tau=1/L$.
 
-\paragraph{3. Convergence.} Le théorème~3.4.1 suppose $J$ $\alpha$-convexe : il \textbf{ne s'applique pas} ici, et pour la même raison ni Uzawa (Th.~3.4.3) ni la pénalisation (Prop.~3.4.6). On démontre en annexe~\ref{app:convergence}, avec l'inéquation d'Euler (Th.~2.5.1), que $E(\varepsilon_k)$ croît, que les pas tendent vers 0 et que toute valeur d'adhérence de $(\varepsilon_k)$ vérifie les conditions KKT. Pour un problème non concave, c'est la meilleure garantie générale : un point KKT n'est pas forcément un maximum global.
+\paragraph{3. Convergence.} Le théorème de convergence du gradient projeté vu en cours suppose $J$ fortement convexe : il \textbf{ne s'applique pas} ici, et pour la même raison ni les résultats sur l'algorithme d'Uzawa ni ceux sur la pénalisation. On démontre en annexe~\ref{app:convergence}, avec l'inéquation d'Euler, que $E(\varepsilon_k)$ croît, que les pas tendent vers 0 et que toute valeur d'adhérence de $(\varepsilon_k)$ vérifie les conditions KKT. Pour un problème non concave, c'est la meilleure garantie générale : un point KKT n'est pas forcément un maximum global.
 
 \paragraph{4. Global ou local ?} On lance le gradient projeté depuis 20 points initiaux aléatoires sur 100 instances aléatoires ($\gamma\in\{3,4,6,8\}$ ; la hessienne y est indéfinie, comme en tout point d'après le §\ref{sec:existenceII}). L'écart maximal entre valeurs finales vaut $1{,}8\times10^{-15}$, l'écart maximal entre solutions $1{,}1\times10^{-8}$, et le résidu KKT maximal $2{,}9\times10^{-10}$. Nous n'avons donc \textbf{jamais observé deux maxima locaux distincts} : le problème est non concave mais, empiriquement, unimodal. L'unicité n'est démontrée que pour $\gamma=2$ (proposition~\ref{prop:gamma2}).
 
@@ -547,7 +547,7 @@ Le message pour notre projet de recherche : \textbf{la structure en bloc change 
 %=====================================================================
 Notations : $g=\nabla E(\varepsilon_k)$, $\varepsilon^+=\varepsilon_{k+1}=P_K(\varepsilon_k+\tau g)$, $d=\varepsilon^+-\varepsilon_k$, et $0<\tau<2/L$ (on prend $\tau=1/L$).
 \begin{enumerate}
-\item \textbf{Caractérisation de la projection.} $P_K(y)$ minimise la fonction convexe $\phi(z)=\tfrac12\nr{z-y}^2$, de gradient $z-y$, sur le convexe $K$ ; l'inéquation d'Euler (Th.~2.5.1) est nécessaire, et suffisante puisque $\phi$ est convexe :
+\item \textbf{Caractérisation de la projection.} $P_K(y)$ minimise la fonction convexe $\phi(z)=\tfrac12\nr{z-y}^2$, de gradient $z-y$, sur le convexe $K$ ; l'inéquation d'Euler est nécessaire, et suffisante puisque $\phi$ est convexe :
 \begin{equation*}\label{eq:A1}
 z^*=P_K(y)\iff z^*\in K\ \text{ et }\ \sca{z^*-y}{w-z^*}\ge0\quad\forall w\in K.\tag{A.1}
 \end{equation*}
@@ -569,7 +569,7 @@ donc la série converge et $\nr{\varepsilon_{k+1}-\varepsilon_k}\to0$. $K$ étan
 \[\bar\varepsilon=P_K\big(\bar\varepsilon+\tau\nabla E(\bar\varepsilon)\big).\]
 \item \textbf{Point fixe $\iff$ Euler $\iff$ KKT.} Par \eqref{eq:A1} avec $y=\bar\varepsilon+\tau\nabla E(\bar\varepsilon)$ et $z^*=\bar\varepsilon$, le point fixe équivaut à
 \[\sca{\nabla E(\bar\varepsilon)}{w-\bar\varepsilon}\le0\quad\forall w\in K,\]
-la condition nécessaire d'Euler (Th.~2.5.1) pour un minimum local de $J=-E$ sur le convexe $K$ : aucune direction admissible ne fait monter $E$ au premier ordre. $K$ étant défini par des contraintes affines (qualifiées), cette condition équivaut aux conditions KKT du §\ref{sec:kkt} (lemme de Farkas).
+la condition nécessaire d'Euler pour un minimum local de $J=-E$ sur le convexe $K$ : aucune direction admissible ne fait monter $E$ au premier ordre. $K$ étant défini par des contraintes affines (qualifiées), cette condition équivaut aux conditions KKT du §\ref{sec:kkt} (lemme de Farkas).
 \end{enumerate}
 \textbf{Ce que l'on n'obtient pas.} Rien ne garantit que $\bar\varepsilon$ soit le maximum \emph{global} : $E$ n'est pas concave, et l'inéquation d'Euler n'est plus suffisante. On ne montre pas non plus la convergence de toute la suite (elle a lieu si les points KKT sont isolés, puisque $\nr{\varepsilon_{k+1}-\varepsilon_k}\to0$). C'est pourquoi on combine des multi-départs avec une vérification numérique des conditions KKT, dont le résidu est calculé par moindres carrés positifs sur $(\lambda,\mu^0,\mu^1)$ en n'autorisant que les multiplicateurs des contraintes actives.
 
@@ -594,6 +594,6 @@ Commande (depuis \texttt{DM\_Optimisation/}) & Effet\\\midrule
 \bibitem{yin} M.~Yin, M.~Chen, K.~Huang, M.~Wang. \emph{A Theoretical Perspective for Speculative Decoding Algorithm}. NeurIPS 2024.
 \bibitem{fuzzy} M.~Holsman, Y.~Huang, B.~Dhingra. \emph{Fuzzy Speculative Decoding for a Tunable Accuracy-Runtime Tradeoff}. Findings of ACL 2025.
 \bibitem{secure} Y.~Zhang, Z.~Wang, N.~Gong, Y.~Yang. \emph{Secure Speculative Decoding for Large Language Models}. {\NoAutoSpacing arXiv:2610.08678}, 2026.
-\bibitem{allaire} G.~Allaire. \emph{Analyse numérique et optimisation}. Éditions de l'École polytechnique (numérotation des théorèmes reprise du cours).
+\bibitem{allaire} G.~Allaire. \emph{Analyse numérique et optimisation}. Éditions de l'École polytechnique.
 \end{thebibliography}
 \end{document}
