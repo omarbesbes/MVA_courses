@@ -314,14 +314,13 @@ $S=\{\tok{canapé},\tok{lit}\}$, donc $\varphi=(-1,-1,0)$ et $\psi=(0,0,-1)$ ; v
 Le simplexe est programmé comme dans le cours. Avec la base $\cB$ et les hors-base $\cN$ : $x_\cB=A_\cB^{-1}b$, multiplicateurs $\mu=A_\cB^{-\top}c_\cB$, coûts réduits $\tilde c_\cN=c_\cN-A_\cN^\top\mu$ ; si $\tilde c_\cN\ge0$, la base est optimale (Prop.~4.2.8) ; sinon, la variable de coût réduit le plus négatif entre, et le test du ratio $\theta^*=\min\{x_{\cB,i}/d_i:d_i>0\}$, avec $d=A_\cB^{-1}A_j$, désigne la variable sortante. La phase~1 (variables artificielles) fournit une base admissible, ou prouve que le problème ne l'est pas. Les bases sont très dégénérées ($2n-1$ variables de base, souvent nulles) : pour exclure le cyclage, on passe à la règle de Bland après $2m$ pivots dégénérés consécutifs ($m=2n-1$ contraintes). Les multiplicateurs de la base finale donnent le dual (§\ref{sec:perte}).
 
 \subsection{Validation numérique}\label{sec:validation}
-Nous vérifions trois choses : l'implémentation du simplexe trouve le vrai optimum et le vrai dual ; la valeur du PL coïncide avec la formule $\beta$ ; le tout fonctionne sur de vraies lois de LLM.
 Pour chaque $n=3,\dots,12$, on tire 30 paires $(p,q)$ selon des lois de Dirichlet plus ou moins piquées, des lois presque certaines (un LLM sûr de son prochain token) aux lois presque uniformes, et l'on compare la valeur de $(P_0)$ donnée par \textbf{notre simplexe}, par \textbf{HiGHS} (le solveur de référence de SciPy, développé indépendamment) et par la \textbf{formule} $\beta$. On prend aussi 320 positions réelles de GSM8K, en réduisant chaque paire de lois aux 6 tokens les plus probables de chaque modèle plus une case « autres » qui regroupe la masse restante.
 \begin{center}
 \small
 \begin{tabularx}{\linewidth}{@{}lcX@{}}
 \toprule
 Comparaison & Écart maximal & Lecture\\\midrule
-notre simplexe / formule $\beta$ & $4{,}4\times10^{-16}$ & précision machine (en double précision, deux nombres proches de 1 ne se distinguent pas à moins de $2{,}2\times10^{-16}$ près)\\
+notre simplexe / formule $\beta$ & $4{,}4\times10^{-16}$ & précision machine (double précision)\\
 HiGHS / formule $\beta$ & $4{,}4\times10^{-16}$ & idem\\
 notre simplexe / formule, paires réelles & $3{,}5\times10^{-11}$ & masses minuscules (jusqu'à $10^{-12}$), sous la tolérance $10^{-10}$ du test d'optimalité\\
 \bottomrule
@@ -386,11 +385,11 @@ Pour une variable à valeurs entières, $\Esp[N]=\sum_{k\ge1}\Prob(N\ge k)$. Le 
 C'est la formule de l'exemple du §\ref{sec:ou}, où le faible $a_2=0{,}5$ coupe la moitié des blocs.
 \textbf{Contraintes :} $K=\{\varepsilon\in\R^\gamma:\ 0\le\varepsilon_t\le u_t,\ s\cdot\varepsilon\le B\}$, toutes affines.
 \[(Q_B)\qquad \max_{\varepsilon\in K}\ E(\varepsilon)\qquad\Longleftrightarrow\qquad \min_{\varepsilon\in K}\ J(\varepsilon)=-E(\varepsilon).\]
-On le compare au \textbf{modèle A}, qui ignore la structure en bloc et maximise $\sum_t\alpha_t$ : un PL de type sac à dos fractionnaire.
+\paragraph{Modèle de référence (modèle A).} Notre problème $(Q_B)$ est le \textbf{modèle B}, comme « bloc ». Pour mesurer ce que rapporte la prise en compte du bloc, on le compare à un modèle plus naïf, le \textbf{modèle A}, comme « additif ». Celui-ci fait comme si chaque position était vérifiée séparément, le rejet de l'une n'empêchant pas de vérifier les suivantes : le nombre moyen de tokens acceptés serait alors $\sum_t\alpha_t$, que le modèle A maximise sous les mêmes contraintes $K$. Comme $\sum_t\alpha_t=\sum_ta_t+\sum_t\varepsilon_t$, c'est le PL $\max_{\varepsilon\in K}\sum_t\varepsilon_t$, un sac à dos fractionnaire, qui relâche d'abord les positions les moins sensibles (§\ref{sec:kkt}) : c'est la règle que l'on appliquerait spontanément, « relâcher là où c'est le moins risqué ». Dans l'exemple du §\ref{sec:ou}, A voit le même gain ($+0{,}1$) à relâcher la position 2 ou la position 3, alors que le vrai gain vaut $0{,}162$ contre $0{,}045$ : il ignore que la position 3 n'est atteinte qu'une fois sur deux.
 
 
 \subsection{Existence, structure et unicité}\label{sec:existenceII}
-\paragraph{Existence.} $K$ est un polyèdre non vide ($0\in K$ car $B\ge0$), fermé et borné ($0\le\varepsilon\le u$), donc compact ; $J=-E$ est un polynôme, donc continu. Le théorème~2.2.1 (la coercivité est automatique sur un borné) donne au moins un minimum de $J$, c'est-à-dire un maximum de $E$.
+\paragraph{Existence.} $K$ est un polyèdre non vide ($0\in K$ car $B\ge0$), fermé et borné ($0\le\varepsilon\le u$), donc compact ; $J=-E$ est un polynôme, donc continu. Le théorème~2.2.1 donne donc au moins un minimum de $J$, c'est-à-dire un maximum de $E$. Son hypothèse de coercivité (« infinie à l'infini » : $\nr{\varepsilon_n}\to+\infty\Rightarrow J(\varepsilon_n)\to+\infty$ pour toute suite de $K$) est vraie par vacuité, car aucune suite d'un ensemble borné ne tend vers l'infini : on retrouve le théorème de Weierstrass, selon lequel une fonction continue sur un compact atteint son minimum.
 
 \paragraph{Gradient.} $\alpha_t$ n'apparaît que dans les $P_k$ avec $k\ge t$, et linéairement : $\partial P_k/\partial\alpha_t=P_k/\alpha_t$ pour $k\ge t$, $0$ sinon. Comme $\partial\alpha_t/\partial\varepsilon_t=1$,
 \[\partial_tE=\sum_{k\ge t}\frac{P_k}{\alpha_t}=P_{t-1}\big(1+\alpha_{t+1}+\alpha_{t+1}\alpha_{t+2}+\dots+\alpha_{t+1}\cdots\alpha_\gamma\big)=P_{t-1}\,T_t,\]
@@ -413,7 +412,7 @@ Pour deux positions $i\ne j$, la direction $d=s_je_i-s_ie_j$ conserve le coût (
 \begin{proof}
 À coordonnées autres que $i,j$ fixées, $E$ est affine en $\alpha_i$ et en $\alpha_j$ séparément : $E=c_0+c_i\alpha_i+c_j\alpha_j+\partial^2_{ij}E\,\alpha_i\alpha_j$, où $\partial^2_{ij}E>0$ ne dépend ni de $\alpha_i$ ni de $\alpha_j$. Le long de $d$, $\alpha_i\leftarrow\alpha_i+hs_j$ et $\alpha_j\leftarrow\alpha_j-hs_i$ : le coefficient de $h^2$ vaut $-s_is_j\,\partial^2_{ij}E<0$.
 \end{proof}
-Transférer du budget d'une position à une autre est donc toujours un problème concave en dimension~1 : la non-concavité de $E$ vient des directions qui font varier deux positions dans le même sens (comme $\varepsilon_1=\varepsilon_2$ dans l'exemple) ou plus de deux positions à la fois. Ce lemme explique la proposition~\ref{prop:gamma2} ci-dessous et rend plausible l'unimodalité observée au §\ref{sec:algoII}, sans la démontrer pour $\gamma\ge3$.
+Transférer du budget d'une position à une autre est donc un problème concave en dimension~1 ; la non-concavité vient des directions qui font varier plusieurs positions dans le même sens, comme $\varepsilon_1=\varepsilon_2$ dans l'exemple. Ce lemme explique la proposition~\ref{prop:gamma2} et rend plausible l'unimodalité observée (§\ref{sec:algoII}).
 
 \begin{lemme}[budget saturé]\label{lem:sature}
 En tout maximum local, ou bien $s\cdot\varepsilon=B$, ou bien $\varepsilon=u$ (budget surabondant, $B\ge s\cdot u$).
@@ -464,7 +463,7 @@ Ces conditions sont \textbf{seulement nécessaires} : $J$ n'est pas convexe, don
 \item si $\varepsilon_t=0$ : $\mu^1_t=0$, donc $\rho_t\le\lambda$ (pas rentable, on ne relâche pas) ;
 \item si $\varepsilon_t=u_t$ : $\mu^0_t=0$, donc $\rho_t\ge\lambda$ (très rentable, on relâche au maximum).
 \end{itemize}
-C'est une \textbf{règle de seuil} : on relâche les positions dont le rendement dépasse le prix $\lambda$. Pour le \textbf{modèle A}, $\partial_t(\sum_j\alpha_j)=1$, donc $\rho_t=1/s_t$ ne dépend pas de $\varepsilon$ : on sature les positions par sensibilité croissante jusqu'à épuisement du budget (sac à dos fractionnaire ; notre simplexe et cet algorithme glouton donnent la même solution). Pour le \textbf{modèle B}, $\rho_t=P_{t-1}T_t/s_t$ dépend de la \textbf{place} de la position : une position précoce est atteinte souvent ($P_{t-1}$ grand) et débloque beaucoup de tokens ($T_t$ grand). C'est pourquoi le budget va au début du bloc.
+C'est une \textbf{règle de seuil} : on relâche les positions dont le rendement dépasse le prix $\lambda$. Pour le \textbf{modèle A}, $\rho_t=1/s_t$ ne dépend pas de $\varepsilon$, d'où le tri par sensibilité croissante (notre simplexe et cet algorithme glouton donnent la même solution). Pour le \textbf{modèle B}, $\rho_t=P_{t-1}T_t/s_t$ dépend de la \textbf{place} de la position : une position précoce est atteinte souvent ($P_{t-1}$ grand) et débloque beaucoup de tokens ($T_t$ grand). C'est pourquoi le budget va au début du bloc.
 
 \paragraph{$\lambda$ est le prix marginal du budget.} Soit $\varepsilon^*$ optimal pour le budget $B$, avec une position intérieure $t$ ($0<\varepsilon^*_t<u_t$), et soit $0<h\le s_t\min(\varepsilon^*_t,u_t-\varepsilon^*_t)$. Le point $\varepsilon^*+(h/s_t)e_t$ est admissible pour le budget $B+h$, et $\varepsilon^*-(h/s_t)e_t$ pour le budget $B-h$. Comme $E$ est affine en $\varepsilon_t$ ($\partial^2_{tt}E=0$), $E$ y vaut exactement $E^*(B)\pm\partial_tE\,h/s_t=E^*(B)\pm\lambda h$. Donc $E^*(B+h)\ge E^*(B)+\lambda h$ et $E^*(B-h)\ge E^*(B)-\lambda h$, c'est-à-dire
 \begin{equation}\label{eq:encadrement}
@@ -506,12 +505,12 @@ On prend $\gamma=6$, $a_t=0{,}6$ et un budget $B=0{,}3\,B_{\max}$ (où $B_{\max}
 
 La forme de la frontière $E^*(B)$ dépend du profil. En \textbf{S2}, elle est convexe et $\lambda^*(B)$ croît (figure~\ref{fig:frontiere}c) : l'effet de complémentarité des positions ($\partial^2_{ij}E>0$) domine, et il vaut mieux concentrer la déviation sur quelques positions que de la diluer (seules les deux premières sont relâchées, figure~\ref{fig:allocation}). En \textbf{S3}, au contraire, la frontière est essentiellement concave (figure~\ref{fig:frontiere}b) : sa pente décroît d'un segment à l'autre, car on dépense d'abord sur les positions bon marché ($s_t=0{,}3$), très rentables, puis sur les pivots, chers, comme dans un sac à dos. Les deux effets coexistent : en général, $E^*(B)$ n'est ni convexe ni concave.
 
-L'encadrement~\eqref{eq:encadrement} dit où la pente peut baisser. Pour $B<s\cdot u$, le budget est saturé (lemme~\ref{lem:sature}). Si de plus $B$ n'est pas l'une des valeurs « sommets » $B_I=\sum_{t\in I}s_tu_t$ ($I\subset\{1,\dots,\gamma\}$), l'optimum n'est pas un sommet du pavé : il a une position intérieure, et \eqref{eq:encadrement} donne en $B$ une droite d'appui locale de pente $\lambda$, située sous $E^*$. Or une fonction continue qui admet une telle droite en tout point d'un intervalle est convexe sur cet intervalle\footnote{Si $f$ passait strictement au-dessus d'une de ses cordes sur $[c,d]$, la différence $g$ entre $f$ et la corde atteindrait un maximum $>0$ en un $x_0\in\,]c,d[$. La droite d'appui en $x_0$ a forcément la pente de la corde (sinon $g$ dépasserait $g(x_0)$ d'un côté de $x_0$), donc $g=g(x_0)$ près de $x_0$ : l'ensemble où $g$ atteint son maximum serait non vide, ouvert et fermé dans $[c,d]$, sans contenir $c$ ni $d$, ce qui contredit la connexité. $E^*$ est bien continue, et même localement lipschitzienne : si $\varepsilon'$ est optimal pour $B'>B>0$, le point $(B/B')\varepsilon'$ est admissible pour $B$.}. Ainsi, \textbf{$E^*$ est convexe entre deux valeurs $B_I$ consécutives, et sa pente ne peut baisser qu'en un $B_I$}. En S3, l'optimum relâche l'une après l'autre les positions bon marché 1, 3 et 4, puis le pivot précoce 2 (un temps avec la position 6), et le pivot tardif 5 en dernier : la pente chute en $B_I$ pour $I=\{1\}$, $\{1,3\}$, $\{1,3,4\}$ et $\{1,2,3,4,6\}$, d'où l'allure concave. Pour $\gamma=2$, en régime intérieur, $E^*$ est convexe (proposition~\ref{prop:gamma2}).
+L'encadrement~\eqref{eq:encadrement} dit où la pente peut baisser. Pour $B<s\cdot u$, le budget est saturé (lemme~\ref{lem:sature}). Si de plus $B$ n'est pas l'une des valeurs « sommets » $B_I=\sum_{t\in I}s_tu_t$ ($I\subset\{1,\dots,\gamma\}$), l'optimum n'est pas un sommet du pavé : il a une position intérieure, et \eqref{eq:encadrement} donne en $B$ une droite d'appui locale de pente $\lambda$, située sous $E^*$. Or une fonction continue qui admet une telle droite en tout point d'un intervalle est convexe sur cet intervalle\footnote{Si $f$ passait strictement au-dessus d'une de ses cordes sur $[c,d]$, la différence $g$ entre $f$ et la corde atteindrait un maximum $>0$ en un $x_0\in\,]c,d[$. La droite d'appui en $x_0$ a forcément la pente de la corde (sinon $g$ dépasserait $g(x_0)$ d'un côté de $x_0$), donc $g=g(x_0)$ près de $x_0$ : l'ensemble où $g$ atteint son maximum serait non vide, ouvert et fermé dans $[c,d]$, sans contenir $c$ ni $d$, ce qui contredit la connexité. $E^*$ est bien continue, et même localement lipschitzienne : si $\varepsilon'$ est optimal pour $B'>B>0$, le point $(B/B')\varepsilon'$ est admissible pour $B$.}. Ainsi, \textbf{$E^*$ est convexe entre deux valeurs $B_I$ consécutives, et sa pente ne peut baisser qu'en un $B_I$}. En S3, l'optimum relâche l'une après l'autre les positions bon marché 1, 3 et 4, puis le pivot précoce 2 (un temps avec la position 6), et le pivot tardif 5 en dernier : la pente chute en $B_I$ pour $I=\{1\}$, $\{1,3\}$, $\{1,3,4\}$ et $\{1,2,3,4,6\}$, d'où l'allure concave.
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.82\linewidth]{fig6_frontier.png}
-\caption{(a-b) Tokens par passe en fonction du budget, pour l'optimum et trois heuristiques. (c) Multiplicateur KKT $\lambda^*(B)$ et pente numérique $\Delta E^*/\Delta B$ en S2 : $\lambda$ est bien le prix marginal du budget.}
+\includegraphics[width=0.76\linewidth]{fig6_frontier.png}
+\caption{(a-b) Tokens par passe selon le budget, pour l'optimum et trois heuristiques. (c) En S2, $\lambda^*(B)$ coïncide avec la pente numérique $\Delta E^*/\Delta B$.}
 \label{fig:frontiere}
 \end{figure}
 
@@ -522,19 +521,19 @@ Le target (Qwen2.5-1.5B) rédige des solutions à 16 problèmes GSM8K (2344 toke
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.8\linewidth]{fig7_real_data.png}
-\caption{(a) Distribution des acceptations exactes mesurées. (b) Frontière vitesse--budget sur les données réelles. (c) Part relâchée selon la position dans le bloc, à $B=0{,}2\,B_{\max}$.}
+\includegraphics[width=0.72\linewidth]{fig7_real_data.png}
+\caption{(a) Acceptations exactes mesurées. (b) Frontière vitesse--budget réelle. (c) Part relâchée par position, à $B=0{,}2\,B_{\max}$.}
 \label{fig:reel}
 \end{figure}
 
 %=====================================================================
 \section{Conclusion, limites et lien avec le projet}
 %=====================================================================
-Les deux problèmes se traitent avec les outils du cours. La partie I est un PL de transport : le simplexe et la dualité en donnent la valeur ($1-\TV$), un certificat explicite et le prix exact d'une unité de déviation. La partie II est non concave sous contraintes affines et qualifiées : KKT donne une règle de seuil dont le seuil $\lambda$ est le prix marginal exact du budget, et le gradient projeté converge vers un point KKT, le même depuis tous nos départs.
+Les deux problèmes se traitent avec les outils du cours : la partie I par le simplexe et la dualité (valeur $1-\TV$, certificat explicite, prix d'une unité de déviation) ; la partie II, non concave, par KKT (règle de seuil, dont le seuil $\lambda$ est le prix marginal exact du budget) et le gradient projeté, qui aboutit au même point KKT depuis tous nos départs.
 
 Le message pour notre projet de recherche : \textbf{la structure en bloc change la réponse}. Une règle qui relâche les tokens peu sensibles sans tenir compte de leur position (modèle A) peut perdre plus d'un cinquième de la vitesse atteignable (en S2, 2,79 tokens par passe contre 3,52). Et la vitesse pousse à relâcher le début du bloc, à l'opposé des heuristiques de sécurité qui le vérifient plus strictement~\cite{secure} : cette tension est à quantifier avec de vraies sensibilités.
 
-\textbf{Limites.} (H1) ignore la corrélation entre positions ; (H2) est une approximation au premier ordre ; les blocs réels se recalent après chaque rejet ; et nos sensibilités sont des hypothèses, que le projet de recherche devra mesurer.
+\textbf{Limites.} (H1) ignore la corrélation entre positions, (H2) est une approximation au premier ordre, les blocs réels se recalent après chaque rejet, et nos sensibilités sont des hypothèses que le projet devra mesurer.
 
 %=====================================================================
 \appendix
@@ -551,12 +550,12 @@ Avec $y=\varepsilon_k+\tau g$, $z^*=\varepsilon^+$ et $w=\varepsilon_k$ : $\sca{
 \begin{equation*}\label{eq:A3}
 E(\varepsilon_{k+1})\ \ge\ E(\varepsilon_k)+\Big(\frac1\tau-\frac L2\Big)\nr{\varepsilon_{k+1}-\varepsilon_k}^2,\qquad \frac1\tau-\frac L2>0.\tag{A.2}
 \end{equation*}
-\item \textbf{Conséquences.} $E(\varepsilon_k)$ croît et reste majorée par $1+\gamma$ ; en sommant \eqref{eq:A3}, $\sum_k\nr{\varepsilon_{k+1}-\varepsilon_k}^2<\infty$, donc $\nr{\varepsilon_{k+1}-\varepsilon_k}\to0$. $K$ étant compact, une sous-suite $\varepsilon_{k_j}$ converge vers $\bar\varepsilon$, ainsi que $\varepsilon_{k_j+1}$ ; par continuité de $P_K$ (1-lipschitzienne) et de $\nabla E$, $\bar\varepsilon=P_K\big(\bar\varepsilon+\tau\nabla E(\bar\varepsilon)\big)$.
+\item \textbf{Conséquences.} $E(\varepsilon_k)$ croît et reste majorée par $1+\gamma$, donc en sommant \eqref{eq:A3}, $\nr{\varepsilon_{k+1}-\varepsilon_k}\to0$. $K$ étant compact, une sous-suite $\varepsilon_{k_j}$ converge vers $\bar\varepsilon$, ainsi que $\varepsilon_{k_j+1}$ ; par continuité de $P_K$ et de $\nabla E$, $\bar\varepsilon=P_K\big(\bar\varepsilon+\tau\nabla E(\bar\varepsilon)\big)$.
 \item \textbf{Point fixe $\iff$ Euler $\iff$ KKT.} Par \eqref{eq:A1}, ce point fixe équivaut à $\sca{\nabla E(\bar\varepsilon)}{w-\bar\varepsilon}\le0$ pour tout $w\in K$ : la condition nécessaire d'Euler pour un minimum local de $J=-E$ sur $K$, équivalente aux conditions KKT du §\ref{sec:kkt} puisque les contraintes sont affines (lemme de Farkas).
 \end{enumerate}
-Rien ne garantit que $\bar\varepsilon$ soit le maximum \emph{global}, ni que toute la suite converge (c'est le cas si les points KKT sont isolés) : d'où les multi-départs du §\ref{sec:algoII}.
+Rien ne garantit que $\bar\varepsilon$ soit le maximum \emph{global}, ni que toute la suite converge (sauf si les points KKT sont isolés) : d'où les multi-départs.
 
-\begin{thebibliography}{9}\footnotesize\setlength{\itemsep}{1pt}
+\begin{thebibliography}{9}\footnotesize\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
 \bibitem{leviathan} Y.~Leviathan, M.~Kalman, Y.~Matias. \emph{Fast Inference from Transformers via Speculative Decoding}. ICML 2023.
 \bibitem{chen} C.~Chen et al. \emph{Accelerating Large Language Model Decoding with Speculative Sampling}. {\NoAutoSpacing arXiv:2302.01318}, 2023.
 \bibitem{yin} M.~Yin, M.~Chen, K.~Huang, M.~Wang. \emph{A Theoretical Perspective for Speculative Decoding Algorithm}. NeurIPS 2024.
