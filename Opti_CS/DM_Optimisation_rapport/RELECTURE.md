@@ -4,7 +4,15 @@ Relecture du rapport préliminaire (version HTML/PDF du binôme), avec vérifica
 La version corrigée et mise en forme est `rapport_dm.tex` (PDF compilé : `rapport_dm.pdf`, 18 pages annexes comprises).
 Les numéros de figures ci-dessous sont ceux de la version LaTeX.
 
-**Version courte** : `rapport_dm_court.tex` (PDF : `rapport_dm_court.pdf`, 9 pages). Elle garde les mêmes modèles, résultats et démonstrations, mais sans les exemples numériques, la validation détaillée, trois figures (structure, cycle, données réelles) et l'annexe de reproduction.
+**Trois versions du rapport :**
+
+| Fichier | Pages | Contenu |
+|---|---|---|
+| `rapport_dm.tex` | 18 | version longue : tout le détail, introduction courte |
+| `rapport_dm_intermediaire.tex` | 15 | introduction accessible à un non-spécialiste des LLM (schéma, exemples chiffrés, lexique) et l'essentiel du détail de la version longue |
+| `rapport_dm_court.tex` | 11 | même introduction accessible, démonstrations complètes mais condensées, sans validation détaillée |
+
+La version intermédiaire omet, par rapport à la version longue, la figure du cycle (son image porte un renvoi « figure 1 b » devenu faux), la figure de convergence (ses chiffres sont dans le texte), l'exemple numérique de la proposition 3 (passé dans la légende de sa figure) et l'annexe de reproduction.
 
 ## Verdict
 
