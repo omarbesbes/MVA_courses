@@ -31,6 +31,7 @@ const PAGES = [
   { file: "09_td2.html", nav: "TD2" },
   { file: "10_td3.html", nav: "TD3" },
   { file: "07_fiche.html", nav: "Fiche réflexes" },
+  { file: "11_revision.html", nav: "Révision examen" },
 ];
 
 const MACROS = {
@@ -217,6 +218,22 @@ function katexCss() {
   return css;
 }
 
+// Corps d'une page : le texte de la page, plus les fragments inclus par <!--#include _rev/x.html-->
+// (chemin relatif à pages/). Chaque fragment est rendu à part : les erreurs citent son nom et ses lignes.
+const fragmentsOf = {};
+function renderBody(body, file) {
+  const parts = body.split(/<!--#include ([\w./-]+)-->/);
+  fragmentsOf[file] = parts.filter((_, k) => k % 2 === 1);
+  return parts
+    .map((part, k) => {
+      if (k % 2 === 0) return frenchSpacing(processMath(part, file));
+      const p = path.join(here, "pages", part);
+      if (!fs.existsSync(p)) { warnings.push(`${file}: fragment ${part} absent (ignoré)`); return ""; }
+      return frenchSpacing(processMath(fs.readFileSync(p, "utf8"), part));
+    })
+    .join("");
+}
+
 function main() {
   const template = fs.readFileSync(path.join(here, "template.html"), "utf8");
   const css = katexCss() + "\n" + fs.readFileSync(path.join(here, "style.css"), "utf8");
@@ -231,7 +248,7 @@ function main() {
     const src = fs.readFileSync(path.join(here, "pages", page.file), "utf8");
     const { meta, body } = parseFront(src);
     if (!meta.title) errors.push(`${page.file}: pas de « title » dans l'en-tête`);
-    let html = frenchSpacing(processMath(body, page.file));
+    let html = renderBody(body, page.file);
     const t = buildToc(html, page.file);
     allIds[page.file] = t.ids;
     built.push({ page, meta, html: t.html, toc: t.toc, i });
@@ -278,7 +295,7 @@ function main() {
   }
 
   // Avec des noms de pages en argument, on ne signale que leurs erreurs.
-  const mine = (msg) => !only.length || only.some((f) => msg.startsWith(f));
+  const mine = (msg) => !only.length || only.some((f) => msg.startsWith(f) || (fragmentsOf[f] || []).some((g) => msg.startsWith(g)));
   for (const w of warnings.filter(mine)) console.warn("avertissement  " + w);
   errors.splice(0, errors.length, ...errors.filter(mine));
   if (errors.length) {

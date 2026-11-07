@@ -20,8 +20,49 @@
       redrawAll();
     } else if (a === "expand" || a === "collapse") {
       document.querySelectorAll("main details.fold").forEach(function (d) { d.open = a === "expand"; });
+    } else if (a === "autotest") {
+      setAutotest(!document.body.classList.contains("autotest"));
+    } else if (a === "autotest-hide") {
+      setAutotest(true);
     }
   });
+
+  /* ---------------- révision : mode auto-test ----------------
+     Les éléments .memo contiennent ce qui est à savoir par cœur. En mode auto-test ils sont
+     floutés : on lit le titre, on récite, puis un clic (ou Entrée) révèle la réponse. */
+  var memos = document.querySelectorAll("main .memo");
+  var fab = null;
+  function setAutotest(on) {
+    document.body.classList.toggle("autotest", on);
+    memos.forEach(function (m) {
+      m.classList.remove("shown");
+      if (on) { m.setAttribute("tabindex", "0"); m.setAttribute("title", "Cliquez pour révéler"); }
+      else { m.removeAttribute("tabindex"); m.removeAttribute("title"); }
+    });
+    if (fab) fab.textContent = on ? "Quitter l\u2019auto-test" : "Mode auto-test";
+    document.querySelectorAll("[data-autotest-label]").forEach(function (b) {
+      b.textContent = on ? "Quitter le mode auto-test" : "Activer le mode auto-test";
+    });
+  }
+  function reveal(m) { if (document.body.classList.contains("autotest")) { m.classList.add("shown"); m.removeAttribute("title"); } }
+  if (memos.length) {
+    fab = document.createElement("button");
+    fab.type = "button";
+    fab.className = "autotest-fab";
+    fab.setAttribute("data-action", "autotest");
+    fab.textContent = "Mode auto-test";
+    document.body.appendChild(fab);
+    document.addEventListener("click", function (e) {
+      var m = e.target.closest && e.target.closest(".memo");
+      if (m && !m.classList.contains("shown")) { e.preventDefault(); reveal(m); }
+    }, true);
+    document.addEventListener("keydown", function (e) {
+      var m = e.target.closest && e.target.closest(".memo");
+      if (m && (e.key === "Enter" || e.key === " ") && document.body.classList.contains("autotest") && !m.classList.contains("shown")) {
+        e.preventDefault(); reveal(m);
+      }
+    });
+  }
 
   /* ---------------- impression : tout déplier ---------------- */
   var printOpened = [];
