@@ -28,9 +28,10 @@
   });
 
   /* ---------------- révision : mode auto-test ----------------
-     Les éléments .memo contiennent ce qui est à savoir par cœur. En mode auto-test ils sont
-     floutés : on lit le titre, on récite, puis un clic (ou Entrée) révèle la réponse. */
-  var memos = document.querySelectorAll("main .memo");
+     Les éléments .memo contiennent ce qui est à savoir par cœur, les .hook l'aide pour le retrouver.
+     En mode auto-test ils sont floutés : on lit le titre, on récite, puis un clic (ou Entrée)
+     révèle l'indice ou la réponse. */
+  var memos = document.querySelectorAll("main .memo, main .hook");
   var fab = null;
   function setAutotest(on) {
     document.body.classList.toggle("autotest", on);
@@ -45,7 +46,7 @@
     });
   }
   function reveal(m) { if (document.body.classList.contains("autotest")) { m.classList.add("shown"); m.removeAttribute("title"); } }
-  if (memos.length) {
+  if (document.querySelector("main .memo")) {
     fab = document.createElement("button");
     fab.type = "button";
     fab.className = "autotest-fab";
@@ -53,11 +54,11 @@
     fab.textContent = "Mode auto-test";
     document.body.appendChild(fab);
     document.addEventListener("click", function (e) {
-      var m = e.target.closest && e.target.closest(".memo");
-      if (m && !m.classList.contains("shown")) { e.preventDefault(); reveal(m); }
+      var m = e.target.closest && e.target.closest(".memo, .hook");
+      if (m && !m.classList.contains("shown") && document.body.classList.contains("autotest")) { e.preventDefault(); reveal(m); }
     }, true);
     document.addEventListener("keydown", function (e) {
-      var m = e.target.closest && e.target.closest(".memo");
+      var m = e.target.closest && e.target.closest(".memo, .hook");
       if (m && (e.key === "Enter" || e.key === " ") && document.body.classList.contains("autotest") && !m.classList.contains("shown")) {
         e.preventDefault(); reveal(m);
       }
