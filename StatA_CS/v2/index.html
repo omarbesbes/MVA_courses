@@ -282,9 +282,9 @@ a.card:hover { border-color: var(--link); }
 .hook > b:first-child, .hook > strong:first-child { color: var(--text); }
 .memo { border-radius: 6px; transition: filter 0.15s, opacity 0.15s; }
 td.memo, th.memo { border-radius: 0; }
-body.autotest .memo:not(.shown) { filter: blur(0.45em); opacity: 0.5; cursor: pointer; user-select: none; -webkit-user-select: none; }
-body.autotest .memo:not(.shown) * { pointer-events: none; }
-body.autotest .memo:not(.shown):hover { opacity: 0.7; }
+body.autotest :is(.memo, .hook):not(.shown) { filter: blur(0.45em); opacity: 0.5; cursor: pointer; user-select: none; -webkit-user-select: none; }
+body.autotest :is(.memo, .hook):not(.shown) * { pointer-events: none; }
+body.autotest :is(.memo, .hook):not(.shown):hover { opacity: 0.7; }
 .autotest-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin: 1rem 0; padding: 0.6rem 0.8rem; border: 1px dashed var(--axis); border-radius: 10px; background: var(--surface); }
 .autotest-bar p { margin: 0; flex: 1 1 16rem; font-size: 0.92rem; }
 .autotest-fab { position: fixed; right: 14px; bottom: 14px; z-index: 20; font: inherit; font-size: 0.85rem; font-weight: 650; padding: 0.45rem 0.95rem; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text); box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2); cursor: pointer; }
@@ -305,7 +305,7 @@ body.autotest .autotest-fab { background: var(--c-piege); border-color: var(--c-
   details.fold > .fold-body { display: block !important; }
   .box, .exo, figure.fig, .widget { break-inside: avoid; }
   .autotest-fab, .autotest-bar { display: none !important; }
-  body.autotest .memo { filter: none !important; opacity: 1 !important; }
+  body.autotest :is(.memo, .hook) { filter: none !important; opacity: 1 !important; }
 }
 
 </style>
@@ -343,7 +343,7 @@ body.autotest .autotest-fab { background: var(--c-piege); border-color: var(--c-
 </div>
 
 <div class="box methode"><div class="box-h">L'examen approche ? Commencez par la page de révision</div>
-<p>La page <a href="11_revision.html"><strong>Révision pour l'examen</strong></a> rassemble tout le cours et les trois TD, triés selon ce qu'il faut en faire : <span class="tag coeur">par cœur</span> <span class="tag refaire">à savoir refaire</span> <span class="tag comprendre">à comprendre</span>. Vous y trouverez un plan de révision sur deux jours, un mode auto-test qui cache les formules à réciter, les théorèmes avec leurs hypothèses, les preuves à savoir refaire et des questions par séance. La même page existe en <a href="Revision_examen_StatA.pdf">PDF (A4)</a>, preuves dépliées, pour l'imprimer.</p>
+<p>La page <a href="11_revision.html"><strong>Révision pour l'examen</strong></a> rassemble tout le cours et les trois TD, triés selon ce qu'il faut en faire : <span class="tag coeur">par cœur</span> <span class="tag refaire">à savoir refaire</span> <span class="tag comprendre">à comprendre</span>. Vous y trouverez un plan de révision sur deux jours, un mode auto-test qui cache les formules à réciter, les théorèmes avec leurs hypothèses, les preuves à savoir refaire et des questions par séance. La même page existe en <a href="Revision_examen_StatA.pdf">PDF (A4)</a>, preuves dépliées, pour l'imprimer, ainsi qu'une version <a href="Revision_essentiel_StatA.pdf">« essentiel »</a> (les synthèses seulement) pour la dernière relecture.</p>
 </div>
 
 <h2 id="mode-emploi">Comment travailler avec ce guide<a class="anchor" href="#mode-emploi" aria-label="Lien vers cette section">#</a></h2>
@@ -489,9 +489,10 @@ M1001 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">�
   });
 
   /* ---------------- révision : mode auto-test ----------------
-     Les éléments .memo contiennent ce qui est à savoir par cœur. En mode auto-test ils sont
-     floutés : on lit le titre, on récite, puis un clic (ou Entrée) révèle la réponse. */
-  var memos = document.querySelectorAll("main .memo");
+     Les éléments .memo contiennent ce qui est à savoir par cœur, les .hook l'aide pour le retrouver.
+     En mode auto-test ils sont floutés : on lit le titre, on récite, puis un clic (ou Entrée)
+     révèle l'indice ou la réponse. */
+  var memos = document.querySelectorAll("main .memo, main .hook");
   var fab = null;
   function setAutotest(on) {
     document.body.classList.toggle("autotest", on);
@@ -506,7 +507,7 @@ M1001 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">�
     });
   }
   function reveal(m) { if (document.body.classList.contains("autotest")) { m.classList.add("shown"); m.removeAttribute("title"); } }
-  if (memos.length) {
+  if (document.querySelector("main .memo")) {
     fab = document.createElement("button");
     fab.type = "button";
     fab.className = "autotest-fab";
@@ -514,11 +515,11 @@ M1001 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">�
     fab.textContent = "Mode auto-test";
     document.body.appendChild(fab);
     document.addEventListener("click", function (e) {
-      var m = e.target.closest && e.target.closest(".memo");
-      if (m && !m.classList.contains("shown")) { e.preventDefault(); reveal(m); }
+      var m = e.target.closest && e.target.closest(".memo, .hook");
+      if (m && !m.classList.contains("shown") && document.body.classList.contains("autotest")) { e.preventDefault(); reveal(m); }
     }, true);
     document.addEventListener("keydown", function (e) {
-      var m = e.target.closest && e.target.closest(".memo");
+      var m = e.target.closest && e.target.closest(".memo, .hook");
       if (m && (e.key === "Enter" || e.key === " ") && document.body.classList.contains("autotest") && !m.classList.contains("shown")) {
         e.preventDefault(); reveal(m);
       }

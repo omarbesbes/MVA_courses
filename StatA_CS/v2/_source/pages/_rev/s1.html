@@ -2,9 +2,9 @@
 
 <div class="box resume"><div class="box-h">L'essentiel de la séance en 5 lignes</div>
 <ul>
-<li><strong>MCO</strong> : $X\hb\MC=PY$ est la projection de $Y$ sur $\Ima X$ ; erreur de prédiction $\sigma^2\rg(X)/n$. Inutilisables si $p\ge n$ ($\bstar$ non identifiable, interpolation) ou si $X\T X$ a de petites valeurs propres (variance $\sigma^2/\mu_j$).</li>
-<li><strong>Ridge</strong> $(X\T X+\lambda I_p)^{-1}X\T Y$ : décale le spectre de $\lambda$, multiplie chaque direction propre par $\frac{\mu_j}{\mu_j+\lambda}$ ; biaisé mais stable ; ne sélectionne pas.</li>
-<li><strong>ℓ0</strong> : MCO sur chaque sous-ensemble de variables + un prix par variable (Cp/AIC : $2\sigma^2/n$, BIC : $\sigma^2\log(n)/n$) ; sélectionne, mais $2^p$ modèles.</li>
+<li><strong>MCO</strong> : $X\hb\MC=PY$ est la projection de $Y$ sur $\Ima X$ ; erreur de prédiction $\sigma^2\rg(X)/n$. Inutilisables si $p\ge n$ (interpolation ; dès que $p>n$, $\bstar$ n'est plus identifiable) ou si $X\T X$ a de petites valeurs propres (variance $\sigma^2/\mu_j$).</li>
+<li><strong>Ridge</strong> $(X\T X+\lambda I_p)^{-1}X\T Y$ pour le critère $\norm{Y-X\beta}^2+\lambda\norm\beta^2$ (avec $\norm{Y-X\beta}_n^2$, $\lambda$ devient $n\lambda$) : décale le spectre de $\lambda$, multiplie la composante MCO de chaque direction propre par $\frac{\mu_j}{\mu_j+\lambda}$ ; biaisé mais stable ; ne sélectionne pas.</li>
+<li><strong>ℓ0</strong> : MCO sur chaque sous-ensemble de variables + un prix $\lambda_n$ par variable dans $\norm{Y-X\beta}_n^2+\lambda_n\norm\beta_0$ (Cp/AIC : $2\sigma^2/n$, BIC : $\sigma^2\log(n)/n$) ; sélectionne, mais $2^p$ modèles.</li>
 <li><strong>Parcimonie</strong> : $\abs{\Astar}\le s=o(n)$ ; l'oracle (MCO sur $\Astar$) fait $\sigma^2\abs{\Astar}/n$ : c'est la cible.</li>
 <li><strong>Lasso</strong> : pénalité $\lambda\norm\beta_1$, convexe <em>et</em> créatrice de zéros ; pénalisé ⇔ contraint. <strong>TD1</strong> : Ridge unique et contraint, biais et variance spectraux, Lasso pénalisé = contraint, inégalité oracle pour la sélection de modèles.</li>
 </ul></div>
@@ -21,7 +21,7 @@ $$Y=X\bstar+\eps,\qquad \eps\sim\N(0,\sigma^2I_n).$$
 <li>Grande dimension : $p=p(n)\ge n$. Objectifs : estimer $\bstar$ (estimation), $X\bstar$ (prédiction), et plus loin $\Astar=\{j:\bstar_j\ne0\}$ (sélection).</li>
 </ul>
 </div>
-<p class="hook"><b>Pour la retrouver :</b> la loi des données est $Y\sim\N(X\bstar,\sigma^2I_n)$ ; elle ne dépend de $\bstar$ qu'à travers $X\bstar$. Tout le cours en découle : $X\bstar$ est toujours « visible », $\bstar$ seulement si $X$ est injective, ou sous une hypothèse de parcimonie.</p>
+<p class="hook"><b>Pour la retrouver :</b> la loi des données est $Y\sim\N(X\bstar,\sigma^2I_n)$ ; elle ne dépend de $\bstar$ qu'à travers $X\bstar$. Tout le cours en découle : $X\bstar$ est toujours « visible », $\bstar$ seulement si $X$ est injective, ou bien sous une hypothèse de parcimonie et une condition sur $X$ (séance 3).</p>
 </div>
 
 <div class="box intu"><div class="box-h">À comprendre — Prédire n'est pas estimer <span class="tag comprendre">à comprendre</span> <a class="ref" href="01_seance1.html#objectifs-estimation">→ S1</a></div>
@@ -42,14 +42,14 @@ $$X\T X\,\hb=X\T Y.$$
 <ol class="steps">
 <li>$$\begin{aligned}\norm{Y-X\beta}^2&=Y\T Y-2\beta\T X\T Y\\&\quad+\beta\T X\T X\beta\end{aligned}$$<span class="why">on développe $(Y-X\beta)\T(Y-X\beta)$ ; $Y\T X\beta$ est un nombre, égal à sa transposée $\beta\T X\T Y$.</span></li>
 <li>$$\begin{aligned}&\nabla_\beta\norm{Y-X\beta}^2\\&=-2X\T Y+2X\T X\beta\\&=-2X\T(Y-X\beta)\end{aligned}$$<span class="why">$\nabla(a\T\beta)=a$ et $\nabla(\beta\T A\beta)=2A\beta$ pour $A$ symétrique.</span></li>
-<li>$$\begin{aligned}&\nabla_\beta\norm{Y-X\hb}^2=0\\&\iff X\T X\hb=X\T Y\end{aligned}$$<span class="why">le facteur $\frac1n$ ne change pas l'argmin.</span></li>
+<li>$$\begin{aligned}&\nabla_\beta\norm{Y-X\hb}^2=0\\&\iff X\T X\hb=X\T Y\end{aligned}$$<span class="why">on divise par $-2$ ; le facteur $\frac1n$ du critère ne change pas l'argmin.</span></li>
 <li>$$v\T(2X\T X)v=2\norm{Xv}^2\ge0$$<span class="why">hessienne positive : le critère est convexe, donc gradient nul ⇔ minimum global.</span></li>
 </ol></div></details>
 </div>
 
 <div class="box thm" id="s1-mco-unicite"><div class="box-h">Proposition — Quand les MCO sont-ils uniques ? <span class="tag coeur">par cœur</span> <a class="ref" href="01_seance1.html#mco-unicite">→ S1</a></div>
 <div class="memo">
-<p>$\Ker(X\T X)=\Ker X$. Donc $X\T X$ inversible $\iff$ $\Ker X=\{0\}$ $\iff$ colonnes linéairement indépendantes $\iff$ $\rg X=p$. C'est <strong>impossible si $p>n$</strong>, car $\rg X\le\min(n,p)$. Sinon, il y a une infinité de solutions $\hb+v$, $v\in\Ker X$, toutes avec le même ajustement $X\hb=PY$.</p>
+<p>$\Ker(X\T X)=\Ker X$. Donc $X\T X$ inversible $\iff$ $\Ker X=\{0\}$ $\iff$ colonnes linéairement indépendantes $\iff$ $\rg X=p$. C'est <strong>impossible si $p>n$</strong>, car $\rg X\le\min(n,p)$. Si $X\T X$ n'est pas inversible, il y a une infinité de solutions $\hb+v$, $v\in\Ker X$, toutes avec le même ajustement $X\hb=PY$.</p>
 </div>
 <p class="hook"><b>L'idée :</b> $X\T Xv=0\Rightarrow v\T X\T Xv=\norm{Xv}^2=0\Rightarrow Xv=0$. Par le théorème du rang, on en tire aussi $\rg(X\T X)=\rg X$.</p>
 </div>
@@ -91,7 +91,13 @@ $$\E\norm{Y-X\hb\MC}^2=\sigma^2\,(n-\rg X),$$
 $$\hat\sigma^2=\frac{\norm{Y-X\hb\MC}^2}{n-\rg X}.$$
 <p>Si $\rg X=n$, les résidus sont nuls : on ne peut plus estimer $\sigma^2$ ainsi.</p>
 </div>
-<p class="hook"><b>Pour la retrouver :</b> $Y-X\hb=(I-P)Y=(I-P)\eps$ car $(I-P)X\bstar=0$, puis l'astuce de la trace avec $\tr(I-P)=n-\rg X$. C'est le « diviser par $n-p$ » des statistiques classiques.</p>
+<p class="hook"><b>Pour la retrouver :</b> le bruit a $n$ directions ; le modèle en « mange » $\rg X$ (elles passent dans $X\hb$), il en reste $n-\rg X$ dans les résidus. C'est le « diviser par $n-p$ » des statistiques classiques.</p>
+<details class="fold proof"><summary>Preuve express</summary><div class="fold-body">
+<ol class="steps">
+<li>$$Y-X\hb\MC=(I_n-P)Y=(I_n-P)\eps$$<span class="why">$X\hb\MC=PY$ ; $(I_n-P)X\bstar=0$ car $X\bstar\in\Ima X$.</span></li>
+<li>$$\E\norm{(I_n-P)\eps}^2=\sigma^2\tr(I_n-P)$$<span class="why">astuce de la trace, avec $(I_n-P)\T(I_n-P)=I_n-P$ (projecteur orthogonal).</span></li>
+<li>$$\tr(I_n-P)=n-\tr P=n-\rg X$$<span class="why">linéarité de la trace et $\tr P=\rg X$.</span></li>
+</ol></div></details>
 </div>
 
 <div class="box piege"><div class="box-h">Piège — De quelle erreur parle-t-on ?</div>
@@ -104,7 +110,7 @@ $$\hat\sigma^2=\frac{\norm{Y-X\hb\MC}^2}{n-\rg X}.$$
 
 <h3 id="s1-limites">Les limites des MCO</h3>
 
-<div class="box thm" id="s1-identifiabilite"><div class="box-h">Proposition — Quand $p>n$, $\bstar$ n'est pas identifiable <span class="ref">Cours1 · diapo 8</span> <span class="tag coeur">par cœur</span> <a class="ref" href="01_seance1.html#identifiabilite">→ S1</a></div>
+<div class="box thm" id="s1-identifiabilite"><div class="box-h">Proposition — Identifiabilité de $\bstar$ quand $p>n$ <span class="ref">Cours1 · diapo 8</span> <span class="tag coeur">par cœur</span> <a class="ref" href="01_seance1.html#identifiabilite">→ S1</a></div>
 <div class="memo">
 <p>Si $p>n$, alors $\dim\Ker X=p-\rg X\ge p-n>0$. Pour $v\in\Ker X$, $v\ne0$, on a $X(\bstar+v)=X\bstar$ : $\bstar$ et $\bstar+v$ donnent la <strong>même loi</strong> de $Y$. Conséquences :</p>
 <ul>
@@ -112,13 +118,14 @@ $$\hat\sigma^2=\frac{\norm{Y-X\hb\MC}^2}{n-\rg X}.$$
 <li>les MCO ne sont pas uniques et pas interprétables ;</li>
 <li>typiquement $\rg X=n$ : l'erreur vaut $\sigma^2$, il n'y a pas de consistance.</li>
 </ul>
+<p>Plus généralement (diapo 8), $\bstar$ n'est pas identifiable dès que $X\T X$ n'est pas inversible, c'est-à-dire dès que les colonnes de $X$ sont liées.</p>
 </div>
 <p class="hook"><b>Pour la retrouver :</b> identifiable veut dire que deux paramètres différents donnent deux lois différentes ; or la loi de $Y$ ne voit que $X\bstar$. Ajoutez le théorème du rang et $\rg X\le n$.</p>
 </div>
 
 <div class="box intu" id="s1-conditionnement"><div class="box-h">À comprendre — Le mauvais conditionnement <span class="tag comprendre">à comprendre</span> <a class="ref" href="01_seance1.html#conditionnement">→ S1</a></div>
 <p>$\mu_j=v_j\T X\T Xv_j=\norm{Xv_j}^2$ mesure de combien bougent les prédictions quand $\beta$ bouge dans la direction $v_j$. Une petite valeur propre désigne une direction presque invisible pour les données, donc une variance $\sigma^2/\mu_j$ énorme.</p>
-<p>Des variables corrélées en créent. Deux colonnes normalisées ($\norm{X_j}^2=n$) de corrélation $\rho$ donnent les valeurs propres $n(1\pm\rho)$ et $\Var(\hb\MC_1)=\frac{\sigma^2}{n(1-\rho^2)}$. Avec $\rho=0{,}99$, c'est 50 fois plus qu'avec $\rho=0$, et le conditionnement $\frac{1+\rho}{1-\rho}$ vaut 199.</p>
+<p>Des variables corrélées en créent. Deux colonnes centrées et normalisées ($\norm{X_j}^2=n$) de corrélation empirique $\rho$ donnent les valeurs propres $n(1\pm\rho)$ et $\Var(\hb\MC_1)=\frac{\sigma^2}{n(1-\rho^2)}$. Avec $\rho=0{,}99$, c'est environ 50 fois plus qu'avec $\rho=0$, et le conditionnement $\frac{1+\rho}{1-\rho}$ vaut 199.</p>
 <p><strong>À retenir :</strong> « $X\T X$ inversible » ne suffit pas ; ce qui compte, c'est la <strong>plus petite valeur propre</strong>. La condition RE de la séance 3 en est la version raffinée.</p>
 </div>
 
@@ -136,10 +143,11 @@ $$\begin{aligned}\hb=\argmin_{\beta\in\R^p}\Big\{&\norm{Y-X\beta}_n^2\\&+\mathrm
 <div class="memo">
 <p>Pour $\lambda>0$, le minimiseur existe et est <strong>unique</strong>, même si $p\ge n$.</p>
 <ul>
-<li>Critère $\norm{Y-X\beta}^2+\lambda\norm\beta^2$ (formule de la diapo, TD1) :
+<li>Critère non normalisé $\norm{Y-X\beta}^2+\lambda\norm\beta^2$ (convention du TD1) :
 $$\hb^R(\lambda)=(X\T X+\lambda I_p)^{-1}X\T Y.$$</li>
-<li>Critère $\norm{Y-X\beta}_n^2+\lambda\norm\beta^2$ (celui qui est écrit sur la diapo) : $(X\T X+n\lambda I_p)^{-1}X\T Y$.</li>
+<li>Critère normalisé $\norm{Y-X\beta}_n^2+\lambda\norm\beta^2$ : $(X\T X+n\lambda I_p)^{-1}X\T Y$.</li>
 </ul>
+<p>La diapo 11 mélange les deux : elle écrit le critère normalisé, mais la formule du critère non normalisé.</p>
 </div>
 <p class="hook"><b>Pour la retrouver :</b> ce sont les équations normales dans lesquelles $X\T X$ devient $X\T X+\lambda I_p$, car le gradient gagne un terme $+2\lambda\beta$. Un $\frac1n$ devant l'ajustement se reporte sur $\lambda$ : il devient $n\lambda$.</p>
 <details class="fold proof"><summary>Preuve express (TD1, ex. 1 Q1)</summary><div class="fold-body">
@@ -168,32 +176,33 @@ $$v_j\T\hb^R(\lambda)=\frac{\mu_j}{\mu_j+\lambda}\;v_j\T\hb\MC\qquad(\mu_j>0).$$
 
 <div class="box thm" id="s1-ridge-bv"><div class="box-h">Formule — Biais et variance du Ridge <span class="tag coeur">par cœur</span><span class="tag refaire">à savoir refaire</span> <a class="ref" href="01_seance1.html#ridge-biais-variance">→ S1</a> <a class="ref" href="08_td1.html#ex1-q3">→ TD1</a></div>
 <div class="memo">
-<p>Critère non normalisé. On écrit $X\T X=PDP\T$ avec $D=\diag(\mu_1,\dots,\mu_p)$ et $\theta_j=[P\T\bstar]_j=v_j\T\bstar$.</p>
-$$\E\hb^R(\lambda)-\bstar=-\lambda(X\T X+\lambda I_p)^{-1}\bstar,$$
+<p>Critère non normalisé $\norm{Y-X\beta}^2+\lambda\norm\beta^2$. On écrit $X\T X=PDP\T$, avec $P$ orthogonale de colonnes $v_1,\dots,v_p$ (ici $P$ n'est pas un projecteur), $D=\diag(\mu_1,\dots,\mu_p)$ et $\theta_j=[P\T\bstar]_j=v_j\T\bstar$.</p>
+$$\E\hb^R(\lambda)-\bstar=-\lambda(X\T X+\lambda I_p)^{-1}\bstar.$$
+<p>Dans la direction $v_j$ : biais $-\dfrac{\lambda}{\mu_j+\lambda}\,\theta_j$, variance $\dfrac{\sigma^2\mu_j}{(\mu_j+\lambda)^2}$. En sommant :</p>
 $$\begin{aligned}B^R(\lambda)&=\norm{\E\hb^R(\lambda)-\bstar}^2\\&=\sum_{j=1}^p\frac{\lambda^2\theta_j^2}{(\mu_j+\lambda)^2},\end{aligned}$$
 $$\begin{aligned}V^R(\lambda)&=\E\norm{\hb^R(\lambda)-\E\hb^R(\lambda)}^2\\&=\sigma^2\sum_{j=1}^p\frac{\mu_j}{(\mu_j+\lambda)^2},\end{aligned}$$
 $$\E\norm{\hb^R(\lambda)-\bstar}^2=\sum_{j=1}^p\frac{\lambda^2\theta_j^2+\sigma^2\mu_j}{(\mu_j+\lambda)^2}.$$
 <p>Le biais croît avec $\lambda$ (vers $\norm\bstar^2$) et la variance décroît (vers 0). En $\lambda=0$, si tous les $\mu_j>0$, on retrouve le risque des MCO, $\sigma^2\sum_j1/\mu_j$.</p>
 </div>
-<p class="hook"><b>Pour la retrouver :</b> dans la direction $v_j$, le Ridge garde la fraction $\frac{\mu_j}{\mu_j+\lambda}$ de la composante, donc il en perd $\frac{\lambda}{\mu_j+\lambda}\theta_j$ (c'est le biais). Et $v_j\T\hb^R=\frac{(Xv_j)\T Y}{\mu_j+\lambda}$ a pour variance $\frac{\sigma^2\norm{Xv_j}^2}{(\mu_j+\lambda)^2}=\frac{\sigma^2\mu_j}{(\mu_j+\lambda)^2}$.</p>
+<p class="hook"><b>Pour la retrouver :</b> dans la direction $v_j$, le Ridge garde en moyenne la fraction $\frac{\mu_j}{\mu_j+\lambda}$ de $\theta_j$, donc il en perd $\frac{\lambda}{\mu_j+\lambda}\theta_j$ (c'est le biais, au signe près). Et $v_j\T\hb^R=\frac{(Xv_j)\T Y}{\mu_j+\lambda}$ a pour variance $\frac{\sigma^2\norm{Xv_j}^2}{(\mu_j+\lambda)^2}=\frac{\sigma^2\mu_j}{(\mu_j+\lambda)^2}$.</p>
 <details class="fold proof"><summary>Preuve express (TD1, ex. 1 Q3–Q4)</summary><div class="fold-body">
 <ol class="steps">
 <li>$$\begin{aligned}\E\hb^R&=(X\T X+\lambda I_p)^{-1}X\T X\bstar\\&=\bstar-\lambda(X\T X+\lambda I_p)^{-1}\bstar\end{aligned}$$<span class="why">$\hb^R$ est linéaire en $Y$ et $\E Y=X\bstar$ ; on écrit $X\T X=(X\T X+\lambda I_p)-\lambda I_p$.</span></li>
 <li>$$\begin{aligned}&(X\T X+\lambda I_p)^{-1}\\&=P(D+\lambda I_p)^{-1}P\T\end{aligned}$$<span class="why">$X\T X+\lambda I_p=PDP\T+\lambda PP\T=P(D+\lambda I_p)P\T$, avec $P$ orthogonale.</span></li>
 <li>$$\begin{aligned}B^R(\lambda)&=\lambda^2\norm{(D+\lambda I_p)^{-1}P\T\bstar}^2\\&=\sum_j\frac{\lambda^2\theta_j^2}{(\mu_j+\lambda)^2}\end{aligned}$$<span class="why">une matrice orthogonale conserve la norme ; $(D+\lambda I_p)^{-1}$ est diagonale.</span></li>
-<li>$$\begin{aligned}&\hb^R-\E\hb^R=A\eps,\\&A=(X\T X+\lambda I_p)^{-1}X\T,\\&V^R=\E\norm{A\eps}^2=\sigma^2\tr(AA\T)\end{aligned}$$<span class="why">astuce de la trace : seule la covariance $\sigma^2I_n$ du bruit sert, pas sa gaussianité.</span></li>
+<li>$$\begin{aligned}&\hb^R-\E\hb^R=A\eps,\\&A=(X\T X+\lambda I_p)^{-1}X\T,\\&V^R=\E\norm{A\eps}^2=\sigma^2\tr(AA\T)\end{aligned}$$<span class="why">astuce de la trace, puis $\tr(A\T A)=\tr(AA\T)$ ; seule la covariance $\sigma^2I_n$ du bruit sert, pas sa gaussianité.</span></li>
 <li>$$\begin{aligned}AA\T&=P\,\diag\Big(\frac{\mu_j}{(\mu_j+\lambda)^2}\Big)P\T\\\Rightarrow\ V^R&=\sigma^2\sum_j\frac{\mu_j}{(\mu_j+\lambda)^2}\end{aligned}$$<span class="why">$AA\T=(X\T X+\lambda I_p)^{-1}X\T X(X\T X+\lambda I_p)^{-1}$, que l'on diagonalise ; puis $\tr(PMP\T)=\tr M$.</span></li>
 </ol></div></details>
 </div>
 
 <div class="box intu"><div class="box-h">À comprendre — Un peu de Ridge bat toujours les MCO (hors diapos) <span class="tag comprendre">à comprendre</span> <a class="ref" href="01_seance1.html#ridge-biais-variance">→ S1</a></div>
 <p>La dérivée en $\lambda$ du terme $j$ du risque vaut $\frac{2\mu_j(\lambda\theta_j^2-\sigma^2)}{(\mu_j+\lambda)^3}$, soit $-2\sigma^2/\mu_j^2<0$ en $\lambda=0$ : le risque commence par <strong>décroître</strong> (Hoerl et Kennard, 1970).</p>
-<p>En dimension 1, avec $S=\sum_ix_i^2$ : le biais vaut $-\frac{\lambda\bstar}{S+\lambda}$, la variance $\frac{\sigma^2S}{(S+\lambda)^2}$, et le meilleur choix est $\lambda^*=\sigma^2/{\bstar}^2$. Il dépend de $\bstar$, inconnu : en pratique, on choisit $\lambda$ par validation croisée.</p>
+<p>En dimension 1, pour le critère $\sum_i(y_i-x_i\beta)^2+\lambda\beta^2$ et avec $S=\sum_ix_i^2$ : le biais vaut $-\frac{\lambda\bstar}{S+\lambda}$, la variance $\frac{\sigma^2S}{(S+\lambda)^2}$, et le meilleur choix est $\lambda^*=\sigma^2/{\bstar}^2$ (si $\bstar\ne0$). Il dépend de $\bstar$, inconnu : en pratique, on choisit $\lambda$ par validation croisée.</p>
 </div>
 
 <div class="box thm" id="s1-ridge-contraint"><div class="box-h">Proposition — La forme contrainte du Ridge <span class="ref">TD1 · ex. 1 Q2</span> <span class="tag coeur">par cœur</span><span class="tag refaire">à savoir refaire</span> <a class="ref" href="08_td1.html#ex1-q2">→ TD1</a></div>
 <div class="memo">
-<p>Avec $M_\lambda=\norm{\hb^R(\lambda)}$, le Ridge $\hb^R(\lambda)$ est l'<strong>unique</strong> solution de</p>
+<p>Pour $\lambda>0$ et $M_\lambda=\norm{\hb^R(\lambda)}$, le Ridge $\hb^R(\lambda)=(X\T X+\lambda I_p)^{-1}X\T Y$ est l'<strong>unique</strong> solution de</p>
 $$\min_{\norm\beta\le M_\lambda}\ \norm{Y-X\beta}^2 .$$
 <p>Le rayon $M_\lambda$ dépend des données $Y$, et il décroît quand $\lambda$ augmente.</p>
 </div>
@@ -202,7 +211,7 @@ $$\min_{\norm\beta\le M_\lambda}\ \norm{Y-X\beta}^2 .$$
 <ol class="steps">
 <li>$$\exists\ \tilde\beta\in\argmin_{\norm\beta\le M_\lambda}\norm{Y-X\beta}^2$$<span class="why">fonction continue sur une boule fermée bornée, donc compacte.</span></li>
 <li>$$\begin{aligned}&\norm{Y-X\tilde\beta}^2\le\norm{Y-X\hb^R}^2,\\&\lambda\norm{\tilde\beta}^2\le\lambda M_\lambda^2=\lambda\norm{\hb^R}^2\end{aligned}$$<span class="why">$\hb^R$ est dans la boule (sa norme vaut $M_\lambda$), et $\tilde\beta$ aussi.</span></li>
-<li>$$\begin{aligned}&f(\tilde\beta)\le f(\hb^R)=\min f\\&\Rightarrow\ \tilde\beta=\hb^R\end{aligned}$$<span class="why">on additionne les deux inégalités ; $\hb^R$ est l'unique minimiseur de $f$ (Q1).</span></li>
+<li>$$\begin{aligned}&f(\tilde\beta)\le f(\hb^R)=\min f\\&\Rightarrow\ \tilde\beta=\hb^R\end{aligned}$$<span class="why">on additionne les deux inégalités ; $\hb^R$ est l'unique minimiseur de $f$ (Q1). Le problème contraint a donc une solution (étape 1), et toute solution vaut $\hb^R$ : il y en a exactement une.</span></li>
 </ol></div></details>
 </div>
 
@@ -235,11 +244,11 @@ $$\min_{\norm\beta\le M_\lambda}\ \norm{Y-X\beta}^2 .$$
 <div class="memo">
 <p>Bruit gaussien ; modèle $m$ <strong>fixé</strong> ; $P$ projection orthogonale sur $\Ima(X_m)$ ; $d=\rg(X_m)=\tr P$ ; $X\hb_m=PY$. Alors</p>
 $$\begin{aligned}&\E\norm{X\hb_m-X\bstar}_n^2+\sigma^2\\&\quad=\E\norm{Y-X\hb_m}_n^2+\frac{2\sigma^2d}{n}.\end{aligned}$$
-<p>Le membre de gauche est l'erreur de test (de nouvelles réponses aux mêmes points). Donc $\norm{Y-X\hb_m}_n^2+\frac{2\sigma^2d}n$ estime sans biais l'erreur de test. Comme $d=\norm{\hb_m}_0$ presque sûrement, on obtient</p>
+<p>Le membre de gauche est l'erreur de test (de nouvelles réponses aux mêmes points). Donc $\norm{Y-X\hb_m}_n^2+\frac{2\sigma^2d}n$ estime sans biais l'erreur de test. Comme $d=\norm{\hb_m}_0$ presque sûrement (colonnes de $X_m$ indépendantes), on obtient</p>
 $$\mathrm{pen}_{Cp}(\beta,n)=\mathrm{pen}_{AIC}(\beta,n)=\frac{2\sigma^2\norm\beta_0}{n}.$$
 <p>AIC vaut $-2\times$ log-vraisemblance $+\,2d$ : dans le modèle gaussien à $\sigma$ connu, il a le même minimiseur que Cp.</p>
 </div>
-<p class="hook"><b>L'idée :</b> le terme « ce que le modèle ne sait pas représenter », $\norm{(I-P)X\bstar}^2$, est le même des deux côtés. Le bruit vaut $\sigma^2(n-d)$ dans l'erreur d'apprentissage (le modèle a « mangé » $d$ directions) et $\sigma^2d$ dans l'erreur de prédiction. La différence est $2\sigma^2d-n\sigma^2$.</p>
+<p class="hook"><b>L'idée :</b> le terme « ce que le modèle ne sait pas représenter », $\norm{(I-P)X\bstar}^2$, est le même des deux côtés. Le bruit vaut $\sigma^2(n-d)$ dans l'erreur d'apprentissage (le modèle a « mangé » $d$ directions) et $\sigma^2d$ dans l'erreur de prédiction. La différence (prédiction moins apprentissage) est $2\sigma^2d-n\sigma^2$.</p>
 <details class="fold proof"><summary>Preuve express</summary><div class="fold-body">
 <p>On note $\mu=X\bstar$ ; $P$ et $I-P$ sont des projections orthogonales de rangs $d$ et $n-d$, et $P(I-P)=0$.</p>
 <ol class="steps">
@@ -251,6 +260,7 @@ $$\mathrm{pen}_{Cp}(\beta,n)=\mathrm{pen}_{AIC}(\beta,n)=\frac{2\sigma^2\norm\be
 
 <div class="box thm" id="s1-bic"><div class="box-h">Formule — La pénalité BIC <span class="ref">Cours1 · diapos 19–20</span> <span class="tag coeur">par cœur</span> <a class="ref" href="01_seance1.html#bic">→ S1</a></div>
 <div class="memo">
+<p>Avec le critère normalisé $\norm{Y-X\beta}_n^2+\mathrm{pen}(\beta,n)$ :</p>
 $$\mathrm{pen}_{BIC}(\beta,n)=\sigma^2\log(n)\,\frac{\norm\beta_0}{n}.$$
 <p>BIC est plus sévère que Cp et AIC dès que $\log n>2$, c'est-à-dire $n\ge8$ (« dès que $n>7$ ») : il choisit des modèles plus parcimonieux.</p>
 <ul>
@@ -258,7 +268,7 @@ $$\mathrm{pen}_{BIC}(\beta,n)=\sigma^2\log(n)\,\frac{\norm\beta_0}{n}.$$
 <li><strong>Cp et AIC</strong> sont meilleurs pour la <strong>prédiction</strong> (estimer $X\bstar$).</li>
 </ul>
 </div>
-<p class="hook"><b>Pour la retenir :</b> comparez les prix par variable, $2\sigma^2/n$ contre $\sigma^2\log(n)/n$, sachant que $e^2\approx7{,}39$. Une variable inutile fait baisser $\norm{Y-X\hb}^2$ de $\sigma^2Z^2$, avec $Z\sim\N(0,1)$. AIC l'accepte si $\abs Z>\sqrt2$, avec probabilité $\approx0{,}157$ quel que soit $n$ ; BIC l'accepte si $Z^2>\log n$, avec une probabilité qui tend vers 0.</p>
+<p class="hook"><b>Pour la retenir :</b> comparez les prix par variable, $2\sigma^2/n$ contre $\sigma^2\log(n)/n$, sachant que $e^2\approx7{,}39$. Une variable inutile, ajoutée à un modèle qui contient déjà les vraies variables, fait baisser $\norm{Y-X\hb}^2$ de $\sigma^2Z^2$, avec $Z\sim\N(0,1)$. AIC l'accepte si $\abs Z>\sqrt2$, avec probabilité $\approx0{,}157$ quel que soit $n$ ; BIC l'accepte si $Z^2>\log n$, avec une probabilité qui tend vers 0.</p>
 </div>
 
 <div class="box intu"><div class="box-h">À comprendre — Le talon d'Achille de ℓ0 : $2^p$ modèles <span class="tag comprendre">à comprendre</span> <a class="ref" href="01_seance1.html#l0-bilan">→ S1</a></div>
@@ -271,7 +281,7 @@ $$\mathrm{pen}_{BIC}(\beta,n)=\sigma^2\log(n)\,\frac{\norm\beta_0}{n}.$$
 </div>
 
 <div class="box reflexe"><div class="box-h">Réflexe — Comparer des modèles</div>
-<p>Quand vous comparez des modèles de tailles différentes → n'utilisez jamais l'erreur d'apprentissage seule. Pénalisez (Cp/AIC : $+2\sigma^2d/n$ ; BIC : $+\sigma^2d\log(n)/n$) ou faites une validation croisée.</p>
+<p>Quand vous comparez des modèles de tailles différentes → n'utilisez jamais l'erreur d'apprentissage seule. Pénalisez $\norm{Y-X\hb_m}_n^2$ (Cp/AIC : $+2\sigma^2d/n$ ; BIC : $+\sigma^2d\log(n)/n$) ou faites une validation croisée.</p>
 </div>
 
 <h3 id="s1-oracle">Parcimonie et oracle</h3>
@@ -287,7 +297,7 @@ $$\mathrm{pen}_{BIC}(\beta,n)=\sigma^2\log(n)\,\frac{\norm\beta_0}{n}.$$
 <div class="memo">
 $$\hb^{MCR}=(X_{\Astar}\T X_{\Astar})^{-1}X_{\Astar}\T Y,$$
 $$\E\Big[\norm{X\hb^{MCR}-X\bstar}_n^2\Big]=\sigma^2\,\frac{\abs{\Astar}}{n}.$$
-<p>$X_{\Astar}$ est formée des colonnes $X_j$, $j\in\Astar$. Sous (S), l'erreur est au plus $\sigma^2s/n\to0$ : elle dépend de la vraie dimension, pas de $p$. Comme $\Astar$ est inconnu, cet estimateur est inutilisable : c'est une <strong>référence</strong>.</p>
+<p>$X_{\Astar}$ est formée des colonnes $X_j$, $j\in\Astar$, supposées indépendantes (rang $\abs{\Astar}\le n$) ; $\hb^{MCR}$ est complété par des 0 hors de $\Astar$. Sous (S), l'erreur est au plus $\sigma^2s/n\to0$ : elle dépend de la vraie dimension, pas de $p$. Comme $\Astar$ est inconnu, cet estimateur est inutilisable : c'est une <strong>référence</strong>.</p>
 </div>
 <p class="hook"><b>Preuve en une ligne :</b> $X\bstar=X_{\Astar}\bstar_{\Astar}$, donc le modèle réduit est exact ; on applique le théorème des MCO à $X_{\Astar}$, de rang plein $\abs{\Astar}\le n$.</p>
 </div>
@@ -336,7 +346,7 @@ $$\begin{aligned}\hb^L(\lambda)\in\argmin_{\beta\in\R^p}\Big\{&\norm{Y-X\beta}_n
 </div></details>
 </div>
 
-<div class="box thm" id="td1-lasso"><div class="box-h">Théorème — Lasso pénalisé = Lasso contraint <span class="ref">TD1 · ex. 2</span> <span class="tag coeur">par cœur</span><span class="tag refaire">à savoir refaire</span> <a class="ref" href="08_td1.html#ex2">→ TD1</a></div>
+<div class="box thm" id="td1-lasso"><div class="box-h">Théorème — Lasso pénalisé et Lasso contraint <span class="ref">TD1 · ex. 2</span> <span class="tag coeur">par cœur</span><span class="tag refaire">à savoir refaire</span> <a class="ref" href="08_td1.html#ex2">→ TD1</a></div>
 <div class="memo">
 <p>Critères du TD : $f_0(\beta)=\norm{Y-X\beta}^2$ ; problème pénalisé $\min f_0+\lambda\norm\beta_1$ ($\lambda>0$) ; problème contraint $\min_{\norm\beta_1\le M_\lambda}f_0$.</p>
 <ol>
@@ -349,11 +359,11 @@ $$\begin{aligned}\hb^L(\lambda)\in\argmin_{\beta\in\R^p}\Big\{&\norm{Y-X\beta}_n
 <details class="fold proof"><summary>Preuve express</summary><div class="fold-body">
 <p>On note $f=f_0+\lambda\norm\cdot_1$, et $\hb^{(1)}$, $\hb^{(2)}$ deux solutions du problème pénalisé.</p>
 <ol class="steps">
-<li>$$\begin{aligned}&\tilde\beta=\tfrac12\hb^{(1)}+\tfrac12\hb^{(2)}\ :\\&f_0(\tilde\beta)<\tfrac12f_0(\hb^{(1)})+\tfrac12f_0(\hb^{(2)})\\&\text{si }X\hb^{(1)}\ne X\hb^{(2)}\end{aligned}$$<span class="why">sur une ligne $i_0$ où les ajustements diffèrent, $\big(\frac{a+b}2\big)^2<\frac{a^2+b^2}2$ pour $a\ne b$ ; l'inégalité est large sur les autres lignes.</span></li>
-<li>$$\begin{aligned}&\lambda\norm{\tilde\beta}_1\\&\le\tfrac12\lambda\norm{\hb^{(1)}}_1+\tfrac12\lambda\norm{\hb^{(2)}}_1\\&\Rightarrow\ f(\tilde\beta)<\min f\end{aligned}$$<span class="why">inégalité triangulaire. C'est une contradiction, donc $X\hb^{(1)}=X\hb^{(2)}$.</span></li>
+<li>$$\begin{aligned}&\bar\beta=\tfrac12\hb^{(1)}+\tfrac12\hb^{(2)}\ :\\&f_0(\bar\beta)<\tfrac12f_0(\hb^{(1)})+\tfrac12f_0(\hb^{(2)})\\&\text{si }X\hb^{(1)}\ne X\hb^{(2)}\end{aligned}$$<span class="why">sur une ligne $i_0$ où les ajustements diffèrent, $\big(\frac{a+b}2\big)^2<\frac{a^2+b^2}2$ pour $a\ne b$ ; l'inégalité est large sur les autres lignes.</span></li>
+<li>$$\begin{aligned}&\lambda\norm{\bar\beta}_1\\&\le\tfrac12\lambda\norm{\hb^{(1)}}_1+\tfrac12\lambda\norm{\hb^{(2)}}_1\\&\Rightarrow\ f(\bar\beta)<\min f\end{aligned}$$<span class="why">inégalité triangulaire. C'est une contradiction, donc $X\hb^{(1)}=X\hb^{(2)}$.</span></li>
 <li>$$\begin{aligned}\lambda\norm{\hb^{(1)}}_1&=\min f-f_0(\hb^{(1)})\\&=\min f-f_0(\hb^{(2)})\\&=\lambda\norm{\hb^{(2)}}_1\end{aligned}$$<span class="why">$f_0$ ne dépend que de $X\beta$ ; on divise par $\lambda>0$. C'est faux pour $\lambda=0$ : les solutions $\hb\MC+v$, $v\in\Ker X$, ont des normes $\ell_1$ différentes.</span></li>
 <li>$$\begin{aligned}f_0(\hb)&\le f_0(\beta)+\lambda\big(\norm\beta_1-N_\lambda\big)\\&\le f_0(\beta)\quad\text{si }\norm\beta_1\le N_\lambda\end{aligned}$$<span class="why">pénalisé ⊂ contraint : $f(\hb)\le f(\beta)$ et $\norm{\hb}_1=N_\lambda$, donc $\hb$ est admissible et optimal.</span></li>
-<li>$$\begin{aligned}f_0(\tilde\beta)+\lambda\norm{\tilde\beta}_1&\le f_0(\hb)+\lambda N_\lambda\\&=\min f\end{aligned}$$<span class="why">contraint ⊂ pénalisé : une solution pénalisée $\hb$ est admissible, donc $f_0(\tilde\beta)\le f_0(\hb)$ ; et $\norm{\tilde\beta}_1\le M_\lambda=N_\lambda$.</span></li>
+<li>$$\begin{aligned}f_0(\tilde\beta)+\lambda\norm{\tilde\beta}_1&\le f_0(\hb)+\lambda N_\lambda\\&=\min f\end{aligned}$$<span class="why">contraint ⊂ pénalisé : soit $\tilde\beta$ une solution du problème contraint et $\hb$ une solution pénalisée (il en existe : $f$ est continue et coercive). $\hb$ est admissible, donc $f_0(\tilde\beta)\le f_0(\hb)$ ; et $\lambda\norm{\tilde\beta}_1\le\lambda M_\lambda=\lambda N_\lambda$. On additionne : $\tilde\beta$ minimise $f$.</span></li>
 </ol></div></details>
 </div>
 
@@ -368,7 +378,7 @@ $$\begin{aligned}\hb^L(\lambda)\in\argmin_{\beta\in\R^p}\Big\{&\norm{Y-X\beta}_n
 <ul>
 <li>$Y=f^*+\eps$, avec $f^*=X\bstar\in\R^n$ et $\eps\sim\N(0,\sigma^2I_n)$ ; le vrai modèle $m^*=\{j:\bstar_j\ne0\}$ est inconnu.</li>
 <li>Un modèle est un ensemble $m\subset\{1,\dots,p\}$ : $S_m=\mathrm{Vect}\{X_j,\ j\in m\}$ (colonnes), $d_m=\dim S_m$, $\hat f_m=P_{S_m}Y$. On choisit dans une collection $\mathcal M$.</li>
-<li>Risque (non normalisé) : $R(\hat f_m)=\E\norm{\hat f_m-f^*}^2$. Oracle : $m_0=\argmin_{m\in\mathcal M}R(\hat f_m)$ ; il dépend de $\bstar$, donc il est inutilisable.</li>
+<li>Risque (non normalisé) : $R(\hat f_m)=\E\norm{\hat f_m-f^*}^2$. Oracle : $m_0=\argmin_{m\in\mathcal M}R(\hat f_m)$ ; il n'est pas aléatoire mais dépend de $\bstar$, donc $\hat f_{m_0}$ est inutilisable. But : choisir $\hat m$ tel que $\E\norm{\hat f_{\hat m}-f^*}^2\le C\,\E\norm{\hat f_{m_0}-f^*}^2$.</li>
 <li>$m^*$ n'est pas forcément dans $\mathcal M$ ; et même si $m^*\in\mathcal M$, on peut avoir $m_0\ne m^*$.</li>
 </ul>
 </div>
@@ -388,31 +398,31 @@ $$R(\hat f_m)=\underbrace{\norm{(I_n-P_{S_m})f^*}^2}_{\text{biais}^2}+\underbrac
 <p>Critère et pénalité :</p>
 $$C(m)=\norm{Y-\hat f_m}^2+\sigma^2\,\mathrm{pen}(m),$$
 $$\mathrm{pen}(m)=K\Big(\sqrt{d_m}+\sqrt{2\log(1/\Pi_m)}\Big)^2,$$
-<p>avec $K>1$, des poids $\Pi_m\in\,]0,1]$ tels que $\sum_{m\in\mathcal M}\Pi_m=1$, et $\hat m=\argmin_{m\in\mathcal M}C(m)$. Alors il existe $C_K>0$, qui ne dépend que de $K$, tel que</p>
-$$\begin{aligned}&\E\norm{\hat f_{\hat m}-f^*}^2\\&\le C_K\min_{m\in\mathcal M}\Big\{\E\norm{\hat f_m-f^*}^2\\&\qquad\qquad+\sigma^2\log(\Pi_m^{-1})+\sigma^2\Big\}.\end{aligned}$$
-<p>Si de plus $\log(\Pi_m^{-1})\le Cd_m$ pour tout $m$ (et si $\mathcal M$ contient au moins deux modèles), alors $\E\norm{\hat f_{\hat m}-f^*}^2\le C_K(2+C)\,\E\norm{\hat f_{m_0}-f^*}^2$ : <strong>on fait aussi bien que l'oracle, à une constante près</strong>.</p>
+<p>avec $K>1$, des poids $\Pi_m\in\,]0,1]$ tels que $\sum_{m\in\mathcal M}\Pi_m=1$, et $\hat m=\argmin_{m\in\mathcal M}C(m)$. Alors il existe $C'_K>0$, qui ne dépend que de $K$, tel que</p>
+$$\begin{aligned}&\E\norm{\hat f_{\hat m}-f^*}^2\\&\le C'_K\min_{m\in\mathcal M}\Big\{\E\norm{\hat f_m-f^*}^2\\&\qquad\qquad+\sigma^2\log(\Pi_m^{-1})+\sigma^2\Big\}.\end{aligned}$$
+<p>Si de plus $\log(\Pi_m^{-1})\le Cd_m$ pour tout $m$ ($C>0$ constante), alors $\E\norm{\hat f_{\hat m}-f^*}^2\le C'_K(2+C)\,\E\norm{\hat f_{m_0}-f^*}^2$ : <strong>on fait aussi bien que l'oracle, à une constante près</strong>.</p>
 </div>
-<p class="hook"><b>Pour la retenir :</b> c'est un « Cp en plus fort ». $d_m$ paie la variance ; $\sqrt{2\log(1/\Pi_m)}$ paie la taille de la collection (borne de l'union pondérée) ; $K>1$ permet d'absorber. La garantie vaut pour toute collection, sans condition sur $X$, avec des constantes indépendantes de $n$, $p$ et $f^*$. Les constantes explicites (28 pour $K=3$) ne sont pas à retenir.</p>
+<p class="hook"><b>Pour la retenir :</b> c'est un « Cp en plus fort ». $d_m$ paie la variance ; $\sqrt{2\log(1/\Pi_m)}$ paie la taille de la collection (borne de l'union pondérée) ; $K>1$ permet d'absorber. La garantie vaut pour toute collection, sans condition sur $X$, avec des constantes indépendantes de $n$, $p$, $f^*$ et de la taille de $\mathcal M$. Notation : l'énoncé appelle $C_K$ à la fois la constante de (d) et celle de (f) ; la page du TD les distingue, $C_K$ pour (d) et $C'_K$ pour (f). Leurs valeurs ($C_3=14$, $C'_3=28$) ne sont pas à retenir.</p>
 </div>
 
 <div class="box methode" id="td1-carte"><div class="box-h">Méthode — La carte de la preuve <span class="tag refaire">à savoir refaire</span> <a class="ref" href="08_td1.html#ex3-q2a">→ TD1</a></div>
 <ol>
 <li><strong>(a) Inégalité de base.</strong> On part de $C(\hat m)\le C(m)$ et on remplace $Y$ par $f^*+\eps$. Comme $\norm{Y-\hat f}^2=\norm{f^*-\hat f}^2+2\ps{\eps}{f^*-\hat f}+\norm\eps^2$, les $\norm\eps^2$ se simplifient :
 $$\begin{aligned}&R(\hat f_{\hat m})\le R(\hat f_m)\\&\quad+2\E\ps{\eps}{f^*-\hat f_m}+\sigma^2\mathrm{pen}(m)\\&\quad+\E\big[2\ps{\eps}{\hat f_{\hat m}-f^*}-\sigma^2\mathrm{pen}(\hat m)\big].\end{aligned}$$</li>
-<li><strong>(b) Terme croisé du modèle fixé.</strong> $\E\ps{\eps}{f^*-\hat f_m}=-\E[\eps\T P_{S_m}\eps]=-\sigma^2d_m$ (trace d'un projecteur).</li>
+<li><strong>(b) Terme croisé du modèle fixé.</strong> $f^*-\hat f_m=(I_n-P_{S_m})f^*-P_{S_m}\eps$, donc $\E\ps{\eps}{f^*-\hat f_m}=-\E[\eps\T P_{S_m}\eps]=-\sigma^2d_m$ (bruit centré, puis trace d'un projecteur).</li>
 <li><strong>(c) Terme croisé du modèle choisi.</strong> Comme $\hat m$ dépend de $\eps$, on ne peut que majorer. Le vecteur $v=\hat f_{\hat m}-f^*$ appartient à $\bar S_{\hat m}=\mathrm{Vect}(S_{\hat m},f^*)$, donc $\ps\eps v=\ps{P_{\bar S_{\hat m}}\eps}{v}$. On applique Cauchy–Schwarz, puis Young $2xy\le ax^2+y^2/a$ ($a>1$), puis Pythagore dans $\bar S_{\hat m}=\tilde S_{\hat m}\oplus\mathrm{Vect}(f^*)$ :
 $$\begin{aligned}2\ps{\eps}{\hat f_{\hat m}-f^*}\le{}&a\sigma^2\big(N^2+U_{\hat m}\big)\\&+a^{-1}\norm{\hat f_{\hat m}-f^*}^2,\end{aligned}$$
 avec $N^2=\norm{P_{\mathrm{Vect}(f^*)}\eps}^2/\sigma^2\sim\chi^2(1)$ et $U_m=\norm{P_{\tilde S_m}\eps}^2/\sigma^2$.</li>
 <li><strong>(d) Le cœur : contrôler $U_{\hat m}$.</strong> On prend $a=\frac{K+1}2$ et $Z=a\sigma^2(N^2+U_{\hat m})-\sigma^2\mathrm{pen}(\hat m)$, de sorte que (c) donne $2\ps{\eps}{\hat f_{\hat m}-f^*}-\sigma^2\mathrm{pen}(\hat m)\le a^{-1}\norm{\hat f_{\hat m}-f^*}^2+Z$. Il reste à montrer $\E Z\lesssim\sigma^2$, en quatre gestes :
 <ul>
 <li><em>pire cas</em> : $aU_{\hat m}-\mathrm{pen}(\hat m)\le a\sum_m\big(U_m-\frac{2}{K+1}\mathrm{pen}(m)\big)_+$ ;</li>
-<li><em>modèle fixé</em> : la concentration gaussienne ($\eps\mapsto\norm{P_{\tilde S_m}\eps}$ est 1-lipschitzienne) donne $\sqrt{U_m}\le\sqrt{d_m}+\sqrt{2\xi_m}$, avec $\xi_m\sim\mathcal E(1)$ ;</li>
+<li><em>modèle fixé</em> : la concentration gaussienne ($\eps\mapsto\norm{P_{\tilde S_m}\eps}$ est 1-lipschitzienne) et Jensen ($\E\norm{P_{\tilde S_m}\eps}\le\sigma\sqrt{d_m}$) donnent $\sqrt{U_m}\le\sqrt{d_m}+\sqrt{2\xi_m}$, avec $\xi_m\sim\mathcal E(1)$ ;</li>
 <li><em>faire apparaître le poids</em> : avec $L_m=\log(1/\Pi_m)$, $\sqrt{2\xi_m}\le\sqrt{2L_m}+\sqrt{2(\xi_m-L_m)_+}$, puis $(x+y)^2\le(1+\alpha)x^2+(1+\alpha^{-1})y^2$ avec $\alpha=\frac{K-1}{K+1}$ ;</li>
 <li><em>espérance</em> : $\E(\xi-c)_+\le e^{-c}$.</li>
 </ul>
 On obtient
 $$\E\Big(U_m-\tfrac{2}{K+1}\mathrm{pen}(m)\Big)_+\le\tfrac{4K}{K-1}\,\Pi_m,$$
-puis, avec $\sum_m\Pi_m=1$ et $\E N^2\le1$, $\E Z\le\big(\frac{K+1}2+\frac{2K(K+1)}{K-1}\big)\sigma^2$.</li>
+puis, avec $\sum_m\Pi_m=1$ et $\E N^2\le1$, $\E Z\le\big(\frac{K+1}2+\frac{2K(K+1)}{K-1}\big)\sigma^2=:C_K\sigma^2$.</li>
 <li><strong>(e) La pénalité est au plus de l'ordre du risque.</strong> Avec $(u+v)^2\le2u^2+2v^2$ et $\sigma^2d_m\le R(\hat f_m)$ : $\sigma^2\mathrm{pen}(m)\le2KR(\hat f_m)+4K\sigma^2\log(\Pi_m^{-1})$.</li>
 <li><strong>(f) Assembler et absorber.</strong> $R(\hat f_{\hat m})$ apparaît à droite avec le facteur $a^{-1}<1$ : on le fait passer à gauche, où il reste $\big(1-\frac1a\big)R(\hat f_{\hat m})=\frac{K-1}{K+1}R(\hat f_{\hat m})$. On divise, puis on prend le meilleur $m$.</li>
 <li><strong>(g) Cas $\log(\Pi_m^{-1})\le Cd_m$.</strong> On a $\sigma^2\log(\Pi_m^{-1})\le C\sigma^2d_m\le C\,R(\hat f_m)$, et $\sigma^2\le R(\hat f_m)$ si $d_m\ge1$ : on obtient l'oracle à une constante près.</li>
