@@ -3,10 +3,10 @@
 <div class="box resume"><div class="box-h">L'essentiel de la séance en 5 lignes</div>
 <ul>
 <li><strong>GLM</strong> = une loi de la famille exponentielle pour $Y_i$ + un prédicteur linéaire $\eta_i=x_i\T\beta$ + un lien $g(\mu_i)=\eta_i$ ; le lien canonique $g=(A')^{-1}$ donne $\theta_i=x_i\T\beta$.</li>
-<li><strong>Tout se lit sur $A$</strong> : moyenne $A'(\theta)$, variance $A''(\theta)$ ; pour $L_n=-\frac1n\ell$, gradient $\frac1nX\T(\mu-y)$ et hessienne $\frac1nX\T WX$ avec $W=\diag(\Var Y_i)\succeq0$ : $L_n$ est convexe.</li>
+<li><strong>Tout se lit sur $A$</strong> : moyenne $A'(\theta)$, variance $A''(\theta)$ ; avec le lien canonique, $L_n=-\frac1n\ell$ a pour gradient $\frac1nX\T(\mu-y)$ et pour hessienne $\frac1nX\T WX$, $W=\diag(\Var Y_i)\succeq0$ : $L_n$ est convexe.</li>
 <li><strong>EMV</strong> : équations $X\T y=X\T\mu$ (lien canonique), résolues par Newton = IRLS ; à $p$ fixé, $\sqrt n(\hb-\bstar)\to\N(0,I(\bstar)^{-1})$, d'où les intervalles de Wald (lemme de Slutsky).</li>
 <li><strong>Grande dimension</strong> : l'EMV peut ne pas exister (séparation) ; Lasso $L_n(\beta)+\lambda\norm\beta_1$, KKT $\frac1nX_j\T(y-\hat\mu)=\lambda\sgn(\hb_j)$ si $\hb_j\neq0$ (et $\le\lambda$ en valeur absolue sinon), $\lambda_{\max}=\norm{\nabla L_n(0)}_\infty$ sans constante.</li>
-<li><strong>Logistique</strong> : perte $f(z)=\log(1+e^{-z})$ de la marge $z=y\,x\T\beta$ ($y=\pm1$) ; $f''=\sigma(1-\sigma)\le\frac14$ mais $\inf_\beta W_{ii}=0$ : inégalité oracle lente sans hypothèse sur $X$ (Hoeffding, TD3), vitesse rapide seulement sous RE + bornes.</li>
+<li><strong>Logistique</strong> : perte $f(z)=\log(1+e^{-z})$ de la marge $z=y\,x\T\beta$ ($y=\pm1$) ; $f''=\sigma(1-\sigma)\le\frac14$ mais $\inf_\beta W_{ii}=0$ : inégalité oracle lente sans condition RE, avec seulement $\abs{z_{ij}}\le c$ (Hoeffding, TD3) ; vitesse rapide seulement sous RE + bornes.</li>
 </ul></div>
 
 <h3 id="s5-pourquoi">Pourquoi un GLM, et ses trois ingrédients</h3>
@@ -20,7 +20,7 @@
 <ol>
 <li>une loi de la <strong>famille exponentielle</strong> pour chaque $Y_i$ ;</li>
 <li>un <strong>prédicteur linéaire</strong> $\eta_i=x_i\T\beta$, $\beta\in\R^p$ ;</li>
-<li>une <strong>fonction de lien</strong> $g$, strictement monotone et dérivable, qui prend toutes les valeurs que $\E(Y)$ peut prendre, avec $g\big(\E(Y_i)\big)=x_i\T\beta$, c'est-à-dire $\mu_i=\E(Y_i)=g^{-1}(x_i\T\beta)$.</li>
+<li>une <strong>fonction de lien</strong> $g$, strictement monotone et dérivable, qui « prend toutes les valeurs que $\E(Y)$ peut prendre » (définie sur l'ensemble des moyennes possibles, qu'elle envoie sur tout $\R$), avec $g\big(\E(Y_i)\big)=x_i\T\beta$, c'est-à-dire $\mu_i=\E(Y_i)=g^{-1}(x_i\T\beta)$.</li>
 </ol>
 <p>Au tableau : linéaire $\E[Y\mid X=x]=x\T\beta$ ; GLM $g\big(\E[Y\mid X=x]\big)=x\T\beta$.</p>
 </div>
@@ -34,7 +34,7 @@
 <p>$Y$ appartient à la famille exponentielle si sa densité (sa loi, si $Y$ est discrète) s'écrit
 $$f_\theta(y)=\exp\big(\eta(\theta)\,T(y)-A(\theta)+B(y)\big),$$
 avec $\eta,T,A,B$ déterministes. Forme <strong>naturelle</strong> : $\eta(\theta)=\theta$ ($\theta$ est le paramètre naturel). Dans tout le cours, $T(y)=y$. La fonction $A$ (log-partition) n'est pas libre, elle est imposée par $\int f_\theta=1$ :
-$$A(\theta)=\log\int e^{\theta T(y)+B(y)}\,\dd y$$ (une somme pour une loi discrète).</p>
+$$A(\theta)=\log\int e^{\eta(\theta)T(y)+B(y)}\,\dd y$$ (une somme pour une loi discrète).</p>
 </div>
 <p class="hook"><b>Pour la retrouver :</b> écrivez $\log f_\theta(y)$ et rangez en trois tas : les termes mixtes (ils doivent former le produit $\theta\,T(y)$), les termes en $\theta$ seul ($-A$), les termes en $y$ seul ($B$). Contre-exemple : la loi uniforme sur $[0,\theta]$, dont le support dépend de $\theta$.</p>
 </div>
@@ -48,14 +48,15 @@ $$A(\theta)=\log\int e^{\theta T(y)+B(y)}\,\dd y$$ (une somme pour une loi discr
 <tr><td>Bernoulli $\mathcal B(p)$</td><td class="memo">$\log\frac p{1-p}$</td><td class="memo">$\log(1+e^\theta)$</td><td class="memo">$0$</td><td class="memo">$\sigma(\theta)=p$</td><td class="memo">$p(1-p)$</td></tr>
 <tr><td>Poisson $\mathcal P(\lambda)$</td><td class="memo">$\log\lambda$</td><td class="memo">$e^\theta$</td><td class="memo">$-\log y!$</td><td class="memo">$e^\theta=\lambda$</td><td class="memo">$\lambda$</td></tr>
 </tbody></table></div>
-<p class="hook"><b>Pour la retrouver :</b> Bernoulli $\log f=y\log\frac p{1-p}+\log(1-p)$, donc $A=-\log(1-p)=\log(1+e^\theta)$ (car $1-p=\frac1{1+e^\theta}$) ; Poisson $\log f=y\log\lambda-\lambda-\log y!$, donc $A=\lambda=e^\theta$ ; gaussienne $\log f=y\mu-\frac{\mu^2}2-\frac{y^2}2-\log\sqrt{2\pi}$.</p>
+<p class="hook"><b>Pour la retrouver :</b> Bernoulli $\log f=y\log\frac p{1-p}+\log(1-p)$, donc $A=-\log(1-p)=\log(1+e^\theta)$ (car $1-p=\frac1{1+e^\theta}$) ; Poisson $\log f=y\log\lambda-\lambda-\log y!$, donc $A=\lambda=e^\theta$ ; gaussienne $\log f=y\mu-\frac{\mu^2}2-\frac{y^2}2-\log\sqrt{2\pi}$. Même méthode pour la loi exponentielle $\lambda e^{-\lambda y}$ (exercice 1 de S5) : $\theta=-\lambda<0$, $A(\theta)=-\log(-\theta)$, $B=0$, lien canonique $g(\mu)=-1/\mu$, qui n'atteint que $]-\infty,0[$.</p>
 </div>
 
 <div class="box def" id="s5-dispersion"><div class="box-h">Définition — Forme avec paramètre de dispersion (version Cours6) <span class="tag coeur">par cœur</span> <a class="ref" href="05_seance5.html#forme-dispersion">→ S5</a></div>
 <div class="memo">
 $$\begin{gathered}f_\theta(y)=\exp\Big(\frac{y\theta-b(\theta)}{a(\phi)}+c(y,\phi)\Big),\\\E Y=b'(\theta),\qquad\Var Y=a(\phi)\,b''(\theta).\end{gathered}$$
-<p>$\theta$ : paramètre naturel ; $\phi$ : dispersion ; $b$ joue le rôle de $A$, $c$ celui de $B$. Exemple $\N(\mu,\sigma^2)$ : $\theta=\mu$, $b(\theta)=\theta^2/2$, $a(\phi)=\phi=\sigma^2$, $c(y,\phi)=-\frac{y^2}{2\phi}-\frac12\log(2\pi\phi)$. Bernoulli et Poisson : $a(\phi)=1$.</p>
+<p>$a,b,c$ déterministes, $c$ dérivable, $b$ trois fois dérivable de dérivée première inversible ; $\theta$ : paramètre naturel, $\phi$ : paramètre de dispersion (tous deux inconnus) ; $b$ joue le rôle de $A$, $c$ celui de $B$. Exemple $\N(\mu,\sigma^2)$ : $\theta=\mu$, $b(\theta)=\theta^2/2$, $a(\phi)=\phi=\sigma^2$, $c(y,\phi)=-\frac{y^2}{2\phi}-\frac12\log(2\pi\phi)$. Bernoulli et Poisson : $a(\phi)=1$, on retrouve la forme de Cours5.</p>
 </div>
+<p class="hook"><b>Pour la retrouver :</b> même preuve par le score, avec $\frac{\partial\ell}{\partial\theta}=\frac{y-b'(\theta)}{a(\phi)}$ et $\frac{\partial^2\ell}{\partial\theta^2}=-\frac{b''(\theta)}{a(\phi)}$ : score centré ⇒ $\E Y=b'(\theta)$ ; identité de Fisher ⇒ $\frac{b''(\theta)}{a(\phi)}=\frac{\Var Y}{a(\phi)^2}$. Contrôle : $\N(\mu,\sigma^2)$ donne $\Var Y=\sigma^2\cdot1$.</p>
 </div>
 
 <div class="box thm" id="s5-moments"><div class="box-h">Théorème — Moyenne et variance d'une loi de la famille exponentielle <span class="tag coeur">par cœur</span><span class="tag refaire">à savoir refaire</span> <a class="ref" href="05_seance5.html#moments">→ S5</a></div>
