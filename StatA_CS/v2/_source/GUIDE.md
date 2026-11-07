@@ -172,6 +172,23 @@ Ajoutées avec les TD (octobre 2026) : `existence` (dans `optimisation`), `lois-
 ```
 Composants spécifiques : `box enonce` (énoncé, bordure double ardoise), `box officiel` (corrigé officiel, prune).
 
+## 7 quater. La page de révision (`11_revision.html`)
+
+Page d'examen : elle ne ré-explique pas, elle **trie** (chaque encadré dit quoi faire de la notion) et renvoie aux séances.
+
+- Le fichier `pages/11_revision.html` contient les parties transversales (mode d'emploi, cours en une page,
+  conventions, théorèmes et hypothèses, pièges, jour J) et **inclut** les parties par séance :
+  `<!--#include _rev/s3.html-->` (chemin relatif à `pages/`). Chaque séance a trois fragments dans `pages/_rev/` :
+  `SEC.html` (la partie), `q_SEC.html` (questions d'auto-test), `p_SEC.html` (lignes du tableau « preuves à savoir refaire »),
+  avec SEC = `outils`, `s1` … `s6`. Ids préfixés : `o-`, `s1-`/`td1-`, `s2-`, `s3-`/`td2-`, `s4-`, `s5-`/`td3-`, `s6-`.
+- Étiquettes dans le titre d'un encadré : `<span class="tag coeur">par cœur</span>`,
+  `<span class="tag refaire">à savoir refaire</span>`, `<span class="tag comprendre">à comprendre</span>`.
+- `<div class="memo">…</div>` (ou `<td class="memo">`) entoure exactement ce qu'il faut réciter ; `<p class="hook">` l'aide
+  « Pour la retrouver ». En **mode auto-test** (bouton en bas à droite, géré par `app.js`), les deux sont floutés et un clic les
+  révèle : le titre de l'encadré doit donc poser la question sans donner la réponse.
+- Une preuve à savoir refaire est une « Preuve express » repliée (`details.fold.proof` + `ol.steps`).
+- PDF : `node pdf.mjs` après `node build.mjs` (page entière dépliée, et version « essentiel »).
+
 ## 8. Notations communes
 
 - $n$ observations, $p$ variables ; $X\in\R^{n\times p}$ ; ligne $i$ : $x_i$ (vecteur ligne, comme les diapos) ; colonne $j$ : $X_j\in\R^n$.
@@ -185,5 +202,6 @@ Composants spécifiques : `box enonce` (énoncé, bordure double ardoise), `box 
 ```
 cd StatA_CS/v2/_source && npm install && node build.mjs            # toutes les pages
 node build.mjs 03_seance3.html                                     # une seule page (erreurs de cette page seulement)
+node pdf.mjs                                                       # PDF de la page de révision (Playwright)
 ```
 La compilation échoue (et liste fichier:ligne) sur toute formule invalide, tout lien interne sans cible, tout id en double.
