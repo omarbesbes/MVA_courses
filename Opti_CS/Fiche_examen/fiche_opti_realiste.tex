@@ -1,0 +1,124 @@
+% Fiche d'examen -- Optimisation : VERSION "VRAIMENT MANUSCRITE".
+% Meme contenu (fiche_contenu.tex) et meme habillage que fiche_opti_manuscrite.tex (Patrick Hand,
+% formules en Euler), avec en plus les irregularites d'une vraie ecriture. Deux etapes :
+%  1) ce fichier (LuaLaTeX) + ../../outils_manuscrit/manuscrit.lua : espacement aleatoire entre
+%     lettres et mots, pas de cesure, chaque glyphe (texte et maths) legerement tourne / etire /
+%     incline / decale ; soulignes de titres, triangles "!", etoiles, fleches et doubles barres
+%     (R, Z) traces a main levee ; trois ratures. Les encres sont des couleurs "marqueurs"
+%     (noir = texte, bleu pur = titres, rouge pur, vert pur, cyan = violet, magenta = crayon)
+%     que l'etape 2 remplace par de vraies couleurs de stylo.
+%  2) ../../outils_manuscrit/reencrage.py : rendu 600 dpi, deformations elastiques multi-echelles,
+%     reencrage au stylo (largeur et pression variables), traits de colonnes au crayon.
+% Compilation (depuis ce dossier) :
+%   lualatex fiche_opti_realiste.tex
+%   python3 ../../outils_manuscrit/reencrage.py fiche_opti_realiste.pdf
+\RequirePackage{fix-cm}
+\documentclass[a4paper]{article}
+\usepackage[a4paper,margin=4.5mm,top=4mm,bottom=4mm]{geometry}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{euler}      % maths a l'allure manuscrite (a charger avant fontspec)
+\usepackage{fontspec}
+% a la main il n'y a pas d'italique : l'italique reste droit ; le gras = trait epaissi
+\setmainfont{PatrickHand-Regular.ttf}[Path=./fonts/,
+  BoldFont=PatrickHand-Regular.ttf, BoldFeatures={FakeBold=1.5},
+  ItalicFont=PatrickHand-Regular.ttf,
+  BoldItalicFont=PatrickHand-Regular.ttf, BoldItalicFeatures={FakeBold=1.5}]
+\usepackage{multicol}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{calc}
+\usepackage{ragged2e}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+\setlength{\columnsep}{2.6mm}
+\setlength{\columnseprule}{0.35pt}
+\setlength{\multicolsep}{0pt}
+\setlength{\abovedisplayskip}{0pt}\setlength{\belowdisplayskip}{0pt}
+\setlength{\abovedisplayshortskip}{0pt}\setlength{\belowdisplayshortskip}{0pt}
+\setlength{\arraycolsep}{1.5pt}
+\thickmuskip=2.5mu plus 2mu \medmuskip=2mu plus 1mu \thinmuskip=1.5mu
+\hyphenpenalty=10000 % a la main, on ne coupe pas les mots
+
+% ---------- irregularites (Lua) ----------
+\directlua{dofile("../../outils_manuscrit/manuscrit.lua"); manuscrit.enable()}
+\AddToHook{shipout/before}{\directlua{manuscrit.page(\the\ShipoutBox)}}
+\pgfmathsetseed{2027}
+
+% ---------- encres (marqueurs, remplacees par les vraies couleurs a l'etape 2) ----------
+% texte courant : noir (couleur par defaut) -> stylo noir
+\definecolor{cT}{RGB}{0,0,255}     % titres et noms de resultats -> stylo bleu
+\definecolor{cP}{RGB}{255,0,0}     % avertissements -> stylo rouge
+\definecolor{cK}{RGB}{0,255,0}     % CN / CS / methode -> stylo vert
+\definecolor{cA}{RGB}{0,255,255}   % astuces hors slides -> stylo violet
+\definecolor{crayon}{RGB}{255,0,255} % traits de colonnes -> crayon a papier
+\renewcommand{\columnseprulecolor}{\color{crayon}}
+
+% ---------- traces a main levee ----------
+\tikzset{main/.style={line width=0.5pt,line cap=round,line join=round,x=1em,y=1em}}
+% (pas de "rand" dans un rayon polaire : TikZ y lit "and")
+\newcommand{\handstar}{\tikz[main,baseline={(0,-0.3em)}]{\pgfmathsetmacro{\hr}{90+9*rand}%
+  \draw (\hr:{0.33+0.04*(2*rnd-1)}) -- (\hr+144:{0.33+0.04*(2*rnd-1)}) -- (\hr+288:{0.33+0.04*(2*rnd-1)})
+     -- (\hr+432:{0.33+0.04*(2*rnd-1)}) -- (\hr+576:{0.33+0.04*(2*rnd-1)}) -- (\hr+722+7*rand:{0.35+0.05*(2*rnd-1)});}}
+\newcommand{\handarrow}{\tikz[main,baseline=0pt]{\draw (0,{0.28+0.03*rand}) .. controls (0.36,{0.30+0.04*rand}) .. (0.72,0.29);
+     \draw ({0.52+0.03*rand},{0.47+0.03*rand}) -- (0.73,0.29) -- ({0.53+0.03*rand},{0.12+0.03*rand});}}
+% triangle "attention" avec un point d'exclamation, trace a la main
+\newcommand{\handwarn}{\tikz[main,baseline=-0.04em]{%
+  \draw ({0.02*rand},{0.02*rand}) -- ({0.45+0.03*rand},{0.86+0.03*rand}) -- ({0.90+0.03*rand},{0.02*rand}) -- ({-0.06+0.03*rand},{0.03*rand});
+  \draw ({0.45+0.02*rand},0.62) -- ({0.45+0.02*rand},{0.30+0.03*rand}); \fill ({0.45+0.02*rand},0.15) circle (0.045);}}
+% lettre a double barre (R, Z, N...) : la lettre manuscrite + un second trait a la main
+\newdimen\bbw \newdimen\bbh
+\newcommand{\HandBBbox}[1]{\setbox0\hbox{#1}\bbw=\wd0 \bbh=\fontcharht\font`#1\relax
+  \rlap{\box0}%
+  \makebox[0pt][l]{\tikz[baseline=0pt,line width=0.48pt,line cap=round]{%
+    \ifx Z#1\draw ({0.12*\bbw+0.15em},{0.05*\bbh}) .. controls ({0.5*\bbw+0.15em+0.02em*rand},{0.5*\bbh})
+        .. ({0.86*\bbw+0.08em},{0.95*\bbh});%
+    \else\draw ({0.21em+0.012em*rand},{0.04*\bbh}) .. controls ({0.21em+0.06*\bbh+0.02em*rand},{0.5*\bbh})
+        .. ({0.21em+0.12*\bbh+0.02em*rand},{0.97*\bbh});\fi}}%
+  \kern\bbw}
+\renewcommand{\mathbb}[1]{\text{\HandBBbox{#1}}}
+% soulignement de titre : un trait a main levee (depart avant le titre, longueur et pente variables)
+\newcommand{\handunder}[1]{\draw[cT,line width=0.55pt,line cap=round]
+  ({-0.8pt-0.8pt*rnd},{-1.7pt+0.25pt*rand}) .. controls ({0.5*#1},{-1.6pt+0.6pt*rand}) .. ({#1},{-1.7pt+0.5pt*rand});}
+% rature : le texte barre de deux traits rapides, puis on continue
+\newcommand{\raturebox}[1]{\tikz[baseline=(r.base)]{\node[inner sep=0pt,outer sep=0pt] (r) {#1};
+  \draw[line width=0.5pt,line cap=round] ($(r.west)+({-0.6pt},{-0.5pt+0.3pt*rand})$) -- ($(r.east)+({0.6pt},{0.5pt+0.3pt*rand})$);
+  \draw[line width=0.5pt,line cap=round] ($(r.west)+({-0.4pt},{0.6pt+0.3pt*rand})$) -- ($(r.east)+({0.7pt},{-0.3pt+0.3pt*rand})$);}\kern0.18em}
+\newcommand{\rature}[1]{\ifmmode\text{\raturebox{$#1$}}\else\raturebox{#1}\fi}
+
+% ---------- notations ----------
+\newcommand{\R}{\mathbb{R}}\newcommand{\N}{\mathbb{N}}\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\sca}[2]{\langle #1,#2\rangle}
+\newcommand{\nr}[1]{\|#1\|}
+\newcommand{\eps}{\varepsilon}
+\newcommand{\Lg}{\mathcal{L}}
+
+% ---------- structure d'un enonce (comme fiche_opti_manuscrite.tex) ----------
+\newcommand{\B}{\par\noindent\hangindent=0.8em\hangafter=1\makebox[0.8em][l]{\textbullet}}
+\newcommand{\Th}[1]{\textbf{\color{cT}#1}}
+\newcommand{\Hyp}{\textbf{Hyp.}~}
+\newcommand{\Alors}{$\boldsymbol{\Rightarrow}$~}
+\newcommand{\CN}{\textbf{\color{cK}[CN]}~}
+\newcommand{\CS}{\textbf{\color{cK}[CS]}~}
+\newcommand{\Mt}{{\color{cK}\handarrow}\,}
+\newcommand{\Ex}{\textit{Ex.}~}
+% astuce / methode hors slides : etoile violette tracee a la main
+\newcommand{\Ast}{\par\noindent\hangindent=0.8em\hangafter=1\makebox[0.8em][l]{\color{cA}\handstar}}
+\newcommand{\astsym}{{\color{cA}\handstar}}
+\newcommand{\pg}[1]{{\color{cP}#1}}
+% precision absente des slides : triangle "!" rouge, trace a la main
+\newcommand{\warnsym}{\handwarn}
+\newcommand{\Warn}[1]{{\color{cP}\warnsym\if\relax\detokenize{#1}\relax\else\,(#1)\fi}}
+% titres de section : stylo bleu, souligne a main levee
+\newcommand{\Sec}[1]{\par\vspace{2pt}\noindent\begin{tikzpicture}[baseline=(titre.base)]
+  \node[anchor=base west,inner sep=0pt,text=cT,font=\bfseries\fontsize{10.6}{11.6}\selectfont] (titre) at (0,0) {#1};
+  \useasboundingbox (0,-2pt) rectangle (titre.north east);
+  \pgfmathsetmacro{\lsoul}{0.84+0.14*rnd}% le trait ne va pas toujours jusqu'au bout de la colonne
+  \handunder{\lsoul\linewidth}
+\end{tikzpicture}\par\vspace{1.2pt}}
+\newcommand{\TitreFiche}{\fontsize{12}{13}\selectfont\bfseries\color{cT}}
+\newcommand{\Legende}{\fontsize{7.6}{8.6}\selectfont}
+\begin{document}
+\fontsize{8.95}{9.86}\selectfont
+\input{fiche_contenu}
+\end{document}

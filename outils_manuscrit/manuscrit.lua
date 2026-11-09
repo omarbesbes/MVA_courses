@@ -5,6 +5,9 @@
 --     + bruit propre a chaque lettre. Rien n'est identique d'une lettre a l'autre.
 manuscrit = manuscrit or {}
 local M = manuscrit
+-- polices considerees comme "manuscrites" (les autres -- maths -- recoivent en plus
+-- l'inclinaison de l'ecriture) : motifs cherches dans le nom de la police
+M.handfonts = M.handfonts or { "Kalam", "Patrick" }
 
 local GLYPH, KERN, GLUE = node.id("glyph"), node.id("kern"), node.id("glue")
 local HLIST, VLIST, DISC, MATH = node.id("hlist"), node.id("vlist"), node.id("disc"), node.id("math")
@@ -35,12 +38,15 @@ end
 local function clamp(x, a, b) if x < a then return a elseif x > b then return b end return x end
 
 local fontsize, handfont = {}, {}
-local function is_hand(f)   -- police manuscrite (Kalam) ?
+local function is_hand(f)   -- police manuscrite ?
   local h = handfont[f]
   if h == nil then
     local fnt = font.getfont(f)
     local nm = fnt and ((fnt.fullname or "") .. " " .. (fnt.name or "") .. " " .. (fnt.psname or "")) or ""
-    h = (nm:find("Kalam") ~= nil)
+    h = false
+    for _, pat in ipairs(M.handfonts) do
+      if nm:find(pat, 1, true) then h = true end
+    end
     handfont[f] = h
   end
   return h

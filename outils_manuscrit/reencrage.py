@@ -2,7 +2,8 @@
 """Reencrage : transforme le PDF "marqueurs" (LuaLaTeX) en fiche qui a l'air ecrite au stylo.
 
 Etapes, pour chaque page rendue a 600 dpi :
-  1. separation des encres (marqueurs : bleu pur, rouge pur, vert pur, noir, magenta = crayon) ;
+  1. separation des encres (marqueurs : bleu pur, rouge pur, vert pur, noir, cyan = violet,
+     magenta = crayon) ;
   2. deformation elastique multi-echelle (meme champ pour toutes les encres) :
      rotation globale, derive lente de la page, lignes qui ondulent et penchent chacune a sa facon,
      mots legerement decales, forme de chaque lettre legerement alteree ;
@@ -15,7 +16,7 @@ Etapes, pour chaque page rendue a 600 dpi :
 Sorties : <base>_impression.pdf (sans quadrillage, a imprimer de preference sur papier petits
 carreaux) et <base>_quadrille.pdf (petits carreaux 5 mm dessines, pour l'ecran ou papier blanc).
 
-usage : python3 manuscrit/reencrage.py fiche_integration_sto_realiste.pdf [--dpi 600] [--seed 11]
+usage : python3 ../../outils_manuscrit/reencrage.py fiche_xxx_realiste.pdf [--dpi 600] [--seed 11]
 dependances : numpy scipy scikit-image opencv-python-headless img2pdf pillow, poppler (pdftoppm)
 """
 import argparse
@@ -40,9 +41,10 @@ INKS = {
     "rouge":  dict(marker=(1, 0, 0), color=(0.780, 0.110, 0.150), pen=1.07, kind="stylo"),
     "vert":   dict(marker=(0, 1, 0), color=(0.090, 0.450, 0.200), pen=1.00, kind="stylo"),
     "noir":   dict(marker=(0, 0, 0), color=(0.110, 0.110, 0.130), pen=1.00, kind="stylo"),
+    "violet": dict(marker=(0, 1, 1), color=(0.400, 0.180, 0.520), pen=1.00, kind="stylo"),
     "crayon": dict(marker=(1, 0, 1), color=(0.420, 0.420, 0.440), pen=0.70, kind="crayon"),
 }
-ORDER = ["crayon", "bleu", "vert", "noir", "rouge"]   # ordre de pose (soustractif : peu importe)
+ORDER = ["crayon", "bleu", "vert", "noir", "violet", "rouge"]   # ordre de pose (soustractif : peu importe)
 
 
 def mm(x, dpi):
@@ -191,8 +193,9 @@ def process_page(png, dpi, rng, log):
     del img
     shape = next(iter(layers.values())).shape
     dx, dy = displacement(shape, dpi, rng)
-    # largeur de pointe de reference : celle du texte bleu (la police de base)
-    ref = warp(layers["bleu"], dx, dy) > 0.42
+    # largeur de pointe de reference : celle de l'encre majoritaire (le texte courant)
+    main = max(layers, key=lambda n: float(layers[n].sum()))
+    ref = warp(layers[main], dx, dy) > 0.42
     sk = skeletonize(ref[::1, ::1])
     r0 = float(np.median(ndi.distance_transform_edt(ref)[sk])) - 0.35
     del ref, sk
@@ -219,15 +222,17 @@ def ink_palette(grid=False):
     """Palette explicite (uint8, N x 3) : blanc pur + chaque encre a 40 niveaux de couverture
     (+ quadrillage). Une quantification automatique ferait disparaitre les encres rares."""
     cols = [(1.0, 1.0, 1.0)]
-    levels = np.linspace(0.025, 1.0, 40)
+    levels = np.linspace(0.028, 1.0, 36)
     for p in INKS.values():
         C = np.array(p["color"])
         cols += [tuple(1 - a * (1 - C)) for a in levels]
     if grid:
         G = np.array(GRID_COLOR)
-        B = np.array(INKS["bleu"]["color"])
         cols.append(tuple(G))
-        cols += [tuple(G * (1 - a * (1 - B))) for a in levels[1::2]]
+        for ink in ("bleu", "noir"):          # encre courante sur une ligne du quadrillage
+            C = np.array(INKS[ink]["color"])
+            cols += [tuple(G * (1 - a * (1 - C))) for a in levels[2::3]]
+    assert len(cols) <= 256
     return np.round(255 * np.array(cols)).astype(np.uint8)
 
 
