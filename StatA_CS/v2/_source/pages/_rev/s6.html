@@ -1,0 +1,387 @@
+<h2 id="s6">6. Les variantes du Lasso <a class="ref" href="06_seance6.html">→ S6</a></h2>
+
+<div class="box resume"><div class="box-h">L'essentiel de la séance en 5 lignes</div>
+<ul>
+<li>Le Lasso a quatre défauts : il <strong>biaise</strong> les gros coefficients, garde <strong>au plus $n$</strong> variables, choisit <strong>au hasard</strong> parmi des variables corrélées, <strong>ignore la structure</strong> (groupes, ordre). Chaque variante en corrige un (l'elastic net en corrige deux).</li>
+<li>Bridge $\lambda\sum_j\abs{\beta_j}^\gamma$ : convexe ⇔ $\gamma\ge1$, zéros exacts ⇔ $\gamma\le1$ ; seul le Lasso ($\gamma=1$) a les deux.</li>
+<li>La méthode de toute la séance : en design orthonormé, le critère vaut $\sum_j(\beta_j-b_j)^2+\text{pénalité}+\text{cte}$ ; on résout un problème à une variable (ou à un bloc) et on obtient une règle $b\mapsto\hb$.</li>
+<li>Débiaiser : LSLasso (seuillage dur), Lasso relaxé (rétrécissement $\delta\lambda/2$), Lasso adaptatif (retire $\lambda/(2\abs{b_j})$ au lieu de $\lambda/2$ ; garde $\abs{b_j}>\sqrt{\lambda/2}$). Dantzig : $\min\norm\beta_1$ sous la contrainte des KKT, d'où $\norm{\hb^D}_1\le\norm{\hb^L}_1$.</li>
+<li>Elastic net ($+\lambda_2\norm\beta_2^2$) : solution unique, partage égal entre colonnes identiques, Lasso divisé par $1+\lambda_2$ en orthonormé. Structure : group-Lasso (blocs gardés ou tués en entier), Lasso fusionné (paliers).</li>
+</ul></div>
+
+<div class="box rappel" id="s6-convention"><div class="box-h">Convention de toute la section <a class="ref" href="06_seance6.html#avant-conventions">→ S6</a></div>
+<p>Critères <strong>non normalisés</strong>, comme les diapos 74–87 : $\norm{Y-X\beta}^2+\text{pénalité}$ (avec $\frac1n\norm{Y-X\beta}^2$, remplacez $\lambda$ par $n\lambda$). Design <strong>orthonormé</strong> : $X\T X=I_p$ (donc $p\le n$), et $b=X\T Y=\hb\MC$. Dans cette convention, le seuil du Lasso est $\lambda/2$.</p></div>
+
+<div class="box methode" id="s6-labo"><div class="box-h">Méthode — Le laboratoire orthonormé <span class="tag coeur">par cœur</span><span class="tag refaire">à savoir refaire</span> <a class="ref" href="06_seance6.html#avant-lasso">→ S6</a></div>
+<div class="memo">
+<p>Si $X\T X=I_p$ et $b=X\T Y$ :</p>
+$$\norm{Y-X\beta}^2=\sum_{j=1}^p(\beta_j-b_j)^2+\big(\norm Y^2-\norm b^2\big),$$
+<p>et le dernier terme ne dépend pas de $\beta$.</p>
+<p>Une pénalité séparable donne $p$ problèmes à une variable indépendants, $\min_{\beta_j}\,(\beta_j-b_j)^2+\text{pén}(\beta_j)$ ; une pénalité par groupes donne un problème par bloc. Brique de base (Lasso à une variable) :</p>
+$$\argmin_{\beta_j\in\R}\ (\beta_j-b_j)^2+\lambda\abs{\beta_j}=\sgn(b_j)\big(\abs{b_j}-\lambda/2\big)_+ .$$
+</div>
+<p class="hook"><b>Pour la retrouver :</b> $\norm{Y-X\beta}^2=\norm Y^2-2\beta\T X\T Y+\beta\T X\T X\beta=\norm Y^2-2\beta\T b+\norm\beta^2$, puis on complète le carré.</p>
+<ol>
+<li>Écrire le problème à une variable.</li>
+<li>Cas $\beta_j>0$, puis $\beta_j<0$ : annuler la dérivée, vérifier que la solution a bien le signe supposé.</li>
+<li>Cas $\beta_j=0$ : $0\in\partial(\text{critère})(0)$, avec $\partial\abs\cdot(0)=[-1,1]$ ; pour la pénalité $\ell_0$, comparer directement les coûts.</li>
+<li>Dessiner la règle $b\mapsto\hb$ : zone morte autour de 0 ? biais pour les grands $\abs b$ ? continuité ?</li>
+</ol></div>
+
+<h3 id="s6-defauts">Les quatre défauts du Lasso, et qui les corrige</h3>
+
+<div class="table-wrap"><table>
+<thead><tr><th>Défaut du Lasso</th><th>Ce qu'on observe</th><th>Variante(s) qui corrige(nt)</th></tr></thead>
+<tbody>
+<tr><td>1. Biais sur les gros coefficients</td><td>le seuillage doux retire $\lambda/2$ à tout coefficient gardé, même très grand</td><td class="memo">LSLasso, Lasso relaxé, Lasso adaptatif</td></tr>
+<tr><td>2. Au plus $n$ variables</td><td>si $p>n$, il garde au plus $n$ variables, même si davantage sont pertinentes</td><td class="memo">elastic net</td></tr>
+<tr><td>3. Variables corrélées</td><td>il en garde une « au hasard » ; avec une colonne dupliquée, une infinité de solutions</td><td class="memo">elastic net</td></tr>
+<tr><td>4. Structure ignorée</td><td>coefficients qui vont par groupes, voisins qui devraient être égaux</td><td class="memo">group-Lasso, Lasso fusionné</td></tr>
+</tbody></table></div>
+<p class="small muted">Deux constructions complètent le panorama : le <strong>bridge</strong>, qui range ℓ0, Lasso et Ridge dans une même famille, et le <strong>sélecteur de Dantzig</strong>, un autre estimateur parcimonieux, très proche du Lasso (mais distinct en général), qui se calcule par programmation linéaire.</p>
+
+<h3 id="s6-bridge">Bridge : ℓ0, Lasso et Ridge dans une même famille</h3>
+
+<div class="box def" id="s6-bridge-def"><div class="box-h">Définition — Estimateur bridge <span class="tag coeur">par cœur</span> <a class="ref" href="06_seance6.html#bridge-def">→ S6</a></div>
+<div class="memo">
+<p>Pour $\lambda\ge0$ et $\gamma\ge0$ :</p>
+$$C_{\lambda,\gamma}(\beta)=\norm{Y-X\beta}^2+\lambda\norm\beta_\gamma^\gamma,$$
+$$\norm\beta_\gamma^\gamma=\begin{cases}\sum_{j=1}^p\abs{\beta_j}^\gamma&\text{si }\gamma>0,\\[2pt]\sum_{j=1}^p\ind\{\beta_j\neq0\}&\text{si }\gamma=0,\end{cases}$$
+$$\hb^{\mathrm{Bridge}}(\lambda,\gamma)=\argmin_{\beta\in\R^p}C_{\lambda,\gamma}(\beta).$$
+<p>Trois cas ($\lambda>0$) : $\gamma=0$ sélection de modèle (ℓ0 : Cp, AIC, BIC) ; $\gamma=1$ Lasso ; $\gamma=2$ Ridge.</p>
+</div>
+<p class="hook"><b>Pour la retrouver :</b> on remplace $\abs{\beta_j}$ par $\abs{\beta_j}^\gamma$. Le cas $\gamma=0$ est la limite naturelle : $\abs u^\gamma\to1$ quand $\gamma\to0$ si $u\neq0$, alors que $\abs0^\gamma=0$.</p></div>
+
+<div class="box thm" id="s6-bridge-ortho"><div class="box-h">Formules — Bridge en design orthonormé pour $\gamma=2$, $1$, $0$ <span class="tag coeur">par cœur</span><span class="tag refaire">à savoir refaire</span> <a class="ref" href="06_seance6.html#bridge-ortho">→ S6</a></div>
+<div class="memo">
+$$\begin{aligned}\gamma=2\ (\text{Ridge}) &:\quad\hb_j=\frac{b_j}{1+\lambda}\\[2pt]\gamma=1\ (\text{Lasso}) &:\quad\hb_j=\sgn(b_j)\big(\abs{b_j}-\lambda/2\big)_+\\[2pt]\gamma=0\ (\ell_0) &:\quad\hb_j=b_j\,\ind\{\abs{b_j}>\sqrt\lambda\}\end{aligned}$$
+<p>Ridge : tout est rétréci, rien n'est nul. Lasso : <em>seuillage doux</em> (zéros + décalage de $\lambda/2$). ℓ0 : <em>seuillage dur</em> (on garde tel quel ou on tue).</p>
+</div>
+<p class="hook"><b>Pour la retrouver :</b> Ridge, dériver ; Lasso, trois cas de signe ; ℓ0, comparer deux coûts : $\beta_j=b_j$ coûte $\lambda$, $\beta_j=0$ coûte $b_j^2$, on garde ssi $b_j^2>\lambda$.</p>
+<details class="fold proof"><summary>Preuve express</summary><div class="fold-body">
+<ol class="steps">
+<li>$$2(\beta_j-b_j)+2\lambda\beta_j=0\iff\beta_j=\frac{b_j}{1+\lambda}$$<span class="why">$\gamma=2$ : critère dérivable et strictement convexe en $\beta_j$, on annule la dérivée.</span></li>
+<li>$$2(\beta_j-b_j)+\lambda=0\iff\beta_j=b_j-\lambda/2$$<span class="why">$\gamma=1$, cas $\beta_j>0$ : sur $]0,+\infty[$, $\abs{\beta_j}=\beta_j$ est dérivable ; cohérent ssi $b_j>\lambda/2$. Le cas $\beta_j<0$ donne de même $b_j+\lambda/2$ si $b_j<-\lambda/2$.</span></li>
+<li>$$0\in-2b_j+\lambda[-1,1]\iff\abs{b_j}\le\lambda/2$$<span class="why">$\gamma=1$, cas $\beta_j=0$ : condition $0\in\partial(\text{critère})(0)$ avec $\partial\abs\cdot(0)=[-1,1]$. Les trois cas se résument en $\sgn(b_j)(\abs{b_j}-\lambda/2)_+$.</span></li>
+<li>$$\min\big(\underbrace{\lambda}_{\beta_j=b_j},\ \underbrace{b_j^2}_{\beta_j=0}\big)\ \Rightarrow\ \hb_j=b_j\,\ind\{b_j^2>\lambda\}$$<span class="why">$\gamma=0$ : si $\beta_j\neq0$, la pénalité vaut $\lambda$ quel que soit $\beta_j$, donc le meilleur choix est $\beta_j=b_j$ (ajustement nul) ; sinon on paie $b_j^2$.</span></li>
+</ol></div></details></div>
+
+<div class="box thm" id="s6-bridge-convexite"><div class="box-h">Proposition — Convexité du bridge <span class="tag coeur">par cœur</span><span class="tag refaire">à savoir refaire</span> <a class="ref" href="06_seance6.html#bridge-convexite">→ S6</a></div>
+<div class="memo">
+<p>Pour $\gamma\ge1$, $\beta\mapsto\norm\beta_\gamma^\gamma$ est convexe (strictement si $\gamma>1$), donc $C_{\lambda,\gamma}$ est convexe. Pour $0\le\gamma<1$ : la boule $\{\norm\beta_\gamma^\gamma\le1\}$ n'est pas convexe ($p\ge2$), et $C_{\lambda,\gamma}$ n'est pas convexe ($\lambda>0$). La région de contrainte est convexe <strong>si et seulement si $\gamma\ge1$</strong> (diapo 76).</p>
+<p>Zéros exacts ⇔ $\gamma\le1$ (pointe en 0). Seul $\gamma=1$ est à la fois convexe et créateur de zéros.</p>
+</div>
+<p class="hook"><b>L'idée :</b> $\gamma\ge1$ : $t\mapsto t^\gamma$ est convexe et croissante sur $[0,\infty[$, composée avec $\abs\cdot$. $\gamma<1$ : $e_1$ et $e_2$ sont dans la boule, pas leur milieu, car $2\cdot2^{-\gamma}=2^{1-\gamma}>1$.</p>
+<details class="fold proof"><summary>Preuve express</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\begin{aligned}\abs{\theta u+(1-\theta)v}^\gamma&\le\big(\theta\abs u+(1-\theta)\abs v\big)^\gamma\\&\le\theta\abs u^\gamma+(1-\theta)\abs v^\gamma\end{aligned}$$<span class="why">$\gamma\ge1$ : inégalité triangulaire et croissance de $t^\gamma$, puis convexité de $t^\gamma$ sur $[0,\infty[$ (dérivée seconde $\gamma(\gamma-1)t^{\gamma-2}\ge0$). Une somme de convexes est convexe, et $\norm{Y-X\beta}^2$ est convexe.</span></li>
+<li>$$\Big\|\tfrac{e_1+e_2}2\Big\|_\gamma^\gamma=2\big(\tfrac12\big)^\gamma=2^{1-\gamma}>1$$<span class="why">$0<\gamma<1$ : $e_1$ et $e_2$ sont dans la boule ($\norm{e_1}_\gamma^\gamma=\norm{e_2}_\gamma^\gamma=1$), pas leur milieu : boule non convexe (exemple : $\gamma=0{,}5$ donne $\sqrt2\approx1{,}41$). Pour $\gamma=0$ : la « norme » du milieu vaut 2.</span></li>
+<li>$$\varphi''(t)=2\norm{X_1}^2+\lambda\gamma(\gamma-1)t^{\gamma-2}\xrightarrow[t\to0^+]{}-\infty$$<span class="why">$\varphi(t)=C_{\lambda,\gamma}(\beta+te_1)$ avec $\beta_1=0$ et $0<\gamma<1$ : $\varphi$ est concave près de $0^+$, donc le critère n'est pas convexe sur cette droite, donc pas convexe (pour $\gamma=0$, le milieu est au-dessus de la corde).</span></li>
+</ol></div></details></div>
+
+<div class="box intu" id="s6-pointe"><div class="box-h">À comprendre — Pourquoi la pointe en 0 crée des zéros <span class="tag comprendre">à comprendre</span> <a class="ref" href="06_seance6.html#bridge-def">→ S6</a></div>
+<p>Un coefficient posé en 0 a-t-il intérêt à bouger ? L'ajustement gagne, au premier ordre, une quantité proportionnelle au déplacement $\abs{\beta_j}$ ; la pénalité coûte $\lambda\abs{\beta_j}^\gamma$. Si $\gamma\le1$, ce coût est au moins du même ordre ($\abs{\beta_j}^\gamma\ge\abs{\beta_j}$ près de 0) : quand le gain est faible, rester à 0 est optimal. Si $\gamma>1$, la pénalité a une dérivée nulle en 0 : rester à 0 exigerait $X_j\T(Y-X\hb)=0$ exactement, un événement de probabilité nulle.</p></div>
+
+<div class="box thm" id="s6-diapo75"><div class="box-h">Les énoncés de la diapo 75, un par un <span class="tag coeur">par cœur</span> <a class="ref" href="06_seance6.html#bridge-existence">→ S6</a></div>
+<div class="table-wrap"><table>
+<thead><tr><th>Cas</th><th>Énoncé</th><th>Pourquoi</th></tr></thead>
+<tbody>
+<tr><td>$\gamma=0$</td><td class="memo">l'estimateur existe si $X$ est injective</td><td class="memo">$2^p$ problèmes de moindres carrés restreints à comparer ; l'injectivité rend chacun unique (en fait un minimiseur existe toujours)</td></tr>
+<tr><td>$\gamma>0$</td><td class="memo">l'estimateur existe</td><td class="memo">critère continu et coercif : la pénalité explose quand $\norm\beta\to\infty$</td></tr>
+<tr><td>$0\le\gamma<1$</td><td class="memo">$C_{\lambda,\gamma}$ n'est pas convexe, peut être très dur à minimiser en grande dimension</td><td class="memo">minima locaux ; la proposition ci-dessus</td></tr>
+<tr><td>$\gamma=1$</td><td class="memo">$C_{\lambda,1}$ convexe ; un unique minimiseur si $X$ est injective</td><td class="memo">$X$ injective ⇔ $\rg X=p$ ⇒ hessienne $2X\T X\succ0$, ajustement strictement convexe (sinon, voir la colonne dupliquée)</td></tr>
+<tr><td>$\gamma>1$</td><td class="memo">strictement convexe, unique minimiseur ; presque sûrement toutes les coordonnées sont non nulles</td><td class="memo">$t^\gamma$ strictement convexe ; pénalité de dérivée nulle en 0</td></tr>
+<tr><td>contrainte</td><td class="memo">$\hb^{\mathrm{Bridge}}(\lambda,\gamma)=\argmin_{\{\beta:\ \norm\beta_\gamma^\gamma\le t\}}\norm{Y-X\beta}^2$ pour un $t$ associé à $\lambda$</td><td class="memo">Lagrange ; garanti pour $\gamma\ge1$ (cas convexe)</td></tr>
+</tbody></table></div></div>
+
+<div class="box piege"><div class="box-h">Piège — « norme » ℓγ pour $\gamma<1$</div>
+<p>Pour $\gamma<1$, $\norm\beta_\gamma=(\sum_j\abs{\beta_j}^\gamma)^{1/\gamma}$ <strong>n'est pas une norme</strong> (l'inégalité triangulaire échoue, c'est la non-convexité), et $\norm\beta_0$ non plus (pas homogène). Le mot est un abus de langage.</p></div>
+
+<h3 id="s6-dim2">En dimension 2 : les ellipses et le premier contact</h3>
+
+<div class="box thm" id="s6-decomposition"><div class="box-h">Identité — L'ajustement autour des moindres carrés <span class="tag coeur">par cœur</span><span class="tag refaire">à savoir refaire</span> <a class="ref" href="06_seance6.html#illustration-decomposition">→ S6</a></div>
+<div class="memo">
+$$\norm{Y-X\beta}^2=(\beta-\hb\MC)\T X\T X(\beta-\hb\MC)+\norm{Y-X\hb\MC}^2$$
+<p>Le problème contraint $\argmin_{\norm\beta_\gamma^\gamma\le t}\norm{Y-X\beta}^2$ revient donc à minimiser $(\beta-\hb\MC)\T X\T X(\beta-\hb\MC)$ sur la région de contrainte.</p>
+</div>
+<p class="hook"><b>L'idée :</b> Pythagore. On écrit $Y-X\beta=\hat r+X(\hb\MC-\beta)$ avec $\hat r=Y-X\hb\MC$ ; les équations normales donnent $X\T\hat r=0$, ce qui tue le terme croisé.</p>
+<details class="fold proof"><summary>Preuve express</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\norm{Y-X\beta}^2=\norm{\hat r}^2+2\,\hat r\T X(\hb\MC-\beta)+\norm{X(\hb\MC-\beta)}^2$$<span class="why">$Y-X\beta=\hat r+X(\hb\MC-\beta)$ et $\norm{u+v}^2=\norm u^2+2u\T v+\norm v^2$.</span></li>
+<li>$$\hat r\T X(\hb\MC-\beta)=(X\T\hat r)\T(\hb\MC-\beta)=0$$<span class="why">équations normales : $X\T X\hb\MC=X\T Y$, soit $X\T\hat r=0$.</span></li>
+<li>$$\norm{X(\hb\MC-\beta)}^2=(\beta-\hb\MC)\T X\T X(\beta-\hb\MC)$$<span class="why">$\norm{Xv}^2=v\T X\T Xv$.</span></li>
+</ol></div></details></div>
+
+<div class="box intu" id="s6-contact"><div class="box-h">À comprendre — Pourquoi le losange donne des zéros, et pas le disque <span class="tag comprendre">à comprendre</span> <a class="ref" href="06_seance6.html#illustration-figure">→ S6</a></div>
+<p>Les lignes de niveau de l'ajustement sont des <strong>ellipses centrées en $\hb\MC$</strong> (axes : vecteurs propres de $X\T X$ ; demi-axes $\sqrt{c/\mu_k}$). L'estimateur contraint est le <strong>premier point de contact</strong> entre une ellipse qu'on gonfle et la région permise. Le losange ℓ1 a des <strong>coins sur les axes</strong> : le contact s'y produit pour toute une plage de positions de $\hb\MC$ (en un coin, le cône normal est un secteur de 90°), d'où une coordonnée exactement nulle. Le disque ℓ2 n'a pas de coin : toucher un axe est un accident. Le Lasso ne garde pas forcément les plus gros $\hb\MC_j$ : avec $X\T X=\begin{pmatrix}4&1{,}4\\1{,}4&1\end{pmatrix}$, $t=1$ (diapo 77) et $\hb\MC=(2,3)$ (figure de la diapo 78), le Lasso vaut $(1,0)$ et le Ridge environ $(0{,}89;\ 0{,}46)$.</p></div>
+
+<h3 id="s6-lslasso">LSLasso : Lasso, puis moindres carrés</h3>
+
+<div class="box intu" id="s6-biais"><div class="box-h">À comprendre — D'où vient le biais du Lasso <span class="tag comprendre">à comprendre</span> <a class="ref" href="06_seance6.html#lslasso-biais">→ S6</a></div>
+<p>En design orthonormé, $b_j=\bstar_j+X_j\T\eps\sim\N(\bstar_j,\sigma^2)$ est sans biais. Pour un gros $\bstar_j$, le Lasso renvoie $b_j-\lambda/2$ : un <strong>biais systématique de $\lambda/2$</strong> sur un coefficient dont la non-nullité ne fait aucun doute. Le même $\lambda$ sert à <em>sélectionner</em> (il le faut assez grand pour tuer le bruit) et à <em>estimer</em> (il le faudrait petit pour ne pas biaiser).</p></div>
+
+<div class="box def" id="s6-lslasso-def"><div class="box-h">Définition — LSLasso (<em>Least Squares Lasso</em>) <span class="tag coeur">par cœur</span> <a class="ref" href="06_seance6.html#lslasso">→ S6</a></div>
+<div class="memo">
+<ol><li>Lasso : on obtient $\hb^L(\lambda)$.</li>
+<li>Moindres carrés sur les covariables actives :
+$$\hb^{\mathrm{LSLasso}}(\lambda)=\argmin_{\beta\in\R^p:\ \supp(\beta)=\supp(\hb^L(\lambda))}\ \tfrac12\norm{Y-X\beta}_2^2.$$</li></ol>
+<p>La validation croisée doit porter sur <strong>toute la procédure</strong> (implémenté dans <code>glmnet</code>, <code>relax=TRUE</code>).</p>
+</div>
+<p class="hook"><b>Pour la retrouver :</b> le Lasso <em>choisit</em> les variables, les moindres carrés les <em>estiment</em> sans rétrécissement. Limite : une variable oubliée à l'étape 1 reste oubliée.</p></div>
+
+<div class="box thm" id="s6-lslasso-ortho"><div class="box-h">Formule — LSLasso en design orthonormé <span class="tag coeur">par cœur</span><span class="tag refaire">à savoir refaire</span> <a class="ref" href="06_seance6.html#lslasso-ortho">→ S6</a></div>
+<div class="memo">
+$$\hb^{\mathrm{LSLasso}}_j=b_j\,\ind\{\abs{b_j}>\lambda/2\}$$
+<p>C'est le seuillage dur au seuil $\lambda/2$.</p>
+</div>
+<p class="hook"><b>Pour la retrouver :</b> l'étape 1 garde $\{j:\abs{b_j}>\lambda/2\}$ ; l'étape 2 se découple, et chaque $(\beta_j-b_j)^2$ est minimal en $\beta_j=b_j$. C'est la même règle que la sélection ℓ0 de paramètre $\lambda'=\lambda^2/4$ (seuil $\sqrt{\lambda'}=\lambda/2$) : en orthonormé, le LSLasso résout le problème combinatoire sans explorer les $2^p$ modèles.</p>
+<details class="fold proof"><summary>Preuve express</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\hat S:=\supp(\hb^L)=\{j:\abs{b_j}>\lambda/2\}$$<span class="why">seuillage doux : la coordonnée est non nulle exactement quand $\abs{b_j}$ dépasse le seuil.</span></li>
+<li>$$\min_{\beta:\ \beta_j=0\ \forall j\notin\hat S}\norm{Y-X\beta}^2=\min\sum_{j\in\hat S}(\beta_j-b_j)^2+\text{cte}$$<span class="why">découplage orthonormé, avec $\beta_j=0$ imposé hors de $\hat S$.</span></li>
+<li>$$\hb^{\mathrm{LSLasso}}_j=b_j\ (j\in\hat S),\qquad0\ (j\notin\hat S)$$<span class="why">chaque terme est minimal en $\beta_j=b_j$ : plus aucun rétrécissement.</span></li>
+</ol></div></details></div>
+
+<div class="box piege" id="s6-cv"><div class="box-h">Piège — Régler $\lambda$ pour le Lasso seul, puis réajuster <a class="ref" href="06_seance6.html#lslasso-cv">→ S6</a></div>
+<p>La validation croisée du Lasso seul choisit plutôt un <strong>petit</strong> $\lambda$ (pour moins rétrécir les bons coefficients), quitte à laisser entrer du bruit avec des coefficients minuscules ; le réajustement donne alors à ce bruit un coefficient <strong>plein</strong> : surapprentissage. Pour chaque $\lambda$ candidat, calculez tout l'estimateur en deux étapes sur les plis d'apprentissage, et mesurez son erreur sur le pli de validation.</p></div>
+
+<h3 id="s6-dantzig">Le sélecteur de Dantzig</h3>
+
+<div class="box def" id="s6-dantzig-def"><div class="box-h">Définition — Sélecteur de Dantzig (Candès et Tao, 2007) <span class="tag coeur">par cœur</span> <a class="ref" href="06_seance6.html#dantzig">→ S6</a></div>
+<div class="memo">
+$$D_\lambda=\big\{\beta\in\R^p:\ \norm{2X\T(Y-X\beta)}_\infty\le\lambda\big\}\ \ \text{(convexe)},$$
+$$\hb^D(\lambda)=\argmin_{\beta\in D_\lambda}\norm\beta_1.$$
+</div>
+<p class="hook"><b>Pour la retrouver :</b> $D_\lambda$, c'est l'inégalité des KKT du Lasso imposée à toutes les variables : aucune variable n'est trop corrélée au résidu. Lasso : « bien ajuster en payant la taille » ; Dantzig : « être le plus petit possible en ajustant assez bien ».</p></div>
+
+<div class="box thm" id="s6-dantzig-l1"><div class="box-h">Proposition — Dantzig contre Lasso <span class="tag coeur">par cœur</span><span class="tag refaire">à savoir refaire</span> <a class="ref" href="06_seance6.html#dantzig-comparaison">→ S6</a></div>
+<div class="memo">
+<p>$\norm{\hb^D(\lambda)}_1\le\norm{\hb^L(\lambda)}_1$. Les performances numériques et théoriques des deux estimateurs sont très proches ; dans certains cas ils coïncident (par exemple en design orthonormé).</p>
+</div>
+<p class="hook"><b>L'idée :</b> les KKT disent $\hb^L\in D_\lambda$, et $\hb^D$ minimise $\norm\cdot_1$ sur $D_\lambda$.</p>
+<details class="fold proof"><summary>Preuve express</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\begin{aligned}\abs{2X_j\T(Y-X\hb^L)}&=\lambda&&\text{si }\hb^L_j\neq0,\\\abs{2X_j\T(Y-X\hb^L)}&\le\lambda&&\text{si }\hb^L_j=0\end{aligned}$$<span class="why">conditions KKT du Lasso, critère $\norm{Y-X\beta}^2+\lambda\norm\beta_1$.</span></li>
+<li>$$\norm{2X\T(Y-X\hb^L)}_\infty\le\lambda,\ \text{ i.e. }\ \hb^L\in D_\lambda$$<span class="why">chaque coordonnée est au plus $\lambda$ en valeur absolue.</span></li>
+<li>$$\norm{\hb^D}_1=\min_{\beta\in D_\lambda}\norm\beta_1\le\norm{\hb^L}_1$$<span class="why">un minimum sur un ensemble est inférieur à la valeur en n'importe quel point de cet ensemble.</span></li>
+</ol></div></details></div>
+
+<div class="box methode" id="s6-dantzig-lp"><div class="box-h">Méthode — Écrire Dantzig comme un programme linéaire <span class="tag refaire">à savoir refaire</span> <a class="ref" href="06_seance6.html#dantzig-lp">→ S6</a></div>
+<p>On sépare parties positive et négative : $\beta=\beta^+-\beta^-$, $\beta^\pm\ge0$, et $\abs{\beta_j}=\beta^+_j+\beta^-_j$ à l'optimum.</p>
+<div class="memo">
+$$\begin{aligned}&\min_{\beta^+,\,\beta^-\ge0}\ \sum_{j=1}^p(\beta^+_j+\beta^-_j)\\&\text{s.c. }\ -\lambda\le2X_j\T\big(Y-X\beta^++X\beta^-\big)\le\lambda,\quad j=1,\dots,p.\end{aligned}$$
+<p>Objectif et contraintes linéaires : $2p$ inconnues positives, $2p$ inégalités. Le Lasso, lui, est un programme <em>quadratique</em>.</p>
+</div></div>
+
+<div class="box thm" id="s6-dantzig-ortho"><div class="box-h">Proposition — Le sélecteur de Dantzig en design orthonormé <span class="tag coeur">par cœur</span><span class="tag refaire">à savoir refaire</span> <a class="ref" href="06_seance6.html#dantzig-ortho">→ S6</a></div>
+<div class="memo">
+$$D_\lambda=\big\{\beta:\ \abs{\beta_j-b_j}\le\lambda/2\ \ \forall j\big\}$$
+$$\hb^D_j=\sgn(b_j)\big(\abs{b_j}-\lambda/2\big)_+=\hb^L_j .$$
+</div>
+<p class="hook"><b>L'idée :</b> $2X\T(Y-X\beta)=2(b-\beta)$ : la contrainte devient une boîte, et l'on minimise chaque $\abs{\beta_j}$ sur son intervalle.</p>
+<details class="fold proof"><summary>Preuve express</summary><div class="fold-body">
+<ol class="steps">
+<li>$$2X\T(Y-X\beta)=2(X\T Y-X\T X\beta)=2(b-\beta)$$<span class="why">$X\T Y=b$ et $X\T X=I_p$.</span></li>
+<li>$$\norm{2(b-\beta)}_\infty\le\lambda\iff\beta_j\in\big[b_j-\lambda/2,\ b_j+\lambda/2\big]\ \text{ pour tout }j$$<span class="why">on divise par 2 : $D_\lambda$ est une boîte.</span></li>
+<li>$$\min_{\beta\in D_\lambda}\sum_j\abs{\beta_j}=\sum_j\ \min_{\abs{\beta_j-b_j}\le\lambda/2}\abs{\beta_j}$$<span class="why">objectif et contrainte se découplent : chaque $\beta_j$ se choisit séparément.</span></li>
+<li>$$\hb^D_j=\begin{cases}0&\text{si }\abs{b_j}\le\lambda/2,\\b_j-\sgn(b_j)\,\lambda/2&\text{sinon}\end{cases}$$<span class="why">on prend 0 s'il est dans l'intervalle, sinon l'extrémité la plus proche de 0 : c'est $\sgn(b_j)(\abs{b_j}-\lambda/2)_+$, le Lasso.</span></li>
+</ol></div></details></div>
+
+<h3 id="s6-adaptatif">Le Lasso adaptatif</h3>
+
+<div class="box def" id="s6-adaptatif-def"><div class="box-h">Définition — Lasso adaptatif (Zou, 2006) <span class="tag coeur">par cœur</span> <a class="ref" href="06_seance6.html#adaptatif">→ S6</a></div>
+<div class="memo">
+$$\hb^{\mathrm{AdapL}}(\lambda)=\argmin_{\beta\in\R^p}\Big\{\norm{Y-X\beta}^2+\lambda\sum_{j=1}^p\omega_j\abs{\beta_j}\Big\},$$
+<p>avec $\omega_j=1/\abs{\tilde\beta_j}$, où $\tilde\beta$ est un estimateur préliminaire ; choix usuel si $p$ n'est pas trop grand : $\omega_j=1/\abs{\hb^{\mathrm{ols}}_j}$ (moindres carrés).</p>
+</div>
+<p class="hook"><b>Pour la retrouver :</b> on fait confiance aux gros. $\abs{\tilde\beta_j}$ grand ⇒ poids petit ⇒ peu pénalisé, donc peu biaisé ; $\abs{\tilde\beta_j}$ petit ⇒ poids énorme ⇒ tué.</p></div>
+
+<div class="box thm" id="s6-adaptatif-ortho"><div class="box-h">Formule — Lasso adaptatif en design orthonormé, avec $\tilde\beta=b$ <span class="tag coeur">par cœur</span><span class="tag refaire">à savoir refaire</span> <a class="ref" href="06_seance6.html#adaptatif-ortho">→ S6</a></div>
+<div class="memo">
+$$\hb^{\mathrm{AdapL}}_j=\sgn(b_j)\Big(\abs{b_j}-\frac{\lambda}{2\abs{b_j}}\Big)_+$$
+<p>Coordonnée gardée ssi $\abs{b_j}>\sqrt{\lambda/2}$ ; biais d'une coordonnée gardée : $\dfrac{\lambda}{2\abs{b_j}}$, qui tend vers 0 quand $\abs{b_j}\to\infty$ (contre $\lambda/2$ pour le Lasso).</p>
+</div>
+<p class="hook"><b>L'idée :</b> c'est un Lasso à une variable de paramètre $\lambda\omega_j$, donc un seuillage doux au seuil $\lambda\omega_j/2=\lambda/(2\abs{b_j})$. Intermédiaire entre seuillage doux (près du seuil) et seuillage dur (grands $b_j$).</p>
+<details class="fold proof"><summary>Preuve express</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\min_{\beta_j}\ (\beta_j-b_j)^2+\lambda\omega_j\abs{\beta_j}$$<span class="why">découplage orthonormé : la pénalité pondérée reste séparable.</span></li>
+<li>$$\begin{aligned}\hb_j&=\sgn(b_j)\Big(\abs{b_j}-\frac{\lambda\omega_j}2\Big)_+\\&=\sgn(b_j)\Big(\abs{b_j}-\frac{\lambda}{2\abs{b_j}}\Big)_+\end{aligned}$$<span class="why">seuillage doux avec $\lambda\omega_j$ à la place de $\lambda$, puis $\omega_j=1/\abs{b_j}$.</span></li>
+<li>$$\hb_j\neq0\iff\abs{b_j}>\frac{\lambda}{2\abs{b_j}}\iff\abs{b_j}^2>\frac\lambda2$$<span class="why">on multiplie par $\abs{b_j}>0$.</span></li>
+<li>$$\abs{b_j}-\abs{\hb_j}=\frac{\lambda}{2\abs{b_j}}$$<span class="why">pour une coordonnée gardée ; à comparer au biais constant $\lambda/2$ du Lasso.</span></li>
+</ol></div></details></div>
+
+<div class="box methode" id="s6-adaptatif-calcul"><div class="box-h">Méthode — Calculer un Lasso adaptatif avec un logiciel de Lasso <span class="tag refaire">à savoir refaire</span> <a class="ref" href="06_seance6.html#adaptatif-calcul">→ S6</a></div>
+<div class="memo">
+<p>Poser $\gamma_j=\omega_j\beta_j$ et $\tilde X_j=X_j/\omega_j$. Alors $X\beta=\sum_j(\omega_j\beta_j)\frac{X_j}{\omega_j}=\tilde X\gamma$ et $\sum_j\omega_j\abs{\beta_j}=\norm\gamma_1$, donc</p>
+$$\norm{Y-X\beta}^2+\lambda\sum_j\omega_j\abs{\beta_j}=\norm{Y-\tilde X\gamma}^2+\lambda\norm\gamma_1 .$$
+<p>On résout ce Lasso standard en $\gamma$, puis $\hb_j=\hat\gamma_j/\omega_j$.</p>
+</div>
+<p class="hook"><b>Remarque :</b> si $\tilde\beta_j=0$, le poids est infini, la colonne $\tilde X_j$ est nulle : la variable est exclue d'office.</p></div>
+
+<h3 id="s6-relaxe">Le Lasso relaxé</h3>
+
+<div class="box def" id="s6-relaxe-def"><div class="box-h">Définition — Lasso relaxé (Meinshausen, 2007) <span class="tag coeur">par cœur</span> <a class="ref" href="06_seance6.html#relaxe">→ S6</a></div>
+<div class="memo">
+<ol><li>Calculer $\hb^L(\lambda)=\argmin_\beta\{\norm{Y-X\beta}^2+\lambda\norm\beta_1\}$ et poser $\hat S_\lambda=\{j:\hb^L_j(\lambda)\neq0\}$.</li>
+<li>Pour $\delta\in[0,1]$ :
+$$\hb^{\mathrm{relaxedL}}(\lambda,\delta)=\argmin_{\beta\in\R^p,\ J(\beta)\subset\hat S_\lambda}\big\{\norm{Y-X\beta}^2+\delta\lambda\norm\beta_1\big\}.$$</li></ol>
+<p>$\delta=1$ redonne le Lasso (s'il est unique) ; $\delta=0$ redonne le LSLasso (valeur couramment utilisée).</p>
+</div>
+<p class="hook"><b>Pour la retrouver :</b> deux paramètres pour deux rôles : $\lambda$ <em>choisit</em> les variables, $\delta\lambda\le\lambda$ règle combien on les <em>rétrécit</em>.</p></div>
+
+<div class="box thm" id="s6-relaxe-ortho"><div class="box-h">Formule — Lasso relaxé en design orthonormé <span class="tag coeur">par cœur</span><span class="tag refaire">à savoir refaire</span> <a class="ref" href="06_seance6.html#relaxe-ortho">→ S6</a></div>
+<div class="memo">
+$$\hb^{\mathrm{relaxedL}}_j(\lambda,\delta)=\begin{cases}X_j\T Y-\dfrac{\delta\lambda}2&\text{si }X_j\T Y\ge\dfrac\lambda2,\\[4pt]0&\text{si }-\dfrac\lambda2\le X_j\T Y\le\dfrac\lambda2,\\[4pt]X_j\T Y+\dfrac{\delta\lambda}2&\text{si }X_j\T Y\le-\dfrac\lambda2,\end{cases}$$
+<p>soit, avec $b_j=X_j\T Y$ : $\hb_j=\ind\{\abs{b_j}>\lambda/2\}\big(b_j-\sgn(b_j)\,\delta\lambda/2\big)$.</p>
+</div>
+<p class="hook"><b>L'idée :</b> seuil $\lambda/2$ (sélection de l'étape 1), puis rétrécissement réduit à $\delta\lambda/2$. Lasso, LSLasso et relaxé ont la <strong>même zone morte</strong> $[-\lambda/2,\lambda/2]$ : mêmes variables, seule l'amplitude change.</p>
+<details class="fold proof"><summary>Preuve express</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\hat S_\lambda=\{j:\abs{b_j}>\lambda/2\},\qquad j\notin\hat S_\lambda\Rightarrow\hb_j=0$$<span class="why">étape 1 = seuillage doux au seuil $\lambda/2$ ; puis contrainte $J(\beta)\subset\hat S_\lambda$.</span></li>
+<li>$$\begin{aligned}\hb_j&=\argmin_{\beta_j}\,(\beta_j-b_j)^2+\delta\lambda\abs{\beta_j}\\&=\sgn(b_j)\Big(\abs{b_j}-\frac{\delta\lambda}2\Big)_+\end{aligned}$$<span class="why">pour $j\in\hat S_\lambda$ : découplage orthonormé, seuillage doux au seuil $\delta\lambda/2$.</span></li>
+<li>$$=b_j-\sgn(b_j)\frac{\delta\lambda}2$$<span class="why">$\abs{b_j}>\lambda/2\ge\delta\lambda/2$ car $\delta\le1$ : la partie positive est inutile. Aux points frontières $\abs{b_j}=\lambda/2$ près (sans importance), c'est la formule de la diapo 83.</span></li>
+</ol></div></details></div>
+
+<h3 id="s6-enet">L'elastic net</h3>
+
+<div class="box thm" id="s6-lasso-defauts"><div class="box-h">Proposition — Deux défauts du Lasso (diapo 84) <span class="tag coeur">par cœur</span><span class="tag refaire">à savoir refaire</span> <a class="ref" href="06_seance6.html#enet-duplique">→ S6</a></div>
+<div class="memo">
+<ol><li>Si $p>n$, le Lasso sélectionne <strong>au plus $n$ variables</strong> avant de saturer.</li>
+<li><strong>Colonne dupliquée</strong> : soit $\tilde X=[X,X_p]\in\R^{n\times(p+1)}$. Si $\hb^L_p(\lambda)\neq0$, alors pour tout $\alpha\in[0,1]$,
+$$\tilde\beta(\lambda)=\big(\hb^L_1(\lambda),\dots,\hb^L_{p-1}(\lambda),\ \alpha\,\hb^L_p(\lambda),\ (1-\alpha)\,\hb^L_p(\lambda)\big)$$
+est solution de $\argmin_{\beta\in\R^{p+1}}\{\norm{Y-\tilde X\beta}^2+\lambda\norm\beta_1\}$ : une <strong>infinité de solutions</strong>.</li></ol>
+</div>
+<p class="hook"><b>L'idée (point 2) :</b> répartir $\hb^L_p$ entre les deux copies ne change ni l'ajustement (même colonne) ni la norme ℓ1 (morceaux de même signe), et l'on ne peut pas faire mieux avec $\tilde X$ qu'avec $X$ (inégalité triangulaire).</p>
+<p class="small muted">Sur la diapo 84, « $\tilde X\in\R^{n\times p}$ » est une coquille : $\tilde X$ a $p+1$ colonnes.</p>
+<details class="fold proof"><summary>Preuve express (colonne dupliquée)</summary><div class="fold-body">
+<p>Notons $C$ et $\tilde C$ les critères du Lasso avec $X$ et avec $\tilde X$, et $m(\gamma)=(\gamma_1,\dots,\gamma_{p-1},\gamma_p+\gamma_{p+1})\in\R^p$ pour $\gamma\in\R^{p+1}$.</p>
+<ol class="steps">
+<li>$$\tilde X\gamma=X\,m(\gamma)$$<span class="why">les colonnes $p$ et $p+1$ de $\tilde X$ valent toutes deux $X_p$.</span></li>
+<li>$$\norm\gamma_1\ge\norm{m(\gamma)}_1$$<span class="why">inégalité triangulaire $\abs{\gamma_p}+\abs{\gamma_{p+1}}\ge\abs{\gamma_p+\gamma_{p+1}}$.</span></li>
+<li>$$\tilde C(\gamma)\ge C(m(\gamma))\ge C(\hb^L)\quad\text{pour tout }\gamma$$<span class="why">lignes 1 et 2, puis minimalité de $\hb^L$.</span></li>
+<li>$$\begin{aligned}&m(\tilde\beta)=\hb^L\ \text{ et }\ \norm{\tilde\beta}_1=\norm{\hb^L}_1\\&\Longrightarrow\ \tilde C(\tilde\beta)=C(\hb^L)=\min\tilde C\end{aligned}$$<span class="why">$\alpha\hb^L_p$ et $(1-\alpha)\hb^L_p$ ont le même signe : l'inégalité triangulaire est une égalité.</span></li>
+</ol></div></details></div>
+
+<div class="box intu" id="s6-au-plus-n"><div class="box-h">À comprendre — Pourquoi « au plus $n$ variables » <span class="tag comprendre">à comprendre</span> <a class="ref" href="06_seance6.html#enet-n">→ S6</a></div>
+<p>Il existe toujours une solution du Lasso dont les colonnes actives sont <strong>linéairement indépendantes</strong>, donc avec au plus $\rg X\le n$ coefficients non nuls. Idée : si les colonnes actives sont liées, il existe $v\neq0$, nul hors du support, avec $Xv=0$ ; le long de $v$ l'ajustement ne bouge pas et la pénalité ℓ1 varie linéairement, donc (minimalité) reste constante ; on avance jusqu'à annuler une coordonnée active, et on recommence. (Preuve hors diapos ; la diapo énonce le fait.)</p></div>
+
+<div class="box def" id="s6-enet-def"><div class="box-h">Définition — Elastic net (Zou et Hastie, 2005) <span class="tag coeur">par cœur</span> <a class="ref" href="06_seance6.html#enet-def">→ S6</a></div>
+<div class="memo">
+<p>Pour $\lambda_1>0$ et $\lambda_2>0$ :</p>
+$$\hb^{e.n}(\lambda_1,\lambda_2)=\argmin_{\beta\in\R^p}\big\{\norm{Y-X\beta}^2+\lambda_1\norm\beta_1+\lambda_2\norm\beta_2^2\big\}.$$
+<p>Le critère est <strong>strictement convexe</strong> : un unique minimiseur, sans aucune hypothèse sur $X$. Version améliorée : $(1+\lambda_2)\,\hb^{e.n}(\lambda_1,\lambda_2)$.</p>
+</div>
+<p class="hook"><b>Pour la retrouver :</b> Lasso + un peu de Ridge, <strong>au carré</strong>. C'est le carré qui donne la stricte convexité (hessienne $2\lambda_2I_p\succ0$ ; convexe + strictement convexe = strictement convexe) ; sans carré, ce serait un group-Lasso à un seul groupe. Existence : critère continu et coercif.</p></div>
+
+<div class="box thm" id="s6-enet-ortho"><div class="box-h">Formule — Elastic net en design orthonormé <span class="tag coeur">par cœur</span><span class="tag refaire">à savoir refaire</span> <a class="ref" href="06_seance6.html#enet-ortho">→ S6</a></div>
+<div class="memo">
+$$\hb^{e.n}_j=\frac{\sgn(b_j)\big(\abs{b_j}-\lambda_1/2\big)_+}{1+\lambda_2}=\frac{\hb^L_j(\lambda_1)}{1+\lambda_2}$$
+<p>et la version corrigée vaut $(1+\lambda_2)\,\hb^{e.n}_j=\hb^L_j(\lambda_1)$ : le Lasso.</p>
+</div>
+<p class="hook"><b>L'idée :</b> double rétrécissement, d'abord un seuillage doux (Lasso), puis une division par $1+\lambda_2$ (Ridge). D'où la correction $\times(1+\lambda_2)$, qui redonne exactement le Lasso quand les variables sont orthogonales : l'elastic net ne change quelque chose que dans le cas <strong>corrélé</strong>.</p>
+<details class="fold proof"><summary>Preuve express</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\begin{aligned}&(\beta-b)^2+\lambda_1\abs\beta+\lambda_2\beta^2\\&=(1+\lambda_2)\beta^2-2b\beta+\lambda_1\abs\beta+b^2\end{aligned}$$<span class="why">on développe $(\beta-b)^2$ et on regroupe les $\beta^2$ (indice $j$ omis).</span></li>
+<li>$$=(1+\lambda_2)\Big[\Big(\beta-\frac{b}{1+\lambda_2}\Big)^2+\frac{\lambda_1}{1+\lambda_2}\abs\beta\Big]+\text{cte}$$<span class="why">on factorise par $1+\lambda_2>0$ et on complète le carré.</span></li>
+<li>$$\begin{aligned}\hb&=\sgn(b)\Big(\frac{\abs b}{1+\lambda_2}-\frac{\lambda_1}{2(1+\lambda_2)}\Big)_+\\&=\frac{\sgn(b)\big(\abs b-\lambda_1/2\big)_+}{1+\lambda_2}\end{aligned}$$<span class="why">le crochet est un Lasso à une variable de cible $b/(1+\lambda_2)$ et de paramètre $\lambda_1/(1+\lambda_2)$ : seuillage doux, puis mise en facteur.</span></li>
+</ol></div></details></div>
+
+<div class="box thm" id="s6-enet-partage"><div class="box-h">Proposition — Elastic net avec deux colonnes identiques <span class="tag coeur">par cœur</span><span class="tag refaire">à savoir refaire</span> <a class="ref" href="06_seance6.html#enet-groupe">→ S6</a></div>
+<div class="memo"><p>Si les colonnes $X_p$ et $X_{p+1}$ sont identiques, la solution (unique) de l'elastic net vérifie $\hb^{e.n}_p=\hb^{e.n}_{p+1}$.</p></div>
+<p class="hook"><b>L'idée :</b> remplacer $(\hb_p,\hb_{p+1})$ par $(c/2,c/2)$, où $c=\hb_p+\hb_{p+1}$ : même ajustement, norme ℓ1 pas plus grande, et partie $\ell_2^2$ strictement plus petite si $\hb_p\neq\hb_{p+1}$.</p>
+<details class="fold proof"><summary>Preuve express</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\hb_pX_p+\hb_{p+1}X_p=cX_p=\tfrac c2X_p+\tfrac c2X_p$$<span class="why">les deux colonnes sont égales : l'ajustement ne change pas.</span></li>
+<li>$$\abs{c/2}+\abs{c/2}=\abs c\le\abs{\hb_p}+\abs{\hb_{p+1}}$$<span class="why">inégalité triangulaire : la partie ℓ1 ne peut que diminuer.</span></li>
+<li>$$\big(\tfrac c2\big)^2+\big(\tfrac c2\big)^2=\tfrac{c^2}2\le\hb_p^2+\hb_{p+1}^2$$<span class="why">$a^2+(c-a)^2=2(a-c/2)^2+c^2/2$ est minimal uniquement en $a=c/2$ : égalité ssi $\hb_p=\hb_{p+1}$.</span></li>
+<li><p>Si $\hb_p\neq\hb_{p+1}$, le vecteur modifié a un critère strictement plus petit.</p><span class="why">impossible pour le minimiseur : donc $\hb_p=\hb_{p+1}$.</span></li>
+</ol></div></details></div>
+
+<div class="box intu" id="s6-enet-effet"><div class="box-h">À comprendre — Ce que l'elastic net change <span class="tag comprendre">à comprendre</span> <a class="ref" href="06_seance6.html#enet-groupe">→ S6</a></div>
+<p>Face à des variables très corrélées, le Lasso en garde une <strong>arbitrairement</strong> (et change d'avis à la moindre perturbation des données) ; l'elastic net les fait entrer et sortir <strong>ensemble</strong>, avec des coefficients proches (« effet de groupe »). Il peut aussi garder plus de $n$ variables : c'est un Lasso sur les données augmentées $Y^*=\begin{pmatrix}Y\\0_p\end{pmatrix}$, $X^*=(1+\lambda_2)^{-1/2}\begin{pmatrix}X\\\sqrt{\lambda_2}\,I_p\end{pmatrix}$, de rang $p$ (exercice 8 de la séance, hors diapos).</p></div>
+
+<h3 id="s6-fused">Le Lasso fusionné</h3>
+
+<div class="box def" id="s6-fused-def"><div class="box-h">Définition — Lasso fusionné (Tibshirani, Saunders, Rosset, Zhu et Knight, 2005) <span class="tag coeur">par cœur</span> <a class="ref" href="06_seance6.html#fused">→ S6</a></div>
+<div class="memo">
+<p>Pour $\lambda_1>0$ et $\lambda_2>0$ :</p>
+$$\begin{aligned}\hb^{\mathrm{fused}}(\lambda_1,\lambda_2)=\argmin_{\beta\in\R^p}\Big\{&\norm{Y-X\beta}^2+\lambda_1\sum_{j=1}^p\abs{\beta_j}\\&+\lambda_2\sum_{j=2}^p\abs{\beta_j-\beta_{j-1}}\Big\}.\end{aligned}$$
+<p>Premier terme : la pénalité du Lasso. Second : il encourage des coefficients <strong>voisins identiques</strong>. Voisinage général (pixels adjacents) : $\lambda_2\sum_{j\sim j'}\abs{\beta_j-\beta_{j'}}$. Les paramètres $\lambda_1,\lambda_2$ sont difficiles à régler.</p>
+</div>
+<p class="hook"><b>Pour la retrouver :</b> ℓ1 fabrique des zéros exacts ; mis sur les <em>différences</em>, il fabrique des sauts nuls, donc des paliers. On suppose « peu de ruptures » (détection de ruptures, signal constant par morceaux) au lieu de « peu de coefficients non nuls ».</p></div>
+
+<div class="box piege" id="s6-fused-piege"><div class="box-h">Piège — Pas de règle orthonormée, et l'ordre compte <a class="ref" href="06_seance6.html#fused-exemple">→ S6</a></div>
+<p>Même avec $X\T X=I$, $\abs{\beta_j-\beta_{j-1}}$ <strong>couple</strong> chaque coordonnée à ses voisines : pas de découplage, pas de formule coordonnée par coordonnée (on utilise des algorithmes dédiés). Et la pénalité n'a de sens que si l'ordre des variables en a un (temps, position sur un chromosome, pixels).</p></div>
+
+<div class="box methode" id="s6-fused-2pts"><div class="box-h">Méthode — Le Lasso fusionné à deux points <span class="tag refaire">à savoir refaire</span> <a class="ref" href="06_seance6.html#exercices">→ S6, exercice 9</a></div>
+<p>$X=I_2$, $\lambda_1=0$ : $\min_\beta\,(\beta_1-y_1)^2+(\beta_2-y_2)^2+\lambda_2\abs{\beta_1-\beta_2}$. Changez de variables : $m=\frac{\beta_1+\beta_2}2$, $d=\beta_1-\beta_2$, $\bar y=\frac{y_1+y_2}2$, $\Delta=y_1-y_2$. Le critère vaut $2(m-\bar y)^2+\frac12(d-\Delta)^2+\lambda_2\abs d$ et se découple.</p>
+<div class="memo"><p>$\hat m=\bar y$ et $\hat d=\sgn(\Delta)\big(\abs\Delta-\lambda_2\big)_+$ : si $\abs{y_1-y_2}\le\lambda_2$, les deux estimations <strong>fusionnent</strong> en $\frac{y_1+y_2}2$ ; sinon chacune se rapproche de l'autre de $\lambda_2/2$.</p></div></div>
+
+<h3 id="s6-group">Le group-Lasso</h3>
+
+<div class="box def" id="s6-group-def"><div class="box-h">Définition — Group-Lasso (Yuan et Lin, 2006) <span class="tag coeur">par cœur</span> <a class="ref" href="06_seance6.html#group">→ S6</a></div>
+<div class="memo">
+<p>On se donne $K$ groupes connus $G_1,\dots,G_K$, non vides et disjoints ; pour $\lambda>0$ :</p>
+$$\hb^{\mathrm{group}}(\lambda)=\argmin_{\beta\in\R^p}\Big\{\norm{Y-X\beta}^2+\lambda\sum_{k=1}^K\norm{\beta_{(k)}}\Big\},$$
+$$\beta_{(k)j}=\begin{cases}\beta_j&\text{si }j\in G_k,\\0&\text{sinon.}\end{cases}$$
+<p>Norme euclidienne <strong>non élevée au carré</strong>. Si $K=p$ (groupes singletons), $\norm{\beta_{(k)}}=\abs{\beta_k}$ : c'est le Lasso standard.</p>
+</div>
+<p class="hook"><b>Pour la retrouver :</b> un Lasso dont les « coordonnées » sont des blocs. La norme non carrée est pointue en 0 comme $\abs u$ (son sous-différentiel en 0 est la boule unité), donc un bloc entier peut être nul ; avec le carré on retrouverait le Ridge, $\sum_k\norm{\beta_{(k)}}^2=\norm\beta^2$. Exemple type : une variable catégorielle codée par plusieurs indicatrices, à garder ou retirer en entier.</p>
+<p class="small muted">Hors diapos : pour des groupes de tailles différentes, Yuan et Lin pondèrent chaque terme par $\sqrt{\abs{G_k}}$. La diapo 87, et donc toute cette fiche, n'a pas ce poids.</p></div>
+
+<div class="box thm" id="s6-group-kkt"><div class="box-h">Proposition — Caractérisation du group-Lasso (diapo 87) <span class="tag coeur">par cœur</span><span class="tag refaire">à savoir refaire</span> <a class="ref" href="06_seance6.html#group-kkt">→ S6</a></div>
+<div class="memo">
+<p>$X_{(k)}$ : sous-matrice des colonnes du groupe $k$. Pour tout $k\in\{1,\dots,K\}$ :</p>
+$$\begin{cases}2X_{(k)}\T(Y-X\hb^{\mathrm{group}})=\lambda\,\dfrac{\hb^{\mathrm{group}}_{(k)}}{\norm{\hb^{\mathrm{group}}_{(k)}}_2}&\text{si }\hb^{\mathrm{group}}_{(k)}\neq0,\\[10pt]\big\|2X_{(k)}\T(Y-X\hb^{\mathrm{group}})\big\|_2\le\lambda&\text{si }\hb^{\mathrm{group}}_{(k)}=0.\end{cases}$$
+<p>La procédure garde ou écarte <strong>tous</strong> les coefficients d'un bloc.</p>
+</div>
+<p class="hook"><b>L'idée :</b> les KKT du Lasso, où la valeur absolue de la corrélation d'une variable avec le résidu devient la <strong>norme du vecteur des corrélations</strong> du groupe. Un groupe reste à 0 tant que, collectivement, il n'est pas assez corrélé au résidu.</p>
+<details class="fold proof"><summary>Preuve express</summary><div class="fold-body">
+<ol class="steps">
+<li>$$0\in-2X\T(Y-X\hb)+\lambda\,\partial\Big(\sum_k\norm{\hb_{(k)}}\Big)$$<span class="why">le critère est convexe : $\hb$ minimise ⇔ $0$ appartient au sous-différentiel ; le gradient de l'ajustement vaut $-2X\T(Y-X\beta)$.</span></li>
+<li>$$0\in-2X_{(k)}\T(Y-X\hb)+\lambda\,\partial\norm\cdot_2\big(\hb_{(k)}\big)$$<span class="why">pour chaque groupe $k$ : les blocs sont disjoints, donc la pénalité est une somme de fonctions de blocs différents ; on lit la condition bloc par bloc (lignes du groupe $k$).</span></li>
+<li>$$\begin{aligned}\partial\norm\cdot_2(u)&=\{u/\norm u_2\}&&(u\neq0),\\\partial\norm\cdot_2(0)&=\{h:\norm h_2\le1\}\end{aligned}$$<span class="why">sous-différentiel de la norme euclidienne : le premier cas donne l'égalité, le second donne $2X_{(k)}\T(Y-X\hb)=\lambda h$ avec $\norm h_2\le1$.</span></li>
+</ol></div></details></div>
+
+<div class="box thm" id="s6-group-ortho"><div class="box-h">Formule — Group-Lasso en design orthonormé <span class="tag coeur">par cœur</span><span class="tag refaire">à savoir refaire</span> <a class="ref" href="06_seance6.html#group-ortho">→ S6</a></div>
+<div class="memo">
+$$\hb_{(k)}=\Big(1-\frac{\lambda}{2\norm{b_{(k)}}_2}\Big)_+\,b_{(k)}$$
+<p>Seuillage doux <em>par groupe</em> : bloc entier nul ssi $\norm{b_{(k)}}_2\le\lambda/2$ ; sinon il est rétréci <strong>dans sa direction</strong> (toutes ses coordonnées multipliées par le même facteur). Groupes de taille 1 : $\big(1-\frac\lambda{2\abs{b_j}}\big)_+b_j=\sgn(b_j)(\abs{b_j}-\lambda/2)_+$, le seuillage doux.</p>
+</div>
+<p class="hook"><b>L'idée :</b> le critère se découple par groupe en $\min_u\norm{u-c}^2+\lambda\norm u$ ($c=b_{(k)}$) : $u=0$ ssi $\norm c\le\lambda/2$ ; sinon $u$ est un multiple positif de $c$ et $\norm u=\norm c-\lambda/2$.</p>
+<details class="fold proof"><summary>Preuve express</summary><div class="fold-body">
+<ol class="steps">
+<li>$$0\in-2c+\lambda\{h:\norm h\le1\}\iff\norm c\le\lambda/2$$<span class="why">$u=0$ est solution ssi cette condition d'optimalité en 0 a lieu : $2c$ doit s'écrire $\lambda h$ avec $\norm h\le1$.</span></li>
+<li>$$2(u-c)+\lambda\frac u{\norm u}=0\iff u\Big(1+\frac\lambda{2\norm u}\Big)=c$$<span class="why">en $u\neq0$ le critère est dérivable : on annule le gradient.</span></li>
+<li>$$\norm u+\frac\lambda2=\norm c,\qquad u=\frac{\norm c-\lambda/2}{\norm c}\,c$$<span class="why">le facteur est positif, donc $u$ a la direction de $c$ ; on prend les normes. Possible seulement si $\norm c>\lambda/2$ ; la partie positive regroupe les deux cas.</span></li>
+</ol></div></details></div>
+
+<h3 id="s6-bilan">Bilan : quel outil pour quel défaut</h3>
+
+<div class="table-wrap"><table>
+<thead><tr><th>Méthode</th><th>Corrige</th><th>Critère / définition</th><th>Règle $b\mapsto\hb$ ($X\T X=I$)</th><th>Convexe ?</th></tr></thead>
+<tbody>
+<tr><td>Lasso</td><td class="memo">(référence)</td><td class="memo">$\norm{Y-X\beta}^2+\lambda\norm\beta_1$</td><td class="memo">$\sgn(b)(\abs b-\lambda/2)_+$</td><td class="memo">oui</td></tr>
+<tr><td>Ridge (bridge $\gamma=2$)</td><td class="memo">instabilité de $(X\T X)^{-1}$</td><td class="memo">$\norm{Y-X\beta}^2+\lambda\norm\beta_2^2$</td><td class="memo">$b/(1+\lambda)$</td><td class="memo">oui, strictement</td></tr>
+<tr><td>Sélection ℓ0 (bridge $\gamma=0$)</td><td class="memo">—</td><td class="memo">$\norm{Y-X\beta}^2+\lambda\norm\beta_0$</td><td class="memo">$b\,\ind\{\abs b>\sqrt\lambda\}$</td><td class="memo">non</td></tr>
+<tr><td>LSLasso</td><td class="memo">biais</td><td class="memo">Lasso, puis moindres carrés sur le support</td><td class="memo">$b\,\ind\{\abs b>\lambda/2\}$</td><td class="memo">chaque étape</td></tr>
+<tr><td>Lasso relaxé</td><td class="memo">biais</td><td class="memo">Lasso, puis Lasso de paramètre $\delta\lambda$ sur le support</td><td class="memo">$\ind\{\abs b>\lambda/2\}\,\big(b-\sgn(b)\,\delta\lambda/2\big)$</td><td class="memo">chaque étape</td></tr>
+<tr><td>Lasso adaptatif</td><td class="memo">biais</td><td class="memo">$\norm{Y-X\beta}^2+\lambda\sum_j\abs{\beta_j}/\abs{\tilde\beta_j}$</td><td class="memo">$\sgn(b)\big(\abs b-\frac{\lambda}{2\abs b}\big)_+$ ($\tilde\beta=b$)</td><td class="memo">oui</td></tr>
+<tr><td>Dantzig</td><td class="memo">(autre formulation)</td><td class="memo">$\min\norm\beta_1$ s.c. $\norm{2X\T(Y-X\beta)}_\infty\le\lambda$</td><td class="memo">$\sgn(b)(\abs b-\lambda/2)_+$ (= Lasso)</td><td class="memo">oui (programme linéaire)</td></tr>
+<tr><td>Elastic net</td><td class="memo">au plus $n$ variables ; corrélations</td><td class="memo">$\norm{Y-X\beta}^2+\lambda_1\norm\beta_1+\lambda_2\norm\beta_2^2$</td><td class="memo">$\sgn(b)(\abs b-\lambda_1/2)_+/(1+\lambda_2)$</td><td class="memo">oui, strictement</td></tr>
+<tr><td>Lasso fusionné</td><td class="memo">structure ordonnée</td><td class="memo">$\norm{Y-X\beta}^2+\lambda_1\norm\beta_1+\lambda_2\sum_{j\ge2}\abs{\beta_j-\beta_{j-1}}$</td><td class="memo">pas de découplage</td><td class="memo">oui</td></tr>
+<tr><td>Group-Lasso</td><td class="memo">structure en groupes</td><td class="memo">$\norm{Y-X\beta}^2+\lambda\sum_k\norm{\beta_{(k)}}_2$</td><td class="memo">$\big(1-\frac{\lambda}{2\norm{b_{(k)}}}\big)_+b_{(k)}$ (par groupe)</td><td class="memo">oui</td></tr>
+</tbody></table></div>
+
+<div class="box intu" id="s6-trois-questions"><div class="box-h">À comprendre — Trois questions devant chaque règle <span class="tag comprendre">à comprendre</span> <a class="ref" href="06_seance6.html#conclusion">→ S6</a></div>
+<p>(1) Vaut-elle exactement 0 sur un intervalle autour de 0 ? (sélection) (2) Colle-t-elle à la diagonale pour les grands $\abs b$ ? (pas de biais sur les gros effets) (3) Est-elle continue ? (stabilité). Le seuillage doux est continu mais biaisé ; le seuillage dur est sans biais pour les grands $b$ mais saute au seuil, d'où plus de variance ; l'adaptatif et le relaxé sont des intermédiaires. Aucune règle ne gagne partout : c'est encore le compromis biais–variance.</p>
+<p>Le message des diapos 88–89 : des critères convexes contournent la complexité combinatoire de la sélection de modèle ; ils introduisent un biais mais réduisent la variance et donnent un petit ensemble de prédicteurs interprétable ; on modifie la pénalité ℓ1 pour corriger les défauts du Lasso ou injecter une connaissance a priori ; le choix de $\lambda$ reste un défi ; tout s'étend aux modèles linéaires généralisés.</p></div>
+
+<div class="box reflexe"><div class="box-h">Réflexes de la séance 6</div>
+<ul>
+<li>Nouvelle pénalité ? → design orthonormé, problème à une variable, dessin de $b\mapsto\hb$.</li>
+<li>Pénalité pointue en 0 ? → zéros exacts. Convexe ? → calculable, caractérisée par $0\in\partial F$.</li>
+<li>Comparer deux estimateurs définis par un minimum ? → montrer que l'un est admissible pour le problème de l'autre ($\hb^L\in D_\lambda$).</li>
+<li>Variables corrélées, solution instable ? → un peu de $\ell_2^2$ : stricte convexité ⇒ unicité.</li>
+<li>Procédure en deux étapes ? → validation croisée sur la procédure complète.</li>
+</ul></div>

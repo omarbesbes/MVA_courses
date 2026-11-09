@@ -273,6 +273,23 @@ a.card:hover { border-color: var(--link); }
 .pager a:hover { border-color: var(--link); }
 .foot { max-width: 1280px; margin: 0 auto; padding: 1.2rem 1.25rem 2rem; font-size: 0.82rem; color: var(--muted); border-top: 1px solid var(--border); }
 
+/* ---------- page Révision : étiquettes, formules à mémoriser, mode auto-test ---------- */
+.tag { display: inline-block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; line-height: 1.45; padding: 0 0.5em; border-radius: 999px; border: 1.5px solid currentColor; margin-left: 0.45rem; vertical-align: 0.12em; white-space: nowrap; }
+.tag.coeur { color: var(--c-piege); }
+.tag.refaire { color: var(--c-thm); }
+.tag.comprendre { color: var(--c-rappel); }
+.hook { font-size: 0.94rem; color: var(--text-2); }
+.hook > b:first-child, .hook > strong:first-child { color: var(--text); }
+.memo { border-radius: 6px; transition: filter 0.15s, opacity 0.15s; }
+td.memo, th.memo { border-radius: 0; }
+body.autotest :is(.memo, .hook):not(.shown) { filter: blur(0.45em); opacity: 0.5; cursor: pointer; user-select: none; -webkit-user-select: none; }
+body.autotest :is(.memo, .hook):not(.shown) * { pointer-events: none; }
+body.autotest :is(.memo, .hook):not(.shown):hover { opacity: 0.7; }
+.autotest-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin: 1rem 0; padding: 0.6rem 0.8rem; border: 1px dashed var(--axis); border-radius: 10px; background: var(--surface); }
+.autotest-bar p { margin: 0; flex: 1 1 16rem; font-size: 0.92rem; }
+.autotest-fab { position: fixed; right: 14px; bottom: 14px; z-index: 20; font: inherit; font-size: 0.85rem; font-weight: 650; padding: 0.45rem 0.95rem; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text); box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2); cursor: pointer; }
+body.autotest .autotest-fab { background: var(--c-piege); border-color: var(--c-piege); color: var(--surface); }
+
 @media (max-width: 640px) {
   body { font-size: 16px; }
   .top h1 { font-size: 1.4rem; }
@@ -287,6 +304,8 @@ a.card:hover { border-color: var(--link); }
   .layout { display: block; }
   details.fold > .fold-body { display: block !important; }
   .box, .exo, figure.fig, .widget { break-inside: avoid; }
+  .autotest-fab, .autotest-bar { display: none !important; }
+  body.autotest :is(.memo, .hook) { filter: none !important; opacity: 1 !important; }
 }
 
 </style>
@@ -306,7 +325,7 @@ a.card:hover { border-color: var(--link); }
       <button type="button" class="tool-btn" data-action="theme" aria-label="Changer de thème">Thème</button>
     </div>
   </div>
-  <nav class="course-nav" aria-label="Pages du cours"><a href="index.html">Accueil</a><a href="00_rappels.html">Rappels</a><a href="01_seance1.html" aria-current="page">S1</a><a href="02_seance2.html">S2</a><a href="03_seance3.html">S3</a><a href="04_seance4.html">S4</a><a href="05_seance5.html">S5</a><a href="06_seance6.html">S6</a><a href="08_td1.html">TD1</a><a href="09_td2.html">TD2</a><a href="10_td3.html">TD3</a><a href="07_fiche.html">Fiche réflexes</a></nav>
+  <nav class="course-nav" aria-label="Pages du cours"><a href="index.html">Accueil</a><a href="00_rappels.html">Rappels</a><a href="01_seance1.html" aria-current="page">S1</a><a href="02_seance2.html">S2</a><a href="03_seance3.html">S3</a><a href="04_seance4.html">S4</a><a href="05_seance5.html">S5</a><a href="06_seance6.html">S6</a><a href="08_td1.html">TD1</a><a href="09_td2.html">TD2</a><a href="10_td3.html">TD3</a><a href="07_fiche.html">Fiche réflexes</a><a href="11_revision.html">Révision examen</a></nav>
 </header>
 <div class="layout">
   <nav class="toc" aria-label="Sommaire de la page">
@@ -1836,8 +1855,50 @@ c-10,0,-16.667,5,-20,15z M410 15 H367 v585 v600 v585 h43z"/></svg></span></span>
       redrawAll();
     } else if (a === "expand" || a === "collapse") {
       document.querySelectorAll("main details.fold").forEach(function (d) { d.open = a === "expand"; });
+    } else if (a === "autotest") {
+      setAutotest(!document.body.classList.contains("autotest"));
+    } else if (a === "autotest-hide") {
+      setAutotest(true);
     }
   });
+
+  /* ---------------- révision : mode auto-test ----------------
+     Les éléments .memo contiennent ce qui est à savoir par cœur, les .hook l'aide pour le retrouver.
+     En mode auto-test ils sont floutés : on lit le titre, on récite, puis un clic (ou Entrée)
+     révèle l'indice ou la réponse. */
+  var memos = document.querySelectorAll("main .memo, main .hook");
+  var fab = null;
+  function setAutotest(on) {
+    document.body.classList.toggle("autotest", on);
+    memos.forEach(function (m) {
+      m.classList.remove("shown");
+      if (on) { m.setAttribute("tabindex", "0"); m.setAttribute("title", "Cliquez pour révéler"); }
+      else { m.removeAttribute("tabindex"); m.removeAttribute("title"); }
+    });
+    if (fab) fab.textContent = on ? "Quitter l\u2019auto-test" : "Mode auto-test";
+    document.querySelectorAll("[data-autotest-label]").forEach(function (b) {
+      b.textContent = on ? "Quitter le mode auto-test" : "Activer le mode auto-test";
+    });
+  }
+  function reveal(m) { if (document.body.classList.contains("autotest")) { m.classList.add("shown"); m.removeAttribute("title"); } }
+  if (document.querySelector("main .memo")) {
+    fab = document.createElement("button");
+    fab.type = "button";
+    fab.className = "autotest-fab";
+    fab.setAttribute("data-action", "autotest");
+    fab.textContent = "Mode auto-test";
+    document.body.appendChild(fab);
+    document.addEventListener("click", function (e) {
+      var m = e.target.closest && e.target.closest(".memo, .hook");
+      if (m && !m.classList.contains("shown") && document.body.classList.contains("autotest")) { e.preventDefault(); reveal(m); }
+    }, true);
+    document.addEventListener("keydown", function (e) {
+      var m = e.target.closest && e.target.closest(".memo, .hook");
+      if (m && (e.key === "Enter" || e.key === " ") && document.body.classList.contains("autotest") && !m.classList.contains("shown")) {
+        e.preventDefault(); reveal(m);
+      }
+    });
+  }
 
   /* ---------------- impression : tout déplier ---------------- */
   var printOpened = [];
