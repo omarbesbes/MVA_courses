@@ -11,21 +11,23 @@ they work offline.
 
 | Page | Content |
 |---|---|
-| `index.html` | How to read the guide, the story in one page, the map of the methods, the summary table “what it tries / what it achieves” |
+| `index.html` | How to read the guide, the idea in five minutes, the map of the pages, the table of every lossy method (what it tries, how it decides, what it achieves, what it costs), ten conclusions |
 | `01_foundations.html` | The exact algorithm: why decoding is slow, draft-then-verify, the accept / resample rule and its proof, acceptance rate = overlap of two distributions, tokens per round, the speed-up law, the ceiling |
-| `02_lossless.html` | The lossless frontier: trained drafters, drafting heads (Medusa, the EAGLE line), lookups, trees of candidates, block verification, adaptive draft length, what happens on a loaded server |
+| `02_lossless.html` | The lossless frontier: trained drafters, drafting heads (Medusa, the EAGLE line), lookups, block drafters, trees of candidates and the recursive rejection rule, block verification, adaptive draft length, what happens on a loaded server, what is deployed, the three ceilings |
 | `03_relaxed.html` | Lossy I — relaxing the acceptance test with a statistical rule: lenience, top-k and margin rules, BiLD, typical acceptance, mentored decoding, fuzzy speculative decoding, speculative cascades, and the theory of the speed / fidelity trade-off |
 | `04_judges.html` | Lossy II — judging correctness instead of agreement: Judge Decoding, AutoJudge and their successors, training-free semantic verification |
 | `05_reasoning.html` | Lossy III — speculating on reasoning steps (reward-guided speculative decoding, SpecReason, Lookahead Reasoning…), token-level routing between a small and a large model, and the border with cascades |
-| `06_practice.html` | Beyond text (images, actions, speech), how to evaluate a lossy method honestly, what is deployed, risks (watermarks, side channels), a decision guide, open problems |
+| `06_practice.html` | Beyond text (images, actions, speech), how to read a speed-up and evaluate a lossy method, what “lossless” means on real hardware, the lossy options of serving software, risks (safety, watermarks, side channels, attacks on speed), a decision guide, open problems |
 
 Each page follows the same pattern: the problem before the method, the statement of the paper quoted with its
 reference and decoded symbol by symbol, a toy example with numbers you can check by hand, the idea of the proof
 and then the proof, pitfalls, quick checks, exercises with solutions, and interactive figures (drag the
 probability bars, move the thresholds, watch the acceptance rate and the bias).
 
-**About the numbers.** Every number attributed to a paper was checked against the paper (sources read in
-November 2026) and is given with its setting. Speed-ups from different papers are not comparable (different
+**About the numbers.** Every number attributed to a paper comes from the research notes in `_source/notes/`,
+where it is recorded with a quotation of the source (read in November 2026) and its setting; the pages were
+checked against those notes. Two of the six note files are incomplete (their collection was interrupted): the
+pages use only what the notes contain, plus a few tables read directly in the papers. Speed-ups from different papers are not comparable (different
 models, tasks, hardware and baselines) and are never ranked against one another. Numbers in toy examples are
 computed by scripts and announced as toy numbers.
 
@@ -40,7 +42,7 @@ from (`notes/`: one file per topic, each fact with a quotation and a link). The 
 ```
 cd _source
 npm install                      # KaTeX, used at build time only
-python3 figures_01.py            # one generator per page (numpy)
+python3 figures_01.py            # one generator per page that has static figures (numpy): 01 … 06
 node build.mjs                   # all pages; or: node build.mjs 01_foundations.html
 node tools/check_page.cjs 01_foundations.html --shots /tmp/shots   # headless checks and screenshots (Playwright)
 ```

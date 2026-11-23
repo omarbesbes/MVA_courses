@@ -1,0 +1,84 @@
+<h2 id="methods">3. The lossy methods in one table</h2>
+<p class="tldr">More than twenty approaches, four families. For each: what it tries, how it decides, what it achieves as reported by its authors in their own setting, and its main cost. The links lead to the full cards.</p>
+<p>Read the rows, do not compare the “achieves” column from one row to the next: the models, tasks, hardware and baselines differ. Where an independent study exists, the last column says what it found.</p>
+
+<h3 id="methods-rules">Family 1 — a rule on the two distributions (<a href="03_relaxed.html">page 3</a>)</h3>
+<p>The test reads only $p$ and $q$ at the current position. No training. The trade-off theorem applies to all of them: acceptance gained ≤ total variation paid.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>method</th><th>what it tries</th><th>how it decides</th><th>what it achieves (as reported)</th><th>cost, and independent findings</th></tr></thead>
+<tbody>
+<tr><td><a href="03_relaxed.html#lenience">Lenience</a><br>Leviathan et al., 2023 (appendix)</td><td>raise acceptance with one knob, keeping rare tokens rare</td><td>accept with probability $\min\big(1,\frac{p}{\lambda q}\big)$, $\lambda\le1$</td><td>acceptance 0.62 → 0.84 for $\lambda=1$ → 0.1 (translation, T5); no quality measurement in the paper</td><td>exactly one point of total variation per point of acceptance; mild loss at loose settings in 2026 comparisons</td></tr>
+<tr><td><a href="03_relaxed.html#greedy-rules">Top-$k$ and margin rules</a><br>Stern et al., 2018; SpecDec, 2023</td><td>stop rejecting good tokens that are not the target's first choice</td><td>greedy decoding: accept if in the target's top $k$, or within a margin of its best token</td><td>accepted block 4.95 → 5.67 tokens for 0.6 BLEU (translation)</td><td>no guarantee; evidence on small translation models only</td></tr>
+<tr><td><a href="03_relaxed.html#bild">BiLD</a><br>Kim et al., NeurIPS 2023</td><td>call the large model only occasionally</td><td>the small model writes until its confidence drops; the large model then cancels the tokens it finds too unlikely</td><td>1.5× with no loss of BLEU / ROUGE, 1.7× for about one point (T5 family)</td><td>blocks that never trigger the fallback are never verified; thresholds per task</td></tr>
+<tr><td><a href="03_relaxed.html#typical">Typical acceptance</a><br>Medusa, ICML 2024</td><td>keep the speed-up when sampling at non-zero temperature</td><td>accept if $p(x)>\min(\epsilon,\delta e^{-H(p)})$: any token the target finds plausible enough</td><td>“comparable” quality on open-ended chat, in one figure</td><td>ignores $q$; several points lost on hard tasks in 2026 comparisons, once the baseline gets the same truncation</td></tr>
+<tr><td><a href="03_relaxed.html#mentored">Mentored decoding</a><br>Tran-Thien, 2023 (blog, with proof)</td><td>the highest acceptance under a bound on $\KL(p\,\|\,\text{out})$</td><td>$q$ clipped into the band $[p/\beta,\ p/\alpha]$</td><td>a two-sided guarantee for every token; one small experiment</td><td>a search per position; little evidence; the simplified version tested by others degrades gracefully</td></tr>
+<tr><td><a href="03_relaxed.html#cactus">CACTUS</a><br>Hao and Mou, ICLR 2026</td><td>typical acceptance with a hard divergence constraint</td><td>raise the target's probability of the drafted token as far as $\KL\le\delta$ allows, then test</td><td>30–50% fewer rejections; scores within −3 to +5 points of exact sampling (Qwen3, three benchmarks)</td><td>the bound is per drafted token; aggressive at loose settings in the 360-cell study</td></tr>
+<tr><td><a href="03_relaxed.html#fuzzy">Fuzzy speculative decoding</a><br>Holsman et al., Findings of ACL 2025</td><td>a dial between accuracy and speed</td><td>take the drafter's distribution whole when its divergence from $p$ is below a threshold</td><td>equal accuracy at 1 to 3 tokens/s more, or 2% of accuracy for 5 tokens/s (70B with an 8B drafter)</td><td>the threshold does not predict the quality; aggressive at loose settings</td></tr>
+<tr><td><a href="03_relaxed.html#spec-cascades">Speculative cascades</a><br>Narasimhan et al., ICLR 2025</td><td>run the deferral rule of a cascade inside speculative execution</td><td>per token, keep the drafter's choice or defer to the target, by comparing their confidences; or accept within the target's top set</td><td>latency reduced 1.85–1.95× at the large model's quality, where lenience gets 1.61× in the same table (T5)</td><td>relies on calibration; the confidence rule is fragile with weak drafters, the top-set rule is the most conservative of all</td></tr>
+<tr><td><a href="03_relaxed.html#mixture">Static ensemble</a><br>DIVERSED, AISTATS 2026</td><td>the simplest surrogate target</td><td>the exact test against $w\,p+(1-w)\,q$</td><td>acceptance 69% against 45% for the exact rule (8B with a 1B drafter, GSM8K)</td><td>no cap: a token the target forbids is accepted with probability $1-w$; an option of the Transformers library</td></tr>
+</tbody></table></div>
+
+<h3 id="methods-judges">Family 2 — a judge (<a href="04_judges.html">page 4</a>)</h3>
+<p>The test asks whether a mismatch matters, using the target's hidden state or its behaviour on the following tokens.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>method</th><th>what it tries</th><th>how it decides</th><th>what it achieves (as reported)</th><th>cost, and independent findings</th></tr></thead>
+<tbody>
+<tr><td><a href="04_judges.html#judge-decoding">Judge Decoding</a><br>Bachmann et al., ICLR 2025</td><td>verify the quality of a token, not its agreement with the target</td><td>a linear classifier on the target's hidden state accepts tokens that the exact test rejects</td><td>19.7 tokens per target call against 6.3; about twice the tokens per second of the exact rule (8B drafting for 405B); scores within about a point</td><td>hand-annotated data of the same kind as the task; the guarantee is lost; not released</td></tr>
+<tr><td><a href="04_judges.html#autojudge">AutoJudge</a><br>Garipov et al., NeurIPS 2025</td><td>the same judge without annotators</td><td>labels mined by search: does replacing this token change the final answer?</td><td>1.1× at equal accuracy, 1.5× for two points, against the tuned exact rule (8B → 70B, GSM8K)</td><td>task-specific; needs checkable answers; mining is expensive</td></tr>
+<tr><td><a href="04_judges.html#selfjudge">SelfJudge</a><br>Yoon et al., ICML 2026</td><td>one judge for all tasks, without annotation or answer checker</td><td>labels from the target's own likelihood of the continuation after the swap</td><td>+11% to +46% tokens per second for 0 to 2 points</td><td>small gains; loses more on harder mathematics</td></tr>
+<tr><td><a href="04_judges.html#training-free">FLy</a><br>Li et al., ICLR 2026</td><td>the benefit of a judge with nothing to train</td><td>at a mismatch: if the target hesitates (entropy) and then agrees with the next 6 drafted tokens, keep it</td><td>2.88× against 1.83× for the exact rule (70B), 5.34× against 2.82× (405B), at least 99% of the score</td><td>no guarantee; needs long drafts from a strong drafter; one of the six rules whose resistance to attacks falls in the 2026 security study; ships as an option of vLLM</td></tr>
+</tbody></table></div>
+
+<h3 id="methods-steps">Family 3 — another unit, another contract (<a href="05_reasoning.html">page 5</a>)</h3>
+<p>The unit is a reasoning step, or the large model is not run on what is accepted.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>method</th><th>what it tries</th><th>how it decides</th><th>what it achieves (as reported)</th><th>cost, and independent findings</th></tr></thead>
+<tbody>
+<tr><td><a href="05_reasoning.html#rsd">Reward-guided speculative decoding</a><br>Liao et al., ICML 2025</td><td>keep a correct step even if the large model would have phrased it differently</td><td>a reward model scores each drafted step; below a threshold the large model rewrites it</td><td>88.0 against 85.6 for the large model alone on a mathematics benchmark, with 4.4× fewer operations</td><td>a cascade: accepted steps are never seen by the large model; needs a reward model; accepts almost every step when re-measured</td></tr>
+<tr><td><a href="05_reasoning.html#specreason">SpecReason</a><br>Pan et al., NeurIPS 2025</td><td>use the tolerance of intermediate reasoning to approximation</td><td>the large model reads each drafted step and gives it a mark out of 9</td><td>1.4× to 3.0× with +0.4 to +9 points of accuracy, under a token budget</td><td>2 to 12 points lost when re-measured without the budget</td></tr>
+<tr><td><a href="05_reasoning.html#lookahead">Lookahead Reasoning</a><br>Fu et al., NeurIPS 2025</td><td>go past the ceiling of token-level speculation without losing the large model's content</td><td>the large model writes its own steps in parallel; a verifier keeps the drafts that mean the same</td><td>1.5× to 2.1× together with token-level speculation; accuracy within about two points</td><td>more compute, not less; one more model, the verifier</td></tr>
+<tr><td><a href="05_reasoning.html#routing">R2R</a><br>Fu et al., NeurIPS 2025</td><td>let the small model write, and replace only the tokens that change the path of the reasoning</td><td>a learned router sends 11–15% of the tokens to the large model</td><td>2.76× the large model's speed, at 46% average accuracy against 50% (and 10% for the small model alone)</td><td>a router trained on 7.6 million labels; operations are not saved; unfinished answers</td></tr>
+</tbody></table></div>
+
+<h3 id="methods-beyond">Family 4 — other outputs (<a href="06_practice.html#beyond">page 6, §1</a>)</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>method</th><th>what it tries</th><th>how it decides</th><th>what it achieves (as reported)</th><th>cost</th></tr></thead>
+<tbody>
+<tr><td><a href="06_practice.html#beyond-class">LANTERN</a><br>Jang et al., ICLR 2025</td><td>speculation for image tokens, where many codes are nearly equivalent</td><td>accept on the target probability of the drafted code and its nearest codes, within a total-variation budget</td><td>2.26× where the exact test gives 1.29× (greedy); 1.69× against 0.93× (sampling)</td><td>diversity: recall 0.56 → 0.45; FID +2 to +3.5</td></tr>
+<tr><td><a href="06_practice.html#beyond-others">GSD, COOL-SD</a><br>ICCV 2025; AAAI 2026</td><td>the same, with classes rebuilt at each step, or with a bound for the whole sequence</td><td>the exact test on clusters of tokens; a lenience that decreases along the draft</td><td>3.6–3.8× (exact method of the same table: 2.2×); 2.69× (exact: 2.37×)</td><td>FID +1.3 to +2.8</td></tr>
+<tr><td><a href="06_practice.html#beyond-others">Spec-VLA</a><br>Wang et al., EMNLP 2025</td><td>speculation for robot actions written as bins</td><td>accept a drafted bin within $r$ bins of the target's choice</td><td>1.22× to 1.42× where the exact test gives 1.08× to 1.15×; success rates within a few points</td><td>the tolerance depends on the task</td></tr>
+<tr><td><a href="06_practice.html#beyond-others">Speech SD, PCG</a><br>Interspeech 2025; ICASSP 2026</td><td>speculation for audio tokens</td><td>an additive tolerance; or the exact test on groups of similar sounds</td><td>1.4× where the exact test gives about 1×</td><td>word error rate up by 2 to 3 points</td></tr>
+</tbody></table></div>
+
+<h2 id="takeaways">4. Ten things the guide establishes</h2>
+<ol>
+<li>The exact rule keeps the target's distribution, by a proof of three lines, and no exact rule rejects less. Its acceptance is the overlap $1-\TV(p,q)$.</li>
+<li>Exact methods progressed through the drafter, not the test: from about 2× to about 5× at batch 1 between 2023 and 2026.</li>
+<li>Those gains shrink under load, because verification spends capacity that is idle only on a quiet server.</li>
+<li>A lossy rule is an exact test against another distribution. Naming that distribution is the first step in understanding any method.</li>
+<li>At one position, a point of acceptance costs at least a point of total variation. Good rules pay exactly that; none pays less.</li>
+<li>What the total variation costs in quality depends on which tokens it falls on. Rules that cap how often a token can be over-produced hold up best in independent comparisons.</li>
+<li>Judges accept much longer drafts. They carry no guarantee, do not transfer across tasks, and their errors compound over a long answer.</li>
+<li>“Speculative” covers two different contracts. If the large model still processes what is accepted, latency is saved. If it does not, compute is saved and the small model's text is in the answer.</li>
+<li>Accepted tokens are not speed: a relaxed rule can lengthen the answers by more than it speeds up the rounds. Safety behaviour degrades before accuracy does.</li>
+<li>Exactness has a value of its own: an exact method inherits every evaluation of the target. A lossy method starts them again.</li>
+</ol>
+
+<h2 id="notation">5. Notation and conventions</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>symbol</th><th>meaning</th></tr></thead>
+<tbody>
+<tr><td>$p(x)$</td><td>the <strong>target</strong> model's probability of the next token $x$ (the large model whose output is wanted)</td></tr>
+<tr><td>$q(x)$</td><td>the <strong>drafter</strong>'s probability of $x$ (several papers swap the two letters; the guide always converts)</td></tr>
+<tr><td>$\ga$</td><td>the number of tokens drafted before each verification</td></tr>
+<tr><td>$\al$</td><td>the acceptance rate: the probability that a drafted token is kept</td></tr>
+<tr><td>$c$</td><td>the cost of one drafter call, in target calls</td></tr>
+<tr><td>$\TV(p,q)$</td><td>total variation distance, $\frac12\sum_x\abs{p(x)-q(x)}=1-\sum_x\min(p(x),q(x))$</td></tr>
+<tr><td>out</td><td>the distribution of the token that a method actually writes</td></tr>
+</tbody></table></div>
+<p><strong>Colour code of the figures.</strong> <span class="sw p"></span>target &nbsp; <span class="sw q"></span>drafter &nbsp; <span class="sw ok"></span>accepted &nbsp; <span class="sw lax"></span>relaxed, lossy &nbsp; <span class="sw fix"></span>correction after a rejection &nbsp; <span class="sw no"></span>rejected. The full table of notation is on <a href="01_foundations.html#notation">page 1</a>.</p>
+<p><strong>Words.</strong> <em>Exact</em> and <em>lossless</em> are used as synonyms: the output follows the target's distribution (with greedy decoding: it is the target's text). <em>Lossy</em> and <em>relaxed</em>: it does not.</p>
+
+<h2 id="sources">6. Where the content comes from</h2>
+<p>Each page ends with its sources. The facts were collected in research notes kept with the guide, in <code>_source/notes/</code>: one file per topic, each statement with a quotation and a link, and a mark for what was read in the primary source and what was not. The pages contain only statements found there. Two of the six files are incomplete, because their collection was interrupted (the notes on relaxed rules and on judges stop before their last sections); the pages built on them use what the notes contain, and a few tables read directly in the papers.</p>
+<p>The total-variation distance and couplings, used throughout, are developed in the optimal transport course of this repository: <a href="../Optimal_transport_ML/v2/Lesson03.html#tv">Lesson 3</a>.</p>

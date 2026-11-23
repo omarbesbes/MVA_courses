@@ -155,7 +155,8 @@ Compute every coordinate in the script. Colours are CSS classes only (strokes `c
 `f1…f6`, `fk`, `fm`, `fs`; washes `a1…a6`, `am`; text `tx tx-s tx-b tx-i tx-m`), so that figures follow the
 light and dark themes. `Canvas` has helpers for diagrams: `box(x, y, w, h, lines, k)`, `chip(x, y, w, h, s, k,
 strike)`, `arrow(x1, y1, x2, y2, k)`, `rect`, `line`, `path`, `text`. Use Unicode in SVG text (α, γ, ≤, ×),
-never `_` or `^`. At least three static figures per page (diagrams of the control flow are the most useful).
+never `_` or `^`. One to three static figures per page (diagrams of the control flow are the most useful); on a
+phone a figure keeps a legible size and scrolls sideways inside its frame.
 
 **Interactive figures**: `widgets/NN_name.js`, a code fragment inserted by the build inside the scope of
 `app.js`, which registers `WIDGETS.name = function (box) { … }` (`name` unique in the whole guide; prefix it
@@ -166,7 +167,8 @@ cls)`, `clip`, `unclip`, `crosshair(xs, rowsAt)`, `tx`, `ty`, `ix`, `iy`, `clear
 `legend`, `tableView`, `redrawers`, `frac`, `mulberry32`, `gaussRand`, `addSvg`, `normalize`, `overlap`,
 `tvDist`, `klDiv`, `jsDiv`, `entropy`, `argmaxIndex`, `sampleIndex`, `residual`, `setBar`, `dragBars`.
 Place with `<div class="widget" data-widget="name"><p class="w-noscript">Interactive figure (needs
-JavaScript).</p></div>`, followed by a paragraph “What to look at: …”. At least two per page.
+JavaScript).</p></div>`, followed by a paragraph “What to look at: …”. One or two per page (three on page 1).
+A page can load the widget file of another page with a header line `widgets: 01_foundations, index`.
 Pitfalls of the helpers: `new Plot(svg, …)` and `Plot.clear()` empty the whole `svg`; `svg .ln` sets
 `stroke-width` in CSS, which beats a `stroke-width` attribute, so variable widths must be inline styles;
 `fmt` prints “—” for NaN; labels built from data go through `textContent`, never `innerHTML`; push your
@@ -208,7 +210,13 @@ Anchors that other pages may link to (they must exist with exactly these ids):
 
 - `01_foundations.html`: `start`, `slow`, `asymmetry`, `greedy`, `rule`, `rule-proof`, `tv`, `optimal`,
   `greedy-case`, `rounds`, `expected-tokens`, `speedup`, `speedup-limits`, `ceiling`, `exercises`, `sources`.
-- the anchors of pages 2–6 are listed in §10 (filled in when the plan of each page is fixed).
+- the anchors of the other pages are the `id`s of their `h2` and `h3` headings. `node build.mjs` (all pages) fails
+  on any link between pages whose anchor does not exist, so the list is checked by the build and not kept here.
+  The ones most linked to: `02_lossless.html#heads`, `#lookup`, `#trees`, `#block`, `#length`, `#serving`,
+  `#ceiling`; `03_relaxed.html#what`, `#front`, `#front-theorem`, `#lenience`, `#typical`, `#mentored`,
+  `#mixture`, `#benchmarks`, `#benchmarks-length`; `04_judges.html#judge-decoding`, `#autojudge`,
+  `#training-free`, `#compounding`, `#compounding-safety`; `05_reasoning.html#rsd`, `#lookahead`, `#routing`,
+  `#border`; `06_practice.html#beyond`, `#evaluation`, `#deployment`, `#risks`, `#decide`, `#open`.
 
 ## 9. Notation common to all pages (the notation of Leviathan et al. 2023)
 

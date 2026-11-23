@@ -1,0 +1,69 @@
+<!--
+title: Speculative decoding for language models: from the exact algorithm to lossy acceptance
+short: Home
+description: A step-by-step guide to speculative decoding for large language models. The exact algorithm and its proof, the state of the art of exact methods, then the lossy methods in detail (relaxed acceptance rules, learned and training-free judges, step-level speculation and routing, images, speech and actions), with what each approach tries and what it achieves, evaluation, deployment, risks and a decision guide.
+subtitle: A small model writes a draft, the large model checks it in one parallel pass, and the text comes out several times faster. Done exactly, the output is unchanged. This guide explains why, then follows the methods that give up exactness on purpose: what each one tries, what it achieves, and what it costs.
+widgets: index
+-->
+
+<div class="box objectives">
+<div class="box-h">What you will know at the end</div>
+<ol>
+<li>How speculative decoding works, why the exact version leaves the output distribution untouched (with the proof), and what limits its speed.</li>
+<li>What the best exact methods do in 2026, and what remains of their speed-ups on a loaded server.</li>
+<li>What “lossy” means precisely: which distribution a relaxed rule samples from, and the theorem that prices every relaxation.</li>
+<li>Every family of lossy method, with for each approach what it tries, how it decides, what it achieves and what it costs.</li>
+<li>How to evaluate such a method, what serving software offers, what can go wrong, and how to choose.</li>
+</ol>
+</div>
+
+<h2 id="start">0. How to read this guide</h2>
+<p><strong>For whom.</strong> You know what a language model, a token and a probability distribution are. Nothing about speculative decoding is assumed. The mathematics needed is sums of probabilities; every symbol is explained where it appears.</p>
+<p><strong>In which order.</strong> Pages 1, 3, 4 and 5 are the course. Pages 2 and 6 are maps: what exists on the exact side, and how all this is used. With one hour: <a href="01_foundations.html#rule">page 1, §3</a> (the rule and its proof), <a href="03_relaxed.html#front">page 3, §2</a> (the trade-off), <a href="03_relaxed.html#benchmarks">page 3, §10</a> (what independent evaluations found), and <a href="06_practice.html#decide">page 6, §5</a> (how to choose).</p>
+<p><strong>What the pages are made of.</strong></p>
+<ul>
+<li>Each section opens with one sentence that states its result. Read those alone for a first pass.</li>
+<li>Each method has a <strong>card</strong> with four lines: what it tries, how it decides, what it achieves, what it costs.</li>
+<li>Boxes titled “In the paper” quote the source, then a list decodes the quotation term by term.</li>
+<li>Small examples can be checked by hand. Interactive figures let you move the quantities; each has a line “What to look at”.</li>
+<li>Proofs, hints and solutions are folded; the buttons at the top open them all.</li>
+</ul>
+<div class="box pitfall"><div class="box-h">Pitfall — the numbers</div>
+<p>A speed-up or a score is the number reported by a paper, in that paper's setting: its models, its tasks, its hardware, its baseline. Two numbers from two papers are not comparable, and this guide never ranks methods by them. When a later study measured several methods under the same conditions, the guide says so and gives that result separately. The state of the art described is that of November 2026.</p>
+</div>
+
+<h2 id="idea">1. The idea in five minutes</h2>
+<p class="tldr">Writing is sequential and slow; reading is parallel and cheap. Let something cheap write, and let the large model read. An exact test keeps the output distribution unchanged; a lenient test keeps more of the draft and changes it.</p>
+<ol>
+<li><strong>The asymmetry.</strong> A large model writes one token per pass, and each pass takes about the same time whether it scores one position or twenty. Scoring a text that already exists is therefore much cheaper than writing it. (<a href="01_foundations.html#slow">page 1, §1</a>)</li>
+<li><strong>Draft, then verify.</strong> A <em>drafter</em> (a small model, a few extra layers, a lookup) proposes the next $\ga$ tokens. The large model, the <em>target</em>, scores them all in one pass: at each position it now knows its own distribution $p$, to compare with the drafter's $q$.</li>
+<li><strong>The exact rule.</strong> Keep a drafted token $x$ with probability $\min\!\big(1,\frac{p(x)}{q(x)}\big)$; at the first rejection, draw a replacement from the normalised positive part of $p-q$, and start a new round. The output is then distributed exactly as if the target had written alone. (<a href="01_foundations.html#rule">page 1, §3</a>, with the proof)</li>
+<li><strong>The law of the speed-up.</strong> If a drafted token is accepted with probability $\al$ and one drafter call costs $c$ target calls, the speed-up is $\dfrac{1-\al^{\ga+1}}{(1-\al)(\ga c+1)}$. And $\al$ cannot exceed the overlap of the two distributions, $1-\TV(p,q)$. (<a href="01_foundations.html#speedup">page 1, §5</a>)</li>
+<li><strong>The exact frontier.</strong> Better drafters, trees of candidates, smarter verification: 3× to 5× for one request at a time in the papers of 2024–2026, 1.1× to 2× on a busy server. (<a href="02_lossless.html">page 2</a>)</li>
+<li><strong>The lossy step.</strong> To keep more of the draft than the overlap allows, change the test. The output distribution then moves away from the target's, by at least as much as the acceptance gained. (<a href="03_relaxed.html#front-theorem">page 3, §2</a>)</li>
+</ol>
+
+<div class="widget" data-widget="home"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p><strong>What to look at.</strong> One position, three possible tokens. The target (blue) prefers “Paris”; the drafter (orange) prefers “the”. At $\lambda=1$ the test is the exact rule: the draft is accepted 70% of the time and what comes out (amber) is the blue distribution. Lower $\lambda$: the test becomes lenient, the acceptance rises, more tokens come out of each call of the target, and the amber bars slide from the blue ones toward the orange ones. Read the third line: rejection plus distance stays equal to 0.30, the distance between the two models. Each point of acceptance was bought with a point of distance. No rule can do better at one position; the methods of this guide differ in <em>where</em> they let the distance fall.</p>
+
+<p>That last sentence is the plan of the lossy pages:</p>
+<ul>
+<li><strong>Rules that read only the two distributions</strong> (<a href="03_relaxed.html">page 3</a>): lenience, accept sets, bounded divergences, mixtures. Cheap and general; blind to which tokens matter.</li>
+<li><strong>Judges</strong> (<a href="04_judges.html">page 4</a>): a classifier, trained or not, decides whether a mismatch is harmless. Longer accepted drafts; no guarantee, and a judge is only as good as its training.</li>
+<li><strong>Other units, other contracts</strong> (<a href="05_reasoning.html">page 5</a>): accept a whole reasoning step, or let the small model write and call the large one only where it matters. Some of these save latency, others save compute, and the second kind leaves the small model's text in the answer.</li>
+<li><strong>Other outputs</strong> (<a href="06_practice.html#beyond">page 6, §1</a>): images, speech and robot actions, where many tokens are nearly equivalent.</li>
+</ul>
+
+<figure class="fig"><!-- include figures/05/map.svg --><figcaption>Two questions sort every method of the guide: what is accepted or rejected (a token, a reasoning step), and whether the large model still processes what is accepted. If it does, latency is saved and compute is not; if it does not, compute is saved and the accepted text is the small model's. (Figure of page 5.)</figcaption></figure>
+
+<h2 id="pages">2. The six pages</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>page</th><th>the question</th><th>you will meet</th></tr></thead>
+<tbody>
+<tr><td><a href="01_foundations.html">1 · The exact algorithm</a></td><td>How can a draft be checked so that the output does not change at all, and how fast can that be?</td><td>the accept / resample rule and its proof, total variation, tokens per round, the speed-up law, the ceiling</td></tr>
+<tr><td><a href="02_lossless.html">2 · The lossless frontier</a></td><td>How far do exact methods go?</td><td>distilled drafters, heads on the target (the EAGLE line), lookups, block drafters, trees, block verification, load, the three ceilings</td></tr>
+<tr><td><a href="03_relaxed.html">3 · Relaxed acceptance</a></td><td>What does a relaxed test sample from, and what is the best possible trade?</td><td>the trade-off theorem, lenience, accept sets (typical acceptance, BiLD), mentored decoding, CACTUS, fuzzy speculative decoding, speculative cascades, mixtures, the 2026 comparisons</td></tr>
+<tr><td><a href="04_judges.html">4 · Judges</a></td><td>Can one accept a token because it is right, not because it matches?</td><td>Judge Decoding, AutoJudge, SelfJudge, the training-free FLy, compounding of errors, safety</td></tr>
+<tr><td><a href="05_reasoning.html">5 · Steps and routing</a></td><td>What if the unit is a reasoning step, or if the large model is not run at all on what is accepted?</td><td>reward-guided speculative decoding, SpecReason, Lookahead Reasoning, token routing (R2R), the border with cascades</td></tr>
+<tr><td><a href="06_practice.html">6 · Practice</a></td><td>How is this used, measured and chosen?</td><td>images, speech, actions; evaluation; what “lossless” means on hardware; software options; risks; a decision guide; open problems</td></tr>
+</tbody></table></div>
