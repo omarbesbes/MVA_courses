@@ -1,0 +1,73 @@
+<h2 id="autojudge">3. AutoJudge: labels by counterfactual search</h2>
+<p class="tldr">A mismatch is important if swapping the drafter's token into the target's answer changes the final answer once the target has finished writing. This can be checked automatically, on any task where two answers can be compared. A logistic regression then learns to recognise the unimportant ones.</p>
+
+<article class="mcard">
+<header class="mcard-h">
+<p class="mcard-name">AutoJudge</p>
+<p class="mcard-meta">Garipov, Velikonivtsev, Ermakov, Svirschevski, Egiazarian, Ryabinin (Yandex, HSE, IST Austria, Together AI) · NeurIPS 2025 · <a href="https://arxiv.org/abs/2504.20039">arXiv 2504.20039</a> · code released</p>
+<p class="tags"><span class="tag lossy">lossy</span><span class="tag train">trained judge, mined labels</span><span class="tag unit">token level</span><span class="tag year">2025</span></p>
+</header>
+<dl class="mfacts">
+<dt class="tries">What it tries</dt><dd>Keep the judge of §2 and remove the annotators: “errors in derivation should be fixed, while minor word choices should not”, and which is which can be found by search.</dd>
+<dt class="how">How it decides</dt><dd>Offline: for each mismatch of a training answer, swap in the drafter's token, let the target regenerate, compare final answers; label the mismatch important or not. Train a logistic regression on hidden states. Online: when the exact test would reject, accept anyway if the classifier says “unimportant”.</dd>
+<dt class="gets">What it achieves</dt><dd>Llama-3.1-8B drafting for 70B on GSM8K: over 40 tokens accepted per target call “with a ≤1% change in accuracy”. In a serving engine, against the exact rule with its own best draft length (72.3 tokens/s): 80.6 tokens/s at 91.9% accuracy (92.0% at the strictest setting), 107.4 tokens/s at 89.9%. On code (LiveCodeBench): over 22 tokens per cycle for about 2% of Pass@1.</dd>
+<dt class="costs">What it costs</dt><dd>Mining is expensive (about 700 s per GSM8K example for the 8B/70B pair). The judge is task-specific: a GSM8K judge fails on code and on harder mathematics. Needs a way to compare final answers; little to gain on creative writing.</dd>
+</dl>
+</article>
+
+<h3 id="autojudge-mining">The search</h3>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Garipov et al., NeurIPS 2025, §3.1</span></div>
+<p>“A token $y_t \in y_{target}$ is unimportant if swapping that token for the draft model's output results in an equivalent answer. Likewise, if replacing $y_i$ (and continuing target generation from there) results in a different answer, then the original token was "important" and the token should be generated with $\theta_{target}$.”</p>
+</div>
+<dl class="decode">
+<dt>$y_{target}$</dt><dd>The answer the target writes alone, greedily.</dd>
+<dt>the draft model's output</dt><dd>What the drafter would have written <em>at that position</em>, given the target's text so far. The positions where it differs from the target's token are the mismatches.</dd>
+<dt>equivalent answer</dt><dd>Defined by the task: the same final number for a mathematics problem ($\tok{1.5}$ and $\tok{3/2}$ count as equal), the same results on the test cases for a program.</dd>
+</dl>
+<div class="algo"><div class="algo-h">Algorithm — mining the labels of one training example (after Algorithm 1 of the paper)</div><ol>
+<li>Let the target write its answer $y$; extract its final answer.</li>
+<li>Find the mismatches: the positions where the drafter, reading $y$, would have written another token.</li>
+<li><span class="kw">While</span> a mismatch remains: take the first one, at position $t$.</li>
+<li class="in1">Replace $y_t$ by the drafter's token and let the target regenerate everything after it.</li>
+<li class="in1"><span class="kw">If</span> the final answer is equivalent: label the mismatch <em>unimportant</em>, <strong>keep the new text</strong> as $y$, recompute the mismatches. <span class="cm">as at inference, where an accepted token stays</span></li>
+<li class="in1"><span class="kw">Else</span>: label it <em>important</em>, keep the target's token.</li>
+<li class="in1">Continue with the mismatches after position $t$.</li>
+</ol></div>
+<div class="box example"><div class="box-h">Worked example (toy tokens)</div>
+<p>Question: “Tom has 3 boxes of 4 apples and eats 2. How many apples are left?” The target's answer, with the three positions where the drafter would have written something else:</p>
+<div class="toks"><span class="lab">target</span><span class="tok p">Tom</span><span class="tok ctx"> has 3 × 4 = 12 apples.</span><span class="tok p"> After</span><span class="tok ctx"> eating 2, he has 12 − 2 =</span><span class="tok p"> 10</span><span class="tok ctx">. The final answer is 10.</span></div>
+<div class="toks"><span class="lab">drafter would write</span><span class="tok q">He</span><span class="tok dim"> …</span><span class="tok q"> Then</span><span class="tok dim"> …</span><span class="tok q"> 14</span></div>
+<ol>
+<li>Swap $\tok{Tom}\to\tok{He}$; the target regenerates: “He has 3 × 4 = 12 apples. After eating 2, he has 12 − 2 = 10. The final answer is 10.” Same answer: <span class="tok lax">He</span> is unimportant. Keep the new text.</li>
+<li>Swap $\tok{ After}\to\tok{ Then}$; regenerate: “… Then he eats 2, so 12 − 2 = 10. The final answer is 10.” Same answer: <span class="tok lax"> Then</span> is unimportant. Keep it.</li>
+<li>Swap $\tok{ 10}\to\tok{ 14}$; regenerate: “… = 14. The final answer is 14.” Different answer: <span class="tok no"> 14</span> is important; the target's token stays.</li>
+</ol>
+<p>Three labelled examples for the classifier: two harmless, one harmful. On the real GSM8K training set the paper obtains about 130,000 mismatches, of which about 20% are important; on LiveCodeBench about 27,000, of which about 5%.</p>
+</div>
+<p>The search is sequential on purpose. The authors first tried to test each mismatch independently, on the target's original text: fewer than 1% came out important, because “a sufficiently strong target model might recover from even a low-quality token”. But at inference accepted tokens accumulate, and it is their combination that sinks an answer. Keeping each accepted swap and continuing from the new text makes the training labels match what happens at inference.</p>
+<figure class="fig"><!-- include figures/04/mining.svg --><figcaption>Mining one label. The target's answer is the reference. At a mismatch, the drafter's token is swapped in and the target writes the rest again. If the final answers agree, the mismatch is harmless and the new text becomes the reference; otherwise it is harmful and the target's token stays.</figcaption></figure>
+
+<h3 id="autojudge-results">What was measured</h3>
+<p>The classifier is a logistic regression on the hidden states of the position that encodes the drafted token (the target's alone suffices; adding the drafter's changes the quality by less than 1%). Its threshold is the knob. The paper reports the whole trade-off, which is the right way to present a lossy method:</p>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Garipov et al., NeurIPS 2025, Table 1 (GSM8K, zero-shot, serving engine, batch 1; each method with its best draft length)</span></div>
+<div class="table-wrap"><table>
+<thead><tr><th>pair</th><th>exact rule</th><th colspan="4">AutoJudge, classifier threshold from strict to loose</th></tr></thead>
+<tbody>
+<tr><td rowspan="2">8B → 70B (4 A100)</td><td>72.3 tokens/s</td><td>72.3</td><td>80.6</td><td>107.4</td><td>109.6</td></tr>
+<tr><td>—</td><td>92.0%</td><td>91.9%</td><td>89.9%</td><td>88.0%</td></tr>
+<tr><td rowspan="2">1B → 8B (1 A100)</td><td>147.7 tokens/s</td><td>149.2</td><td>169.2</td><td>171.2</td><td>173.9</td></tr>
+<tr><td>—</td><td>83.1%</td><td>80.2%</td><td>79.8%</td><td>77.4%</td></tr>
+</tbody></table></div>
+</div>
+<p>So, for the 8B/70B pair: 11% faster than a well-tuned exact rule for free, 49% faster for two points of accuracy. For the small pair the gains are 1% to 17% and cost up to six points; for a 405B target the paper reports 1% to 20%. The gain is largest where a call of the target is very expensive relative to the drafter.</p>
+<div class="box pitfall"><div class="box-h">Pitfall — “2× over speculative decoding” depends on the draft length given to the baseline</div>
+<p>The abstract of the paper says “up to $\approx2\times$ speedup over speculative decoding at the cost of $\le 1\%$ drop in accuracy”. That figure is obtained when both methods use the same long draft of 32 tokens — far too long for the exact rule, which then runs at 40.6 tokens/s instead of 72.3. With each method at its own best draft length, the same operating point is 1.11×. The first study of <a href="03_relaxed.html#benchmarks">page 3, §10</a> makes the general point: the draft length of the baseline matters as much as the relaxation.</p>
+</div>
+
+<h3 id="autojudge-limits">Limits</h3>
+<ul>
+<li><strong>The judge does not transfer between tasks.</strong> The paper's own tests: a judge mined on GSM8K “results in inferior performance” on code, and on harder mathematics (MATH) its trade-off is worse than the plain top-$K$ rule. An independent 2026 study trained one judge on a mixture of GSM8K and code: mostly mathematics, it scores 83.1 on MATH and 76.7 on a code benchmark; mostly code, 64.5 and 57.9. What a judge learns to call harmless depends on what it was shown.</li>
+<li><strong>It needs an answer to compare.</strong> On open-ended tasks the authors used a language model as the equivalence test: AutoJudge helps on short factual answers, “but not on creative writing”, where over 70% of the mismatches change the answer in the eyes of that test — “there is little room for speed up”.</li>
+<li><strong>Mining is costly and noisy.</strong> About 700 seconds per GSM8K example for the 8B/70B pair. The authors of a later method (JuDi) measured more than 2,700 GPU-hours for the GSM8K training set, and found that only a quarter of the tokens keep the same label across four runs of the search.</li>
+<li><strong>“Same final answer” is a narrow criterion.</strong> A swap that makes an intermediate sentence false but leaves the final number intact is labelled harmless. The next method starts from this criticism.</li>
+</ul>

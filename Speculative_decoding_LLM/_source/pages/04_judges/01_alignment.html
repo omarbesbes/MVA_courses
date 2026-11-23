@@ -1,0 +1,37 @@
+<h2 id="alignment">1. Agreement is not correctness</h2>
+<p class="tldr">The exact test accepts a token when the large model would have written that very token. Feed it text written by a stronger model, or by a careful human, and it stops after two or three tokens: it measures alignment with one model's habits, not quality.</p>
+
+<h3 id="alignment-evidence">The experiment that started the family</h3>
+<p>If rejections were signs of mistakes, a better draft would be rejected less. The authors of Judge Decoding tested exactly that. They took Llama-3.1-405B as the target and replaced the usual small drafter by GPT-4o, a far stronger writer than any small drafter: GPT-4o writes complete answers, and one counts how many tokens the target accepts, with the greedy exact test, before the first rejection.</p>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Bachmann et al. (Judge Decoding), ICLR 2025, §3.2 and Figures 2–3</span></div>
+<p>“Counter-intuitively, we find that the target model does not reward the higher quality of tokens, accepting only roughly two before encountering the first rejection.” The same count for human-written Wikipedia summaries, used as answers to “What can you tell me about …?”: 3.1 tokens. And with the roles reversed on GSM8K — the 405B model drafting for the 8B model — 6.3 tokens, against 6.6 the usual way round: “acceptance rates do not improve with the quality of the responses.”</p>
+<div class="hbars" role="img" aria-label="Tokens of a GPT-4o answer accepted by Llama-405B before the first rejection, exact test versus judge, three benchmarks">
+<span class="hb-l">MT-Bench — exact test</span><span class="hb-t"><i class="base" style="--v:8.5%"></i></span><span class="hb-v">2.3</span>
+<span class="hb-l">MT-Bench — with the judge</span><span class="hb-t"><i class="lax" style="--v:95.2%"></i></span><span class="hb-v">25.8</span>
+<span class="hb-l">GSM8K — exact test</span><span class="hb-t"><i class="base" style="--v:7.7%"></i></span><span class="hb-v">2.1</span>
+<span class="hb-l">GSM8K — with the judge</span><span class="hb-t"><i class="lax" style="--v:82.3%"></i></span><span class="hb-v">22.3</span>
+<span class="hb-l">HumanEval — exact test</span><span class="hb-t"><i class="base" style="--v:9.6%"></i></span><span class="hb-v">2.6</span>
+<span class="hb-l">HumanEval — with the judge</span><span class="hb-t"><i class="lax" style="--v:100%"></i></span><span class="hb-v">27.1</span>
+</div>
+<p class="hbars-cap">Tokens of a GPT-4o answer accepted by Llama-3.1-405B before the first rejection (read from Figure 3 of the paper). Grey: greedy exact test. Amber: the judge of §2.</p>
+</div>
+<p>The exact test, then, is not a quality filter that happens to be strict. It answers a different question. A sentence can be opened in a hundred acceptable ways; the target has one favourite; anything else is “wrong” for the test. The paper states the consequence as a research question: “Can we adapt verification to assess token quality rather than alignment?”</p>
+<p>A second observation of the same paper explains why simply drafting more does not help. With the exact test, the number of accepted tokens saturates as the draft gets longer: about 3.5 tokens for drafts of 5, about 11 for drafts of 50 (Llama-3.1-8B drafting for 405B). This is the $\frac{1}{1-\al}$ ceiling of <a href="01_foundations.html#expected-tokens">page 1</a>: a draft is cut at its first disagreement, however good the rest. It is the reason, say the authors, “why prior work is limited largely to $M\le7$”.</p>
+<div class="box pitfall"><div class="box-h">Pitfall — what this experiment does and does not show</div>
+<p>It shows that exact matching is a poor proxy for quality: excellent text is rejected. It does not show that everything the exact test rejects is fine. A small drafter's disagreements are a mixture: many harmless rewordings, and some real mistakes — a wrong digit, a wrong variable. The whole difficulty of this page is to tell them apart <em>token by token, before seeing the rest of the answer</em>.</p>
+</div>
+
+<h3 id="alignment-skeleton">The common skeleton: a second opinion where the exact test rejects</h3>
+<p>All the methods of this page keep the loop of page 1 and change one step. The target still reads the whole draft in one pass. Then, at each position:</p>
+<div class="algo"><div class="algo-h">Algorithm — verification with a second opinion (greedy decoding)</div><ol>
+<li><span class="kw">If</span> the drafted token is the target's own choice: accept. <span class="cm">the exact test; nothing is lost here</span></li>
+<li><span class="kw">Else</span> (a mismatch): ask the second opinion — a trained judge (§2–§4) or a rule (§5).</li>
+<li class="in1">If it says “harmless”: accept the drafted token and go on. <span class="cm">the only place where the output can differ from the target's</span></li>
+<li class="in1">If it says “harmful”: reject; the target writes its own token; the rest of the draft is discarded.</li>
+</ol></div>
+<p>Two consequences follow from the structure alone. The second opinion can only <em>add</em> acceptances: with a judge that always says “harmful”, the method is exact speculative decoding. And every difference between the output and the target's own text comes from the judge's <em>false positives</em>: harmful mismatches it let through. The cost of the method is entirely there.</p>
+<figure class="fig"><!-- include figures/04/pipeline.svg --><figcaption>Verification with a judge. The target reads the draft once. Its output distributions give the exact test, as before; its hidden state at each drafted token feeds a small classifier, the judge. A drafted token passes if either says yes; the draft is cut at the first token that both refuse.</figcaption></figure>
+<div class="quiz"><p>Why does the judge read the target's hidden state <em>at the drafted token</em>, and not the distribution $p_i$ that the target computed for that position?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>$p_i$ was computed before the target saw the drafted token: it says what the target expected, which is what the exact test already uses. The hidden state at the drafted token is computed <em>after</em> reading it, with the whole context: it encodes the target's reaction to that token. The authors of Judge Decoding illustrate it: forced to start with “The capital of France is Berlin”, the model continues “… just kidding, it's actually Paris”. Something in its state after “Berlin” already knows.</p>
+</div></details></div>

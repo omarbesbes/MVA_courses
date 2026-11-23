@@ -1,0 +1,57 @@
+<h2 id="judge-decoding">2. Judge Decoding: a linear probe on the target's own reaction</h2>
+<p class="tldr">Train one linear layer on the target's last hidden state to recognise the tokens at which an answer goes wrong, from 500 hand-annotated examples. Accept a drafted token if the exact test or this judge accepts it. Reported: about 20 tokens per target call instead of 6, at the target's benchmark scores.</p>
+
+<article class="mcard">
+<header class="mcard-h">
+<p class="mcard-name">Judge Decoding</p>
+<p class="mcard-meta">Bachmann, Anagnostidis, Pumarola, Georgopoulos, Sanakoyeu, Du, Schönfeld, Thabet, Kohler (Meta, ETH Zürich) · ICLR 2025 (oral) · <a href="https://arxiv.org/abs/2501.19309">arXiv 2501.19309</a></p>
+<p class="tags"><span class="tag lossy">lossy</span><span class="tag train">trained judge, hand-labelled data</span><span class="tag unit">token level</span><span class="tag year">2025</span></p>
+</header>
+<dl class="mfacts">
+<dt class="tries">What it tries</dt><dd>Verify the <em>quality</em> of a drafted token instead of its agreement with the target, so that long drafts from a good drafter are not cut at the first harmless difference.</dd>
+<dt class="how">How it decides</dt><dd>A linear classifier (“judge”) reads the target's last hidden state at the drafted token; the token is accepted if the exact test accepts it <em>or</em> the judge's probability exceeds $\delta=0.5$. The judge is trained on 500 question / correct answer / wrong answer triples annotated by the authors.</dd>
+<dt class="gets">What it achieves</dt><dd>Llama-3.1-8B drafting for Llama-3.1-405B (8-bit, 8 H100, batch 1): 19.7 tokens per target call against 6.3 for the exact rule with the same drafter; 129.3 tokens/s against 58.7 in an optimised framework. For the 70B target (2 H100): 18.8 against 6.4, and 141.8 tokens/s against 76.7. Benchmark scores within about one point of the target's (table below).</dd>
+<dt class="costs">What it costs</dt><dd>“The mathematical guarantee to maintain target quality is lost.” The judge must be trained on data “of similar nature” to the task: without code examples in its training set, HumanEval falls from 86.6 to 80.4. Needs a strong drafter and a large target. Code and data were not released.</dd>
+</dl>
+</article>
+
+<h3 id="judge-what">What the judge is</h3>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Bachmann et al., ICLR 2025, §4.1 and Appendix B</span></div>
+<p>“our experiments show that last hidden layer embeddings of erroneous tokens effectively "flag" errors and contradictions, prompting the model to generate subsequent tokens that attempt to correct the mistake.” The judge: “a simple linear head proved most effective […] we train only 16.4k parameters on just 30k tokens in less than 1.5 hours, with all target model parameters remaining frozen.” The decision: accept if “$\sigma\left(f_{\text{judge}}(\bm e_i)\right)>\delta$ for $\delta\in[0.5,1]$”, and “we take the logical OR between the two, $\bm z=\bm z_{\text{stand}}\vee\bm z_{\text{judge}}$”.</p>
+</div>
+<dl class="decode">
+<dt>$\bm e_i$</dt><dd>The target's hidden state at the position of the drafted token $i$, taken just before the final normalisation and the output layer. For Llama-3.1-405B it has 16,384 coordinates — hence the 16.4k parameters: the judge is a single vector of weights.</dd>
+<dt>$f_{\text{judge}}$, $\sigma$</dt><dd>A linear function of $\bm e_i$ and the sigmoid: a logistic regression. The authors note that it “can be viewed as an additional entry in the vocabulary”: one more output of the last layer, so it costs nothing at inference.</dd>
+<dt>$\bm z_{\text{stand}}\vee\bm z_{\text{judge}}$</dt><dd>Two masks over the draft positions: accepted by the exact test, accepted by the judge. A token passes if either mask says yes. With $\delta=1$ the judge never accepts and the method is exact.</dd>
+<dt>30k tokens</dt><dd>The tokens of the 500 annotated triples. Labels: every token of a correct answer is positive; in a wrong answer, tokens are positive up to the mistake and the mistaken tokens are negative. There are about 20 times more positives than negatives, so the loss gives more weight to the negatives, and the judge is tuned “to rather reject than accept when in doubt”.</dd>
+</dl>
+<p>The training set mixes questions from two public datasets and new ones; answers were produced by several models, then “manually reviewed and corrected by the authors, who also annotated the precise location of errors in wrong answers”. The authors tried to have a language model do the annotation: “too imprecise”.</p>
+
+<h3 id="judge-results">What was measured</h3>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Bachmann et al., ICLR 2025, Table 1 and Figure 6</span></div>
+<div class="table-wrap"><table>
+<thead><tr><th>target (drafter: Llama-3.1-8B)</th><th>verification</th><th>tokens per target call</th><th>tokens/s (optimised framework)</th></tr></thead>
+<tbody>
+<tr><td rowspan="2">Llama-3.1-70B, 2 H100</td><td>exact</td><td>6.4</td><td>76.7</td></tr>
+<tr><td>judge</td><td>18.8</td><td>141.8</td></tr>
+<tr><td rowspan="2">Llama-3.1-405B, 8 H100</td><td>exact</td><td>6.3</td><td>58.7</td></tr>
+<tr><td>judge</td><td>19.7</td><td>129.3</td></tr>
+</tbody></table></div>
+<p>Benchmark scores with the 405B target, in the order drafter alone / top-$K$ acceptance / judge / target alone: GSM8K 86.2 / 90.2 / 96.6 / 96.8; HumanEval 71.3 / 72.5 / 86.6 / 87.1; ARC-Challenge 83.1 / 83.3 / 96.6 / 96.6; MMLU 69.1 / 69.8 / 86.7 / 86.7; MT-Bench 82.6 / 83.5 / 89.7 / 90.1.</p>
+</div>
+<p>Three things to read in these numbers.</p>
+<ul>
+<li><strong>The gain over the exact rule is a factor 2.</strong> The paper's headline is “9×” and 129 tokens/s; nine is relative to the 405B model decoding alone, in an unoptimised framework. On the same hardware and framework as the 129 tokens/s, the exact rule with the same drafter gives 58.7: the judge's own contribution is ×2.2 (×1.85 for the 70B target). This is the comparison to remember, and the authors give the means to make it.</li>
+<li><strong>The scores stay within about a point of the target's</strong> — with the two targets, a loss of at most 0.6 point on the four benchmarks with a right answer, and of 0.4 (405B) to 1.1 (70B) on MT-Bench, the open-ended one. The simple alternative “accept if the token is in the target's top $K$” (a rule of page 3) barely improves on the drafter alone: a rank in a probability vector does not tell harmless from harmful, the hidden state does.</li>
+<li><strong>The setting is favourable by design:</strong> a drafter that is itself a strong model (8B), a very large target, drafts of 25 tokens. The authors list it among the limitations: “The draft model needs to be of high-quality”, and “the target model needs to be of sufficient size to be able to provide accurate judgements”.</li>
+</ul>
+<div class="box practice"><div class="box-h">In practice — the framework changes the speed-up more than the method does</div>
+<p>The same paper warns that speed-ups measured in an unoptimised framework overstate everything: a well-known exact method goes from 3× to 1.5× when the baseline is optimised, and the plain 70B model in the fast framework is quicker than that method in the slow one. A speed-up is a ratio; ask what the denominator is.</p>
+</div>
+
+<h3 id="judge-limits">Where it stops working</h3>
+<p>The decisive experiment is the paper's own. Remove the coding examples from the 500 triples, retrain the judge, evaluate on code:</p>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Bachmann et al., ICLR 2025, §5.3 and Appendix A</span></div>
+<p>“While we do observe a drop in performance from $86.6$ to $80.4\%$, the performance is still significantly better than the draft model at $71.3\%$ […] Nevertheless, our approach is not a silver bullet and to maintain target quality it is required to train the judge on data of similar nature.” And among the limitations: “If the draft model has safety issues, the target model could potentially accept safety-critical tokens through the judge, even if the target would otherwise never produce such outputs. We have not observed such issues in our experiments but have also not thoroughly investigated this problem”.</p>
+</div>
+<p>Six points lost on a task the judge had not seen: more than a third of the distance between the target and the drafter. The reviewers of the paper pressed on the same spot (“for novel tasks, a new tuning dataset must be hand curated”), and asked what happens for “open-ended creative generation tasks where "correctness" may not be as easily defined”. No answer exists in the paper for that case. Two further facts limit the method in practice: neither the dataset nor the code was published, and an attempt by other researchers to reproduce the manual annotation on a smaller pair of models (§3) gave a judge worse than the top-$K$ rule.</p>

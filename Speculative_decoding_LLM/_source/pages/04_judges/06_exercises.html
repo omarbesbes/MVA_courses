@@ -1,0 +1,50 @@
+<h2 id="exercises">7. Exercises</h2>
+
+<div class="exo"><div class="exo-h">Exercise 1 — The judge can only add <span class="lvl">★</span></div>
+<p>With the rule “accept if the exact test accepts or the judge accepts” and greedy decoding, show that (a) the output is the target's own text whenever the judge never accepts a mismatch; (b) the output can differ from the target's text only at positions where the judge accepted a mismatch, and after them.</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>Go through the algorithm of §1 position by position, as in the proof of the greedy case on page 1.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) If the judge never accepts a mismatch, a drafted token is accepted only when it is the target's choice, and the first mismatch is replaced by the target's choice: this is the greedy algorithm of <a href="01_foundations.html#greedy">page 1, §2</a>, which reproduces the target's text.</p>
+<p>(b) By the same induction, as long as every accepted token is the target's choice, the next distributions are those of the target's own run. The first token that is not the target's choice can only be a mismatch accepted by the judge. From there on the context differs from the target's own text, so later tokens may differ too — even those that pass the exact test, which is now an exact test <em>given the new context</em>.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 2 — What the headline hides <span class="lvl">★</span></div>
+<p>From the table of §2 (Judge Decoding), compute for each target: the ratio of tokens per target call (judge / exact) and the ratio of tokens per second. Why is the second smaller than the first?</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>Per round, what else takes time besides the target's pass?</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>70B: $18.8/6.4=2.9$ and $141.8/76.7=1.85$. 405B: $19.7/6.3=3.1$ and $129.3/58.7=2.2$.</p>
+<p>Tokens per call count only the target's passes. But the judge's drafts are longer (25 tokens against 10 for the exact rule in that paper), and the drafter's calls are sequential: a round costs $\ga c+1$ (page 1, §5). Tripling the tokens per call while multiplying the drafting time by 2.5 gives less than a factor 3 in speed; the smaller the ratio between the target's and the drafter's costs, the larger the gap. It is larger for the 70B target (the 8B drafter is relatively more expensive) than for 405B.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 3 — Compounding <span class="lvl">★★</span></div>
+<p>An answer contains 3 harmful mismatches on average (positions where accepting the drafter's token would change the final answer). (a) With a judge whose false-accept rate is $f=0.1$, what fraction of the answers is spoiled? With $f=0.01$? (b) What $f$ keeps the loss under one point?</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>An answer survives if none of the three is accepted.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) $1-(1-f)^3$: $27.1\%$ for $f=0.1$, $2.97\%$ for $f=0.01$. (b) $1-(1-f)^3\le0.01$ gives $f\le1-0.99^{1/3}\approx0.0034$. A judge that is right 90% of the time on harmful tokens — a respectable classifier — spoils more than a quarter of the answers in this model. This is why the judges of §2–§4 are tuned to reject when in doubt, and why their gains shrink when one insists on no loss.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 4 — The sign of the two terms <span class="lvl">★★</span></div>
+<p>In SelfJudge's score $s=s_{\text{prefix}}+\text{suffix term}$ (§4), with greedy decoding: (a) show that $s_{\text{prefix}}\le0$ at a mismatch; (b) describe a swap for which the suffix term is about $0$, and one for which it is very negative; (c) can the suffix term be positive?</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>$y_i$ is the target's argmax given $y_{<i}$. The suffix term compares the likelihood of the same continuation after two different tokens.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) $y_i=\argmax_vP(v\mid y_{<i})$, so $P(z_i\mid y_{<i})\le P(y_i\mid y_{<i})$ and the difference of logarithms is $\le0$.</p>
+<p>(b) About $0$: a synonym or a formatting variant, after which the same words are as likely as before ($\tok{ Thus}$ for $\tok{ Therefore}$). Very negative: a token that the continuation contradicts — a different number that the next lines reuse, a different variable name that the next lines refer to.</p>
+<p>(c) Yes: the continuation was generated greedily after $y_i$, but nothing prevents it from being even more likely after $z_i$ (for instance if $z_i$ is a more explicit wording of the same thing). Then the score can exceed the prefix term, and a token the target ranked low can still be labelled acceptable. This is exactly what distinguishes the score from a margin rule on $P(z_i\mid y_{<i})$.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 5 — FLy by hand <span class="lvl">★★</span></div>
+<p>A draft of 12 tokens has mismatches at positions 3, 7 and 10; the target's normalised entropies there are $0.52$, $0.08$ and $0.41$. All other drafted tokens equal the target's choice. With $\theta=0.3$ and $W=6$, how many drafted tokens does FLy accept? Same question with $W=2$, and with $\theta=0.05$, $W=2$.</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>At a mismatch: gate first; if deferred, look at the $W$ following drafted tokens for another mismatch.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>$\theta=0.3$, $W=6$. Position 3: entropy $0.52\ge0.3$, deferred; the window is positions 4 to 9, which contains the mismatch at 7: the window fails, position 3 is rejected. FLy accepts 2 tokens — no more than the exact rule.</p>
+<p>$\theta=0.3$, $W=2$. Position 3: deferred; window = positions 4–5, no mismatch: accepted. Position 7: entropy $0.08<0.3$, strict: rejected. FLy accepts 6 tokens (positions 1 to 6); the exact rule accepts 2.</p>
+<p>$\theta=0.05$, $W=2$. Position 3 accepted as before. Position 7: $0.08\ge0.05$, deferred; window = positions 8–9, no mismatch: accepted. Position 10: deferred; window = positions 11–12, no mismatch: accepted. All 12 tokens pass — including the one at position 7, where the target was nearly certain of another token. A short window and a low gate make the rule accept almost anything; a long window makes it timid. The paper's values (0.3 and 6) sit between.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 6 — Design question <span class="lvl">★★★</span></div>
+<p>You must serve a 70B model for (a) a coding assistant, (b) a customer-support chatbot with strict refusal policies, (c) a creative-writing tool. For each, would you consider a judge-based method, and with which precautions? Use only facts from this page.</p>
+<details class="fold sol"><summary>Elements of an answer</summary><div class="fold-body">
+<p>(a) Code has a checker (tests), so AutoJudge-style labels are available, and the paper reports about twice the accepted tokens for about two points of Pass@1. Precautions: mine the labels on code, not on mathematics (§6, transfer); measure on the hardest benchmark available; compare with the exact rule at its own best draft length; consider that an exact method with a cheap trained head may simply be faster (§5).</p>
+<p>(b) The risky case: safety degrades before accuracy (§6), because refusals are decided in the first tokens and small drafters comply far more often. Either stay exact, or apply the exact rule to the beginning of each response, and evaluate with attack benchmarks, not only utility ones.</p>
+<p>(c) Little to gain: where most mismatches change the result in the eyes of an evaluator (over 70% in AutoJudge's creative-writing test), a judge has almost nothing it may accept, and “correctness” is not defined. The reviewers of Judge Decoding raised the same point. An exact method, or a rule of page 3 designed for open-ended sampling, fits better.</p>
+</div></details></div>

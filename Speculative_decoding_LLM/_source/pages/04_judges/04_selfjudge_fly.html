@@ -1,0 +1,86 @@
+<h2 id="selfjudge">4. SelfJudge: labels from the target's own likelihood</h2>
+<p class="tldr">Swap the drafter's token into the target's answer and ask the target how likely that token and the next twenty tokens of its original continuation are now. If the text still “fits”, the swap is harmless. No ground truth, no regeneration; one judge for all tasks; smaller but broader gains.</p>
+
+<article class="mcard">
+<header class="mcard-h">
+<p class="mcard-name">SelfJudge</p>
+<p class="mcard-meta">Yoon et al. · ICML 2026 · <a href="https://arxiv.org/abs/2510.02329">arXiv 2510.02329</a></p>
+<p class="tags"><span class="tag lossy">lossy</span><span class="tag train">trained judge, self-supervised labels</span><span class="tag unit">token level</span><span class="tag year">2025–2026</span></p>
+</header>
+<dl class="mfacts">
+<dt class="tries">What it tries</dt><dd>A judge that needs neither annotators (§2) nor a task with checkable answers (§3), and that is trained once for all tasks.</dd>
+<dt class="how">How it decides</dt><dd>Label: a “semantic preservation score”, the change in the target's log-likelihood of the swapped token <em>and of the following 20 tokens of its own answer</em>; mismatches above a threshold are labelled acceptable. Judge: logistic regression on the target's hidden states, combined with the exact test as in §2.</dd>
+<dt class="gets">What it achieves</dt><dd>Llama-3.1-8B target with a 1B drafter, in a serving engine: 137.4 tokens/s against 111.2 for the exact rule on GSM8K (+23.5%) at 80.5% accuracy against 80.7%; +46% tokens/s on MMLU, for a score lower by 0.7 to 2.3 points depending on the table. Llama-3.1-70B with an 8B drafter: +11% to +22% tokens/s, GSM8K accuracy 93.8–94.0% against 93.0%, MMLU 81.4% to 79.8% against 80.6%.</dd>
+<dt class="costs">What it costs</dt><dd>Gains much smaller than those reported in §2–§3 (one to two more tokens per round). Still loses 2 to 3 points on harder mathematics (MATH-500) with the small target. The label threshold was calibrated against AutoJudge labels.</dd>
+</dl>
+</article>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Yoon et al. (SelfJudge), §3.3.1, Equations 6–8</span></div>
+<p>For a target response $y$ and the drafter's alternative $z_i$ at position $i$:</p>
+$$s(y,z_i)=\underbrace{\log P(z_i\mid y_{<i})-\log P(y_i\mid y_{<i})}_{s_{\text{prefix}}}+\underbrace{\log P(y_{>i}\mid y_{<i},z_i)-\log P(y_{>i}\mid y_{\le i})}_{\text{suffix likelihood}}.$$
+<p>“In practice, our semantic preservation score uses $N$ future tokens as opposed to using all future tokens.”</p>
+</div>
+<dl class="decode">
+<dt>$P$</dt><dd>The target model's probability, everywhere. The drafter only supplies the alternative token $z_i$.</dd>
+<dt>$s_{\text{prefix}}$</dt><dd>How much less likely the drafter's token is than the target's own, given what came before. Always $\le0$ at a mismatch under greedy decoding. Alone, this is the margin rule of <a href="03_relaxed.html#greedy-rules">page 3</a>.</dd>
+<dt>suffix likelihood</dt><dd>The new ingredient. Does the continuation the target actually wrote, $y_{>i}$, remain as likely after the swap? If the drafter said $\tok{ Thus}$ for $\tok{ Therefore}$, what follows is unaffected and this term is near $0$. If it said $\tok{ 14}$ for $\tok{ 10}$, the target's next tokens (“The final answer is 10”) become very unlikely and the term is strongly negative.</dd>
+<dt>$N$</dt><dd>The number of following tokens used; the paper takes $N=20$ and reports that $N=0$ (the prefix term alone) gives the worst judge.</dd>
+</dl>
+<p>The computation needs one extra pass of the target on the text with the swapped token, instead of a full regeneration: in the paper's count, 69,432 labels in 8 hours where AutoJudge produced 14,896 in 82 hours on the same hardware. The labels come from three corpora (GSM8K, a code benchmark, general instructions), and a single judge is trained on all of them.</p>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Yoon et al. (SelfJudge), Table 1: Llama-3.1-8B target, Llama-3.2-1B drafter, temperature 0</span></div>
+<div class="table-wrap"><table>
+<thead><tr><th>verification</th><th>GSM8K</th><th>MATH-500</th><th>MMLU</th><th>average change vs exact</th></tr></thead>
+<tbody>
+<tr><td>exact</td><td>9.14 tokens / 80.7</td><td>9.98 / 45.4</td><td>4.36 / 65.0</td><td>—</td></tr>
+<tr><td>top-$k$</td><td>14.59 / 71.2</td><td>15.08 / 29.8</td><td>6.69 / 49.5</td><td>+4.01 tokens, −10.7 points</td></tr>
+<tr><td>AutoJudge (strict threshold)</td><td>9.71 / 80.1</td><td>11.23 / 41.0</td><td>4.47 / 64.6</td><td>+0.49, −1.4</td></tr>
+<tr><td>SelfJudge (strict threshold)</td><td>10.09 / 80.7</td><td>10.91 / 43.0</td><td>5.14 / 64.4</td><td>+0.81, −0.5</td></tr>
+<tr><td>SelfJudge (looser threshold)</td><td>11.29 / 80.5</td><td>12.78 / 42.2</td><td>6.38 / 62.7</td><td>+2.17, −1.6</td></tr>
+</tbody></table></div>
+<p class="small">Each cell: mean accepted tokens per round / task score. The average column also includes a summarisation task not shown here.</p>
+</div>
+<p>This table is worth more than its modest numbers suggest, for two reasons. It is one of the few places where several verification rules are run by the same people on the same models and tasks: and there the top-$k$ rule of page 3 accepts the most and loses ten points, while both judges stay within a point or two. And it shows what a judge buys when the drafter is small and the target modest: one or two tokens per round, not fifteen. The spectacular numbers of §2 belong to a large target with a strong drafter.</p>
+<p>The paper also checks what the judge is worth <em>alone</em>, without the exact test in front of it: 2.08 tokens per round on GSM8K instead of 9.14. A linear probe is a second opinion, not a verifier.</p>
+
+<h2 id="training-free">5. No training at all: FLy and its relatives</h2>
+<p class="tldr">Accept a mismatch only where the target was undecided, and only if the target then agrees with the next few drafted tokens. A wrong token usually makes the target “push back” within a few positions; a harmless one does not. No data, no classifier, one extra comparison per round.</p>
+
+<article class="mcard">
+<header class="mcard-h">
+<p class="mcard-name">FLy — training-free loosely speculative decoding</p>
+<p class="mcard-meta">Li et al. · ICLR 2026 · <a href="https://arxiv.org/abs/2511.22972">arXiv 2511.22972</a></p>
+<p class="tags"><span class="tag lossy">lossy</span><span class="tag free">training-free</span><span class="tag unit">token level</span><span class="tag year">2025–2026</span></p>
+</header>
+<dl class="mfacts">
+<dt class="tries">What it tries</dt><dd>The benefit of a judge without its two weaknesses: annotation or mining cost, and failure outside the training domain.</dd>
+<dt class="how">How it decides</dt><dd>At a mismatch: (1) <strong>entropy gate</strong> — if the target's normalised entropy at that position is below $\theta=0.3$, reject as usual; (2) <strong>deferred window</strong> — otherwise look at the next $W=6$ drafted tokens: if the target's own choice equals the draft at all of them, keep the mismatch; if not, reject it.</dd>
+<dt class="gets">What it achieves</dt><dd>Llama-3.1-8B drafting, temperature 0, means over GSM8K, HumanEval and MBPP, speed-up over the target alone: 2.88× for the 70B target (exact rule, same drafter: 1.83×) and 5.34× for 405B (exact: 2.82×), with 12.7 and 17.1 tokens per round (exact: 10.1 and 11.8) and at least 99% of the target's score. On tasks outside any judge's training data: 2.74× and 4.80× (exact: 2.04× and 2.83×).</dd>
+<dt class="costs">What it costs</dt><dd>No guarantee. Needs long drafts from a strong drafter (15 to 25 tokens). In the authors' own tables an exact method with trained heads is faster on one 70B model (3.83× against 2.63×). A 2026 security study finds that it lets through more unsafe completions than the exact rule (§6).</dd>
+</dl>
+</article>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Li et al. (FLy), ICLR 2026, Equations 5–6 and §2.2</span></div>
+<p>At a mismatch position $j$, with $p_j$ the target's distribution: $h_j=\dfrac{-\sum_{v\in\V}p_j(v)\log p_j(v)}{\log\abs{\V}}\in[0,1]$, and the gate is “Strict” if $h_j<\theta$, “Defer” if $h_j\ge\theta$. “If the target model is confident (i.e., $h_j<\theta$), indicating a strong preference for its top-rated token such as digits in arithmetic, we fall back to the standard SPD rule and reject all tokens starting from the mismatch position”.</p>
+</div>
+<dl class="decode">
+<dt>$h_j$</dt><dd>The entropy of the target's distribution at the mismatch, divided by its largest possible value: $0$ when the target is certain, $1$ when it has no preference. This is the idea of typical acceptance (<a href="03_relaxed.html#typical">page 3, §6</a>): relax only where the target hesitates.</dd>
+<dt>deferred window</dt><dd>The new idea. The target scored the whole draft in one pass, so its choices at the positions <em>after</em> the mismatch were computed with the drafter's token in the context. If it keeps choosing the same tokens as the drafter there, the swap did not disturb it. If it diverges within $W$ tokens, the paper reads this as the target “correcting” an error.</dd>
+<dt>no extra pass</dt><dd>Everything is read from the logits the target has already produced; the paper measures about half a millisecond per round for the rule, against 59 to 201 ms for the target's pass.</dd>
+</dl>
+<p>Compare with SelfJudge: both ask whether the text after the swap still fits. SelfJudge asks it offline, about the target's <em>original</em> continuation, to make labels; FLy asks it online, about the <em>drafter's</em> continuation, and uses the answer directly. The price is that FLy needs the draft to go on for several tokens after each mismatch, hence the long drafts.</p>
+
+<div class="widget" data-widget="p4fly"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p><strong>What to look at.</strong> A toy draft of 18 tokens with four mismatches; under each one are the target's own choice and its normalised entropy at that position (toy values). The first is a rewording where the target hesitates, and the target then agrees with the next six drafted tokens: FLy accepts it, and with it nine tokens where the exact rule accepts none. The second and third are two tokens apart — the drafter wrote “gives away 5” where the target would write “gives 5 away”: at the second, the window contains the third, so FLy rejects, although the reordering is harmless. The fourth is a wrong number at a position where the target is certain. Set $W$ to 1: the reordering passes, and FLy stops at the wrong number, thanks to the gate. Now lower $\theta$ to 0: the gate no longer protects, and the wrong number is accepted. Set $\theta$ to 1: every mismatch is “strict”, and the rule is the exact one.</p>
+
+<h3 id="training-free-numbers">Reading FLy's numbers</h3>
+<p>FLy's tables report the exact rule with the same drafter next to each result, so the judge-free gain can be isolated: ×1.6 for the 70B target and ×1.9 for 405B at temperature 0. The accuracy is given as a “recovery ratio” (the target's score is 100%); the paper reports at least 99% on its benchmarks. Two more facts from the paper place it:</p>
+<ul>
+<li>On Llama-3.3-70B, the exact method EAGLE-3, which drafts with a trained head attached to the target (<a href="02_lossless.html">page 2</a>), is faster than FLy on the in-domain benchmarks (3.83× against 2.63×) while accepting fewer tokens per round (5.6 against 11.9): its drafts are much cheaper. On out-of-domain tasks the order reverses (1.56× against 2.53×), because the trained head no longer drafts well. Tokens per round and speed are different things.</li>
+<li>FLy is the one method of this page that reached a mainstream serving engine: vLLM offers it as an opt-in verifier, documented as intentionally lossy.</li>
+</ul>
+
+<h3 id="others">Relatives</h3>
+<p>Two other training-free ideas, more briefly, and one caution.</p>
+<ul>
+<li><strong>Reflective verification</strong> (“Think Before You Accept”, Wang et al., 2025 preprint, <a href="https://arxiv.org/abs/2505.18629">arXiv 2505.18629</a>). The verification input is extended so that the target reads the draft, a short prompt asking it to reflect, and the draft again; one pass gives the usual distributions and a second, “reflective” set, mixed with weight 0.3 before any acceptance test. Reported: about one more accepted token per round and 5–15% more throughput on Llama-3 pairs, with scores within noise; the verifier reads about three times as many tokens.</li>
+<li><strong>Entropy-dependent thresholds for copied drafts</strong> (AASD, EMNLP 2025, <a href="https://arxiv.org/abs/2505.13204">arXiv 2505.13204</a>): for long-context tasks where drafts are copied from the prompt, a probability threshold that depends on the entropy replaces exact match. It is a statistical rule of the page-3 kind rather than a judge.</li>
+<li><strong>The label “judge” is used loosely.</strong> Several 2026 methods presented as descendants of Judge Decoding are in fact threshold rules on probabilities. The test is simple: does the decision use information beyond the two probability vectors at the position — a hidden state, the following tokens, the final answer? If not, it belongs to page 3, with page 3's limits.</li>
+</ul>

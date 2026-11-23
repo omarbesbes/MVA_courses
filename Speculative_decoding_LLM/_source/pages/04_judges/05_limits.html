@@ -1,0 +1,66 @@
+<h2 id="compounding">6. The bill: what a judge can cost</h2>
+<p class="tldr">A judge is wrong sometimes, and an answer contains many mismatches. One harmful token let through is enough to change the answer, so the judge's false-accept rate is multiplied by the number of opportunities. Judges also carry their training task with them, and what they let through first is not accuracy but safety.</p>
+
+<h3 id="compounding-model">Errors compound: a toy model</h3>
+<p>To see why the false-accept rate matters so much, take a deliberately simple model (ours, for intuition; the numbers are not measurements).</p>
+<div class="box def"><div class="box-h">Toy model of judged verification</div>
+<ul>
+<li>A drafted token is a mismatch with probability $\mu$ (so the exact rule accepts with rate $\al=1-\mu$).</li>
+<li>A share $h$ of the mismatches is <em>harmful</em>: accepting one spoils the answer. The rest are harmless.</li>
+<li>The judge accepts a harmless mismatch with probability $a$ (its usefulness) and a harmful one with probability $f$ (its false-accept rate).</li>
+</ul>
+</div>
+<ol class="steps">
+<li>A drafted token is accepted with probability $\ \al'=1-\mu\,\big(1-a(1-h)-f\,h\big)$.<span class="why">Rejected only if it is a mismatch that the judge refuses; the judge accepts a mismatch with probability $a(1-h)+fh$.</span></li>
+<li>Tokens per target call: $\ \dfrac{1-\al'^{\,\ga+1}}{1-\al'}$.<span class="why">The formula of <a href="01_foundations.html#expected-tokens">page 1, §4</a> with the new acceptance rate.</span></li>
+<li>An answer of $n$ tokens contains at least one accepted harmful token with probability $\ 1-(1-\mu\,h\,f)^{n}$.<span class="why">Each token is, independently, an accepted harmful mismatch with probability $\mu hf$.</span></li>
+</ol>
+<div class="box example"><div class="box-h">Worked example (toy numbers)</div>
+<p>$\mu=0.15$, $h=0.15$, drafts of $\ga=25$ tokens, answers of $n=200$ tokens. The exact rule gives $\frac{1-0.85^{26}}{0.15}\approx6.6$ tokens per target call.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>judge</th><th>$a$</th><th>$f$</th><th>tokens per target call</th><th>answers with a harmful token accepted</th></tr></thead>
+<tbody>
+<tr><td>good</td><td>0.8</td><td>0.01</td><td>15.1</td><td>4.4%</td></tr>
+<tr><td>same, a little too lenient</td><td>0.8</td><td>0.05</td><td>15.2</td><td>20.2%</td></tr>
+<tr><td>out of its domain</td><td>0.6</td><td>0.20</td><td>12.2</td><td>59.4%</td></tr>
+</tbody></table></div>
+<p>Between the first two lines the speed barely changes and the share of spoiled answers is multiplied by almost five. The speed is made by the harmless mismatches the judge accepts; the damage is made by the harmful ones, and it is counted per answer, not per token. An accuracy loss “under 1%” means, in this model, a false-accept rate of about two per thousand.</p>
+</div>
+
+<div class="widget" data-widget="p4judge"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p><strong>What to look at.</strong> The judge gives each mismatch a score; harmless and harmful mismatches have overlapping score distributions, and the threshold cuts between them. Top: tokens per target call as the threshold moves; bottom: share of answers in which a harmful token got through. Move the threshold to the left (lenient): the top curve flattens quickly while the bottom one keeps climbing — past a certain point, leniency buys nothing and costs a lot. Then lower the judge's separation (a judge used outside its training task) and see how little room is left. Finally raise the share of harmful mismatches towards 0.7, the figure reported for creative writing in §3: there is nothing to gain.</p>
+
+<h3 id="compounding-transfer">Judges carry their training task</h3>
+<p>The evidence is consistent across the papers of this page, each on its own setting:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>judge trained on</th><th>used on</th><th>what happened</th><th>source</th></tr></thead>
+<tbody>
+<tr><td>annotated answers without code</td><td>code (HumanEval)</td><td>86.6 → 80.4 (target alone: 87.1)</td><td>Judge Decoding, §5.3</td></tr>
+<tr><td>GSM8K</td><td>code (LiveCodeBench)</td><td>“inferior performance”</td><td>AutoJudge, §4.2</td></tr>
+<tr><td>GSM8K</td><td>harder mathematics (MATH)</td><td>trade-off worse than top-$K$ at most settings</td><td>AutoJudge, appendix</td></tr>
+<tr><td>mostly code</td><td>MATH / code / multilingual / function calls</td><td>64.5 / 57.9 / 43.5 / 63.0, against 83.1 / 76.7 / 63.0 / 88.0 for a mostly-mathematics judge</td><td>Wang, Zhou et al. 2026</td></tr>
+</tbody></table></div>
+<p>A judge is a classifier, and “harmless” is not a property of a token: it depends on what the answer is for. In a proof, a digit matters and a connective does not; in a poem it may be the reverse. The training-free rule of §5 avoids the problem of training data, not the underlying one: its two signals (entropy, agreement of the following tokens) are also proxies.</p>
+
+<h3 id="compounding-safety">Safety degrades before accuracy</h3>
+<p>The authors of Judge Decoding had flagged the risk (§2): a judge might accept, from the drafter, tokens that the target “would otherwise never produce”. A 2026 study measured it for six lossy rules, including FLy and four rules of page 3.</p>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Zhang, Wang, Gong, Yang, “Secure Speculative Decoding for Large Language Models”, accepted at IEEE S&amp;P 2027, <a href="https://arxiv.org/abs/2610.08678">arXiv 2610.08678</a></span></div>
+<p>Small drafters refuse harmful requests far less often than their targets: on the study's jailbreak set, attacks fail 19.5% of the time against Qwen3-0.6B and 89.5% against Qwen3-8B. With lossy verification, “For Qwen3-0.6B/8B, the average PRR is 0.744 on the two security benchmarks, Jailbreak and Prompt Injection, compared with 0.905 on the two utility benchmarks, HumanEval and GSM8K.” And: “Security PRR drops much earlier […] utility PRR on GSM8K and HumanEval remains close to the baseline until the verifier becomes highly aggressive, e.g., at ARs around 0.7. In contrast, security PRR often starts to decline at much lower ARs, e.g., around 0.3.”</p>
+</div>
+<dl class="decode">
+<dt>PRR</dt><dd>Performance retention ratio: where the lossy system stands between the drafter alone and the target alone, on a given benchmark (1 = the target's level). On security benchmarks, “performance” is the rate at which attacks fail.</dd>
+<dt>AR</dt><dd>The acceptance rate of drafted tokens, raised by loosening the rule.</dd>
+<dt>the explanation given</dt><dd>“draft tokens accepted at early decoding positions have a disproportionate effect because they set the initial direction of the response.” A refusal is decided in the first few tokens; if the drafter's “Sure, here is” is accepted, the target continues a compliant answer.</dd>
+</dl>
+<p>The numbers are averages over each rule's range of settings, not results at recommended settings, and the study proposes a fix (apply the exact rule to the first tokens of the response, the lossy rule afterwards). The lesson for this page is about evaluation: a judge validated on accuracy benchmarks has not been validated. This is the general price of leaving exactness, stated on <a href="03_relaxed.html#benchmarks">page 3</a>: every property of the target must be measured again.</p>
+
+<h3 id="compare">The methods of this page, side by side</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>method</th><th>where the labels come from</th><th>what the decision reads</th><th>cost before deployment</th><th>reported against the exact rule, same models</th><th>known weak point</th></tr></thead>
+<tbody>
+<tr><td>Judge Decoding (<a href="#judge-decoding">§2</a>)</td><td>500 answers annotated by hand</td><td>target's hidden state</td><td>annotation; 1.5 h of training</td><td>3× the tokens per call, about 2× the tokens/s (8B → 70B and 405B), scores within about a point</td><td>new task = new annotation; not released</td></tr>
+<tr><td>AutoJudge (<a href="#autojudge">§3</a>)</td><td>counterfactual search on a task with checkable answers</td><td>hidden states</td><td>hundreds of seconds of target inference per example</td><td>1.1× at equal accuracy, 1.5× for 2 points (8B → 70B, GSM8K)</td><td>task-specific; needs an answer checker</td></tr>
+<tr><td>SelfJudge (<a href="#selfjudge">§4</a>)</td><td>the target's likelihood after the swap</td><td>target's hidden state</td><td>one extra pass per training example</td><td>1.1× to 1.5× tokens/s, 0 to 2 points lost</td><td>small gains; harder mathematics</td></tr>
+<tr><td>FLy (<a href="#training-free">§5</a>)</td><td>none</td><td>target's entropy; next 6 tokens</td><td>none</td><td>1.6× (70B) to 1.9× (405B), at least 99% of the score</td><td>long drafts from a strong drafter; security</td></tr>
+</tbody></table></div>
+<p>The rows are not comparable with one another: different models, tasks and engines. What can be compared is each row with the exact rule in its own setting, and the pattern is stable: <strong>a factor between 1.1 and 2 over a well-tuned exact rule, largest when the target is very large and the drafter strong, for a loss that is small on the tasks the judge was built for.</strong></p>

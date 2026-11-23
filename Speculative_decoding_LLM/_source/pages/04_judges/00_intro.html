@@ -1,0 +1,47 @@
+<!--
+title: 4 — Lossy II: judging correctness instead of agreement
+short: 4 · Judges
+description: Judge-based lossy speculative decoding: why agreement with the target is not correctness, Judge Decoding, AutoJudge, SelfJudge, the training-free FLy rule, what these methods report, where they fail, and why a small error rate per token matters.
+subtitle: The exact test asks “would the large model have written this token?”. The methods of this page ask “is this token fine?” — and let a small classifier, or a rule that watches how the large model reacts, give the answer. They accept two to three times more tokens than the exact rule; the question is what the extra ones cost.
+-->
+
+<div class="box objectives">
+<div class="box-h">What you will be able to do after this page</div>
+<ol>
+<li>Give the evidence that the exact test rejects correct text: what happens when a stronger model, or a human, writes the draft.</li>
+<li>Describe the <strong>judge</strong>: what it reads (a hidden state of the target), how small it is, and how its verdict is combined with the exact test.</li>
+<li>Explain the three ways of obtaining labels for a judge: by hand (<strong>Judge Decoding</strong>), by counterfactual search (<strong>AutoJudge</strong>), by the target's own likelihood (<strong>SelfJudge</strong>).</li>
+<li>Run <strong>FLy</strong>, the training-free rule, by hand on a draft: entropy gate, then deferred window.</li>
+<li>Quote, with their settings, what each method reports — and compare with the exact rule <em>on the same pair of models</em>.</li>
+<li>Explain why judges are task-specific, why a small false-accept rate matters over a long answer, and what was found about safety.</li>
+</ol>
+</div>
+
+<h2 id="start">0. Before you start</h2>
+<h3 id="howto">How to read this page</h3>
+<p>You need <a href="01_foundations.html">page 1</a> (the exact rule, and its greedy form: accept if the drafted token is the target's argmax). <a href="03_relaxed.html">Page 3</a> helps for the contrast but is not required; the one idea to bring from it is that at temperature 0 a relaxed rule is defined by <em>which</em> non-matching tokens it lets through (<a href="03_relaxed.html#greedy-rules">§4 there</a>).</p>
+<p>All the methods of this page work at temperature 0 or close to it, and all share the same skeleton: the exact test first; where it rejects, a second opinion. Method cards have the same four rows as on page 3 (what it tries, how it decides, what it achieves, what it costs). The numbers are the authors', in the authors' setting; when a paper reports both the exact rule and its own method on the same models, we give both.</p>
+
+<h3 id="story">The story of the page in six steps</h3>
+<p class="tldr">The exact test measures agreement, not correctness; a judge is a cheap way to ask the large model whether a different token is still fine; everything depends on where the judge's training labels come from, and on the tokens it gets wrong.</p>
+<ol class="chain">
+<li><strong>The observation (§1).</strong> Give the large model a draft written by a <em>better</em> model, or by a human: it still rejects after two or three tokens. Rejection is not a sign of error.</li>
+<li><strong>The judge (§2).</strong> After the large model has read a drafted token, its own hidden state says whether something went wrong. A linear classifier on that state, trained on a few hundred annotated answers, triples the number of accepted tokens (Judge Decoding).</li>
+<li><strong>Labels without annotators (§3).</strong> Swap each disagreement into the large model's answer, let it finish, and see whether the final answer changes (AutoJudge).</li>
+<li><strong>Labels without answers (§4).</strong> Ask the large model's likelihood whether the rest of its own answer still fits after the swap (SelfJudge).</li>
+<li><strong>No training at all (§5).</strong> Accept a disagreement only where the large model was unsure, and only if it then goes along with the draft for the next few tokens (FLy).</li>
+<li><strong>The bill (§6).</strong> Judges are learned on a task and do not travel well; one harmful token accepted is enough to spoil an answer; and safety degrades before accuracy does.</li>
+</ol>
+
+<h3 id="notation">Notation</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>Symbol</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td>mismatch</td><td>A position where the drafted token differs from the target's own choice (its argmax, given the same prefix). The exact rule rejects there.</td></tr>
+<tr><td>harmless / harmful mismatch</td><td>A mismatch whose acceptance leaves the quality of the answer unchanged / degrades it. Each method has its own operational definition; the papers also say unimportant / important, or acceptable / critical.</td></tr>
+<tr><td>$\ga$</td><td>Draft length (the papers write $M$, $K$ or “window”). With a judge it is much longer than on page 1: 20 to 60 tokens.</td></tr>
+<tr><td>tokens per target call</td><td>Mean number of tokens committed per verification pass (written $m^*$, $\tau$, MAT in the papers). Check in each case whether the target's own token is counted.</td></tr>
+<tr><td>$e_i$</td><td>The target's last-layer hidden state at the position of drafted token $i$, i.e. <em>after reading that token</em>.</td></tr>
+<tr><td>judge</td><td>A classifier $e_i\mapsto$ probability that the drafted token is acceptable.</td></tr>
+</tbody></table></div>
+<p><strong>Colour code.</strong> <span class="tok ok">accepted by the exact test</span> <span class="tok lax">mismatch accepted by the judge</span> <span class="tok no">rejected</span> <span class="tok fix">target's correction</span> <span class="tok dim">discarded</span>.</p>
