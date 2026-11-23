@@ -1,0 +1,89 @@
+<h2 id="position">8. Position: is the smoothness just position?</h2>
+<p class="tldr">A position basis $\mP$ (one vector per grid position, per layer) is high-rank in early layers and collapses to about two dimensions in the last ones. In per-image PCA it shows up only in components 3 to 5, and the maps stay smooth when the position subspace is projected out.</p>
+
+<h3 id="pos-problem">The problem</h3>
+<p>The ViT adds position information at the input and every patch token is tied to a place in the grid. A smooth colour map over a grid could simply be that: tokens that are neighbours in the image have similar position codes. The paper tests this ("Just position?") in three steps: build a position basis, see how it changes with depth, check whether it explains the PCA maps.</p>
+
+<h3 id="pos-basis">The position basis $\mP$ and its two extractions</h3>
+<div class="box paper"><div class="box-h">Positional basis extraction <span class="ref">App. I · p. 45; §6 · p. 15</span></div>
+<p>"For each layer, we extract positional embeddings from 1 million ImageNet images, yielding $\mA\in\R^{N\times t\times d}$ token representations [...]. We employ two approaches to recover the positional basis: <strong>Direct averaging.</strong> We compute the average embedding for each spatial position across all images: $\vp_i=\frac1N\sum_{k=1}^N\mA_{n,i}$ [...]. <strong>Linear classification.</strong> We train a linear classifier to predict token position from embeddings, yielding weight vectors $\vw_i$ for each position at each layer. Both methods produce highly consistent results [...]. We therefore choose to use the classifier weights as our primary positional basis." Main text: "a position encoding matrix $\mP\in\R^{256\times d}$ at each layer".</p></div>
+<dl class="decode">
+<dt>$\mP\in\R^{256\times d}$</dt><dd>row $i$ is the vector for grid position $i$ of the $16\times16$ grid, at a given layer. $256$ rows because only the patch tokens have a grid position.</dd>
+<dt>direct averaging</dt><dd>$\vp_i$ is the mean activation of the token at position $i$ over images: whatever is constant across images at this position (content averages out). The paper writes $\mA_{n,i}$ with a sum over $k$ — an index slip: it should read $\frac1N\sum_{n=1}^N\mA_{n,i}$.</dd>
+<dt>linear classification</dt><dd>a 256-way linear classifier $\hat i=\argmax_i\ps{\va}{\vw_i}$ (+bias, not mentioned). Its weight rows $\vw_i$ are the basis: a direction along which position $i$ is read out. Accuracy = fraction of tokens whose position is recovered.</dd>
+</dl>
+<div class="box remark"><div class="box-h">Notation in the paper</div><p>The appendix uses $N$ and $n$ for the number of images and $t=261$ for tokens per image; only the $256$ patch tokens have a position. We write $N$ for the number of images.</p></div>
+
+<h3 id="pos-fig14">Figure 14: decoding, rank, per-image PCA</h3>
+<figure class="paperfig narrow"><img data-src="paper_figures/decoding_pos_layers.png" alt="Accuracy of the linear position decoder per layer, for patch tokens, cls and register tokens">
+<figcaption><strong>Fig. 14 (top left) of the paper.</strong> Linear decodability of the token position across layers.
+<span class="src">From the paper (Fel, Wang et al., 2026), CC BY 4.0.</span></figcaption></figure>
+<div class="box method"><div class="box-h">How to read Fig. 14 (top left)</div>
+<ul>
+<li><strong>Axes.</strong> Horizontal: layer $0$ to $11$. Vertical: accuracy of the position decoder.</li>
+<li><strong>Numbers (read off).</strong> About $1.0$ in layers $0$–$2$, $0.97$ in layers $3$–$4$, $0.95$ in layer $5$, $0.92$ in layers $6$–$7$, $0.82$ in layer $8$, then $0.44$, $0.34$, $0.23$ in layers $9$, $10$, $11$. The curves for <code>cls</code> and registers stay high until the end.</li>
+<li><strong>Reading.</strong> Exact position is recoverable up to layer 8, then lost; the caption says "collapses after layer 8".</li>
+<li><strong>Not shown.</strong> The chance level ($1/256=0.004$) and the structure of the errors: at layers 9–11, a decoder that is off by one patch is counted as wrong; so a coarse position can still be present (see Fig. 15).</li>
+</ul></div>
+<figure class="paperfig"><img data-src="paper_figures/rank_pos_basis.png" alt="Left: stable rank of the position basis per layer. Right: explained variance of the top two principal components of the position basis per layer">
+<figcaption><strong>Fig. 14 (top right) of the paper.</strong> Stable rank of $\mP$ (left) and $R^2$ of its top-2 principal components (right), per layer.
+<span class="src">From the paper (Fel, Wang et al., 2026), CC BY 4.0.</span></figcaption></figure>
+<div class="box recall"><div class="box-h">Reminder — stable rank</div>
+<p>For a matrix with singular values $\sigma_1\ge\sigma_2\ge\dots$, $\mathrm{srank}(\mP)=\norm{\mP}_F^2/\norm{\mP}_2^2=\sum_r\sigma_r^2/\sigma_1^2$. It is $1$ for a rank-one matrix, at most $\rank\mP$, and it counts "how many directions are as strong as the strongest". <a href="02_toolbox.html#stable-rank">more</a></p></div>
+<div class="box method"><div class="box-h">How to read Fig. 14 (top right)</div>
+<ul>
+<li><strong>Left panel.</strong> Stable rank for layers $1$ to $12$: 9.0, 8.1, 5.4, 7.2, 5.6, 5.4, 4.9, 4.4, 4.4, 2.8, 2.6, 2.7; a dashed line at $2$.</li>
+<li><strong>Right panel.</strong> $R^2$ of the top two principal components of the position basis, for layers $0$ to $11$: 0.63, 0.75, 0.83, 0.77, 0.81, 0.86, 0.90, 0.94, 0.96, 0.99, 1.00, 1.00.</li>
+<li><strong>Reading.</strong> Early layers: many directions are needed to describe the 256 positions; late layers: two components describe $99$–$100\%$ of the variance: a 2-D sheet.</li>
+<li><strong>Not shown.</strong> Whether $\mP$ is centred before the stable rank; which of the two extraction methods is plotted (the classifier, by the text).</li>
+</ul></div>
+<div class="box idea"><div class="box-h">Place-cell code versus axis code</div>
+<p>Two ways to code 256 positions in a vector space. <strong>Place code</strong> (O'Keefe's place cells): one direction per position, $\mP\approx\mI_{256}$; all 256 directions have the same strength, so after centring the stable rank is $255$ and the top-2 components explain only $2/255=0.8\%$ of the variance (computed in <code>check_04.py</code>). <strong>Axis code</strong> (Chang and Tsao for faces): two directions, the row coordinate and the column coordinate; $\mP$ has two columns that are ramps, stable rank $2$, $R^2=1$ (and the 256 positions form a flat sheet). The paper reads the evolution of Fig. 14 as a move from the first to the second.</p></div>
+<div class="widget" data-widget="p4position"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p><strong>What to look at:</strong> at 0 the position code is a place code: the sheet is a random cloud, stable rank is $255$. Slide towards the axis code: two directions emerge, the cloud unfolds into the $16\times16$ sheet, the stable rank goes to $2$ and $R^2$ to $1$. The mixture is a toy that we built; the real layers are in Figs. 14 and 15.</p>
+
+<div class="box remark"><div class="box-h">Inconsistency in Fig. 14 — layer axes, and a stable rank above 2 with $R^2\approx1$</div>
+<p>(1) The two panels do not use the same layer axis: $R^2$ is plotted for layers $0$–$11$, stable rank for layers $1$–$12$. (2) The values are incompatible for one centred matrix. Let $R^2=(\sigma_1^2+\sigma_2^2)/\sum_r\sigma_r^2$. Then $\mathrm{srank}=\sum\sigma_r^2/\sigma_1^2=(\sigma_1^2+\sigma_2^2)/(R^2\sigma_1^2)\le2/R^2$, because $\sigma_2\le\sigma_1$. At $R^2\approx1$ this gives $\mathrm{srank}\le2$, while the last three layers read $2.8$, $2.6$, $2.7$. For all $12$ pairs of values the stable rank exceeds $2/R^2$ (<code>check_04.py</code>, figure below).</p></div>
+<figure class="fig"><!-- include figures/04/sr_vs_r2.svg --><figcaption>Stable rank read off Fig. 14 (blue) against the bound $2/R^2$ (grey) that holds if both are computed on the same centred matrix. Whatever the layer alignment (same index or shifted by one), the points stay above the bound.</figcaption></figure>
+<p>So the two panels are not computed on the same object: for instance the stable rank on the raw $\mP$ and $R^2$ on a centred (or otherwise processed) version, or a different definition of $R^2$. The text does not say. The qualitative message (rank decreases with depth towards a sheet) is unaffected; a quantitative claim such as "stable rank converges to 2" is not what the plot shows (it stays at about $2.6$–$2.8$).</p>
+
+<h3 id="pos-fig15">Figure 15: PCA of the position basis across layers</h3>
+<figure class="paperfig"><img data-src="paper_figures/pca_basis_pca_2d.jpg" alt="Colour map of the 16 by 16 grid and 2D PCA scatter of the 256 position vectors at layers 0, 2, 4, 6, 8, 9, 10, 11">
+<figcaption><strong>Fig. 15 of the paper.</strong> Left: colour code of the $16\times16$ positions. Right: 2-D PCA of the 256 position vectors, one dot per position coloured by its grid position, at several layers.
+<span class="src">From the paper (Fel, Wang et al., 2026), CC BY 4.0.</span></figcaption></figure>
+<div class="box method"><div class="box-h">How to read this figure</div>
+<ul>
+<li><strong>Left.</strong> The colour of each grid cell (a smooth two-coordinate colour map), used to colour the dots.</li>
+<li><strong>Right.</strong> Layers $0,2,4,6,8$: blobs of unordered colours (in layer 8 some bands appear); layers $9,10,11$: the dots form a grid-like sheet where neighbouring colours are neighbours, a curved quadrilateral (the rows bend), with the left–right and top–bottom structure of the colour map.</li>
+<li><strong>Conclusion.</strong> Position is compressed to a 2-D sheet at the end ("coarse spatial priors").</li>
+<li><strong>Note.</strong> It is a sheet, not a flat plane: the rows bend. It is also consistent with the dense positional concepts of <a href="#occurrence">section 1</a>.</li>
+<li><strong>Does not show.</strong> A numerical measure of the flatness of the sheet; for layers 1, 3, 5, 7 nothing is plotted.</li>
+</ul></div>
+
+<h3 id="pos-pca">Bottom of Fig. 14: where position sits in a per-image PCA</h3>
+<figure class="paperfig"><img data-src="paper_figures/pca_dinob.png" alt="Left: cumulative explained variance of per-image PCA against the number of components. Right: cosine similarity between per-image PCA components and the two top position directions">
+<figcaption><strong>Fig. 14 (bottom) of the paper.</strong> Left: cumulative variance captured by per-image PCA. Right: cosine between the $r$-th per-image component and the first two directions of the position basis.
+<span class="src">From the paper (Fel, Wang et al., 2026), CC BY 4.0.</span></figcaption></figure>
+<div class="box method"><div class="box-h">How to read this figure</div>
+<ul>
+<li><strong>Left.</strong> The cumulative explained variance climbs fast: $15$ components capture about $81\%$ (read off a marked point). With $256$ tokens in $768$ dimensions, at most $255$ components are non-trivial; $15$ is $6\%$ of that.</li>
+<li><strong>Right.</strong> The cosine of each per-image component with "Pos comp. 1" and "Pos comp. 2" (the top two directions of $\mP$). It peaks at component $5$ for Pos comp. 1 ($0.24$) and component $3$ for Pos comp. 2 ($0.19$), then falls to nearly $0$.</li>
+<li><strong>Reading.</strong> Position is not in the dominant components ($1$, $2$) of an image's token cloud but in the 3rd–5th. In $\R^{768}$ two random directions have $\abs{\cos}\approx0.036$, so $0.19$–$0.24$ is about $5$–$7$ times chance, but the angle is still about $76^\circ$–$79^\circ$.</li>
+<li><strong>Not shown.</strong> Which layer (presumably the last) and over how many images ("on average").</li>
+</ul></div>
+
+<h3 id="pos-removal">Figure 27: smoothness survives position removal</h3>
+<p>The test: project each token onto the orthogonal complement of the position subspace (the span of the classifier directions) and redo the PCA map.</p>
+<figure class="paperfig"><img data-src="paper_figures/pca_rabbit_no_pos.jpg" alt="PCA colour maps of a rabbit image after removal of the positional subspace">
+<figcaption><strong>Fig. 27 of the paper (App. I · p. 45).</strong> PCA map of the patch tokens of a rabbit image after projection orthogonal to the position basis.
+<span class="src">From the paper (Fel, Wang et al., 2026), CC BY 4.0.</span></figcaption></figure>
+<div class="box method"><div class="box-h">How to read this figure</div>
+<ul>
+<li><strong>What is drawn.</strong> Same kind of map as Figs. 12–13, for one image, after removing the position subspace.</li>
+<li><strong>What to look at.</strong> Colour regions still follow the rabbit and its surroundings.</li>
+<li><strong>Authors' conclusion.</strong> Smoothness is "genuine semantic organization rather than artifacts of positional encoding".</li>
+<li><strong>Does not show.</strong> A quantitative comparison before and after; the layer used; more than one image (the main text points to this figure for the claim).</li>
+</ul></div>
+<div class="box ours"><div class="box-h">Our reading — removing a linear subspace is not removing position</div>
+<p>The projection removes what a <em>linear</em> classifier uses at one layer. The positional information that is left (nonlinearly coded, or in directions the classifier does not use) is not removed. And the map would be smooth even without any position code, since neighbouring patches share content. The experiment excludes the explanation "smooth <em>because of the 2-D position sheet</em>", which is what it is designed for. See <a href="06_critical_reading.html#position-tile">page 6</a>.</p></div>
+<div class="box reflex"><div class="box-h">Reflex</div><p>When you see "the rank collapses to 2" → ask on which matrix (centred or not, which layers, which extraction) and compare with the bound $\mathrm{srank}\le2/R^2$.</p></div>

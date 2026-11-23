@@ -1,0 +1,69 @@
+<h2 id="antipodal">4. Antipodal pairs</h2>
+<p class="tldr">Some pairs of atoms satisfy $\mD_i\approx-\mD_j$: "vertical" against "horizontal" lines, white against black shirts, a person on the left against on the right. With non-negative codes, this is what a signed feature looks like.</p>
+
+<h3 id="anti-paper">The observation</h3>
+<div class="box paper"><div class="box-h">Antipodal structure <span class="ref">§5 · p. 12, Fig. 11 A · p. 13</span></div>
+<p>"[...] a small but significant number of concept pairs are nearly antipodal, i.e., $\mD_i\approx-\mD_j$. This go against the assumption of a Grassmannian-like dictionary. Instead, it suggests that DINO sometimes exploits paired directions to encode semantically opposed features such as 'left vs right' or 'white vs black' along shared lines but with opposite signs. Practically, such antipodal structure should be accounted when using cosine similarity in downstream analyses, particularly in data filtering, clustering, or retrieval contexts."</p></div>
+<figure class="paperfig narrow"><img data-src="paper_figures/antipodal.png" alt="Examples of pairs of concepts with opposite atoms: vertical against horizontal lines, white against black shirts">
+<figcaption><strong>Fig. 11 (A) of the paper.</strong> Pairs of concepts whose atoms are nearly opposite, shown by the images where each fires most.
+<span class="src">From the paper (Fel, Wang et al., 2026), CC BY 4.0.</span></figcaption></figure>
+<div class="box method"><div class="box-h">How to read this figure</div>
+<ul>
+<li><strong>What is drawn.</strong> Each row is a pair $(i,j)$ with $\ps{\mD_i}{\mD_j}\approx-1$; for each concept, example images where it is strongly active.</li>
+<li><strong>What to look at.</strong> The two concepts of a pair are semantic opposites (vertical/horizontal, white/black, left/right).</li>
+<li><strong>The authors' conclusion.</strong> Polarity encodes meaning: the model uses one line with two signs.</li>
+<li><strong>What it does not show.</strong> How many pairs there are ("a small but significant number"), nor a control with unpaired concepts. These are the examples found at the tail of Fig. 10 A.</li>
+</ul></div>
+
+<h3 id="anti-why">Why non-negative codes need two atoms for one signed feature</h3>
+<div class="box example"><div class="box-h">Worked example — one axis, one signed feature</div>
+<p>Suppose a token carries a feature $x\in\R$ along a unit direction $\vu$: the activation is $\va=x\,\vu$, with $x=-1.5$, $0.7$ or $2$.</p>
+<ol class="steps">
+<li>With <em>one</em> atom $\mD_1=\vu$ and codes $z_1\ge0$: $\va=z_1\vu$ can only represent $x\ge0$. For $x=-1.5$, the best code is $z_1=0$ and the error is $1.5$. <span class="why">a non-negative combination of one vector is a half-line.</span></li>
+<li>With <em>two</em> atoms $\mD_1=\vu$, $\mD_2=-\vu$: $x=-1.5$ is $z=(0,\,1.5)$; $x=0.7$ is $z=(0.7,\,0)$; $x=2$ is $z=(2,\,0)$. <span class="why">$z_1=\max(x,0)$, $z_2=\max(-x,0)$, so that $z_1\mD_1+z_2\mD_2=(z_1-z_2)\vu=x\vu$.</span></li>
+<li>Cosine similarity of the two atoms: $-1$. Coherence $\abs{\ps{\mD_1}{\mD_2}}=1$, the largest possible. <span class="why">they span one line.</span></li>
+<li>The two codes never need to be on together: $z_1z_2=0$ in the representation above. So their entry $G_{12}$ of the co-activation matrix is about $0$. <span class="why">simultaneous activity would give $(z_1-z_2)\vu$, a waste of one of the $k$ slots; our reasoning, not a statement of the paper.</span></li>
+</ol></div>
+<div class="widget" data-widget="p4antipodal"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p><strong>What to look at:</strong> with the second atom at $180^\circ$, the error is $0$ for every $x$. Reduce the angle: negative $x$ can no longer be reached and the error grows. The line through the origin needs two opposite directions, not one.</p>
+
+<div class="box recall"><div class="box-h">Reminder — cosine similarity</div>
+<p>$\cos(\vx,\vy)=\ps{\vx}{\vy}/(\norm{\vx}\norm{\vy})\in[-1,1]$. It sees the <em>direction</em>, with sign. <a href="02_toolbox.html#cosine">more</a></p></div>
+<div class="box pitfall"><div class="box-h">The cosine pitfall</div>
+<p>Two antipodal concepts have cosine $-1$: a nearest-neighbour search or a clustering by cosine puts them as far apart as possible, although they are the same axis seen from its two ends (the same line, the same feature). Conversely, a filter "remove concepts with large $\abs{\cos}$ with a given one" removes the opposite too, while one that keeps only cosines $>0$ misses it. Decide first whether the sign is meaning (left versus right) or redundancy (one line), then use $\cos$ or $\abs{\cos}$.</p></div>
+<div class="box ours"><div class="box-h">Our reading — antipodal pairs may come from non-negativity, not from the model</div>
+<p>The paper opposes the pairs to the Grassmannian assumption. But the codes are constrained to $\mZ\ge0$: an unconstrained signed feature (the usual LRH) would be one atom. The pairs may thus be a consequence of the dictionary method (non-negative codes) applied to signed directions, in addition to whatever the model does. The paper's evidence cannot separate the two. It also means that the coherence $\mu$, which uses $\abs{\ps{\mD_i}{\mD_j}}$, equals $1$ for such a pair although the representation is perfectly legitimate. See <a href="06_critical_reading.html#identifiability">page 6</a>.</p></div>
+
+<h2 id="geometry-vs-usage">5. Geometry versus usage</h2>
+<p class="tldr">Fig. 11 B: the co-activation matrix $\mZ\T\mZ$ and the geometry matrix $\mD\mD\T$ have correlation $r=0.28$ ($R^2=0.08$). Atoms that fire together are only slightly closer. A footnote adds that a positive correlation is expected from the reconstruction itself.</p>
+<div class="box paper"><div class="box-h">Concept geometry is only weakly shaped by co-activation <span class="ref">§5 · p. 13, Fig. 11 B · p. 13</span></div>
+<p>"A natural hypothesis [...] is that the geometry of the concept dictionary reflects patterns of co-activation [...]. To evaluate this, we compare the co-activation matrix $\mZ\T\mZ$ [...] with the geometric affinity matrix $\mD\mD\T$. [...] the two matrices exhibit only weak but statistically significant correlation. [...] Footnote: Algebraically, [...] $\mathrm{corr}(\mZ\T\mZ,\mD\mD\T)\propto\tr[\mZ\T\mZ\,\mD\mD\T]=\tr[\mD\T\mZ\T\mZ\,\mD]\approx\tr[\mA\T\mA]\propto\mathrm{cov}(\mA)$, which is guaranteed to be positive. So this positive relation might be an intrinsic property of linear reconstructive methods." Right panel: a UMAP of the dictionary with the top co-activation links drawn.</p></div>
+<figure class="paperfig"><img data-src="paper_figures/ztz_dtd.jpg" alt="Left: scatter of co-activation against dictionary inner product with a weak positive trend. Right: UMAP of the dictionary with long links between co-activating concepts">
+<figcaption><strong>Fig. 11 (B) of the paper.</strong> Left: co-activation against geometric similarity, one point per pair (r = 0.28). Right: UMAP of the atoms with edges for the strongest co-activations.
+<span class="src">From the paper (Fel, Wang et al., 2026), CC BY 4.0.</span></figcaption></figure>
+<div class="box method"><div class="box-h">How to read this figure</div>
+<ul>
+<li><strong>Left.</strong> Each point is a pair of concepts: horizontal, $\ps{\mD_i}{\mD_j}$ (geometry); vertical, $G_{ij}$ (usage). A weak upward trend inside a wide cloud: $r=0.28$, $R^2=r^2\approx0.08$ ($0.28^2=0.078$).</li>
+<li><strong>Right.</strong> If co-firing concepts were neighbours in the UMAP, edges would be short and local. They are long and tangled: co-activation links cross the map.</li>
+<li><strong>Conclusion of the authors.</strong> Usage statistics do not determine proximity; there is no clear modular organisation.</li>
+<li><strong>What it does not say.</strong> Whether the diagonal is in the correlation, how many pairs, and whether the Pearson correlation was computed on raw or log values.</li>
+</ul></div>
+
+<h3 id="trace">The footnote's trace identity, step by step</h3>
+<p>Row convention: $\mZ\in\R^{N\times c}$ ($N$ tokens), $\mD\in\R^{c\times d}$, $\mG=\mZ\T\mZ$, $\mK=\mD\mD\T$ (both $c\times c$ and symmetric).</p>
+<ol class="steps">
+<li>$\ps{\mG}{\mK}_F=\sum_{ij}G_{ij}K_{ij}=\tr[\mG\T\mK]=\tr[\mG\mK]$ <span class="why">the entrywise inner product of two matrices is $\tr[\mG\T\mK]$; $\mG$ is symmetric.</span></li>
+<li>$\tr[\mZ\T\mZ\,\mD\mD\T]=\tr[\mD\T\mZ\T\mZ\,\mD]$ <span class="why">cyclic property of the trace, $\tr[\mX\mY]=\tr[\mY\mX]$, applied with $\mX=\mZ\T\mZ\mD$ and $\mY=\mD\T$: the last factor $\mD\T$ moves to the front.</span></li>
+<li>$\tr[(\mZ\mD)\T(\mZ\mD)]=\norm{\mZ\mD}_F^2$ <span class="why">$\mD\T\mZ\T=(\mZ\mD)\T$, and $\tr[\mathbf{M}\T\mathbf{M}]=\sum_{ij}M_{ij}^2$.</span></li>
+<li>$\norm{\mZ\mD}_F^2\approx\norm{\mA}_F^2$ <span class="why">$\mZ\mD\approx\mA$ with $R^2>88\%$.</span></li>
+</ol>
+<p>Verified numerically on random $50\times12$ codes and a $12\times7$ dictionary: all four expressions equal $1428.37$ (<code>check_04.py</code>).</p>
+<div class="box ours"><div class="box-h">Our reading — what the identity gives, and what it does not</div>
+<p>The identity is exact and the quantity $\ps{\mG}{\mK}_F=\norm{\mZ\mD}_F^2$ is positive: it is the <em>uncentred</em> inner product of the two matrices. Hence "any linear reconstruction gives a positive relation" is true for this inner product. But a Pearson correlation centres both matrices, is not proportional to this trace ("$\propto$" in the footnote is loose), and does not need the diagonal. Two points follow.</p>
+<ul>
+<li>The diagonal terms dominate the trace: $G_{ii}>0$ and $K_{ii}=1$. In a toy with $300$ unit atoms and unrelated sparse codes (<code>check_04.py</code>), $99.8\%$ of $\ps{\mG}{\mK}_F$ comes from the diagonal and the Pearson correlation on the off-diagonal entries is $0.002$, while including the diagonal gives $0.40$.</li>
+<li>So if the paper's $r=0.28$ includes the diagonal it is of the size that unrelated usage and geometry give; if it excludes it, then it is a small but real relation. The paper does not say which (the figure does not tell either).</li>
+</ul>
+<p>Either way, $r=0.28$ is weak evidence that usage does not shape geometry. See <a href="06_critical_reading.html#diagnostics">page 6</a>.</p></div>
+<div class="quiz"><p>$r=0.28$, so $R^2=0.08$. What percentage of the variance of $G_{ij}$ does geometry "explain" in the linear sense?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body"><p>$r^2=0.078$, about $8\%$ (as read off the paper): for a simple linear regression of one variable on the other, $R^2=r^2$.</p></div></details></div>

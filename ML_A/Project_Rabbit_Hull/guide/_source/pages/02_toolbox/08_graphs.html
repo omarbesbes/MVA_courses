@@ -1,0 +1,24 @@
+<h2 id="graphs">8. Graphs: k-NN and geodesics</h2>
+<p class="tldr">A k-nearest-neighbour graph connects each point to its closest samples; shortest paths in it approximate distances along the data (the Isomap idea) and are, by construction, made of pieces that join sample points.</p>
+
+<h3 id="knn-geodesics">k-NN graph, shortest paths, Isomap</h3>
+<p><strong>Problem.</strong> The straight line between two tokens leaves the region where tokens live. How does one move from one to the other <em>along</em> the data?</p>
+<div class="box def"><div class="box-h">Definitions</div>
+<p>The <em class="new">k-NN graph</em> of points $P_1..P_N$ has an edge $\{i,j\}$ when $P_j$ is among the $k$ nearest points of $P_i$ or the converse, with weight $\norm{P_i-P_j}$. A <em class="new">shortest path</em> from $i$ to $j$ minimises the sum of weights (Dijkstra's algorithm). The Isomap idea (Tenenbaum, de Silva, Langford 2000): when points sample a curved manifold densely enough, the shortest-path length approximates the <em class="new">geodesic</em> distance along the manifold, much better than the Euclidean distance through the ambient space. The geodesic path is the polyline through the sample points.</p></div>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">§7.2, Fig. 17 left · p. 20–21</span></div>
+<p>"Straight lines depart the data support quickly, whereas graph geodesics remain close throughout": the distance to the nearest sample along a path between two tokens, for a linear interpolation (a triangle peaking at about $13$) and for the shortest path in the k-NN graph (a plateau of about $4$–$5$).</p></div>
+<div class="box thm"><div class="box-h">The graph path stays near the sample by construction</div>
+<p>Every point of a polyline $P_{i_0}P_{i_1}\dots P_{i_m}$ whose vertices are sample points is within $\tfrac12\max_l\norm{P_{i_l}-P_{i_{l+1}}}$ of a sample point (one of its two endpoints).</p>
+<details class="fold proof"><summary>Proof</summary><div class="fold-body"><p>A point $(1-t)a+tb$ of the edge $[a,b]$ is at distance $t\norm{a-b}$ from $a$ and $(1-t)\norm{a-b}$ from $b$; the smaller is $\le\tfrac12\norm{a-b}$.</p></div></details></div>
+<div class="box example"><div class="box-h">Numbers (Gaussian samples, $N=1000$, $k=10$, one pair of points)</div>
+<div class="table-wrap"><table>
+<tr><th>$d$</th><th>$\norm{P_i-P_j}$</th><th>straight line: max distance to the nearest sample</th><th>k-NN path: edges, longest edge</th><th>k-NN path: max distance to the nearest sample</th></tr>
+<tr><td>2</td><td>2.41</td><td>0.15</td><td>18, 0.25</td><td>0.10</td></tr>
+<tr><td>10</td><td>2.63</td><td>1.32</td><td>2, 2.06</td><td>1.03</td></tr>
+<tr><td>50</td><td>9.53</td><td>4.77</td><td>2, 7.93</td><td>3.97</td></tr>
+<tr><td>200</td><td>18.55</td><td>9.27</td><td>3, 17.25</td><td>8.63</td></tr>
+</table></div>
+<p>For $d\ge10$ the nearest sample to the midpoint of two samples is one of the endpoints: the straight line's worst distance is exactly half the chord, and the k-NN path (two or three long edges) can only improve on that by a bit. In low dimension (2) the path hugs the sample.</p></div>
+<div class="box ours"><div class="box-h">Our reading</div>
+<p>The plateau of the graph path is the half-edge bound at work: it measures the length of the longest edge of the path, not whether the data are on a curved support; and a chord between two samples is, for i.i.d. samples in high dimension, far from every sample whether or not the support is convex. Developed on <a href="06_critical_reading.html#diag-chords">page 6</a>.</p></div>
+<div class="box pitfall"><div class="box-h">Pitfall</div><p>The graph depends on $k$: too small and the graph is disconnected, too large and it short-circuits the manifold (edges through empty space). The shortest-path length is always $\ge$ the Euclidean distance (triangle inequality) and equals it when the straight segment is an edge.</p></div>

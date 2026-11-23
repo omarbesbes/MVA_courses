@@ -1,0 +1,65 @@
+<h2 id="pca-maps">7. The shape of an image: PCA maps</h2>
+<p class="tldr">The paper stops looking at the dictionary and looks at the 256 patch tokens of one image. Coloured by their first three principal components, they give smooth maps that follow objects. Since PCA is linear, the paper says it "cannot fabricate curvature"; this is true, but needs a precise statement.</p>
+
+<h3 id="pca-problem">The problem</h3>
+<p>All of Part I and §5 went through a dictionary factorisation $\mA\approx\mZ\mD$. §6 asks what the tokens look like without it ("model-native geometry"), in the simplest setting: the tokens of one image. The tool is the PCA map that Oquab et al. (DINOv2) and Darcet et al. (registers) already show to illustrate semantic structure.</p>
+<div class="box paper"><div class="box-h">The shape of an image <span class="ref">§6 · p. 15</span></div>
+<p>"[...] (i) to demystify what PCA actually captures in single-image embeddings, particularly the origin of the observed 'smooth' structure; and (ii) to characterize token-level geometry across layers without presupposing a sparse, near-orthogonal coding model." Captions of Figs. 12 and 13: "Patch embeddings from DINO are projected via PCA (on a per-image basis) and visualized by assigning the first three principal components to RGB color (normalized to $[0,1]$). [...] PCA is an affine (linear) transformation and cannot generate curvature on its own, implying that the observed smoothness reflects genuine structure in the embeddings." "[...] the alignment of token geometry across distinct images suggest that the representation is not purely relative (i.e., based only on distances within each image tokens)."</p></div>
+
+<h3 id="pca-how">How a PCA map is made</h3>
+<div class="box recall"><div class="box-h">Reminder — PCA</div>
+<p>For a data matrix $\mX\in\R^{n\times d}$, centre the rows, take the eigenvectors of the covariance (equivalently the right singular vectors) as principal directions $\vv_1,\vv_2,\dots$ ordered by variance. The coordinate of row $\vx$ on component $r$ is $\ps{\vx-\bar\vx}{\vv_r}$. <a href="02_toolbox.html#pca">more</a></p></div>
+<ol class="steps">
+<li>Take the $256$ patch tokens of one image: $\mX\in\R^{256\times768}$. <span class="why">the paper's maps use patch tokens; <code>cls</code> and registers are left out.</span></li>
+<li>Centre them and compute the top three principal directions of <em>this image's</em> tokens. <span class="why">"per-image basis": one PCA per image.</span></li>
+<li>Project: each token gets three numbers $(u_1,u_2,u_3)$. <span class="why">$256\times3$ matrix.</span></li>
+<li>Rescale each of the three channels to $[0,1]$ and read them as $(r,g,b)$. <span class="why">the caption says "normalized to $[0,1]$"; whether per channel or jointly is not stated.</span></li>
+<li>Put the $256$ colours back on the $16\times16$ grid of patches. <span class="why">token $(i,j)$ keeps its position; the map is an image.</span></li>
+</ol>
+<div class="box pitfall"><div class="box-h">Signs and colours are only meaningful inside one image</div>
+<p>A principal direction is defined up to sign, and its rank depends on the image. The colour "red" in two different per-image maps does not mean the same thing. That is why Fig. 22 (below) uses one shared basis.</p></div>
+
+<h3 id="pca-linear">"PCA is linear, so it cannot fabricate curvature", made precise</h3>
+<div class="box thm"><div class="box-h">Fact</div>
+<p>Let $L:\R^d\to\R^3$ be affine, $L(\vx)=\mP\vx+\vb$. For two points $\va,\vb'$, the image of the segment $[\va,\vb']$ is the segment $[L\va,L\vb']$, or a single point when $L\va=L\vb'$.</p></div>
+<ol class="steps">
+<li>A point of the segment is $\vx_t=(1-t)\va+t\vb'$, $t\in[0,1]$. <span class="why">definition of the segment.</span></li>
+<li>$L(\vx_t)=\mP((1-t)\va+t\vb')+\vb=(1-t)(\mP\va+\vb)+t(\mP\vb'+\vb)=(1-t)L\va+tL\vb'$. <span class="why">linearity of $\mP$, and $(1-t)\vb+t\vb=\vb$.</span></li>
+<li>So $t\mapsto L(\vx_t)$ is the parametrisation of the segment from $L\va$ to $L\vb'$; if the two endpoints coincide, a single point. $\square$ <span class="why">same formula as the segment.</span></li>
+</ol>
+<figure class="fig"><!-- include figures/04/linear_segment.svg --><figcaption>A curved set (green) in the plane and the chord between its ends (orange). A full-rank linear map keeps the chord straight and bends the set exactly as much as it was bent. A rank-one map flattens everything.</figcaption></figure>
+<p>Consequence: if the colours of the PCA map trace a curved surface, that curvature was already present in the projection of the data onto the three directions. A projection can <em>lose</em> shape (flatten, as in the right panel), never <em>add</em> curvature to a straight set. This is the correct content of the paper's sentence.</p>
+<div class="box ours"><div class="box-h">Our reading — what a smooth map does and does not prove</div>
+<p>A projection onto orthonormal directions can only shrink distances: $\norm{\mP\vx-\mP\vy}\le\norm{\vx-\vy}$. So <em>if</em> neighbouring patches are close in $\R^{768}$, they are close in colour. The converse fails: two tokens can have the same colour and differ in all the other $765$ directions. A smooth map therefore shows that the top-3 coordinates vary slowly across the image; it is consistent with, but does not prove, that the tokens form a connected set in $\R^{768}$. Moreover, neighbouring patches of a natural image look alike, so some smoothness is expected from the content; the paper does not give a null comparison (for example, the same maps for pixel patches). See <a href="06_critical_reading.html#nested">page 6</a>.</p></div>
+<div class="box def"><div class="box-h">"Locally connected"</div>
+<p>The paper uses "locally connected" and "smooth" without defining them. The operational meaning in the figures: tokens of adjacent patches are neighbours in the embedding, so that the 256 tokens trace a connected low-dimensional set (a curve or a sheet) rather than a cloud, and colour boundaries follow object boundaries.</p></div>
+
+<h3 id="pca-figs">Figures 12, 13, 22</h3>
+<figure class="paperfig"><img data-src="paper_figures/random_imagenet_qualitative1.png" alt="Pairs of ImageNet images and their PCA colour maps of patch tokens">
+<figcaption><strong>Fig. 12 of the paper.</strong> Random ImageNet images, each next to the per-image PCA map of its patch tokens (first three components as RGB). More examples: Figs. 23–26 (App. H, pp. 42–45).
+<span class="src">From the paper (Fel, Wang et al., 2026), CC BY 4.0.</span></figcaption></figure>
+<figure class="paperfig"><img data-src="paper_figures/qualitative_snow_leopard.jpg" alt="Top: snow leopard images. Bottom: PCA colour maps of their patch tokens delineating the animal">
+<figcaption><strong>Fig. 13 of the paper.</strong> Snow leopard images (top) and their PCA maps (bottom): the animal is delineated with smooth transitions.
+<span class="src">From the paper (Fel, Wang et al., 2026), CC BY 4.0.</span></figcaption></figure>
+<div class="box method"><div class="box-h">How to read Figures 12 and 13</div>
+<ul>
+<li><strong>What is drawn.</strong> A photo and, next to it, a $16\times16$ map of colours (RGB $=$ the first three per-image principal components).</li>
+<li><strong>What to look at.</strong> Regions of nearly constant colour with sharp edges at object contours; the object and its background get different colours; a few noisy patches remain.</li>
+<li><strong>Authors' conclusion.</strong> Despite no supervision for localisation, tokens lie on smooth low-dimensional manifolds aligned with objects (and PCA cannot create this).</li>
+<li><strong>Does not show.</strong> Any quantitative measure of smoothness; the selection of images (Fig. 12 says random, Fig. 13 is a single class); a comparison with another model.</li>
+</ul></div>
+<figure class="paperfig"><img data-src="paper_figures/snow_leopard_details.jpg" alt="Five snow leopard images with a shared-basis PCA colour map and five 3D views of the token cloud in that basis">
+<figcaption><strong>Fig. 22 of the paper (App. H · p. 41).</strong> Five snow leopard images; for each, the shared-basis PCA map and the cloud of its tokens in 3D PCA space seen from several viewpoints.
+<span class="src">From the paper (Fel, Wang et al., 2026), CC BY 4.0.</span></figcaption></figure>
+<div class="box method"><div class="box-h">How to read this figure</div>
+<ul>
+<li><strong>Difference with Figs. 12–13.</strong> One PCA is fitted on the tokens of all five images pooled together ($5\times256$ tokens), then every image is projected in that same basis.</li>
+<li><strong>Columns.</strong> Photo; colour map (the leopard is red in all five, the top is green, the sides blue, the bottom dark); then five views of the 3D token cloud, coloured by RGB.</li>
+<li><strong>What to look at.</strong> The five clouds have the same branched shape in the same place: the red cluster of the animal, a green and a blue branch.</li>
+<li><strong>Authors' conclusion.</strong> "A global manifold structure, within which local image tokenizations trace smooth trajectories": the representation is not purely relative.</li>
+<li><strong>Does not show.</strong> Images of different classes or layouts; five similar images (one animal, centred, in a forest) are favourable for alignment.</li>
+</ul></div>
+<div class="box idea"><div class="box-h">Why a shared basis shows the geometry is "not purely relative"</div>
+<p>A purely relative representation would be one in which only the distances between tokens of the <em>same</em> image are meaningful; then the position of the clouds in the ambient space of different images would be arbitrary, and a PCA basis pooled over images would not align them. Here the clouds overlap and the colours agree. It is a statement about these five images, not a proof for arbitrary ones.</p></div>
+<div class="quiz"><p>A linear map sends a straight line of tokens (two tokens and all their convex combinations) to a curve in the PCA map. Is that possible?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body"><p>No: the image of a segment under a linear (or affine) map is a segment or a point. A curved trace in a PCA map means the tokens themselves do not lie on a straight line; it says nothing about the original curvature in the discarded directions.</p></div></details></div>

@@ -112,3 +112,11 @@ print("sigma1=22.5 -> sigma1^2 =", 22.5**2, " average sigma^2 = c/d =", c / d, "
 print("sigma at index 200 ~7 -> 49 ; index 760 ~3.5 -> 12.25")
 print("MP band relative: 1 -/+ sqrt(d/c) =", 1 - np.sqrt(d/c), 1 + np.sqrt(d/c))
 print("2*ln(P)/d for c=32000:", 2*np.log(P)/d)
+
+print("\n== exercises ==")
+n = 768
+for Hs in (0.2, 0.25): print("equal non-zeros k giving Hoyer", Hs, ":", (np.sqrt(n) - Hs * (np.sqrt(n) - 1)) ** 2)
+Z = np.array([[1, 0], [0, 1], [1, 1.]]); D = np.array([[1, 0], [.6, .8]]); G = Z.T @ Z; K = D @ D.T
+print("ex trace: G=", G.tolist(), " K=", K.tolist(), " tr[GK]=", np.trace(G @ K), " ||ZD||^2=", np.linalg.norm(Z @ D) ** 2)
+print("ex MP: c=10000,d=100:", np.sqrt(10000 / 100), 1 - np.sqrt(100 / 10000), 1 + np.sqrt(100 / 10000))
+print("ex slots: two dense concepts at 0.29, k=8: share", 2 * 0.29 / 8)

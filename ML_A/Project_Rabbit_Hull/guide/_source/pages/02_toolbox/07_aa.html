@@ -1,0 +1,46 @@
+<h2 id="aa">7. Archetypal analysis</h2>
+<p class="tldr">Archetypal analysis (AA) approximates every data point by a convex combination of $K$ archetypes, which are themselves convex combinations of data points. Its error always lies between that of the best $(K-1)$-dimensional affine subspace and that of $k$-means.</p>
+
+<h3 id="archetypal-analysis">The Cutler–Breiman formulation</h3>
+<div class="box def"><div class="box-h">Definition (Cutler and Breiman, 1994)</div>
+<p>Given $\mX\in\R^{N\times d}$ (rows = points) and $K$, solve
+$$\min_{\mA,\mB}\ \norm{\mX-\mA\mB\mX}_F^2\quad\text{s.t. the rows of }\mA\in\R^{N\times K}\text{ and of }\mB\in\R^{K\times N}\text{ lie in the simplex.}$$
+The matrix $\mZ=\mB\mX\in\R^{K\times d}$ holds the <em class="new">archetypes</em>: each is a convex combination of data points ($\mZ_k\in\conv(\mX)$); each data point is approximated by $\mA_i\mZ$, a convex combination of archetypes.</p></div>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">§7.2 and footnote · p. 20, Fig. 17 middle · p. 21, App. A</span></div>
+<p>"Archetypal Analysis seeks $\bm Z=\bm X\bm B$ where archetypes are convex combinations of data (so $\bm Z\subset\conv(\bm X)$), and $\bm X\approx\bm Z\bm A$ where data are convex combinations of archetypes. Both have simplex constraints." AA "is precisely the single-tile case of MRH ($\abs S=1$)". Fig. 17 (middle): per-image AA reconstruction error (MSE) for $3,5,10,20,30$ archetypes: $0.32,0.26,0.19,0.138,0.116$, against $0.227$ for the SAE (dashed). The paper's footnote uses $\bm Z$ for archetypes and $\bm A$ for the coefficients, while its main text uses $\mZ$ for the codes and $\mA$ for the activations; we write $\mA,\mB$ as above.</p></div>
+<dl class="decode">
+<dt>$\mB$ (rows in $\simplex^{N-1}$)</dt><dd>how each archetype is built from data points.</dd>
+<dt>$\mA$ (rows in $\simplex^{K-1}$)</dt><dd>the code of each point: convex weights of the $K$ archetypes (the analogue of the SAE code $\vz$, with sum 1 instead of sparsity).</dd>
+</dl>
+<p><strong>Algorithm (alternating projected gradient).</strong> The objective is convex in $\mA$ for fixed $\mB$ and convex in $\mB$ for fixed $\mA$, but not jointly. Start from a $k$-means solution or random data points; alternate: a gradient step on $\mA$ then projection of each row on the simplex; same on $\mB$. The step is $1/L$ with $L$ the largest eigenvalue of the Hessian of the sub-problem. The objective never increases.</p>
+<p><strong>Projection onto the simplex.</strong> The Euclidean projection of $v\in\R^n$ onto $\simplex^{n-1}$ is $\max(v-\theta\mathbf1,0)$ where, with $u$ the sorted values in decreasing order, $\rho=\max\{j:u_j-\tfrac1j(\sum_{i\le j}u_i-1)>0\}$ and $\theta=\tfrac1\rho(\sum_{i\le\rho}u_i-1)$ (Held et al. 1974; Duchi et al. 2008).</p>
+<div class="box example"><div class="box-h">Example — projecting $v=(0.8,0.6,-0.2)$</div>
+<ol class="steps">
+<li>sorted $u=(0.8,0.6,-0.2)$ <span class="why">already decreasing.</span></li>
+<li>$j=1$: $0.8-(0.8-1)=1.0>0$; $j=2$: $0.6-\tfrac{1.4-1}{2}=0.4>0$; $j=3$: $-0.2-\tfrac{1.2-1}{3}=-0.267<0$ <span class="why">so $\rho=2$.</span></li>
+<li>$\theta=\tfrac{1.4-1}{2}=0.2$, result $(0.6,0.4,0)$ <span class="why">non-negative, sums to 1, and the third coordinate is clipped to 0. Computed with <code>rh/aa.py</code>.</span></li></ol></div>
+<div class="box pitfall"><div class="box-h">Pitfall</div><p>The problem is non-convex, so different initialisations reach different archetypes; the <em>error</em> is stable, the archetypes are not unique. AA is invariant under translation of the data (rows sum to 1) but not under general linear maps of the coordinates other than rotations/scalings, which preserve the objective up to a factor.</p></div>
+
+<h3 id="aa-sandwich">The sandwich: PCA ≤ AA ≤ k-means</h3>
+<p><strong>Problem.</strong> What does an AA error of $0.12$ with $30$ archetypes (Fig. 17) mean? We need reference points: what would any method with $K$ prototypes give?</p>
+<div class="box thm"><div class="box-h">Sandwich</div>
+<p>Let $E_{\mathrm{PCA}}(r)$ be the squared error of the best $r$-dimensional affine subspace, $E_{\mathrm{AA}}(K)$ the optimum of the AA problem and $E_{\mathrm{km}}(K)$ the $k$-means error with $K$ centres (the optimum, or any particular solution, for the upper bound). Then
+$$E_{\mathrm{PCA}}(K-1)\ \le\ E_{\mathrm{AA}}(K)\ \le\ E_{\mathrm{km}}(K).$$</p>
+<details class="fold proof"><summary>Proof</summary><div class="fold-body">
+<p><strong>Right.</strong> Take a $k$-means solution with clusters $C_1..C_K$ and centres $\mu_k$ (cluster means). Let $\mA$ be one-hot (row $i$ has a 1 in the column of its cluster) and let $\mB$ have row $k$ equal to $1/\abs{C_k}$ on the points of $C_k$. Both are row-stochastic, $\mB\mX=(\mu_k)$ and $\mA\mB\mX$ has row $i$ equal to the centre of its cluster. So the $k$-means error is the AA objective at a feasible point: the minimum is at most that.</p>
+<p><strong>Left.</strong> Row $i$ of $\mA\mB\mX$ is a convex combination of the $K$ archetypes, hence lies in the affine hull of $K$ points, an affine subspace of dimension at most $K-1$. The reconstruction $\mA\mB\mX$ therefore has all its rows in one affine subspace of dimension $\le K-1$ (the one spanned by the archetypes), and the best such subspace (PCA) has error at most this one.</p></div></details></div>
+<figure class="fig"><!-- include figures/02/aasandwich.svg --><figcaption>Fraction of variance unexplained (FVU) on a synthetic set of $256$ points in $\R^{50}$ (rank-8 structure plus noise), computed with <code>code/rh/aa.py</code>: AA (blue) between the best $(K-1)$-dimensional affine subspace (grey) and $k$-means (orange).</figcaption></figure>
+<div class="box example"><div class="box-h">Numbers (computed in <code>check_02.py</code>, FVU)</div>
+<div class="table-wrap"><table>
+<tr><th>data</th><th>$K$</th><th>PCA$(K-1)$</th><th>AA</th><th>$k$-means</th></tr>
+<tr><td rowspan="3">isotropic Gaussian, $N=256$, $d=50$</td><td>3</td><td>0.923</td><td>0.932</td><td>0.954</td></tr>
+<tr><td>10</td><td>0.692</td><td>0.796</td><td>0.880</td></tr>
+<tr><td>20</td><td>0.436</td><td>0.675</td><td>0.809</td></tr>
+<tr><td rowspan="3">rank 8 + noise, $N=256$, $d=50$</td><td>3</td><td>0.442</td><td>0.470</td><td>0.677</td></tr>
+<tr><td>10</td><td>0.005</td><td>0.155</td><td>0.444</td></tr>
+<tr><td>20</td><td>0.003</td><td>0.079</td><td>0.335</td></tr>
+</table></div>
+<p>Even for structureless Gaussian data, AA with $K=20$ already removes a third of the variance, and for a rank-8 structure $K=10$ gives $0.155$. A small AA error with a few archetypes is therefore what low-dimensional data gives, not by itself evidence of a particular geometry.</p></div>
+<div class="box ours"><div class="box-h">Our reading — the figure to compare with</div>
+<p>The paper reports the AA error of each image's tokens with $K$ up to $30$, and compares it with a global SAE of $32{,}000$ atoms. The fair reference is the sandwich above, computed on the same tokens (and on null data with the same covariance). The paper's "MSE" and our FVU are not the same normalisation. See <a href="06_critical_reading.html#diag-aa">page 6</a>.</p></div>
+<div class="box recall"><div class="box-h">Where this is used</div><p>Page 1: the Archetypal SAE; page 5: evidence ev-aa (Fig. 17 middle and right); page 6: the AA diagnostics.</p></div>

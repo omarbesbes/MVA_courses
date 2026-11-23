@@ -21,20 +21,18 @@ def fig_coherence_scale():
     sd = 1 / np.sqrt(d_)
     P = c_ * (c_ - 1) / 2
     rmax = np.sqrt(2 * np.log(P) / d_)
-    items = [  # value, label, class, row (above=1/2, below negative)
-        (welch, f"Welch bound {welch:.4f}", "c6", 1),
-        (sd, f"random: std {sd:.4f}", "c6", 2),
-        (0.065897, "Grassmannian frame 0.0659", "c2", 1),
-        (rmax, f"random: largest of 5×10⁸ pairs ≈ {rmax:.2f}", "c6", 2),
-        (0.92, "SAE: largest ≈ 0.92 (read off Fig. 10 A)", "c1", 1),
+    items = [  # value, label, stroke class, fill class, row, anchor
+        (welch, f"Welch bound {welch:.4f} ≈ random: std {sd:.4f}", "cm", "fm", 2, "start"),
+        (0.065897, "Grassmannian frame 0.0659", "c2", "f2", 1, "start"),
+        (rmax, f"random: largest of 5×10⁸ pairs ≈ {rmax:.2f}", "cm", "fm", 3, "start"),
+        (0.92, "SAE: largest ≈ 0.92 (read off Fig. 10 A)", "c1", "f1", 1, "end"),
     ]
-    anchors = {0: "start", 1: "start", 2: "start", 3: "start", 4: "end"}
-    for k, (v, lab, cl, row) in enumerate(items):
-        yy = y - 14 - (row - 1) * 34 if True else y
-        c.add(f'<line x1="{X(v):.1f}" y1="{y}" x2="{X(v):.1f}" y2="{yy+6:.1f}" class="ln {cl} thin"/>')
-        c.add(f'<circle cx="{X(v):.1f}" cy="{y}" r="4.5" class="f{cl[1]}"/>')
-        c.text(X(v) + (-4 if anchors[k] == "end" else 4), yy, lab, "tx-s", anchors[k])
-    c.text(40, 28, "Where the paper's three dictionaries sit on one axis (c = 32 000, d = 768)", "tx-b")
+    for v, lab, sc, fc, row, anc in items:
+        yy = y - 14 - (row - 1) * 34
+        c.add(f'<line x1="{X(v):.1f}" y1="{y}" x2="{X(v):.1f}" y2="{yy+6:.1f}" class="ln {sc} thin"/>')
+        c.add(f'<circle cx="{X(v):.1f}" cy="{y}" r="4.5" class="{fc}"/>')
+        c.text(X(v) + (-4 if anc == "end" else 4), yy, lab, "tx-s", anc)
+    c.text(40, 20, "Where the paper's three dictionaries sit on one axis (c = 32 000, d = 768)", "tx-b")
     c.text(40, 232, "Grey: baselines and bounds. Orange: the numerically computed Grassmannian frame. Blue: the learned SAE dictionary.", "tx-s")
     c.save()
 
@@ -45,7 +43,7 @@ def fig_linear_segment():
     arc = np.stack([np.cos(th), np.sin(th)], 1)
     A = np.array([[1.3, 0.5], [-0.3, 0.7]])  # full rank
     B = np.array([[1.0, 0.6], [0.0, 0.0]])  # rank 1
-    panels = [("In activation space", np.eye(2)), ("Full-rank linear map: chord stays straight", A), ("Rank-1 linear map: everything on a line", B)]
+    panels = [("Activation space", np.eye(2)), ("Full-rank linear map", A), ("Rank-1 linear map", B)]
     for i, (title, M) in enumerate(panels):
         ox, oy, s = 120 + i * 240, 190, 62
         c.text(ox, 38, title, "tx-b", "middle")
@@ -60,8 +58,8 @@ def fig_linear_segment():
             c.text(P(q)[0] + (-9 if lab == "a" else 9), P(q)[1] + 4, lab if i == 0 else lab + "′", "tx", "end" if lab == "a" else "start")
         c.add(f'<circle cx="{P(mid)[0]:.1f}" cy="{P(mid)[1]:.1f}" r="3.5" class="f2"/>')
     c.text(120, 250, "green: a curved set of tokens", "tx-s", "middle")
-    c.text(360, 250, "orange dashed: the chord, image of the chord", "tx-s", "middle")
-    c.text(600, 250, "curved set may become flat, never the reverse", "tx-s", "middle")
+    c.text(360, 250, "dashed: chord a–b and its image a′–b′", "tx-s", "middle")
+    c.text(600, 250, "the image is flat", "tx-s", "middle")
     c.save()
 
 
@@ -72,7 +70,7 @@ def fig_sr_vs_r2():
     c = Canvas("sr_vs_r2", 720, 330, "Stable rank read off Figure 14 against the upper bound 2 divided by R squared", sub=SUB)
     f = Fig(c, (60, 40, 620, 230), (0, 11), (0, 10))
     f.axes(xticks=range(0, 12), yticks=range(0, 11, 2), xfmt=lambda v: str(int(v)), yfmt=lambda v: str(int(v)), xlabel="index in the list (layer 0–11 for R², layer 1–12 for stable rank)")
-    f.path([(i, b) for i, b in enumerate(bound)], "ln c6", extra=' style="stroke-width:2"')
+    f.path([(i, b) for i, b in enumerate(bound)], "ln cm", extra=' style="stroke-width:2"')
     f.path([(i, s) for i, s in enumerate(sr)], "ln c1", extra=' style="stroke-width:1.5"')
     for i, s in enumerate(sr):
         f.circle(i, s, 4.5, "f1")

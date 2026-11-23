@@ -1,0 +1,41 @@
+<h2 id="attribution">9. Attribution: gradient × input, occlusion, integrated gradients, RISE</h2>
+<p class="tldr">All the standard attribution methods give the same answer, $w_ix_i$, for a linear model; the paper uses this to justify its importance score $\E[Z_i]W'_{ij}$, and uses RISE (random masking) to check where a concept depends on the image.</p>
+
+<h3 id="grad-input">Gradient × input, occlusion, integrated gradients</h3>
+<p><strong>Problem.</strong> Given a function $f:\R^n\to\R$ and an input $x$, how much of $f(x)$ does coordinate $i$ account for?</p>
+<div class="box def"><div class="box-h">Three attributions (baseline $0$)</div>
+<ul>
+<li><strong>Gradient × input</strong>: $a_i=x_i\,\partial_if(x)$.</li>
+<li><strong>Occlusion</strong> (Zeiler and Fergus): $a_i=f(x)-f(x_{\setminus i})$, where $x_{\setminus i}$ is $x$ with coordinate $i$ set to the baseline $0$.</li>
+<li><strong>Integrated gradients</strong> (Sundararajan et al. 2017) with baseline $0$: $a_i=x_i\int_0^1\partial_if(\alpha x)\,d\alpha$; it satisfies completeness $\sum_ia_i=f(x)-f(0)$.</li>
+</ul></div>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">App. C.1 · p. 33</span></div>
+<p>"In linear regimes, this coincides with canonical attribution functionals when expressed in the concept basis. Specifically gradient × input, Integrated Gradients with zero baseline, Occlusion, and RISE reduce to linear functionals that are proportional to $\E(\mZ)\mW'_{:,j}$ when aggregated across tokens."</p></div>
+<div class="box thm"><div class="box-h">Linear case</div>
+<p>If $f(x)=\sum_jw_jx_j+b$ then all three attributions equal $w_ix_i$.</p>
+<details class="fold proof"><summary>Proof</summary><div class="fold-body"><p>$\partial_if=w_i$ everywhere, so gradient × input is $x_iw_i$. Occlusion: $f(x)-f(x_{\setminus i})=w_ix_i$ (the bias cancels). IG: $x_i\int_0^1w_i\,d\alpha=w_ix_i$. $\square$</p></div></details></div>
+<div class="box example"><div class="box-h">Example</div>
+<p>$w=(2,-1,0.5)$, $x=(1,3,4)$, $b=0.7$: $f(x)=1.7$. All three give $(2,-3,2)$, whose sum $1.0=f(x)-f(0)$. In the paper, $f$ is the probe output $Y_j=\sum_iz_iW'_{ij}$ as a function of the codes $z$, so the attribution of concept $i$ is $z_iW'_{ij}$, averaged over tokens: $\E[Z_i]W'_{ij}$.</p>
+<p>Non-linear counter-example: $f(x)=\norm x^2$ at $x=(1,2)$: gradient × input $=(2,8)$, whereas occlusion and IG both give $(1,4)$ and $f(x)-f(0)=5$: gradient × input does not satisfy completeness here ($10\ne5$).</p></div>
+<div class="box pitfall"><div class="box-h">Pitfall</div><p>The agreement is a property of linear models. The paper applies it to the readout $\mY=\mZ\mW'$, which is linear in the codes; it does not extend to the full network, and "optimal under faithfulness criteria" (Thm 3 of Fel et al. 2023) is quoted from that reference, not proved here.</p></div>
+
+<h3 id="rise">RISE</h3>
+<p><strong>Problem.</strong> Which region of an image does a score depend on, without access to gradients? Mask random parts of the image and see which pixels are present when the score is high.</p>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">App. C.2 · p. 34</span></div>
+<p>$$\Gamma^{(i)}_{\mathrm{RISE}}(\bm f,\bm x)=\E_{\bm m\sim\mathbb P_{\bm m}}\bigl(\bm f(\bm x\odot\bm m)\,\big|\,\bm m_i=1\bigr),$$
+where $\bm f$ is the composition of the model and the SAE (it outputs a concept activation), using 8000 forward passes per explanation.</p></div>
+<dl class="decode">
+<dt>$\bm m$</dt><dd>a random binary mask (RISE: a coarse random grid upsampled; $m_i=1$: pixel or region $i$ kept), drawn from the distribution $\mathbb P_{\bm m}$.</dd>
+<dt>$\bm x\odot\bm m$</dt><dd>the image with the masked regions removed (set to a baseline).</dd>
+<dt>$\E(\cdot\mid m_i=1)$</dt><dd>the mean of the score over masks that keep region $i$.</dd>
+</dl>
+<p><strong>Estimate.</strong> With $N$ masks and $P(m_i=1)=p$: $\Gamma^{(i)}\approx\dfrac{\sum_nf(\bm x\odot\bm m_n)\,m_{n,i}}{\sum_nm_{n,i}}\approx\dfrac{1}{pN}\sum_nf(\bm x\odot\bm m_n)\,m_{n,i}$. A region gets a high value when the score is high whenever the region is kept, relative to the overall mean $\E f$.</p>
+<div class="box example"><div class="box-h">Toy example (computed)</div>
+<p>16 pixels, the "object" is pixels 4–7, each pixel kept with probability $p=\tfrac12$, and $f=1$ if at least $3$ of the $4$ object pixels are kept, else $0$.</p>
+<ul><li>Overall $\E f=\tfrac{4+1}{16}=0.3125$ (3 of 4: 4 ways, all 4: 1 way, out of 16).</li>
+<li>Pixel outside the object: independent of $f$, so $\E(f\mid m_i=1)=0.3125$.</li>
+<li>Pixel inside the object: given it is kept, at least 2 of the other 3 must be kept: $\tfrac{3+1}{8}=0.5$.</li>
+<li>Monte Carlo with 8000 masks: $0.50$ inside, $0.31$ outside (standard error $0.008$). So the map highlights the object, whichever tokens the concept itself fires on.</li></ul></div>
+<div class="box ours"><div class="box-h">Our reading</div>
+<p>RISE answers "which parts of the input matter for the value $f$", where $f$ is the concept's activation (here on the tokens where it fires). That is how the paper separates where a concept <em>fires</em> from what it <em>depends on</em> (Elsewhere concepts, Fig. 4). With masks of low resolution, the map is smooth and cannot localise fine structure; and $\bm x\odot\bm m$ is out of distribution for the model (a masked image), which is a limit of any occlusion method.</p></div>
+<div class="box recall"><div class="box-h">Where this is used</div><p>Page 3: importance (§3, App. C.1: $\E[Z_i]W'_{ij}$ is gradient × input in the concept basis) and Elsewhere concepts (Fig. 4, App. C.2).</p></div>

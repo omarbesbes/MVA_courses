@@ -1,0 +1,30 @@
+<h2 id="softmax">6. Softmax</h2>
+<p class="tldr">Softmax turns a vector of logits into a point of the open simplex; it ignores a common shift, can be inverted up to a constant, and at low temperature selects the largest logit. Attention weights are softmax outputs, which is why they are convex weights (Lemma 1).</p>
+
+<h3 id="softmax-properties">Definition and properties</h3>
+<div class="box def"><div class="box-h">Definition</div>
+<p>For $x\in\R^n$ and a temperature $\tau>0$: $\softmax(x/\tau)_i=\dfrac{e^{x_i/\tau}}{\sum_je^{x_j/\tau}}$; $\tau=1$ is the usual softmax.</p></div>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Lemma 1 · p. 19, Lemma 5 · p. 49</span></div>
+<p>Single head: $\mY=\mA\mV$ with $\mA=\softmax(\mQ\mK\T)$, rows in the simplex, so each output is a convex combination of the values: $\mY\subset\conv(\mV)$. Low temperature: the weights select one vertex, with the bound $\bigl\|\sum_j\alpha_jv_j-v_{j^*}\bigr\|\le\operatorname{diam}(V)\sum_{j\ne j^*}e^{-\Delta_j/\tau}$ ($\Delta_j$ the gap between the largest logit and the $j$-th).</p></div>
+<div class="box thm"><div class="box-h">Properties</div>
+<ol>
+<li><strong>Simplex</strong>: $\softmax(x)\in\simplex^{n-1}$ and all entries are $>0$: the image is the <em>open</em> simplex $\{p:p_i>0,\sum p_i=1\}$. Outputs are never exactly $0$ (in floating point they underflow only below about $e^{-745}$).</li>
+<li><strong>Shift invariance</strong>: $\softmax(x+s\mathbf 1)=\softmax(x)$ for every $s\in\R$. So the logits contain $n-1$ numbers of information.</li>
+<li><strong>Inverse</strong>: if $p=\softmax(x)$, then $\ln p_i=x_i-\ln\sum_je^{x_j}$, i.e. $x=\ln p+s\mathbf 1$; every $p$ in the open simplex is attained (take $x=\ln p$). So softmax is a bijection from $\R^n/\R\mathbf 1$ onto the open simplex.</li>
+<li><strong>Temperature</strong>: if the maximum $x_{j^*}$ is unique, $\softmax(x/\tau)\to e_{j^*}$ as $\tau\to0$; if the maximum is attained on a set $M$, the limit is the uniform distribution on $M$; as $\tau\to\infty$ it tends to the uniform distribution $\tfrac1n\mathbf 1$.</li>
+<li><strong>Quantitative low-temperature bound</strong>: for $j\ne j^*$, $p_j\le e^{-\Delta_j/\tau}$; and for any points $v_j$, $\bigl\|\sum_jp_jv_j-v_{j^*}\bigr\|\le\operatorname{diam}\{v_j\}\sum_{j\ne j^*}e^{-\Delta_j/\tau}$.</li>
+</ol>
+<details class="fold proof"><summary>Proofs</summary><div class="fold-body">
+<p>(1) exponentials are positive; the denominator is the sum of the numerators. (2) the factor $e^{s}$ cancels. (3) take logs of the definition. (4) divide numerator and denominator by $e^{x_{j^*}/\tau}$: $p_j=e^{-\Delta_j/\tau}/\bigl(1+\sum_{l\ne j^*}e^{-\Delta_l/\tau}\bigr)$ with $\Delta_l>0$ (unique maximum) tends to $0$ for $j\ne j^*$, so $p_{j^*}\to1$; with ties, the tied terms contribute $e^0=1$ each; $\tau\to\infty$: all $e^{x_j/\tau}\to1$. (5) from the same formula $p_j\le e^{-\Delta_j/\tau}$ since the denominator is $\ge1$; then $\sum_jp_jv_j-v_{j^*}=\sum_{j\ne j^*}p_j(v_j-v_{j^*})$ because $\sum p_j=1$, and $\norm{v_j-v_{j^*}}\le\operatorname{diam}$.</p></div></details></div>
+<div class="box example"><div class="box-h">Numbers</div>
+<ul>
+<li>$x=(2,1,0)$: $\softmax(x)=(0.665,0.245,0.090)$; shifted by $+10$: the same. $\ln p=(-0.408,-1.408,-2.408)$, and $\ln p+2.408=(2,1,0)$ recovers $x$ up to the constant.</li>
+<li>Temperature: $\tau=2$: $(0.507,0.307,0.186)$; $\tau=0.5$: $(0.867,0.117,0.016)$; $\tau=0.1$: $(1.000,0.000,0.000)$ with leftover mass about $4.5\times10^{-5}$; $\tau=10$: $(0.367,0.332,0.301)$; $\tau=100$: almost uniform.</li>
+<li>Two logits $(x,0)$: $\softmax=(\sigma(x),1-\sigma(x))$, the sigmoid ($x=1$: $0.731$).</li>
+<li>Bound check at $\tau=0.5$: $\sum_{j\ne j^*}e^{-\Delta_j/\tau}=e^{-2}+e^{-4}=0.154$ against the true leftover mass $0.133$.</li>
+</ul></div>
+<div class="widget" data-widget="p2softmax"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p>What to look at: the point sits in the interior of the triangle for every finite logit vector and every $\tau>0$; as $\tau\to0$ it slides to the vertex of the largest logit; adding the same constant to all logits does not move it. The grey curve is the path traced by the point when $\tau$ varies from $0.05$ to $20$ at the current logits.</p>
+<div class="box pitfall"><div class="box-h">Pitfalls</div>
+<ul><li>Softmax output is never on the boundary: attention outputs are in the <em>relative interior</em> of $\conv(V)$ but never on a face; the paper's Lemma 1 proof "the attainable set is $\conv(V)$" is true only for its closure (see <a href="06_critical_reading.html#architecture">page 6</a>).</li>
+<li>Which set the logits can reach matters: attention logits $\mK q$ span at most the column space of $\mK$ (dimension $\le d_k$), so not all of the simplex is attainable for a given query-key set.</li></ul></div>

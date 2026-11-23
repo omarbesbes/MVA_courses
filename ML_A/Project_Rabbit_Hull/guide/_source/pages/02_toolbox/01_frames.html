@@ -1,0 +1,76 @@
+<h2 id="frames">1. Frames: unit-norm dictionaries</h2>
+<p class="tldr">A dictionary is $c$ unit vectors in $\R^d$ (rows of $\mD$). How well it can avoid interference is measured by the largest inner product between two atoms; the Welch bound says how small that can be, random vectors miss it by a factor 6.5, and the singular values of $\mD$ say how evenly the atoms fill space.</p>
+
+<h3 id="gram-coherence">Gram matrix and mutual coherence</h3>
+<p><strong>Problem.</strong> The linear representation hypothesis writes an activation as $\va=\vz\mD$ with a sparse code $\vz$. To read a code back from $\va$ one computes $\va\mD\T=\vz\mD\mD\T=\vz\mG$. If $\mG=\mI$ the read-out is exact. Otherwise each coordinate receives the contributions of the other active atoms: <em class="new">interference</em>.</p>
+<div class="box def"><div class="box-h">Definition</div>
+<p>For $\mD\in\R^{c\times d}$ with unit rows, the <em class="new">Gram matrix</em> is $\mG=\mD\mD\T\in\R^{c\times c}$, $G_{ij}=\ps{\mD_i}{\mD_j}$ (so $G_{ii}=1$), and the <em class="new">mutual coherence</em> is
+$$\mu(\mD)=\max_{i\neq j}\abs{G_{ij}}.$$</p></div>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Def. 1 · p. 5</span></div>
+<p>Condition (ii) of the linear representation hypothesis: the dictionary is <em>quasi-orthogonal</em>, $\mu(\mD)=\max_{i\ne j}\abs{\mD_i\mD_j\T}\le\eps$, with unit rows. Fig. 10 (p. 12) compares the inner products of the trained atoms with those of random and of "Grassmannian" dictionaries.</p></div>
+<dl class="decode">
+<dt>$\mG\in\R^{c\times c}$</dt><dd>all pairwise cosines of atoms (unit norms make inner products cosines).</dd>
+<dt>$\mu$</dt><dd>the worst pair. It controls interference in the worst case; the typical pair is far better (see <a href="#jl-random">random vectors</a>).</dd>
+</dl>
+<div class="box thm"><div class="box-h">Read-out with interference</div>
+<p>If $\va=\sum_{i\in S}z_i\mD_i$ with $\abs S=k$, then for every atom $j$: $\abs{\ps{\va}{\mD_j}-z_j}\le\mu\sum_{i\in S,\,i\ne j}\abs{z_i}\le\mu\,(k-1)\max_i\abs{z_i}$ (for $j\notin S$: $\le\mu\sum_{i\in S}\abs{z_i}$).</p>
+<details class="fold proof"><summary>Proof</summary><div class="fold-body"><p>$\ps{\va}{\mD_j}=\sum_{i\in S}z_iG_{ij}=z_j\,G_{jj}[j\in S]+\sum_{i\in S,i\ne j}z_iG_{ij}$ with $G_{jj}=1$; bound $\abs{G_{ij}}\le\mu$ for $i\ne j$ and use the triangle inequality.</p></div></details></div>
+<div class="box example"><div class="box-h">Example — three atoms in the plane</div>
+<p>$\mD_i=(\cos\theta_i,\sin\theta_i)$ with $\theta_i=90^\circ,210^\circ,330^\circ$ (the "Mercedes" frame, $c=3$, $d=2$). The Gram matrix has $1$ on the diagonal and $-\tfrac12$ elsewhere, so $\mu=\tfrac12$. Reading the code $\vz=(1,0,0)$ gives $\vz\mG=(1,-\tfrac12,-\tfrac12)$: the unused atoms receive an interference of $0.5$. With $c=3000$ random atoms in $d=768$ and a code with $k=8$ active atoms of weights in $[0.5,1.5]$, the largest read-out error we measure is $0.39$ (the bound $\mu\sum\abs{z_i}$ gives $1.64$: the worst case is far from typical).</p></div>
+<div class="box pitfall"><div class="box-h">Pitfall</div><p>Coherence is a worst-case, pairwise quantity. A dictionary can have a bad $\mu$ because of a single pair of nearly parallel atoms (the paper's trained dictionary has "tight clusters", §5) while most pairs are nearly orthogonal. Fig. 10A shows the whole distribution of $G_{ij}$, not only its maximum.</p></div>
+
+<h3 id="welch-grassmannian">The Welch bound and Grassmannian frames</h3>
+<p><strong>Problem.</strong> With $c>d$ the atoms cannot be orthogonal ($\rank\mG\le d$). What is the smallest coherence possible? The paper uses the answer as the "ideal" reference (Grassmannian frame) against which the trained dictionary is compared.</p>
+<div class="box thm"><div class="box-h">Welch bound</div>
+<p>For $c>d$ unit vectors in $\R^d$,
+$$\mu\;\ge\;\sqrt{\frac{c-d}{d\,(c-1)}}.$$
+Equality holds iff the vectors form an <em class="new">equiangular tight frame</em> (ETF): all $\abs{G_{ij}}$ ($i\neq j$) equal, and $\mD\T\mD=\tfrac cd\mI_d$.</p>
+<details class="fold proof"><summary>Proof (trace argument)</summary><div class="fold-body">
+<ol class="steps">
+<li>$\tr\mG=c$ <span class="why">unit rows.</span></li>
+<li>$\rank\mG\le d$ and $\mG$ is symmetric, so with eigenvalues $\lambda_1,\dots,\lambda_d$ (the others are 0): $c=\sum\lambda_i$ and $\norm{\mG}_F^2=\sum\lambda_i^2$.</li>
+<li>$\norm{\mG}_F^2\ge\dfrac{(\sum\lambda_i)^2}{d}=\dfrac{c^2}{d}$ <span class="why">Cauchy–Schwarz on $d$ numbers; equality iff all $\lambda_i=c/d$, i.e. $\mD\T\mD=\frac cd\mI_d$ (tight frame).</span></li>
+<li>$\norm{\mG}_F^2=c+\sum_{i\ne j}G_{ij}^2\le c+c(c-1)\mu^2$ <span class="why">diagonal terms are 1; there are $c(c-1)$ off-diagonal entries, each of square $\le\mu^2$; equality iff all $\abs{G_{ij}}=\mu$ (equiangular).</span></li>
+<li>$\dfrac{c^2}{d}\le c+c(c-1)\mu^2\;\Rightarrow\;\mu^2\ge\dfrac{c/d-1}{c-1}=\dfrac{c-d}{d(c-1)}$ <span class="why">combine 3 and 4 and solve.</span></li>
+</ol></div></details></div>
+<p><em class="new">Grassmannian frame</em> (the paper's term): a set of $c$ unit vectors whose coherence is as small as possible among all such sets; an ETF that attains the Welch bound is one, but ETFs exist only for special pairs $(c,d)$, and in general the minimum is above the Welch bound and found numerically (the paper's TAAP computation took six hours on an A100 and reaches $\mu=0.0659$).</p>
+<div class="box paper"><div class="box-h">Cousins named in the paper <span class="ref">§2 (motivation of Def. 1)</span></div>
+<p>The paper motivates near-orthogonality by <strong>Tammes' problem</strong> (place points on a sphere to maximise the smallest distance between two of them, so that the largest cosine is minimal: this is exactly the minimal-coherence problem when we only look at $\max G_{ij}$ and not $\abs{G_{ij}}$), <strong>Thomson's problem</strong> (minimal electrostatic energy $\sum1/\norm{x_i-x_j}$ of points on a sphere: a smooth surrogate), and <strong>spherical codes</strong> (the general name for point sets on a sphere with a prescribed minimal angle). Taking $\abs{G_{ij}}$ (lines instead of vectors) gives the Grassmannian packing of lines.</p></div>
+<div class="box example"><div class="box-h">Example — numbers</div>
+<ul>
+<li>$c=3,d=2$ (Mercedes): Welch $=\sqrt{1/(2\cdot2)}=0.5$ — attained: it is an ETF. $c=4,d=3$ (tetrahedron): $\sqrt{1/9}=\tfrac13$, attained. $c=6$, $d=3$ (six diagonals of the icosahedron): $\sqrt{3/(3\cdot5)}=1/\sqrt5=0.447$, attained.</li>
+<li>The paper's sizes $c=32{,}000$, $d=768$: Welch $=\sqrt{31232/(768\cdot31999)}=0.0356$. The numerical Grassmannian frame of the paper has $0.0659$ (1.85 times the bound: no ETF of this size is known to us; we do not claim none exists).</li>
+</ul></div>
+<figure class="fig"><!-- include figures/02/welchcurve.svg --><figcaption>Welch bound (blue), coherence expected for random unit vectors (orange), both for $d=768$; at $c=32{,}000$: $0.036$ (bound), $0.066$ (the paper's numerical frame), $0.23$ (random). The dashed grey line is $1/\sqrt d$, the standard deviation of one random inner product.</figcaption></figure>
+<div class="widget" data-widget="p2welch"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p>What to look at: raise $c$ at fixed $d$ and watch the Welch bound grow slowly towards $1/\sqrt d$ while the typical maximum of random vectors grows like $\sqrt{\ln c}$. Set $c=d$ and the bound is 0 (an orthonormal basis).</p>
+
+<h3 id="jl-random">Random vectors and Johnson–Lindenstrauss</h3>
+<p><strong>Problem.</strong> What coherence does a dictionary without any training (the paper's "random" baseline, Fig. 10A) have, and what does "exponentially many nearly orthogonal vectors" (the paper's footnote) really give?</p>
+<p><strong>Typical pair.</strong> Take $\mD_i,\mD_j$ independent uniform on the unit sphere of $\R^d$. Then $\ps{\mD_i}{\mD_j}$ has mean 0 and variance $1/d$, and is close to $\N(0,1/d)$ for large $d$ (by symmetry, $\mD_j$ can be rotated to $e_1$, so it is the first coordinate of a uniform unit vector, of variance $1/d$ because $\sum_k x_k^2=1$). For $d=768$ the standard deviation is $1/\sqrt{768}=0.0361$: a typical random pair is as incoherent as the Welch bound.</p>
+<p><strong>Worst pair.</strong> There are $c(c-1)/2\approx5.1\times10^8$ pairs. For a Gaussian the maximum of $M$ values of $\abs{\cdot}$ is about $\sigma\sqrt{2\ln M}$ (heuristic, from the tail $P(\abs X>t)\approx e^{-t^2/2\sigma^2}$ equating $M\,P=1$). Hence
+$$\mu_{\text{random}}\approx\sqrt{\frac{2\ln\bigl(c(c-1)\bigr)}{d}}=0.23\quad(c=32{,}000,\ d=768).$$
+Our simulation with $c=3000$, $d=768$: standard deviation $0.0361$, observed $\mu=0.196$, prediction $0.204$. The paper quotes a random dictionary within $\pm0.2$ (Fig. 10A).</p>
+<div class="box paper"><div class="box-h">Footnote <span class="ref">§5 · p. 12</span></div>
+<p>"The Johnson–Lindenstrauss lemma implies that $p=\exp(\mathcal O(m\eps^2))$ vectors can be embedded into $\R^m$ such that all pairwise inner products are preserved up to a small distortion $\eps>0$. This supports the feasibility of near-orthogonality even in regimes where $p\gg m$."</p></div>
+<div class="box thm"><div class="box-h">What can be proved (the existence statement behind the footnote)</div>
+<p>For $\eps\in(0,1)$ there exist $p\ge\exp(d\eps^2/4)$ unit vectors in $\R^d$ with all pairwise $\abs{\ps{x}{y}}\le\eps$ (take $p$ the integer part, assuming $p\ge2$).</p>
+<details class="fold proof"><summary>Proof (random vectors and a union bound)</summary><div class="fold-body">
+<p>Fact (K. Ball, <em>An elementary introduction to modern convex geometry</em>, 1997, Lemma 2.2): for $x$ uniform on the unit sphere of $\R^d$ and $\eps\in[0,1)$, $P(x_1\ge\eps)\le e^{-d\eps^2/2}$. For $p$ independent uniform vectors, rotation invariance gives $P(\abs{\ps{x_i}{x_j}}>\eps)\le2e^{-d\eps^2/2}$ for each of the $p(p-1)/2$ pairs. The union bound: the probability that some pair fails is at most $p^2e^{-d\eps^2/2}$, which is $<1$ when $p<e^{d\eps^2/4}$. So some draw works.</p></div></details></div>
+<div class="box ours"><div class="box-h">Our reading — what the constant says at the paper's sizes</div>
+<p>The footnote hides the constant in $\mathcal O$. With the constant $1/4$ proved above, $e^{768\,\eps^2/4}\ge32{,}000$ requires $\eps\ge0.232$: the existence argument guarantees $\mu\le0.23$, i.e. random-level coherence, not the $0.066$ reached numerically, and not $0.036$. The footnote therefore supports "$c\gg d$ with a coherence of a few tenths is possible", and not "$\mu\approx0.04$ is possible". The Welch bound $0.0356$ says that no dictionary does better, and the gap between $0.0356$ and $0.0659$ is the price of fitting $32{,}000$ unit vectors.</p></div>
+<div class="box pitfall"><div class="box-h">Pitfall</div><p>"Nearly orthogonal" depends on the scale: $\eps=0.2$ means an angle of $78^\circ$ to $102^\circ$ for every pair, which still allows an interference of $0.2$ per active neighbour. With $k=8$ active atoms, interference adds up (see the read-out theorem above).</p></div>
+
+<h3 id="tight-frames-spectrum">Tight frames and the singular-value spectrum</h3>
+<p><strong>Problem.</strong> Coherence looks at pairs. The singular values of $\mD$ look at the whole dictionary: do the atoms cover all directions equally?</p>
+<p><strong>Identity.</strong> For $\mD\in\R^{c\times d}$ with unit rows, $\sum_i\sigma_i^2=\norm{\mD}_F^2=c$, over at most $d$ non-zero singular values. So their mean square is $c/d$. The dictionary is a <em class="new">tight frame</em> iff $\mD\T\mD=\frac cd\mI_d$, i.e. all $\sigma_i=\sqrt{c/d}$: for $c=32{,}000$, $d=768$, $\sqrt{c/d}=6.455$. In words: every direction $u\in\R^d$ of unit length receives the same total energy $\sum_i\ps{\mD_i}{u}^2=\norm{\mD u}^2=c/d$ from the atoms. Any other spectrum has the same sum of squares but is spread unevenly.</p>
+<p><strong>Random rows.</strong> For a $c\times d$ matrix with i.i.d. $\N(0,1/d)$-like unit rows the singular values fill the Marchenko–Pastur band
+$$\sqrt{\tfrac cd}\,\Bigl(1\pm\sqrt{\tfrac dc}\Bigr)=\sqrt{\tfrac cd}\pm1=[5.45,\;7.46].$$
+We measured $[5.459,7.443]$ on a random $32{,}000\times768$ matrix (and $[0.976,2.968]$ vs the predicted $[0.976,2.976]$ for $c=3000$). This is a standard result of random matrix theory (the extreme singular values of an $N\times n$ Gaussian matrix are $\sqrt N\pm\sqrt n$ asymptotically; we used it, we did not prove it).</p>
+<figure class="fig"><!-- include figures/02/spectra.svg --><figcaption>Singular values of unit-row dictionaries with the same $\sum\sigma_i^2=32{,}000$: flat for a tight frame (blue), the thin Marchenko–Pastur band for random rows (grey, measured), and a decaying, anisotropic spectrum (orange, illustrative power law, not the paper's data).</figcaption></figure>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Fig. 10B · p. 12</span></div>
+<p>The spectrum of the SAE dictionary "shows a sharp decay", "the dictionary spans a low-dimensional subspace despite its overcomplete size", whereas random and Grassmannian dictionaries are flat (about $6.5$ for the Grassmannian frame, in the band $[5.5,7.4]$ for the random one). The leading value is about $22.5$ (read off the figure).</p></div>
+<div class="box example"><div class="box-h">Example — what a leading value of 22.5 means</div>
+<p>$\sigma_1^2=22.5^2\approx506$ out of the total $c=32{,}000$: about $1.6\%$ of the energy of the whole dictionary lies along one direction, against $1/768=0.13\%$ for a flat spectrum: twelve times more. Its stable rank (next section) is $32{,}000/22.5^2\approx63$ if the total is $c$.</p></div>
+<div class="box pitfall"><div class="box-h">Pitfall</div><p>A fast decay does not mean that the dictionary has few atoms or low rank; it means unequal usage of directions (<em class="new">anisotropy</em>). The paper itself offers the explanation that the activations $\mA$ are anisotropic (§5). The unit-row constraint also fixes the total: a sharp peak at the top is compensated by small values at the end (the paper's curve goes to about 0 at the last index).</p></div>
+<div class="box recall"><div class="box-h">Where this is used</div><p>Page 4: Fig. 10 (coherence and spectrum of the dictionary, §5); page 1: condition (ii) of Definition 1. Exercises 1 and 2 below.</p></div>

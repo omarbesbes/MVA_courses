@@ -1,0 +1,75 @@
+<h2 id="scores">2. Scores: stable rank, Hoyer, entropy, cosine</h2>
+<p class="tldr">Four numbers summarise a matrix or a vector: how many directions a matrix really uses (stable rank), how spread over coordinates a vector is (Hoyer), how spread over tokens a distribution is (entropy), and how aligned two vectors are (cosine).</p>
+
+<h3 id="stable-rank">Stable rank</h3>
+<p><strong>Problem.</strong> The rank of a matrix counts its non-zero singular values, so it jumps from 768 to 1 because of numerical noise. The paper (Fig. 14, App. I) wants a smooth measure of "how many directions" the position basis spans.</p>
+<div class="box def"><div class="box-h">Definition</div>
+<p>For a non-zero matrix $\mathbf{M}$ with singular values $\sigma_1\ge\sigma_2\ge\dots$,
+$$\operatorname{srank}(\mathbf{M})=\frac{\norm{\mathbf{M}}_F^2}{\norm{\mathbf{M}}_2^2}=\frac{\sum_i\sigma_i^2}{\sigma_1^2}.$$</p></div>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Fig. 14 · p. 16, App. I · p. 45</span></div>
+<p>The paper reports the stable rank of the "position basis" across layers: $9.0,8.1,5.4,7.2,5.6,5.4,4.9,4.4,4.4,2.8,2.6,2.7$ (layers 1–12), read as the effective number of dimensions needed to encode position.</p></div>
+<div class="box thm"><div class="box-h">Properties</div>
+<ol>
+<li>$1\le\operatorname{srank}(\mathbf{M})\le\rank(\mathbf{M})$; it is invariant under scaling $\mathbf{M}\to s\mathbf{M}$ and under $\mathbf{M}\to\mU\mathbf{M}\mV$ with $\mU,\mV$ orthogonal.</li>
+<li>$\operatorname{srank}=1$ iff $\mathbf{M}$ has rank 1; $\operatorname{srank}=r$ iff its $r$ non-zero singular values are all equal.</li>
+<li>If the rows of $\mathbf{M}$ are centred data, $\sigma_i^2/\sum_j\sigma_j^2$ is the fraction of variance of the $i$-th principal component; so the first component explains exactly $1/\operatorname{srank}$ of the variance.</li>
+<li>A matrix with two non-zero singular values has $\operatorname{srank}=1+\sigma_2^2/\sigma_1^2\le2$.</li>
+</ol>
+<details class="fold proof"><summary>Proof</summary><div class="fold-body"><p>(1) $\sigma_1^2\le\sum_{i\le r}\sigma_i^2\le r\sigma_1^2$. (2) equality cases of the two inequalities. (3) $\norm{\mathbf{M}}_F^2=\sum\sigma_j^2$ and $\sigma_1^2$ is the variance (times $n$) along the first component. (4) $\sum\sigma_i^2=\sigma_1^2+\sigma_2^2$ and $\sigma_2\le\sigma_1$.</p></div></details></div>
+<div class="box example"><div class="box-h">Example</div>
+<ul>
+<li>$\mI_5$: srank $5$. $\operatorname{diag}(3,1)$: $(9+1)/9=1.11$ (almost rank 1). $\operatorname{diag}(1,1)$: $2$. Singular values $(4,3,2,1)$: $30/16=1.875$.</li>
+<li>Random $3000\times768$ matrix with unit rows: $\sigma_1^2\approx8.8$, srank $=3000/8.8=340$: far below the rank 768 yet large. A dictionary of $32{,}000$ unit atoms with $\sigma_1=22.5$ has srank $\le32{,}000/506=63$.</li>
+<li>Two singular values $(1,0.8)$: srank $1.64$; the top component explains $1/1.64=61\%$ of the variance.</li>
+</ul></div>
+<div class="box ours"><div class="box-h">Our reading — Fig. 14: stable rank 2.6 and R² of the top-2 PCs at 1.00</div>
+<p>In layers 10–12 the paper reports a stable rank of $2.6$–$2.8$ and, in the panel next to it, that two principal components explain $R^2\approx1.00$ of the position basis. For one and the same centred matrix this is impossible: top-2 explaining everything means two non-zero singular values, hence srank $\le2$ by property 4. The two panels cannot be computed on the same object (for instance one centred, one not, or one with PCA per image). See <a href="06_critical_reading.html#errata">errata</a>.</p></div>
+<div class="box pitfall"><div class="box-h">Pitfall</div><p>The stable rank depends on whether the matrix is centred: the mean adds a large singular value along the mean direction, which drives srank towards 1. Always say which matrix.</p></div>
+
+<h3 id="hoyer">Hoyer sparsity</h3>
+<p><strong>Problem.</strong> Is an atom $\mD_i$ aligned with a few neurons (coordinates) or spread over all of them? The paper uses this to argue that concepts are not "neuron-aligned".</p>
+<div class="box def"><div class="box-h">Definition (Hoyer 2004)</div>
+<p>For $x\in\R^n$, $x\ne0$:
+$$H(x)=\frac{\sqrt n-\norm{x}_1/\norm{x}_2}{\sqrt n-1}\in[0,1].$$</p></div>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Fig. 10C–D · p. 12</span></div>
+<p>"Scores remain below the neuron-aligned limit (1.0)", compared with the Gaussian baseline "$1-\sqrt{2/\pi}\approx0.2$". The atoms score about $0.22$–$0.25$ (read off the figure).</p></div>
+<ol class="steps">
+<li>$\norm{x}_2\le\norm{x}_1\le\sqrt n\norm{x}_2$ <span class="why">Cauchy–Schwarz for the right inequality; $(\sum\abs{x_i})^2\ge\sum x_i^2$ for the left. Hence $1\le\norm{x}_1/\norm{x}_2\le\sqrt n$ and $H\in[0,1]$.</span></li>
+<li>one-hot vector: $\norm{x}_1/\norm{x}_2=1$, $H=1$ <span class="why">maximal sparsity.</span></li>
+<li>constant vector (all $\abs{x_i}$ equal): ratio $=\sqrt n$, $H=0$ <span class="why">maximal spread (equality case of Cauchy–Schwarz).</span></li>
+<li>Gaussian $x\sim\N(0,\mI_n)$: $\norm{x}_1\approx n\,\E\abs{g}=n\sqrt{2/\pi}$ and $\norm{x}_2\approx\sqrt n$ <span class="why">law of large numbers; $\E\abs g=\sqrt{2/\pi}=0.798$.</span></li>
+<li>$H\approx\dfrac{\sqrt n\,(1-\sqrt{2/\pi})}{\sqrt n-1}\to1-\sqrt{2/\pi}=0.202$ <span class="why">insert and let $n\to\infty$. At $n=768$ the formula gives $0.2097$ and a simulation of 2000 vectors gives $0.2094\pm0.008$ (standard deviation): the baseline in dimension 768 is $0.21$, not $0.202$.</span></li>
+</ol>
+<div class="box example"><div class="box-h">Example</div>
+<p>$n=4$, $x=(3,4,0,0)$: $\norm{x}_1/\norm{x}_2=7/5=1.4$, $H=(2-1.4)/(2-1)=0.6$. $x=(1,1,0,0)$: $H=0.586$. In $n=768$: a vector with 8 equal non-zero entries scores $0.93$; a geometric profile $2^{-i}$ scores $0.97$; the absolute value of a Gaussian vector scores $0.21$, like the signed one ($H$ ignores signs).</p></div>
+<div class="box pitfall"><div class="box-h">Pitfall</div><p>$H$ is invariant under signs and scale, but not under rotations of the basis: it measures alignment with the <em>coordinate</em> axes. A sparse vector in a rotated basis looks dense. In a residual stream the coordinates are not privileged by the architecture in the same way for all layers, which is why a low Hoyer score does not prove that the atom is a "distributed" feature in any basis-independent sense. A score of $0.22$–$0.25$ against a baseline of $0.21$ says "close to random in the coordinate basis".</p></div>
+
+<h3 id="entropy">Entropy of a distribution over tokens</h3>
+<p><strong>Problem.</strong> A concept fires on some tokens of the $261$ of an image. Is its footprint concentrated on one token (the cls token, a register, a position) or spread? Entropy gives one number.</p>
+<div class="box def"><div class="box-h">Definition</div>
+<p>For a probability vector $p\in\simplex^{n-1}$, $H(p)=-\sum_ip_i\ln p_i$ (with $0\ln0=0$), in <em>nats</em> (natural logarithm; divide by $\ln2$ for bits). $0\le H(p)\le\ln n$, with $H=0$ iff $p$ is one-hot and $H=\ln n$ iff $p$ is uniform. $e^{H}$ is the "effective number" of tokens.</p></div>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">§4, Fig. 7, App. G · p. 9, 39</span></div>
+<p>The footprint $\omega_i$ of concept $i$ is its mean code over images at each of the $261$ token positions; its entropy (in nats, maximum $\ln261=5.56$) is histogrammed: a spike at $0$ (about 110 concepts) and a bulk at $5$–$5.5$.</p></div>
+<div class="box example"><div class="box-h">Reference values</div>
+<div class="table-wrap"><table>
+<tr><th>distribution</th><th>entropy (nats)</th></tr>
+<tr><td>one token</td><td>0</td></tr>
+<tr><td>$(\tfrac12,\tfrac14,\tfrac14)$</td><td>1.040 (effective number $e^H=2.83$)</td></tr>
+<tr><td>uniform on 4 registers</td><td>$\ln4=1.386$</td></tr>
+<tr><td>uniform on one grid column (16 patches)</td><td>$2.77$</td></tr>
+<tr><td>uniform on a third of the tokens (87)</td><td>$4.47$</td></tr>
+<tr><td>half the mass on the 4 registers, half uniform on 256 patches</td><td>$4.16$</td></tr>
+<tr><td>uniform on 256 patches</td><td>$\ln256=5.545$</td></tr>
+<tr><td>uniform on all 261 tokens</td><td>$5.565$ ($=8.03$ bits)</td></tr>
+</table></div></div>
+<div class="box pitfall"><div class="box-h">Pitfall</div><p>Entropies near the maximum are indistinguishable at a glance: $5.0$ is $e^{5.0}\approx148$ effective tokens, $5.5$ is $245$. Between "all tokens" and "all patches but no register" the difference is $0.02$ nats. A specific structure (the 5 special tokens carry weight) hides in the last digits; the paper looks at the spike at 0 for that reason.</p></div>
+
+<h3 id="cosine">Cosine similarity</h3>
+<p><strong>Problem.</strong> Compare directions, not lengths. $\cos(u,v)=\dfrac{\ps uv}{\norm u\norm v}\in[-1,1]$; it is the inner product when both are unit vectors, and $\cos(\lambda u,\mu v)=\cos(u,v)$ for $\lambda,\mu>0$.</p>
+<ul>
+<li>$\cos=1$: same direction; $0$: orthogonal; $-1$: opposite. <em class="new">Antipodal pair</em>: $v=-\lambda u$, $\lambda>0$ ($\cos=-1$). Example: $u=(1,2,2)$, $v=(2,1,-2)$ both have norm $3$ and $\ps uv=2+2-4=0$: orthogonal.</li>
+<li>In $\R^{768}$ two independent random directions have $\cos\sim\N(0,1/768)$: standard deviation $0.036$, and $P(\abs{\cos}>0.2)\approx3\times10^{-8}$. So $\cos=0.2$ between two atoms is a strong alignment.</li>
+<li>Use $\abs{\cos}$ when the sign of a direction is arbitrary (the two ends of an axis are the same feature; the paper's antipodal pairs, Fig. 11A, are "opposite poles of the same feature axis", e.g. white shirt / black shirt). Use $\cos$ itself when the sign matters (a non-negative code only moves along $+\mD_i$, so $\mD_i$ and $-\mD_i$ are different concepts).</li>
+</ul>
+<div class="box pitfall"><div class="box-h">Pitfall</div><p>A strongly negative cosine between two atoms does not make them "anti-correlated concepts" in use: the codes are non-negative, so the two atoms never subtract; they can still be active together on different tokens. Coactivation and geometry are separate statistics (paper §5, Fig. 11B).</p></div>
+<div class="box recall"><div class="box-h">Where this is used</div><p>Stable rank: page 4 (position basis, Fig. 14). Hoyer: page 4 (Fig. 10C–D). Entropy: page 3 (token types, Fig. 7). Cosine: pages 3 and 4 (Figs. 3, 10, 11).</p></div>

@@ -1,0 +1,29 @@
+<h2 id="interpolative">9. Toward interpolative geometry</h2>
+<p class="tldr">After excluding position as the only cause, the paper proposes that patch tokens are smooth mixtures of a discrete set of "landmark" prototypes, and finds support in the DINOv2 training heads. This is a conjecture; it is the bridge to the Minkowski hypothesis of page 5.</p>
+<div class="box paper"><div class="box-h">Toward interpolative geometry <span class="ref">§6 · p. 16</span></div>
+<p>"[...] across many images, patch tokens occupy a consistent low dimensional and locally connected set that aligns with object and coherent regions. First, this stability across images suggest that embeddings are not purely relative. Second, [...] the connectedness is not explained by position alone [...]. What remains is the possibility that tokens interpolate smoothly between a discrete set of anchor points or landmark representations. This interpolative structure finds natural support in DINOv2's training objectives. The global DINO head matches teacher representations using 128k prototypes, while the iBOT head performs masked prediction with its own 128k prototype vocabulary. The Kozachenko–Leonenko regularizer further encourages entropy maximization, promoting uniform distribution across the representation space while avoiding collapse. Rather than learning arbitrary smooth manifolds, this setup naturally favors representations that can be expressed as mixtures of multiple prototype sets. [...] This suggests that the observed connectedness may arise not from continuous interpolation per se, but from discrete mixing of archetypal points."</p></div>
+<h3 id="interp-decode">What each ingredient is</h3>
+<dl class="decode">
+<dt>DINO head</dt><dd>maps the image-level feature to scores over $128$k prototypes; teacher and student probability vectors (softmax over prototypes) are matched by a cross-entropy. <a href="01_background.html#dino-loss">more</a></dd>
+<dt>iBOT head</dt><dd>the same idea for masked patch tokens, with its own $128$k prototypes. <a href="01_background.html#ibot">more</a></dd>
+<dt>footnote of the paper</dt><dd>each head is an MLP $4096\to4096\to256$ producing scores over $128$k prototypes, followed by softmax, "effectively implementing implicit clustering with soft assignments" (stated by the paper; we did not check it against the DINOv2 code).</dd>
+<dt>KoLeo (Kozachenko–Leonenko)</dt><dd>a regulariser that spreads the features in a batch by penalising small nearest-neighbour distances, i.e. a nearest-neighbour entropy estimate. <a href="01_background.html#koleo">more</a></dd>
+<dt>"mixtures of prototypes"</dt><dd>a softmax output $\mathbf p\in\simplex^{K}$ is a point of a simplex: a weighted combination of the prototypes with weights summing to $1$. This is exactly the form of an archetypal (convex) code, which is why the paper links it to what comes next.</dd>
+</dl>
+<h3 id="interp-status">Claimed, and conjectured</h3>
+<div class="table-wrap"><table>
+<tr><th>Statement</th><th>Status</th></tr>
+<tr><td>Patch tokens of different images share a low-dimensional frame; maps are smooth (Figs. 12, 13, 22)</td><td><span class="tag suggestive">suggestive</span>: qualitative, few images</td></tr>
+<tr><td>Position alone does not explain it (Figs. 14, 27)</td><td><span class="tag suggestive">suggestive</span>: linear subspace only</td></tr>
+<tr><td>DINO and iBOT heads have 128k prototypes with softmax assignments</td><td>stated by the paper (architecture)</td></tr>
+<tr><td>KoLeo spreads features uniformly, avoiding collapse</td><td>its purpose, as stated in the DINOv2 method</td></tr>
+<tr><td>"This setup naturally favours" tokens as mixtures of landmarks of several prototype sets</td><td><span class="tag speculative">speculative</span>: no derivation, no measurement</td></tr>
+<tr><td>Connectedness comes from "discrete mixing of archetypal points" rather than continuous interpolation</td><td><span class="tag speculative">speculative</span></td></tr>
+</table></div>
+<div class="box ours"><div class="box-h">Our reading — three gaps between the heads and the backbone tokens</div>
+<ul>
+<li>The prototypes live in the space of the head's output (after the MLP and a normalisation), not in the $768$-dimensional token space that Fig. 12 shows. A mixture of prototypes there says nothing yet about a convex combination of tokens in $\R^{768}$.</li>
+<li>Softmax weights over $128$k prototypes with a low temperature are nearly one-hot; the claim of rich mixtures would need the weights to be spread, which the paper does not measure.</li>
+<li>The paper does not say on which tokens KoLeo acts; if it acts only on image-level features, it says nothing about patch tokens (page 1 recalls the definition).</li>
+</ul>
+<p>This is the weak link between §6 and the MRH of <a href="05_minkowski.html#why">page 5</a>; page 5 then argues from the attention mechanism instead. See <a href="06_critical_reading.html#architecture">page 6</a>.</p></div>
