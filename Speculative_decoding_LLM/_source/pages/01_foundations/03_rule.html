@@ -1,0 +1,122 @@
+<h2 id="rule">3. With sampling: the accept / resample rule</h2>
+<p class="tldr">Keep the drafted token $x$ with probability $\min\big(1,\,p(x)/q(x)\big)$; if it is rejected, draw the replacement from what $p$ has in excess of $q$. The token you output is then an exact sample from $p$, and you kept the draft as often as any exact method can.</p>
+
+<h3 id="rule-problem">The problem: asking for equality wastes almost everything</h3>
+<p>With sampling there is no longer one right token: the target's next token is random. The first idea is to copy §2: let the target draw its own token $y$ from $p$, and keep the drafted token $x$ if $x=y$. The output $y$ is an exact sample of $p$, fine. But how often does the draft survive? The two draws are independent, so</p>
+$$\P(x=y)=\sum_{v\in\V}q(v)\,p(v).$$
+<div class="box example"><div class="box-h">Worked example — a perfect drafter that is almost always rejected</div>
+<p>Four tokens, and both models say they are equally likely: $p=q=(\tfrac14,\tfrac14,\tfrac14,\tfrac14)$. The drafter is <em>perfect</em>: it has exactly the target's distribution. Yet two independent draws coincide with probability $4\times\tfrac14\times\tfrac14=\tfrac14$ only. Three drafts out of four are thrown away for no reason.</p>
+</div>
+<p>The mistake is in what we asked for. We do not need the draft to equal an <em>independent</em> sample of the target. We need one thing only: <strong>the token we output must be distributed according to $p$</strong>. How we produce it is free, and we may use the drafted token to do so. In the example above, the obvious solution is to output the drafted token every time: it is already a sample of $p$.</p>
+<p>So the real question is: <em>given a token $x$ drawn from $q$, how do I turn it into a token drawn from $p$, changing it as rarely as possible?</em></p>
+
+<h3 id="rule-statement">The rule</h3>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Leviathan, Kalman, Matias 2023, §2.3 “Speculative sampling”</span></div>
+<p id="quote-rule">“To sample $x\sim p(x)$, we instead sample $x\sim q(x)$, keeping it if $q(x)\le p(x)$, and in case $q(x)>p(x)$ we reject the sample with probability $1-\frac{p(x)}{q(x)}$ and sample $x$ again from an adjusted distribution $p'(x)=norm(\max(0,p(x)-q(x)))$ instead.”</p>
+</div>
+<dl class="decode">
+<dt>$x\sim q(x)$</dt><dd>The drafted token: drawn by the small model from its own distribution.</dd>
+<dt>$q(x)\le p(x)$</dt><dd>The drafter proposes this token <em>less often</em> than the target wants it. There is no reason to throw it away: keep it, always.</dd>
+<dt>$q(x)>p(x)$</dt><dd>The drafter proposes this token <em>too often</em>. Keep it only a fraction $p(x)/q(x)$ of the time, so that in the end it comes out with frequency $q(x)\times\frac{p(x)}{q(x)}=p(x)$.</dd>
+<dt>$p'(x)$</dt><dd>The <em class="new">residual distribution</em>. $\max(0,p(x)-q(x))$ is the probability mass that the target puts on $x$ and that the drafter fails to supply; “norm” divides by the total so that it sums to 1. After a rejection, the replacement token is drawn from it: rejections are used to fill exactly the gaps left by the draft.</dd>
+</dl>
+<div class="box def"><div class="box-h">The rule, in the notation of the guide</div>
+<p>Draw $x\sim q$ and a uniform number $u\in[0,1]$.</p>
+<ul>
+<li>If $u\le\dfrac{p(x)}{q(x)}$: <strong>accept</strong>, output $x$. (Always the case when $q(x)\le p(x)$.)</li>
+<li>Otherwise: <strong>reject</strong>, and output a token drawn from the <strong>residual</strong> $\ r(v)=\dfrac{\pos{p(v)-q(v)}}{\sum_{w}\pos{p(w)-q(w)}}$.</li>
+</ul>
+</div>
+<div class="box example"><div class="box-h">Worked example A — three tokens</div>
+<p>After “The capital of France is”, suppose (toy numbers) that the two models give</p>
+<div class="table-wrap"><table>
+<thead><tr><th>token $x$</th><th>target $p(x)$</th><th>draft $q(x)$</th><th>$\min(p,q)$</th><th>accept with prob. $\min(1,p/q)$</th><th>$\pos{p-q}$</th><th>residual $r(x)$</th></tr></thead>
+<tbody>
+<tr><td>$\tok{ Paris}$</td><td>0.6</td><td>0.3</td><td>0.3</td><td>1</td><td>0.3</td><td>1</td></tr>
+<tr><td>$\tok{ the}$</td><td>0.3</td><td>0.5</td><td>0.3</td><td>0.6</td><td>0</td><td>0</td></tr>
+<tr><td>$\tok{ a}$</td><td>0.1</td><td>0.2</td><td>0.1</td><td>0.5</td><td>0</td><td>0</td></tr>
+<tr><th>total</th><th>1</th><th>1</th><th>0.7</th><th></th><th>0.3</th><th>1</th></tr>
+</tbody></table></div>
+<p>If the drafter writes $\tok{ Paris}$ (probability 0.3), it is always kept. If it writes $\tok{ the}$ (probability 0.5), it is kept 6 times out of 10. If it writes $\tok{ a}$ (probability 0.2), one time out of two. Whenever a token is rejected, the replacement is $\tok{ Paris}$, the only token the drafter under-proposes. Let us check the frequency of each output:</p>
+<ul>
+<li>$\tok{ Paris}$: drafted and kept, $0.3\times1$, or written after a rejection, $0.5\times0.4+0.2\times0.5=0.3$. Total $0.6=p(\tok{ Paris})$.</li>
+<li>$\tok{ the}$: drafted and kept, $0.5\times0.6=0.3=p(\tok{ the})$.</li>
+<li>$\tok{ a}$: drafted and kept, $0.2\times0.5=0.1=p(\tok{ a})$.</li>
+</ul>
+<p>The output follows $p$ exactly, and the draft was kept with probability $0.3+0.3+0.1=0.7$. With the naive “draw independently and compare” of the previous paragraph, it would have been kept with probability $0.3\times0.6+0.5\times0.3+0.2\times0.1=0.35$: half as often.</p>
+</div>
+<figure class="fig"><!-- include figures/01/overlap.svg --><figcaption>Worked example A. The green band under each pair of bars is $\min(p,q)$: the part of the draft that is kept. What sticks out of the band on the draft's side (0.2 on $\tok{ the}$, 0.1 on $\tok{ a}$) is rejected; what sticks out on the target's side (0.3 on $\tok{ Paris}$) is the gap that the residual fills. The two amounts are always equal.</figcaption></figure>
+
+<div class="widget" data-widget="p1step"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p><strong>What to look at.</strong> Drag the top of any bar to reshape the two distributions (or pick a preset). The green band is the accepted mass; its total is the acceptance probability $\be$. The black dots are the distribution of the token that the rule outputs: with the correct replacement (“the residual”) they sit exactly on top of the blue bars, whatever you do to the drafter. Switch the replacement to “a fresh sample from $p$” and watch the dots leave the bars: that is a lossy rule, and it is the subject of <a href="#rule-proof">the pitfall below</a>. “Draw 20 000 tokens” runs the rule for real and shows the observed frequencies.</p>
+
+<h3 id="rule-proof">Why the output is exactly $p$</h3>
+<div class="box idea"><div class="box-h">Idea of the proof</div>
+<p>A token $v$ can be output in two ways: it was drafted and kept, or some token was rejected and $v$ was drawn from the residual. The first way has probability $\min(p(v),q(v))$. The second has probability $\pos{p(v)-q(v)}$, because the probability of a rejection is precisely the total of the gaps. And $\min(p,q)+\pos{p-q}=p$.</p>
+</div>
+<details class="fold proof" open><summary>Full proof</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\P(\text{draft}=v\ \text{and accepted})=q(v)\,\min\!\Big(1,\frac{p(v)}{q(v)}\Big)=\min\big(q(v),p(v)\big).$$<span class="why">The draft is $v$ with probability $q(v)$, then it is accepted with probability $\min(1,p(v)/q(v))$. (If $q(v)=0$ the token is never drafted and both sides are $0$.)</span></li>
+<li>$$\be:=\P(\text{accepted})=\sum_{v}\min\big(p(v),q(v)\big).$$<span class="why">Sum of step 1 over all tokens.</span></li>
+<li>$$\P(\text{rejected})=1-\be=\sum_v\big(p(v)-\min(p(v),q(v))\big)=\sum_v\pos{p(v)-q(v)}.$$<span class="why">$\sum_vp(v)=1$, and $p-\min(p,q)$ equals $p-q$ when $p>q$ and $0$ otherwise. This is the denominator of the residual $r$.</span></li>
+<li>$$\begin{aligned}\P(\text{output}=v)&=\min\big(p(v),q(v)\big)+(1-\be)\,\frac{\pos{p(v)-q(v)}}{1-\be}\\&=\min\big(p(v),q(v)\big)+\pos{p(v)-q(v)}.\end{aligned}$$<span class="why">Either $v$ was drafted and accepted (step 1), or there was a rejection (probability $1-\be$) and $v$ was drawn from $r$. By step 3 the factor $1-\be$ cancels the denominator of $r$.</span></li>
+<li>$$\min\big(p(v),q(v)\big)+\pos{p(v)-q(v)}=p(v).$$<span class="why">If $p(v)\ge q(v)$: $q(v)+(p(v)-q(v))=p(v)$. If $p(v)<q(v)$: $p(v)+0=p(v)$.</span></li>
+</ol>
+<p>So $\P(\text{output}=v)=p(v)$ for every token $v$: the output is an exact sample of the target.<span class="qed">∎</span></p>
+</div></details>
+<div class="box pitfall"><div class="box-h">Pitfall — after a rejection, do not resample from $p$</div>
+<p>It is tempting to say: “the draft was rejected, so let the target sample its own token from $p$”. Then a token $v$ comes out with probability $\min(p(v),q(v))+(1-\be)\,p(v)$, which is not $p(v)$. In example A this gives $(0.3+0.3\times0.6,\ 0.3+0.3\times0.3,\ 0.1+0.3\times0.1)=(0.48,\,0.39,\,0.13)$ instead of $(0.6,\,0.3,\,0.1)$: the tokens the drafter likes are counted twice, once when they are accepted and once more in the fresh sample. The total variation between this output and $p$ is $0.12$. Keep this computation in mind: several lossy methods of <a href="03_relaxed.html">page 3</a> do exactly this, knowingly.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — the rule needs the drafter's probabilities</div>
+<p>The test uses $q(x)$, the probability the drafter gave to the token it wrote. A drafter that only returns tokens (a lookup in a database, a copy of the prompt) has no $q$. The fix is to treat it as a deterministic drafter: $q$ puts probability 1 on its token, and the rule becomes “accept with probability $p(x)$” (Exercise 6).</p>
+</div>
+
+<h3 id="tv">The acceptance probability is an overlap</h3>
+<p>Step 2 of the proof gave the probability that a drafted token is kept. It deserves its own statement, because the whole economics of speculative decoding hangs on this number.</p>
+<div class="box thm"><div class="box-h">Result — acceptance probability</div>
+$$\be=\sum_{v\in\V}\min\big(p(v),q(v)\big)=1-\TV(p,q),\qquad\TV(p,q)=\frac12\sum_{v\in\V}\abs{p(v)-q(v)}.$$
+</div>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Leviathan et al. 2023, §3.2: Definition 3.2, Lemma 3.3, Theorem 3.5, Corollary 3.6</span></div>
+<p id="quote-dlk">The paper defines a divergence $D_{LK}(p,q)=\sum_x\abs{p(x)-M(x)}=\sum_x\abs{q(x)-M(x)}$ with $M(x)=\frac{p(x)+q(x)}{2}$, shows that $D_{LK}(p,q)=1-\sum_x\min(p(x),q(x))$, and proves $\be=1-D_{LK}(p,q)$, hence $\al=1-\E\big(D_{LK}(p,q)\big)=\E\big(\min(p,q)\big)$.</p>
+</div>
+<dl class="decode">
+<dt>$D_{LK}(p,q)$</dt><dd>The paper's own name for what is usually called the total variation distance: $\sum_x\abs{p(x)-\frac{p(x)+q(x)}2}=\frac12\sum_x\abs{p(x)-q(x)}=\TV(p,q)$.</dd>
+<dt>$\be$</dt><dd>The acceptance probability <em>for one prefix</em> (it depends on $p$ and $q$ at that position).</dd>
+<dt>$\al=\E(\be)$</dt><dd>The average over the prefixes met during generation: the <em class="new">acceptance rate</em>, the single number that summarises how well a drafter fits a target on a task. $\E(\min(p,q))$ is short for the average of $\sum_x\min(p(x),q(x))$.</dd>
+</dl>
+<ol class="steps">
+<li>$$\min(a,b)=\frac{a+b-\abs{a-b}}{2}\quad\text{for all real numbers }a,b.$$<span class="why">If $a\le b$, then $\abs{a-b}=b-a$ and the right-hand side is $a$; symmetric otherwise.</span></li>
+<li>$$\sum_v\min\big(p(v),q(v)\big)=\frac{1+1}{2}-\frac12\sum_v\abs{p(v)-q(v)}=1-\TV(p,q).$$<span class="why">Sum step 1 over the vocabulary; $p$ and $q$ each sum to 1.</span></li>
+</ol>
+<p>Three values to remember: if $p=q$, the overlap is $1$ and everything is accepted; if $p$ and $q$ put their mass on disjoint sets of tokens, it is $0$; in example A it is $0.7$, and $\TV=\frac12(0.3+0.2+0.1)=0.3$.</p>
+<div class="box recall"><div class="box-h">Reminder — total variation, and a result you may have already proved</div>
+<p>$\TV(p,q)$ is the amount of probability mass that must be moved to turn $q$ into $p$. In the optimal transport course of this repository, <a href="../Optimal_transport_ML/v2/Lesson03.html#tv-01">Lesson 3, “Total variation is a transport cost”</a> proves that the cheapest transport plan for the cost “1 if the mass moves, 0 if it stays” leaves $\min(a_i,b_i)$ in place at each point and ships the excess of one measure onto the deficit of the other, proportionally. Read it again with $a=q$ and $b=p$: “stays in place” is “the draft is accepted”, and “ship the excess onto the deficit, proportionally” is “resample from the residual”. Speculative sampling <em>is</em> that optimal plan. (Convention: that course writes $\norm{\alpha-\beta}_{\TV}=\sum_i\abs{a_i-b_i}$, without the $\frac12$, so its value is between 0 and 2.)</p>
+</div>
+<div class="quiz"><p>The drafter is certain: $q$ puts probability 1 on the token $\tok{ the}$. The target gives it $p(\tok{ the})=0.3$. What is the acceptance probability, and what is the residual?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>$\be=\sum_v\min(p(v),q(v))=\min(0.3,1)=0.3$: all the other terms are $0$ because $q$ is $0$ there. The residual is $p$ with $\tok{ the}$ removed, renormalised: $r(v)=p(v)/0.7$ for $v\ne\tok{ the}$, and $r(\tok{ the})=0$. An over-confident drafter is accepted only as often as the target agrees with its favourite token.</p>
+</div></details></div>
+
+<h3 id="optimal">No exact rule keeps the draft more often</h3>
+<p>Could a cleverer rule accept more than $\sum_v\min(p(v),q(v))$ and still be exact? No.</p>
+<div class="box thm"><div class="box-h">Result — the rule is optimal for one drafted token</div>
+<p>Let $X$ be the drafted token, with distribution $q$, and let $Y$ be the token output by <em>any</em> procedure that uses $X$ and extra randomness, and whose output has distribution $p$. Then $\P(Y=X)\le\sum_v\min(p(v),q(v))=1-\TV(p,q)$, with equality for the accept / resample rule.</p>
+</div>
+<details class="fold proof"><summary>Full proof</summary><div class="fold-body">
+<ol class="steps">
+<li>$$\P(X=v\text{ and }Y=v)\le\min\big(\P(X=v),\,\P(Y=v)\big)=\min\big(q(v),p(v)\big).$$<span class="why">The event “$X=v$ and $Y=v$” is contained in “$X=v$” and in “$Y=v$”; and $X\sim q$, $Y\sim p$.</span></li>
+<li>$$\P(Y=X)=\sum_v\P(X=v\text{ and }Y=v)\le\sum_v\min\big(p(v),q(v)\big).$$<span class="why">The events “$X=Y=v$” for different $v$ are disjoint, and their union is “$X=Y$”.</span></li>
+<li>For the accept / resample rule, $\P(Y=X)\ge\P(\text{accepted})=\sum_v\min(p(v),q(v))$: the bound is attained.<span class="why">Step 2 of the proof of exactness. (After a rejection the residual never gives back the rejected token: a rejected token has $q>p$, so its residual mass is $0$.)</span></li>
+</ol>
+<p><span class="qed">∎</span></p>
+</div></details>
+<p>In the vocabulary of probability, a pair $(X,Y)$ with $X\sim q$ and $Y\sim p$ is a <em class="new">coupling</em> of $q$ and $p$, and one that maximises $\P(X=Y)$ is a <em class="new">maximal coupling</em>. Speculative sampling is a maximal coupling of the draft and the target distributions. The paper that made this view explicit, SpecTr (Sun et al., NeurIPS 2023), writes the choice of the output token as an optimal transport problem with the cost “1 if the output differs from the draft”, and concludes: “speculative sampling achieves the optimal cost with one draft token”. This is good news and bad news: the rule cannot be improved, so <strong>with one drafted token per position, exactness costs a rejection rate of at least $\TV(p,q)$</strong>. We come back to this ceiling in §6.</p>
+
+<h3 id="greedy-case">The greedy case is a special case</h3>
+<p>Greedy decoding is sampling from a distribution that puts probability 1 on one token, $a=\argmax_v p(v)$. Apply the rule with this one-hot $p$:</p>
+<ol class="steps">
+<li>If the draft is $x=a$: accept with probability $\min(1,\,1/q(a))=1$.<span class="why">$p(a)=1\ge q(a)$.</span></li>
+<li>If the draft is $x\ne a$: accept with probability $\min(1,\,0/q(x))=0$.<span class="why">$p(x)=0$.</span></li>
+<li>The residual is $\pos{p-q}$ renormalised: only $a$ can have $p(a)-q(a)>0$, so the replacement is $a$.<span class="why">Every other token has $p=0$.</span></li>
+</ol>
+<p>This is exactly the algorithm of §2: keep the draft if it is the target's argmax, otherwise write the argmax. And the acceptance probability is $\be=\min(1,q(a))=q(a)$, or simply 1 or 0 when the drafter is greedy too. The same remark covers temperature, top-$k$ and nucleus sampling: apply the reshaping to each model's distribution first, and call $p$ and $q$ the results. This is how the original paper sets things up: all these methods “can all easily be cast into standard sampling from an adjusted probability distribution. For example, argmax sampling is equivalent to zeroing out non-max elements of the distribution and normalizing.”</p>

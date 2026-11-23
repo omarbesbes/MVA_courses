@@ -1,0 +1,64 @@
+<h2 id="front">2. The exchange rate: one unit of acceptance costs one unit of bias</h2>
+<p class="tldr">For any rule, acceptance gained beyond the exact rule is paid at least one-for-one in total variation: rejection probability + bias ≥ $\TV(p,q)$. The rules that reach equality form a straight line, the Pareto front; lenience is on it, thresholds are not.</p>
+
+<h3 id="front-theorem">The theorem</h3>
+<p>The exact rule rejects with probability $\TV(p,q)$ and has no bias. The opposite extreme, “accept everything”, never rejects and outputs $q$: its bias is $\TV(p,q)$. In both cases rejection + bias $=\TV(p,q)$. This is not a coincidence, and no rule can do better.</p>
+<div class="box thm"><div class="box-h">Result — the trade-off at one position</div>
+<p>For every rule $(b,r)$, with acceptance $A$ and output distribution $\text{out}$:</p>
+$$\underbrace{(1-A)}_{\text{rejection probability}}+\underbrace{\TV(\text{out},p)}_{\text{bias}}\ \ge\ \TV(p,q),\qquad\text{that is}\qquad A\ \le\ 1-\TV(p,q)+\TV(\text{out},p).$$
+<p>Equality holds if and only if (i) the rule wastes no acceptance: $A=1-\TV(q,\text{out})$, the most any rule with this output can accept; and (ii) the output lies between the draft and the target on every token: $\min(p(v),q(v))\le\text{out}(v)\le\max(p(v),q(v))$.</p>
+</div>
+<div class="box idea"><div class="box-h">Idea of the proof</div>
+<p>Two facts you already know. First, page 1: if the output has distribution $\text{out}$ and the draft has distribution $q$, they cannot coincide more often than $1-\TV(q,\text{out})$; so the rule rejects with probability at least $\TV(q,\text{out})$. Second, total variation is a distance: going from $p$ to $q$ through $\text{out}$ is at least as long as going straight. Rejection pays for the leg from $q$ to $\text{out}$, bias is the leg from $\text{out}$ to $p$.</p>
+</div>
+<details class="fold proof" open><summary>Full proof</summary><div class="fold-body">
+<ol class="steps">
+<li>$$A=\P(\text{the draft is kept})\ \le\ \P(\text{output}=\text{draft})\ \le\ 1-\TV(q,\text{out}).$$<span class="why">When the draft is kept, the output is the draft. The draft has distribution $q$ and the output has distribution $\text{out}$: by the optimality result of <a href="01_foundations.html#optimal">page 1, §3</a> (applied with $\text{out}$ in the role of the target), two such tokens are equal with probability at most $1-\TV(q,\text{out})$.</span></li>
+<li>$$\TV(p,q)\ \le\ \TV(p,\text{out})+\TV(\text{out},q).$$<span class="why">Triangle inequality: for every token, $\abs{p(v)-q(v)}\le\abs{p(v)-\text{out}(v)}+\abs{\text{out}(v)-q(v)}$; sum over $v$ and halve.</span></li>
+<li>$$\TV(p,q)\ \le\ \TV(p,\text{out})+(1-A).$$<span class="why">Step 1 says $\TV(\text{out},q)\le1-A$; substitute in step 2.</span></li>
+</ol>
+<p>Equality in step 3 needs equality in steps 1 and 2. Step 1 is condition (i). Step 2 is an equality exactly when $\abs{p(v)-q(v)}=\abs{p(v)-\text{out}(v)}+\abs{\text{out}(v)-q(v)}$ for every token, that is when $\text{out}(v)$ is between $p(v)$ and $q(v)$: condition (ii).<span class="qed">∎</span></p>
+</div></details>
+<p>The proof suggests a second way to describe a lossy rule, often clearer than the pair $(b,r)$: <strong>name the distribution $\pi$ you are willing to output instead of $p$, then run the exact rule of page 1 with $\pi$ as the target</strong>. Accept $x$ with probability $\min\big(1,\frac{\pi(x)}{q(x)}\big)$, and after a rejection draw from $\pos{\pi-q}$ renormalised. By page 1 the output is exactly $\pi$ and the acceptance is $1-\TV(q,\pi)$, the best possible for that output: condition (i) holds by construction. All the freedom is in the choice of the <em class="new">surrogate target</em> $\pi$, and the theorem says: take it between $q$ and $p$.</p>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Narasimhan et al., “Faster Cascades via Speculative Decoding”, ICLR 2025, §4.1</span></div>
+<p>“we use a user-specified target distribution $\pi=\mathbb{T}(q,p)\in\Delta_{\mathscr{V}}$ […] We accept a draft token $x_{t}$ when $q(x_{t})\leq\pi(x_{t})$ and reject it otherwise with probability $1-\frac{\pi(x_{t})}{q(x_{t})}$. Upon rejection, we re-sample from the residual distribution $\operatorname{norm}\left(\max\{0,\pi(\cdot)-q(\cdot)\}\right)$.”</p>
+</div>
+<p>This paper (the subject of <a href="#cascades">§8</a>) uses the same letters as this guide: $q$ is the small model, $p$ the large one. $\mathbb T$ is any recipe that builds a target from the two distributions. We will use this description again and again: for each method, ask <em>what is its $\pi$?</em></p>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Yin, Chen, Huang, Wang, NeurIPS 2024, Theorems 4 and 5</span></div>
+<p>The paper writes $p$ for the <em>draft</em> and $q$ for the <em>target</em> (the reverse of this guide), $b$ for the acceptance probability and $\mathcal P$ for the replacement distribution. For a fixed $b$ it defines the smallest achievable bias, $\text{Loss}^*_{TV}(b):=\min_{\mathcal P}d_{TV}[\mathbb P^{\mathcal A},q]$, computes it in closed form (Theorem 4), and proves (Theorem 5): “For any Algorithm $\mathcal A$ in the class […] that satisfies $\min\{1,\frac{q(x)}{p(x)}\}\le b(x)\le1,\ \forall x\in\mathcal V$. Then $\ \mathbb P^{\mathcal A}(\text{reject})+\text{Loss}^*_{TV}(b)=d_{TV}[p,q]$.” It concludes that “the pareto front is a straight line connecting $(0,d_{TV}[p,q])$ and $(d_{TV}[p,q],0)$”.</p>
+</div>
+<dl class="decode">
+<dt>$\mathbb P^{\mathcal A}(\text{reject})$</dt><dd>Our rejection probability $1-A$.</dd>
+<dt>$\text{Loss}^*_{TV}(b)$</dt><dd>The bias $\TV(\text{out},p)$ of the rule that uses acceptance $b$ and the <em>best possible</em> replacement distribution for it. Theorem 4 of the paper describes these best replacements: nothing on the tokens that acceptance already over-supplies, and no more than the remaining gap on the others — which is our condition (ii).</dd>
+<dt>$\min\{1,q(x)/p(x)\}\le b(x)$</dt><dd>In our letters, $b(x)\ge\min(1,p(x)/q(x))$: the rule accepts at least as much as the exact rule, on every token. The paper proves the equality for these rules; our statement adds that no rule of any kind can be on the other side of the line.</dd>
+<dt>Pareto front</dt><dd>The set of pairs (bias, rejection probability) that cannot be improved in one coordinate without losing in the other. Here it is the segment from “exact speculative decoding” (bias $0$, rejection $\TV(p,q)$) to “always accept the draft” (bias $\TV(p,q)$, rejection $0$).</dd>
+</dl>
+<p>The theorem has a plain reading. <strong>Total variation is a strict accountant: every extra draft you accept, beyond what the exact rule accepts, moves the output away from the target by at least the same amount.</strong> There is no clever test that gains $0.2$ of acceptance for $0.05$ of total variation. What a rule can do is (a) not waste — sit on the line rather than below it — and (b) choose <em>which</em> tokens receive the extra mass, something total variation does not see.</p>
+
+<h3 id="front-who">Who is on the line, who is not</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>rule</th><th>acceptance probability $b(x)$</th><th>replacement $r$</th><th>on the front?</th></tr></thead>
+<tbody>
+<tr><td>exact</td><td>$\min\big(1,\frac{p(x)}{q(x)}\big)$</td><td>$\pos{p-q}$, renormalised</td><td class="yes">yes, at bias 0</td></tr>
+<tr><td>lenience $\lambda\in(0,1]$ (<a href="#lenience">§3</a>)</td><td>$\min\big(1,\frac{p(x)}{\lambda\,q(x)}\big)$</td><td>$\pos{p-q}$, renormalised</td><td class="yes">yes</td></tr>
+<tr><td>mixture target, weight $w\in[0,1]$ (<a href="#mixture">§9</a>)</td><td>$\min\big(1,\frac{w\,p(x)+(1-w)\,q(x)}{q(x)}\big)$</td><td>$\pos{p-q}$, renormalised</td><td class="yes">yes</td></tr>
+<tr><td>exact test, fresh sample</td><td>$\min\big(1,\frac{p(x)}{q(x)}\big)$</td><td>$p$</td><td class="no">no: wastes acceptance, breaks (i)</td></tr>
+<tr><td>threshold on the target probability (<a href="#typical">§6</a>)</td><td>$1$ if $p(x)\ge\theta$, else $0$</td><td>$p$, or its argmax</td><td class="no">no in general: breaks (i), often (ii)</td></tr>
+</tbody></table></div>
+<p>Check lenience against the two conditions. Its output (computed in §3) is between $q$ and $p$ on every token: condition (ii). And it is exactly “the exact rule toward its own output”: same acceptance probabilities, same residual; condition (i). So lenience wastes nothing: in example A, $\lambda=0.8$ gains $0.10$ of acceptance for $0.10$ of bias. The rule “exact test, fresh sample” has output $(0.48,0.39,0.13)$, at distance $0.18$ from $q$: a rule with that output could accept $82\%$ of the drafts, and this one accepts $70\%$. The threshold rule of §1 gains $0.10$ of acceptance for $0.26$ of bias: it rejects $\tok{ a}$ even though the exact rule would keep it half of the time, and its fresh samples refill tokens that are already over-supplied, pushing $\tok{ the}$ to $0.56$, above both models.</p>
+<div class="widget" data-widget="p3front"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p><strong>What to look at.</strong> Left: the target and draft distributions (drag the bars), and as black dots the output of the rule you selected. Right: the plane (bias, acceptance). The straight line is the front $A=1-\TV(p,q)+\text{bias}$; nothing can be above it. Move the knob of each rule and watch its point: lenience and the mixture slide <em>along</em> the line, from the exact rule (left end) to “accept everything” (right end); the two rules that write a fresh sample of $p$ after a rejection travel <em>below</em> it. Then compare, at the same acceptance, the outputs of lenience and of the mixture: same bias, different tokens. That difference is the subject of the next paragraph.</p>
+
+<h3 id="front-blind">What total variation does not see</h3>
+<p>Two rules on the front, tuned to the same acceptance, have the same bias. They are not the same rule. In example A, tune both to $A=0.8$:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>rule</th><th>accepts $(\tok{ Paris},\tok{ the},\tok{ a})$ with probability</th><th>output</th><th>largest ratio $\text{out}(v)/p(v)$</th></tr></thead>
+<tbody>
+<tr><td>lenience $\lambda=0.8$</td><td>$(1,\ 0.75,\ 0.625)$</td><td>$(0.5,\ 0.375,\ 0.125)$</td><td>$1.25=1/\lambda$</td></tr>
+<tr><td>mixture $w=2/3$</td><td>$(1,\ 0.733,\ 0.667)$</td><td>$(0.5,\ 0.367,\ 0.133)$</td><td>$1.33$</td></tr>
+</tbody></table></div>
+<p>Lenience multiplies the acceptance probability of every over-proposed token by the same factor $1/\lambda$; the mixture adds the same amount $1-w$ to each. So lenience keeps a <strong>relative</strong> cap: no token comes out more than $1/\lambda$ times more often than the target wants, and a token the target forbids ($p(v)=0$) is never written. The mixture has no such cap: a token with $p(v)=0$ that the drafter proposes is accepted with probability $1-w$. Same total variation, very different behaviour on rare tokens — and rare tokens are where the mistakes are (a wrong digit, a wrong name). This is why the story does not end with the theorem: the later sections are all attempts to spend the bias on tokens that do not matter.</p>
+<div class="quiz"><p>A rule keeps every drafted token ($b\equiv1$). Where is it in the plane, and is it on the front?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>Its acceptance is 1 and its output is $q$, so its bias is $\TV(p,q)$: the point $(\TV(p,q),\,1)$, the right end of the front. It satisfies (i) trivially and (ii) because nothing is ever written after a rejection. It is “optimal” only in the accountant's sense: it is also the small model alone, with the large model paid for and ignored.</p>
+</div></details></div>

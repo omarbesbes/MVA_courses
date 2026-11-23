@@ -1,0 +1,88 @@
+<h2 id="lenience">3. Lenience: pretend the drafter proposed less</h2>
+<p class="tldr">Divide the drafter's probability by a factor before the test. Every over-proposed token is accepted more often, no token can come out more than $1/\lambda$ times too often, and the rule sits exactly on the front. The original paper proposed it in an appendix and never measured its effect on quality.</p>
+
+<article class="mcard">
+<header class="mcard-h">
+<p class="mcard-name">Lenience (lossy speculative decoding)</p>
+<p class="mcard-meta">Leviathan, Kalman, Matias · ICML 2023, Appendix A.5 · <a href="https://arxiv.org/abs/2211.17192">arXiv 2211.17192</a> — generalised as “lenience functions” in DistillSpec (Zhou et al., ICLR 2024, <a href="https://arxiv.org/abs/2310.08461">arXiv 2310.08461</a>)</p>
+<p class="tags"><span class="tag lossy">lossy</span><span class="tag free">training-free</span><span class="tag unit">token level</span><span class="tag year">2022</span></p>
+</header>
+<dl class="mfacts">
+<dt class="tries">What it tries</dt><dd>Raise the acceptance rate with one knob, while keeping a guarantee that rare tokens stay rare.</dd>
+<dt class="how">How it decides</dt><dd>Accept the drafted token $x$ with probability $\min\big(1,\frac{p(x)}{\lambda\,q(x)}\big)$, $\lambda\in(0,1]$ (the paper writes $l$); after a rejection, draw from the usual residual. $\lambda=1$ is the exact rule.</dd>
+<dt class="gets">What it achieves</dt><dd>A cap: no token is written with probability above $p(x)/\lambda$. In the paper (T5-XXL target, T5-small drafter, English–German, sampling at temperature 1): acceptance rate $0.62\to0.71\to0.76\to0.84$ for $\lambda=1,\ 0.5,\ 0.3,\ 0.1$, and <em>expected</em> improvement factors of 2.5X, 3.1X, 3.6X and 5X. No quality measurement. Later measurements by other authors are mixed (see below).</dd>
+<dt class="costs">What it costs</dt><dd>One unit of total variation per unit of acceptance gained (§2). No lower bound on any token's probability: the authors warn that “lenience could hurt the diversity of the samples”. As defined, it does nothing at temperature 0.</dd>
+</dl>
+</article>
+
+<h3 id="lenience-rule">The rule and its guarantee</h3>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Leviathan et al. 2023, Appendix A.5 “Lenience”</span></div>
+<p>“We could include a lenience parameter $l\in[0,1]$ and multiply $q(x)$ by $l$ before comparing with $p(x)$ in Algorithm 1. This still maintains the nice guarantee that no token can be sampled with probability greater than $\frac{p(x)}{l}$. This means for example, that with $l=\frac{1}{10}$ no token can be sampled with more than $10$X its ground truth probability, so we can guarantee that extremely rare tokens will remain extremely rare (there is no guarantee on the minimum probability, so lenience could hurt the diversity of the samples).”</p>
+</div>
+<dl class="decode">
+<dt>multiply $q(x)$ by $l$</dt><dd>The test of page 1 compares a uniform number with $p(x)/q(x)$. With lenience it compares it with $p(x)/(l\,q(x))$: the drafter is treated as if it had proposed $x$ only $l$ times as often as it did, so it looks less “over-proposed” and is accepted more.</dd>
+<dt>no token … greater than $p(x)/l$</dt><dd>The promise is an upper bound on each token's output probability, relative to the target. A token the target gives $10^{-6}$ cannot come out with probability more than $10^{-5}$ when $l=0.1$. In particular a token with $p(x)=0$ is never written.</dd>
+<dt>no guarantee on the minimum probability</dt><dd>The extra accepted mass has to come from somewhere: the tokens the drafter under-proposes receive less than the target wants (they are refilled only after rejections, and there are fewer rejections). Their probability can drop towards the drafter's.</dd>
+<dt>what the paragraph does not say</dt><dd>Which distribution is used after a rejection. Every later use of the rule (DistillSpec's Algorithm A.1, the baselines of other papers) keeps the residual $\pos{p-q}$ of the exact rule; by §2 that is the choice that wastes nothing.</dd>
+</dl>
+<p>The paper motivates the idea with a remark worth remembering: “when we train two models with identical architectures and sizes on the same dataset, the generated probability distributions will not be identical, so some lenience might make sense.” The target's distribution is itself one draw among equally good ones; reproducing it to the last decimal is a convention, not a necessity.</p>
+
+<h3 id="lenience-output">What comes out, token by token</h3>
+<p>With the residual of the exact rule, the output distribution can be written down. Write $A=\sum_v\min\big(q(v),\frac{p(v)}{\lambda}\big)$ for the acceptance, and $\Delta=\frac{1-A}{\TV(p,q)}\in[0,1]$ for the share of the total gap that the (rarer) rejections still fill. There are three kinds of tokens.</p>
+<div class="box thm"><div class="box-h">Result — output of lenient speculative sampling</div>
+$$\text{out}(v)=\begin{cases}q(v)+\Delta\,\big(p(v)-q(v)\big)&\text{if }q(v)\le p(v)\quad\text{(under-proposed: partly refilled)}\\[2pt] q(v)&\text{if }p(v)&lt;q(v)\le p(v)/\lambda\quad\text{(always accepted: the drafter's own probability)}\\[2pt] p(v)/\lambda&\text{if }q(v)&gt;p(v)/\lambda\quad\text{(capped)}\end{cases}$$
+<p>and the bias is $\TV(\text{out},p)=A-\big(1-\TV(p,q)\big)$, the acceptance gained.</p>
+</div>
+<details class="fold proof"><summary>Derivation</summary><div class="fold-body">
+<ol class="steps">
+<li>Accepted mass of $v$: $\ q(v)\min\big(1,\frac{p(v)}{\lambda q(v)}\big)=\min\big(q(v),\frac{p(v)}{\lambda}\big)$.<span class="why">Same computation as on page 1, with $p/\lambda$ in place of $p$.</span></li>
+<li>If $q(v)&gt;p(v)$, the residual $\pos{p-q}$ gives nothing to $v$, so $\text{out}(v)=\min\big(q(v),\frac{p(v)}{\lambda}\big)$: this is $q(v)$ in the second case and $p(v)/\lambda$ in the third.<span class="why">The residual is supported on the tokens with $p&gt;q$.</span></li>
+<li>If $q(v)\le p(v)$, the accepted mass is $q(v)$ and the replacement adds $(1-A)\frac{p(v)-q(v)}{\TV(p,q)}=\Delta\,(p(v)-q(v))$.<span class="why">$q\le p\le p/\lambda$, so the minimum in step 1 is $q(v)$; the residual is $\pos{p-q}$ divided by its total, $\TV(p,q)$.</span></li>
+<li>$\Delta\le1$, so the output never exceeds $p$ on the under-proposed tokens; the excess of the output over $p$ is carried by the other tokens and equals $\sum_{q&gt;p}\big(\min(q,\frac p\lambda)-p\big)=A-\sum_v\min(p,q)$.<span class="why">$A\ge\sum_v\min(p(v),q(v))=1-\TV(p,q)$, so $1-A\le\TV(p,q)$. Total variation is the total excess.</span></li>
+</ol>
+</div></details>
+<div class="box example"><div class="box-h">Worked example</div>
+<p>Example A with $\lambda=0.8$: the caps are $p/\lambda=(0.75,\ 0.375,\ 0.125)$. $\tok{ Paris}$ is under-proposed ($0.3\le0.6$); $\tok{ the}$ and $\tok{ a}$ are above their caps ($0.5&gt;0.375$, $0.2&gt;0.125$). Acceptance $A=0.3+0.375+0.125=0.8$, so $\Delta=\frac{0.2}{0.3}=\frac23$. Output: $\tok{ Paris}$: $0.3+\frac23\times0.3=0.5$; $\tok{ the}$: $0.375$; $\tok{ a}$: $0.125$. Bias $0.8-0.7=0.1$.</p>
+<p>With $\lambda=0.5$: caps $(1.2,\ 0.6,\ 0.2)$, every token is within its cap, $A=1$, $\Delta=0$: the output is $q$. In this example any $\lambda\le0.5$ turns the large model into a spectator.</p>
+</div>
+<figure class="fig"><!-- include figures/03/lenience.svg --><figcaption>Lenience on example A, $\lambda=0.8$. The short horizontal marks are the caps $p(v)/\lambda$; the black dots are the output. The two over-proposed tokens come out at their caps ($1.25$ times the target's probability); the under-proposed one is only refilled to $0.5$ instead of $0.6$.</figcaption></figure>
+
+<h3 id="lenience-numbers">What was measured</h3>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Leviathan et al. 2023, Appendix A.5, Table 5</span></div>
+<p>Target T5-XXL (11B), English–German translation, standard sampling (temperature 1). Acceptance rate $\al$ for lenience $l=1,\ 0.5,\ 0.3,\ 0.1$:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>drafter</th><th>$l=1$ (exact)</th><th>$l=0.5$</th><th>$l=0.3$</th><th>$l=0.1$</th></tr></thead>
+<tbody>
+<tr><td>T5-small (77M)</td><td>0.62</td><td>0.71</td><td>0.76</td><td>0.84</td></tr>
+<tr><td>T5-base (250M)</td><td>0.68</td><td>0.80</td><td>0.83</td><td>0.90</td></tr>
+</tbody></table></div>
+<p>“With $c=0.015$, using lenience values of 1, 0.5, 0.3, and 0.1 (meaning that no token can be sampled with probability greater than 1X, 2X, 3X and 10X of the ground truth) we get improvement factors of 2.5X, 3.1X, 3.6X, and 5X respectively.”</p>
+</div>
+<p>Read these numbers for what they are. The acceptance rates are measured. The improvement factors are what the speed-up law of page 1 predicts from them; they are not timed runs. And the paragraph contains <strong>no measurement of quality</strong>: no BLEU score of the lenient translations is given. The paper says so itself: “the results in this paper except for this section use the strictest version of Algorithm 1 and don't allow lenience of any kind.” Lenience entered the literature as an idea, with its guarantee, and it was left to others to find out what it does to the output.</p>
+<p>Others did, later, usually as a baseline for their own method, so read their numbers with that in mind:</p>
+<ul>
+<li>Narasimhan et al. (ICLR 2025; T5-small drafting for T5-large, temperature 1, $\ga=5$) tune the lenience until the <em>quality of the large model is matched</em>, and report the latency reduction obtained at that point: 1.61× on WMT English–German, 1.10× on XSum, 1.57× on CNN/DailyMail.</li>
+<li>The authors of DIVERSED (AISTATS 2026; temperature 1, draft length 5) report on GSM8K, for Llama-3.1-8B with a Llama-3.2-1B drafter, an acceptance of 59.81% with lenience against 44.60% without, at an accuracy of 66% against 67%; but for Qwen3-8B with a Qwen3-0.6B drafter, 60.10% against 59.58% — almost no gain — at an accuracy of 86% against 91%.</li>
+</ul>
+<p>The second line is the whole difficulty of lossy decoding in two numbers: the same rule, the same benchmark, another pair of models, and the bias lands on tokens that matter.</p>
+
+<h3 id="lenience-functions">Variants: lenience functions</h3>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Zhou et al. (DistillSpec), ICLR 2024, §3 “DistillSpec with lossy SD” and §5.3</span></div>
+<p>The acceptance probability becomes $\min\big(1,f(p(y_t),\epsilon)/q(y_t)\big)$ for a “lenience function” $f$, with three choices: “$f_{\rm lin}(p,\epsilon)=p/\epsilon$, $f_{\rm sq}(p,\epsilon)=p/\epsilon^{2}$, and $f_{\rm exp}(p,\epsilon)=p^{\epsilon}$”; $\epsilon=1$ is lossless. On GSM8K: “Although $f_{\rm exp}$ makes interpolation possible, it yields a worse quality-latency trade-off. Interestingly, it is possible to significantly reduce latency while preserving most of the quality on GSM8K, possibly because many tokens are inconsequential for final performance, and a variety of proposals can be safely accepted with minimal effect on generation quality.”</p>
+</div>
+<dl class="decode">
+<dt>$f_{\rm lin}$, $f_{\rm sq}$</dt><dd>Leviathan's lenience with $\lambda=\epsilon$ and $\lambda=\epsilon^2$: the same family, with a relative cap $1/\lambda$.</dd>
+<dt>$f_{\rm exp}(p,\epsilon)=p^{\epsilon}$</dt><dd>Raises the target's probability to a power below 1 before the test. A token with $p=10^{-6}$ is treated as if it had $p=10^{-3}$ when $\epsilon=0.5$: small probabilities are inflated much more than large ones, and the relative cap is lost. The paper reports the worse trade-off without explaining it; the missing cap is a plausible reason.</dd>
+<dt>“many tokens are inconsequential”</dt><dd>The sentence to remember from this section. Quality is carried by a minority of tokens; the others can be accepted from the drafter at no cost. Lenience cannot tell the two kinds apart. <a href="04_judges.html">Page 4</a> is about methods that try to.</dd>
+</dl>
+<div class="box pitfall"><div class="box-h">Pitfall — the “6–10×” of DistillSpec is not a lossy speed-up</div>
+<p>The abstract of DistillSpec announces a decoding latency reduced “by $6-10\times$ with minimal performance drop”. That figure does not come from lenience. It comes from replacing the large fine-tuned target by a smaller <em>distilled</em> target of equal quality, and then running <em>exact</em> speculative decoding with a distilled drafter (6.4× on XSum, 10.7× on GSM8K, relative to the original large model). The lossy results of the paper are shown as curves only.</p>
+</div>
+
+<h3 id="lenience-greedy">And at temperature 0?</h3>
+<p>With greedy decoding $p$ is a point mass, $p(x)/(\lambda q(x))$ is $0$ for every token but the argmax, and lenience changes nothing. The paper's answer is to be lenient <em>before</em> reducing $p$ to its argmax: accept the drafted token if its probability under the target's full distribution is at least a fraction $l$ of the largest one, $p(x)\ge l\cdot\max_vp(v)$. (The current arXiv version prints the inequality as $p(x)\le l\cdot\max(p)$, which would accept only unlikely tokens; the first arXiv version has $\ge$, the one that makes sense.) For the same T5 pair it reports acceptance rates of $0.75,\ 0.75,\ 0.8,\ 0.87$ for $l=1,\ 0.5,\ 0.3,\ 0.1$.</p>
+<p>This is a different kind of rule: no coin flip, no residual, a deterministic test on the target's probabilities. It is the subject of the next three sections.</p>
+<div class="quiz"><p>Lenience $\lambda=0.1$. The target gives a wrong digit a probability of $0.02$, and the drafter proposes that digit with probability $0.5$. How often can the wrong digit be written at this position: with the exact rule, with lenience?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>Exact rule: with probability $p=0.02$, by construction. Lenience: the cap is $p/\lambda=0.2$, and the drafter proposes it more often than that ($0.5&gt;0.2$), so the digit comes out with probability $0.2$ — ten times the target's rate. “Extremely rare tokens remain extremely rare” is true; a token at 2% is not extremely rare, and one position in five is a lot when the answer is a number.</p>
+</div></details></div>

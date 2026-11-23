@@ -1,0 +1,48 @@
+<h2 id="ceiling">6. The ceiling: what exactness costs</h2>
+<p class="tldr">An exact method cannot keep a drafted token more often than the two distributions overlap. To go faster you either make them overlap more, or you stop asking for exactness — and then you must say what “acceptable” means.</p>
+
+<h3 id="ceiling-two-ways">Two ways out</h3>
+<p>Collect what the page has shown. The speed-up is driven by the acceptance rate $\al$ (§5). For an exact method with one draft per position, $\al$ cannot exceed the average overlap $\E\big[\sum_v\min(p(v),q(v))\big]$ (§3). So, for a given target, on given hardware, there are only two directions.</p>
+<div class="cols">
+<div class="box method"><div class="box-h">Stay exact: work on the draft</div>
+<ul>
+<li>make $q$ closer to $p$: train the drafter to imitate the target;</li>
+<li>make the drafter cheaper (smaller $c$): let the target draft for itself with a light extra head, or look the draft up in a database;</li>
+<li>propose several candidates per position, or verify whole blocks jointly, which goes around the one-token bound;</li>
+<li>choose the draft length adaptively.</li>
+</ul>
+<p>This is the <strong>lossless frontier</strong>: <a href="02_lossless.html">page 2</a>.</p>
+</div>
+<div class="box method"><div class="box-h">Give up exactness: work on the test</div>
+<ul>
+<li>accept more often than $\min(1,p/q)$, with a rule that bounds the damage (<a href="03_relaxed.html">page 3</a>);</li>
+<li>replace the test “does the target agree?” by “is this token <em>correct</em>?”, answered by a small judge (<a href="04_judges.html">page 4</a>);</li>
+<li>verify whole reasoning steps instead of tokens, or let the large model write only the hard tokens (<a href="05_reasoning.html">page 5</a>).</li>
+</ul>
+<p>This is <strong>lossy speculative decoding</strong>: the output no longer follows $p$ exactly.</p>
+</div>
+</div>
+
+<h3 id="ceiling-why-lossy">Why anybody would give up exactness</h3>
+<p>Because the exact rule rejects a great many tokens that are not mistakes. The rule protects the <em>distribution</em> of the target, with all its habits, and has no notion of right and wrong.</p>
+<div class="box example"><div class="box-h">Worked example — rejected, yet not wrong (toy numbers)</div>
+<p>The text so far is a proof step, and the next word is a connective. The target hesitates between three equally correct words; the drafter has a favourite.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>token</th><th>target $p$</th><th>draft $q$</th><th>$\min(p,q)$</th><th>accepted with prob.</th></tr></thead>
+<tbody>
+<tr><td>$\tok{ therefore}$</td><td>0.5</td><td>0.15</td><td>0.15</td><td>1</td></tr>
+<tr><td>$\tok{ so}$</td><td>0.3</td><td>0.05</td><td>0.05</td><td>1</td></tr>
+<tr><td>$\tok{ thus}$</td><td>0.2</td><td>0.8</td><td>0.2</td><td>0.25</td></tr>
+<tr><th>total</th><th>1</th><th>1</th><th>0.4</th><th></th></tr>
+</tbody></table></div>
+<p>The acceptance probability is $0.4$: six drafts out of ten are rejected, almost all of them the word $\tok{ thus}$, which the target itself would have written one time out of five and which changes nothing to the proof. The rejections are the price of reproducing the target's <em>style</em>, not its <em>correctness</em>.</p>
+</div>
+<p>If what you need is an answer that is as good as the target's — the same final number, a program that passes the same tests — rather than a text with the target's exact distribution, those rejections are pure waste. Lossy methods try to recover that waste. They all face the same three questions, and the rest of the guide is organised around them:</p>
+<ol>
+<li><strong>What is accepted?</strong> A rule on probabilities, the verdict of a judge, the score of a reasoning step.</li>
+<li><strong>What is lost?</strong> A bounded shift of the distribution, a few points of accuracy on a benchmark, or nothing measurable — and on which tasks.</li>
+<li><strong>What is gained?</strong> More tokens per call of the target; sometimes, when the large model is skipped altogether for part of the text, less compute.</li>
+</ol>
+<div class="box pitfall"><div class="box-h">Pitfall — “lossy” does not mean “worse”, and “lossless” does not mean “good”</div>
+<p>Lossless means: same distribution as the target. If the target is wrong, a lossless method is wrong in exactly the same way. Lossy means: a different distribution. It can be worse (the small model's mistakes leak in), equal for all practical purposes, and in a few reported cases slightly better on a benchmark. The only way to know is to measure quality on the task, which is the subject of <a href="06_practice.html">page 6</a>.</p>
+</div>

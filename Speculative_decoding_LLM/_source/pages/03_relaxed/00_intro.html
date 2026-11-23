@@ -1,0 +1,71 @@
+<!--
+title: 3 — Lossy I: relaxing the acceptance test
+short: 3 · Relaxed acceptance
+description: Lossy speculative decoding by statistical rules: what a relaxed acceptance rule is, the one-for-one trade-off between acceptance and total variation, lenience, rank and margin rules, BiLD, typical acceptance, mentored decoding, fuzzy speculative decoding, speculative cascades, mixture targets, and what the 2026 head-to-head evaluations found.
+subtitle: The first family of lossy methods keeps the draft-then-verify loop and changes only the test: accept more often than the exact rule, by a formula on the two probability distributions. What each rule tries, what it guarantees, what its authors measured — and what independent evaluations found afterwards.
+-->
+
+<div class="box objectives">
+<div class="box-h">What you will be able to do after this page</div>
+<ol>
+<li>Describe any token-level lossy rule in two equivalent ways — the pair (acceptance probability, replacement distribution), or the <strong>surrogate target</strong> it really samples from — and compute its acceptance and its bias on a small vocabulary.</li>
+<li>State and prove the <strong>exchange rate</strong>: rejection probability + bias ≥ $\TV(p,q)$, and say which rules reach equality.</li>
+<li>Explain <strong>lenience</strong>, its cap $p(x)/\lambda$, what its authors did and did not measure.</li>
+<li>Read the deterministic rules used with greedy decoding — top-$k$, margins, BiLD's rollback, <strong>typical acceptance</strong> — as “sets of acceptable tokens”, and compare those sets.</li>
+<li>Explain what <strong>mentored decoding</strong> and CACTUS optimise, and why a guarantee in Kullback–Leibler divergence protects rare tokens better than one in total variation.</li>
+<li>Explain the rules that decide <em>per position</em> which model to trust: <strong>fuzzy speculative decoding</strong> and <strong>speculative cascades</strong>, and the mixture targets.</li>
+<li>Summarise what the independent evaluations of 2026 found, and why the family leads naturally to the judges of <a href="04_judges.html">page 4</a>.</li>
+</ol>
+</div>
+
+<h2 id="start">0. Before you start</h2>
+
+<h3 id="howto">How to read this page</h3>
+<p>You need <a href="01_foundations.html">page 1</a>: the accept / resample rule, the overlap $\sum_v\min(p(v),q(v))=1-\TV(p,q)$, and the fact that no exact rule accepts more (<a href="01_foundations.html#optimal">§3 there</a>). <a href="02_lossless.html">Page 2</a> is not required.</p>
+<p>§1 and §2 are the theory: short, and worth doing with a pencil, because every later section is read through them. §3 to §9 are the methods, in the order in which the ideas appeared. Each method opens with a card:</p>
+<article class="mcard">
+<header class="mcard-h">
+<p class="mcard-name">Name of the method</p>
+<p class="mcard-meta">Authors · venue and year · link to the paper</p>
+<p class="tags"><span class="tag lossy">lossy</span><span class="tag free">training-free</span><span class="tag unit">token level</span></p>
+</header>
+<dl class="mfacts">
+<dt class="tries">What it tries</dt><dd>The problem the authors attack, in one or two sentences.</dd>
+<dt class="how">How it decides</dt><dd>The acceptance rule, in the notation of this guide.</dd>
+<dt class="gets">What it achieves</dt><dd>The numbers reported by the authors, with the models, the task and the baseline. They are the authors' numbers, in the authors' setting.</dd>
+<dt class="costs">What it costs</dt><dd>What is lost or required, including what later papers found.</dd>
+</dl>
+</article>
+<p>Then come the statement of the paper (quoted and decoded), a toy example, and what was measured. §10 is different: it reports the head-to-head evaluations published in 2026, where the same rules are compared by people who did not invent them.</p>
+<div class="box pitfall"><div class="box-h">Pitfall — do not rank methods by their own papers' numbers</div>
+<p>A speed-up of 2× in one paper and 1.5× in another say nothing about which method is better: the models, the tasks, the hardware, the temperature and the baseline differ, and so does the meaning of “speed-up” (over the target alone, over exact speculative decoding, at matched quality…). In this guide numbers from different papers are never put side by side in a chart. When a comparison exists <em>inside</em> one paper or one benchmark, we give it and say so.</p>
+</div>
+
+<h3 id="story">The story of the page in seven steps</h3>
+<p class="tldr">Accepting more than the exact rule moves the output away from the target, one for one in total variation; the whole question is on which tokens the difference falls.</p>
+<ol class="chain">
+<li><strong>A language for lossy rules (§1).</strong> A rule is how often you accept and what you write otherwise. That fixes the output distribution, hence an acceptance and a bias.</li>
+<li><strong>The exchange rate (§2).</strong> Rejection probability + bias ≥ $\TV(p,q)$. The best rules trade one for the other at par; many trade worse. A rule is best described by the surrogate target $\pi$ it samples from.</li>
+<li><strong>Lenience (§3).</strong> The first relaxed rule for sampling: at par, with a cap on every token's probability, and published without any measurement of quality.</li>
+<li><strong>Sets of acceptable tokens (§4–§6).</strong> With greedy decoding, relaxing means accepting tokens that are not the target's first choice: its top $k$, those within a margin of the best, those above a probability threshold that adapts to the entropy (typical acceptance).</li>
+<li><strong>Guarantees that protect rare tokens (§7).</strong> Mentored decoding and CACTUS maximise acceptance under a bound on a Kullback–Leibler divergence: the output is the draft distribution clipped into a band around the target.</li>
+<li><strong>Choosing whom to trust, position by position (§8–§9).</strong> Fuzzy speculative decoding takes the draft whenever the two distributions are close; speculative cascades take it when the small model looks at least as reliable; mixtures blend the two.</li>
+<li><strong>The reality check (§10).</strong> Independent evaluations in 2026: the conservative rules keep accuracy and gain little, the aggressive ones gain acceptance and lose accuracy, especially with weak drafters and hard tasks. A formula on $p$ and $q$ does not know which tokens matter.</li>
+</ol>
+
+<h3 id="notation">Notation</h3>
+<p>The notation of <a href="01_foundations.html#notation">page 1</a>, plus:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Symbol</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td>$b(x)$</td><td>Probability of accepting the drafted token $x$ (a number in $[0,1]$; $0$ or $1$ for a deterministic rule).</td></tr>
+<tr><td>$r$</td><td>Replacement distribution: what the output is drawn from after a rejection.</td></tr>
+<tr><td>$A=\sum_vq(v)b(v)$</td><td>Acceptance of the rule at this position (the exact rule has $A=1-\TV(p,q)$).</td></tr>
+<tr><td>$\text{out}$, $\pi$</td><td>Distribution of the output token. $\pi$ is used when the rule is defined by the distribution it aims at (the surrogate target).</td></tr>
+<tr><td>bias</td><td>$\TV(\text{out},p)$, unless another divergence is named.</td></tr>
+<tr><td>$\lambda$</td><td>Lenience factor in $(0,1]$ ($l$ in the original paper; $\lambda=1$ is exact).</td></tr>
+<tr><td>$\KL(a\,\|\,b)$</td><td>Kullback–Leibler divergence $\sum_va(v)\log\frac{a(v)}{b(v)}$ (natural logarithm).</td></tr>
+<tr><td>$\Hent(p)$</td><td>Entropy $-\sum_vp(v)\log p(v)$, in nats.</td></tr>
+</tbody></table></div>
+<p><strong>Papers that swap the letters.</strong> Yin et al. (§2), the mentored decoding post and CACTUS (§7) write $p$ for the draft and $q$ for the target. Everything below is translated to the convention of this guide: <span class="sw p"></span>$p$ target, <span class="sw q"></span>$q$ draft.</p>
+<p><strong>Colour code.</strong> As on page 1, plus <span class="sw lax"></span>amber for what only a relaxed rule accepts: <span class="tok ok">accepted by the exact rule</span> <span class="tok lax">accepted by the relaxed rule only</span> <span class="tok no">rejected</span>.</p>

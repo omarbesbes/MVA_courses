@@ -1,0 +1,75 @@
+<h2 id="exercises">7. Exercises</h2>
+<p>Eight exercises, from a direct computation to the two observations that open pages 2 and 3. Try each one before opening the hint.</p>
+
+<div class="exo"><div class="exo-h">Exercise 1 — One step, four tokens <span class="lvl">★</span></div>
+<p>The target and the drafter give $p=(0.4,\,0.3,\,0.2,\,0.1)$ and $q=(0.1,\,0.2,\,0.3,\,0.4)$ to four tokens. Compute the acceptance probability of each token, the overall acceptance probability $\be$, the residual, and check that the output follows $p$.</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>Make the table of worked example A: $\min(p,q)$, $\min(1,p/q)$, $\pos{p-q}$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>$\min(p,q)=(0.1,\,0.2,\,0.2,\,0.1)$, so $\be=0.6$ and $\TV(p,q)=0.4$. Acceptance probabilities $\min(1,p/q)=(1,\ 1,\ \tfrac23,\ \tfrac14)$. Gaps $\pos{p-q}=(0.3,\,0.1,\,0,\,0)$, total $0.4=1-\be$, residual $r=(\tfrac34,\,\tfrac14,\,0,\,0)$.</p>
+<p>Output: token 1: $0.1+0.4\times\tfrac34=0.4$; token 2: $0.2+0.4\times\tfrac14=0.3$; token 3: $0.3\times\tfrac23=0.2$; token 4: $0.4\times\tfrac14=0.1$. This is $p$.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 2 — Independent draws are worse <span class="lvl">★</span></div>
+<p>Show that for any two distributions, $\sum_vp(v)q(v)\le\sum_v\min(p(v),q(v))$: drawing the target's token independently and comparing never keeps the draft more often than the accept / resample rule. When are the two equal?</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>$p(v)\,q(v)=\min(p(v),q(v))\times\max(p(v),q(v))$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>For each token, $p(v)q(v)=\min(p(v),q(v))\max(p(v),q(v))\le\min(p(v),q(v))$ because $\max(p(v),q(v))\le1$. Sum over $v$.</p>
+<p>Equality needs, for every $v$, either $\min(p(v),q(v))=0$ or $\max(p(v),q(v))=1$. So either the supports are disjoint (both sides are 0), or one of the two distributions is concentrated on a single token (both sides equal the probability the other gives to that token, as in the quick check of §3). As soon as both models hesitate between tokens they share, the independent comparison wastes drafts.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 3 — Choose the draft length <span class="lvl">★★</span></div>
+<p>A drafter is accepted with rate $\al=0.6$ and costs $c=0.1$. Compute the tokens per round and the speed-up for $\ga=2,3,4$. Which draft length do you choose?</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>$\E[N]=1+\al+\dots+\al^\ga$; divide by $\ga c+1$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<div class="table-wrap"><table>
+<thead><tr><th>$\ga$</th><th>tokens per round</th><th>time of a round</th><th>speed-up</th></tr></thead>
+<tbody>
+<tr><td>2</td><td>$1+0.6+0.36=1.96$</td><td>1.2</td><td>1.633</td></tr>
+<tr><td>3</td><td>$1.96+0.216=2.176$</td><td>1.3</td><td>1.674</td></tr>
+<tr><td>4</td><td>$2.176+0.1296=2.3056$</td><td>1.4</td><td>1.647</td></tr>
+</tbody></table></div>
+<p>$\ga=3$ is best. The fourth drafted token would be reached with probability $0.6^3\approx0.22$ and accepted with probability $0.6$: it adds $0.13$ token per round but costs $0.1$ every round, and the ratio goes down.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 4 — How much work is thrown away? <span class="lvl">★★</span></div>
+<p>With i.i.d. acceptances of rate $\al$, show that the mean number of accepted drafts per round is $\frac{\al(1-\al^\ga)}{1-\al}$. For $\al=0.8$ and $\ga=5$, what fraction of the drafter's tokens is discarded? How many of the $\ga+1$ positions scored by the target are used?</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>The number of accepted drafts is $N-1$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>$\E[N-1]=\frac{1-\al^{\ga+1}}{1-\al}-1=\frac{\al-\al^{\ga+1}}{1-\al}=\frac{\al(1-\al^\ga)}{1-\al}$.</p>
+<p>For $\al=0.8$, $\ga=5$: $2.69$ drafts accepted out of 5, so $2.31$ are discarded, $46\%$ of the drafter's work. The target scored 6 positions and $3.69$ of its distributions were used (one per token output); the other $2.31$ were computed for nothing. This is the extra compute that speculative decoding spends to buy latency.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 5 — Should the drafter sample or be greedy? <span class="lvl">★★</span></div>
+<p>The target samples from $p$. A drafter with distribution $q$ can either sample its token from $q$, or always write its most likely token. (a) Show that the greedy drafter is accepted with probability $p(\hat x)$, where $\hat x=\argmax q$. (b) Compare the two options for $p=(0.6,0.3,0.1)$, $q=(0.3,0.5,0.2)$, then for $p=(0.9,0.1)$, $q=(0.6,0.4)$. What do you conclude?</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>A greedy drafter is a drafter whose distribution is concentrated on $\hat x$. Apply $\be=\sum_v\min(p(v),q(v))$ to it.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) The greedy drafter's distribution $\hat q$ puts probability 1 on $\hat x$. Then $\be=\min(p(\hat x),1)=p(\hat x)$, and the rule is still exact, because the proof of §3 holds for any $q$, as long as the $q$ used in the test is the distribution the token was really drawn from.</p>
+<p>(b) First pair: sampling gives $\be=0.3+0.3+0.1=0.7$; the greedy drafter writes token 2 and is accepted with probability $p_2=0.3$. Sampling is much better: the drafter's favourite is not the target's. Second pair: sampling gives $0.6+0.1=0.7$; the greedy drafter writes token 1 and is accepted with probability $0.9$. Greedy is better: the drafter has the right favourite but is less sure of it than the target, and sampling from $q$ wastes $0.4$ of its mass on a token the target seldom wants.</p>
+<p>Conclusion: what matters is the overlap between $p$ and the distribution the draft is <em>actually</em> drawn from. Sharpening or flattening the drafter (its temperature) is a free parameter, and the best choice depends on how the two models differ.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 6 — A drafter without probabilities <span class="lvl">★★</span></div>
+<p>A drafter proposes tokens by copying them from a document (a lookup; it has no distribution). The target samples from $p$. Give an exact acceptance rule. What does it become when the target decodes greedily?</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>A deterministic proposal $\hat x$ is a draw from the distribution that puts probability 1 on $\hat x$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>Take $q$ concentrated on the proposed token $\hat x$: accept with probability $\min(1,p(\hat x)/1)=p(\hat x)$; otherwise draw from the residual, which is $p$ with $\hat x$ removed and renormalised: $r(v)=\frac{p(v)}{1-p(\hat x)}$ for $v\ne\hat x$. Output: $\hat x$ with probability $p(\hat x)$, and any other $v$ with probability $(1-p(\hat x))\cdot\frac{p(v)}{1-p(\hat x)}=p(v)$. Exact.</p>
+<p>With a greedy target, $p$ is concentrated on $a=\argmax p$: accept if and only if $\hat x=a$. This is the test used by the retrieval-based drafters of <a href="02_lossless.html">page 2</a>.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 7 — Token by token is not optimal for a block <span class="lvl">★★★</span></div>
+<p>Two positions, two tokens each. First position: $p_1=(\tfrac13,\tfrac23)$ and $q_1=(\tfrac23,\tfrac13)$ on $\{A,B\}$. Second position, on $\{a,b\}$: after $A$, the target gives $(1,0)$ and the drafter $(\tfrac12,\tfrac12)$; after $B$, both give $(\tfrac12,\tfrac12)$. (a) With the algorithm of §4 and $\ga=2$, what is the probability that both drafted tokens are accepted? (b) Compute the overlap $\sum\min$ of the two distributions <em>over the four sequences of two tokens</em>. (c) What does the gap suggest?</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>(a) Sum over the four drafts of $q(\text{draft})\times$ acceptance of token 1 $\times$ acceptance of token 2; equivalently $\min(p_1,q_1)\times\min(p_2,q_2)$. (b) The probability of a sequence is the product of its two conditional probabilities.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) A draft $(x_1,x_2)$ is fully accepted with probability $\min(p_1(x_1),q_1(x_1))\times\min(p_2(x_2\mid x_1),q_2(x_2\mid x_1))$. Drafts starting with $A$: $\tfrac13\times(\tfrac12+0)=\tfrac16$. Drafts starting with $B$: $\tfrac13\times(\tfrac12+\tfrac12)=\tfrac13$. Total $\tfrac12$.</p>
+<p>(b) Sequence probabilities under the target: $Aa:\tfrac13$, $Ab:0$, $Ba:\tfrac13$, $Bb:\tfrac13$. Under the drafter: $Aa:\tfrac13$, $Ab:\tfrac13$, $Ba:\tfrac16$, $Bb:\tfrac16$. Overlap: $\tfrac13+0+\tfrac16+\tfrac16=\tfrac23$.</p>
+<p>(c) By §3 applied to sequences instead of tokens, an exact procedure could keep the whole two-token draft with probability $\tfrac23$; testing the tokens one at a time keeps it with probability $\tfrac12$ only. The reason: the drafter proposes $A$ too often (ratio $\tfrac12$) but then proposes $a$ too rarely (ratio 2); on the whole sequence $Aa$ the two errors cancel ($\tfrac13$ against $\tfrac13$), yet the token-level test punishes the first one without crediting the second. The rule of §3 is optimal for <em>one</em> token, not for a block. Verifying the block jointly is the idea of <em>block verification</em>, on <a href="02_lossless.html">page 2</a>.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 8 — What if we cheat a little? <span class="lvl">★★★</span></div>
+<p>Take worked example A, $p=(0.6,0.3,0.1)$ and $q=(0.3,0.5,0.2)$. Replace the acceptance probability by $\min\!\big(1,\frac{p(x)}{\lambda\,q(x)}\big)$ with $\lambda=0.8$, and keep the same residual $r=(1,0,0)$ after a rejection. Compute the new acceptance probability, the distribution of the output, and its total variation distance to $p$. Compare with the exact rule ($\lambda=1$). What happens for $\lambda=0.5$?</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>Output probability of $v$: $q(v)\times$ its acceptance probability, plus (probability of a rejection) $\times r(v)$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>$\lambda=0.8$: acceptance probabilities $\min(1,\tfrac{0.6}{0.24})=1$, $\min(1,\tfrac{0.3}{0.4})=0.75$, $\min(1,\tfrac{0.1}{0.16})=0.625$. Acceptance probability $0.3+0.375+0.125=0.8$ (it was $0.7$). Output: $(0.3+0.2,\ 0.375,\ 0.125)=(0.5,\,0.375,\,0.125)$. Distance to $p$: $\frac12(0.1+0.075+0.025)=0.1$.</p>
+<p>So this rule <strong>buys $0.1$ of acceptance for $0.1$ of total variation</strong>: every extra accepted draft is a draft the exact rule would have replaced, and each one moves the output away from $p$ by the same amount. For $\lambda=0.5$ all three acceptance probabilities reach 1: every draft is accepted, the output is $q$ itself, at distance $\TV(p,q)=0.3$ from the target. The large model is then only a spectator.</p>
+<p>This is the simplest lossy rule (a <em>lenient</em> acceptance), and the exchange rate you just found — one unit of acceptance for one unit of total variation — is the best any rule can offer. <a href="03_relaxed.html">Page 3</a> starts from here.</p>
+</div></details></div>

@@ -1,0 +1,76 @@
+<!--
+title: 1 — Draft, verify, accept: the exact algorithm
+short: 1 · The exact algorithm
+description: Speculative decoding from scratch: why autoregressive decoding is slow, the draft-then-verify idea, the exact accept / resample rule with its proof, the acceptance rate as an overlap of two distributions, the speed-up law, and the ceiling that motivates lossy methods.
+subtitle: Why a large language model is slow to write, how a small model can write a draft that the large one checks in a single pass, and why the result is exactly what the large model would have produced on its own. Every formula is derived, then tried on small numbers.
+-->
+
+<div class="box objectives">
+<div class="box-h">What you will be able to do after this page</div>
+<ol>
+<li>Say where the time goes when a language model generates text, and why <strong>checking</strong> $\ga$ proposed tokens costs about as much as <strong>writing</strong> one.</li>
+<li>Run one round of speculative decoding by hand, with greedy decoding and with sampling.</li>
+<li>State the <strong>accept / resample rule</strong> and prove that its output follows exactly the distribution of the large model.</li>
+<li>Compute an acceptance rate, $\be=\sum_x\min(p(x),q(x))=1-\TV(p,q)$, and prove that no exact rule accepts more often.</li>
+<li>Derive the number of tokens produced per call of the large model, $\frac{1-\al^{\ga+1}}{1-\al}$, and the <strong>speed-up law</strong>; find the best draft length.</li>
+<li>Explain what the law hides (total compute, batch size, the latency of the drafter) and why exactness puts a <strong>ceiling</strong> on the speed-up — the reason lossy methods exist.</li>
+</ol>
+</div>
+
+<h2 id="start">0. Before you start</h2>
+
+<h3 id="howto">How to read this page</h3>
+<p>The page builds the algorithm in the order in which you would invent it: first the cost to beat (§1), then the idea on the easy case where the model always picks its most likely token (§2), then the real case with sampling (§3), then several tokens at a time (§4), the speed-up (§5), and the limit (§6). Statements taken from the original papers are quoted in a box like this one, with the place they come from:</p>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">authors, year, section or table</span></div>
+<p>A faithful quotation, followed by a <strong>decoding</strong>: what each symbol means, in words.</p>
+</div>
+<p>Then come an example with numbers you can check by hand, the <strong>idea</strong> of the proof, and the full proof, folded (click to open; the button “Open all folds” at the top opens everything). The other boxes:</p>
+<div class="cols">
+<div class="box def"><div class="box-h">Definition</div><p>A new object, stated precisely.</p></div>
+<div class="box thm"><div class="box-h">Result</div><p>A statement with its hypotheses.</p></div>
+<div class="box intu"><div class="box-h">Intuition</div><p>The picture to keep in mind.</p></div>
+<div class="box example"><div class="box-h">Worked example</div><p>Numbers you can check by hand.</p></div>
+<div class="box pitfall"><div class="box-h">Pitfall</div><p>A classical mistake.</p></div>
+<div class="box reflex"><div class="box-h">Reflex</div><p>“When you see … → think …”.</p></div>
+<div class="box recall"><div class="box-h">Reminder</div><p>A prerequisite, recalled where it is used.</p></div>
+<div class="box practice"><div class="box-h">In practice</div><p>What a real serving stack does.</p></div>
+</div>
+<p>The interactive figures have sliders, buttons and bars you can drag. The sentence under each figure says what to look for; “Show the numbers” opens the values behind the drawing. The numbers of the toy examples were computed by a script (exact fractions); they are toy numbers, not measurements on a real model.</p>
+
+<h3 id="story">The story of the page in seven steps</h3>
+<p class="tldr">A large model writes slowly but checks quickly; so a small model writes, the large one checks, and a well-chosen coin flip makes the result exactly the large model's own.</p>
+<ol class="chain">
+<li><strong>The cost (§1).</strong> A language model produces one token per forward pass. The time to generate a text is the number of tokens times the time of a pass.</li>
+<li><strong>The asymmetry (§1).</strong> One forward pass over a sequence returns a next-token distribution at <em>every</em> position. Scoring several proposed tokens is one pass; writing them is several.</li>
+<li><strong>Guess and check (§2).</strong> A small, fast model writes a draft of $\ga$ tokens. The large model reads it in one pass and keeps the longest prefix it agrees with, plus one token of its own.</li>
+<li><strong>The coin flip (§3).</strong> With sampling, “agrees” becomes: keep the drafted token $x$ with probability $\min(1,p(x)/q(x))$; otherwise draw a replacement from what $p$ has in excess of $q$. The output is an exact sample of the large model.</li>
+<li><strong>The overlap (§3).</strong> A drafted token is kept with probability $\sum_x\min(p(x),q(x))$: the overlap of the two distributions, one minus their total variation. No exact rule can keep more.</li>
+<li><strong>The speed-up (§4–§5).</strong> With an acceptance rate $\al$ and a drafter that costs a fraction $c$ of the large model, a round yields $\frac{1-\al^{\ga+1}}{1-\al}$ tokens for a time $\ga c+1$.</li>
+<li><strong>The ceiling (§6).</strong> Exactness caps the acceptance rate at the overlap. To go faster one improves the draft (<a href="02_lossless.html">page 2</a>) or stops asking for exactness (<a href="03_relaxed.html">pages 3</a>, <a href="04_judges.html">4</a> and <a href="05_reasoning.html">5</a>).</li>
+</ol>
+
+<h3 id="toolbox">What you need</h3>
+<ul>
+<li><strong>A discrete probability distribution</strong> on a finite set (here the vocabulary), and what “draw $x$ from $p$” means.</li>
+<li><strong>Conditional probabilities</strong> and the chain rule $\P(x_1,\dots,x_n)=\prod_t\P(x_t\mid x_1,\dots,x_{t-1})$.</li>
+<li><strong>The sum of a geometric progression</strong>, $1+\al+\dots+\al^{\ga}=\frac{1-\al^{\ga+1}}{1-\al}$.</li>
+<li><strong>Total variation</strong> between two distributions. It is recalled in §3; if you followed the optimal transport course of this repository, you have already met it, with its transport interpretation, in <a href="../Optimal_transport_ML/v2/Lesson03.html#tv">Lesson 3, §5</a> — and you will see that speculative sampling <em>is</em> the optimal plan computed there.</li>
+</ul>
+
+<h3 id="notation">Notation</h3>
+<p>The guide uses the notation of Leviathan, Kalman and Matias (2023). Beware when you open other papers: several of them swap the letters (the DeepMind paper of Chen et al. calls the target $q$ and the draft $p$).</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Symbol</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td>$\V$</td><td>The vocabulary: the finite set of tokens (tens of thousands of them in a real model, 3 to 6 in our examples).</td></tr>
+<tr><td>$x_{<t}$</td><td>The prefix: the prompt and all the tokens generated so far.</td></tr>
+<tr><td>$\Mp$, $p(x)$</td><td>The <strong>target model</strong> — large, slow, the one whose output we want — and its next-token distribution $p(x)=p(x\mid x_{<t})$ after the current prefix.</td></tr>
+<tr><td>$\Mq$, $q(x)$</td><td>The <strong>draft model</strong> — small and fast (also called approximation model, drafter, assistant) — and its next-token distribution $q(x)=q(x\mid x_{<t})$.</td></tr>
+<tr><td>$\ga$</td><td>The number of tokens drafted before each check (draft length, lookahead).</td></tr>
+<tr><td>$\be$</td><td>The probability that a drafted token is accepted, for a given prefix. $\be$ depends on the prefix through $p$ and $q$.</td></tr>
+<tr><td>$\al$</td><td>The average of $\be$ over prefixes: the <strong>acceptance rate</strong>.</td></tr>
+<tr><td>$c$</td><td>The <strong>cost coefficient</strong>: time of one call of $\Mq$ divided by the time of one call of $\Mp$ (for instance $0.05$).</td></tr>
+<tr><td>$\pos{u}$</td><td>The positive part: $\max(u,0)$.</td></tr>
+<tr><td>$\TV(p,q)$</td><td>The total variation distance, $\frac12\sum_x\abs{p(x)-q(x)}$, a number between $0$ (same distribution) and $1$ (disjoint supports).</td></tr>
+</tbody></table></div>
+<p><strong>Colour code of the figures.</strong> <span class="sw p"></span>target model $p$ &nbsp; <span class="sw q"></span>draft model $q$ &nbsp; <span class="sw ok"></span>accepted &nbsp; <span class="sw no"></span>rejected &nbsp; <span class="sw fix"></span>correction written by the target. The same code is used for the tokens in the text: <span class="tok q">drafted</span> <span class="tok ok">accepted</span> <span class="tok no">rejected</span> <span class="tok fix">correction</span> <span class="tok dim">discarded</span>.</p>

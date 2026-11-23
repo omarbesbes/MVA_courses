@@ -1,0 +1,60 @@
+<h2 id="rounds">4. Many tokens per round</h2>
+<p class="tldr">Draft $\ga$ tokens, check them all with one pass of the target, keep them up to the first rejection, and let the target write one token. If each drafted token is accepted with probability $\al$, a round produces $\frac{1-\al^{\ga+1}}{1-\al}$ tokens on average.</p>
+
+<h3 id="round-algo">One round of the full algorithm</h3>
+<p>We now put §1 and §3 together. The drafter writes $\ga$ tokens in a row, each sampled from its own distribution; the target scores the whole draft in one pass; then the rule of §3 is applied position by position, <em>in order</em>, and stops at the first rejection.</p>
+<div class="algo"><div class="algo-h">Algorithm — one round of speculative decoding (sampling)</div><ol>
+<li><span class="kw">Draft.</span> For $i=1,\dots,\ga$: draw $\tilde x_i\sim q_i=q(\cdot\mid x_{<t},\tilde x_1,\dots,\tilde x_{i-1})$. <span class="cm">$\ga$ calls of $\Mq$, one after the other</span></li>
+<li><span class="kw">Verify.</span> Run $\Mp$ once on the prefix followed by $\tilde x_1,\dots,\tilde x_\ga$; it returns $p_1,\dots,p_{\ga+1}$. <span class="cm">one call of $\Mp$, $\ga+1$ positions in parallel</span></li>
+<li><span class="kw">Accept.</span> For $i=1,\dots,\ga$: draw $u_i$ uniform in $[0,1]$; if $u_i>\dfrac{p_i(\tilde x_i)}{q_i(\tilde x_i)}$, reject position $i$ and stop the loop. Let $n$ be the number of accepted tokens.</li>
+<li><span class="kw">Correct or extend.</span> If $n<\ga$ (a rejection at position $n+1$): draw $x'$ from the residual $\pos{p_{n+1}-q_{n+1}}$, renormalised.</li>
+<li class="in1">If $n=\ga$ (everything accepted): draw $x'\sim p_{\ga+1}$. <span class="cm">a free token: the target already computed this distribution</span></li>
+<li><span class="kw">Output</span> $\tilde x_1,\dots,\tilde x_n,x'$ and start the next round after them.</li>
+</ol></div>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Leviathan et al. 2023, Algorithm 1 “SpeculativeDecodingStep”</span></div>
+<p id="quote-algo">The algorithm of the paper has the same four stages: sample $\ga$ guesses $x_1,\dots,x_\ga$ from $\Mq$ autoregressively; run $\Mp$ in parallel on the $\ga+1$ prefixes; determine the number of accepted guesses $n$ from uniform draws $r_i$ with the test $r_i>\frac{p_i(x)}{q_i(x)}$; adjust the distribution from $\Mp$ if needed ($p'\leftarrow norm(\max(0,p_{n+1}-q_{n+1}))$ when $n<\ga$) and return the prefix followed by $x_1,\dots,x_n$ and a token $t\sim p'$.</p>
+</div>
+<div class="box example"><div class="box-h">Worked example — a round with $\ga=5$ (toy tokens)</div>
+<div class="toks"><span class="lab">draft ($\Mq$)</span><span class="tok q"> is</span><span class="tok q"> Paris</span><span class="tok q">,</span><span class="tok q"> a</span><span class="tok q"> city</span></div>
+<div class="toks"><span class="lab">ratio $p_i/q_i$</span><span class="tok ctx">1.1</span><span class="tok ctx">0.9</span><span class="tok ctx">0.4</span><span class="tok dim">·</span><span class="tok dim">·</span></div>
+<div class="toks"><span class="lab">draw $u_i$</span><span class="tok ctx">0.62</span><span class="tok ctx">0.35</span><span class="tok ctx">0.71</span><span class="tok dim">·</span><span class="tok dim">·</span></div>
+<div class="toks"><span class="lab">output</span><span class="tok ok"> is</span><span class="tok ok"> Paris</span><span class="tok no">,</span><span class="tok fix">.</span><span class="tok dim"> a</span><span class="tok dim"> city</span></div>
+<p>Position 1: the ratio is above 1, the token is accepted whatever $u_1$ is. Position 2: $0.35\le0.9$, accepted. Position 3: $0.71>0.4$, rejected; the replacement is drawn from the residual at that position (here a full stop). Positions 4 and 5 are discarded without being tested. The round outputs 3 tokens.</p>
+</div>
+<p><strong>Why stop at the first rejection?</strong> For the same reason as in §2: $p_{n+2},p_{n+3},\dots$ and the drafted tokens after position $n+1$ were all computed with the rejected token in their context.</p>
+<p><strong>Why is the result still exact?</strong> By the chain rule, a text is an exact sample of the target as soon as each of its tokens is an exact sample of $p(\cdot\mid\text{the tokens actually written before it})$. Position 1 uses $p_1$, computed from the true prefix: §3 says the token written there is an exact sample of $p_1$. If the draft was accepted at position 1, then $p_2$ was computed with the token actually written, and §3 applies again; and so on. The replacement $x'$ is drawn from the residual of the position where the rejection happened, whose context is made of accepted tokens only. And when everything is accepted, $p_{\ga+1}$ has the right context too.</p>
+<div class="box practice"><div class="box-h">In practice — what an implementation has to manage</div>
+<ul>
+<li><strong>Two caches.</strong> Both models keep a KV cache. After a rejection, the entries of the discarded positions are dropped from both.</li>
+<li><strong>The drafter's probabilities</strong> $q_i(\tilde x_i)$ are stored while drafting; the test needs them.</li>
+<li><strong>Batches.</strong> In a batch, each sequence accepts a different number of tokens, so the sequences get out of step. Implementations either advance all of them by the smallest $n$ of the batch or handle ragged lengths with padding and masks; both cost something (§5).</li>
+</ul>
+</div>
+
+<h3 id="expected-tokens">How many tokens does a round produce?</h3>
+<p>To get a formula we need a model of the acceptances. The simplest one, used in the original paper: <strong>each drafted token is accepted with the same probability $\al$, independently of the others</strong>. (It is a simplification: in real text, acceptances come in runs. We come back to it below.)</p>
+<p>Let $N$ be the number of tokens a round outputs: the accepted ones, plus the one written by the target. $N$ is between $1$ and $\ga+1$.</p>
+<div class="box thm"><div class="box-h">Result — tokens per round</div>
+$$\P(N=k)=\al^{k-1}(1-\al)\ \ \text{for }1\le k\le\ga,\qquad\P(N=\ga+1)=\al^{\ga},\qquad\E[N]=\frac{1-\al^{\ga+1}}{1-\al}.$$
+</div>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Leviathan et al. 2023, §3.1, Equation (1)</span></div>
+<p id="quote-tokens">“$E(\#\ generated\ tokens)=\dfrac{1-\alpha^{\gamma+1}}{1-\alpha}$”, obtained under the simplifying assumption that the acceptance probabilities $\be$ are i.i.d., as the mean of a capped geometric variable.</p>
+</div>
+<ol class="steps">
+<li>$$\P(N\ge k)=\al^{k-1}\qquad\text{for }1\le k\le\ga+1.$$<span class="why">The round outputs at least $k$ tokens exactly when the first $k-1$ drafted tokens are all accepted (then either token $k$ is accepted too, or the target writes the $k$-th token).</span></li>
+<li>$$\E[N]=\sum_{k=1}^{\ga+1}\P(N\ge k)=\sum_{k=1}^{\ga+1}\al^{k-1}.$$<span class="why">For a variable with values in $\{1,\dots,\ga+1\}$, the mean is the sum of the tail probabilities: each outcome $N=m$ is counted once in each of the $m$ terms $k=1,\dots,m$.</span></li>
+<li>$$\sum_{k=1}^{\ga+1}\al^{k-1}=1+\al+\dots+\al^{\ga}=\frac{1-\al^{\ga+1}}{1-\al}.$$<span class="why">Sum of a geometric progression with $\ga+1$ terms and ratio $\al\ne1$.</span></li>
+</ol>
+<div class="box example"><div class="box-h">Worked example</div>
+<p>With $\al=0.8$ and $\ga=5$: the round outputs $1,2,3,4,5$ or $6$ tokens with probabilities $0.2,\ 0.16,\ 0.128,\ 0.1024,\ 0.08192$ and $0.32768$ (the last one is $0.8^5$: all five accepted). The mean is $\frac{1-0.8^6}{0.2}=\frac{11529}{3125}\approx3.69$ tokens per call of the target, instead of 1. Drafting more and more tokens cannot give more than $\frac1{1-\al}=5$: sooner or later a token is rejected.</p>
+</div>
+
+<div class="widget" data-widget="p1rounds"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p><strong>What to look at.</strong> Each press of “One round” plays a round with the acceptance rate and draft length you chose: green tokens are accepted drafts, the pink one is the rejected draft, the purple one is the token written by the target, grey ones are discarded. The bars count how often a round produced 1, 2, … tokens; the black dots are the probabilities of the formula. Run 1000 rounds and compare the observed mean with $\frac{1-\al^{\ga+1}}{1-\al}$. Then raise $\ga$ with a low $\al$: almost all the extra drafts end up grey.</p>
+
+<div class="box pitfall"><div class="box-h">Pitfall — “tokens accepted” and “tokens per target call” are not the same number</div>
+<p>Papers report either the mean number of <em>accepted drafts</em> per round, or the mean number of <em>tokens generated</em> per round (per call of the target). They differ by exactly 1, the token written by the target. With $\al=0.8$, $\ga=5$: $\E[\text{accepted}]=\frac{\al(1-\al^{\ga})}{1-\al}\approx2.69$ and $\E[N]\approx3.69$. And $5-2.69=2.31$ drafted tokens are thrown away per round on average. Always check which of the two a paper reports before comparing numbers.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — acceptances are not independent in real text</div>
+<p>The formula assumes one acceptance rate for every position. In practice some stretches are easy (a name being completed, boilerplate, text copied from the prompt) and are accepted in long runs, and some tokens are hard (the first word of an answer, a number) and rejected often. The average $\al$ is still the right first summary, but two drafters with the same $\al$ can give different tokens per round. Use the formula to reason, and measure to decide.</p>
+</div>

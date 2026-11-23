@@ -1,0 +1,57 @@
+<h2 id="greedy">2. Guess and check: the greedy case</h2>
+<p class="tldr">A small model writes $\ga$ tokens; the target reads them in one pass and keeps the longest prefix that matches its own choices, then adds one token of its own. The text is identical to the one the target would have written alone.</p>
+
+<h3 id="greedy-round">One round, by hand</h3>
+<p>Take the easy case first: the target decodes greedily, so at each position there is one right answer, the most likely token. The guess comes from a <em class="new">draft model</em> $\Mq$: a much smaller language model (or any fast predictor), which writes $\ga$ tokens autoregressively. Being small, it is fast; being a language model, it is often right on easy tokens.</p>
+<div class="algo"><div class="algo-h">Algorithm — one round of speculative decoding, greedy case</div><ol>
+<li><span class="kw">Draft.</span> For $i=1,\dots,\ga$: $\ \tilde x_i=\argmax_x q(x\mid x_{<t},\tilde x_1,\dots,\tilde x_{i-1})$. <span class="cm">$\ga$ fast calls of $\Mq$</span></li>
+<li><span class="kw">Verify.</span> Run $\Mp$ once on the prefix followed by $\tilde x_1,\dots,\tilde x_\ga$: it returns $p_1,\dots,p_{\ga+1}$. <span class="cm">one call of $\Mp$</span></li>
+<li><span class="kw">Accept.</span> Let $n$ be the number of leading positions where the draft is the target's choice: $\tilde x_i=\argmax_x p_i(x)$ for $i=1,\dots,n$, and not for $i=n+1$ (or $n=\ga$).</li>
+<li><span class="kw">Output</span> $\tilde x_1,\dots,\tilde x_n$, then the target's own token $\argmax_x p_{n+1}(x)$. Start the next round from there.</li>
+</ol></div>
+<div class="box example"><div class="box-h">Worked example (toy tokens)</div>
+<p>The prefix is “The capital of France”. The drafter writes five tokens; the target reads them in one pass and gives its own choice at each position.</p>
+<div class="toks"><span class="lab">prefix</span><span class="tok ctx">The</span><span class="tok ctx"> capital</span><span class="tok ctx"> of</span><span class="tok ctx"> France</span></div>
+<div class="toks"><span class="lab">draft ($\Mq$)</span><span class="tok q"> is</span><span class="tok q"> Paris</span><span class="tok q">,</span><span class="tok q"> a</span><span class="tok q"> city</span></div>
+<div class="toks"><span class="lab">target's choice</span><span class="tok p"> is</span><span class="tok p"> Paris</span><span class="tok p">.</span><span class="tok dim"> which</span><span class="tok dim"> is</span><span class="tok dim"> known</span></div>
+<div class="toks"><span class="lab">output</span><span class="tok ok"> is</span><span class="tok ok"> Paris</span><span class="tok fix">.</span></div>
+<p>Positions 1 and 2 match: accepted. At position 3 the drafter wrote a comma and the target prefers a full stop: the comma is rejected and the target's full stop is written instead. The last three choices of the target are greyed out: they were computed for a text that continues with the comma, a text that no longer exists. The round produced <strong>3 tokens for one call of the target</strong>.</p>
+</div>
+
+<h3 id="greedy-exact">Why the text is exactly the target's</h3>
+<div class="box idea"><div class="box-h">Idea</div>
+<p>Go through the positions in order. $p_1$ is computed from the true prefix, so its argmax is the token the target would write. If the draft has that token, keeping it changes nothing, and $p_2$ — computed with that token in the context — is then also the distribution the target would have had. And so on, until the first disagreement.</p>
+</div>
+<details class="fold proof"><summary>Full proof</summary><div class="fold-body">
+<p>Let $y_1,y_2,\dots$ be the tokens the target writes when it decodes alone from the prefix: $y_i=\argmax_x p(x\mid x_{<t},y_1,\dots,y_{i-1})$. We show by induction that the round outputs $y_1,\dots,y_{n+1}$.</p>
+<ol class="steps">
+<li>$p_1=p(\cdot\mid x_{<t})$, so $\argmax p_1=y_1$.<span class="why">$p_1$ does not depend on the draft.</span></li>
+<li>If $\tilde x_1=y_1,\dots,\tilde x_{i-1}=y_{i-1}$, then $p_i=p(\cdot\mid x_{<t},\tilde x_1,\dots,\tilde x_{i-1})=p(\cdot\mid x_{<t},y_1,\dots,y_{i-1})$, so $\argmax p_i=y_i$.<span class="why">The context of $p_i$ is the prefix and the first $i-1$ draft tokens, which are the target's own tokens by hypothesis.</span></li>
+<li>For $i\le n$ the acceptance test says $\tilde x_i=\argmax p_i=y_i$: the accepted tokens are $y_1,\dots,y_n$.<span class="why">Step 2, applied for $i=1,\dots,n$ in turn.</span></li>
+<li>The last output is $\argmax p_{n+1}=y_{n+1}$.<span class="why">Step 2 with $i=n+1$: the first $n$ draft tokens are the target's.</span></li>
+</ol>
+<p>The round therefore writes the next $n+1$ tokens of the target's own greedy text, whatever the draft was.<span class="qed">∎</span></p>
+</div></details>
+<p>Two consequences are worth saying out loud.</p>
+<ul>
+<li><strong>A round is never lost.</strong> Even if the first drafted token is wrong ($n=0$), the round outputs one token, the target's: exactly what a normal step would have produced. A round yields between $1$ and $\ga+1$ tokens for one call of the target.</li>
+<li><strong>The quality of the drafter changes the speed, never the text.</strong> A bad drafter makes the method slow (and costs the time of drafting); it cannot make the output worse.</li>
+</ul>
+<div class="box pitfall"><div class="box-h">Pitfall — the tokens after the first mismatch look right, and are useless</div>
+<p>In the example, after the rejected comma the drafter wrote “a city”, which might well be a fine continuation. It cannot be kept: both the drafter's tokens and the target's distributions $p_4,p_5,p_6$ were computed <em>after the comma</em>. Once the comma is replaced, they describe another text.</p>
+</div>
+<div class="quiz"><p>With $\ga=5$, how many calls of each model does it take to produce 3 tokens in the round above, and how many would the target alone have needed?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>Five calls of the small model (it drafted five tokens, two of which were wasted along with the rejected one) and one call of the target. Alone, the target would have needed three calls. If the small model is 20 times faster than the target ($c=0.05$), the round costs $5\times0.05+1=1.25$ target-calls instead of $3$.</p>
+</div></details></div>
+<details class="fold more"><summary>Where the idea comes from</summary><div class="fold-body">
+<p>Guessing several tokens and checking them in one parallel pass predates large language models. Until the end of 2022 every method of this family was deterministic: it reproduced <em>greedy</em> decoding.</p>
+<ul>
+<li><strong>Blockwise parallel decoding</strong> (Stern, Shazeer, Uszkoreit; NeurIPS 2018). Extra heads are added to a translation model so that it proposes $k$ future tokens at once; the model itself then verifies them and the method “back[s] off to the longest prefix validated by a scoring model”. Exact for greedy decoding; reported wall-clock speed-ups up to 3.3× on translation. The paper already contains the first <em>lossy</em> acceptance rules: accept a proposed token if it is among the top-$k$ tokens of the verifier, or within a small distance of its choice.</li>
+<li><strong>Aggressive decoding</strong> (Sun, Ge, Wei, Wang; ACL 2021). For grammatical error correction the output is close to the input, so the input sentence itself is the draft: all positions are checked in parallel, and decoding restarts after the first difference. Same output as greedy decoding.</li>
+<li><strong>Generalized aggressive decoding, later renamed SpecDec</strong> (Xia, Ge, et al.; posted March 2022, Findings of EMNLP 2023 under the title “Speculative Decoding: Exploiting Speculative Execution for Accelerating Seq2seq Generation”). A separate, non-autoregressive drafter proposes a block and the translation model verifies it. Its “Spec-Verification” deliberately relaxes the test (a drafted token is accepted if it is among the top 3 of the verifier and within a log-likelihood gap of 1 of its first choice): a lossy rule again, validated on BLEU.</li>
+<li><strong>Speculative decoding</strong> (Leviathan, Kalman, Matias; Google, posted 30 November 2022, ICML 2023) and <strong>speculative sampling</strong> (Chen et al.; DeepMind, posted 2 February 2023, “undertaken concurrently and independently”). A small language model drafts, and — the real novelty — the accept / resample rule of §3 makes the method exact for <em>sampling</em>, for any drafter.</li>
+<li><strong>Inference with reference</strong> (Yang et al.; Microsoft, April 2023) copies spans from a reference document as drafts, for large language models; exact for greedy decoding.</li>
+</ul>
+<p>Two things to notice. Relaxed, lossy acceptance is as old as the idea itself: it appears in 2018 and in 2022, before the exact rule for sampling existed. And the word “lossless” has two meanings in this literature: “same output distribution as the target” (Leviathan, Chen — the meaning of this guide) and “no loss on a task metric such as BLEU” (the aggressive decoding papers). Always check which one a paper means.</p>
+</div></details>

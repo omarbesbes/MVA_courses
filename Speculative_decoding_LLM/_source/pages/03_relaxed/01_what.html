@@ -1,0 +1,48 @@
+<h2 id="what">1. What a relaxed rule is, and what it costs</h2>
+<p class="tldr">A token-level lossy rule is a pair: how often a drafted token is accepted, and what is written after a rejection. The pair fixes the distribution of the output, hence two numbers to watch: how much acceptance was gained, and how far the output moved from the target.</p>
+
+<h3 id="what-pair">A rule is a pair (acceptance, replacement)</h3>
+<p><a href="01_foundations.html#rule">Page 1</a> ended on a ceiling: with one drafted token per position, an exact method keeps the draft with probability at most $\sum_v\min(p(v),q(v))=1-\TV(p,q)$. Every method of this page goes through that ceiling by changing the test, so we need a language for “changing the test”. Look at one position. The drafter has written $x\sim q$; the target has computed $p$.</p>
+<div class="box def"><div class="box-h">Definition — a token-level rule</div>
+<p>A <em class="new">rule</em> is a pair $(b,r)$:</p>
+<ul>
+<li>an <em class="new">acceptance probability</em> $b(x)\in[0,1]$ for each token $x$ the drafter may write (it may depend on $p$ and $q$);</li>
+<li>a <em class="new">replacement distribution</em> $r$ over the vocabulary, from which the output is drawn when the draft is rejected.</li>
+</ul>
+<p>Its <em class="new">acceptance</em> is $A=\sum_vq(v)\,b(v)$, the probability that the drafted token is kept, and its output has the distribution</p>
+$$\text{out}(v)=\underbrace{q(v)\,b(v)}_{\text{drafted and kept}}+\underbrace{(1-A)\,r(v)}_{\text{written after a rejection}}.$$
+</div>
+<p>The exact rule of page 1 is the pair $b(x)=\min\big(1,\frac{p(x)}{q(x)}\big)$, $r=\pos{p-q}$ renormalised, for which $\text{out}=p$ and $A=1-\TV(p,q)$. A rule is <em class="new">lossy</em> when $\text{out}\ne p$. Its <em class="new">bias</em> at this position is how far the output is from the target; the natural first measure is the total variation,</p>
+$$\text{bias}=\TV(\text{out},p)=\frac12\sum_v\abs{\text{out}(v)-p(v)}.$$
+<div class="box example"><div class="box-h">Worked example — four rules on the same position</div>
+<p>Take worked example A of page 1 once more: $p=(0.6,\,0.3,\,0.1)$ and $q=(0.3,\,0.5,\,0.2)$ on the tokens $\tok{ Paris}$, $\tok{ the}$, $\tok{ a}$, so that $\TV(p,q)=0.3$. The exact residual is $(1,0,0)$.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>rule</th><th>accepts $x$ with probability</th><th>after a rejection writes</th><th>acceptance $A$</th><th>output</th><th>bias</th></tr></thead>
+<tbody>
+<tr><td>exact</td><td>$\min(1,p/q)=(1,\ 0.6,\ 0.5)$</td><td>the residual</td><td>0.70</td><td>$(0.6,\ 0.3,\ 0.1)$</td><td>0</td></tr>
+<tr><td>exact test, fresh sample</td><td>$(1,\ 0.6,\ 0.5)$</td><td>a sample of $p$</td><td>0.70</td><td>$(0.48,\ 0.39,\ 0.13)$</td><td>0.12</td></tr>
+<tr><td>lenient test ($\lambda=0.8$)</td><td>$\min(1,\frac{p}{0.8\,q})=(1,\ 0.75,\ 0.625)$</td><td>the residual</td><td>0.80</td><td>$(0.5,\ 0.375,\ 0.125)$</td><td>0.10</td></tr>
+<tr><td>threshold: accept iff $p(x)\ge0.2$</td><td>$(1,\ 1,\ 0)$</td><td>a sample of $p$</td><td>0.80</td><td>$(0.42,\ 0.56,\ 0.02)$</td><td>0.26</td></tr>
+</tbody></table></div>
+<p>Rows 2 and 3 you computed on page 1 (the pitfall of §3 and Exercise 8). Compare rows 3 and 4: the same acceptance, $0.8$, bought at a very different price, $0.10$ against $0.26$. And compare rows 1 and 2: the same acceptance, but the second one damages the output for nothing. Rules are not equally good at converting bias into acceptance. §2 says exactly how good a rule can be.</p>
+</div>
+
+<h3 id="what-yardsticks">Three yardsticks for what is lost</h3>
+<p>“How far from the target” can be measured in three ways, and the methods of this page differ mostly in which one they care about.</p>
+<ol>
+<li><strong>Distance between distributions</strong>, at one position: $\TV(\text{out},p)$, or a Kullback–Leibler divergence. This is the yardstick of the theory (§2) and of the methods that want a guarantee (§3, §7, §9). It treats all tokens alike: moving probability from $\tok{ therefore}$ to $\tok{ thus}$ costs as much as moving it from $\tok{4}$ to $\tok{5}$ in the result of a computation.</li>
+<li><strong>Agreement with greedy decoding.</strong> When the target decodes greedily, its “distribution” is a single token, and any accepted token that is not the argmax counts as a full disagreement. Rules designed for this regime (§4, §5, §6) therefore look at something else: the probability the target gives to the drafted token, or its rank.</li>
+<li><strong>Quality on the task</strong>: BLEU, accuracy on a benchmark, tests passed. It is what we actually want, it is what the papers report, and it is the only yardstick that knows that some tokens matter more than others. It cannot be computed at one position; it is measured at the end.</li>
+</ol>
+<div class="box pitfall"><div class="box-h">Pitfall — a small bias per token is not a small bias per text</div>
+<p>Biases add up along the text. If at every position the rule's output is within $\eps$ of the target in total variation, the distribution of a whole text of $n$ tokens is within $n\,\eps$ of the target's — and no better in general. With $\eps=0.01$ and $n=200$ the bound is $2$, which says nothing (a total variation never exceeds $1$). A per-token guarantee is a statement about each step, not about the text. This is why every paper of this page ends up measuring task quality.</p>
+</div>
+<details class="fold proof"><summary>Why biases add up (a coupling argument)</summary><div class="fold-body">
+<p>Let $P$ be the distribution of the text under the target and $P'$ under the lossy method, with per-position distributions $p_t(\cdot\mid x_{&lt;t})$ and $\text{out}_t(\cdot\mid x_{&lt;t})$. Claim: $\TV(P,P')\le\sum_{t=1}^n\E_{x_{&lt;t}\sim P}\big[\TV\big(p_t(\cdot\mid x_{&lt;t}),\text{out}_t(\cdot\mid x_{&lt;t})\big)\big]$.</p>
+<ol class="steps">
+<li>Generate two texts together, $X\sim P$ and $X'\sim P'$: as long as they are equal, draw their next tokens from a maximal coupling of $p_t$ and $\text{out}_t$; after the first difference, draw them independently.<span class="why">A maximal coupling of two distributions makes the two draws equal with probability $1-\TV$ (page 1, §3). Each text has the right distribution because each of its tokens is drawn from the right conditional distribution.</span></li>
+<li>$\P(\text{first difference at position }t)\le\E_{x_{&lt;t}\sim P}\big[\TV(p_t,\text{out}_t)\big]$.<span class="why">The texts must be equal before $t$ (then their common prefix is distributed as a prefix of $X\sim P$), and then differ at $t$, which the coupling makes happen with probability $\TV(p_t,\text{out}_t)$.</span></li>
+<li>$\TV(P,P')\le\P(X\ne X')=\sum_t\P(\text{first difference at }t)$.<span class="why">For any coupling, $\TV\le\P(X\ne X')$ (page 1, §3, with texts in place of tokens); and the texts differ if and only if there is a first position where they differ.</span></li>
+</ol>
+<p>With a bias of at most $\eps$ at every position the bound is $n\,\eps$.<span class="qed">∎</span></p>
+</div></details>

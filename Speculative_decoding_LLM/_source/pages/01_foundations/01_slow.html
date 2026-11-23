@@ -1,0 +1,38 @@
+<h2 id="slow">1. Where the time goes</h2>
+<p class="tldr">A language model writes one token per forward pass, so the time to generate grows with the number of tokens; but a single pass can score many positions at once. Writing is sequential, checking is parallel.</p>
+
+<h3 id="next-token">A language model is a next-token sampler</h3>
+<p>A language model does one thing: given a sequence of tokens, it returns a probability for every possible next token. To write a text, we call it in a loop.</p>
+<div class="box def"><div class="box-h">Definition — autoregressive decoding</div>
+<p>Given the prefix $x_{<t}$ (the prompt and the tokens written so far), the <em class="new">target model</em> $\Mp$ computes a distribution $p(\cdot\mid x_{<t})$ over the vocabulary $\V$. We pick the next token $x_t$ from it, append it to the prefix, and start again. Two usual ways to pick:</p>
+<ul>
+<li><em class="new">greedy decoding</em>: $x_t=\argmax_x p(x\mid x_{<t})$ (the most likely token; “temperature 0”);</li>
+<li><em class="new">sampling</em>: $x_t$ is drawn at random with probabilities $p(\cdot\mid x_{<t})$, possibly after reshaping them (temperature, top-$k$, nucleus).</li>
+</ul>
+</div>
+<p>From now on, $p$ always means the distribution we actually pick from, <em>after</em> any reshaping. With sampling, the whole text is random, and the chain rule gives its probability:</p>
+$$\P(x_1,\dots,x_n)=\prod_{t=1}^{n}p(x_t\mid x_{<t}).$$
+<p>This product is what we will call <em class="new">the output distribution of the target</em>. An acceleration method is <em class="new">lossless</em> (or <em>exact</em>) when the texts it produces follow exactly this distribution: nobody looking at the outputs, however many, could tell that anything was changed. It is <em class="new">lossy</em> otherwise.</p>
+<p>The problem is the loop. Each turn is a full forward pass of a network with billions of parameters, and turn $t+1$ cannot start before turn $t$ has chosen its token.</p>
+<div class="box example"><div class="box-h">Worked example (toy numbers)</div>
+<p>If one pass of the target takes $50$ ms, an answer of $200$ tokens takes $200\times0.05=10$ seconds. The only ways to go faster are to make each pass shorter (a smaller or compressed model: the output changes) or to need <strong>fewer passes of the target than tokens</strong>. Speculative decoding does the second.</p>
+</div>
+
+<h3 id="asymmetry">The asymmetry: one pass scores every position</h3>
+<p>Here is the fact everything rests on. When a transformer reads a sequence of $n$ tokens, it does not only output the distribution of token $n+1$. It outputs a next-token distribution <strong>at every position</strong>: after the first token, after the first two, and so on. This is how it is trained (each position predicts the following token), and during generation those extra outputs are simply not needed, because the earlier tokens are already chosen.</p>
+<p>Now suppose somebody hands us a <em>guess</em> $\tilde x_1,\dots,\tilde x_\ga$ for the next $\ga$ tokens. One pass of the target over “prefix + guess” returns, all at once,</p>
+$$p_1=p(\cdot\mid x_{<t}),\quad p_2=p(\cdot\mid x_{<t},\tilde x_1),\quad\dots,\quad p_{\ga+1}=p(\cdot\mid x_{<t},\tilde x_1,\dots,\tilde x_\ga).$$
+<p>That is $\ga+1$ distributions: what the target thinks should come at each of the guessed positions, and one more for the position after the guess.</p>
+<figure class="fig"><!-- include figures/01/parallel.svg --><figcaption>Top: writing four tokens with the target alone takes four passes, one after the other. Bottom: reading a four-token guess takes one pass, and returns five distributions. $p_i$ is the target's opinion on position $i$ <em>assuming the guesses before it are kept</em>.</figcaption></figure>
+<div class="box intu"><div class="box-h">Intuition — why one pass over $\ga+1$ positions costs about one pass over one</div>
+<p>When a large model generates for a single user, most of the time of a pass goes into moving its weights through the memory of the processor, not into arithmetic. A pass that handles a few more positions reuses the same weights and does a little more arithmetic in parallel: it takes almost the same time. The two founding papers both start from this observation. Leviathan et al.: “inference from large models is often not bottlenecked on arithmetic operations, but rather on memory bandwidth and communication”. Chen et al., for a model spread over several accelerators: for a small number of scored tokens the linear layers “will continue to be memory bound and therefore take a similar amount of time”.</p>
+<p>This is an assumption, and we keep it for the whole page: <strong>the target can score a handful of positions in parallel for the price of one</strong>. It is reasonable for small $\ga$ on hardware that is not already saturated; §5 says when it breaks.</p>
+</div>
+<div class="box recall"><div class="box-h">Reminder — the key-value cache</div>
+<p>A decoder does not recompute the whole prefix at each step: it stores, for every past position, the intermediate results the next positions need (the <em>KV cache</em>). So a “pass” in this page means: process the new positions only, reading the cache for the old ones. This holds for the target's parallel check too: it processes the $\ga$ guessed tokens in one go and extends its cache.</p>
+</div>
+<div class="quiz"><p>The target reads the prefix followed by a guess of 4 tokens. How many next-token distributions does this pass give for the new positions, and what is the catch with the third one?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>Five: $p_1,\dots,p_5$. The third, $p_3=p(\cdot\mid x_{<t},\tilde x_1,\tilde x_2)$, was computed <em>assuming</em> the first two guessed tokens. It is the distribution the target would really use at that position only if $\tilde x_1$ and $\tilde x_2$ are both kept. If $\tilde x_1$ is thrown away, $p_3$ is a distribution for a text that will never exist.</p>
+</div></details></div>
+<p>So checking is cheap. What we need is somebody to write the guess, quickly.</p>

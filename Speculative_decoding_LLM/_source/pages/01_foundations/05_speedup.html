@@ -1,0 +1,85 @@
+<h2 id="speedup">5. When is it faster? The speed-up law</h2>
+<p class="tldr">A round costs the time of $\ga$ drafter calls plus one target call and yields $\frac{1-\al^{\ga+1}}{1-\al}$ tokens. The speed-up is the ratio; it exceeds 1 for some $\ga$ exactly when the acceptance rate $\al$ is larger than the relative cost $c$ of the drafter.</p>
+
+<h3 id="speedup-law">The law</h3>
+<p>Count time in units of one call of the target. A call of the drafter costs $c$ (for example $c=0.05$ if it is 20 times faster). We keep the assumption of §1: the target's parallel check of $\ga+1$ positions costs one call.</p>
+<ol class="steps">
+<li>Time of one round: $\ \ga\,c+1$.<span class="why">$\ga$ sequential calls of the drafter, then one call of the target.</span></li>
+<li>Tokens produced by one round: $\ \E[N]=\dfrac{1-\al^{\ga+1}}{1-\al}$.<span class="why">§4.</span></li>
+<li>Time per token with speculative decoding: $\ \dfrac{(\ga c+1)(1-\al)}{1-\al^{\ga+1}}$; without it: $1$.<span class="why">Over many rounds, total time divided by total tokens tends to the ratio of the means.</span></li>
+</ol>
+<figure class="fig"><!-- include figures/01/timeline.svg --><figcaption>The accounting, drawn to scale for a drafter ten times faster than the target ($c=0.1$) and $\ga=5$. A round lasts $5\times0.1+1=1.5$ calls. In this example run the two rounds happen to yield 4 and 3 tokens: seven tokens in 3 units of time instead of 7.</figcaption></figure>
+<div class="box thm"><div class="box-h">Result — the speed-up law</div>
+$$\text{speed-up}(\al,\ga,c)=\frac{1-\al^{\ga+1}}{(1-\al)(\ga c+1)}.$$
+</div>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Leviathan et al. 2023, §3.3–3.4: Theorem 3.8 and Corollary 3.9</span></div>
+<p id="quote-speed">Theorem 3.8: “The expected improvement factor in total walltime by Algorithm 1 is $\frac{1-\alpha^{\gamma+1}}{(1-\alpha)(\gamma c+1)}$.” Corollary 3.9: “If $\alpha>c$, there exists $\gamma$ for which we'll get an improvement, and the improvement factor will be at least $\frac{1+\alpha}{1+c}$.”</p>
+</div>
+<dl class="decode">
+<dt>improvement factor in walltime</dt><dd>Time of ordinary decoding divided by time of speculative decoding, for the same number of tokens. $2$ means twice as fast.</dd>
+<dt>$c$</dt><dd>Definition 3.7 of the paper: “the ratio between the time for a single run of $M_q$ and the time for a single run of $M_p$”. It is a ratio of <em>measured times</em>, not of parameter counts; the paper notes that it “depends on the hardware configuration and software implementation details”.</dd>
+<dt>the hypotheses behind it</dt><dd>Stated in the paper: the acceptances are i.i.d.; “we can run $\gamma+1$ concurrent evaluations of $M_p$ in parallel without increasing the walltime”; and the generation is long enough.</dd>
+</dl>
+<div class="box example"><div class="box-h">Worked example</div>
+<p>$\al=0.8$, $c=0.05$, $\ga=5$: a round costs $5\times0.05+1=1.25$ and yields $3.69$ tokens. Speed-up $=3.69/1.25\approx2.95$. The answer of 200 tokens that took 10 seconds in §1 now takes about $3.4$ seconds, with about 54 calls of the target instead of 200.</p>
+</div>
+
+<div class="widget" data-widget="p1speed"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p><strong>What to look at.</strong> The thick curve is the speed-up as a function of the draft length $\ga$ for your $\al$ and $c$; the dot marks the best $\ga$. The two thin curves show what happens if the acceptance rate were 0.1 lower or higher: the speed-up is very sensitive to $\al$ when $\al$ is high. Move $c$ up: the best $\ga$ shrinks, and when $c$ passes $\al$ the whole curve drops under the “no gain” line. Point at the plot (or use the arrow keys) to read the values.</p>
+
+<h3 id="speedup-condition">When is there a gain at all?</h3>
+<div class="box thm"><div class="box-h">Result — the break-even condition</div>
+<p>There is a draft length $\ga\ge1$ with speed-up $>1$ <strong>if and only if $\al>c$</strong>. In that case $\ga=1$ already gives $\dfrac{1+\al}{1+c}$.</p>
+</div>
+<details class="fold proof"><summary>Full proof</summary><div class="fold-body">
+<ol class="steps">
+<li>With $\ga=1$: $\ \dfrac{1-\al^2}{(1-\al)(c+1)}=\dfrac{1+\al}{1+c}$, which is $>1$ exactly when $\al>c$.<span class="why">$1-\al^2=(1-\al)(1+\al)$.</span></li>
+<li>Conversely, for every $\ga$: $\ \dfrac{1-\al^{\ga+1}}{1-\al}=1+\al+\dots+\al^\ga\le1+\ga\al$.<span class="why">Each of the $\ga$ powers $\al^k$, $k\ge1$, is at most $\al$ because $0\le\al\le1$.</span></li>
+<li>So if $\al\le c$: speed-up $\le\dfrac{1+\ga\al}{1+\ga c}\le1$ for every $\ga$.<span class="why">Step 2 and $\al\le c$.</span></li>
+</ol>
+<p><span class="qed">∎</span></p>
+</div></details>
+<p>The best draft length balances two effects: a longer draft gives more tokens per round, but each extra drafted token costs $c$ and is less and less likely to be reached. There is no closed form; the table gives the optimum for a few values (computed with the law).</p>
+<div class="table-wrap"><table>
+<thead><tr><th>best $\ga$ → speed-up</th><th>$\al=0.5$</th><th>$\al=0.6$</th><th>$\al=0.7$</th><th>$\al=0.8$</th><th>$\al=0.9$</th></tr></thead>
+<tbody>
+<tr><th>$c=0.01$</th><td>5 → 1.88</td><td>7 → 2.30</td><td>9 → 2.97</td><td>14 → 4.23</td><td>24 → 7.49</td></tr>
+<tr><th>$c=0.05$</th><td>3 → 1.63</td><td>4 → 1.92</td><td>6 → 2.35</td><td>8 → 3.09</td><td>13 → 4.67</td></tr>
+<tr><th>$c=0.1$</th><td>2 → 1.46</td><td>3 → 1.67</td><td>4 → 1.98</td><td>6 → 2.47</td><td>10 → 3.43</td></tr>
+<tr><th>$c=0.2$</th><td>1 → 1.25</td><td>2 → 1.40</td><td>3 → 1.58</td><td>4 → 1.87</td><td>7 → 2.37</td></tr>
+</tbody></table></div>
+<div class="box reflex"><div class="box-h">Reflex</div>
+<p>When you see a speed-up claim → look for three numbers: the acceptance rate (or tokens per round), the relative cost of the drafter, and the draft length. Read the table along a row: at $c=0.05$, going from $\al=0.7$ to $\al=0.9$ doubles the best speed-up ($2.35\to4.67$). <strong>The acceptance rate is the lever.</strong> Everything in the rest of the guide is a way to raise it: by drafting better (page 2), or by accepting more (pages 3 to 5).</p>
+</div>
+
+<h3 id="speedup-measured">What the first two papers measured</h3>
+<p>The law says that a drafter must be judged on two numbers at once, $\al$ and $c$. The first experiments of the original paper show it better than any argument.</p>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Leviathan et al. 2023, Tables 2 and 4</span></div>
+<p>Target: T5-XXL (11B parameters), English-to-German translation, greedy decoding (temperature 0), batch size 1 on a single TPU-v4. Three drafters of the same family:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>drafter $\Mq$</th><th>acceptance rate $\al$</th><th>cost $c$</th><th>draft length $\ga$</th><th>measured speed-up</th></tr></thead>
+<tbody>
+<tr><td>T5-small (77M)</td><td>0.75</td><td>0.02</td><td>7</td><td>3.4X</td></tr>
+<tr><td>T5-base (250M)</td><td>0.80</td><td>0.04</td><td>7</td><td>2.8X</td></tr>
+<tr><td>T5-large (800M)</td><td>0.82</td><td>0.11</td><td>7</td><td>1.7X</td></tr>
+</tbody></table></div>
+<p>With sampling at temperature 1 the same three drafters have $\al=0.62,\ 0.68,\ 0.71$ and give 2.6X, 2.4X and 1.4X.</p>
+</div>
+<p>Read the table from top to bottom: the drafter gets better ($\al$ rises from 0.75 to 0.82) and the method gets <em>slower</em> (3.4X down to 1.7X), because the cost $c$ rises faster than the acceptance. The authors conclude that a drafter “around two orders of magnitude smaller” than the target “usually performed best, balancing $\al$ and $c$”. Two more observations of the paper are worth keeping: across all the pairs they measured, drafters a couple of orders of magnitude smaller than the target give “$\alpha$ values between 0.5 and 0.9”; and “the sharper the adjusted distribution, the higher the $\alpha$ values” — greedy decoding is easier to draft for than sampling, as the two rows of numbers above show.</p>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Chen et al. 2023 (DeepMind), Table 1</span></div>
+<p>Target: Chinchilla (70B parameters, 80 layers), served on 16 TPU v4. Drafter: a 4B-parameter model trained for the purpose, almost as wide as the target but with only 8 layers; it samples at 1.8 ms per token against 14.1 ms for the target. Draft length 4 (the paper writes $K$). Measured speed-ups: 1.92× on XSum summarisation with nucleus sampling, 2.01× with greedy decoding, and 2.46× on HumanEval code generation, with unchanged benchmark scores (ROUGE-2 0.112 → 0.114 and 0.157 → 0.156; HumanEval 45.1% → 47.0%).</p>
+</div>
+<p>The DeepMind drafter is only about 17 times smaller than its target, far from “two orders of magnitude”; it is fast because it is <em>shallow</em>. Latency, not size, is what $c$ measures. The small score differences are sampling noise: the method is exact, as the paper puts it, “within hardware numerics”.</p>
+
+<h3 id="speedup-limits">What the law hides</h3>
+<p>The law is a model. Five things are outside it, and each one is a research topic of <a href="02_lossless.html">page 2</a> or <a href="06_practice.html">page 6</a>.</p>
+<ol>
+<li><strong>Total compute goes up, not down.</strong> The target still processes every token of the output, plus all the drafted tokens that are thrown away, and the drafter's work is added on top. The original paper computes the factor by which the number of arithmetic operations grows (its Theorem 3.11): $\frac{(1-\al)(\ga\hat c+\ga+1)}{1-\al^{\ga+1}}$, where $\hat c$ is the ratio of the operations per token of the two models. With $\al=0.8$, $\ga=5$ and a negligible drafter, that is $1.63$ times more operations for a text produced $3.69$ times faster. The authors say it plainly: “latency is improved through increased concurrency at the cost of an increased number of arithmetic operations. Thus, our method is not helpful for configurations where additional computation resources are not available.”</li>
+<li><strong>The parallel check is free only if the hardware has room.</strong> On a server that already processes large batches, the processor is busy, scoring $\ga+1$ positions per sequence is real extra work, and the speed-up shrinks or turns into a slowdown (<a href="02_lossless.html">page 2</a> gives the measurements).</li>
+<li><strong>$c$ is a latency, measured.</strong> A drafter with 20 times fewer parameters is not 20 times faster: its $\ga$ calls are sequential and each has a fixed overhead. Depth matters more than width, as the DeepMind drafter shows.</li>
+<li><strong>$\al$ depends on everything.</strong> The task (copy-heavy tasks are easy), the temperature, how the drafter was trained. One pair of models has a different $\al$ on translation and on summarisation (0.75 against 0.65 for T5-small in the paper above).</li>
+<li><strong>Two models in memory</strong>, two caches, and more complex batching.</li>
+</ol>
+<div class="box pitfall"><div class="box-h">Pitfall — “exact” means exact in distribution, not identical outputs</div>
+<p>With sampling, a speculative run and an ordinary run use their random numbers differently, so they produce different texts: it is the <em>distribution</em> of the texts that is the same. Even with greedy decoding, the two runs evaluate the network in batches of different shapes, and floating-point rounding can flip the argmax on a near-tie; from that token on the two texts differ. Chen et al. warn about it: “Even with greedy sampling, a single token deviating due to numerics could result in two sequences diverging wildly”. Do not test an implementation by comparing strings; compare distributions, or task scores.</p>
+</div>
