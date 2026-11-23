@@ -1,0 +1,71 @@
+<h2 id="trees">4. More from each call of the target: trees and block verification</h2>
+<p class="tldr">The target's parallel pass can check several continuations at once. A tree of candidates raises the number of tokens kept per call, but only like the logarithm of its size. With sampling, several candidates need an extended accept/reject rule to stay exact. Verifying a block jointly instead of token by token adds a few per cent more.</p>
+
+<h3 id="trees-idea">Several candidates per position</h3>
+<p>On page 1 the draft is one chain: if its first token is refused, the whole chain is lost. But the pass that scores $\ga$ positions could score more. So let the drafter propose alternatives where it hesitates: a second and a third candidate for the first token, a second candidate after the most likely one, and so on. The candidates form a <strong>tree</strong> whose root is the current context. The target scores all the nodes in one pass (a mask lets each node see only its own ancestors: this is called <em>tree attention</em>), and the output follows the tree downward for as long as one of the children is accepted.</p>
+<p>With greedy decoding the test at a node is “is this the target's choice?”. What matters at each position is then whether the target's choice is <em>among</em> the candidates: the drafter's top-$k$ agreement replaces its top-1 agreement.</p>
+<p><strong>Which tree?</strong> Suppose that the target's choice is the drafter's $j$-th candidate with probability $r_j$, at every position. A node reached through the ranks $j_1,\dots,j_d$ is accepted together with its whole path with probability $r_{j_1}\times\dots\times r_{j_d}$: call this the <em>value</em> of the node. Only one path is followed, so the expected number of drafted tokens kept is the sum of the values of the nodes. The best tree with $N$ nodes is therefore made of the $N$ nodes of highest value. Sequoia computes it once, offline, from measured $r_j$. EAGLE-2 observes that acceptance depends on the context, not only on the rank, and rebuilds the tree at every round, using the drafter's own confidence as the estimate of each node's value.</p>
+
+<div class="widget" data-widget="p2tree"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p><strong>What to look at.</strong> A toy drafter: at each position the target's choice is its first candidate with probability $a$, its second with probability $a(1-a)$, its third with $a(1-a)^2$, and so on. The upper panel draws the best tree for the node budget; the area of a node is its value. The lower panel gives the expected number of tokens per call of the target (kept tokens, plus the one the target always supplies) as the budget grows, for a single chain and for the best tree. Three things to check. With $a=0.9$ the best tree is almost a chain: alternatives are worth little when the first guess is usually right. With $a=0.5$ the chain saturates at 2 tokens and the tree keeps growing. And the horizontal axis is logarithmic: the tree's curve becomes a straight line, so each <em>doubling</em> of the budget adds the same number of tokens.</p>
+
+<div class="box key"><div class="box-h">Key idea — a logarithmic return</div>
+<p>In the toy model, doubling the number of nodes adds about $\dfrac{\ln 2}{H}$ tokens, where $H$ is the entropy of the rank distribution $(r_j)$: 0.8 token per doubling for $a=0.7$. The same shape is found outside the toy model. Sequoia observes that the number of tokens generated “scales nearly logarithmically in the size of the tree”. In one re-measurement of EAGLE-3 (DFlash's table, §3), a tree of 16 nodes yields 3.05 tokens per call and a tree of 60 nodes 3.48. And a 2025 result (Pankratov and Alistarh) proves that, for any deterministic speculation scheme, the expected number of tokens per round is at most $\frac{\mu+\mu_{(2)}}{\mu^{2}}\log P+O(1)$, where $P$ is the number of positions the verifier can check at once, $\mu$ the expected entropy of the target's output and $\mu_{(2)}$ a second moment of the same kind: logarithmic in the capacity, roughly inverse in the entropy. More parallel capacity buys little; unpredictable text costs a lot.</p>
+</div>
+
+<h3 id="trees-exact">Staying exact with several candidates</h3>
+<p>With sampling, “accept a candidate if any of them passes the test of page 1” is not exact: it favours the tokens that the drafter proposes often. The exact extension applies the rule of <a href="01_foundations.html#rule">page 1, §3</a> again, to what is left after each rejection.</p>
+<div class="algo"><div class="algo-h">Algorithm — $k$ candidates for one position (recursive rejection sampling)</div><ol>
+<li>Start with the target $p_1=p$ and the draft distribution $q_1=q$.</li>
+<li><span class="kw">For</span> $i=1,\dots,k$:</li>
+<li class="in1">draw the candidate $x_i\sim q_i$;</li>
+<li class="in1">accept it with probability $\min\!\big(1,\,p_i(x_i)/q_i(x_i)\big)$, and stop; <span class="cm">the rule of page 1, with $p_i$ as target</span></li>
+<li class="in1">otherwise replace the target by the residual: $p_{i+1}(v)\propto\pos{p_i(v)-q_i(v)}$; <span class="cm">what the output must follow after this rejection</span></li>
+<li class="in1">and take $q_{i+1}=q_i$ (candidates drawn <em>with replacement</em>), or $q_i$ with $x_i$ removed and renormalised (<em>without replacement</em>).</li>
+<li>If the $k$ candidates were rejected, output a sample from $p_{k+1}$.</li>
+</ol></div>
+<details class="fold proof" open><summary>Why it is exact</summary><div class="fold-body">
+<p>The theorem of page 1 says: for <em>any</em> two distributions $p_i,q_i$, “draw $x\sim q_i$, keep it with probability $\min(1,p_i/q_i)$, otherwise output a sample of the residual $p_{i+1}$” outputs a sample of $p_i$. Read the algorithm from the end. Line 7 outputs an exact sample of $p_{k+1}$. So round $k$ (a test, then on rejection something distributed as $p_{k+1}$) outputs an exact sample of $p_k$. So round $k-1$ outputs an exact sample of $p_{k-1}$, and so on down to $p_1=p$. The argument never uses how $q_i$ was chosen, only that the candidate was drawn from it: this is why removing the rejected tokens is allowed.</p>
+</div></details>
+<div class="box example"><div class="box-h">Example — two candidates on example A</div>
+<p>Take example A of page 1: $p=(0.6,\,0.3,\,0.1)$ and $q=(0.3,\,0.5,\,0.2)$ on $\tok{ Paris}$, $\tok{ the}$, $\tok{ a}$. One candidate is kept with probability $0.7$, and after a rejection the residual is $p_2=(1,0,0)$: the output must be $\tok{ Paris}$.</p>
+<ul>
+<li><strong>Second candidate with replacement</strong>, drawn from $q$ again: it is kept only if it is $\tok{ Paris}$, probability $0.3$. Total: $0.7+0.3\times0.3=0.79$.</li>
+<li><strong>Without replacement.</strong> If $\tok{ the}$ was rejected (probability $0.5\times0.4=0.2$), the second candidate is drawn from $(0.6,\,\cdot\,,0.4)$ and is $\tok{ Paris}$ with probability $0.6$. If $\tok{ a}$ was rejected (probability $0.2\times0.5=0.1$), it is drawn from $(0.375,\,0.625,\,\cdot\,)$. Total: $0.7+0.2\times0.6+0.1\times0.375=0.8575$.</li>
+</ul>
+<p>The reason for the gap: a token is rejected only where $q>p$, and there the residual is zero. Proposing the same token a second time is a certain rejection. Sampling without replacement “prevent[s] the draft model from making the same mistake twice” (Sequoia).</p>
+</div>
+<p>Applied at every node of a tree, this rule gives an exact tree method. It is the verification of SpecInfer (2023, with replacement) and of EAGLE; Sequoia and Recursive Speculative Decoding (2024) draw without replacement. The best possible rule for $k$ candidates is not this one:</p>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Sun et al., SpecTr, NeurIPS 2023</span></div>
+<p>SpecTr reads the choice of the output token as an <em>optimal transport</em> problem between the law of the $k$ candidates and the target $p$, with the cost “the output is not one of the candidates”. With one candidate the optimal plan is the rule of page 1 (it is the maximal coupling of <a href="01_foundations.html#optimal">page 1, §3</a>). With $k$ candidates the optimal plan is a linear program whose size is exponential in $k$; the paper gives a fast rule that reaches at least $1-1/e\approx63\%$ of the optimal acceptance. Measured with a pair of PALM-2 models: 2.13× with 8 drafts of 8 tokens, against 1.56× with a single draft of the same length.</p>
+</div>
+
+<article class="mcard">
+<header class="mcard-h">
+<p class="mcard-name">Trees of candidates</p>
+<p class="mcard-meta">SpecInfer (ASPLOS 2024, <a href="https://arxiv.org/abs/2305.09781">arXiv 2305.09781</a>) · SpecTr (NeurIPS 2023, <a href="https://arxiv.org/abs/2310.15141">arXiv 2310.15141</a>) · Sequoia (NeurIPS 2024, <a href="https://arxiv.org/abs/2402.12374">arXiv 2402.12374</a>) · EAGLE-2 (EMNLP 2024)</p>
+<p class="tags"><span class="tag lossless">lossless</span><span class="tag free">no training (a way of using a drafter)</span><span class="tag year">2023–2024</span></p>
+</header>
+<dl class="mfacts">
+<dt class="tries">What it tries</dt><dd>Survive a wrong first guess: keep alternatives, verify them all in the same pass.</dd>
+<dt class="how">How</dt><dd>A tree of candidates scored with tree attention; a multi-candidate accept/reject rule; a tree shape fitted to the drafter (offline in Sequoia, at every round in EAGLE-2).</dd>
+<dt class="gets">What it achieves</dt><dd>Sequoia with a separate small drafter: up to 4.04× on a 7B target, on one GPU. EAGLE-2's dynamic tree: “20%-40% faster than EAGLE-1”, same head. Medusa and the whole EAGLE line of §2 draft trees.</dd>
+<dt class="costs">What it costs</dt><dd>The verification pass is larger: dozens of nodes scored for a handful of tokens kept. That is free only while the hardware has spare capacity (§6): in a study on a production engine, a 21-node tree falls below 1× at batch size 64 while a chain stays above.</dd>
+</dl>
+</article>
+
+<h3 id="block">Block verification: test the block, not the tokens</h3>
+<p><a href="01_foundations.html#exercises">Exercise 7 of page 1</a> ended on a puzzle: on its two-token example, the token-by-token test keeps the whole draft with probability $\tfrac12$, while the two sequence distributions overlap by $\tfrac23$. Block verification (Sun, Mendlovic, Leviathan and co-authors, ICLR 2025) recovers the difference, with the same draft and the same pass of the target.</p>
+<p>Write $\rho_i=p(x_i\mid\cdot)/q(x_i\mid\cdot)$ for the ratio at position $i$ of the draft. The token-by-token rule keeps the first $i$ tokens with probability $\min(1,\rho_1)\times\dots\times\min(1,\rho_i)$: every ratio is capped at 1 separately. Block verification caps the <em>running product</em> instead:</p>
+$$w_0=1,\qquad w_i=\min\big(1,\;w_{i-1}\,\rho_i\big).$$
+<p>The whole block is kept with probability $w_\ga$; otherwise a shorter prefix is kept, with probabilities computed from the $w_i$, and the replacement token is drawn from a residual adjusted by $w_i$. A token that the target likes more than the drafter does ($\rho_i>1$) can now repay an earlier token that it liked less ($\rho<1$), though no credit is carried beyond 1. Since $w_i$ is never smaller than the product of the capped ratios, the full block is kept at least as often as before; the paper proves more: on average, no exact rule keeps more tokens.</p>
+<div class="box example"><div class="box-h">Example — the puzzle of page 1</div>
+<p>Draft $\tok{A}\,\tok{a}$: $\rho_1=\frac{1/3}{2/3}=\frac12$, then $\rho_2=\frac{1}{1/2}=2$. Token by token: $\frac12\times1=\frac12$. Block: $w_1=\frac12$, $w_2=\min(1,\frac12\times2)=1$: this draft is always kept in full. Over the four possible drafts, both tokens are kept with probability $\frac23$ instead of $\frac12$, and the expected number of drafted tokens kept goes from $\frac76$ to $\frac43$. The output distribution is the target's in both cases.</p>
+</div>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Sun et al., “Block Verification Accelerates Speculative Decoding”, ICLR 2025</span></div>
+<p>“In prior works, draft verification is performed independently token-by-token. Surprisingly, we show that this approach is not optimal.” The paper proves that block verification is exact and that no exact verification rule for a single draft produces more tokens per round on average. Measured: “modest but consistent wall-clock speedups over the standard token verification algorithm of 5%-8%”, larger at higher temperature, and none with greedy decoding, where the two rules coincide.</p>
+</div>
+<p><em>Traversal verification</em> (NeurIPS 2025) extends the idea to trees, from the leaves to the root: 2.2% to 5.7% more kept tokens in its paper. Block verification is an option in vLLM and SGLang.</p>
+<div class="box pitfall"><div class="box-h">Pitfall — where the gains are</div>
+<p>Better exact verification is worth a few per cent: 5–8% for block verification, 2–6% for traversal verification, in their papers. Better drafters moved the authors' batch-1 tables from about 2× (2023) to about 5× (2026). The verification rule of page 1 was already close to the best an exact method can do; this is why large further gains had to come either from the drafter, or from giving up exactness.</p>
+</div>

@@ -1,0 +1,54 @@
+<h2 id="serving">6. From a paper's table to a loaded server</h2>
+<p class="tldr">Speculation spends the target's idle parallel capacity. On a busy server that capacity is not idle: the speed-up shrinks, and long drafts or wide trees can make decoding slower. Measurements made by others than the authors are well below the authors' tables.</p>
+
+<h3 id="serving-why">Why the gain shrinks with load</h3>
+<p>Recall <a href="01_foundations.html#asymmetry">page 1, §1</a>: when a model writes one token at a time for one request, most of the time of a pass goes into reading the weights from memory, so scoring $\ga+1$ positions costs almost the same as scoring one. Verification is cheap <em>because the processor was waiting</em>. A server does not decode one request at a time: it puts $B$ requests in the same pass. Without speculation the pass scores $B$ positions; with speculation, $B(\ga+1)$. When $B$ grows, the arithmetic itself becomes the limit, and the extra positions are paid in full.</p>
+<p>A toy model makes this precise. Say that a pass scoring $n$ positions takes the time $1+\kappa n$: a fixed part (reading the weights), and a small cost $\kappa$ per position. Plain decoding advances the $B$ sequences by one token in $1+\kappa B$. A speculative round costs $\ga c\,(1+\kappa B)$ for the draft (the drafter being $c$ times cheaper than the target, as on page 1), then $1+\kappa B(\ga+1)$ for the verification, and yields $\tau=\frac{1-\al^{\ga+1}}{1-\al}$ tokens per sequence:</p>
+$$\text{speed-up}(B)\;=\;\frac{\tau\,(1+\kappa B)}{\ga c\,(1+\kappa B)+1+\kappa B\,(\ga+1)}.$$
+<ul>
+<li><strong>Light load</strong> ($\kappa B\ll1$): $\dfrac{\tau}{\ga c+1}$, the law of page 1.</li>
+<li><strong>Heavy load</strong> ($\kappa B\gg1$): $\dfrac{\tau}{\ga c+\ga+1}$, which is below 1, since $\tau\le\ga+1$. The target scores $\ga+1$ positions per sequence to keep $\tau$ of them: the rejected ones are now real work, taken from other requests.</li>
+</ul>
+
+<div class="widget" data-widget="p2load"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p><strong>What to look at.</strong> The green curve is the speed-up for the draft length you chose, as the batch grows (logarithmic axis). At batch 1 it is the number of page 1. It then falls, and crosses the dashed line “no gain” at the pink dot. Increase $\ga$: the left end rises a little, the right end falls a lot, and the break-even point moves left. The dashed purple curve uses the best draft length at each batch size: it shortens as the load grows, down to no speculation at all. This is the reason for the load-aware controllers of §5, and for the sentence that opens the documentation of a widely used engine: speculative decoding is there “to reduce inter-token latency under medium-to-low QPS (queries per second), memory-bound workloads”.</p>
+
+<h3 id="serving-measured">What was measured</h3>
+<ul>
+<li><strong>EAGLE in a production engine</strong> (a 2026 study on vLLM; 8B target, a mathematics benchmark, one H100): 1.73× at batch 1, 1.21× at batch 128. “Increasing batch size improves absolute throughput but systematically reduces the relative speedup of speculative decoding”.</li>
+<li><strong>EAGLE-3</strong> (measured by the SGLang team, 8B target, one H100, chain of 3 tokens): 1.81× at batch 2, 1.38× at batch 64. The first EAGLE in the same table: 1.40× at batch 2, below 1× from batch 24.</li>
+<li><strong>DFlash</strong> (its paper, 4B target, mathematics benchmark, SGLang): 4.8× with one request at a time, 2.9× with 32 concurrent requests.</li>
+<li><strong>SPEED-Bench</strong> (NVIDIA, ICML 2026; production engines, batch 32, large targets): mean speed-ups from 1.06× to 1.90× for trained drafters, and below 1× for n-gram lookups (0.88× on a 70B target).</li>
+<li><strong>Meta</strong>, on its own serving of Llama models with an EAGLE-style drafter: “a speed-up for large batch sizes between 1.4x and 2.0x at production scale”.</li>
+<li><strong>An exception: long prompts.</strong> With contexts of thousands of tokens, moving the cache in memory dominates even at large batch sizes, and speculation pays again: MagicDec reports “up to 2.51x speedup” for an 8B model at batch sizes 32 to 256.</li>
+</ul>
+<p>The same drafter, five settings:</p>
+<div class="hbars" role="img" aria-label="Speed-up reported for EAGLE-3 in five different settings, from 5.58 times in its own paper to 1.38 times at batch size 64">
+<span class="hb-l">its own paper: Vicuna-13B, chat benchmark, batch 1</span><span class="hb-t"><i class="ok" style="--v:93%"></i></span><span class="hb-v">5.58×</span>
+<span class="hb-l">Spec-Bench leaderboard: Vicuna-13B, six tasks, batch 1</span><span class="hb-t"><i class="ok" style="--v:50.3%"></i></span><span class="hb-v">3.02×</span>
+<span class="hb-l">as a baseline in DFlash's table: Qwen3-4B, batch 1</span><span class="hb-t"><i class="ok" style="--v:34.7%"></i></span><span class="hb-v">2.08×</span>
+<span class="hb-l">SPEED-Bench: Llama-3.3-70B, batch 32</span><span class="hb-t"><i class="ok" style="--v:31.7%"></i></span><span class="hb-v">1.90×</span>
+<span class="hb-l">SGLang team: Llama-3.1-8B, batch 64</span><span class="hb-t"><i class="ok" style="--v:23%"></i></span><span class="hb-v">1.38×</span>
+</div>
+<p class="hbars-cap">Speed-up of EAGLE-3 over plain decoding of the same target, as reported in five sources. The targets, tasks, hardware and tree sizes differ: that is the point. A speed-up belongs to a setting at least as much as to a method.</p>
+
+<h3 id="serving-benchmarks">Reading a table of speed-ups</h3>
+<ul>
+<li><strong>Spec-Bench</strong> (Xia et al., 2024) was the usual yardstick until 2025: 480 prompts (six kinds of task, 80 each), a Vicuna target, greedy decoding, batch size 1, one GPU. Its own leaderboard shows that the hardware reorders the methods: one model-free method goes from 1.40× on a consumer GPU to 2.22× on a data-centre GPU, while a separate small drafter goes from 1.79× down to 1.52×.</li>
+<li><strong>Who trained what.</strong> A controlled study (2026) re-measured released drafters in one engine, then retrained six kinds of drafter on the same data. On one benchmark, the gap between the fastest and the slowest was 4.60 (in units of speed-up) in the papers, 2.84 after re-measurement, 1.53 after retraining. Much of what separates methods in the tables is training data and measurement conditions.</li>
+<li><strong>Which text.</strong> Record numbers come from mathematics and code, where long spans are predictable. On open-ended conversation the same drafters give about half (§3).</li>
+</ul>
+<p>The evaluation checklist of <a href="06_practice.html#evaluation">page 6</a> applies to exact and lossy methods alike.</p>
+
+<h3 id="deployed">What is deployed</h3>
+<p>Exact speculative decoding is a standard feature of the open-source serving engines (vLLM, SGLang, TensorRT-LLM, llama.cpp, Hugging Face Transformers and TGI). In late 2026 an engine offers a menu, not a method: a trained drafter conditioned on the target (EAGLE-3 since 2025, the block drafters of §3 since 2026), a separate small model, the multi-token-prediction heads of the models that ship with them, a lookup in the prompt or in past outputs, and controls that shorten or switch off speculation under load.</p>
+<div class="box paper"><div class="box-h">In the source <span class="ref">Google Research blog, “Looking back at speculative decoding”, December 2024</span></div>
+<p>“Speculative decoding enables AI Overviews in Google Search to produce results faster than before”, and: “the method guarantees an identical output distribution”.</p>
+</div>
+<ul>
+<li><strong>Meta</strong> describes EAGLE-based speculation for Llama models at production scale, with a verification “which preserves the output probability distribution”.</li>
+<li><strong>DeepSeek</strong> reports a block drafter (DSpark) serving live traffic: per-user generation “60 to 85 percent” faster than its previous production drafter at matched throughput.</li>
+<li><strong>Cursor</strong> rewrites files with a lookup drafter fed by the file being edited (“speculative edits”): about 13× over plain decoding of a 70B model, on that task.</li>
+<li>Groq, Cerebras, SambaNova, Together, Fireworks and AWS SageMaker name the technique in their documentation or announcements. No official document of OpenAI or Anthropic says whether it is used.</li>
+</ul>
+<p>Everything in this list is the exact kind. Lossy options exist in the same engines, switched off by default and labelled as such; <a href="06_practice.html#deployment">page 6</a> lists them.</p>

@@ -1,0 +1,33 @@
+<h2 id="ceiling">7. The three ceilings of exact methods</h2>
+<p class="tldr">An exact method is bounded three times: by the overlap of the two distributions, by the cost of the drafter, and by the load of the server. The work of 2024–2026 pushed hard against the second and found ways around part of the third. Nothing exact moves the first.</p>
+
+<div class="table-wrap"><table>
+<thead><tr><th>ceiling</th><th>statement</th><th>what was done about it</th><th>what remains</th></tr></thead>
+<tbody>
+<tr><td><strong>Statistical</strong></td><td>A drafted token is kept with probability at most $1-\TV(p,q)$. A chain yields at most $\frac{1}{1-\al}$ tokens per call; a tree adds the logarithm of its size.</td><td>Drafters closer to the target (distillation, the target's hidden states, training for the accepted length); several candidates; block verification.</td><td>The text itself. Sampling at a higher temperature lowers the overlap; open-ended text is less predictable than mathematics or code.</td></tr>
+<tr><td><strong>Economic</strong></td><td>The gain is divided by $\ga c+1$. With a slow drafter, speculative decoding is slower than plain decoding.</td><td>One layer instead of a model; no model at all; a whole block in one pass; drafting during verification.</td><td>A drafter to train for each target, and to keep in memory.</td></tr>
+<tr><td><strong>Systemic</strong></td><td>Verification uses idle parallel capacity. Under load, a 4–6× at batch 1 becomes 1.1–2×, or a loss.</td><td>Shorter drafts and chains under load; controllers that switch speculation off.</td><td>At high load the best exact choice can be no speculation.</td></tr>
+</tbody></table></div>
+
+<p><strong>Orders of magnitude.</strong> With a free drafter, $\al=0.8$ allows 5 tokens per call and $\al=0.9$ allows 10. The 2026 drafters report 6 to 11 tokens per call on mathematics and code, so, by the formula $\frac{1}{1-\al}$, they already agree with the target on roughly 85–90% of the tokens there; on conversation the same drafters report 4 to 6. The remaining disagreement is not a defect of the drafter that more training would remove entirely: at a position where the target itself hesitates between two wordings, no drafter can know which one it will draw.</p>
+<p>The temperature shows the same thing from another side. EAGLE's own table for a 13B chat model: 3.01–3.76× with greedy decoding, 2.66–2.89× at temperature 1. DFlash: 4.9× and 4.1× on average. The models are the same; only the amount of randomness the target is allowed has changed.</p>
+
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Yin, Chen, Huang, Wang, “A Theoretical Perspective for Speculative Decoding Algorithm”, NeurIPS 2024</span></div>
+<p>“We prove in Theorem 2 that any unbiased algorithm cannot have fewer rejections than Speculative Decoding. This indicates its optimality among the class, and having fewer rejections needs to suffer quality loss or requires extra information.”</p>
+</div>
+<dl class="decode">
+<dt>unbiased algorithm</dt><dd>One whose output follows the target's distribution: what this guide calls exact, or lossless.</dd>
+<dt>the class</dt><dd>Rules that go through one drafted chain and keep or replace each token (the frame of page 1).</dd>
+<dt>quality loss</dt><dd>An output that no longer follows the target's distribution: the subject of pages 3 to 5.</dd>
+<dt>extra information</dt><dd>Something beyond one draft and the two distributions: more candidates (§4), or knowledge of which differences matter (the judges of page 4).</dd>
+</dl>
+
+<h3 id="ceiling-lossy">What a lossy method can change, and what it cannot</h3>
+<p>This sentence of the paper is the hinge of the guide. To keep more tokens than $1-\TV(p,q)$ from a given draft, the output distribution has to move. That is what the next three pages study:</p>
+<ul>
+<li><a href="03_relaxed.html">Page 3</a> and <a href="04_judges.html">page 4</a> relax the acceptance test. They act on the <strong>first</strong> ceiling only. The drafter's cost is unchanged. The load still matters, though a rule that rejects less also wastes fewer verified positions.</li>
+<li><a href="05_reasoning.html">Page 5</a> changes the unit from the token to the reasoning step, or stops running the target on what is accepted. The second option also lifts the <strong>third</strong> ceiling, since the target does less work; the accepted text is then the small model's.</li>
+</ul>
+<div class="box pitfall"><div class="box-h">Pitfall — the fair baseline of a lossy method</div>
+<p>A lossy method is often compared with speculative decoding as it was in 2023: a separate small drafter, a fixed draft length, a token-by-token test. The exact methods of this page are far ahead of that baseline in their authors' batch-1 tables (EAGLE-3: 5.58× where the separate drafter gets 1.93×). Before accepting a loss of fidelity, ask what the best <em>exact</em> method gives in the same setting, and whether the relaxed rule can be combined with it. Many can: a rule of page 3 or 4 only replaces the test at the end of the round.</p>
+</div>

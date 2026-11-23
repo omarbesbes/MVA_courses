@@ -1,0 +1,47 @@
+<h2 id="exercises">8. Exercises</h2>
+
+<div class="exo"><div class="exo-h">Exercise 1 — Which lever? <span class="lvl">★</span></div>
+<p>For each idea, say which term of the speed-up law it acts on ($\al$, $c$, or the number of tokens obtained from a call of the target at fixed $\al$ and $c$): (a) distilling the drafter on the target's outputs; (b) replacing a 1B drafter by one layer fed with the target's hidden state; (c) looking the continuation up in the prompt; (d) proposing three candidates for the first drafted token; (e) stopping the draft when the drafter's entropy is high; (f) a block drafter that writes 16 tokens in one pass; (g) block verification.</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) $\al$. (b) Both: $c$ falls (one layer), and $\al$ rises (the head sees what the target computed). (c) $c$, down to zero; $\al$ is whatever the text allows. (d) The use of the call: more positions scored, more chances that one path survives. (e) The use of the call, and the drafter's wasted time: fewer tokens drafted after a rejection. (f) $c$: the cost of a draft no longer grows with its length. (g) The use of the call: the same draft and the same pass yield more kept tokens.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 2 — A lookup or a head? <span class="lvl">★★</span></div>
+<p>Use the law of page 1. A lookup drafter costs nothing ($c=0$); a head costs $c=0.05$. (a) On open-ended conversation the lookup has $\al=0.3$ and the head $\al=0.8$. Compare the best speed-ups (for the head, try $\ga=8$). (b) On a file-editing task where most of the output is copied, both reach $\al=0.9$. Compare at $\ga=16$. (c) In the heavy-load limit of §6, what is the speed-up of the lookup of (a) with $\ga=4$?</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>With $c=0$ the speed-up is the number of tokens per round, which grows with $\ga$ towards $\frac1{1-\al}$. Heavy load: $\frac{\tau}{\ga c+\ga+1}$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) Lookup: at most $\frac1{1-0.3}=1.43$. Head, $\ga=8$: $\frac{1-0.8^{9}}{0.2\times(1+0.4)}=\frac{0.866}{0.28}=3.09$. The head wins by a factor of two.</p>
+<p>(b) Lookup: $\frac{1-0.9^{17}}{0.1}=8.33$. Head: $\frac{8.33}{1+0.05\times16}=4.63$. The lookup wins: at equal acceptance, the free drafter can afford long drafts. This is the regime of prompt lookup, SuffixDecoding and “speculative edits” (§3, §6).</p>
+<p>(c) $\tau=\frac{1-0.3^{5}}{0.7}=1.43$, and $\frac{1.43}{0+4+1}=0.29$: more than three times <em>slower</em> than plain decoding. A free drafter is not free under load: the target pays for every position it verifies. This is what SPEED-Bench measures for n-gram lookups at batch 32 (below 1×).</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 3 — The best tree with four nodes <span class="lvl">★★</span></div>
+<p>Greedy decoding. At every position the target's choice is the drafter's first candidate with probability $0.6$ and its second candidate with probability $0.2$. You may score four drafted tokens. Compare (a) a chain of four first choices; (b) two candidates at the first position, and two after the first choice; (c) the best tree. Give the expected number of drafted tokens kept in each case.</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>The value of a node is the product of the probabilities along its path; the expected number of kept tokens is the sum of the values (§4).</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>Values: first choice at position 1: $0.6$; second choice at position 1: $0.2$; first choices at positions 2, 3, 4 along the main chain: $0.36$, $0.216$, $0.1296$; second choice at position 2 after the first choice: $0.6\times0.2=0.12$.</p>
+<p>(a) $0.6+0.36+0.216+0.1296=1.306$. (b) $0.6+0.2+0.36+0.12=1.28$. (c) The four largest values are $0.6$, $0.36$, $0.216$ and $0.2$: a chain of three first choices plus one alternative for the first token, $1.376$. With four nodes the gain over a chain is 5%. Alternatives are worth adding where the main chain has become unlikely: the fourth token of the chain (value $0.13$) is worth less than a second guess at the first (value $0.2$).</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 4 — Two candidates, with sampling <span class="lvl">★★</span></div>
+<p>On three tokens, $p=(0.5,\,0.3,\,0.2)$ and $q=(0.2,\,0.3,\,0.5)$. (a) What is the probability that a single candidate is kept, and what is the residual? (b) With the recursive rule of §4, what is the probability that one of two candidates is kept, with replacement, then without? (c) Show in general that a token rejected at one round is rejected with certainty if it is proposed again at the next.</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) $\sum\min(p,q)=0.2+0.3+0.2=0.7$. Only the third token can be rejected (it is the only one with $q>p$), with probability $0.5\times(1-\frac{0.2}{0.5})=0.3$. The residual is $\pos{p-q}=(0.3,0,0)$ normalised: $(1,0,0)$.</p>
+<p>(b) With replacement the second candidate is kept if it is the first token: $0.2$. Total $0.7+0.3\times0.2=0.76$. Without replacement the second candidate is drawn from $(\frac{0.2}{0.5},\frac{0.3}{0.5})=(0.4,0.6)$: total $0.7+0.3\times0.4=0.82$.</p>
+<p>(c) A candidate $x$ can be rejected only if $\min(1,p_i(x)/q_i(x))<1$, that is $p_i(x)<q_i(x)$. Then $\pos{p_i(x)-q_i(x)}=0$, so the next target $p_{i+1}$ gives $x$ the probability $0$, and the test $\min(1,p_{i+1}(x)/q_{i+1}(x))$ is $0$. Proposing $x$ again wastes a candidate; removing it from the draft distribution costs nothing.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 5 — Block verification: the order matters <span class="lvl">★★</span></div>
+<p>A draft of two tokens has the ratios $(\rho_1,\rho_2)$ between target and drafter. Compute the probability that both tokens are kept, for the token-by-token rule and for block verification, when (a) $(\rho_1,\rho_2)=(\tfrac12,2)$; (b) $(\rho_1,\rho_2)=(2,\tfrac12)$. Comment.</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>Token by token: $\min(1,\rho_1)\min(1,\rho_2)=\frac12$ in both cases. Block: (a) $w_1=\frac12$, $w_2=\min(1,\frac12\times2)=1$. (b) $w_1=\min(1,2)=1$, $w_2=\min(1,1\times\frac12)=\frac12$.</p>
+<p>A deficit can be repaid by a later surplus; a surplus cannot be saved for a later deficit. The reason is in the first token. In (b) the target wants the first token twice as often as the drafter proposes it. Keeping it every time it is drafted supplies half of what is needed; the other half comes from the residual, after the rejection of other drafts, and those outputs continue with tokens drawn from the target. They already supply half of the sequences the target wants, so the drafted continuation may only be kept half of the time. In both cases the sequence as a whole has ratio $\rho_1\rho_2=1$, yet only (a) can be kept every time.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 6 — Where speculation stops paying <span class="lvl">★★★</span></div>
+<p>In the toy model of §6, find the batch size $B^\star$ at which the speed-up equals 1. Compute it for $\al=0.7$, $c=0.05$, $\kappa=0.005$ with $\ga=3$, then $\ga=8$.</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>Write $x=\kappa B$ and solve $\tau(1+x)=\ga c\,(1+x)+1+(\ga+1)x$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>$x\,(\tau-\ga c-\ga-1)=1+\ga c-\tau$, hence $$B^\star=\frac1\kappa\cdot\frac{\tau-1-\ga c}{\ga+1+\ga c-\tau}.$$ The numerator is positive exactly when speculation pays at batch 1; the denominator is always positive because $\tau\le\ga+1$.</p>
+<p>$\ga=3$: $\tau=\frac{1-0.7^4}{0.3}=2.53$, so $B^\star=\frac{1}{0.005}\cdot\frac{1.38}{1.62}\approx171$. $\ga=8$: $\tau=\frac{1-0.7^9}{0.3}=3.20$, so $B^\star=\frac{1}{0.005}\cdot\frac{1.80}{6.20}\approx58$. The longer draft yields more tokens per round (3.20 against 2.53) and stops paying three times sooner: under load, drafts must shorten.</p>
+</div></details></div>

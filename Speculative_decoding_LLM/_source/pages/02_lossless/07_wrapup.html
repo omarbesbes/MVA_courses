@@ -1,0 +1,69 @@
+<h2 id="wrapup">9. What to remember</h2>
+
+<div class="box summary"><div class="box-h">Summary</div>
+<ul>
+<li>Every exact method pulls one of three levers of the law of page 1: a higher acceptance $\al$, a cheaper drafter $c$, or more tokens out of each call of the target.</li>
+<li><strong>Drafters.</strong> A separate small model, improved by distillation (+10–45%); a head on the target fed with its hidden state (the EAGLE line: 3× to 5.6× in its authors' tables); a lookup (free, strong on repeated text); since 2026, block drafters that write a whole draft in one pass (about 5× on average, up to 9.6× on mathematics).</li>
+<li><strong>Trees.</strong> Several candidates per position are scored in the same pass. The number of tokens kept grows like the logarithm of the size of the tree. With sampling, exactness needs the recursive rule: after each rejection the target becomes the residual; candidates are best drawn without replacement.</li>
+<li><strong>Block verification</strong> caps the running product of the ratios instead of each ratio: exact, optimal for one chain, 5–8% faster, nothing with greedy decoding.</li>
+<li><strong>Draft length</strong> should follow the drafter's uncertainty: 7–22% over the best fixed length, without training.</li>
+<li><strong>Under load</strong> the gain shrinks, because verification uses capacity that is no longer idle: 1.1× to 2× at batch 32 on production engines, and a loss for long drafts, wide trees and weak drafters.</li>
+<li><strong>Three ceilings</strong>: the overlap $1-\TV(p,q)$, the drafter's cost, the load. No exact rule rejects less than the rule of page 1; keeping more tokens from the same draft means changing the output distribution.</li>
+</ul>
+</div>
+
+<h3 id="compare">The exact families at a glance</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>family</th><th>lever</th><th>examples</th><th>reported, batch 1, by the authors</th><th>main limit</th></tr></thead>
+<tbody>
+<tr><td>separate small model</td><td>$\al$</td><td>the first papers; DistillSpec</td><td>2–3×; +10–45% with distillation</td><td>the drafter's latency; a second model to serve</td></tr>
+<tr><td>heads on the target</td><td>$\al$ and $c$</td><td>Medusa; EAGLE, EAGLE-2, EAGLE-3</td><td>3.1× → 5.6× (13B chat model)</td><td>a head per target; about 3× when measured by others, 1.1–1.9× at batch 32</td></tr>
+<tr><td>lookups</td><td>$c=0$</td><td>prompt lookup, REST, SuffixDecoding</td><td>1.2–2.7× in general; up to 5.3× on repetitive workloads</td><td>needs repeated text; below 1× under load otherwise</td></tr>
+<tr><td>block drafters</td><td>$c$ (one pass)</td><td>DFlash, JetSpec, DSpark</td><td>4.9× on average; 2.7–4.6× on chat, up to 9.6× on mathematics</td><td>a drafter per target; records on predictable text</td></tr>
+<tr><td>trees</td><td>use of the call</td><td>SpecInfer, SpecTr, Sequoia, EAGLE-2</td><td>+20–40% (dynamic tree over static tree)</td><td>logarithmic return; a larger pass, costly under load</td></tr>
+<tr><td>block verification</td><td>use of the call</td><td>Sun et al.; traversal verification</td><td>+5–8%; +2–6% kept tokens on trees</td><td>nothing at temperature 0</td></tr>
+<tr><td>adaptive length, scheduling</td><td>use of the call</td><td>SpecDec++, AdaEDL, SVIP; PEARL</td><td>+7–22%; up to +50% with parallel drafting</td><td>a head to train, or a second device</td></tr>
+</tbody></table></div>
+<p class="hbars-cap">Each cell comes from a different paper and setting: read the rows, do not compare the columns.</p>
+
+<h3 id="reflexes">Reflexes</h3>
+<ul class="checklist">
+<li>A speed-up → ask for the batch size, the temperature, the target, the kind of text, and who measured.</li>
+<li>A new drafter → ask whether it must be trained for each target, and what it costs in memory.</li>
+<li>A tree → ask how many nodes are scored for each token kept.</li>
+<li>“Lossless” with sampling and several candidates → look for the residual in the rule.</li>
+<li>A lossy method → ask which exact method it was compared with.</li>
+</ul>
+
+<h3 id="next">What comes next</h3>
+<p><a href="03_relaxed.html">Page 3</a> crosses the line: rules that keep more drafted tokens than $1-\TV(p,q)$ allows, what output distribution they produce, and the trade-off theorem that prices every one of them.</p>
+
+<h3 id="glossary">Glossary</h3>
+<dl class="decode">
+<dt>drafter</dt><dd>Whatever proposes the draft: a small model, a head, a lookup, a block model.</dd>
+<dt>head</dt><dd>A small network attached to the target and fed with its hidden states.</dd>
+<dt>tree attention</dt><dd>A mask that lets the target score all the nodes of a tree of candidates in one pass, each node seeing only its ancestors.</dd>
+<dt>recursive rejection sampling</dt><dd>The exact rule for several candidates: test a candidate; on rejection, replace the target by the residual and test the next.</dd>
+<dt>block efficiency, $\tau$</dt><dd>Average number of tokens produced per call of the target.</dd>
+<dt>block drafter</dt><dd>A drafter that writes all the tokens of a draft in one pass.</dd>
+<dt>multi-token prediction (MTP)</dt><dd>Extra output heads trained with the model itself to predict several tokens ahead; some models ship with them.</dd>
+<dt>memory-bound, compute-bound</dt><dd>A pass limited by reading the weights from memory (extra positions are almost free), or by the arithmetic (they are not).</dd>
+</dl>
+
+<h3 id="sources">Sources</h3>
+<ul>
+<li>Y. Zhou et al., <em>DistillSpec: Improving Speculative Decoding via Knowledge Distillation</em>, ICLR 2024. <a href="https://arxiv.org/abs/2310.08461">arXiv 2310.08461</a>.</li>
+<li>M. Yan, S. Agarwal, S. Venkataraman, <em>Decoding Speculative Decoding</em>, NAACL 2025. <a href="https://arxiv.org/abs/2402.01528">arXiv 2402.01528</a>.</li>
+<li>T. Cai et al., <em>Medusa: Simple LLM Inference Acceleration Framework with Multiple Decoding Heads</em>, ICML 2024. <a href="https://arxiv.org/abs/2401.10774">arXiv 2401.10774</a>.</li>
+<li>Y. Li, F. Wei, C. Zhang, H. Zhang, <em>EAGLE</em> (ICML 2024, <a href="https://arxiv.org/abs/2401.15077">arXiv 2401.15077</a>), <em>EAGLE-2</em> (EMNLP 2024, <a href="https://arxiv.org/abs/2406.16858">arXiv 2406.16858</a>), <em>EAGLE-3</em> (NeurIPS 2025, <a href="https://arxiv.org/abs/2503.01840">arXiv 2503.01840</a>).</li>
+<li>A. Saxena, <em>Prompt Lookup Decoding</em>, code repository, <a href="https://github.com/apoorvumang/prompt-lookup-decoding">github.com/apoorvumang/prompt-lookup-decoding</a>. Z. He et al., <em>REST</em>, NAACL 2024, <a href="https://arxiv.org/abs/2311.08252">arXiv 2311.08252</a>. G. Oliaro et al., <em>SuffixDecoding</em>, NeurIPS 2025, <a href="https://arxiv.org/abs/2411.04975">arXiv 2411.04975</a>.</li>
+<li>J. Chen et al., <em>DFlash: Block Diffusion for Flash Speculative Decoding</em>, ICML 2026, <a href="https://arxiv.org/abs/2602.06036">arXiv 2602.06036</a>. <em>JetSpec</em>, <a href="https://arxiv.org/abs/2606.18394">arXiv 2606.18394</a>. <em>DSpark</em>, <a href="https://arxiv.org/abs/2607.05147">arXiv 2607.05147</a>.</li>
+<li>X. Miao et al., <em>SpecInfer</em>, ASPLOS 2024, <a href="https://arxiv.org/abs/2305.09781">arXiv 2305.09781</a>. Z. Sun et al., <em>SpecTr: Fast Speculative Decoding via Optimal Transport</em>, NeurIPS 2023, <a href="https://arxiv.org/abs/2310.15141">arXiv 2310.15141</a>. Z. Chen et al., <em>Sequoia</em>, NeurIPS 2024, <a href="https://arxiv.org/abs/2402.12374">arXiv 2402.12374</a>. W. Jeon et al., <em>Recursive Speculative Decoding</em>, <a href="https://arxiv.org/abs/2402.14160">arXiv 2402.14160</a>.</li>
+<li>Z. Sun et al., <em>Block Verification Accelerates Speculative Decoding</em>, ICLR 2025, <a href="https://arxiv.org/abs/2403.10444">arXiv 2403.10444</a>. Y. Weng et al., <em>Traversal Verification for Speculative Tree Decoding</em>, NeurIPS 2025, <a href="https://arxiv.org/abs/2505.12398">arXiv 2505.12398</a>.</li>
+<li>S. Pankratov, D. Alistarh, <em>Speculative Decoding Speed-of-Light: Optimal Lower Bounds via Branching Random Walks</em>, <a href="https://arxiv.org/abs/2512.11718">arXiv 2512.11718</a>. M. Yin et al., <em>A Theoretical Perspective for Speculative Decoding Algorithm</em>, NeurIPS 2024, <a href="https://arxiv.org/abs/2411.00841">arXiv 2411.00841</a>.</li>
+<li>K. Huang et al., <em>SpecDec++</em>, COLM 2025, <a href="https://arxiv.org/abs/2405.19715">arXiv 2405.19715</a>. S. Agrawal et al., <em>AdaEDL</em>, <a href="https://arxiv.org/abs/2410.18351">arXiv 2410.18351</a>. Z. Zhang et al., <em>SVIP</em>, EMNLP 2025, <a href="https://arxiv.org/abs/2411.18462">arXiv 2411.18462</a>. J. Mamou et al., <em>Dynamic Speculation Lookahead</em>, <a href="https://arxiv.org/abs/2405.04304">arXiv 2405.04304</a>.</li>
+<li>T. Liu et al., <em>PEARL</em>, ICLR 2025, <a href="https://arxiv.org/abs/2408.11850">arXiv 2408.11850</a>. T. Kumar et al., <em>Speculative Speculative Decoding</em>, ICLR 2026, <a href="https://arxiv.org/abs/2603.03251">arXiv 2603.03251</a>. H. Sun et al., <em>TriForce</em>, COLM 2024, <a href="https://arxiv.org/abs/2404.11912">arXiv 2404.11912</a>. R. Sadhukhan et al., <em>MagicDec</em>, <a href="https://arxiv.org/abs/2408.11049">arXiv 2408.11049</a>. <em>TurboSpec</em>, <a href="https://arxiv.org/abs/2406.14066">arXiv 2406.14066</a>.</li>
+<li>H. Xia et al., <em>Unlocking Efficiency in Large Language Model Inference: A Comprehensive Survey of Speculative Decoding</em> (Spec-Bench), Findings of ACL 2024, <a href="https://arxiv.org/abs/2401.07851">arXiv 2401.07851</a>. X. Liu et al., <em>Speculative Decoding: Performance or Illusion?</em>, <a href="https://arxiv.org/abs/2601.11580">arXiv 2601.11580</a>. T. Abramovich et al., <em>SPEED-Bench</em>, ICML 2026, <a href="https://arxiv.org/abs/2604.09557">arXiv 2604.09557</a>. Y. Long et al., <em>When Does Better Acceptance Pay? A Controlled Study of Speculative Decoding</em>, <a href="https://arxiv.org/abs/2610.24993">arXiv 2610.24993</a>.</li>
+<li>Y. Leviathan, M. Kalman, Y. Matias, <em>Looking back at speculative decoding</em>, Google Research blog, 6 December 2024, <a href="https://research.google/blog/looking-back-at-speculative-decoding/">research.google/blog</a>. Meta, <em>Efficient Speculative Decoding for Llama at Scale</em>, <a href="https://arxiv.org/abs/2508.08192">arXiv 2508.08192</a>. Cursor, <em>Editing Files at 1000 Tokens per Second</em>, <a href="https://cursor.com/blog/instant-apply">cursor.com/blog/instant-apply</a>.</li>
+<li>Every number of this page, with its setting and the methods not named here (several dozen), is in the research notes of this guide, <code>_source/notes/lossless_state_of_the_art.md</code> and <code>_source/notes/foundations_and_theory.md</code>.</li>
+</ul>

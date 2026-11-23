@@ -1,0 +1,32 @@
+<!--
+title: 2 — The lossless frontier: everything that keeps the output exact
+short: 2 · Lossless frontier
+description: A map of exact speculative decoding as of 2026: trained and distilled drafters, drafting heads attached to the target (Medusa, the EAGLE line), lookups, parallel block drafters, trees of candidates, block verification, adaptive draft length, what happens on a loaded server, what is deployed, and the three ceilings that motivate lossy methods.
+subtitle: Before giving up exactness, see how far it goes. This page is a map of what has been tried to make the draft better and cheaper without touching the output distribution, what each idea reports, and where the whole family stops.
+-->
+
+<div class="box objectives">
+<div class="box-h">What you will be able to do after this page</div>
+<ol>
+<li>Sort any exact method by the lever it pulls in the speed-up law: a higher acceptance rate, a cheaper drafter, a better use of each call of the target.</li>
+<li>Describe the main families of drafters — a separate small model, heads attached to the target, lookups, parallel block drafters — and what each reports.</li>
+<li>Explain why several candidates per position (trees) help, why accepting them naively would break exactness, and what block verification changes.</li>
+<li>Say what happens to batch-1 speed-ups on a loaded server, and what serving software ships.</li>
+<li>State the three ceilings of exact methods: statistical, economic, systemic.</li>
+</ol>
+</div>
+
+<h2 id="start">0. Before you start</h2>
+<p>This page is a map, not a course: the guide's subject is lossy speculation (pages 3 to 5), and this page is here so that you know what the lossy methods are competing with. You need <a href="01_foundations.html">page 1</a>. Each family gets a short card with what it tries and what it reports. All the methods here are <strong>lossless</strong>: with sampling they keep the target's distribution, with greedy decoding they keep its text (up to the numerical caveat of <a href="01_foundations.html#speedup-limits">page 1, §5</a>).</p>
+<div class="box pitfall"><div class="box-h">Pitfall — speed-ups are per setting</div>
+<p>Almost every number on this page is “speed-up over the target decoding alone, batch size 1, greedy decoding, one GPU”, measured by the method's authors on their own choice of model, task and hardware. They are not comparable across papers, and §6 shows what becomes of them on a loaded server.</p>
+</div>
+<h3 id="levers">The three levers</h3>
+<p>Everything follows from the law of <a href="01_foundations.html#speedup">page 1, §5</a>: speed-up $=\dfrac{1-\al^{\ga+1}}{(1-\al)(\ga c+1)}$.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>lever</th><th>how</th><th>families</th><th>section</th></tr></thead>
+<tbody>
+<tr><td>raise $\al$: a draft closer to the target</td><td>train the drafter to imitate the target; give it the target's own internal state</td><td>distilled drafters; heads on the target</td><td><a href="#drafters">§1</a>, <a href="#heads">§2</a></td></tr>
+<tr><td>lower $c$: a cheaper draft</td><td>a single layer instead of a model; no model at all; all draft tokens in one pass</td><td>heads; lookups; parallel block drafters</td><td><a href="#heads">§2</a>, <a href="#lookup">§3</a></td></tr>
+<tr><td>get more out of each call of the target</td><td>several candidates per position; verify blocks jointly; stop drafting at the right time</td><td>trees; block verification; adaptive length</td><td><a href="#trees">§4</a>, <a href="#length">§5</a></td></tr>
+</tbody></table></div>

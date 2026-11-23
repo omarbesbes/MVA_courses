@@ -1,0 +1,27 @@
+<h2 id="length">5. Draft the right amount, at the right time</h2>
+<p class="tldr">A fixed draft length is wrong most of the time: too long where the text is hard, too short where it is easy. Stopping the draft when the drafter itself becomes unsure gains 7% to 22% over the best fixed length. Two further ideas: speculate on the drafter too (cascades), and draft while the target verifies (this needs spare hardware).</p>
+
+<h3 id="length-adaptive">Stop when a rejection is likely</h3>
+<p>With a fixed $\ga$, every rejection wastes the tokens drafted after it, and every fully accepted draft could have been longer. The gap is large. The first paper already computed it: with an oracle telling where the first rejection will fall, the expected number of tokens per round is $\frac{1}{1-\al}$ instead of $\frac{1-\al^{\ga+1}}{1-\al}$, and the speed-up “can be up to $\sim$60% higher” than with a fixed $\ga$. A later oracle study (SpecDec++, on a 7B/70B pair, greedy decoding) measures 2.92× with oracle stopping against 1.90× for the best fixed length.</p>
+<p>No oracle exists, but the drafter's own uncertainty is a usable signal. Here is why. The acceptance probability at a position is $\be=1-\TV(p,q)$ (page 1), and Pinsker's inequality bounds a total variation by a Kullback–Leibler divergence:</p>
+$$\be\;=\;1-\TV(p,q)\;\ge\;1-\sqrt{\tfrac12\,\KL(q\,\|\,p)}.$$
+<p>The divergence needs the target $p$, which is what we are trying not to compute. The heuristic step is to replace it by a multiple of the drafter's entropy $H(q)$, which is available for free: where the drafter spreads its probability over many tokens, it is probably far from the target. This gives a stopping rule with one threshold $\lambda$ and one constant $c$:</p>
+$$\text{stop drafting and call the target as soon as}\quad 1-\sqrt{c\,H(q)}<\lambda .$$
+<div class="table-wrap"><table>
+<thead><tr><th>method</th><th>the signal that stops the draft</th><th>training</th><th>gain over the best fixed length, as reported</th></tr></thead>
+<tbody>
+<tr><td>SpecDec++ (COLM 2025)</td><td>a small head on the drafter predicts the probability that some drafted token will be rejected; stop above a threshold (the paper proves that a threshold rule is optimal)</td><td>a head</td><td>7% to 11% (7B/70B chat pair)</td></tr>
+<tr><td>AdaEDL (workshop, 2024), SVIP (EMNLP 2025)</td><td>the entropy rule above</td><td>none</td><td>10% to 57% (AdaEDL; the top of the range where drafting is expensive); up to 17% and 22% (SVIP, long generations)</td></tr>
+<tr><td>Dynamic lookahead (2024)</td><td>a classifier, or simply the drafter's confidence in its next token against a threshold</td><td>none in the shipped version</td><td>10% on average</td></tr>
+</tbody></table></div>
+<p>All of these are exact: they change how many tokens are drafted, not how a token is accepted. The confidence-threshold version has been the default of Hugging Face's assisted generation since 2024. Keep the mechanism in mind for pages 3 and 4: there, an entropy (the target's, this time) is used to decide <em>acceptance</em> itself, and that is no longer exact.</p>
+
+<h3 id="length-cascade">Speculate on the drafter, and draft during verification</h3>
+<ul>
+<li><strong>Cascades of drafters.</strong> If a small model can draft for the target, a smaller one (or a table of n-grams) can draft for the small model. Staged speculative decoding (2023) and Cascade Speculative Drafting (NeurIPS 2024) stack drafters this way. TriForce (2024) applies it to very long contexts: the target itself, reading only a small part of its cache, is the middle drafter, and a tiny model drafts for it; 2.31× on a 7B model with a 128K context in the paper.</li>
+<li><strong>Drafting in parallel with verification.</strong> In the basic loop the drafter waits while the target verifies, and the target waits while the drafter drafts. PEARL (ICLR 2025) lets the drafter continue during verification and the target start verifying before the draft is complete: up to 1.50× over plain speculative decoding in the paper. “Speculative speculative decoding” (ICLR 2026) has the drafter guess the outcome of the verification in progress and prepare the next draft for it: on average 30% faster than optimised speculative decoding in the paper, with the drafter on a separate GPU.</li>
+<li><strong>Deciding under load.</strong> Controllers such as TurboSpec and Nightjar adapt the draft length to the current load and the measured acceptance, or switch speculation off when it does not pay. §6 shows why this is needed.</li>
+</ul>
+<div class="box pitfall"><div class="box-h">Pitfall — parallel drafting does not raise acceptance</div>
+<p>These schedulers hide the drafter's time behind the target's; they change neither $\al$ nor the size of the verification. Their limit is the speed-up of a free drafter with the same acceptance, $\frac{1-\al^{\ga+1}}{1-\al}$, and they need a second device, or idle capacity on the first.</p>
+</div>
