@@ -1,0 +1,58 @@
+<h2 id="importance">2. Concept importance for a task</h2>
+<p class="tldr">A linear probe on activations is, in the concept basis, a linear probe on codes with weights $\mW'=\mD\mW\T$; the importance of concept $i$ for output $j$ is its mean code times its weight, $\E[Z_i]\,W'_{ij}$.</p>
+
+<h3 id="imp-problem">The problem</h3>
+<p>The model has been trained on tasks (classification, segmentation, depth) through simple heads. We have 32,000 concepts. Which of them does a given head use? The head is linear, the concepts are linear directions, so the question can be answered exactly by one matrix product, with no new training.</p>
+
+<h3 id="imp-derivation">Derivation</h3>
+<div class="box paper"><div class="box-h">Importance of concepts <span class="ref">§3 · p. 6 and App. C.1 · p. 33</span></div>
+<p>For a downstream prediction $\mY=\mA\mW\T$ with $\mW\in\R^{o\times d}$, $o$ being the number of outputs, one has $\mY=(\mZ\mD)\mW\T=\mZ\mW'$ with $\mW'=\mD\mW\T$. "This formulation provides a direct measure of each concept's importance through $\E(\mZ\mW')=\E(\mZ)\mW'$, which represents the expected concept activation weighted by task-output alignment." In linear regimes this is "the optimal importance measure under standard faithfulness criteria (Theorem 3 in Fel et al. 2023)".</p></div>
+<ol class="steps">
+<li>$\mY=\mA\mW\T$ <span class="why">the probe: each row of $\mA$ (one token) gives one row of $\mY$ ($o$ scores). Shapes: $(nt\times d)(d\times o)=nt\times o$.</span></li>
+<li>$\mA\approx\mZ\mD$ <span class="why">the dictionary reconstruction; $\mZ$ is $nt\times c$, $\mD$ is $c\times d$.</span></li>
+<li>$\mY\approx\mZ\mD\mW\T$ <span class="why">substitute. Here the approximation sign hides the reconstruction error $(\mA-\mZ\mD)\mW\T$, which the paper drops.</span></li>
+<li>$\mY\approx\mZ\,(\mD\mW\T)=\mZ\mW'$ <span class="why">associativity. $\mW'=\mD\mW\T$ has shape $(c\times d)(d\times o)=c\times o$.</span></li>
+<li>$Y_{n,j}=\sum_{i=1}^c Z_{n,i}\,W'_{ij}$ <span class="why">write the product entry by entry: output $j$ of token $n$ is a sum over concepts of (code) × (weight). Only $\le k=8$ terms are non-zero.</span></li>
+<li>$\E[Y_{\cdot,j}]=\sum_i \E[Z_i]\,W'_{ij}$ <span class="why">linearity of expectation (over tokens, and images). The $i$-th summand is the contribution of concept $i$ to the mean output $j$: this is the score.</span></li>
+</ol>
+<figure class="fig"><!-- include figures/03/pipeline.svg --><figcaption>From image to probe: the probe can be applied on $\mA$ directly, or on the codes through $\mW'=\mD\mW\T$.</figcaption></figure>
+<dl class="decode">
+<dt>$W'_{ij}=\mD_i\cdot\mW_j$</dt><dd>alignment of atom $i$ with the probe row $j$ (the direction in activation space that raises output $j$). Large and positive: using concept $i$ pushes output $j$ up.</dd>
+<dt>$\E[Z_i]$</dt><dd>mean code of concept $i$: frequency × typical intensity (<em>including zeros</em>, since the code is 0 when the concept is off).</dd>
+<dt>$\E[Z_i]W'_{ij}$</dt><dd>importance of concept $i$ for output $j$; a signed number.</dd>
+</dl>
+
+<div class="box recall"><div class="box-h">Reminder — why "gradient × input"</div>
+<p>For a function $f$ and an input $x$, <em>gradient × input</em> attributes to coordinate $i$ the number $x_i\,\partial f/\partial x_i$ (<a href="02_toolbox.html#grad-input">more</a>). Here $f=Y_j$ is, as a function of the codes, $\sum_i z_iW'_{ij}$: linear, so $\partial Y_j/\partial z_i=W'_{ij}$ and gradient × input is $z_iW'_{ij}$. Averaging over tokens gives $\E[Z_i]W'_{ij}$. So the score is gradient × input <em>in the concept basis</em>, averaged. For a linear function this also equals the Integrated Gradients with a zero baseline and the occlusion score (replace $z_i$ by 0); the paper states this in App. C.1. RISE (<a href="02_toolbox.html#rise">more</a>) averages over random masks and for a linear model is proportional to it.</p></div>
+
+<h3 id="optimal">The optimality claim</h3>
+<p>The paper claims (footnote, §3, and App. C.1) that in the linear case this score is the optimal attribution under three faithfulness criteria, citing Theorem 3 of Fel et al. 2023 ("A holistic approach to unifying automatic concept extraction and concept importance estimation"). We have not re-derived this theorem; the statement below is "according to the paper".</p>
+<ul>
+<li><strong>C-Deletion</strong>: remove concepts one by one, most important first, and track the drop of the output. A good importance score makes it fall fast.</li>
+<li><strong>C-Insertion</strong>: add concepts one by one, most important first, starting from an empty input. A good score makes it rise fast.</li>
+<li><strong>C-$\mu$Fidelity</strong>: correlation, over random subsets of concepts, between the sum of importances of the removed concepts and the actual change of the output.</li>
+</ul>
+<p>The paper says that "in linear cases, these metrics coincide and share the same optimal attribution function". Intuition: if the output is $\sum_i z_iW'_{ij}$, removing a set $S$ changes it by exactly $\sum_{i\in S}z_iW'_{ij}$, so the score is exactly additive, and ordering by it is optimal.</p>
+
+<h3 id="imp-example">A worked example</h3>
+<div class="box example"><div class="box-h">Example — three concepts, two outputs</div>
+<p>Let $\E[\vz]=(0.5,\,0.2,\,0.05)$ and
+$$\mW'=\begin{pmatrix}2&-1\\0.5&1\\-3&4\end{pmatrix}\quad(\text{rows: concepts, columns: outputs}).$$
+Scores $\E[Z_i]W'_{ij}$: concept 1: $(1.00,\,-0.50)$; concept 2: $(0.10,\,0.20)$; concept 3: $(-0.15,\,0.20)$.
+Sums over concepts: $(0.95,\,-0.10)$, which is the mean output $\E[\mY]$ (the 2-vector).</p>
+<p>Output 1 is driven by concept 1 (1.00 of 0.95; the others sum to $-0.05$). Output 2 is a near-cancellation: $-0.5+0.2+0.2=-0.1$. Concept 3 has the largest weights ($-3,4$) but a small mean code (0.05), so it ends up equal to concept 2 in output 2 and weaker than concept 1 everywhere. Weight alone does not make a concept important; frequency × intensity matters. Play with it:</p></div>
+<div class="widget" data-widget="p3importance"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p><strong>What to look at:</strong> set $\E[Z_3]$ to 0 and see its bars vanish whatever $W'$; push all three alignments to the same sign on one output and see the contributions pile up; the black marker (sum of bars) is always the mean output.</p>
+
+<h3 id="imp-pitfalls">What the definition leaves unclear</h3>
+<div class="box pitfall"><div class="box-h">Pitfalls</div><ul>
+<li><strong>Two readings of $\phi$.</strong> App. C.1 defines $\vphi=\E(\mZ)\mW'\in\R^o$, "the concept-importance vector for the probe". Summed over concepts this is the mean output (a vector of length $o$), not a vector of 32,000 scores. The per-concept score is each summand $\E[Z_i]W'_{ij}$; the appendix says it "can be read from $\E(\mZ)$ together with the corresponding rows of $\mW'$".</li>
+<li><strong>Aggregation over outputs is not specified.</strong> The scores form a $c\times o$ matrix. To rank concepts for a task one needs one number per concept: the paper does not say whether it takes a sum, a max, an absolute value or the score of one class. (For a segmentation head with many classes, or depth with a regression output, the choices differ.)</li>
+<li><strong>Sign.</strong> With a signed score, "most important" may mean most positive or largest in absolute value. Not specified.</li>
+<li><strong>What is dropped.</strong> Reconstruction error $(\mA-\mZ\mD)\mW\T$ (about 12% of the variance) and the probe's bias term are left out.</li>
+<li><strong>Tokens vs images.</strong> The score is an expectation over <em>tokens</em>. The classifier head of DINOv2 takes the concatenation of the <code>cls</code> token and the mean of the patch tokens (App. C.2), so a class score is not a function of one token. The averaging makes the token-level linear decomposition valid for the mean-pooled part, but the <code>cls</code> branch is a separate input.</li>
+<li><strong>Expectation includes zeros.</strong> $\E[Z_i]$ small can mean "rare but strong" or "frequent but weak"; the score cannot tell them apart.</li>
+</ul></div>
+<div class="box ours"><div class="box-h">Our reading — importance is not necessity</div>
+<p>$\E[Z_i]W'_{ij}$ measures a linear contribution to the logit; it says nothing about whether the model would still classify correctly without the concept, since other atoms are correlated with it. See <a href="06_critical_reading.html#verdict">page 6</a>.</p></div>
+<div class="box reflex"><div class="box-h">Reflex</div><p>When you see "importance of a concept for a linear probe" → push the probe through the dictionary, $\mW'=\mD\mW\T$, then weight by the mean code.</p></div>

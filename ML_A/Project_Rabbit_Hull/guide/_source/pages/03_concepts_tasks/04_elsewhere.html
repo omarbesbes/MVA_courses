@@ -1,0 +1,43 @@
+<h2 id="elsewhere">4. "Elsewhere" concepts</h2>
+<p class="tldr">Some of the most important concepts for an ImageNet class fire on tokens that are not on the object, and only when the object is somewhere in the image: a concept map and a causal map of the same concept point at different places.</p>
+
+<h3 id="else-problem">The problem</h3>
+<p>Concept heat maps colour the tokens where a concept is active, and readers take this to mean "the concept is about this region". That assumption is not guaranteed. In a ViT, a token's activation depends on all other tokens through attention (<a href="01_background.html#attention">recall</a>), so a token can carry information about something located elsewhere.</p>
+<div class="box paper"><div class="box-h">"Elsewhere" concepts <span class="ref">§3 · p. 7 and App. C.2 · p. 34</span></div>
+<p>"Across a wide range of ImageNet classes, the top few most important concepts typically include not only interpretable objects or object-parts, but also an 'Elsewhere' concept": these "activate broadly across the tokens, but crucially <em>not</em> on the object itself", yet "their firing depends on the object's presence, and vanish if the object is removed". They express "<em>not the object, but the object exists</em>". They warn that heat maps "violate the unspoken assumption: the concept is just about the token where the concept fires".</p></div>
+
+<figure class="paperfig"><img data-src="paper_figures/elsewhere.jpg" alt="Elsewhere concepts for rabbit, fox and cat: token activation maps and RISE maps">
+<figcaption><strong>Fig. 4 of the paper.</strong> Rows are the classes rabbit, fox and cat. Per class: images, the token-level map of the concept (middle row), and a causal RISE map (bottom row).<span class="src">From the paper (Fel, Wang et al., 2026), CC BY 4.0.</span></figcaption></figure>
+<div class="box method"><div class="box-h">How to read this figure</div>
+<ul>
+<li><strong>Token map (middle row)</strong>: colour where the concept's code $Z_i$ is large, per patch. For these concepts the colour is on the surroundings and avoids the animal.</li>
+<li><strong>RISE map (bottom row)</strong>: colour where <em>masking</em> the image changes the concept's activation. It lights up the animal itself.</li>
+<li><strong>The two maps disagree</strong>: where the concept fires is not what it depends on. That is the whole point.</li>
+<li><strong>Not shown:</strong> how many concepts are of this type (the paper says "recurring" and "for several classes"), and no number quantifies the effect; the object-removal claim is visual.</li>
+</ul></div>
+
+<h3 id="rise-decode">The RISE formula, decoded</h3>
+<div class="box paper"><div class="box-h">Causal attribution <span class="ref">App. C.2 · p. 34</span></div>
+$$\Gamma^{(i)}_{\text{RISE}}(f,\vx)=\E_{\vm\sim\mathbb{P}_{\vm}}\big(f(\vx\odot\vm)\mid \vm_i=1\big)$$
+<p>$f$ is "the composition of the model and the SAE", with 8000 forward passes per explanation.</p></div>
+<dl class="decode">
+<dt>$\vm$</dt><dd>a random binary (or soft) mask of the image, drawn from a distribution $\mathbb{P}_{\vm}$; $\odot$ multiplies it pixel-wise with the image $\vx$, hiding the parts where $\vm=0$.</dd>
+<dt>$f(\vx\odot\vm)$</dt><dd>here: the activation of the concept of interest on the masked image (the concept is the output of model + SAE).</dd>
+<dt>$\vm_i=1$</dt><dd>conditioning on pixel (or region) $i$ being visible.</dd>
+<dt>$\Gamma^{(i)}$</dt><dd>average concept activation over the masks that keep location $i$. If keeping $i$ is what the concept needs, the average is high. Recall <a href="02_toolbox.html#rise">RISE</a>. Estimated with 8000 masks.</dd>
+</dl>
+<p>Reading the logic: the object region gets a high $\Gamma$, because masks that hide the object kill the concept even if they keep the places where it fires. The paper's conclusion: "the object or animal itself is the most causally important region responsible for concept firing, even though the concept manifests its activation in spatially disjoint locations".</p>
+
+<figure class="fig"><!-- include figures/03/elsewhere_logic.svg --><figcaption>The logic of an Elsewhere concept on a toy grid, as a conditional rule. Left: fires off the object. Middle: object removed, nothing fires. Right: a plain background detector, which would not depend on the object.</figcaption></figure>
+<div class="widget" data-widget="p3elsewhere"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p><strong>What to look at:</strong> toggle the object: the object concept and the Elsewhere concept both vanish, the background concept does not. Compare the "where it fires" row with the "what it depends on" row.</p>
+
+<h3 id="else-why">Why this is possible and useful</h3>
+<ul>
+<li><strong>Attention makes it possible.</strong> A patch token far from the object can read the object through attention and copy a summary of it into its own residual stream, so its activation encodes "the object is somewhere in the image".</li>
+<li><strong>Pooling makes it useful.</strong> The classifier takes <code>cls</code> and the <em>mean</em> of the patch tokens. A mean does not care where the evidence sits: class evidence spread over off-object tokens still reaches the logit. The paper adds that this can improve robustness to occlusion and viewpoint (App. C.2), a plausibility argument that it does not test.</li>
+<li><strong>Implication for heat maps.</strong> A concept's token map shows where it is expressed, not what it is about. The paper recommends combining localisation with causal perturbation.</li>
+</ul>
+<div class="box ours"><div class="box-h">Our reading — what is established</div>
+<p>The figure shows a few examples from three classes. The paper's statements "implicitly learns a form of fuzzy spatial logic" and "fundamental computational strategy" go beyond that: no frequency of Elsewhere concepts, no random-concept control and no ablation of such a concept on the class score is given. The simplest alternative explanation of the token maps is a concept that reads global context from the registers or <code>cls</code> token. <a href="06_critical_reading.html#verdict">Page 6</a>.</p></div>
+<div class="box reflex"><div class="box-h">Reflex</div><p>When you see a concept heat map → ask where it fires <em>and</em> what it depends on; the two can be disjoint.</p></div>

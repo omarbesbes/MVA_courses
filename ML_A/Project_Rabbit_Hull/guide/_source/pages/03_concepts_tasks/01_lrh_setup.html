@@ -1,0 +1,75 @@
+<h2 id="lrh-setup">1. The working hypothesis and how it is made operational</h2>
+<p class="tldr">The paper assumes that a token activation is a combination of at most $k=8$ non-negative multiples of unit vectors chosen among $c=32{,}000$ almost-orthogonal atoms, and finds those atoms with an archetypal sparse autoencoder trained on 1.4M images.</p>
+
+<h3 id="problem-1">The problem</h3>
+<p>A ViT has 768 neurons per token, but images contain far more than 768 things. Neurons are polysemantic: one neuron responds to several unrelated things. The paper's answer is to look for <em>directions</em> instead of neurons, and to ask that each activation uses only a few of them. This is the <a href="01_background.html#lrh">linear representation hypothesis</a> (LRH), whose roots (<a href="01_background.html#superposition">superposition</a>) are recalled on page 1.</p>
+
+<div class="box paper"><div class="box-h">Definition 1 — Linear Representation Hypothesis <span class="ref">§2 · p. 5</span></div>
+<p>A representation $\va\in\R^d$ satisfies the LRH if there exist a sparsity constant $k$, an overcomplete dictionary $\mD=(\vd_1,\dots,\vd_c)\in\R^{c\times d}$ and a coefficient vector $\vz\in\R^c$ such that $\va=\vz\mD$, under the conditions:</p>
+$$\text{(i) } c\gg d,\qquad \text{(ii) } \mu(\mD)\equiv\max_{i\ne j}\abs{\mD_i\mD_j\T}\le\eps,\ \ \norm{\mD_i}_2=1,\qquad \text{(iii) } \abs{\supp(\vz)}\le k\ll c .$$
+</div>
+<dl class="decode">
+<dt>$\va=\vz\mD$</dt><dd>row-vector convention: $\va$ and $\vz$ are rows, $\mD$ has one atom per row. So $\va=\sum_i z_i\mD_i$, a combination of atoms.</dd>
+<dt>(i) $c\gg d$</dt><dd><em>overcompleteness</em>: more atoms than dimensions ($c/d\approx41.7$ here). It allows one atom per concept rather than one per dimension. A consequence is that the atoms cannot be orthogonal and the decomposition $\va=\vz\mD$ is not unique (see the toy example below).</dd>
+<dt>(ii) $\mu(\mD)\le\eps$</dt><dd><em>quasi-orthogonality</em>: the <em>coherence</em> $\mu$ is the largest absolute cosine between two different atoms (unit norm). Small $\eps$ means that atoms interfere little, so a sparse code can be read back from $\va$. Recall: <a href="02_toolbox.html#gram-coherence">Gram matrix and coherence</a>. The definition does not give a value of $\eps$.</dd>
+<dt>(iii) $\abs{\supp(\vz)}\le k\ll c$</dt><dd><em>sparsity</em>: at most $k$ non-zero codes. This is what makes the decomposition meaningful despite overcompleteness.</dd>
+</dl>
+<p>The paper motivates (ii) by compression: arranging $c$ directions with minimal coherence is the problem of spherical codes (Tammes, Thomson), formalised by <em>Grassmannian frames</em> (<a href="02_toolbox.html#welch-grassmannian">Welch bound and Grassmannian frames</a>). Definition 1 does not require non-negative codes: the non-negativity $\mZ\ge0$ comes later, with the SAE.</p>
+
+<figure class="fig"><!-- include figures/03/rowconv.svg --><figcaption>The row convention $\va=\vz\mD$. Only $k$ entries of $\vz$ are non-zero; they select $k$ rows of $\mD$ and weight them.</figcaption></figure>
+
+<h3 id="toy-lrh">A worked example by hand</h3>
+<div class="box example"><div class="box-h">Example — $d=2$, three atoms, one active code</div>
+<p>Take $c=3$ unit atoms in $\R^2$: $\mD_1=(1,0)$, $\mD_2=(0,1)$, $\mD_3=(1,1)/\sqrt2$. The off-diagonal entries of $\mD\mD\T$ are $0,\ 0.7071,\ 0.7071$, so $\mu(\mD)=0.7071$. Overcomplete ($3>2$) but far from "quasi-orthogonal": a toy example cannot be both, since in the plane three directions have at least coherence $0.5$ (the Welch bound $\sqrt{(c-d)/(d(c-1))}=0.5$; for the real dictionary it is $0.0356$).</p>
+<p>Take the code $\vz=(1.5,\,0,\,2)$, with support size $2\le k$. Then
+$$\va=\vz\mD=1.5\,(1,0)+2\,(0.7071,0.7071)=(2.9142,\ 1.4142).$$
+Non-uniqueness: the same $\va$ is also $\vz'=(2.9142,\,1.4142,\,0)$, a code on atoms 1 and 2 only. Both have support size 2. Sparsity alone does not choose between them; the SAE's encoder and its objective do.</p></div>
+
+<h3 id="optim">The optimisation problem</h3>
+<div class="box paper"><div class="box-h">The factorisation problem <span class="ref">§2 · p. 5</span></div>
+<p>For a batch of $n$ images, concatenating all tokens gives $\mA\in\R^{nt\times d}$. Find codes $\mZ\in\R^{nt\times c}$ and a dictionary $\mD\in\R^{c\times d}$ with</p>
+$$\min_{\mZ,\mD}\ \norm{\mA-\mZ\mD}_F^2\quad\text{subject to}\quad \mZ\ge0,\ \ \norm{\mZ_i}_0\le k,\ \ \mD_i\in\conv(\mA).$$
+</div>
+<dl class="decode">
+<dt>$\norm{\mA-\mZ\mD}_F^2$</dt><dd>sum of squared reconstruction errors over all tokens: fidelity.</dd>
+<dt>$\mZ\ge0$</dt><dd>entrywise: concepts only add. A concept is "present with intensity $z_i$" and never "negatively present".</dd>
+<dt>$\norm{\mZ_i}_0\le k$</dt><dd>row $i$ of $\mZ$ (one token) has at most $k$ non-zero entries. $\norm{\cdot}_0$ counts non-zeros.</dd>
+<dt>$\mD_i\in\conv(\mA)$</dt><dd>each atom is a convex combination of real activations. This is the <a href="01_background.html#archetypal-sae">archetypal</a> constraint: atoms stay inside the data cloud, which makes the dictionary stable across training runs (the paper's reason for choosing it). In practice $\conv(\mA)$ is replaced by the hull of 128,000 k-means centroids $\mC$ and $\mD=\mS\mC$ with $\mS$ row-stochastic (non-negative rows summing to 1). Note that in Definition 1 the atoms are unit vectors; this problem does not state a normalisation. The paper does not say how the two are reconciled.</dd>
+</dl>
+
+<div class="box paper"><div class="box-h">The exact configuration <span class="ref">§2 · p. 5</span></div>
+<div class="nums">
+<div class="num"><b>768</b><span>$d$: width of DINOv2-B</span></div>
+<div class="num"><b>261</b><span>$t$: 1 cls + 4 registers + 256 patches</span></div>
+<div class="num"><b>32,000</b><span>$c$: atoms</span></div>
+<div class="num"><b>8</b><span>$k$: active codes per token (BatchTopK)</span></div>
+<div class="num"><b>128,000</b><span>k-means centroids approximating $\conv(\mA)$</span></div>
+<div class="num"><b>1.4M</b><span>ImageNet-1k images, with augmentation</span></div>
+<div class="num"><b>&gt; 88%</b><span>$R^2$ of the reconstruction</span></div>
+</div>
+<p>Codes come from a single-layer encoder followed by a BatchTopK projection; training uses Adam for 50 epochs. So the dictionary is fitted on $1.4\text{M}\times261\approx3.65\times10^8$ tokens.</p></div>
+<p>What these numbers say: each token, a point of $\R^{768}$, is rebuilt from 8 atoms ($k/c=0.025\%$ of the dictionary), and $R^2>88\%$ means about 12% of the squared norm (after centring, as usual for $R^2$; the paper does not say) is left unexplained. The $R^2$ is the only fidelity number given.</p>
+
+<h3 id="z-d">What $\mZ$ and $\mD$ mean: statistics and geometry</h3>
+<div class="box paper"><div class="box-h">Interpretation of $\mZ$ and $\mD$ <span class="ref">§2 · p. 5</span></div>
+<p>$\mZ$ encodes the <em>statistical structure</em> of the activation space: which concepts are active, how often, to what degree. $\mD$ encodes the <em>geometric structure</em>: the atomic directions that span the space. The result is a library of 32,000 concept atoms, "each interpretable as a linear probe on DINOv2 activations".</p></div>
+<p>This split organises the paper: page 3 (this one) uses $\mZ$ and $\mD$ together through a probe; <a href="04_statistics_geometry.html">page 4</a> studies $\mZ$ (co-activation) and $\mD$ (inner products) separately; <a href="05_minkowski.html">page 5</a> replaces the linear picture. "Each atom is a linear probe" means: the score of atom $i$ on a token is the inner product with $\mD_i$. Because the atoms are not orthogonal, this score is not the code $z_i$ the encoder produces.</p>
+
+<h3 id="appendix-b">One problem, five methods (App. B)</h3>
+<div class="box paper"><div class="box-h">Dictionary learning with method-specific constraints <span class="ref">App. B · p. 33</span></div>
+<p>$(\mZ^\star,\mD^\star)=\argmin\norm{\mA-\mZ\mD}_F^2$ with, depending on the method, the constraints of the table.</p></div>
+<div class="table-wrap"><table>
+<tr><th>Method</th><th>Constraint in the paper</th><th>In words</th></tr>
+<tr><td>ACE — k-means</td><td>$\mZ_i\in\{\ve_1,\dots,\ve_k\}$</td><td>each token is assigned to one cluster; the atom is its centroid (one-hot code)</td></tr>
+<tr><td>ICE — PCA</td><td>$\mD\mD\T=\mI$</td><td>orthonormal atoms; at most $d$ of them</td></tr>
+<tr><td>CRAFT — NMF</td><td>$\mZ\ge0,\ \mD\ge0$</td><td>parts-based: both factors non-negative</td></tr>
+<tr><td>AA — archetypal analysis</td><td>$\mZ_i\in\simplex^{c},\ \mD_i\in\conv(\mA)$</td><td>each token is a convex mix of archetypes that lie in the data hull</td></tr>
+<tr><td>SAE</td><td>$\mZ=\Psi_\theta(\mA),\ \norm{\mZ}_0\le K$</td><td>codes come from an encoder $\Psi_\theta$ (TopK, JumpReLU, ReLU…); amortised, batched</td></tr>
+</table></div>
+<p>Reading the table: moving down, constraints on $\mZ$ go from "one atom" (k-means) to "few atoms" (SAE), and constraints on $\mD$ from "orthonormal" to "inside the data". The paper's model combines the last two rows: an SAE encoder with archetypal atoms and non-negative sparse codes. The paper writes $\ve_1,\dots,\ve_k$ for the k-means row where one would expect the $K$ cluster indicators; read $k$ there as the number of clusters. In this appendix $\simplex^c$ is the simplex of $\R^c$ (<a href="02_toolbox.html#simplex-barycentric">simplex</a>). Approaches trade fidelity $\norm{\mA-\mZ\mD}_F$ against sparsity $\norm{\mZ}_0$ along a Pareto frontier.</p>
+
+<div class="box ours"><div class="box-h">Our reading — what the definition leaves open</div>
+<p>$\eps$ is never given a value, and Fig. 10 of the paper (page 4) shows inner products up to $\pm0.9$ in the trained dictionary. So condition (ii) is a motivation, not a property verified for this dictionary. See <a href="06_critical_reading.html#verdict">page 6</a>.</p></div>
+
+<div class="quiz"><p>Why can the same activation have several valid codes in the toy example, and what chooses among them in practice?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body"><p>With $c>d$ the map $\vz\mapsto\vz\mD$ from $\R^c$ to $\R^d$ has a kernel, so many codes give the same $\va$. In the example $(1.5,0,2)$ and $(2.9142,1.4142,0)$ both have two non-zeros. In practice the trained encoder $\Psi_\theta$ returns one code per token (the $k$ largest after BatchTopK), so the choice is made by the architecture and the training objective.</p></div></details></div>

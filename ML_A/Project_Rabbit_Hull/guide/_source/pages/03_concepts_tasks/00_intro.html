@@ -1,0 +1,52 @@
+<!--
+title: Part I — Concepts and Tasks
+short: 3 · Concepts & tasks
+description: The working hypothesis, the importance of a concept for a task, what classification, segmentation and depth use, and the concepts specific to token types (paper §2–4, App. B, C, D, G).
+subtitle: How the paper turns DINOv2 activations into 32,000 concepts, scores them against three downstream tasks, and looks at where they fire (§2, §3, §4).
+kicker: Into the Rabbit Hull · study guide · paper §2–4
+-->
+<div class="box objectives"><div class="box-h">After this page you can</div>
+<ul>
+<li>state Definition 1 (LRH) and say what each of its three conditions does, and write the optimisation problem used to build the dictionary;</li>
+<li>derive the importance score $\E[Z_i]\,W'_{ij}$ from $\mY=\mA\mW\T$, compute it on a small example, and list what it leaves out;</li>
+<li>read Figures 2 and 3 (tasks use few, aligned, low-dimensional sets of concepts) and say what they do not prove;</li>
+<li>explain "Elsewhere" concepts, border concepts and the three families of depth concepts (Figs. 4–6, 18);</li>
+<li>compute the entropy of a footprint, read Figure 7, and explain the <code>cls</code>-only and register-only concepts (Figs. 7, 8, 21).</li>
+</ul></div>
+
+<h2 id="start">Before you start</h2>
+<p class="tldr">Part I of the paper contains no theorem about geometry. It builds a dictionary of 32,000 concepts, asks which ones three tasks use, and looks at where concepts fire. Everything in parts II and III reuses this dictionary.</p>
+
+<h3 id="how-to-read">How to read this page</h3>
+<p>Each section starts with a one-line summary, then quotes the paper in a <em>paper</em> box (with the page of the arXiv v3 PDF) and decodes it. Figures of the paper are followed by a "How to read this figure" box. Our own remarks are in <em>Our reading</em> boxes and are developed on <a href="06_critical_reading.html#verdict">page 6</a>. Every number that is not in the paper is computed by <code>checks/check_03.py</code>.</p>
+
+<h3 id="story">The story of the page in seven steps</h3>
+<ol class="chain">
+<li><strong>Hypothesis.</strong> A token activation is a sparse non-negative combination of a few unit "atoms" among 32,000 (§2, Def. 1).</li>
+<li><strong>Dictionary.</strong> A stable (archetypal) sparse autoencoder gives codes $\mZ$ and atoms $\mD$ with $\mA\approx\mZ\mD$.</li>
+<li><strong>Importance.</strong> A linear probe $\mW$ on $\mA$ becomes a probe $\mW'=\mD\mW\T$ on the codes; the score of concept $i$ for output $j$ is $\E[Z_i]W'_{ij}$.</li>
+<li><strong>Tasks.</strong> Classification uses many concepts, segmentation and depth few; the top concepts of a task are mutually aligned and span a low-dimensional subspace (Figs. 2, 3).</li>
+<li><strong>What they look like.</strong> "Elsewhere" concepts for classification, border concepts for segmentation, monocular cues for depth (Figs. 4–6).</li>
+<li><strong>Token types.</strong> Some concepts fire only on one kind of token: position-specific, <code>cls</code>-only, register-only (Figs. 7, 8).</li>
+<li><strong>Hand-over.</strong> The statistics of $\mZ$ and the geometry of $\mD$ are the subject of <a href="04_statistics_geometry.html">page 4</a>.</li>
+</ol>
+
+<h3 id="needs">What you need</h3>
+<ul>
+<li>The model, tokens, registers: <a href="01_background.html#vit">ViT</a>, <a href="01_background.html#registers">registers</a>, <a href="01_background.html#attention">attention</a>.</li>
+<li>Sparse autoencoders and archetypal SAEs: <a href="01_background.html#sae">SAE</a>, <a href="01_background.html#archetypal-sae">archetypal SAE</a>; the LRH itself: <a href="01_background.html#lrh">LRH</a>.</li>
+<li>Coherence of a dictionary: <a href="02_toolbox.html#gram-coherence">Gram matrix and coherence</a>. UMAP, PCA, entropy, gradient × input, RISE: <a href="02_toolbox.html#umap">UMAP</a>, <a href="02_toolbox.html#pca">PCA</a>, <a href="02_toolbox.html#entropy">entropy</a>, <a href="02_toolbox.html#grad-input">grad × input</a>, <a href="02_toolbox.html#rise">RISE</a>.</li>
+</ul>
+
+<h3 id="notation">Notation decoder</h3>
+<div class="table-wrap"><table>
+<tr><th>Symbol</th><th>Meaning here</th><th>Size</th></tr>
+<tr><td>$\mA$</td><td>activations of all tokens of all images (<em>not</em> the attention matrix)</td><td>$nt\times d$, $d=768$, $t=261$</td></tr>
+<tr><td>$\mZ$</td><td>sparse non-negative codes (<em>not</em> archetypes)</td><td>$nt\times c$, $c=32{,}000$</td></tr>
+<tr><td>$\mD$</td><td>dictionary, atoms $\mD_i$ as rows</td><td>$c\times d$</td></tr>
+<tr><td>$\mW$</td><td>linear probe of a task, one row per output</td><td>$o\times d$</td></tr>
+<tr><td>$\mW'$</td><td>$\mD\mW\T$: probe seen from the concepts</td><td>$c\times o$</td></tr>
+<tr><td>$\mY$</td><td>probe outputs $\mA\mW\T=\mZ\mW'$</td><td>$nt\times o$</td></tr>
+<tr><td>$\omega_i$</td><td>footprint of concept $i$ over the 261 token positions</td><td>$\R^{261}$</td></tr>
+<tr><td>$k$</td><td>number of active codes per token ($k=8$)</td><td></td></tr>
+</table></div>

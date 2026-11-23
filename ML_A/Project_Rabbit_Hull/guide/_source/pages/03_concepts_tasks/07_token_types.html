@@ -1,0 +1,65 @@
+<h2 id="token-types">7. Token-type-specific concepts</h2>
+<p class="tldr">Where on the 261 tokens does a concept fire, on average? Most concepts are spread out; a tail is localised (a position, the cls token, or the four registers), and the register-only ones encode global scene properties.</p>
+<h3 id="tt-problem">The problem</h3>
+<p>A ViT has three kinds of token (<a href="01_background.html#vit">tokens</a>): 256 patches tied to places, one <code>cls</code> token and four <a href="01_background.html#registers">registers</a> that read and write global information. Are some concepts reserved for one kind?</p>
+<h3 id="footprint">The footprint and its entropy</h3>
+<div class="box paper"><div class="box-h">Footprint <span class="ref">§4 · p. 9 and App. G · p. 39</span></div>
+<p>Reshape $\mZ$ as a tensor $\R^{n\times t\times c}$. For concept $i$ the footprint is
+$$\vom_i=\frac1N\sum_{n=1}^{N}\mZ_{n,:,i}\in\R^{t}.$$
+"$\mZ_{n,:,i}$ is the concept map (a vector of 261 scalars) of concept $i$ on input $n$." The paper then measures "the entropy of its empirical footprint distribution": low entropy, localised; high entropy, "spatially uniform".</p></div>
+<dl class="decode">
+<dt>$\mZ_{n,:,i}$</dt><dd>the 261 codes of concept $i$ on image $n$: 1 for <code>cls</code>, 4 for registers, 256 for patches.</dd>
+<dt>$\vom_i$</dt><dd>their average over $N$ images: the mean activation of the concept at each token position (a $16\times16$ map plus 5 special values).</dd>
+<dt>entropy</dt><dd>To be an entropy, $\vom_i$ must be turned into a probability vector, $p_l=\omega_{i,l}/\sum_{l'}\omega_{i,l'}$, then $H=-\sum_l p_l\ln p_l$ (<a href="02_toolbox.html#entropy">recall</a>). The paper does not write this normalisation or the logarithm base; the range of Fig. 7 (up to about 5.5) fits natural logarithms, $\ln261=5.565$.</dd>
+</dl>
+<p>Reference values, computed by <code>checks/check_03.py</code> for footprints that are uniform on a set of $m$ tokens (then $H=\ln m$):</p>
+<div class="table-wrap"><table>
+<tr><th>Footprint</th><th>$m$</th><th>$H=\ln m$ (nats)</th></tr>
+<tr><td>one token (e.g. cls only)</td><td>1</td><td>0</td></tr>
+<tr><td>the four registers</td><td>4</td><td>1.386</td></tr>
+<tr><td>the five special tokens</td><td>5</td><td>1.609</td></tr>
+<tr><td>one grid column</td><td>16</td><td>2.773</td></tr>
+<tr><td>left third of the grid (5 columns × 16 rows)</td><td>80</td><td>4.382</td></tr>
+<tr><td>a third of the 261 tokens</td><td>87</td><td>4.466</td></tr>
+<tr><td>the 256 patches</td><td>256</td><td>5.545</td></tr>
+<tr><td>all 261 tokens</td><td>261</td><td>5.565</td></tr>
+</table></div>
+<p>Also, if half the mass is on the registers and half uniform on patches, $H=4.159$. The maximum $\ln261=5.565$ is hardly smaller than $\ln256=5.545$: the entropy hardly sees the five special tokens, a concept that is uniform on patches and absent on specials is at 5.545. $e^{H}$ can be read as an effective number of tokens.</p>
+<div class="widget" data-widget="p3entropy"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p><strong>What to look at:</strong> use the presets; note how a footprint covering a third of the image is already at 4.4, and how long the bulk of the histogram of Fig. 7 (4–5.5) is: "high entropy" means "not confined to a small region", which includes concepts with a clear but broad preference (left/right, centre).</p>
+
+<h3 id="fig7">Fig. 7: the histogram and the bar chart</h3>
+<figure class="paperfig"><img data-src="paper_figures/footprint.png" alt="Histogram of footprint entropy, and maps of low, medium and high entropy concepts">
+<figcaption><strong>Fig. 7 (left) of the paper.</strong> Number of concepts (log axis) per entropy value, and average token maps of concepts with low, medium and high entropy.<span class="src">From the paper (Fel, Wang et al., 2026), CC BY 4.0.</span></figcaption></figure>
+<div class="box method"><div class="box-h">How to read this figure</div>
+<ul>
+<li><strong>Histogram</strong> (x: entropy 0–5.5; y: number of concepts, log). A spike at 0 of about 110 concepts (single-token footprints), a sparse scatter of 1–10 concepts per bin between 0.3 and 3, then a rise to the bulk: at 4 about 30–100 per bin, at 5 about $10^3$, peak around 5.2–5.5 with several thousand per bin. Compare with the table above: 0 is a single token, 4–4.5 is a third of the image, the bulk is "nearly uniform".</li>
+<li><strong>Token maps</strong> ($16\times16$ patch grid, colour = mean activation). Low entropy: a single blob, a vertical or horizontal strip, a border. Medium: a region (centre, left, bottom). High: nearly flat, with texture.</li>
+<li><strong>Not shown:</strong> the special tokens (maps show patches only), and which entropy cut defines "low".</li>
+<li>A footprint with all its mass on <em>one</em> token has $H=0$; on the four registers equally, $H=1.386$. So the spike at 0 means single-token concepts (for instance <code>cls</code>-only, or one fixed patch); register-only concepts, which spread over four tokens, would sit at or below 1.386, in the sparse part of the histogram. The paper does not say which bins hold them.</li></ul></div>
+
+<h3 id="categories">The three categories</h3>
+<div class="box paper"><div class="box-h">Footprint types <span class="ref">§4 · p. 9–10</span></div>
+<ol><li><strong>Position-specific</strong> concepts on narrow regions ("left-only", "bottom-only"): "residual positional encoding, biases in the training data, or local geometric primitives".</li>
+<li><strong>A unique <code>cls</code>-only concept</strong> that fires "persistently on the <code>cls</code> token across all images", "closely tied to the positional embedding of the <code>cls</code> token", maybe an "ID" or "passport".</li>
+<li><strong><code>reg</code>-only concepts</strong>: a "much more diverse" group, whose variety "cannot be explained by position alone", encoding "non-spatial features".</li></ol></div>
+<figure class="paperfig narrow"><img data-src="paper_figures/unique_concept.png" alt="Bar chart: number of concepts by token-type exclusivity">
+<figcaption><strong>Fig. 7 (right) of the paper.</strong> Number of concepts that are <code>cls</code>-only, <code>reg</code>-only and spatial-only.<span class="src">From the paper (Fel, Wang et al., 2026), CC BY 4.0.</span></figcaption></figure>
+<div class="remark box"><div class="box-h">Remark — "one" or "about 30"?</div>
+<p>The text (§4, App. G, caption of Fig. 21) says a single concept is <code>cls</code>-only. The bar chart, on a log axis, shows a <code>cls</code>-only bar at about 30, a <code>reg</code>-only bar at about 150 and a spatial-only bar at about $3\times10^4$ ($\approx$ 31.8k reading the figure). Both cannot be true with the same definition of "only". The paper does not define the threshold for "exclusively". The order of magnitude of "hundreds" for registers is roughly matched (about 150). We cannot resolve this from the paper.</p></div>
+
+<h3 id="registers-fig">Fig. 8: what register-only concepts are about</h3>
+<figure class="paperfig"><img data-src="paper_figures/registers.jpg" alt="Examples of register-only concepts: top images for motion blur, illumination, caustics, lens effects and style">
+<figcaption><strong>Fig. 8 of the paper.</strong> Selected concepts that fire exclusively on register tokens, shown through feature visualisations and images that activate them most.<span class="src">From the paper (Fel, Wang et al., 2026), CC BY 4.0.</span></figcaption></figure>
+<div class="box method"><div class="box-h">How to read this figure</div>
+<p>Each concept is shown by images that maximally activate it; there is no token map, since the concept is not about a place. What they have in common is global: motion blur, lighting and shadows, caustic reflections, wide-angle warping or depth of field, and artistic or rendering style. Authors: registers act as "a conduit for abstract scene-level information". Not shown: how these concepts were chosen among the hundreds, and whether they matter for any task of section 2. Link with the registers' purpose: <a href="01_background.html#registers">registers</a> were added to ViTs to hold global computation instead of letting patch tokens be hijacked for it; here the concepts they host are global properties, consistent with that purpose.</p></div>
+
+<h3 id="fig21">Fig. 21 and Fig. 20 (App. G)</h3>
+<figure class="paperfig"><img data-src="paper_figures/stats_footprints.png" alt="Average activation per token, per spatial token, and number of concepts by token-type exclusivity">
+<figcaption><strong>Fig. 21 of the paper.</strong> Left: average activation per token position (a 16×16 grid plus a row of five special tokens). Middle: the same restricted to patches. Right: concepts by exclusivity.<span class="src">From the paper (Fel, Wang et al., 2026), CC BY 4.0.</span></figcaption></figure>
+<div class="box method"><div class="box-h">How to read this figure</div>
+<ul><li><strong>Left</strong>: the colour is the mean total activation per token (scale about 7 to 12). Patches are about 9–10, with a bright bottom half and a darker top centre. In the last row the five special tokens sit apart: two registers at the top of the scale (about 11 to 12), the others near the bottom (about 7), <code>cls</code> in the middle (about 9.5). The caption says "elevated activity on register and cls tokens", which is only true of some of them as we read the picture. The unit is not stated (we read it as the sum over concepts of the code, per token).</li>
+<li><strong>Middle</strong>: patches only, scale 8.8–10.4: high on the left and right sides of the lower half, low at top centre. A "subtle positional bias".</li>
+<li><strong>Right</strong>: same bar chart as Fig. 7 right, and same mismatch with the text.</li></ul></div>
+<p>Fig. 20 (p. 39) is a very large image: the average maps of 2,500 concepts sorted by entropy, from localised strips and blobs at the top to uniform maps at the bottom. It illustrates the continuum of the histogram; we do not reproduce it.</p>
+<div class="box ours"><div class="box-h">Our reading</div><p>Two readings of the register-only concepts are compatible with the figure: registers hold global scene information (the paper's reading) or they are a place where the model stores attributes of the whole image that patch tokens also see weakly. The paper tests neither. See <a href="06_critical_reading.html#verdict">page 6</a>.</p></div>

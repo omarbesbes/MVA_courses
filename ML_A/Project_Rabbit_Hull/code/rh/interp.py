@@ -302,7 +302,7 @@ def chord_test(X, pairs, n_steps=101, k=15, metric="cosine", chunk=1024, graph=N
     lin = np.empty((P, n_steps), dtype=np.float64)
     for s in range(0, P, block):
         a, b = xi[s:s + block], xj[s:s + block]
-        pts = (1.0 - t)[None, :, None] * a[:, None, :] + t[None, :, None] * b[:, None, :]
+        pts = a[:, None, :] + t[None, :, None] * (b - a)[:, None, :]   # exact when a == b
         pts[:, 0, :], pts[:, -1, :] = a, b
         lin[s:s + block] = nearest_dist(pts.reshape(-1, d), X, chunk=chunk).reshape(-1, n_steps)
 

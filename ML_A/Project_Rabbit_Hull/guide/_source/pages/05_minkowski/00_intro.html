@@ -1,0 +1,57 @@
+<!--
+title: Part III — The Minkowski Representation Hypothesis
+short: 5 · Minkowski
+description: The Minkowski Representation Hypothesis of "Into the Rabbit Hull": definition, the attention argument with full proofs, the three pieces of evidence, the implications, and the limits.
+subtitle: Paper §7–8 and appendix J. What the hypothesis says, why multi-head attention produces such a geometry, what the authors show for it, what follows from it (steering, non-identifiability), and where it stops.
+kicker: Into the Rabbit Hull · study guide · paper §7
+-->
+<div class="box objectives"><div class="box-h">After this page you can</div>
+<ul>
+<li>state Definition 2 (tiles, tile polytopes, Minkowski sum, block-convex coding) and say what each symbol is, and in what sense it generalises the sparse linear code of Part I;</li>
+<li>prove, line by line, the five results of appendix J: single head (Lemma 1 = App. Lemma 3), affine maps (Lemma 2 = App. Lemma 4), multi-head (Proposition 1 = App. Proposition 3), low temperature (App. Lemma 5, with its bound) and support restriction (App. Lemma 6);</li>
+<li>read the three panels of Fig. 17 and say what each does and does not support, in the authors' own words;</li>
+<li>derive the two steering curves of Fig. 16 (right), and prove that a triangle has no segment as a summand;</li>
+<li>state Proposition 2 (non-identifiability), say where the paper's proof has a gap, and give the correct statement with a genuine example (the regular hexagon);</li>
+<li>quote the paper's own limitations.</li>
+</ul></div>
+
+<h2 id="start">0. Before you start</h2>
+<p class="tldr">Part III turns the observations of Part II (activations interpolate between concepts) into one hypothesis: an activation is a sum of convex combinations of archetypes, one convex combination per active tile. Everything here is geometry of convex sets; the reminders are on the spot.</p>
+
+<h3 id="how-to-read">How to read this page</h3>
+<p>Boxes marked <span class="tag solid">In the paper</span> (green-edged, “❝”) quote the paper with its page. Boxes marked “Our reading” (⚑) are our remarks, kept short; <a href="06_critical_reading.html">page 6</a> develops them with experiments. A <em>remark</em> box next to a proof marks a place where the paper's argument needed a correction. Proofs are in folds: read the <em>idea</em> box first, open the fold when you want every step. Page numbers are those of the arXiv v3 PDF.</p>
+
+<h3 id="story">The story in seven steps</h3>
+<ol class="chain">
+<li><b>Why a geometry.</b> A method sees only what its assumed geometry can express (§1).</li>
+<li><b>The definition.</b> Archetypes grouped in tiles; each tile is a polytope; an activation is a sum of one point per active tile (§2).</li>
+<li><b>Why attention gives it.</b> A softmax head outputs a convex combination of its values; the output projection is affine; the heads are added (§3).</li>
+<li><b>Evidence.</b> Straight paths leave the data, per-image archetypal analysis reconstructs well, co-activation is block-structured (§4).</li>
+<li><b>Implications.</b> Concepts are points and regions; steering saturates at an archetype; the decomposition is not identifiable from one layer (§5).</li>
+<li><b>Limits.</b> A working hypothesis, observational, one model (§6).</li>
+<li><b>Summary and exercises</b> (§7–8).</li>
+</ol>
+
+<h3 id="needs">What you need</h3>
+<ul>
+<li>Convex hull, simplex, barycentric coordinates: <a href="02_toolbox.html#convex-hull">hull</a>, <a href="02_toolbox.html#simplex-barycentric">simplex</a>.</li>
+<li>Minkowski sum, support function, decomposability: <a href="02_toolbox.html#minkowski-sum">sum</a>, <a href="02_toolbox.html#support-functions">support functions</a>, <a href="02_toolbox.html#decomposability">decomposability</a>.</li>
+<li>Softmax: <a href="02_toolbox.html#softmax-properties">properties</a>. Archetypal analysis: <a href="02_toolbox.html#archetypal-analysis">AA</a>.</li>
+<li>The linear representation hypothesis and the observations that motivate Part III: <a href="04_statistics_geometry.html#beyond-lrh">beyond the LRH</a>.</li>
+</ul>
+
+<h3 id="notation">Notation decoder</h3>
+<div class="table-wrap"><table>
+<tr><th>Symbol</th><th>Meaning on this page</th></tr>
+<tr><td>$\X\subset\R^d$</td><td>the activation space of a layer (a set of vectors, not the image batch of other pages)</td></tr>
+<tr><td>$\Ac=(\va_1,\dots,\va_c)\in\R^{c\times d}$</td><td>the archetypes (rows), $c\gg d$; “archetype” = a candidate vertex</td></tr>
+<tr><td>$\Tc_1,\dots,\Tc_m$</td><td>tiles: a partition of the index set $\{1,\dots,c\}$ into $m$ blocks</td></tr>
+<tr><td>$\Pc_i=\conv(\Ac_{\Tc_i})$</td><td>the polytope of tile $i$: hull of its archetypes</td></tr>
+<tr><td>$\oplus$, $\bigmsum_i$</td><td>Minkowski sum: $A\oplus B=\{a+b\}$</td></tr>
+<tr><td>$\simplex^k$</td><td>$\{\vz\ge 0:\mathbf 1\T\vz=1\}$, the probability simplex ($\simplex^{|\Tc_i|}$ is the set of codes of tile $i$)</td></tr>
+<tr><td>$S$</td><td>active set of tiles, $|S|\ll m$</td></tr>
+<tr><td>$\vz_i$</td><td>code of tile $i$ (here the block of the code vector, <em>not</em> the SAE code of earlier pages)</td></tr>
+<tr><td>$\mQ,\mK,\mV,\val$</td><td>attention queries, keys, values, weights; $\val\in\simplex^m$, rows of $\softmax(\mQ\mK\T)$</td></tr>
+<tr><td>$H$, $\mW_O^{(h)}$</td><td>number of heads; output projection of head $h$ ($H=12$ in DINOv2-B)</td></tr>
+<tr><td>$h_{\mathcal C}(\vu)$</td><td>support function $\sup_{\vx\in\mathcal C}\ps{\vu}{\vx}$ (a different object from a head index $h$)</td></tr>
+</table></div>

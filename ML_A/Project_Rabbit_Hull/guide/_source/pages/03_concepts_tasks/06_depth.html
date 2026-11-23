@@ -1,0 +1,36 @@
+<h2 id="depth">6. Depth uses monocular cues</h2>
+<p class="tldr">Perturbing images in five controlled ways and looking at how the top depth concepts react sorts them into three families — projective geometry, shadows, local frequency transitions — with many concepts in between.</p>
+<h3 id="depth-problem">The problem</h3>
+<p>DINOv2 is trained without depth labels, yet linear probes predict depth well (the paper cites several works). What in its features supports this? The method: take the concepts that matter most for the depth probe, change the image so as to destroy one kind of depth cue at a time, and record how much each concept's activation drops. A concept's vector of five sensitivities is its <em>profile</em>.</p>
+<div class="box paper"><div class="box-h">Depth and monocular cue concepts <span class="ref">§3 · p. 8 and App. C.3 · p. 35</span></div>
+<p>Five manipulations: "local median blurring to suppress shadows, global blur to remove fine details, high-pass filtering to emphasize geometric patterns, soft edge enhancement to retain contours, and geometric warping to distort perspective cues". The profiles are projected with UMAP and give "three coherent clusters": <em>projective geometry</em> (perspective lines, structural convergence), <em>shadow-based</em> (soft lighting gradients), <em>local frequency transitions</em> (abrupt changes of detail or texture). "This taxonomy is not exhaustive: some concepts exhibit mixed sensitivity profiles."</p></div>
+<div class="table-wrap"><table>
+<tr><th>Perturbation</th><th>What it removes or keeps (per the paper)</th></tr>
+<tr><td>Local median blur</td><td>small-scale texture and lighting detail; "to suppress shadows" (main text)</td></tr>
+<tr><td>Global blur</td><td>fine detail, high spatial frequencies</td></tr>
+<tr><td>High-pass filter</td><td>keeps edges and lines, removes smooth shading: "emphasizes geometric patterns"</td></tr>
+<tr><td>Soft edges</td><td>keeps contours (edge-preserving)</td></tr>
+<tr><td>Warping</td><td>distorts perspective geometry</td></tr>
+</table></div>
+<figure class="paperfig"><img data-src="paper_figures/depth.jpg" alt="Depth perturbations, UMAP of sensitivity profiles and the three families">
+<figcaption><strong>Fig. 6 of the paper.</strong> Top: two images under the five perturbations. Left and centre: UMAP of the profiles of the top depth concepts. Right: one bar chart per family, a feature visualisation and top-activating crops.<span class="src">From the paper (Fel, Wang et al., 2026), CC BY 4.0.</span></figcaption></figure>
+<div class="box method"><div class="box-h">How to read this figure</div>
+<ul>
+<li><strong>Top strip</strong>: an indoor scene and a vaulted ceiling under (Original), Local Median, Blur, High pass, Soft Edges, Warping.</li>
+<li><strong>Bar charts</strong> (y: 0 to 1, how much the activation is affected; bars in the order median, blur, high-pass, soft edges, warping; values read off the plot, approximate):
+ <em>Local frequency transition</em>: 0.57, 0.52, 0.06, 0.03, 0.1 — sensitive to median and blur only.
+ <em>Projective</em>: 0.25, 0.25, 0.65, 0.38, 0.1 — peak at high-pass, then soft edges.
+ <em>Shadow</em>: 0.07, 0.45, 0.12, 0, 0.07 — peak at blur.</li>
+<li><strong>Illustrations</strong>: frequency: blurred-background sports shots (depth-of-field); projective: spiral staircases and shells (converging lines); shadow: weight-lifting in a gym (lighting gradients).</li>
+<li><strong>UMAP</strong>: about five visible groups of dots, not exactly three.</li>
+<li><strong>Not shown</strong>: how many of the top concepts fall in each family. The bars are one example per family.</li></ul></div>
+<div class="box remark"><div class="box-h">The text and the figure disagree on two details</div>
+<p>App. C.3 says that the projective cluster "shows sensitivity to warping and high-pass" and the shadow cluster "primary sensitivity to median filtering". In Fig. 6 the projective bars show warping at only about 0.1, and the shadow bars peak at blur, not at median. We follow the figure; the appendix wording looks like an error. The main text also says median blurring is used "to suppress shadows", yet it is the frequency family that responds to it, and the shadow family responds to global blur.</p></div>
+
+<h3 id="depth-full">Fig. 18: the full set</h3>
+<figure class="paperfig"><img data-src="paper_figures/perturbation_depth_full.jpg" alt="One small bar chart of five perturbation sensitivities for each of 100 depth concepts">
+<figcaption><strong>Fig. 18 of the paper.</strong> Sensitivity profiles of the top-100 depth concepts (a 10×10 grid, one small bar chart per concept, five bars each).<span class="src">From the paper (Fel, Wang et al., 2026), CC BY 4.0.</span></figcaption></figure>
+<div class="box method"><div class="box-h">How to read this figure</div>
+<p>Each panel is titled by a concept id; five bars on a 0–1 axis in the order of Fig. 6. Profiles of the three families appear (a single high bar at blur; high at the first two; high at the middle), but many panels have two or three bars of similar height, a few are nearly flat and high (all bars around 0.8–1, e.g. in row 4 and row 5), and a few respond only to warping. The panels are small and the labels hard to read. This is the evidence behind "many concepts exhibit mixed sensitivity profiles". The caption's "systematically organized" is not quantified: no count per family is given.</p></div>
+<p><strong>Link with classical cues.</strong> The appendix says the taxonomy "aligns with classical monocular depth cues from visual neuroscience": linear perspective and convergence (projective), shading and shadows, and blur / texture gradients (defocus and frequency). Names only: the paper does not test the link to human perception, and does not cite a particular source here.</p>
+<div class="box ours"><div class="box-h">Our reading</div><p>Perturbations are not clean: a high-pass filter also removes shading and a blur also removes edges, so a profile cannot identify a single cue; the families are best read as "kinds of image statistic". The "three clusters" are the authors' labelling of the UMAP. <a href="06_critical_reading.html#verdict">Page 6</a>.</p></div>
