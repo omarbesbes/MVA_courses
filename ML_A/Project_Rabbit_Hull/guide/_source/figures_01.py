@@ -156,7 +156,7 @@ def nmf(X, K, rng, it=400):
 def fig_zoo():
     rng = np.random.default_rng(3)
     X, U = make_data(rng)
-    c = Canvas("zoo", 720, 470, "The same 2-D data set factorised by five methods", sub=SUB)
+    c = Canvas("zoo", 720, 500, "The same 2-D data set factorised by five methods", sub=SUB)
     panels = []
     mu = X.mean(0)
     # kmeans
@@ -176,11 +176,11 @@ def fig_zoo():
                 v = Xn[lab == j].mean(0); A[j] = v / np.linalg.norm(v)
     titles = [("k-means", "Zᵢ one-hot", 1), ("PCA", "D Dᵀ = I", 1), ("NMF", "Z ≥ 0, D ≥ 0", 1),
               ("Archetypal analysis", "Zᵢ ∈ simplex, Dᵢ ∈ conv(A)", 1), ("Sparse code (SAE-like)", "‖Zᵢ‖₀ ≤ 1, ‖Dᵢ‖ = 1", 2)]
-    pw, ph = 220, 190
-    pos = [(20, 30), (260, 30), (500, 30), (20, 260), (260, 260)]
+    pw, ph = 210, 210
+    pos = [(15, 25), (250, 25), (485, 25), (15, 265), (250, 265)]
     for p, (tt, cons, col) in enumerate(titles):
         x0, y0 = pos[p]
-        f = Fig(c, (x0, y0 + 24, pw, ph - 24), (-0.3, 3.6), (-0.3, 3.2))
+        f = Fig(c, (x0, y0 + 24, pw, ph - 24), (-0.3, 4.9), (-0.3, 4.9))
         c.text(x0, y0 + 4, tt, "tx-b"); c.text(x0, y0 + 18, cons, "tx-s")
         rect(c, x0, y0 + 24, pw, ph - 24, "gr", ' fill="none" stroke-width="0.8"')
         for x, y in X:
@@ -201,14 +201,15 @@ def fig_zoo():
             for (x, y) in hull: f.circle(x, y, 6, "f1")
         if p == 4:
             for a in A:
-                c.arrow(f.X(0), f.Y(0), f.X(a[0] * 3.0), f.Y(a[1] * 3.0), 2)
-    c.text(500, 285, "Same data, five constraints:", "tx-b")
-    for i, s in enumerate(["k-means: atoms = centres of 3 groups;", "PCA: orthogonal axes, signed;", "NMF: positive parts from the origin;",
-                           "AA: corners of a polygon inside the data;", "sparse code: unit directions, one active."]):
-        c.text(500, 305 + i * 17, s, "tx-s")
-    c.text(500, 400, "blue = atoms that are points, orange = directions,", "tx-s")
-    c.text(500, 416, "green = data. Data: 3 sparse non-negative", "tx-s")
-    c.text(500, 432, "features (rays at 12°, 48°, 84°), 240 points.", "tx-s")
+                c.arrow(f.X(0), f.Y(0), f.X(a[0] * 4.2), f.Y(a[1] * 4.2), 2)
+    c.text(485, 290, "Same data, five constraints:", "tx-b")
+    for i, s_ in enumerate(["k-means: 3 centres;", "PCA: orthogonal signed axes;", "NMF: positive parts;",
+                           "AA: corners of a polygon;", "sparse code: unit directions."]):
+        c.text(485, 310 + i * 17, s_, "tx-s")
+    c.text(485, 410, "blue: atoms that are points", "tx-s")
+    c.text(485, 427, "orange: atoms that are directions", "tx-s")
+    c.text(485, 444, "green: data (240 points, rays", "tx-s")
+    c.text(485, 461, "at 12°, 48°, 84°)", "tx-s")
     c.save()
     # numbers for the check script
     return X, km, aa, H, A
@@ -241,7 +242,7 @@ def fig_archetypal():
     X, _ = make_data(rng, 200)
     c = Canvas("archetypal", 720, 300, "Archetypal constraint: atoms are convex combinations of centroids of the data", sub=SUB)
     cent = kmeans(X, 14, seed=1)["centers"]
-    f = Fig(c, (30, 40, 330, 230), (-0.3, 3.6), (-0.3, 3.2))
+    f = Fig(c, (30, 40, 330, 230), (-0.3, 4.9), (-0.3, 4.9))
     rect(c, 30, 40, 330, 230, "gr", ' fill="none" stroke-width="0.8"')
     c.text(30, 28, "data (green), centroids C (grey), atoms D = S C (blue)", "tx-b")
     for x, y in X: f.circle(x, y, 1.8, "f3")
