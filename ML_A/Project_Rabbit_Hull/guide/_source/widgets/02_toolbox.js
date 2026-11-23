@@ -9,7 +9,7 @@
   /* --- 1. Welch bound, random coherence, tight-frame singular value --- */
   WIDGETS.p2welch = function (box) {
     var s = scaffold(box, "Dictionary of c unit vectors in dimension d: coherence of an ideal frame and of random vectors");
-    var P = new Plot(s.svg, { x: [100, 1e6], y: [0, 1], xlog: true, w: 680, h: 340, pad: { l: 46, r: 16, t: 20, b: 40 }, label: "Welch bound and random coherence against the number of vectors" });
+    var P = new Plot(s.svg, { x: [100, 1e6], y: [0, 0.5], xlog: true, w: 680, h: 340, pad: { l: 46, r: 16, t: 20, b: 40 }, label: "Welch bound and random coherence against the number of vectors" });
     var sc = slider(s.controls, "log₁₀ c", 2.1, 6, 0.01, Math.log10(32000), draw);
     var sd = slider(s.controls, "d", 16, 2048, 1, 768, draw);
     button(s.controls, "Paper (c = 32 000, d = 768)", function () { sc.set(Math.log10(32000)); sd.set(768); draw(); });
@@ -20,10 +20,10 @@
       var welch = function (cc) { return cc <= d ? 0 : Math.sqrt((cc - d) / (d * (cc - 1))); };
       var rnd = function (cc) { return Math.min(1, Math.sqrt(2 * Math.log(cc * (cc - 1)) / d)); };
       P.clear();
-      P.axes({ xticks: [100, 1000, 1e4, 1e5, 1e6], yticks: [0, 0.2, 0.4, 0.6, 0.8, 1], xfmt: function (v) { return p2fmtSci(v); }, yd: 1, xlabel: "number of vectors c", ylabel: "coherence μ" });
+      P.axes({ xticks: [100, 1000, 1e4, 1e5, 1e6], yticks: [0, 0.1, 0.2, 0.3, 0.4, 0.5], xfmt: function (v) { return "10" + "⁰¹²³⁴⁵⁶"[Math.round(Math.log10(v))]; }, yd: 1, xlabel: "number of vectors c", ylabel: "coherence μ" });
       P.fn(welch, "ln c1", 300, 100, 1e6); P.fn(rnd, "ln c2", 300, 100, 1e6);
       P.seg(100, 1 / Math.sqrt(d), 1e6, 1 / Math.sqrt(d), "ln cm dash thin");
-      P.seg(c, 0, c, 1, "ln cm thin");
+      P.seg(c, 0, c, 0.5, "ln cm thin");
       P.dot(c, welch(c), 5, "f1"); P.dot(c, rnd(c), 5, "f2");
       sc.out.textContent = p2fmtSci(c); sd.out.textContent = d;
       var tight = Math.sqrt(c / d);
@@ -148,7 +148,9 @@
       if (showQ) { P.poly(S.concat([S[0]]), "am ln cm thin"); P.poly(HQ.concat([HQ[0]]), "ln c5", { fill: "none", style: "stroke-width:2" }); }
       P.poly(HP.concat([HP[0]]), "ln c1", { fill: showQ ? "none" : "", style: "stroke-width:2" });
       var h = supportFn(target, u), q = argmax(target, u), nrm = [-u[1], u[0]], L = 12;
+      P.clip();
       P.seg(u[0] * h - nrm[0] * L, u[1] * h - nrm[1] * L, u[0] * h + nrm[0] * L, u[1] * h + nrm[1] * L, "ln c2", { style: "stroke-width:2" });
+      P.unclip();
       P.seg(0, 0, u[0] * h, u[1] * h, "ln ck thin dash");
       P.seg(0, 0, u[0] * 1.5, u[1] * 1.5, "ln c2", { style: "stroke-width:3" });
       P.text(u[0] * 1.6, u[1] * 1.6, "u", "tx-b", "middle", 0, -6);

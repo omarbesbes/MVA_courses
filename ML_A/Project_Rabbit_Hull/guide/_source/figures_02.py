@@ -47,9 +47,9 @@ def fig_welchcurve():
     f.text(x0, 0.2285, "random: 0.23", "tx-s", "end", dx=-8, dy=-6)
     f.text(x0, 0.0659, "paper's numerical frame: 0.066", "tx-s", "end", dx=-9, dy=-8)
     f.text(x0, welch(32000), "Welch: 0.036", "tx-s", "start", dx=9, dy=18)
-    f.text(3.05, 0.2, "random pairs: √(2 ln(c(c−1))/d)", "tx-s", "start", dy=-4)
-    f.text(5.0, 0.0225 + 0.0, "std of one inner product 1/√d = 0.036", "tx-s", "middle", dy=24)
-    f.text(3.05, welch(1000) , "Welch bound", "tx-s", "start", dy=-24)
+    f.text(3.05, 0.235, "random pairs: √(2 ln(c(c−1))/d)", "tx-s", "start")
+    f.text(6.0, 0.0361, "dashed: 1/√d = 0.036, std of one random inner product", "tx-s", "end", dy=-7)
+    f.text(3.05, 0.075, "Welch bound (blue)", "tx-s", "start")
     f.text(x0, 0.3, "c = 32 000", "tx-s", "middle", dy=-8)
     c.save()
 
