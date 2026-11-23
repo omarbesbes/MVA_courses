@@ -48,7 +48,8 @@ for _ in range(20000):
     m=rng.integers(2,8); X=rng.normal(size=m)*rng.uniform(.2,3); V=rng.normal(size=(m,3))*rng.uniform(.2,3); tau=rng.uniform(.05,3)
     a=np.exp((X-X.max())/tau); a/=a.sum(); j=X.argmax(); Dl=X[j]-X
     lhs=np.linalg.norm(a@V-V[j]); diam=max(np.linalg.norm(p-q) for p in V for q in V)
-    rhs=diam*sum(np.exp(-Dl[k]/tau) for k in range(m) if k!=j); worst=max(worst,lhs/rhs if rhs>0 else 0)
+    rhs=diam*sum(np.exp(-Dl[k]/tau) for k in range(m) if k!=j)
+    if rhs>1e-9: worst=max(worst,lhs/rhs)
     assert lhs<=rhs+1e-12
 print("bound holds on 20000 random cases, max lhs/rhs =",worst)
 # exercise: V=(0,0),(4,0),(1,3), logits (1,0,-1), tau .5

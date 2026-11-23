@@ -1,0 +1,162 @@
+<h2 id="theory">3. Theoretical account: why attention produces such a geometry</h2>
+<p class="tldr">Three arguments support the hypothesis: Gärdenfors' convex concepts, a convex-geometric tradition in earlier work, and the fact that a softmax attention head returns a convex combination of its values and that multi-head attention adds the heads' outputs. The last one is a theorem; we prove it in full.</p>
+
+<h3 id="gardenfors">Gärdenfors' conceptual spaces</h3>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">§7.1 · p. 18</span></div>
+<p>Gärdenfors “models concepts as convex regions within domain-specific coordinate systems; points represent individual objects and prototypes correspond to focal (often extreme) points of these regions. Dimensions capture perceptual or functional qualities (e.g., color, weight, temperature), and category membership varies with proximity — if two objects belong to a category, then any point on a straight path between them remains within the category's region. From this perspective, MRH can be viewed as an operationalization of Gärdenfors' theory for decomposing visual concepts: tiles (or regions) correspond to convex concept sets, while archetypes play the role of prototypes.” The paper then asks: “is such an instantiation realistic in modern architectures, and what evidence favors regions built from points rather than purely directional features?”</p></div>
+<dl class="decode">
+<dt>convex region</dt><dd>a set $C$ with $\vx,\vy\in C\Rightarrow(1-t)\vx+t\vy\in C$. In MRH: the tile polytope $\Pc_i$.</dd>
+<dt>prototype</dt><dd>a focal, extreme point of the region. In MRH: an archetype (a vertex of $\Pc_i$).</dd>
+<dt>quality dimensions</dt><dd>the coordinates (colour, weight…). In MRH a tile is a region of the whole space $\R^d$; the paper does not say which directions play the role of quality dimensions.</dd>
+</dl>
+<p>What is a theory-level motivation here becomes a test later: if concepts are convex regions, then paths between two members stay inside the region. This is the idea behind the interpolation evidence of §4. The step from “a category is convex” to “activations are a Minkowski sum of polytopes” is the paper's own proposal; Gärdenfors does not make it.</p>
+
+<h3 id="precedents">Convex-geometric precedents</h3>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">§7.1 · p. 18–19 (App. J · p. 46)</span></div>
+<p>Three strands, “which we organize into three strands”:</p>
+<ol>
+<li><b>(i) Piecewise-linear networks.</b> ReLU networks partition the input space into convex polyhedral linear regions (often unbounded); work on the number of regions, depth–width trade-offs, the spline view (affine templates), the fact that trained networks realise far fewer regions than the maximum, and interpretability work that enumerates regions to extract exact piecewise-linear rules.</li>
+<li><b>(ii) Representation space.</b> Convex organisation of activations and architecture-specific convex projections; population geometry (activity concentrated on low-dimensional manifolds with structured variability); concept extraction methods that constrain representations to the convex hull of a learned dictionary: $k$-Deep Simplex, MFAs, SpaDE (“a prototype-centric view”).</li>
+<li><b>(iii) Language models.</b> Categorical and hierarchical concepts admit polytopal encodings whose geometry mirrors semantic relations (Park et al.).</li>
+</ol></div>
+<p>None of these strands states MRH: they say that convexity and polytopes are a recurring theme. Strand (i) is about regions of the <em>input</em> space on which a network is affine, strand (ii) about hulls of dictionaries (the single-tile case), strand (iii) about polytopes of concepts in language models. The paper's own contribution is the sum over tiles and the link with attention.</p>
+
+<h3 id="single-head">A single head: Lemma 1 (App. Lemma 3)</h3>
+<p><b>Problem.</b> What is the set of outputs of one attention head? Answer: inside the convex hull of its values, with the attention weights as barycentric codes.</p>
+
+<div class="box paper"><div class="box-h">In the paper — Lemma 1 (single head) <span class="ref">§7.1 · p. 19; App. J, Lemma 3 · p. 47</span></div>
+<p>Consider one attention head with values $\mV=\{\vv_1,\dots,\vv_m\}\subset\R^d$ and attention weights $\val\in\simplex^m$ ($\val=\softmax(\mQ\mK\T)$, outputs $\mY=\val\mV$). The attainable output set is $\mathcal Y=\{\sum_j\alpha_j\vv_j:\val\in\simplex^m\}\subseteq\conv(\mV)$. Moreover, if the pre-softmax logit map can generate any vector in $\Ima(\mK\T)+\spn\{\mathbf1\}=\R^m$ as the query varies, then $\mathcal Y=\conv(\mV)$. In this case the outputs admit an MRH representation: codes $\vz=\val$, archetypes $\Ac=\mV$ ($|S|=1$).</p></div>
+
+<div class="box recall"><div class="box-h">Reminder — softmax</div>
+<p>$\softmax(\vx)_j=e^{x_j}/\sum_ke^{x_k}$. (a) Adding a constant to all logits changes nothing: $\softmax(\vx+\lambda\mathbf1)=\softmax(\vx)$. (b) It maps $\R^m$ onto the <em>relative interior</em> of the simplex (all weights strictly positive and summing to 1), and if $\val$ is in that interior, $\vx=\log\val$ (entrywise) satisfies $\softmax(\vx)=\val$. So every strictly positive weight vector is reachable by choosing the logits, and weights equal to $0$ are never reached. <a href="02_toolbox.html#softmax-properties">More</a>.</p></div>
+
+<dl class="decode">
+<dt>$\mathcal Y$</dt><dd>all outputs of the head when the weights range over what the head can produce.</dd>
+<dt>$\mV$</dt><dd>the $m$ value vectors, one per token the head attends to; $m=261$ for DINOv2-B with 1+4+256 tokens. They are the archetypes of this tile.</dd>
+<dt>$\Ima(\mK\T)+\spn\{\mathbf1\}=\R^m$</dt><dd>the reachability condition. The paper writes the image of $\mK\T$; with the keys as the <em>rows</em> of $\mK\in\R^{m\times d_k}$ and a query $\vq\in\R^{d_k}$ (column), the logit vector is $\mK\vq\in\R^m$, so the set is the <em>column space</em> of $\mK$. We use the latter; the sum with $\spn\{\mathbf1\}$ reflects the invariance (a).</dd>
+</dl>
+
+<div class="box idea"><div class="box-h">Idea</div>
+<p>Inclusion: the weights are non-negative and sum to one, so the output is a convex combination of the values. Reachability: by (b), any strictly positive weights are obtained from the logits $\log\val$; if the logits of the head can be anything (modulo a constant), any such weights, hence any point of the hull, can be produced. Boundary points of the hull are limits, not outputs.</p></div>
+
+<details class="fold proof"><summary>Full proof</summary><div class="fold-body">
+<p><b>Step 1: $\mathcal Y\subseteq\conv(\mV)$.</b> The weights satisfy $\alpha_j\ge0$ and $\sum_j\alpha_j=1$, so $\sum_j\alpha_j\vv_j$ is by definition a point of $\conv(\mV)$.</p>
+<p><b>Step 2: reachability gives the relative interior.</b> Assume $\Ima(\mK)+\spn\{\mathbf1\}=\R^m$ (column-space convention). Let $\val\in\relint(\simplex^m)$, i.e. $\alpha_j>0$ for all $j$ and $\sum_j\alpha_j=1$.</p>
+<ol class="steps">
+<li>Put $\vu=\log\val\in\R^m$ (entrywise).<span class="why">well defined because every $\alpha_j>0$</span></li>
+<li>By hypothesis $\vu=\mK\vq+\lambda\mathbf1$ for some query $\vq$ and some $\lambda\in\R$.<span class="why">$\vu\in\R^m=\Ima(\mK)+\spn\{\mathbf1\}$</span></li>
+<li>$\softmax(\mK\vq)=\softmax(\mK\vq+\lambda\mathbf1)=\softmax(\vu)$.<span class="why">invariance (a)</span></li>
+<li>$\softmax(\vu)_j=\alpha_j/\sum_k\alpha_k=\alpha_j$.<span class="why">$e^{u_j}=\alpha_j$ and $\sum_k\alpha_k=1$</span></li>
+<li>So the query $\vq$ produces exactly the weights $\val$ and the output $\sum_j\alpha_j\vv_j$.</li>
+</ol>
+<p>Hence $\mathcal Y\supseteq\{\val\mV:\val\in\relint\simplex^m\}$. Since $\val\mapsto\val\mV$ is linear and a linear image of the relative interior of a convex set is the relative interior of its image (Rockafellar, Thm 6.6), this set is $\relint\conv(\mV)$. Together with Step 1 and the fact that softmax never outputs a zero weight (so $\mathcal Y\subseteq\val\mV$ for strictly positive $\val$ only), $\mathcal Y=\relint\conv(\mV)$.</p>
+<p><b>Step 3: the boundary.</b> A boundary point of $\conv(\mV)$ (in particular a vertex $\vv_j$) would need some weight to be $0$ (for a vertex, all other weights): softmax never does this, so these points are not outputs. They are limits of outputs: send some logits to $-\infty$ (or let the temperature go to $0$, Lemma 5 below). The closure of $\relint\conv(\mV)$ is $\conv(\mV)$, so $\overline{\mathcal Y}=\conv(\mV)$.</p>
+<p><b>Step 4: the MRH form.</b> The output is $\val\mV$ with $\val\in\simplex^m$: a single tile ($|S|=1$) whose archetypes are the values and whose code is $\val$. $\square$</p>
+</div></details>
+
+<div class="box remark"><div class="box-h">Remark — what the proof of the paper needs to be exactly right</div>
+<ol>
+<li><b>Open or closed.</b> The paper concludes $\mathcal Y=\conv(\mV)$ (“extreme points … attained by limits of interior points”). With a finite temperature, softmax never outputs a zero weight, so the attainable set is $\relint\conv(\mV)$ and only its closure is $\conv(\mV)$. This changes nothing for the geometry, but “equality” means “closure”. We say “fills the hull” below.</li>
+<li><b>Which space.</b> Softmax is declared as a map $\R^d\to\R^d$ but used on $\R^m$ (the number of tokens), and the proof writes “$\vy=\val\vv$” for the product $\val\mV$. We read the statement as above.</li>
+<li><b>The condition is about the keys.</b> The logits are $\mK\vq$, an element of the column space of $\mK$ (dimension at most $\rank\mK\le d_k$). The condition $\Ima(\mK)+\spn\{\mathbf1\}=\R^m$ needs $\rank\mK+1\ge m$.</li>
+</ol></div>
+
+<div class="widget" data-widget="p5head"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p><b>What to look at:</b> (1) move the logit sliders: the output $y$ moves inside the blue quadrilateral and is pulled towards the value with the largest logit; (2) lower the temperature $\tau$: $y$ snaps to the vertex of the largest logit along the dashed green curve (Lemma 5); (3) restrict the support to $S=\{1,2\}$: the output stays on the segment between $\vv_1$ and $\vv_2$, the purple sub-polytope (Lemma 6); (4) drag a value: the hull moves, the output stays in it. The smallest weight printed below is never $0$ for finite $\tau$: the output is always in the relative interior, never exactly on a vertex.</p>
+
+<div class="box ours"><div class="box-h">Our reading — reachability cannot hold in DINOv2-B, and the polytope changes with the image</div>
+<p>(1) A head of DINOv2-B has $d_k=64$ and $m=261$: $\rank\mK+1\le65<261$. The logits of the head span at most a 65-dimensional subspace of $\R^{261}$, and in self-attention the query is tied to the token, so one image realises only $261$ output points. (2) The values are $\mW_V\,\mathrm{LN}(\vx_j)$, functions of the image's own tokens: the polytope is rebuilt for every image, and the argument applies to any softmax attention, trained or random. Developed in <a href="06_critical_reading.html#architecture">page 6</a>.</p></div>
+
+<h3 id="affine">Affine maps keep the codes: Lemma 2 (App. Lemma 4)</h3>
+<p><b>Problem.</b> Between attention and the layer's output there are linear projections and bias terms. Does the convex structure survive?</p>
+<div class="box paper"><div class="box-h">In the paper — Lemma 2 (affine transformations preserve MRH structure) <span class="ref">§7.1 · p. 19; App. J, Lemma 4 · p. 48</span></div>
+<p>If $\gamma(\vx)=\mW\vx+\vb$ is an affine transformation and $\vx=\sum_jz_j\va_j$ (with $z_j\ge0$, $\sum_jz_j=1$), then $\gamma(\vx)=\sum_jz_j\va_j'$ with $\va_j'=\mW\va_j+\vb$: the transformed archetypes absorb the transformation and the bias, “the codes $\vz$ remain unchanged”.</p></div>
+<dl class="decode"><dt>$\gamma$</dt><dd>any affine map (linear map plus bias).</dd><dt>$\va_j'$</dt><dd>the image of archetype $j$; the new dictionary.</dd><dt>“codes unchanged”</dt><dd>the barycentric coordinates are the same: the relative position inside the polytope is preserved.</dd></dl>
+<details class="fold proof"><summary>Full proof</summary><div class="fold-body">
+<ol class="steps">
+<li>$\gamma(\vx)=\mW\bigl(\sum_jz_j\va_j\bigr)+\vb$.<span class="why">definition of $\gamma$ and of $\vx$</span></li>
+<li>$=\sum_jz_j\,\mW\va_j+\vb$.<span class="why">linearity of $\mW$</span></li>
+<li>$=\sum_jz_j\,\mW\va_j+\bigl(\sum_jz_j\bigr)\vb$.<span class="why">$\sum_jz_j=1$ is what makes the bias absorbable: $\vb=1\cdot\vb$</span></li>
+<li>$=\sum_jz_j(\mW\va_j+\vb)=\sum_jz_j\va_j'$. $\square$<span class="why">the same weights, new points</span></li>
+</ol></div></details>
+<div class="box remark"><div class="box-h">Remark — several active tiles: the bias must be absorbed once</div>
+<p>Step 3 uses $\sum_jz_j=1$ for <em>one</em> convex combination. With $|S|$ active tiles, $\vx=\sum_{i\in S}\vz_i\Ac_{\Tc_i}$ and each block sums to one, so absorbing the bias into every archetype adds $\vb$ once per active tile: $\gamma(\vx)=\sum_{i\in S}\vz_i(\mW\Ac_{\Tc_i}+\vb)-(|S|-1)\vb$. The correct statement for a sum is
+$$\gamma\Bigl(\bigmsum_i\Pc_i\Bigr)=\bigmsum_i\mW\Pc_i\ \oplus\ \{\vb\},$$
+i.e. absorb the bias in <em>one</em> tile, or add an extra one-point tile $\{\vb\}$ (a polytope reduced to a point, with the trivial simplex $\simplex^1=\{1\}$). In the attention block this is harmless (the output bias is a single vector), but it should not be read as “every archetype gets $+\vb$”.</p>
+<p>Also, “LayerNorm and RMSNorm … become affine in evaluation” (App. J, p. 48): this holds for BatchNorm (frozen statistics), not for LayerNorm, whose mean and variance are computed per token at inference. DINOv2 uses LayerNorm. <a href="06_critical_reading.html#layernorm">Page 6</a>.</p></div>
+
+<h3 id="multi-head">Multi-head attention: Proposition 1 (App. Proposition 3)</h3>
+<p><b>Problem.</b> A block has $H$ heads; what is the geometry of the block output?</p>
+<div class="box paper"><div class="box-h">In the paper — Proposition 1 (multi-head attention realises MRH) <span class="ref">§7.1 · p. 19; App. J, Prop. 3 · p. 48</span></div>
+<p>Let there be $H$ heads with value sets $\mV_h$ (of size $m_h$) and per-head output projections $\mW_O^{(h)}$. Head $h$ produces weights $\val_h\in\simplex^{m_h}$ and output $\vy_h=\sum_i\alpha_{h,i}\vv_h^{(i)}\in\conv(\mV_h)$. After projection and summation
+$$\vy=\sum_{h=1}^H\mW_O^{(h)}\vy_h=\sum_{h=1}^H\sum_i\alpha_{h,i}\mW_O^{(h)}\vv_h^{(i)}\in\bigmsum_{h=1}^H\mW_O^{(h)}\bigl(\conv(\mV_h)\bigr).$$
+Every output admits an MRH representation with block-convex codes $\vz=(\val_1,\dots,\val_H)$ and archetypes $(\mW_O^{(1)}\mV_1,\dots,\mW_O^{(H)}\mV_H)$. If each head can realise any point of $\relint(\simplex^{m_h})$ up to the softmax constant, the attainable set is exactly the Minkowski sum.</p></div>
+<dl class="decode">
+<dt>$\mW_O^{(h)}$</dt><dd>the part of the output projection $\mW_O$ that acts on head $h$ (below).</dd>
+<dt>$\mW_O^{(h)}(\conv(\mV_h))$</dt><dd>the polytope of head $h$ after projection: the tile polytope $\Pc_h$.</dd>
+<dt>$\vz=(\val_1,\dots,\val_H)$</dt><dd>the code vector: one simplex block per head. The tiles are the heads.</dd>
+</dl>
+<div class="box recall"><div class="box-h">Reminder — “concatenate the heads, then project” is a sum</div>
+<p>A block concatenates the head outputs, $[\vy_1|\dots|\vy_H]\in\R^{Hd_v}$ (each $\vy_h\in\R^{d_v}$, $d_v=64$, $H=12$ in DINOv2-B), and multiplies by one matrix $\mW_O\in\R^{Hd_v\times d}$ (row-vector convention). Cut $\mW_O$ into $H$ horizontal blocks $\mW_O^{(h)}\in\R^{d_v\times d}$. Then
+$$[\vy_1|\dots|\vy_H]\,\mW_O=\begin{bmatrix}\vy_1&\cdots&\vy_H\end{bmatrix}\begin{bmatrix}\mW_O^{(1)}\\ \vdots\\ \mW_O^{(H)}\end{bmatrix}=\sum_{h=1}^H\vy_h\mW_O^{(h)},$$
+because the product of a row by a stacked matrix is the sum of the products of each sub-row by its block. With the column convention of the paper this is $\mW_O^{(h)}\vy_h$.</p></div>
+<div class="box idea"><div class="box-h">Idea</div>
+<p>Each head gives a point of its own polytope (Lemma 1). The projection is linear, so it carries the polytope to $\conv(\mW_O^{(h)}\mV_h)$ (the image of a hull is the hull of the image). Adding one point from each polytope is, by definition, a point of the Minkowski sum. Conversely every point of the sum picks one point per polytope, and each of these is reached by some weights.</p></div>
+<details class="fold proof"><summary>Full proof</summary><div class="fold-body">
+<p><b>Fact used.</b> For a linear map $L$ and a finite set $V$, $L(\conv V)=\conv(L(V))$: $L(\sum_j\alpha_j\vv_j)=\sum_j\alpha_jL\vv_j$ for the same weights, in both directions.</p>
+<p><b>Inclusion.</b></p>
+<ol class="steps">
+<li>By Lemma 1, $\vy_h\in\conv(\mV_h)$ for each head.<span class="why">each head is a single head</span></li>
+<li>$\mW_O^{(h)}\vy_h\in\mW_O^{(h)}\conv(\mV_h)=\conv(\mW_O^{(h)}\mV_h)=:\Pc_h$.<span class="why">the fact above</span></li>
+<li>$\vy=\sum_h\vp_h$ with $\vp_h=\mW_O^{(h)}\vy_h\in\Pc_h$, so $\vy\in\bigmsum_h\Pc_h$.<span class="why">definition of the Minkowski sum</span></li>
+</ol>
+<p><b>Equality under reachability.</b> Let $\vy^\star=\sum_h\vp_h$ with $\vp_h\in\Pc_h$ arbitrary.</p>
+<ol class="steps">
+<li>There are $\vbe_h\in\simplex^{m_h}$ with $\vp_h=\mW_O^{(h)}\sum_j\beta_{h,j}\vv_h^{(j)}$.<span class="why">definition of $\Pc_h$ as a hull</span></li>
+<li>If $\vbe_h\in\relint\simplex^{m_h}$ and head $h$ can realise any such weights, choose its query so that $\val_h=\vbe_h$.<span class="why">reachability, as in Lemma 1</span></li>
+<li>Then the block output is $\sum_h\mW_O^{(h)}\vy_h=\sum_h\vp_h=\vy^\star$.</li>
+</ol>
+<p>Since the weights of softmax are strictly positive, this proves that the attainable set is the sum of the <em>relative interiors</em> of the tile polytopes, which is the relative interior of the sum (the relative interior of a Minkowski sum is the sum of the relative interiors); its closure is $\bigmsum_h\Pc_h$. <b>MRH form.</b> Collect $\vz=(\val_1,\dots,\val_H)$ and $\Ac=(\mW_O^{(1)}\mV_1,\dots,\mW_O^{(H)}\mV_H)$: then $\vy=\sum_h\val_h\mW_O^{(h)}\mV_h$ with each block in a simplex. $\square$</p>
+</div></details>
+<div class="box remark"><div class="box-h">Remark — what the statement covers and what it does not</div>
+<ul>
+<li><b>Joint reachability.</b> The equality needs all heads to reach their weights <em>simultaneously</em>. Every head's queries and values come from the same tokens, so the $H$ weight vectors are not free coordinates; the hypothesis “each head can realise any point” is stronger than “each head alone is surjective”.</li>
+<li><b>One attention update only.</b> A token's final representation is $\vx_L=\vx_0+\sum_\ell\mathrm{attn}_\ell+\sum_\ell\mathrm{mlp}_\ell$ followed by a final LayerNorm. The proposition describes the output of <em>one</em> attention sublayer: it does not cover the residual stream (a sum with all earlier terms), the MLPs (non-linear), or the final normalisation.</li>
+<li><b>Tiles are heads, so all are active.</b> Here $|S|=H$ for every token: every head contributes a point. The block sparsity $|S|\ll m$ of Definition 2 does not appear (the “sparse” tiles of the definition would have to come from the dictionary of archetypes, not from the heads).</li>
+<li><b>Dimensions.</b> $\mW_O^{(h)}$ has rank at most $d_v=64$, so each tile polytope has affine dimension at most 64 and the sum of $12$ of them at most $12\cdot64=768=d$.</li>
+</ul></div>
+<figure class="fig"><!-- include figures/05/layout.svg --><figcaption><strong>Figure B — layout of a block-convex code.</strong> The code vector has one block per tile. Inactive tiles (grey, all zero) contribute nothing; each active tile (blue) has non-negative weights summing to one and selects a point of its polytope; the activation is the sum of the selected points.</figcaption></figure>
+<div class="box ours"><div class="box-h">Our reading — what the proposition proves</div>
+<p>Proposition 1 holds for any softmax multi-head attention, trained or not, on any input. It is a statement about the architecture, not about what DINOv2 learned: MRH needs, in addition, that the archetypes form a fixed dictionary shared across images. And in the sum the tiles are the heads, all active. <a href="06_critical_reading.html#architecture">Page 6</a>.</p></div>
+
+<h3 id="concentration">Attention concentration: App. Lemmas 5 and 6</h3>
+<p><b>Problem.</b> Real attention is often peaked or sparse. What does the polytope picture become?</p>
+<div class="box paper"><div class="box-h">In the paper — Lemma 5 (low-temperature softmax selects vertices) <span class="ref">App. J · p. 49</span></div>
+<p>Let $\val=\softmax(\vx/\tau)$ with logits $\vx\in\R^m$ and temperature $\tau>0$. Then $\lim_{\tau\to0}\sum_j\alpha_j\vv_j=\vv_{j^\star}$ with $j^\star=\argmax_jx_j$: “in the zero-temperature limit the output lies at a vertex of $\conv(\mV)$.” With $\diam(\mV)=\max_{p,q}\|\vv_p-\vv_q\|$ and $\Delta_j=x_{j^\star}-x_j$, “the deviation from the winning vertex satisfies”
+$$\Bigl\|\sum_j\alpha_j\vv_j-\vv_{j^\star}\Bigr\|\le\diam(\mV)\sum_{j\ne j^\star}e^{-\Delta_j/\tau}.$$</p></div>
+<dl class="decode"><dt>$\tau$</dt><dd>temperature: logits are divided by $\tau$; small $\tau$ means peaked attention.</dd><dt>$\Delta_j$</dt><dd>logit margin of the winner over $j$; strictly positive for all $j\ne j^\star$ if the maximum is unique.</dd><dt>$\diam(\mV)$</dt><dd>largest distance between two values: the size of the polytope.</dd></dl>
+<details class="fold proof"><summary>Full proof (limit and bound)</summary><div class="fold-body">
+<p>Assume the maximiser is unique, so $\Delta_j>0$ for $j\ne j^\star$. (With a tie among a set $J$ of maximisers the limit is the barycentre $\frac1{|J|}\sum_{j\in J}\vv_j$ of the tied values, a point of a face, not a vertex.)</p>
+<ol class="steps">
+<li>$\alpha_j=e^{x_j/\tau}\big/\sum_ke^{x_k/\tau}$, and $x_j=x_{j^\star}-\Delta_j$, so $\alpha_j=e^{-\Delta_j/\tau}\alpha_{j^\star}$ for $j\ne j^\star$.<span class="why">divide numerator and denominator by $e^{x_{j^\star}/\tau}$, i.e. use softmax invariance</span></li>
+<li>$\alpha_{j^\star}=\dfrac1{1+\sum_{j\ne j^\star}e^{-\Delta_j/\tau}}\le1$.<span class="why">the weights sum to 1: $\alpha_{j^\star}(1+\sum_{j\ne j^\star}e^{-\Delta_j/\tau})=1$</span></li>
+<li>As $\tau\to0$, $e^{-\Delta_j/\tau}\to0$ for each $\Delta_j>0$, hence $\alpha_{j^\star}\to1$ and $\alpha_j\to0$: the output tends to $\vv_{j^\star}$.<span class="why">finite sum of vanishing terms</span></li>
+<li><b>Bound.</b> $\sum_j\alpha_j\vv_j-\vv_{j^\star}=\sum_j\alpha_j(\vv_j-\vv_{j^\star})=\sum_{j\ne j^\star}\alpha_j(\vv_j-\vv_{j^\star})$.<span class="why">$\sum_j\alpha_j=1$ lets us subtract $\vv_{j^\star}$ inside; the term $j=j^\star$ vanishes</span></li>
+<li>$\bigl\|\sum_{j\ne j^\star}\alpha_j(\vv_j-\vv_{j^\star})\bigr\|\le\sum_{j\ne j^\star}\alpha_j\|\vv_j-\vv_{j^\star}\|\le\diam(\mV)\sum_{j\ne j^\star}\alpha_j$.<span class="why">triangle inequality, then definition of the diameter</span></li>
+<li>$\sum_{j\ne j^\star}\alpha_j=\alpha_{j^\star}\sum_{j\ne j^\star}e^{-\Delta_j/\tau}\le\sum_{j\ne j^\star}e^{-\Delta_j/\tau}$. $\square$<span class="why">step 1 and $\alpha_{j^\star}\le1$</span></li>
+</ol>
+<p>The sharper form is $\diam(\mV)\,\sigma/(1+\sigma)$ with $\sigma=\sum_{j\ne j^\star}e^{-\Delta_j/\tau}$. A finite margin therefore gives an error that decays exponentially in $1/\tau$.</p>
+</div></details>
+<div class="box example"><div class="box-h">Numbers (checked)</div>
+<p>$\mV=\{(0,0),(4,0),(1,3)\}$, logits $(1,0,-1)$, so $\Delta=(\cdot,1,2)$ and $\diam=\sqrt{18}\approx4.243$. At $\tau=0.5$: $\val=(0.867,0.117,0.016)$, $\vy=(0.485,0.048)$, distance to the winner $0.487$, bound $4.243(e^{-2}+e^{-4})=0.652$. At $\tau=0.25$: distance $0.072$, bound $0.079$. At $\tau=0.1$: $1.8\cdot10^{-4}$ against $1.9\cdot10^{-4}$. The bound is tight for small $\tau$ (the dominant term is $\alpha_2\|\vv_2-\vv_1\|$) and holds on 20,000 random instances we tried.</p></div>
+
+<div class="box paper"><div class="box-h">In the paper — Lemma 6 (support restriction selects a sub-polytope) <span class="ref">App. J · p. 50</span></div>
+<p>Fix a subset $S\subseteq\{1,\dots,m\}$ and $\mathcal Y_S=\{\sum_{j\in S}\alpha_j\vv_j:\val\in\simplex^m,\ \alpha_j=0\ (j\notin S)\}$. Then $\mathcal Y_S=\conv(\{\vv_j:j\in S\})$. If across input regimes the support takes values in a family $\mathcal S$ of subsets, the attainable set is $\bigcup_{S\in\mathcal S}\conv(\{\vv_j:j\in S\})$, a union of lower-dimensional polytopes. When $S=\argmax_j\ps{\vw}{\vv_j}$ for some $\vw$, $\mathcal Y_S$ is the face of $\conv(\mV)$ exposed by the supporting hyperplane with normal $\vw$.</p></div>
+<details class="fold proof"><summary>Full proof</summary><div class="fold-body">
+<ol class="steps">
+<li>A weight vector in $\simplex^m$ with $\alpha_j=0$ off $S$ is the same thing as a vector of $\simplex^{|S|}$ on $S$. Hence $\mathcal Y_S=\{\sum_{j\in S}\alpha_j\vv_j:\val_S\in\simplex^{|S|}\}=\conv(\{\vv_j\}_{j\in S})$.<span class="why">definition of the hull</span></li>
+<li>Face. Let $M=\max_j\ps{\vw}{\vv_j}$ and $S=\{j:\ps{\vw}{\vv_j}=M\}$. For $\vy=\sum_j\alpha_j\vv_j\in\conv(\mV)$: $\ps{\vw}{\vy}=\sum_j\alpha_j\ps{\vw}{\vv_j}\le M$.<span class="why">weights non-negative, sum 1</span></li>
+<li>Equality holds iff $\alpha_j=0$ whenever $\ps{\vw}{\vv_j}<M$, i.e. iff $\val$ is supported on $S$. So $\{\vy\in\conv(\mV):\ps{\vw}{\vy}=M\}=\conv(\{\vv_j\}_{j\in S})$, the face exposed by $\vw$. $\square$<span class="why">strict inequality off $S$ forces zero weight</span></li>
+</ol></div></details>
+<div class="box remark"><div class="box-h">Remark — what this lemma needs</div>
+<p>Softmax never gives a weight exactly zero, so Lemma 6 describes <em>sparse</em> attention (top-$k$, masks, or the low-temperature limit), not the attention of DINOv2 at finite $\tau$, whose output is always in the relative interior of the full hull. The statement “disjoint polytopes” for block-sparse attention with affinely independent values is right because barycentric coordinates are unique: the hulls of disjoint subsets of an affinely independent set do not meet.</p></div>
