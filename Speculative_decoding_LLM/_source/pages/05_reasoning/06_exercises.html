@@ -1,0 +1,45 @@
+<h2 id="exercises">7. Exercises</h2>
+
+<div class="exo"><div class="exo-h">Exercise 1 — The ceiling of token-level speculation <span class="lvl">★</span></div>
+<p>Show that the speed-up of page 1, $g(\ga)=\frac{1-\al^{\ga+1}}{(1-\al)(1+c\ga)}$, is at most $\frac1{1-\al}$ for every draft length $\ga\ge0$ and every drafter cost $c\ge0$. For $\al=0.7$, what is the ceiling?</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>Bound the numerator and the denominator separately.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>$1-\al^{\ga+1}\le1$ and $1+c\ga\ge1$, so $g(\ga)\le\frac{1}{1-\al}$, approached only when $c=0$ and $\ga\to\infty$. For $\al=0.7$: at most $3.33$, whatever the hardware. This is the bound that Lookahead Reasoning (§1, §4) sets out to go past by changing the unit.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 2 — The compute of a step-level cascade <span class="lvl">★★</span></div>
+<p>In RSD, count operations as (model size) × (tokens generated), one token-equivalent per reward-model call, steps of $L$ tokens. Let $N_m$, $N_M$, $N_r$ be the sizes of the small, large and reward models, and $\rho$ the share of steps rejected. (a) Write the compute relative to the large model alone. (b) For $N_m=7$, $N_M=72$, $N_r=7$ (billions), $L=40$: what $\rho$ corresponds to “4.4× fewer FLOPs”? (c) Above which $\rho$ is the cascade more expensive than the large model alone?</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>Every step is drafted and scored; a rejected step is also written by the large model.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) Per step: $L\,N_m+N_r+\rho\,L\,N_M$, against $L\,N_M$ for the large model alone: relative compute $\ \frac{N_m}{N_M}+\frac{N_r}{L\,N_M}+\rho$.</p>
+<p>(b) $\frac{7}{72}+\frac{7}{40\times72}+\rho=0.097+0.002+\rho$. Setting this to $\frac1{4.4}=0.227$ gives $\rho\approx0.13$: about one step in eight rewritten by the large model.</p>
+<p>(c) When $0.0997+\rho>1$, i.e. $\rho>0.90$. With the smaller pair (1.5B and 7B, reward model 7B) the fixed part is $\frac{1.5}{7}+\frac{7}{280}=0.24$ and the break-even is $\rho=0.76$: the closer the two models are in size, the less room there is. (This accounting ignores the large model's cost of reading the steps it did not write, which is real; see R2R in §5.)</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 3 — RSD's guarantee <span class="lvl">★★</span></div>
+<p>With the step rule $\omega=\ind(r\ge\delta)$, RSD samples a step from $\mathbf P_{\text{RSD}}=\omega\,\mathbf P_m+\nu\,\mathbf P_M$ with $\nu=\mathbf P_m(r<\delta)$. Assume the large model's expected reward is at least the small model's, $\E_M[r]\ge\E_m[r]$. Prove that $\E_{\text{RSD}}[r]\ge\E_m[r]$. Does the argument give $\E_{\text{RSD}}[r]\ge\E_M[r]$?</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>Split $\E_m[r]$ according to whether $r\ge\delta$. The mean of $r$ over the steps with $r<\delta$ is at most the overall mean.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<ol class="steps">
+<li>$\E_{\text{RSD}}[r]=\E_m[r\,\ind(r\ge\delta)]+\nu\,\E_M[r]$.<span class="why">A step is either a kept draft (drawn from $\mathbf P_m$, with $r\ge\delta$) or, with probability $\nu$, a step of the large model.</span></li>
+<li>$\E_m[r]=\E_m[r\,\ind(r\ge\delta)]+\E_m[r\,\ind(r<\delta)]$.<span class="why">Split according to the threshold.</span></li>
+<li>$\E_m[r\,\ind(r<\delta)]=\nu\,\E_m[r\mid r<\delta]\le\nu\,\E_m[r]\le\nu\,\E_M[r]$.<span class="why">The average of the rewards below the threshold is at most the overall average; then the hypothesis.</span></li>
+<li>Subtract: $\E_{\text{RSD}}[r]-\E_m[r]=\nu\,\E_M[r]-\E_m[r\,\ind(r<\delta)]\ge0$.<span class="why">Steps 1 to 3.</span></li>
+</ol>
+<p>Nothing here compares RSD with the large model. $\E_{\text{RSD}}[r]$ can be above $\E_M[r]$ (if the kept drafts have very high reward) or below it. And the statement is about the reward model's score, not about correctness.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 4 — Classify <span class="lvl">★★</span></div>
+<p>For each scheme say the unit, whether the large model processes accepted units, and what is saved. (a) A small model answers; if its confidence in the whole answer is low, the large model answers instead. (b) The large model verifies drafted tokens with the exact rule. (c) A small model writes a line of code; the large model is asked whether the line is correct; if not, it rewrites it. (d) A small model drafts three steps; the large model writes its own three steps in parallel; a judge compares.</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) Unit: the whole answer; large model not run when the small one is trusted: a classical cascade (query-level routing); compute and latency saved, quality the small model's on those queries. (b) Token; processes everything; latency saved, compute not; exact: page 1. (c) Step (a line); the large model reads the line and writes one token: SpecReason-like; latency saved. (d) Step; the large model writes everything in parallel: Lookahead Reasoning; latency saved, more compute, quality close to the large model's.</p>
+</div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 5 — Why routing does not save operations <span class="lvl">★★★</span></div>
+<p>A text of $n$ tokens is written by a small model of size $N_m$, with a share $s$ of the tokens written by a large model of size $N_M$ instead. Count $2N$ operations per token <em>processed</em> by a model of size $N$ (read or written). (a) If the large model must read every token before writing its own, what is the total compute relative to the large model alone? (b) With $N_m=1.5$, $N_M=32$, what does it give? Compare with the measurements of §5. (c) Then where does the 2.76× speed-up come from?</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>Both models end up processing all $n$ tokens. For (c), recall what limits the speed of a large model on one request (page 1, §1).</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) The small model processes all $n$ tokens: $2N_mn$. The large model also processes all $n$ tokens (it reads the small model's tokens in bulk and writes its own): $2N_Mn$. Total relative to the large model alone: $1+\frac{N_m}{N_M}$, independent of $s$.</p>
+<p>(b) $1+\frac{1.5}{32}=1.05$. The paper measures $\frac{1502}{1136}=1.32$; the difference comes mainly from the longer text ($18.4$ against $15.2$ thousand tokens, a factor $1.21$) and the router.</p>
+<p>(c) From the number of <em>sequential passes</em> of the large model. Each pass reads the model's weights from memory once, and that, not arithmetic, takes the time. The large model alone makes $n$ passes; in R2R it makes about $s\,n$ passes, each over several tokens. The memory traffic falls by 4.5 times in the paper's table, and the time with it. It is the asymmetry of page 1 again: reading in parallel is cheap, writing one by one is not.</p>
+</div></details></div>

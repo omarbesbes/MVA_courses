@@ -1,0 +1,40 @@
+<h2 id="border">6. The border: speculation, cascades, routing</h2>
+<p class="tldr">Sorted by the two questions of §1, the methods of this page fall into three groups: the large model skipped on accepted steps (compute saved), the large model reading but not writing (latency saved, quality the small model's), the large model writing everything in parallel (latency saved, quality the large model's).</p>
+
+<h3 id="compare">The methods of this page, side by side</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>method</th><th>unit</th><th>who decides</th><th>large model on accepted units</th><th>what is saved</th><th>what ties the output to the large model</th></tr></thead>
+<tbody>
+<tr><td>RSD (<a href="#rsd">§2</a>)</td><td>step</td><td>a process reward model, threshold $\delta$</td><td>not run</td><td>compute (reported in FLOPs)</td><td>nothing; expected reward ≥ the small model's</td></tr>
+<tr><td>SpecReason (<a href="#specreason">§3</a>)</td><td>step</td><td>the large model, a 0–9 mark</td><td>reads the step, writes one token</td><td>latency</td><td>its opinion of each step</td></tr>
+<tr><td>Lookahead Reasoning (<a href="#lookahead">§4</a>)</td><td>step</td><td>a verifier comparing with the large model's own step</td><td>writes its own version, in parallel</td><td>latency (more compute)</td><td>semantic equivalence, step by step</td></tr>
+<tr><td>GSI, SPECS (<a href="#others">§4</a>)</td><td>step</td><td>reward plus the large model's likelihood</td><td>scores every candidate</td><td>latency</td><td>a convergence statement as candidates grow</td></tr>
+<tr><td>R2R (<a href="#routing">§5</a>)</td><td>token</td><td>a router on the small model's state</td><td>reads them later, in bulk</td><td>latency, memory traffic</td><td>the large model writes the divergent tokens</td></tr>
+<tr><td>for comparison: exact speculative decoding (page 1)</td><td>token</td><td>the accept / resample rule</td><td>scores every token</td><td>latency (more compute)</td><td>the same distribution</td></tr>
+</tbody></table></div>
+<p>The last column is the one to read before choosing. As one goes up the table, less and less connects the output to the large model, and more and more rests on a judge that is itself a model: a reward model trained on mathematics, a mark out of 9, a 7B verifier, a 56M router.</p>
+
+<h3 id="border-above">Why the accuracy is sometimes above the large model's</h3>
+<p>Several papers of this page report scores above the large model alone. There are three documented explanations, none of which is “the method is smarter than the large model”:</p>
+<ol>
+<li><strong>Selection.</strong> A filter that keeps the high-reward steps of one model and falls back on another acts like an ensemble with a judge. RSD's authors make the point for the expected reward (§2). The effect is real, small (about a point on RSD's averages), and only as reliable as the judge.</li>
+<li><strong>Budgets.</strong> Under a cap on tokens or time, a terser mixture finishes where the large reasoning model is cut off (SpecReason, §3). Without the cap the gain disappears or reverses.</li>
+<li><strong>A baseline weaker than it looks.</strong> In RSD's table exact speculative decoding, which is the large model in theory, scores 0.7 point below it on average: differences of that size are within the noise of the measurement.</li>
+</ol>
+
+<h3 id="border-failures">How they fail</h3>
+<ul>
+<li><strong>The judge is fooled.</strong> A reward model gives a high score to a fluent wrong step; a mark out of 9 does not discriminate; RSD at its default threshold accepts almost every step in a later re-implementation (§2). When the judge is wrong, nothing downstream catches it: unlike on pages 1 to 4, the large model never sees the accepted text (RSD), or sees it only as context.</li>
+<li><strong>The domain has no judge.</strong> Process reward models exist for mathematics. Results on other domains are thin, and the one general-purpose configuration in RSD's table that loses does so on a science benchmark.</li>
+<li><strong>Steps are cut by a blank line.</strong> All the step-level methods segment the trace at “\n\n”. A model that formats differently, or a task without step structure, breaks the unit.</li>
+<li><strong>The small model is too weak.</strong> If most of its steps are rejected, the method costs more than the large model alone: every rejected step was drafted, judged, and then rewritten.</li>
+<li><strong>Answers get longer.</strong> Mixtures of two models tend to reason at greater length and to run into token limits (R2R's unfinished answers, §5).</li>
+</ul>
+<div class="box practice"><div class="box-h">In practice — which box for which need</div>
+<ul>
+<li><strong>You must keep the large model's behaviour</strong> (evaluations, safety policies, style): stay on the speculative side — exact speculative decoding, or Lookahead Reasoning if step-level equivalence is acceptable and you have parallel capacity to spare.</li>
+<li><strong>You pay for compute, on a domain with a good reward model</strong> (mathematics-style reasoning): a step-level cascade like RSD is the method that actually reduces operations; evaluate it on your hardest problems, not on GSM8K.</li>
+<li><strong>You want latency and can train a router on your traffic</strong>: token routing gives a mid-sized model's speed at close to the large model's accuracy in the one study above, with the cost of producing the labels.</li>
+<li>In every case: these are lossy methods. Everything said on <a href="03_relaxed.html#benchmarks">page 3, §10</a> and <a href="04_judges.html#compounding">page 4, §6</a> about re-evaluation applies, with fewer independent evaluations available than for token-level rules.</li>
+</ul>
+</div>

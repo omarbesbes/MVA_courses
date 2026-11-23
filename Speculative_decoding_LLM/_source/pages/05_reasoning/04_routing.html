@@ -1,0 +1,52 @@
+<h2 id="routing">5. Token routing: the small model writes, the large one steps in</h2>
+<p class="tldr">Reverse the roles: the small model is the writer, and a learned router sends to the large model only the tokens at which the two would take different paths — about one token in eight. The small model follows the large model's line of reasoning without the large model writing it.</p>
+
+<article class="mcard">
+<header class="mcard-h">
+<p class="mcard-name">R2R — Roads to Rome</p>
+<p class="mcard-meta">Fu et al. · NeurIPS 2025 · <a href="https://arxiv.org/abs/2505.21600">arXiv 2505.21600</a></p>
+<p class="tags"><span class="tag lossy">lossy</span><span class="tag train">trained router (56M parameters)</span><span class="tag unit">token level · routing</span><span class="tag year">2025</span></p>
+</header>
+<dl class="mfacts">
+<dt class="tries">What it tries</dt><dd>Answer the question “Can SLMs follow LLM reasoning paths by replacing only divergent tokens?” — most differences between a small and a large model are neutral; a few change where the reasoning goes.</dd>
+<dt class="how">How it decides</dt><dd>At each token the small model produces its distribution; a router (a small feed-forward network reading the small model's logits, hidden state and token embedding) predicts whether the position is <em>path-divergent</em>; if so the large model writes that token, otherwise the small model's token is used.</dd>
+<dt class="gets">What it achieves</dt><dd>DeepSeek-R1-distilled models, 1.5B with 32B: the large model writes 11–15% of the tokens; average accuracy over AIME, GPQA and LiveCodeBench 46%, against 50% for the 32B model and 10% for the 1.5B model alone (AIME: 55% against 57% and 12%); 2.76× the generation speed of the 32B model on AIME.</dd>
+<dt class="costs">What it costs</dt><dd>A router trained on 7.6 million labels (448 GPU-hours to produce them). Saves latency and memory traffic, not operations: total compute is slightly above the large model alone. Most failures are answers that never finish.</dd>
+</dl>
+</article>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Fu et al. (R2R), NeurIPS 2025, §1 and Table 1</span></div>
+<p>“only a small fraction of tokens genuinely diverge reasoning paths between LLMs and SLMs. Most generated tokens are either identical or exhibit neutral differences, such as minor variations in abbreviations or expressions.” Measured on 7.6 million tokens written by the 32B model: the 1.5B model would have written a different token at 11% of the positions, and the difference is divergent at 4.9% (2.8% for mathematics, 4.7% for code, 9.7% for question answering).</p>
+</div>
+<p>You have met this observation twice already: as “many tokens are inconsequential” on <a href="03_relaxed.html#lenience-functions">page 3</a>, and as “harmless and harmful mismatches” on <a href="04_judges.html">page 4</a>. The labels are obtained almost as in AutoJudge: at each position where the two models differ, both continuations are completed by the large model to the end of the sentence, and a verifier model says whether the difference is neutral or divergent. What is new is who uses the labels, and when:</p>
+<div class="table-wrap"><table>
+<thead><tr><th></th><th>judge (page 4)</th><th>router (R2R)</th></tr></thead>
+<tbody>
+<tr><td>decides</td><td>after the large model has read the drafted token</td><td><em>before</em> the large model is called</td></tr>
+<tr><td>reads</td><td>the large model's hidden state</td><td>the small model's logits and hidden state only</td></tr>
+<tr><td>large model on accepted tokens</td><td>has processed them (verification pass)</td><td>not called at that moment</td></tr>
+<tr><td>a mistake means</td><td>a harmful token accepted</td><td>a divergent token not sent to the large model</td></tr>
+</tbody></table></div>
+<p>The router must guess, from the small model alone, that the large model would disagree in a way that matters. Its best clue is the small model's own uncertainty: at divergent positions the small model's entropy is 3.8 times its average. At the operating point of the paper it sends 12.4% of the tokens to the large model and catches 95% of the divergent ones.</p>
+
+<h3 id="routing-cost">What is saved, exactly</h3>
+<p>One would expect a method that uses the large model for one token in eight to save seven eighths of its compute. It does not, and the reason is instructive. When the large model is called at a token, it must know the context — including the hundred tokens the small model wrote since its last call. It reads them in one parallel pass (updating its cache), then writes its token. So the large model still <em>processes</em> every token of the text; it just does not <em>generate</em> them one by one.</p>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Fu et al. (R2R), Appendix B.3.2, Table 10 (AIME)</span></div>
+<div class="table-wrap"><table>
+<thead><tr><th></th><th>total computation (TFLOPs)</th><th>total memory access (TB)</th><th>generation speed (tokens/s)</th></tr></thead>
+<tbody>
+<tr><td>1.5B model alone</td><td>157</td><td>104</td><td>141.6</td></tr>
+<tr><td>32B model alone</td><td>1136</td><td>966</td><td>30.5</td></tr>
+<tr><td>R2R (1.5B + 32B)</td><td>1502</td><td>216</td><td>84.3</td></tr>
+</tbody></table></div>
+<p>“R2R, markedly reduces total memory access to just 216 TB, a 4.5x reduction compared to the R1-32B model. This efficiency is achieved with only a modest increase in total computation, which primarily arises from the additional KV-cache updates required when switching between the LLM and SLM.”</p>
+</div>
+<p>This is the lesson of <a href="01_foundations.html#asymmetry">page 1, §1</a> seen from the other end: for a large model serving one request, time goes into moving weights through memory once per sequential step, not into arithmetic. R2R makes the large model take few sequential steps, each over many tokens. In cost it is therefore close to the speculative methods (latency saved, operations not); in quality it is on the cascade side (the text is mostly the small model's). The speeds in the table are the paper's (the last column is from its Table 3).</p>
+<p>Two measured facts complete the picture. Against a mid-sized model used alone (14B), R2R is both more accurate (46% against 43% on average) and 1.6 times faster. And its failures are mostly not wrong answers: of the 27 AIME problems it misses in the paper's analysis, 25 are responses that did not finish within the token limit — the mixture reasons at greater length (18.4 thousand tokens on AIME against 15.2 thousand for the large model), the same length inflation that <a href="03_relaxed.html#benchmarks-length">page 3, §10</a> found for relaxed rules.</p>
+
+<h3 id="routing-others">Relatives</h3>
+<ul>
+<li><strong>CITER</strong> (2025): a router on the small model's hidden state, trained with preference labels that account for the long-term effect of each routing decision.</li>
+<li><strong>Co-LLM</strong> (ACL 2024): a linear “defer” head learned by maximising the likelihood of the training text, without labels of which model to use.</li>
+<li><strong>CoSD</strong> (ICML 2025), despite a similar look, has another goal: an assistant model checks every drafted token in parallel and may replace it, to <em>combine the knowledge</em> of two models of similar size rather than to save compute.</li>
+<li>2026 work trains the small model itself to ask for help (with reinforcement learning) and builds serving systems around token routing.</li>
+</ul>

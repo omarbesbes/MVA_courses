@@ -1,0 +1,47 @@
+<!--
+title: 5 — Lossy III: speculating on steps, and letting the small model write
+short: 5 · Steps and routing
+description: Step-level and reasoning-level speculation (reward-guided speculative decoding, SpecReason, Lookahead Reasoning and relatives), token-level routing between a small and a large model (R2R), and the border between speculative decoding, cascades and routing: who decides, what is verified, and whether the large model's computation is still paid.
+subtitle: With reasoning models an answer is thousands of tokens of thinking. The methods of this page change the unit of speculation from a token to a whole step, and some of them change something deeper: on the parts they accept, the large model is not run at all.
+-->
+
+<div class="box objectives">
+<div class="box-h">What you will be able to do after this page</div>
+<ol>
+<li>Explain why token-level speculation has a ceiling that faster hardware does not lift, and what changes when the unit becomes a reasoning step.</li>
+<li>For any method, answer the two questions that classify it: <strong>what is the unit</strong> that is accepted or rejected, and <strong>does the large model still process the accepted parts</strong>?</li>
+<li>Describe <strong>reward-guided speculative decoding</strong> (RSD): its accept rule, the distribution it samples, its guarantee, and why its headline numbers are in FLOPs.</li>
+<li>Describe <strong>SpecReason</strong> and <strong>Lookahead Reasoning</strong>, and say why one may lose accuracy where the other does not.</li>
+<li>Describe <strong>token routing</strong> (R2R): which tokens go to the large model, who decides, and what is and is not saved.</li>
+<li>Explain the three reasons why some of these methods report an accuracy <em>above</em> the large model's, and their known failure modes.</li>
+</ol>
+</div>
+
+<h2 id="start">0. Before you start</h2>
+<h3 id="howto">How to read this page</h3>
+<p>You need <a href="01_foundations.html">page 1</a> (rounds, acceptance rate, the speed-up law). <a href="04_judges.html">Page 4</a> is the natural predecessor — a judge decides whether a different <em>token</em> is acceptable; here something decides whether a different <em>step</em> is — but it is not required.</p>
+<p>A warning about vocabulary. Many of these papers have “speculative” in their title, and several are not speculative decoding in the sense of page 1: the large model does not verify the small model's tokens in parallel; it is simply not called when the small model's work is judged good enough. That is a <em>cascade</em>. The distinction matters for what you can expect — less latency, or less compute — and §1 sets it up before any method is described.</p>
+
+<h3 id="story">The story of the page in six steps</h3>
+<p class="tldr">Bigger units and a judge of steps make it possible to skip the large model on most of a reasoning trace; what is gained is compute as well as time, what is lost is any link with the large model's distribution.</p>
+<ol class="chain">
+<li><strong>Two questions (§1).</strong> What is the unit — token or step? And is the large model's pass still paid on what is accepted? The answers sort every method into four boxes.</li>
+<li><strong>A reward model as verifier (§2).</strong> RSD: the small model writes a step, a process reward model scores it, the large model rewrites the step only if the score is low.</li>
+<li><strong>The large model as critic (§3).</strong> SpecReason: the large model gives each drafted step a score from 0 to 9 in one short pass.</li>
+<li><strong>Staying close to the large model (§4).</strong> Lookahead Reasoning: the large model writes every step, several steps in parallel; a drafted step is kept only if it means the same as the large model's.</li>
+<li><strong>Token routing (§5).</strong> R2R: the small model writes; a learned router sends to the large model the few tokens at which the two would take different paths.</li>
+<li><strong>The border (§6).</strong> Which of these save compute, which save only latency, why accuracy can go up, and how they fail.</li>
+</ol>
+
+<h3 id="notation">Notation</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>Symbol</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td>step</td><td>A unit of a reasoning trace: in most of these papers, the text up to the next blank line.</td></tr>
+<tr><td>$m$, $M$</td><td>The small (draft) model and the large (target) model, in the notation of RSD. Elsewhere on this page: “small model”, “large model”.</td></tr>
+<tr><td>PRM</td><td>Process reward model: a model trained to score a partial solution step by step; here its score $r\in[0,1]$ for a drafted step.</td></tr>
+<tr><td>$\delta$</td><td>Acceptance threshold on a step's score.</td></tr>
+<tr><td>FLOPs</td><td>Floating-point operations: a measure of compute, independent of hardware. Not a measure of time.</td></tr>
+<tr><td>reasoning model</td><td>A model that writes a long “thinking” trace before its answer (the papers also say LRM).</td></tr>
+</tbody></table></div>
+<p><strong>Colour code.</strong> <span class="sw q"></span>written by the small model &nbsp; <span class="sw p"></span>written by the large model &nbsp; <span class="sw ok"></span>accepted &nbsp; <span class="sw no"></span>rejected.</p>

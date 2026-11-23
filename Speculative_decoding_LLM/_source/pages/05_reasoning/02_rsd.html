@@ -1,0 +1,70 @@
+<h2 id="rsd">2. Reward-guided speculative decoding: a reward model accepts the steps</h2>
+<p class="tldr">The small model writes a reasoning step; a process reward model scores it; if the score is at least $\delta$ the step is kept, otherwise the large model rewrites it. The large model is not consulted on the accepted steps: compute is saved, and the output is a mixture of the two models chosen by the reward.</p>
+
+<article class="mcard">
+<header class="mcard-h">
+<p class="mcard-name">Reward-guided speculative decoding (RSD)</p>
+<p class="mcard-meta">Liao, Xu, Dong, Li, Monz, Savarese, Sahoo, Xiong (Salesforce AI Research, University of Amsterdam) · ICML 2025 · <a href="https://arxiv.org/abs/2501.19324">arXiv 2501.19324</a> · code released</p>
+<p class="tags"><span class="tag lossy">lossy</span><span class="tag free">nothing trained (off-the-shelf reward model)</span><span class="tag unit">step level · large model skipped</span><span class="tag year">2025</span></p>
+</header>
+<dl class="mfacts">
+<dt class="tries">What it tries</dt><dd>Drop the “strict unbiasedness requirement” of speculative decoding for reasoning tasks: a step that is correct should be kept even if the large model would have phrased it differently, and an external reward says whether it is correct.</dd>
+<dt class="how">How it decides</dt><dd>For each step (text up to a blank line): the small model drafts it; a process reward model returns $r\in[0,1]$; accept if $r\ge\delta$ (default $\delta=0.7$), else the large model generates the step from the same prefix.</dd>
+<dt class="gets">What it achieves</dt><dd>Mathematics-tuned Qwen2.5 models, greedy decoding. 7B draft / 72B target / 7B reward model on MATH500: 88.0, against 85.6 for the 72B model alone, “with nearly 4.4× fewer FLOPs”. Averaged over six benchmarks: +0.9 point over the 72B model alone, +0.8 over the 7B model with a 1.5B draft. With a general-purpose model family the average ranges from −0.5 to +1.9.</dd>
+<dt class="costs">What it costs</dt><dd>Needs a reward model for the domain (here mathematics). The guarantee is only relative to the small model. Efficiency is reported in FLOPs, not in time. Later papers find that at $\delta=0.7$ it accepts almost every step, and that it falls well below the large model on harder benchmarks.</dd>
+</dl>
+</article>
+
+<h3 id="rsd-rule">The rule and the distribution it samples</h3>
+<div class="algo"><div class="algo-h">Algorithm — RSD (after Algorithm 1 of the paper)</div><ol>
+<li><span class="kw">For</span> each step $i$, until the answer is complete:</li>
+<li class="in1">the small model writes a draft step $\hat y_i$ from the question $x$ and the steps so far;</li>
+<li class="in1">the reward model computes $r_i=r(\hat y_i\mid x,y_{1:i-1})$; <span class="cm">one call, one number</span></li>
+<li class="in1"><span class="kw">if</span> $r_i\ge\delta$: keep the draft, $y_i=\hat y_i$; <span class="cm">the large model is not run</span></li>
+<li class="in1"><span class="kw">else</span>: the large model writes the step, $y_i\sim M(\cdot\mid x,y_{1:i-1})$.</li>
+</ol></div>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Liao et al., ICML 2025, Propositions 2.1–2.3</span></div>
+<p>The step is distributed as $\mathbf{P}_{\mathrm{RSD}}(y|z)=\omega_{r}(y|z)\mathbf{P}_{m}(y|z)+\nu\mathbf{P}_{M}(y|z)$, where $\nu=1-\mathbf{E}_{\mathbf{P}_{m}}\omega_{r}$. If $\omega$ is non-decreasing in the reward and the large model's expected reward is at least the small model's, then $\mathbf{E}_{\mathbf{P}_{\text{RSD}}}[r(y|z)]\geq\mathbf{E}_{\mathbf{P}_{m}}[r(y|z)]$. And under a budget on $\nu$, “the optimal sampling strategy that maximize the reward is $\omega_{r}(y|z)=1$ if $r(y|z)\geq\delta_{\gamma}(z)$, $0$ if $r(y|z)<\delta_{\gamma}(z)$”.</p>
+</div>
+<dl class="decode">
+<dt>$z$</dt><dd>The context of the step: the question and the previous steps.</dd>
+<dt>$\mathbf P_m$, $\mathbf P_M$</dt><dd>The distributions of a whole step under the small and the large model.</dd>
+<dt>$\omega_r(y|z)$</dt><dd>The probability of keeping the drafted step $y$, a function of its reward. In practice the step function: 1 if $r\ge\delta$, 0 otherwise.</dd>
+<dt>$\nu$</dt><dd>The probability that the draft is rejected, i.e. the share of steps written by the large model: the cost of the method.</dd>
+<dt>first inequality</dt><dd>The only guarantee: on average, the reward of RSD's steps is at least that of the small model alone. Nothing is said about the large model, nor about correctness — only about the reward model's opinion.</dd>
+<dt>second statement</dt><dd>For a given share of large-model steps, a hard threshold on the reward is the best use of them (if the goal is expected reward). This is the “theoretically optimal” of the abstract.</dd>
+</dl>
+<p>Compare with pages 3 and 4. There, a relaxed rule still let the large model see every token and replaced the ones it refused. Here the large model sees nothing of an accepted step. The role of “verifier” is held by a third model, trained for another purpose (scoring solution steps for search), and the output is a mixture: the small model's steps where the reward is high, the large model's elsewhere. The paper itself says how far this is from verification: on MATH500 with a 1.5B draft and a 7B target, “the draft model alone can still solve 48% of questions” — on those questions the large model is never called.</p>
+
+<div class="widget" data-widget="p5rsd"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p><strong>What to look at.</strong> A toy reasoning trace of 14 steps with the reward each drafted step received (toy values). Orange steps are kept from the small model; blue steps were rewritten by the large model. Move the threshold $\delta$: at 0 everything is kept (the small model alone), at 1 everything is rewritten (the large model alone, plus the wasted drafts). The curve is the compute relative to the large model alone, in the paper's accounting (operations proportional to model size per generated token, one token per reward call). Switch the model sizes: the saving depends on how much bigger the large model is. What the figure cannot show is the accuracy: that depends on whether the reward model is right.</p>
+
+<h3 id="rsd-results">What was measured</h3>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Liao et al., ICML 2025, Table 2 (accuracy, greedy decoding, $\delta=0.7$, reward model 7B)</span></div>
+<div class="table-wrap"><table>
+<thead><tr><th>models (draft → target)</th><th>method</th><th>MATH500</th><th>GSM8K</th><th>OlympiadBench</th><th>GPQA</th><th>average of six</th></tr></thead>
+<tbody>
+<tr><td rowspan="3">Qwen2.5-Math 1.5B → 7B</td><td>target alone</td><td>83.2</td><td>95.7</td><td>41.2</td><td>32.8</td><td>65.3</td></tr>
+<tr><td>exact speculative decoding</td><td>83.4</td><td>95.6</td><td>40.6</td><td>28.8</td><td>64.6</td></tr>
+<tr><td>RSD</td><td>84.6</td><td>95.5</td><td>42.1</td><td>33.8</td><td>66.1</td></tr>
+<tr><td rowspan="3">Qwen2.5-Math 7B → 72B</td><td>target alone</td><td>85.6</td><td>95.8</td><td>48.4</td><td>42.4</td><td>71.8</td></tr>
+<tr><td>exact speculative decoding</td><td>84.8</td><td>95.8</td><td>47.6</td><td>41.4</td><td>71.1</td></tr>
+<tr><td>RSD</td><td>88.0</td><td>96.7</td><td>49.9</td><td>42.9</td><td>72.7</td></tr>
+</tbody></table></div>
+</div>
+<p>Three remarks before taking “better than the large model” at face value.</p>
+<ul>
+<li><strong>The gains are about one point on average</strong>, on mathematics benchmarks, with models and a reward model all tuned for mathematics. With general-purpose models of the same family the paper's averages go from −0.5 to +1.9 depending on the reward model, and one cell shows what a wrong judge does: GPQA at 20.2 for RSD against 28.8 for the target alone.</li>
+<li><strong>Exact speculative decoding scores below the target</strong> in the same table (−0.7 on average), although it is exact in theory. The authors attribute this to floating-point effects (the pitfall of <a href="01_foundations.html#speedup-limits">page 1, §5</a>). It gives the scale of the noise: differences under a point are not evidence.</li>
+<li><strong>The efficiency is in FLOPs.</strong> “4.4× fewer FLOPs” counts operations proportional to model size per generated token. It is not a measured latency: every step is first written in full by the small model, then scored, before the large model starts on a rejected step.</li>
+</ul>
+
+<h3 id="rsd-limits">What later papers found</h3>
+<ul>
+<li>The authors of a successor with a distributional guarantee (GSI, ICLR 2026) re-implemented RSD with its recommended threshold: it “generally tends to accept almost all samples” — between 94.9% and 98.2% of the steps in their tables — and so behaves like the small model with a filter; and it “lacks theoretical guarantees on distributional fidelity”.</li>
+<li>Another successor (SPECS, NeurIPS 2026) reports a multi-candidate version of RSD far below search with the large model on a harder competition benchmark (31.2 against 59.2 on AMC23 in one configuration), though above it on MATH500.</li>
+<li>The dependence on a reward model is the structural limit: such models exist for mathematics; for most domains they do not.</li>
+</ul>
+<div class="box pitfall"><div class="box-h">Pitfall — “speculative decoding” in the name, a cascade in the mechanism</div>
+<p>In RSD nothing is verified by the large model, and no draft is checked in parallel. It is a cascade at the granularity of the reasoning step, with a reward model as deferral rule. Its natural comparisons are therefore other cascades and routers, and the small model with a search procedure (the paper does include these), more than the methods of pages 1 to 4.</p>
+</div>

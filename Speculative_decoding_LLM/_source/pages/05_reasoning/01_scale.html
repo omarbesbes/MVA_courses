@@ -1,0 +1,32 @@
+<h2 id="why-steps">1. Two questions that sort every method</h2>
+<p class="tldr">Ask of any method: what is the unit that gets accepted or rejected, and is the large model still run on the accepted units? The first answer says how coarse the judgment is; the second says whether compute is saved or only time.</p>
+
+<h3 id="why-ceiling">Why leave the token</h3>
+<p>Token-level speculation has a ceiling that is easy to state with the law of <a href="01_foundations.html#speedup">page 1</a>. The speed-up is $\frac{1-\al^{\ga+1}}{(1-\al)(\ga c+1)}$, and whatever the draft length and however cheap the drafter, it is below $\frac{1}{1-\al}$: a draft is cut at its first rejected token, and the chance that $\ga$ tokens in a row all pass falls like $\al^\ga$.</p>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Fu et al., “Scaling Speculative Decoding with Lookahead Reasoning”, NeurIPS 2025, abstract and §2</span></div>
+<p>“Token-level speculative decoding (SD) helps, but its benefit is capped, because the chance that an entire $\gamma$-token guess is correct falls exponentially as $\gamma$ grows. This means allocating more compute for longer token drafts faces an algorithmic ceiling – making the speedup modest and hardware-agnostic.”</p>
+</div>
+<p>With $\al=0.8$ the ceiling is 5; in practice, with a real drafter cost, two to three. Pages 3 and 4 raised $\al$ by accepting more tokens. This page takes another road. A reasoning model writes its solution as a sequence of <em>steps</em> — a line of algebra, a case of an analysis, a sentence of a plan. Two different wordings of the same step differ in most of their tokens, so token-level acceptance is low; yet as steps they are interchangeable. If the unit of acceptance is the step, a whole step can be accepted at once, however its tokens are spelled.</p>
+
+<h3 id="why-two">Speculation or cascade? The second question</h3>
+<p>Changing the unit raises a question that did not arise on the previous pages. To accept a drafted <em>token</em>, the large model must have computed its distribution at that position: it reads the draft, in parallel. To accept a drafted <em>step</em>, one can use something else entirely — a reward model, a learned router — and the large model need not look at the step at all. Then the method is no longer a speculative decoder but a <em class="new">cascade</em>: a system that lets the small model answer and calls the large one only when a rule says so.</p>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Narasimhan et al., “Faster Cascades via Speculative Decoding”, ICLR 2025, abstract</span></div>
+<p>“cascades offer better cost-quality trade-offs, often even outperforming the large model, while theoretically, speculative decoding offers a guarantee of quality-neutrality”.</p>
+</div>
+<p>The two mechanisms buy different things:</p>
+<div class="cols">
+<div class="box def"><div class="box-h">Speculative side: the large model reads everything</div>
+<p>The large model processes every drafted unit, in parallel, to verify or to compare. <strong>Latency</strong> goes down (fewer sequential passes of the large model). <strong>Compute</strong> does not: it goes up, as on page 1. The output can stay close to the large model's own.</p>
+</div>
+<div class="box def"><div class="box-h">Cascade side: the large model is skipped</div>
+<p>On accepted units the large model is not run (or only later, cheaply, to catch up). <strong>Compute</strong> goes down, and usually latency with it. But nothing ties the accepted text to the large model: its quality is that of the small model, filtered by the judge.</p>
+</div>
+</div>
+<figure class="fig"><!-- include figures/05/map.svg --><figcaption>The methods of the guide on two axes. Horizontally, the unit that is accepted or rejected. Vertically, whether the large model still processes what is accepted. Pages 1 to 4 are in the top-left box. This page fills the other three; the border cases are discussed in §6.</figcaption></figure>
+<div class="box reflex"><div class="box-h">Reflex</div>
+<p>When a paper reports “× fewer FLOPs” → it is on the cascade side; ask for the wall-clock time and for what guarantees quality. When it reports “× faster” with the large model verifying → it is on the speculative side; ask how much extra compute it spends.</p>
+</div>
+<div class="quiz"><p>A method lets a small model write a paragraph, then asks the large model “is this paragraph correct? answer yes or no”, and keeps it if the answer is yes. Which side is it on?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>Between the two, and closer to the speculative side for the cost: the large model does read every drafted token (to answer, it must process the paragraph), so its compute on input is paid; only the token-by-token <em>generation</em> of the paragraph is saved, which is where the latency is. For quality it is on the cascade side: the kept paragraph is the small model's, vouched for by a one-token opinion. This is SpecReason (§3).</p>
+</div></details></div>

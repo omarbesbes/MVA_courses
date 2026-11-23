@@ -1,0 +1,50 @@
+<h2 id="wrapup">8. What to remember</h2>
+
+<div class="box summary"><div class="box-h">Summary</div>
+<ul>
+<li>Token-level speculation is capped at $\frac1{1-\al}$. Reasoning traces are made of <strong>steps</strong>; two wordings of a step share few tokens but are interchangeable, so the step is a better unit of acceptance.</li>
+<li>Two questions classify every method: <strong>what is the unit</strong>, and <strong>does the large model still process the accepted units</strong>? If yes, latency is saved and compute is not (speculative side). If no, compute is saved and the accepted text is the small model's (cascade side).</li>
+<li><strong>RSD</strong>: a process reward model accepts the small model's steps above a threshold; the large model rewrites the others. A cascade at step level; reported in FLOPs (up to 4.4× fewer on a mathematics benchmark, with about +1 point on average); guarantee relative to the small model only.</li>
+<li><strong>SpecReason</strong>: the large model marks each drafted step out of 9. Faster under a token budget; loses accuracy when re-measured without one.</li>
+<li><strong>Lookahead Reasoning</strong>: the large model writes all the steps in parallel and a verifier keeps the drafts that mean the same. 1.5× to 2.1× together with token-level speculation, accuracy within about two points, more compute.</li>
+<li><strong>Token routing (R2R)</strong>: the small model writes; a router sends about one token in eight to the large model. 2.8× the large model's speed at 92% of its average accuracy in the paper; operations are not saved.</li>
+<li>Scores above the large model's come from selection, token budgets, or noise in the baseline. Failures come from the judge.</li>
+</ul>
+</div>
+
+<h3 id="reflexes">Reflexes</h3>
+<ul class="checklist">
+<li>“Speculative” in a title → ask whether the large model verifies the draft, or is skipped. The second is a cascade.</li>
+<li>A gain in FLOPs → ask for wall-clock time. A gain in time → ask for the total compute.</li>
+<li>A step-level method → ask who judges a step, what that judge was trained on, and how steps are delimited.</li>
+<li>Accuracy above the target's → look for a token budget, and for the exact baseline's own score.</li>
+<li>A router or judge trained on one kind of traffic → test it on another.</li>
+<li>A mixture of two models → check the length of the answers and the share that never finish.</li>
+</ul>
+
+<h3 id="next">What comes next</h3>
+<p><a href="06_practice.html">Page 6</a> leaves the catalogue of methods: relaxed acceptance outside text (images, robot actions, speech), how to evaluate a lossy method without fooling yourself, what serving software actually ships, the risks (watermarks, side channels, safety), a decision guide, and the open problems.</p>
+
+<h3 id="glossary">Glossary</h3>
+<dl class="decode">
+<dt>reasoning step</dt><dd>A unit of a thinking trace, in practice the text between two blank lines.</dd>
+<dt>process reward model (PRM)</dt><dd>A model trained to score partial solutions step by step.</dd>
+<dt>cascade</dt><dd>A system that uses a small model and defers to a large one when a rule says so.</dd>
+<dt>deferral rule</dt><dd>The test that decides to call the large model.</dd>
+<dt>query-level routing</dt><dd>Choosing one model per request. Token-level routing chooses per token.</dd>
+<dt>path-divergent token</dt><dd>A token at which the small and the large model would send the reasoning in different directions (R2R).</dd>
+<dt>prefill / catch-up</dt><dd>The parallel pass by which a model reads tokens it did not write, to update its cache.</dd>
+<dt>semantic verifier</dt><dd>A model that judges whether two steps mean the same thing.</dd>
+<dt>test-time scaling</dt><dd>Spending more computation at inference (longer reasoning, search over candidates) to improve answers.</dd>
+</dl>
+
+<h3 id="sources">Sources</h3>
+<ul>
+<li>B. Liao et al., <em>Reward-Guided Speculative Decoding for Efficient LLM Reasoning</em>, ICML 2025. <a href="https://arxiv.org/abs/2501.19324">arXiv 2501.19324</a>.</li>
+<li>R. Pan et al., <em>SpecReason: Fast and Accurate Inference-Time Compute via Speculative Reasoning</em>, NeurIPS 2025. <a href="https://arxiv.org/abs/2504.07891">arXiv 2504.07891</a>.</li>
+<li>Y. Fu, R. Ge, Z. Shao, Z. Deng, H. Zhang, <em>Scaling Speculative Decoding with Lookahead Reasoning</em>, NeurIPS 2025. <a href="https://arxiv.org/abs/2506.19830">arXiv 2506.19830</a>.</li>
+<li>Fu et al., <em>R2R: Efficiently Navigating Divergent Reasoning Paths with Small-Large Model Token Routing</em>, NeurIPS 2025. <a href="https://arxiv.org/abs/2505.21600">arXiv 2505.21600</a>.</li>
+<li><em>Guided Speculative Inference</em> (GSI), ICLR 2026. <a href="https://arxiv.org/abs/2506.04118">arXiv 2506.04118</a>. <em>SPECS</em>, NeurIPS 2026. <a href="https://arxiv.org/abs/2506.15733">arXiv 2506.15733</a>. Both re-evaluate RSD.</li>
+<li>H. Narasimhan et al., <em>Faster Cascades via Speculative Decoding</em>, ICLR 2025. <a href="https://arxiv.org/abs/2405.19261">arXiv 2405.19261</a>. The distinction between cascades and speculative decoding.</li>
+<li>Other methods named in §4 and §5 (Speculative Thinking, SCoT, SpecSearch, CITER, Co-LLM, CoSD) are described from their papers in the research notes of this guide, <code>_source/notes/lossy_reasoning_and_routing.md</code>, with links.</li>
+</ul>
