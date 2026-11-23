@@ -1,0 +1,32 @@
+<h2 id="deployment">3. What ships: lossy options in real software</h2>
+<p class="tldr">Serving engines are exact by default. In November 2026 a handful of lossy verifiers exist as documented options that must be switched on, each with a warning. No provider says publicly that it runs one.</p>
+
+<h3 id="deploy-options">The options that change the output</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>software</th><th>option</th><th>rule (page)</th><th>what its documentation says</th></tr></thead>
+<tbody>
+<tr><td>vLLM</td><td><code>rejection_sample_method: "fly"</code>, with <code>fly_entropy_threshold</code> (0.3) and <code>fly_window_size</code> (up to 6)</td><td>FLy, the training-free judge of <a href="04_judges.html#training-free">page 4, §5</a></td><td>“FLy is intentionally lossy. Unlike standard speculative decoding, it does not preserve the target distribution and may degrade model outputs.”</td></tr>
+<tr><td>Hugging Face Transformers</td><td><code>assistant_ensemble_weight</code> $=w$ (suggested start: 0.7)</td><td>the static mixture of <a href="03_relaxed.html#mixture">page 3, §9</a>: verify against $w\,p+(1-w)\,q$</td><td>“trading a controlled distributional bias for a higher acceptance rate. Defaults to None, which keeps decoding lossless.”</td></tr>
+<tr><td>TensorRT-LLM</td><td><code>use_relaxed_acceptance_for_thinking</code>, with multi-token-prediction heads</td><td>a relaxed rule limited to reasoning tokens</td><td>listed among the options of the multi-token-prediction drafter</td></tr>
+<tr><td>Medusa (reference code)</td><td><code>posterior_threshold</code> 0.09, <code>posterior_alpha</code> 0.3, active when the temperature is not zero</td><td>typical acceptance, <a href="03_relaxed.html#typical">page 3, §6</a></td><td>“Relaxing the requirement of matching the distribution of the original model makes the non-greedy generation even faster than greedy decoding.”</td></tr>
+<tr><td>vLLM, versions 0.5 to 0.9</td><td><code>typical_acceptance_sampler</code></td><td>typical acceptance</td><td>removed in version 0.10 with a rewrite of the speculation code</td></tr>
+<tr><td>llama.cpp, TGI</td><td>none</td><td>—</td><td>exact verification only</td></tr>
+</tbody></table></div>
+<p>The Hugging Face rule in full: with the option set, a drafted token is accepted with probability $\min\{1,\ 1-w+w\,p(x)/q(x)\}$ instead of $\min\{1,\ p(x)/q(x)\}$; with greedy decoding the draft is compared with the most likely token of the mixture. Near $w=1$ it is the exact rule; near $w=0$ everything is accepted.</p>
+
+<div class="box practice"><div class="box-h">In practice — the numbers published with the vLLM option</div>
+<p>The documentation of the FLy verifier reports tests on four target/drafter pairs: “FLy was faster than Standard SD in all 40 primary configurations”, by 1.07× to 1.94× at temperature 0 with a separate drafter and by 1.04× to 1.31× with newer built-in drafters; and “the 29 configurations with ratio-based quality measurements had a minimum quality retention of 97.9%”. Read the sample sizes: the accuracy tests use 100, 100, 30 and 198 questions, and the lowest retention, about 96%, “corresponded to one fewer correct answer” out of 30. This is vendor documentation, not a peer-reviewed evaluation, and it measures accuracy only (see §4 for what else moves).</p>
+</div>
+
+<div class="box pitfall"><div class="box-h">Pitfall — parameters that look lossy and are not</div>
+<p>Several settings change <em>how much is drafted</em>, not how a token is accepted. They are exact: the minimum draft probability of llama.cpp (<code>--spec-draft-p-min</code>), the confidence threshold and the number of assistant tokens of Transformers (<code>assistant_confidence_threshold</code>, <code>num_assistant_tokens</code>), the draft length of any engine. These are the stopping rules of <a href="02_lossless.html#length">page 2, §5</a>. A second trap in the other direction: engines have a “synthetic” acceptance mode that forces a given acceptance length for benchmarking. Its output “is not valid model output”.</p>
+</div>
+
+<h3 id="deploy-providers">What providers say</h3>
+<p>Every official description found frames speculative decoding as quality-preserving: Google (“the method guarantees an identical output distribution”), Cerebras (“Model output accuracy is likewise unchanged”), Together (“matches the distribution of non-speculative decoding”), Fireworks (“The target model still verifies every accepted token”), AWS (“without compromising quality”). None of the providers surveyed states that a production service uses relaxed acceptance. That is a statement about what is published: what a closed service runs cannot be established from outside.</p>
+
+<h3 id="deploy-trend">Two trends that pull in opposite directions</h3>
+<ul>
+<li><strong>Lossy options arrive fast.</strong> Both options of the table above entered mainstream libraries within months of their papers (FLy: ICLR 2026; the ensemble rule: DIVERSED, AISTATS 2026, of which the library implements the fixed-weight version).</li>
+<li><strong>Drafters are becoming less able to support them.</strong> Models now ship with their own drafting heads, and engines use those by default. A practitioners' study notes that such drafters are “unsuited to relaxed spec-dec, precisely due to the fact that they are weak general language models”: a relaxed rule lets the drafter's text through, and a head trained to guess a few tokens is not a model one wants to read. The study calls it “a conflict of narratives”.</li>
+</ul>

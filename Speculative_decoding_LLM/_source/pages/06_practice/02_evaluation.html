@@ -1,0 +1,55 @@
+<h2 id="evaluation">2. Evaluate without fooling yourself</h2>
+<p class="tldr">A speed-up is a property of a setting. An exact method owes you the setting. A lossy method owes you, in addition, the length of its answers and its quality against the right baselines, on a hard task. And “exact” itself holds only up to the arithmetic of the machine.</p>
+
+<h3 id="eval-words">Three words that change meaning between papers</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>word</th><th>meanings found in the sources</th><th>what to check</th></tr></thead>
+<tbody>
+<tr><td>acceptance rate</td><td>(1) the probability $\al$ that one drafted token is accepted (page 1); (2) accepted tokens ÷ drafted tokens, as serving engines log it, which falls when drafts get longer; (3) tokens accepted per round</td><td>the definition, and the draft length</td></tr>
+<tr><td>accepted length, $\tau$, block efficiency, mean accepted tokens</td><td>tokens per call of the target; counts or does not count the token that the target always supplies</td><td>whether plain decoding scores 1 or 0 on this scale</td></tr>
+<tr><td>speed-up</td><td>ratio of tokens per second, or ratio of time for the same task; for one user, or summed over all the users of a server</td><td>which one, and against which baseline engine</td></tr>
+</tbody></table></div>
+<p>Two derived quantities are worth knowing. <em>Block efficiency</em> is a speed-up only under two assumptions, a free drafter and free parallel capacity: the measured speed-up is always below it. <em>Goodput</em> is the number of tokens per second that end up in the output, as opposed to the tokens computed.</p>
+
+<h3 id="eval-speed">Seven conditions behind any speed-up</h3>
+<ol>
+<li><strong>The hardware.</strong> In the Spec-Bench paper one method goes from 1.48× on a consumer GPU to 2.42× on a data-centre GPU, and the ranking of methods changes (<a href="02_lossless.html#serving-benchmarks">page 2, §6</a>).</li>
+<li><strong>The numerical precision.</strong> Same paper: EAGLE falls from 2.39× to 1.74× when the models run in 32-bit instead of 16-bit floats, and prompt lookup to 1.01×. The authors “advocate for future studies to report speedup metrics across both precision settings”.</li>
+<li><strong>The batch size.</strong> 1.73× at batch 1, 1.21× at batch 128 for the same method (<a href="02_lossless.html#serving">page 2, §6</a>).</li>
+<li><strong>The temperature.</strong> In the first paper, 3.4× with greedy decoding and 2.6× at temperature 1 on the same translation task.</li>
+<li><strong>The draft length</strong>, and whether it was tuned for the baseline as well as for the new method.</li>
+<li><strong>The engine.</strong> A research prototype at batch 1 is not a serving engine: a 2026 study on a production engine finds that verification takes 42% to 95% of the time, and that the implementation overheads differ between engines.</li>
+<li><strong>The prompts.</strong> Synthetic prompts overestimate throughput by 23% on average (SPEED-Bench). Tasks differ: the same lookup drafter gives 2.46× on summarisation and 1.15× on translation.</li>
+</ol>
+
+<h3 id="eval-lossy">What a lossy method owes in addition</h3>
+<ol>
+<li><strong>The length of its answers.</strong> More tokens accepted per round does not mean an answer sooner, because the relaxed text can be longer (<a href="03_relaxed.html#benchmarks-length">page 3, §10</a>). The figure below does the conversion.</li>
+<li><strong>Quality against two anchors.</strong> Between the drafter alone and the target alone, where does the method stand? The <em>performance retention rate</em> $\ \mathrm{PRR}=\dfrac{x-x_{\text{draft}}}{x_{\text{target}}-x_{\text{draft}}}$ is 0 at the drafter's score and 1 at the target's. A method that keeps 97% of the target's accuracy when the drafter alone keeps 95% has a PRR of 0.4: it has lost more than half of what the target adds.</li>
+<li><strong>The right baselines.</strong> The best <em>exact</em> method in the same setting (<a href="02_lossless.html#ceiling-lossy">page 2, §7</a>). For a rule that truncates the vocabulary, the target sampled with the same truncation (<a href="03_relaxed.html#benchmarks">page 3, §10</a>). A naive relaxation at equal speed. And, when compute matters, a cascade (<a href="05_reasoning.html#border">page 5</a>).</li>
+<li><strong>A hard task.</strong> In one comparison the accuracy gap between an exact baseline and truncation-based rules goes “from +0.38 pp on GSM8K to +6.67 pp on AIME”: “easy tasks such as GSM8K mask the distortions introduced by lossy verification”.</li>
+<li><strong>A curve.</strong> Quality against time per answer, for several settings of the knob, with the drafter, the target and the exact method on the same axes. One point (“2× at 99% accuracy”) belongs to one benchmark; the studies of 2026 find that the setting does not transfer from one task to another.</li>
+<li><strong>Everything else the target was evaluated for</strong>: refusals, robustness to injected instructions, calibration, style. The exact method inherits these; the lossy one does not (<a href="#risks">§4</a>).</li>
+</ol>
+
+<div class="widget" data-widget="p6time"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p><strong>What to look at.</strong> Three ways of stating the speed of the same relaxed rule. The grey bar is the exact rule. The outlined bar counts tokens per second: it follows the number of tokens accepted per round and is what most papers report. The solid amber bar divides by the length of the answers: it is the time a user waits. The starting values are the averages of the 360-cell study of page 3 at each rule's loosest setting (1.34 times as many accepted tokens, answers 1.54 times as long): the relaxed rule is ahead in tokens per second and behind per answer. Bring the length ratio down to 1.2: it is ahead on both. The last line of the read-out gives the break-even length.</p>
+<p>As of November 2026 there is no benchmark or leaderboard for lossy speculative decoding. The existing ones (Spec-Bench, SPEED-Bench, and a benchmark for vision-language models) contain exact methods and no quality column.</p>
+
+<h3 id="eval-exact">“Lossless” on real hardware</h3>
+<p>The proof of page 1 is about probabilities as real numbers. An implementation computes them in 16-bit floats, in batches, with caches. Three sources say what survives.</p>
+<div class="box paper"><div class="box-h">In the sources <span class="ref">vLLM documentation (November 2026); Xia et al., Spec-Bench, appendix D.3</span></div>
+<p>“Speculative decoding sampling is theoretically lossless up to the precision limits of hardware numerics. Floating-point errors might cause slight variations in output distributions”.</p>
+<p>“the outputs generated by Speculative Decoding in FP16 precision may not consistently align with those derived from autoregressive decoding. […] In FP32 precision, the outputs of Speculative Decoding are guaranteed to be exactly the same as autoregressive decoding.”</p>
+</div>
+<p>A study on a production engine observed differences “even under greedy decoding”: the average length of the answers of an 8B model on a chat dataset is 737 tokens without speculation and 750, 731 and 736 with three kinds of drafter. It is 674 without speculation at batch size 32: plain decoding does not reproduce itself across batch sizes either. An audit of one self-drafting model found token-for-token identical outputs on 45% of 1,190 prompts in 16-bit arithmetic, and on all of them in 32-bit.</p>
+<div class="box key"><div class="box-h">Key idea — what the guarantee is</div>
+<p>“Lossless” means: no systematic pull toward the drafter. It does not mean the same string of tokens. When two tokens are nearly tied, a rounding difference picks the other one, and the texts diverge from there, as they do between two runs of the target alone on different hardware. The sources report no case where a correct exact implementation moved a task score in a consistent direction.</p>
+</div>
+<div class="box pitfall"><div class="box-h">Pitfall — the noise floor of a table</div>
+<p>Exact baselines differ from their targets in published tables: 74.2% against 78.0% success for exact speculation on a robot benchmark (500 episodes); −0.7 point on average in the table of <a href="05_reasoning.html#rsd-results">page 5, §2</a>; retention rates between 0.91 and 1.02 in the security study of §4. When the exact method is two points away from the target, a lossy method one point away has not been shown to be harmless, and one three points away has not been shown to be harmful. Ask for the number of examples and an interval.</p>
+</div>
+<div class="quiz"><p>A paper writes: “our method scores 71.3 against 71.8 for the target: no degradation”. In the same table the exact method scores 70.9. What can you conclude?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>That the noise of this benchmark is about one point, since a method that should equal the target is 0.9 below it. The lossy method's 0.5 is inside that noise: the table establishes neither a degradation nor its absence. One needs the number of examples, an interval, a harder task, and the other properties of §4.</p>
+</div></details></div>

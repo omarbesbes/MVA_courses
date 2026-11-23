@@ -1,0 +1,86 @@
+<h2 id="beyond">1. Beyond text: where relaxing is the natural thing to do</h2>
+<p class="tldr">When tokens are entries of a learned codebook (image patches, sound frames) or bins of a continuous quantity (robot actions), many tokens mean almost the same thing and the target spreads its probability over them. The exact test, as it is used for text, then accepts very little. Most methods proposed for these outputs replace “is it the same token?” by “is it in the same class?”.</p>
+
+<h3 id="beyond-why">Why the exact test fails</h3>
+<p>In text, the target is often nearly certain of the next token. A model that generates an image as a sequence of codebook entries is in a different situation: thousands of codes stand for visually similar patches, and the probability is spread over them. The authors of LANTERN call this <em>token selection ambiguity</em>, and measure it: with a state-of-the-art drafter and the exact test, the first drafted token of an image model is accepted 4% of the time (“only 4% of drafts are accepted when applied to visual AR models”). The same story in three modalities:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>output</th><th>tokens</th><th>exact speculation, measured</th><th>source</th></tr></thead>
+<tbody>
+<tr><td>image</td><td>entries of a learned codebook</td><td>1.29× with greedy decoding; 0.93× at temperature 1 (slower than no speculation)</td><td>LANTERN, Table 2 (EAGLE-2 on LlamaGen)</td></tr>
+<tr><td>speech</td><td>entries of an audio codebook (65,536 here)</td><td>0.98×</td><td>PCG, Table 1</td></tr>
+<tr><td>robot action</td><td>256 bins per dimension of the action</td><td>1.08× to 1.15×</td><td>Spec-VLA</td></tr>
+</tbody></table></div>
+<p>Compare with the 3× to 5× of <a href="02_lossless.html#heads">page 2</a> on text. For speech and for actions, a relaxed rule is what makes speculation useful at all. For images the picture is more mixed: exact methods designed for images reach about 2× (fixed draft trees, or the model's own previous guesses used as the draft, in the table below), and the relaxed rules add 10% to 80% to the exact method of their own tables.</p>
+
+<h3 id="beyond-class">The common idea: a class of tokens instead of a token</h3>
+<p>If two codes produce nearly the same pixels, rejecting one because the target “preferred” the other is waste. So test the draft against the probability the target gives to the <em>class</em> of the drafted token. The methods differ by where the class comes from:</p>
+<ul>
+<li><strong>A fixed distance between tokens</strong>: nearest neighbours in the codebook's latent space (LANTERN), distance between bin numbers (Spec-VLA), similarity of acoustic embeddings (PCG).</li>
+<li><strong>The target's own distribution at this step</strong>: clusters rebuilt at every position from the target's most likely tokens (GSD).</li>
+<li><strong>No class at all</strong>, only a boost of the acceptance probability: add a constant (Speech SD), or multiply by a factor that decreases along the draft (COOL-SD). These are the lenience of <a href="03_relaxed.html#lenience">page 3</a>, applied to another modality.</li>
+</ul>
+<div class="quiz"><p>The distance between two bin numbers costs nothing and works for robot actions. Why can the same rule not be applied to the tokens of a text?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>Bin numbers are ordered: bin 120 and bin 123 are nearly the same action. Token numbers of a text vocabulary are arbitrary: neighbouring numbers are unrelated words. For text, “close” would have to mean “close in meaning, in this context”, which no fixed table gives. Learning that notion is the programme of the judges of <a href="04_judges.html">page 4</a>.</p>
+</div></details></div>
+
+<article class="mcard">
+<header class="mcard-h">
+<p class="mcard-name">LANTERN — accept on the mass of the latent neighbours</p>
+<p class="mcard-meta">Jang, Park, Yang, Jung, Yun, Kundu, Kim, Yang (KAIST, Intel Labs, AITRICS) · ICLR 2025 · <a href="https://arxiv.org/abs/2410.03355">arXiv 2410.03355</a> · code released</p>
+<p class="tags"><span class="tag lossy">lossy</span><span class="tag train">needs a trained drafter</span><span class="tag unit">images</span><span class="tag year">2024</span></p>
+</header>
+<dl class="mfacts">
+<dt class="tries">What it tries</dt><dd>Make speculation work for autoregressive image generation, where the exact test, with the best drafter design for text, accepts 4% of the first drafted tokens.</dd>
+<dt class="how">How it decides</dt><dd>Around the drafted code $\tilde x$, take its nearest codes in latent space, closest first, for as long as their total target probability stays below $\delta$ (and at most $k$ of them): the set $A_{k,\delta}(\tilde x)$. Accept $\tilde x$ with probability $\min\!\Big(1,\dfrac{\sum_{x\in A_{k,\delta}(\tilde x)}p(x)}{q(\tilde x)}\Big)$.</dd>
+<dt class="gets">What it achieves</dt><dd>On a text-to-image model (LlamaGen-XL), one consumer GPU. Greedy decoding: 2.26× where exact speculation gives 1.29×, with FID 30.78 against 28.63. Sampling: 1.69× where exact speculation gives 0.93×, with FID 18.76 against 15.22.</dd>
+<dt class="costs">What it costs</dt><dd>Diversity: at the 1.69× setting the recall of the generated images falls from 0.56 to 0.45. The bound $\delta$ holds at each position; nothing is stated for the whole image. Two parameters to tune per model.</dd>
+</dl>
+</article>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Jang et al., ICLR 2025 — in the guide's notation ($p$ target, $q$ drafter; the paper uses the opposite letters)</span></div>
+<p>The relaxation is equivalent to testing against a <em>distorted target</em> that moves the neighbours' probability onto the drafted code:</p>
+$$p_{k,\delta}(x\mid \tilde x)=\begin{cases}\sum_{x'\in A_{k,\delta}(\tilde x)}p(x')&\text{if }x=\tilde x,\\[2pt]0&\text{if }x\in A_{k,\delta}(\tilde x),\ x\ne\tilde x,\\[2pt]p(x)&\text{otherwise,}\end{cases}$$
+<p>and $A_{k,\delta}(\tilde x)$ is the largest set of nearest neighbours for which $\TV\big(p_{k,\delta}(\cdot\mid\tilde x),\,p\big)<\delta$. The paper states that the relaxation “inevitably distorts the target distribution”.</p>
+</div>
+<dl class="decode">
+<dt>$A_{k,\delta}(\tilde x)$</dt><dd>The drafted code and some of its nearest codes. The total variation between the distorted target and $p$ is exactly the target probability of the neighbours that were added, so the rule “stay below $\delta$” is a budget on that probability.</dd>
+<dt>first line</dt><dd>The drafted code is treated as if it had the probability of its whole neighbourhood.</dd>
+<dt>second line</dt><dd>The price: when $\tilde x$ is the draft, its neighbours can no longer be produced. Over many positions this removes variety, which is what the fall in recall measures.</dd>
+<dt>surrogate target</dt><dd>This is the frame of <a href="03_relaxed.html#what">page 3, §1</a>: an exact test against another distribution. Here the surrogate depends on the drafted token.</dd>
+</dl>
+
+<div class="widget" data-widget="p6class"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p><strong>What to look at.</strong> Twenty-four codes of a toy codebook, placed so that neighbours on the axis are neighbours in latent space, with the target's probability for each (blue). The drafter proposes one code with certainty, as a draft tree does, so the exact test accepts it with the target's probability of that single code: a few per cent. Raise $\delta$: the neighbours enter the set one by one (amber) and the acceptance probability becomes the sum of their bars. The picture is then the distorted target: the mass of the set is stacked on the drafted code, and its neighbours are emptied (hollow bars). Then move the draft to a code in the small group on the right: the same $\delta$ buys much less, because there is little mass around it. The rule helps where the target hesitates between similar codes, which is where it should.</p>
+
+<h3 id="beyond-others">The other modalities, and the successors</h3>
+<article class="mcard">
+<header class="mcard-h">
+<p class="mcard-name">Spec-VLA — accept a robot action if it is close enough</p>
+<p class="mcard-meta">Wang, Yu, Yuan, Yu, Gao, Wang, Wong · EMNLP 2025 · <a href="https://arxiv.org/abs/2507.22424">arXiv 2507.22424</a></p>
+<p class="tags"><span class="tag lossy">lossy</span><span class="tag greedy">greedy decoding</span><span class="tag unit">robot actions</span><span class="tag year">2025</span></p>
+</header>
+<dl class="mfacts">
+<dt class="tries">What it tries</dt><dd>Speed up a vision-language-action model, which writes each action as a few tokens, each one of 256 bins of a continuous quantity.</dd>
+<dt class="how">How it decides</dt><dd>Accept the drafted bin if it is within $r$ bins of the target's choice: $\lvert a-\hat a\rvert\le r$; otherwise use the target's choice. The distance costs nothing: it is the difference of two bin numbers.</dd>
+<dt class="gets">What it achieves</dt><dd>In simulation (LIBERO, four task suites): 1.22× to 1.42× where the exact test gives 1.08× to 1.15×. Success rates stay within a few points of the baseline in both directions (for example 85.8% against 85.0%, and 85.0% against 89.0%).</dd>
+<dt class="costs">What it costs</dt><dd>The tolerance depends on the task: $r=9$ on three suites, but on the long-horizon suite “the success rate drops significantly when the relaxation threshold exceeds 5”. No guarantee other than the measured success rate.</dd>
+</dl>
+</article>
+<div class="table-wrap"><table>
+<thead><tr><th>method</th><th>modality</th><th>the test</th><th>reported</th><th>what moved</th></tr></thead>
+<tbody>
+<tr><td>Speculative Jacobi Decoding (ICLR 2025)</td><td>images</td><td><strong>exact</strong>; no drafter: the model's own guesses from the previous iteration are the draft</td><td>about 2×</td><td>nothing in distribution (FID 30.76 → 30.85)</td></tr>
+<tr><td>LANTERN++ (workshop, 2025)</td><td>images</td><td>mass of the set at most $\lambda$ times the token's own probability; static draft tree</td><td>up to 2.56× (exact method in the same table: 2.10×)</td><td>FID 28.93 → 33.91 at that setting</td></tr>
+<tr><td>GSD (ICCV 2025)</td><td>images</td><td>the exact test applied to clusters of tokens rebuilt at each step</td><td>3.6× to 3.8× (exact method in the same table: 2.2×)</td><td>FID 30.79 → about 33.3</td></tr>
+<tr><td>COOL-SD (AAAI 2026)</td><td>images</td><td>lenience $\omega_i$ that decreases along the draft, with a bound on the total variation of the whole sequence</td><td>2.69× (exact method in the same table: 2.37×)</td><td>FID 28.99 → 30.30</td></tr>
+<tr><td>Speech SD (Interspeech 2025)</td><td>speech</td><td>accept with probability $\min(1,p/q)+\beta$</td><td>1.4× (nothing at $\beta=0$)</td><td>word error rate 3.67% → 5.70%</td></tr>
+<tr><td>PCG (ICASSP 2026)</td><td>speech</td><td>the exact test applied to groups of acoustically similar tokens</td><td>1.4×</td><td>word error rate 11.1 → 13.8 (Speech SD at the same speed: 18.5)</td></tr>
+<tr><td>LVSpec (ACL 2026)</td><td>text about a video</td><td>loose on tokens with little visual grounding, strict on the others</td><td>2.70× on a 32B model</td><td>“&gt;99.8% of target performance”</td></tr>
+</tbody></table></div>
+<p>Four remarks.</p>
+<ul>
+<li><strong>Models that read images but write text were handled exactly until 2026.</strong> Their output is ordinary text, so the methods of page 2 apply; the first loosened rule (LVSpec) is careful to stay strict on the tokens tied to what is seen, because, in its authors' words, treating those loosely “risks factual hallucinations”.</li>
+<li><strong>Exact methods have not said their last word.</strong> Speculative Jacobi Decoding is exact and needs no drafter; a 2026 preprint (PathRelax) describes an exact tree of such paths that, according to its authors, is faster than the relaxed rules of the table.</li>
+<li><strong>Guarantees are rare.</strong> LANTERN bounds each step; COOL-SD bounds the sequence; PCG is exact for the group and not for the token inside it. Everything else rests on task metrics. And COOL-SD proves what one would guess: “any relaxation of the acceptance criterion inevitably introduces bias that cannot be perfectly corrected by adjusting the resampling distributions.”</li>
+<li><strong>“Quality preserved” usually means one metric.</strong> Prompt-alignment scores barely move in these tables; diversity (recall), FID and word error rate move visibly. Read the column that moves.</li>
+</ul>

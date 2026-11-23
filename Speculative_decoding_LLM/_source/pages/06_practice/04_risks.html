@@ -1,0 +1,50 @@
+<h2 id="risks">4. Risks and side effects</h2>
+<p class="tldr">Four risks are documented. Two concern exact speculation as much as lossy speculation: what the timing of the answers reveals, and inputs built to destroy the speed-up. Two are specific to lossy rules: behaviour that the target was tested for can change, refusals first, and nothing is known about watermarks.</p>
+
+<div class="table-wrap"><table>
+<thead><tr><th>risk</th><th>exact</th><th>lossy</th><th>what was shown</th><th>mitigation</th></tr></thead>
+<tbody>
+<tr><td>safety behaviour changes</td><td>no</td><td>yes</td><td>resistance to jailbreaks and injected instructions falls earlier than accuracy</td><td>exact rule on the first tokens of the answer</td></tr>
+<tr><td>other behaviour changes</td><td>no</td><td>yes</td><td>longer answers, repetition, loss of diversity</td><td>measure them; conservative rules</td></tr>
+<tr><td>watermark detectability</td><td>trade-off</td><td>unknown</td><td>full watermark strength and full acceptance cannot be had together without co-design</td><td>watermark-aware speculation</td></tr>
+<tr><td>side channels</td><td>yes</td><td>yes</td><td>packet sizes and timing reveal which prompt was sent</td><td>send tokens in fixed groups, padding</td></tr>
+<tr><td>attacks on speed</td><td>yes</td><td>less</td><td>crafted inputs make the drafter wrong: up to 62% more time</td><td>controllers that switch speculation off when acceptance collapses (<a href="02_lossless.html#length-cascade">page 2, §5</a>)</td></tr>
+</tbody></table></div>
+
+<h3 id="risk-safety">Safety moves before accuracy</h3>
+<p><a href="04_judges.html#compounding-safety">Page 4, §6</a> gave the measurement: over six lossy rules, the retention rate is 0.72 to 0.74 on security benchmarks where it is 0.87 to 0.90 on accuracy benchmarks, and it starts to fall at a much lower acceptance rate. The mechanism takes three sentences. A lossy verifier produces a mixture that leans toward the drafter wherever the rule is lenient. Small drafters refuse harmful requests far less reliably than their targets. And a refusal is decided in the first few tokens of the answer.</p>
+<p>The same study proposes the matching fix, <strong>position-aware verification</strong>: apply the exact rule to the first $L$ tokens of the answer and the lossy rule afterwards (or blend the two with a weight that grows with the position). Its authors report that this “reduces attack success rates of jailbreak and prompt injection attacks by up to 92.4%, while retaining 99.8% of the decoding speedup”. Two cautions: the result is for greedy decoding with a separate small drafter, against the attacks of the study; and the verifier shipped in vLLM (<a href="#deployment">§3</a>) was among the rules tested, with a retention on the jailbreak set of 0.83 and 0.75 for the two model pairs, as averages over its range of settings and not at its defaults.</p>
+<div class="box pitfall"><div class="box-h">Pitfall — which positions to relax depends on the goal</div>
+<p>For images, COOL-SD (<a href="#beyond-others">§1</a>) proves that, to minimise a bound on the total variation, one should be <em>more</em> lenient at the first positions of a draft and stricter at the last. For safety, the first tokens of the answer are the ones to protect. The two results are about different positions (inside a draft, inside an answer) and different goals; they are a reminder that “where to relax” has no universal answer.</p>
+</div>
+
+<h3 id="risk-behaviour">Other changes of behaviour</h3>
+<ul>
+<li><strong>Longer answers</strong>, mainly through longer reasoning; and in the worst cases “rambling, repetition loops”, or reasoning that uses up the token budget before the answer (<a href="03_relaxed.html#benchmarks-length">page 3, §10</a>).</li>
+<li><strong>Less diversity</strong> in images, <strong>less intelligibility</strong> in speech (§1).</li>
+<li><strong>Unequal speed.</strong> Even with the exact rule, the speed-up “is not uniformly distributed across tasks, consistently diminishing for under-fit, and often underrepresented tasks”: requests in a less common language or domain are accelerated less than the others.</li>
+<li><strong>Not studied.</strong> No measurement of factual errors, calibration or bias under lossy acceptance of text was found.</li>
+</ul>
+
+<h3 id="risk-watermark">Watermarks</h3>
+<p>A statistical watermark makes the choice of each token depend on a secret key, in a way that a detector can test later, ideally without changing the distribution of the text on average over keys. Speculative sampling needs the drafter's and the target's distributions to overlap. The two pull against each other: the watermark makes the target's choice nearly a function of the key, which the drafter cannot guess unless it is watermarked the same way.</p>
+<div class="box paper"><div class="box-h">In the papers <span class="ref">Hu and Huang, NeurIPS 2024, <a href="https://arxiv.org/abs/2410.20418">arXiv 2410.20418</a>; Dathathri et al. (SynthID-Text), Nature, 2024</span></div>
+<p>Hu and Huang prove a no-go theorem: for a vocabulary of more than two tokens, no scheme keeps at once the full strength of the watermark and the full acceptance rate of speculative sampling. The SynthID-Text paper of Google DeepMind proposes the two corresponding versions: a “high-detectability watermarked speculative sampling, which preserves the detectability of the watermark, but may decrease the efficiency”, and a “fast watermarked speculative sampling, which […] preserves the efficiency of speculative sampling, but may decrease the detectability of the watermark”.</p>
+</div>
+<p>A paper of ICLR 2026 (He et al.) shows that the trade-off “is not absolute” once strength is measured on a continuous scale, and recovers both properties by making the acceptance decision itself depend on the key. All three works assume the exact rule. For a lossy verifier, whose output is no longer an unbiased sample of the watermarked target, no analysis was found.</p>
+
+<h3 id="risk-side">Side channels</h3>
+<p>With speculation, the number of tokens produced per round depends on how many drafts were accepted, hence on the text, hence on the question. A streamed answer shows this to anyone who can see the encrypted traffic: accepted drafts arrive as larger packets, and at different times.</p>
+<ul>
+<li><strong>Packet sizes.</strong> Wei et al. recognise which of 50 known prompts was sent with 77.6% to 100% accuracy at temperature 0.3, depending on the speculation scheme, and still 24% to 99.6% at temperature 1 (chance: 2%).</li>
+<li><strong>Timing.</strong> From the delays that efficient-inference techniques introduce, speculation among them, Carlini and Nasr infer the topic of a conversation (medical advice or coding help, for example) “with 90%+ precision” on open-source systems, and distinguish specific messages on commercial services.</li>
+</ul>
+<p>Exactness is no protection here: the output distribution is untouched, the leak is in the schedule. One of the four schemes attacked by Wei et al. is lossy. Sending tokens in groups of fixed size, or padding, closes most of the channel and costs latency or bandwidth.</p>
+
+<h3 id="risk-attacks">Attacks on the speed-up itself</h3>
+<p>Since the gain depends on the drafter agreeing with the target, an input that makes the drafter wrong without changing the target's answer makes the service slower and more expensive. Three preprints of 2026 build such inputs: one increases the mean time per sample by 62.3% on a mathematics benchmark “while preserving the task quality”; another makes the target need “3.2 times as many forward passes per generated token” in its worst case, and notes: “Under sampling, some attacks make SD slower than autoregressive decoding”.</p>
+<p>A lenient rule rejects less, so these attacks weaken under it (from 22.4% to 18.2% of lost speed-up for one of them when typical acceptance replaces the exact test). Lossy acceptance trades one exposure for another: less sensitivity to forced rejections, more exposure to whatever the drafter does badly.</p>
+
+<div class="box key"><div class="box-h">Key idea</div>
+<p>An exact method inherits every property the target was tested for, and adds two risks that have nothing to do with the text: a timing signal and a way to slow it down. A lossy method adds a third: its text is no longer the target's, so every property must be tested again, and the cheapest drafter is usually the least tested model in the system.</p>
+</div>

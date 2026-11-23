@@ -1,0 +1,44 @@
+<h2 id="decide">5. A decision guide</h2>
+<p class="tldr">Start from exactness: it needs no new evaluation. Go lossy only when the exact gain is not enough for your case, you can measure quality and safety on your own task, and the drafter is a capable model. Then prefer rules that cap how far the output can move from the target, and keep the first tokens exact.</p>
+
+<figure class="fig"><!-- include figures/06/decide.svg --><figcaption>Four questions before a lossy rule is switched on. The last three have an exit toward an exact method. The order matters: the second question costs nothing to answer and often removes the need for the others.</figcaption></figure>
+
+<h3 id="decide-table">Which method for which situation</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>your situation</th><th>choose</th><th>what to expect (as reported, in each source's setting)</th><th>what to watch</th></tr></thead>
+<tbody>
+<tr><td>The output must be the target's: audits, published evaluations, a watermark</td><td>an exact method (<a href="02_lossless.html">page 2</a>)</td><td>the target's distribution, up to numerical effects (§2)</td><td>the speed-up under your load</td></tr>
+<tr><td>Text, light load, a drafter can be trained for the target</td><td>a head or a block drafter, exact (<a href="02_lossless.html#heads">page 2, §2–§3</a>)</td><td>3× to 5× at batch 1 in the authors' tables; about half when measured by others</td><td>one drafter per target</td></tr>
+<tr><td>The output repeats the prompt or earlier outputs (editing, retrieval, agents)</td><td>a lookup drafter, exact (<a href="02_lossless.html#lookup">page 2, §3</a>)</td><td>2× to 5× on such text</td><td>below 1× on other text under load</td></tr>
+<tr><td>Heavy load</td><td>short drafts, or none (<a href="02_lossless.html#serving">page 2, §6</a>)</td><td>1.1× to 2×</td><td>a lossy rule does not change this ceiling much</td></tr>
+<tr><td>Text, the exact gain is taken, capable drafter, quality measurable, no training wanted, a bound wanted</td><td>a rule with a cap: lenience, mentored decoding (<a href="03_relaxed.html#mentored">page 3, §7</a>)</td><td>a small loss of accuracy at loose settings in independent comparisons (about three points at the loosest); a modest gain in accepted tokens</td><td>the length of the answers</td></tr>
+<tr><td>The same, with support in a serving engine</td><td>FLy (<a href="04_judges.html#training-free">page 4, §5</a>; option of vLLM)</td><td>1.07× to 1.94× over the exact rule in the engine's documentation; at least 99% of the score in the paper</td><td>security benchmarks; long drafts of a strong drafter</td></tr>
+<tr><td>The same, on one task with checkable answers, and you can train a small classifier</td><td>a learned judge (<a href="04_judges.html#autojudge">page 4, §3</a>)</td><td>1.1× at equal accuracy, 1.5× for two points, in the paper's setting</td><td>the judge does not transfer to another task</td></tr>
+<tr><td>Long reasoning, latency matters, compute is available</td><td>step-level speculation in which the large model still writes (<a href="05_reasoning.html#lookahead">page 5, §4</a>)</td><td>1.5× to 2.1× together with token-level speculation; accuracy within about two points</td><td>more compute, not less</td></tr>
+<tr><td>Cost matters more than fidelity to the large model</td><td>a cascade or a router, at the level of the step or the token (<a href="05_reasoning.html#rsd">page 5, §2 and §5</a>)</td><td>RSD: up to 4.4× fewer operations at the large model's score on a mathematics benchmark; R2R: 2.8× faster at 92% of its accuracy</td><td>the accepted text is the small model's; compare with other cascades</td></tr>
+<tr><td>Images, speech, robot actions</td><td>a class-based relaxed rule (<a href="#beyond">§1</a>)</td><td>speech and actions: 1.2× to 1.4× where the exact test gives about 1×; images: 10% to 80% over the exact method of the same table</td><td>diversity, word error rate, success on long tasks</td></tr>
+</tbody></table></div>
+
+<h3 id="decide-checklist">Before a lossy rule goes into service</h3>
+<ul class="checklist">
+<li>The exact method was tuned first, with the same drafter, and its gain is known.</li>
+<li>Quality was measured on your task, at the setting you will use, against the target and against the drafter alone.</li>
+<li>The time per answer was measured, not only the tokens per round.</li>
+<li>The refusals and the resistance to injected instructions were measured again.</li>
+<li>The first tokens of each answer use the exact rule.</li>
+<li>The setting is recorded with every evaluation result: a result obtained with the exact rule does not describe the system once the option is on.</li>
+</ul>
+
+<h2 id="open">6. Open problems</h2>
+<p class="tldr">Lossy speculation became a subject of its own only around 2026. Its guarantees are local, its evaluations are recent and not yet peer-reviewed, and several obvious questions have no published answer.</p>
+<ol>
+<li><strong>Guarantees for the whole output.</strong> Existing bounds are per position (lenience, mentored decoding, CACTUS, LANTERN) or per group. A bound per position says little about a 2,000-token answer, as the compounding of <a href="04_judges.html#compounding">page 4, §6</a> shows. One sequence-level bound exists, for images.</li>
+<li><strong>A shared benchmark.</strong> One that reports quality, length of the answers, rounds of the target and end-to-end time, across hardware and batch sizes. A 2026 survey asks for exactly this; none exists.</li>
+<li><strong>Relaxed rules for the drafters that ship.</strong> Training-free rules assume a drafter that is a decent language model; engines are moving to drafting heads and block drafters that are not.</li>
+<li><strong>A setting that transfers.</strong> The threshold that is harmless on one task is not on another; no method chooses it from the task.</li>
+<li><strong>Safety, watermarks, side channels under relaxed rules.</strong> One measurement study for safety; nothing for watermarks; nothing specific for side channels.</li>
+<li><strong>Combination with the exact toolbox.</strong> How relaxed rules interact with trees, block verification and scheduling under load is mostly unexplored; the 2026 comparisons study the verification rule alone.</li>
+<li><strong>Open-ended text.</strong> The 2026 comparisons cover reasoning, code, multilingual questions and function calls. Dialogue and long-form writing, where “quality” is hardest to measure, are excluded.</li>
+<li><strong>Actions over time.</strong> For robots, an accepted action can be valid when it is verified and wrong a moment later, when the scene has changed.</li>
+</ol>
+<p>One theoretical statement frames all of them: “any relaxation of the acceptance criterion inevitably introduces bias that cannot be perfectly corrected by adjusting the resampling distributions” (COOL-SD). The question is never whether a lossy rule changes the output. It is where the change falls, and who checked.</p>
