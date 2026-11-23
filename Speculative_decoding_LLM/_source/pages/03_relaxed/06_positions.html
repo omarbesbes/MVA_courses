@@ -1,0 +1,104 @@
+<h2 id="cascades">8. Whom to trust at this position: fuzzy speculative decoding and speculative cascades</h2>
+<p class="tldr">Instead of relaxing the test a little everywhere, decide position by position: here the small model is good enough, take its token whatever it is; there it is not, fall back to the exact rule. The rules differ in the signal they use: the distance between the two distributions, or the two models' confidences.</p>
+
+<h3 id="cascades-switch">A switch between two models</h3>
+<p>All the rules of this section have a surrogate target of the same shape. A <em class="new">deferral rule</em> looks at the two distributions and returns $\delta(q,p)\in\{0,1\}$; then</p>
+$$\pi=\begin{cases}q&\text{if }\delta(q,p)=0\quad\text{(trust the drafter: every draft is accepted)}\\ p&\text{if }\delta(q,p)=1\quad\text{(defer to the target: exact speculative sampling)}\end{cases}$$
+<p>At a position where the drafter is trusted, nothing is rejected and the bias is $\TV(p,q)$; elsewhere the rule is exact. Both cases are on the front of §2 — its two end points. The art is in $\delta$.</p>
+
+<h3 id="fuzzy">Fuzzy speculative decoding</h3>
+<article class="mcard">
+<header class="mcard-h">
+<p class="mcard-name">Fuzzy speculative decoding (FSD)</p>
+<p class="mcard-meta">Holsman, Huang, Dhingra (Duke) · Findings of ACL 2025 · <a href="https://arxiv.org/abs/2502.20704">arXiv 2502.20704</a></p>
+<p class="tags"><span class="tag lossy">lossy</span><span class="tag free">training-free</span><span class="tag unit">position level</span><span class="tag year">2025</span></p>
+</header>
+<dl class="mfacts">
+<dt class="tries">What it tries</dt><dd>Give the user a dial between accuracy and speed. The authors' diagnosis: the exact rule “may reject tokens that if accepted would have no impact on final generation quality”, and cannot be tuned.</dd>
+<dt class="how">How it decides</dt><dd>Accept the drafted token if the divergence between the two next-token distributions is below a threshold $T$ (Jensen–Shannon by default); otherwise sample from the target. The drafted token itself is not looked at.</dd>
+<dt class="gets">What it achieves</dt><dd>Llama-3.1 70B with an 8B drafter, batch size 1, two A100s. GSM8K: target alone 94.9% at 8.5 tokens/s; exact speculative decoding 95.1% at 16.8; FSD from 95.2% at 19.5 (low threshold) to 93.1% at 22.0 (high). CommonsenseQA: exact 84.1% at 13.5; FSD from 84.0% at 14.4 to 82.1% at 19.5. Authors' summary: about 2% of accuracy for 5 tokens/s over exact speculative decoding, or equal accuracy at 1 to 3 tokens/s more.</dd>
+<dt class="costs">What it costs</dt><dd>The authors' main limitation: “it is not preemptively known what threshold $T$ will result in what downstream generation performance”. Relies on the drafter being a competent model wherever it agrees with the target.</dd>
+</dl>
+</article>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Holsman et al. 2025, §4</span></div>
+<p>“$F_{accept}(x_{i})=1$ if $\text{Div}(P_{M_{T}}[i],P_{M_{D}}[i])<T$, $0$ else […] In the case of candidate token rejection, FSD will sample from $P_{M_{T}}[i]$, that is the original target model distribution at the rejected position”. And for a sequence of $N$ tokens: “$\text{Div}(P_{M_{T}}(x_{1:N}),P_{\text{FSD}}(x_{1:N}))\leq N\cdot\%_{M_{D}}\cdot T$”.</p>
+</div>
+<dl class="decode">
+<dt>$P_{M_T}[i]$, $P_{M_D}[i]$</dt><dd>The target's and the drafter's next-token distributions at position $i$: our $p$ and $q$.</dd>
+<dt>$\text{Div}$</dt><dd>Any divergence between the two distributions; the paper tries Kullback–Leibler, total variation and Jensen–Shannon, and keeps the last. For example A of page 1, the Jensen–Shannon divergence is $0.047$ nats.</dd>
+<dt>$\%_{M_D}$</dt><dd>The share of the final tokens that came from the drafter. The bound is the “biases add up” of §1: at most $T$ per accepted position. The authors add that it “doesn't directly indicate how FSD impacts downstream performance”.</dd>
+</dl>
+<p>Two remarks. First, plain FSD is <em>not</em> on the front: at a position where the test fails it rejects every draft, even those the exact rule would keep, and samples afresh from $p$. The paper also defines a “reducible” variant that keeps the exact test in that case; a 2026 study (Xia, Ribar, Balanca) shows that the two variants sample from the same distribution and that the reducible one never accepts less — it is the one to use, and the one the 2026 benchmarks evaluate. Second, compare with mentored decoding (§7): both accept outright where the distributions are close, but FSD spends nothing at the other positions.</p>
+
+<h3 id="spec-cascades">Speculative cascades</h3>
+<article class="mcard">
+<header class="mcard-h">
+<p class="mcard-name">Speculative cascades (SpecCascade)</p>
+<p class="mcard-meta">Narasimhan, Jitkrittum, Rawat, Kim, Gupta, Menon, Kumar (Google) · ICLR 2025 · <a href="https://arxiv.org/abs/2405.19261">arXiv 2405.19261</a></p>
+<p class="tags"><span class="tag lossy">lossy</span><span class="tag free">training-free</span><span class="tag unit">position or token level</span><span class="tag year">2024</span></p>
+</header>
+<dl class="mfacts">
+<dt class="tries">What it tries</dt><dd>Marry two families. A <em>cascade</em> uses the small model alone when it looks confident and often gets a better cost–quality trade-off than the large model; speculative decoding is faster per token but only ever reproduces the large model. Run a cascade's deferral rule <em>through</em> speculative execution.</dd>
+<dt class="how">How it decides</dt><dd>Choose a target $\pi=\mathbb T(q,p)$ and sample it exactly (§2). With a deferral rule, $\pi$ is $q$ or $p$: defer when the drafter is unsure (Chow), when the target is more confident than the drafter by a margin (Diff), or when that margin exceeds the cost of rejecting, proportional to $\TV(p,q)$ (OPT). A token-level variant keeps the drafter only on the target's top tokens.</dd>
+<dt class="gets">What it achieves</dt><dd>T5-small drafting for T5-large, temperature 1, $\ga=5$; metric: latency reduction <em>at the quality of the large model</em>. On translation: 1.95× (OPT) and 1.85× (token rule), against 1.61× for lenience and 1.34× for a BiLD-like rule in the same table (full table below). With Gemma 2B drafting for 27B, the token rule matches the large model at a lower rejection rate on all but one of the eight tasks and is “often better than 27B”.</dd>
+<dt class="costs">What it costs</dt><dd>The rules estimate which model is right from their maximum probabilities, so they are only as good as the models' calibration. The objective is quality against the ground truth, not closeness to $p$: the rules deliberately keep the drafter's token when the drafter looks more confident. Later benchmarks: OPT is fragile with weak drafters; the token rule is the most conservative of the family (§10).</dd>
+</dl>
+</article>
+<p>The deferral rules, in the notation of this guide ($\alpha$ is the knob; larger means trusting the drafter more):</p>
+<div class="table-wrap"><table>
+<thead><tr><th>rule</th><th>defer to the target ($\pi=p$) when</th><th>idea</th></tr></thead>
+<tbody>
+<tr><td>Chow</td><td>$\max_vq(v)<1-\alpha$</td><td>the drafter is not confident (the classical cascade test; needs only $q$)</td></tr>
+<tr><td>Diff</td><td>$\max_vq(v)<\max_vp(v)-\alpha$</td><td>the target is more confident than the drafter, by a margin</td></tr>
+<tr><td>OPT</td><td>$\max_vq(v)<\max_vp(v)-\alpha\cdot\TV(p,q)$</td><td>the margin is scaled by what deferring costs: the rejection rate $\TV(p,q)$</td></tr>
+<tr><td>BiLD-like</td><td>$D(q,p)>\alpha$</td><td>the two models disagree (§5; FSD is this rule with a divergence for $D$)</td></tr>
+</tbody></table></div>
+<p>Diff and OPT need the target's distribution to decide whether to call the target — impossible in an ordinary cascade, where the point of the decision is to avoid that call. Speculative execution removes the difficulty: the target has already scored the draft in parallel. This is the paper's key remark.</p>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Narasimhan et al., ICLR 2025, Lemmas 3–4 and Equation (10)</span></div>
+<p>For a target $\pi=(1-r)\,q_t+r\,p_t$, “the probability of a token drawn from draft distribution $q_{t}$ being rejected is equal to: $r(x_{<t})\cdot D_{\textup{TV}}(p_{t},q_{t})$”. The best deferral decision, for a given budget of rejections, is to defer exactly when the drafter's expected loss exceeds the target's by more than $\alpha\cdot D_{\textup{TV}}(p_{t},q_{t})$; for the 0–1 loss, with the models' own probabilities plugged in: “$\hat{r}_{\tt OPT}(x_{<t})=1\iff\max_{v}q_{t}(v)<\max_{v}p_{t}(v)-\alpha\cdot D_{\textup{TV}}(p_{t},q_{t})$”.</p>
+</div>
+<dl class="decode">
+<dt>expected loss of a model</dt><dd>How often its token would be wrong, measured against the true distribution of text (unknown). The paper replaces it by $1-\max_vq(v)$ and $1-\max_vp(v)$: a model's confidence stands for its accuracy. That substitution is where calibration enters.</dd>
+<dt>$\alpha\cdot D_{\textup{TV}}(p_t,q_t)$</dt><dd>The price of deferring. When the two models are close, deferring costs few rejections, so defer as soon as the target is a little better; when they are far apart, deferring costs many rejections, so defer only if the target is much better.</dd>
+</dl>
+<div class="box example"><div class="box-h">Worked example — the three rules on example A</div>
+<p>$p=(0.6,0.3,0.1)$, $q=(0.3,0.5,0.2)$: $\max q=0.5$, $\max p=0.6$, $\TV=0.3$. Chow defers when $0.5<1-\alpha$, i.e. $\alpha<0.5$. Diff defers when $0.5<0.6-\alpha$, i.e. $\alpha<0.1$. OPT defers when $0.5<0.6-0.3\alpha$, i.e. $\alpha<\frac13$. Note what none of them sees: the drafter's favourite is $\tok{ the}$ and the target's is $\tok{ Paris}$. The rules compare how <em>sure</em> the models are, not <em>what</em> they say. A drafter that is confidently wrong is trusted.</p>
+</div>
+<p>The paper names this weakness itself — a draft token “of poor quality” may be accepted “because $q_{t}$ happens to be more peaked than $p_{t}$” — and answers with a token-level rule. The one most used later (“TokenV3”) keeps the drafter's probability only on the target's top set and gives the rest of the drafter's mass back to $p$:</p>
+$$\pi(v)=q(v)\,\ind\big(v\in\text{Top}_\alpha\big)+p(v)\sum_{v'\notin\text{Top}_\alpha}q(v'),\qquad\text{Top}_\alpha=\big\{v:\ p(v)\ge(1-\alpha)\max_{v'}p(v')\big\}.$$
+<p>You have met the set: it is the multiplicative margin of §4. And you have met the distribution: on example A with $\alpha=0.6$ (top set $\{\tok{ Paris},\tok{ the}\}$) it is $(0.42,\,0.56,\,0.02)$, the output of the “threshold” rule of §1 — sampled here by the exact test, hence with acceptance $0.82$ instead of $0.80$. With $\alpha=0$ the top set is the target's favourite alone and $\pi=(0.72,\,0.21,\,0.07)$: the least relaxed setting is not the exact rule, and it accepts <em>less</em> than the exact rule ($0.58$ against $0.70$).</p>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Narasimhan et al., ICLR 2025, Table 2 (T5-small → T5-large, $T=1$, $\ga=5$, WMT English–German)</span></div>
+<div class="hbars" role="img" aria-label="Latency reduction when matching the quality of the large model, eight methods, WMT English to German">
+<span class="hb-l">sequential cascade (Chow)</span><span class="hb-t"><i class="base" style="--v:79.5%"></i></span><span class="hb-v">1.55×</span>
+<span class="hb-l">token-level cascade (Chow)</span><span class="hb-t"><i class="base" style="--v:52.8%"></i></span><span class="hb-v">1.03×</span>
+<span class="hb-l">lenience (§3)</span><span class="hb-t"><i class="lax" style="--v:82.6%"></i></span><span class="hb-v">1.61×</span>
+<span class="hb-l">BiLD-like rule</span><span class="hb-t"><i class="lax" style="--v:68.7%"></i></span><span class="hb-v">1.34×</span>
+<span class="hb-l">speculative cascade, Chow</span><span class="hb-t"><i class="lax" style="--v:73.3%"></i></span><span class="hb-v">1.43×</span>
+<span class="hb-l">speculative cascade, Diff</span><span class="hb-t"><i class="lax" style="--v:91.8%"></i></span><span class="hb-v">1.79×</span>
+<span class="hb-l">speculative cascade, OPT</span><span class="hb-t"><i class="lax" style="--v:100%"></i></span><span class="hb-v">1.95×</span>
+<span class="hb-l">speculative cascade, token rule</span><span class="hb-t"><i class="lax" style="--v:94.9%"></i></span><span class="hb-v">1.85×</span>
+</div>
+<p class="hbars-cap">Reduction in latency when the method is tuned to match the quality (BLEU) of the large model. One paper, one setting; grey: cascades without speculative execution. On summarisation the gains are much smaller: 1.04× to 1.18× on XSum for the six speculative methods, and the two plain cascades are slower than the large model there.</p>
+</div>
+<p>The authors are careful about what this shows: “We also do not claim to develop a new state-of-the-art method for fast LM inference.” The metric is unusual — exact speculative decoding is not a row, because it cannot be tuned — and the models are small and fine-tuned. What the table does show is the ordering inside the family, in that setting: speculative execution improves on the plain cascades with the same rule, and the rules that look at both models beat the one that looks at the drafter alone.</p>
+
+<h2 id="mixture">9. Blending the two models: mixture targets</h2>
+<p class="tldr">Take as surrogate target a fixed blend of the two distributions. It is on the front for every weight, it is one line of code, and it has no cap on rare tokens.</p>
+<article class="mcard">
+<header class="mcard-h">
+<p class="mcard-name">Static ensemble verification</p>
+<p class="mcard-meta">Analysed in DIVERSED (Wang, Kasa et al.) · AISTATS 2026 · <a href="https://arxiv.org/abs/2604.07622">arXiv 2604.07622</a>; the same target arises in SPRINTER (Zhong et al., <a href="https://arxiv.org/abs/2502.04557">arXiv 2502.04557</a>)</p>
+<p class="tags"><span class="tag lossy">lossy</span><span class="tag free">training-free</span><span class="tag unit">token level</span><span class="tag year">2025–2026</span></p>
+</header>
+<dl class="mfacts">
+<dt class="tries">What it tries</dt><dd>The simplest surrogate target between the two models: $\pi=w\,p+(1-w)\,q$.</dd>
+<dt class="how">How it decides</dt><dd>Exact test toward $\pi$: accept with probability $\min\big(1,\ 1-w+w\frac{p(x)}{q(x)}\big)$; the residual is the usual one.</dd>
+<dt class="gets">What it achieves</dt><dd>Provably on the front: acceptance $1-w\,\TV(p,q)$, bias $(1-w)\,\TV(p,q)$ (DIVERSED, Proposition 1). In that paper's comparison (Llama-3.1-8B with a Llama-3.2-1B drafter, GSM8K, temperature 1, drafts of 5), acceptance 69.49%, against 44.60% for the exact rule, 59.81% for lenience and 61.53% for a speculative cascade.</dd>
+<dt class="costs">What it costs</dt><dd>No relative cap: a token the target forbids is accepted with probability $1-w$ (§2). A 2026 study finds that suppressing such over-proposed tokens, not interpolating, is what preserves quality (§10).</dd>
+</dl>
+</article>
+<p>The mixture appears in the literature from three directions. As a deliberate rule (the static ensemble above; it is also what the option <code>assistant_ensemble_weight</code> of Hugging Face Transformers implements, documented from version 5.14). As the <em>consequence</em> of an imperfect verifier: SPRINTER replaces the target's check by a small trained classifier that predicts whether the target would accept, and shows that with a false-positive rate $\eta$ the output is $(1-\eta)\,p+\eta\,q$, at total variation $\eta\cdot\TV(p,q)$ from the target. And as an <em>ensemble</em>, when the goal is the blend itself and not the large model (Speculative Ensemble, Fu et al., 2025). DIVERSED goes one step further and learns the weight $w$ per position with a small network; that makes it a relative of the judges of <a href="04_judges.html">page 4</a>.</p>
+<div class="quiz"><p>In the static ensemble, which weight $w$ gives the same acceptance as lenience $\lambda=0.8$ on example A, and what is the acceptance probability of a token with $p(x)=0$ in each rule?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>Lenience $\lambda=0.8$ has acceptance $0.8$ on example A (§3). The ensemble has acceptance $1-w\,\TV(p,q)=1-0.3w$, so $w=\frac23$. A token with $p(x)=0$: lenience accepts it with probability $\min(1,0)=0$; the ensemble with probability $1-w=\frac13$.</p>
+</div></details></div>

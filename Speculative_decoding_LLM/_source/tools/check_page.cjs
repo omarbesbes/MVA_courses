@@ -22,7 +22,7 @@ const openFolds = (h) => h.evaluate((e) => { for (let d = e.closest("details"); 
   const browser = await pw.chromium.launch();
   let problems = 0;
   for (const [w, scheme] of [[1280, "light"], [1280, "dark"], [390, "light"]]) {
-    const p = await browser.newPage({ viewport: { width: w, height: 900 }, colorScheme: scheme });
+    const p = await browser.newPage({ viewport: { width: w, height: 1400 }, colorScheme: scheme });
     const errs = [];
     p.on("pageerror", (e) => errs.push("pageerror: " + e.message));
     p.on("console", (m) => { if (m.type() === "error") errs.push("console: " + m.text()); });

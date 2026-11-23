@@ -1,0 +1,46 @@
+<h2 id="benchmarks">10. The reality check: what independent evaluations found in 2026</h2>
+<p class="tldr">Compared by people who did not invent them, on hard tasks and with realistic drafters, relaxed rules behave less well than in their own papers: the conservative ones keep accuracy and gain little, the aggressive ones gain acceptance and lose accuracy, and accepted tokens per round turns out to be a poor measure of speed.</p>
+
+<h3 id="benchmarks-three">Three studies</h3>
+<p>Until 2026 each rule was evaluated by its authors, in its own setting. Three preprints of 2026 put several of them side by side. None is peer-reviewed at the time of writing; they agree with one another on the main points.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>study</th><th>setting</th><th>main findings (quoted)</th></tr></thead>
+<tbody>
+<tr><td>Xia, Ribar, Balanca, <em>A Practical Investigation of Training-free Relaxed Speculative Decoding</em> (<a href="https://arxiv.org/abs/2607.08690">arXiv 2607.08690</a>)</td><td>AIME 2024, GPQA Diamond, LiveCodeBench; Qwen3-32B with 0.6B and 8B drafters, and a model with built-in drafting heads</td><td>Relaxation “should be treated by practitioners as a deployment-specific optimisation potentially requiring further capability evaluation and tuning, rather than a drop-in replacement for strict standard speculative decoding.” A small drafter “still shows consistent clear capability degradation, a far cry from the near-lossless capability demonstrated in many relaxed spec-dec papers”. Draft length has “comparable or greater impact than relaxation, whilst not requiring any additional capability evaluation”.</td></tr>
+<tr><td>Wang, Zhou et al., <em>Revisiting Lossy Verification in Speculative Decoding</em> (<a href="https://arxiv.org/abs/2607.26627">arXiv 2607.26627</a>)</td><td>MATH, MBPP+, INCLUDE, BFCL; LLaMA-3.1-8B with EAGLE-3 heads; Qwen2.5-72B with a 0.5B drafter</td><td>“existing work overstates their advantages under curated settings (selective hyperparameters or easy benchmarks)”. Rules that restrict acceptance to an allowed set (typical acceptance, the token rule of cascades) owe their reported quality to the truncation, and lose to the target sampled with the same truncation. For the other rules, “overshoot suppression, rather than interpolation, [is] the key design principle”.</td></tr>
+<tr><td>Wang, Xu, Gu, Zhang, <em>Acceptance Is Not Speed</em> (<a href="https://arxiv.org/abs/2610.23818">arXiv 2610.23818</a>)</td><td>Five training-free rules, six benchmarks, twelve target–drafter pairs, one serving engine, drafts of 6, temperature 1: 360 cells</td><td>“At each rule's most relaxed evaluated setting, relaxed verification on average accepts $1.34\times$ as many tokens per round but produces $1.54\times$ longer completions”. “For rules that reduce verifier rounds, accuracy typically drops substantially”.</td></tr>
+</tbody></table></div>
+
+<h3 id="benchmarks-length">Accepted tokens are not speed</h3>
+<p>The third finding is the least expected, and it changes how every number on this page should be read. A relaxed rule samples from another distribution; texts from another distribution have another <em>length</em>. If the relaxed text is longer, more rounds are needed to finish it, and the gain in tokens per round can be eaten, or more than eaten.</p>
+<div class="box thm"><div class="box-h">Result — speed-up of a relaxed rule over the target alone</div>
+$$S_{\text{relaxed}}\ \approx\ \frac{\bar L_{\text{target}}}{\bar L_{\text{relaxed}}}\times\frac{\bar\ell+1}{1+\ga\,c}$$
+<p>where $\bar L$ is the average length of a completion (with the target alone, and with the relaxed method), $\bar\ell$ the average number of accepted drafts per round, $\ga$ the draft length and $c$ the relative cost of a drafter call. (Xia, Ribar, Balanca 2026, Equation 4.)</p>
+</div>
+<p>The second factor is the speed-up law of <a href="01_foundations.html#speedup">page 1</a>, with the measured tokens per round. The first factor is new and is exactly $1$ for an exact method. In the 360-cell study it is where the trouble comes from: completions $1.54$ times longer on average at the loosest settings. The first study describes the mechanism: relaxing into a weak drafter can “induce generation pathologies (e.g. rambling, repetition loops) that lead to longer generations”; the third observes a model that, under one rule, spends 15% of its tokens on a hard benchmark inside repeated 50-token passages.</p>
+<div class="box example"><div class="box-h">Worked example (toy numbers)</div>
+<p>Exact method: $\bar\ell=3$ accepted drafts per round, $\ga=6$, $c=0.05$: speed-up $\frac{4}{1.3}=3.08$. A relaxed rule raises $\bar\ell$ to $4.4$ (the tokens per round go from $4$ to $5.4$, a factor $1.35$) but its completions are $1.5$ times longer: speed-up $\frac{1}{1.5}\times\frac{5.4}{1.3}=2.77$. More tokens accepted, more tokens per second, and a slower answer.</p>
+</div>
+
+<h3 id="benchmarks-rules">Rule by rule</h3>
+<p>What the 360-cell study reports for the rules of this page, each at its most relaxed tested setting (accuracy is the fraction of correct answers, so “loses 0.14” is fourteen points):</p>
+<div class="table-wrap"><table>
+<thead><tr><th>rule</th><th>section</th><th>accuracy lost on average</th><th>remark of the authors</th></tr></thead>
+<tbody>
+<tr><td>token rule of speculative cascades</td><td>§8</td><td>0.005</td><td>“the only rule that can reject what lossless verification accepts […] is also the only one that keeps accuracy on average”; smallest acceptance gain (1.11×)</td></tr>
+<tr><td>mentored decoding, $\beta=1$ (= lenience)</td><td>§3, §7</td><td>0.03 (loses in 33 of 60 cells)</td><td>degrades gracefully</td></tr>
+<tr><td>speculative cascade, OPT</td><td>§8</td><td>0.14</td><td rowspan="3">“the three aggressive rules”: they lose in 143 of their 180 graded cells</td></tr>
+<tr><td>CACTUS</td><td>§7</td><td>0.19</td></tr>
+<tr><td>reducible fuzzy speculative decoding</td><td>§8</td><td>0.21</td></tr>
+</tbody></table></div>
+<p>Read the table with its conditions: loosest setting of each rule, average over drafters of very different strength, temperature 1. It is not a ranking of methods at their recommended settings. The first study reaches a compatible conclusion by another road: “Methods that explicitly rely on $q$” — the OPT rule, which trusts the drafter's confidence — “fail with capability drop-offs without speed-ups” when the drafter is weak, while methods “that tightly control deviation from $p$” degrade more gracefully.</p>
+
+<h3 id="benchmarks-lessons">What to take away</h3>
+<ol>
+<li><strong>The exchange rate of §2 is the good case.</strong> One point of acceptance for one point of total variation is what the best rules achieve at one position. What a point of total variation costs in accuracy depends on the tokens it falls on, and no formula on $p$ and $q$ knows that.</li>
+<li><strong>The drafter matters more for lossy rules than for exact ones.</strong> With the exact rule a bad drafter costs speed. With a relaxed rule its mistakes enter the text. Every rule that performs well in its own paper was tested with a drafter that is a decent model of the task.</li>
+<li><strong>Caps help.</strong> The rules that keep the output's probability of each token close to the target's (lenience, mentored decoding, the token rule) are the ones that hold up; interpolations and wholesale switches to the drafter are the ones that break. This is the meaning of “overshoot suppression”.</li>
+<li><strong>Evaluate on a hard task, against the right baseline, and report lengths.</strong> Easy benchmarks hide the damage; a relaxed rule's implicit truncation must be given to the baseline too; tokens per round must come with the completion length.</li>
+<li><strong>Exactness has a value of its own.</strong> “Strict spec-dec doesn't require any capability re-evaluation (in theory)”: a lossless method inherits every evaluation of the target. A lossy one must be re-evaluated, for each task and each setting of its knob, and <a href="06_practice.html">page 6</a> will add: for safety as well.</li>
+</ol>
+<p>None of this closes the subject. It says that a statistical test on two probability vectors is a blunt instrument. The sentence of DistillSpec quoted in §3 pointed to the alternative two years earlier: “many tokens are inconsequential for final performance”. If one could tell <em>which</em> tokens are inconsequential, one could accept those and only those. That is the programme of <a href="04_judges.html">page 4</a>.</p>

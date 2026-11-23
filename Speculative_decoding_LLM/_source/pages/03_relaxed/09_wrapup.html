@@ -1,0 +1,80 @@
+<h2 id="wrapup">12. What to remember</h2>
+
+<div class="box summary"><div class="box-h">Summary</div>
+<ul>
+<li>A token-level lossy rule is a pair (acceptance probability, replacement distribution), or equivalently a <strong>surrogate target</strong> $\pi$ sampled with the exact test. Its acceptance and its bias follow.</li>
+<li><strong>Exchange rate:</strong> rejection probability + $\TV(\text{out},p)\ge\TV(p,q)$. The rules that reach equality sample a $\pi$ that lies between $q$ and $p$ with the exact test. Total variation cannot rank them: they differ in <em>which tokens</em> receive the extra mass.</li>
+<li><strong>Lenience</strong> multiplies $q$ by $\lambda\le1$ in the test: on the front, with a cap $p/\lambda$ on every token; proposed without any quality measurement.</li>
+<li>With <strong>greedy decoding</strong> a rule is an accept set: top-$k$, a margin below the best, a probability floor (BiLD), an entropy-adaptive floor (typical acceptance). All are “on the front”; what matters is the quality of the tokens let in.</li>
+<li><strong>Mentored decoding</strong> and <strong>CACTUS</strong> maximise acceptance under a Kullback–Leibler budget; the first keeps the output in a band $[p/\beta,\,p/\alpha]$.</li>
+<li><strong>Fuzzy speculative decoding</strong> and <strong>speculative cascades</strong> decide per position whether to trust the drafter (distributions close; drafter at least as confident). <strong>Mixtures</strong> blend the two models.</li>
+<li><strong>Independent evaluations (2026):</strong> rules that cap the deviation from $p$ keep accuracy and gain little; rules that lean on the drafter lose accuracy with weak drafters and hard tasks; relaxed outputs get longer, so accepted tokens per round overstate the speed.</li>
+</ul>
+</div>
+
+<h3 id="compare">The rules of this page, side by side</h3>
+<p>The table compares what the rules <em>are</em>. It does not compare their reported speed-ups, which come from different settings.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>rule</th><th>the test looks at</th><th>surrogate target $\pi$, or accept set</th><th>stated guarantee</th><th>authors' evidence</th><th>independent evidence</th></tr></thead>
+<tbody>
+<tr><td>lenience (<a href="#lenience">§3</a>)</td><td>$p(x)$, $q(x)$</td><td>$q$ capped at $p/\lambda$, gaps partly refilled</td><td>$\text{out}\le p/\lambda$</td><td>acceptance rates only</td><td>used as baseline; mild loss at loose settings</td></tr>
+<tr><td>top-$k$, margins (<a href="#greedy-rules">§4</a>)</td><td>rank and ratio $p(x)/p(a)$</td><td>accept set</td><td>none</td><td>BLEU on small translation models</td><td>—</td></tr>
+<tr><td>BiLD (<a href="#bild">§5</a>)</td><td>$\max q$ (when to stop), $p(x)$</td><td>accept set $p(x)\ge e^{-\alpha_{RB}}$</td><td>none</td><td>BLEU / ROUGE on T5</td><td>behind lenience at matched quality in one study</td></tr>
+<tr><td>typical acceptance (<a href="#typical">§6</a>)</td><td>$p(x)$, entropy of $p$</td><td>accept set $p(x)>\min(\epsilon,\delta e^{-H})$</td><td>none</td><td>one figure, open-ended chat</td><td>loses several points on hard tasks</td></tr>
+<tr><td>mentored decoding (<a href="#mentored">§7</a>)</td><td>$p$, $q$ (whole distributions)</td><td>$q$ clipped into $[p/\beta,\,p/\alpha]$</td><td>$\KL(p\|\text{out})\le D$</td><td>one small translation experiment</td><td>$\beta=1$ version: graceful</td></tr>
+<tr><td>CACTUS (<a href="#cactus">§7</a>)</td><td>$p(x)$, $q(x)$</td><td>$p$ with the drafted token lifted to $\gamma^*$</td><td>$\KL(h\|p)\le\delta$ per drafted token</td><td>three benchmarks, Qwen3</td><td>aggressive at loose settings</td></tr>
+<tr><td>fuzzy SD (<a href="#fuzzy">§8</a>)</td><td>a divergence between $p$ and $q$</td><td>$q$ if close, else $p$</td><td>divergence $\le T$ per position</td><td>four benchmarks, three model pairs</td><td>aggressive at loose settings</td></tr>
+<tr><td>speculative cascades (<a href="#spec-cascades">§8</a>)</td><td>$\max q$, $\max p$, $\TV(p,q)$; or the top set of $p$</td><td>$q$ or $p$; token rule: $q$ on the top set</td><td>optimal deferral for a plug-in loss</td><td>T5 and Gemma, cost–quality curves</td><td>OPT fragile with weak drafters; token rule conservative</td></tr>
+<tr><td>static ensemble (<a href="#mixture">§9</a>)</td><td>$p(x)$, $q(x)$</td><td>$w\,p+(1-w)\,q$</td><td>on the front</td><td>acceptance on GSM8K-type tasks</td><td>interpolation alone not enough</td></tr>
+</tbody></table></div>
+
+<h3 id="reflexes">Reflexes</h3>
+<ul class="checklist">
+<li>A relaxed rule → write its surrogate target $\pi$ (or its accept set). Acceptance is $1-\TV(q,\pi)$ at best; bias is the distance from $\pi$ to $p$.</li>
+<li>“We accept $x$% more tokens” → at least $x$ points of total variation per position were paid. Ask where they went.</li>
+<li>A rule that resamples from $p$ (or writes its argmax) after a rejection, with sampling → it is below the front.</li>
+<li>A guarantee “per token” or “per position” → multiply by the length before being reassured.</li>
+<li>A cap relative to $p$ (lenience, mentored, top sets) → rare tokens stay rare. An interpolation or a switch to $q$ → they do not.</li>
+<li>Results on GSM8K, CNN/DailyMail or XSum only → not evidence for a hard task.</li>
+<li>Tokens per round under a relaxed rule → ask for the completion length and the end-to-end time.</li>
+<li>A weak or uncalibrated drafter → no relaxed rule is safe; the exact rule is.</li>
+</ul>
+
+<h3 id="next">What comes next</h3>
+<p>Every rule of this page decides from the two probability vectors at one position. <a href="04_judges.html">Page 4</a> gives the decision more information: the target's hidden state, and a small classifier trained to tell a harmless disagreement from a harmful one. <a href="05_reasoning.html">Page 5</a> changes the unit: whole reasoning steps are drafted and judged, and for part of the text the large model is not run at all.</p>
+
+<h3 id="glossary">Glossary</h3>
+<dl class="decode">
+<dt>surrogate target</dt><dd>The distribution $\pi$ a lossy method is willing to sample instead of $p$.</dd>
+<dt>bias</dt><dd>Distance between the output distribution and the target's, at one position.</dd>
+<dt>Pareto front</dt><dd>Here: the pairs (bias, rejection probability) with rejection + bias $=\TV(p,q)$.</dd>
+<dt>lenience</dt><dd>Dividing the drafter's probability by a constant in the acceptance test.</dd>
+<dt>accept set</dt><dd>For a deterministic rule: the tokens accepted when drafted. Also “allowed set”.</dd>
+<dt>overshoot</dt><dd>A token the drafter proposes more often than the target wants, $q(x)>p(x)$.</dd>
+<dt>deferral rule</dt><dd>A test that decides to hand the position over to the large model.</dd>
+<dt>cascade</dt><dd>A system that answers with a small model and defers to a large one when a rule says so.</dd>
+<dt>truncation sampling</dt><dd>Sampling restricted to an allowed set of tokens (top-$k$, nucleus, min-$p$, $\eta$-sampling).</dd>
+<dt>length inflation</dt><dd>Ratio of the average completion length under a relaxed rule to that of the target.</dd>
+</dl>
+
+<h3 id="sources">Sources</h3>
+<ul>
+<li>Y. Leviathan, M. Kalman, Y. Matias, <em>Fast Inference from Transformers via Speculative Decoding</em>, ICML 2023, Appendix A.5. <a href="https://arxiv.org/abs/2211.17192">arXiv 2211.17192</a>.</li>
+<li>Y. Zhou et al., <em>DistillSpec: Improving Speculative Decoding via Knowledge Distillation</em>, ICLR 2024. <a href="https://arxiv.org/abs/2310.08461">arXiv 2310.08461</a>.</li>
+<li>M. Stern, N. Shazeer, J. Uszkoreit, <em>Blockwise Parallel Decoding for Deep Autoregressive Models</em>, NeurIPS 2018. <a href="https://arxiv.org/abs/1811.03115">arXiv 1811.03115</a>.</li>
+<li>H. Xia, T. Ge et al., <em>Speculative Decoding: Exploiting Speculative Execution for Accelerating Seq2seq Generation</em>, Findings of EMNLP 2023. <a href="https://arxiv.org/abs/2203.16487">arXiv 2203.16487</a>.</li>
+<li>S. Kim et al., <em>Speculative Decoding with Big Little Decoder</em>, NeurIPS 2023. <a href="https://arxiv.org/abs/2302.07863">arXiv 2302.07863</a>.</li>
+<li>T. Cai et al., <em>Medusa: Simple LLM Inference Acceleration Framework with Multiple Decoding Heads</em>, ICML 2024. <a href="https://arxiv.org/abs/2401.10774">arXiv 2401.10774</a>.</li>
+<li>V. Tran-Thien, <em>An Optimal Lossy Variant of Speculative Decoding</em>, blog post, September 2023. <a href="https://vivien000.github.io/blog/journal/a-provably-optimal-lossy-variant-of-speculative-decoding.html">Post</a>, with proof and code.</li>
+<li>Y. Hao, L. Mou, <em>Cactus: Accelerating Auto-Regressive Decoding with Constrained Acceptance Speculative Sampling</em>, ICLR 2026. <a href="https://arxiv.org/abs/2604.04987">arXiv 2604.04987</a>.</li>
+<li>M. Holsman, Y. Huang, B. Dhingra, <em>Fuzzy Speculative Decoding for a Tunable Accuracy-Runtime Tradeoff</em>, Findings of ACL 2025. <a href="https://arxiv.org/abs/2502.20704">arXiv 2502.20704</a>.</li>
+<li>H. Narasimhan et al., <em>Faster Cascades via Speculative Decoding</em>, ICLR 2025. <a href="https://arxiv.org/abs/2405.19261">arXiv 2405.19261</a>.</li>
+<li>M. Yin, M. Chen, K. Huang, M. Wang, <em>A Theoretical Perspective for Speculative Decoding Algorithm</em>, NeurIPS 2024. <a href="https://arxiv.org/abs/2411.00841">arXiv 2411.00841</a>.</li>
+<li>Wang, Kasa et al., <em>DIVERSED</em>, AISTATS 2026. <a href="https://arxiv.org/abs/2604.07622">arXiv 2604.07622</a>.</li>
+<li>Zhong et al., <em>Speeding up Speculative Decoding via Sequential Approximate Verification</em> (SPRINTER), 2025. <a href="https://arxiv.org/abs/2502.04557">arXiv 2502.04557</a>.</li>
+<li>Fu et al., <em>Speculative Ensemble: Fast Large Language Model Ensemble via Speculation</em>, 2025. <a href="https://arxiv.org/abs/2502.01662">arXiv 2502.01662</a>.</li>
+<li>Sharma, <em>When Is a Draft Accepted? A Theory of Acceptance in Speculative Decoding</em>, preprint, 2026. <a href="https://arxiv.org/abs/2606.30265">arXiv 2606.30265</a>.</li>
+<li>Xia, Ribar, Balanca, <em>A Practical Investigation of Training-free Relaxed Speculative Decoding</em>, preprint, 2026. <a href="https://arxiv.org/abs/2607.08690">arXiv 2607.08690</a>.</li>
+<li>Wang, Zhou et al., <em>Revisiting Lossy Verification in Speculative Decoding</em>, preprint, 2026. <a href="https://arxiv.org/abs/2607.26627">arXiv 2607.26627</a>.</li>
+<li>Wang, Xu, Gu, Zhang, <em>Acceptance Is Not Speed</em>, preprint, 2026. <a href="https://arxiv.org/abs/2610.23818">arXiv 2610.23818</a>.</li>
+</ul>

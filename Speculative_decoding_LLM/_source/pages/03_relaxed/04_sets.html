@@ -1,0 +1,114 @@
+<h2 id="greedy-rules">4. At temperature 0: sets of acceptable tokens</h2>
+<p class="tldr">With greedy decoding a relaxed rule is a set: the tokens that are accepted if the drafter proposes them. The exact rule accepts one token, the target's first choice. The oldest relaxed rules accept its top $k$, or everything within a margin of the best.</p>
+
+<h3 id="greedy-sets">From a coin flip to a set</h3>
+<p>When the target decodes greedily, the exact rule is “accept the drafted token if it is $a=\argmax_vp(v)$” (<a href="01_foundations.html#greedy-case">page 1, §3</a>). There is no coin and no residual: if the draft is rejected, the target writes $a$. A relaxed rule in this regime is entirely described by its <em class="new">accept set</em></p>
+$$S(p)\subseteq\V,\qquad a\in S(p):\qquad\text{accept the drafted token }x\iff x\in S(p),\ \text{otherwise write }a.$$
+<p>The set depends on the target's full distribution $p$ <em>before</em> it is reduced to its argmax; this is where the information is. Total variation is useless here (§1, second yardstick): every accepted token other than $a$ is a full disagreement with greedy decoding. What matters is <em>which</em> other tokens are let in, and the rules below differ only in that.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>rule</th><th>accept set $S(p)$</th><th>knob</th><th>where</th></tr></thead>
+<tbody>
+<tr><td>exact match</td><td>$\{a\}$</td><td>—</td><td>page 1</td></tr>
+<tr><td>top-$k$</td><td>the $k$ most likely tokens under $p$</td><td>$k$</td><td>Stern et al. 2018</td></tr>
+<tr><td>multiplicative margin</td><td>$\{x:\ p(x)\ge\kappa\cdot p(a)\}$</td><td>$\kappa\in(0,1]$</td><td>greedy lenience (§3); the token rule of §8</td></tr>
+<tr><td>top-$\beta$ and margin</td><td>top $\beta$ tokens with $\log p(a)-\log p(x)\le\tau$</td><td>$\beta$, $\tau$</td><td>SpecDec (below)</td></tr>
+<tr><td>probability floor</td><td>$\{x:\ p(x)\ge e^{-\alpha_{RB}}\}$</td><td>$\alpha_{RB}$</td><td>BiLD (§5)</td></tr>
+<tr><td>entropy-adaptive floor</td><td>$\{x:\ p(x)>\min(\epsilon,\ \delta e^{-\Hent(p)})\}$</td><td>$\epsilon$, $\delta$</td><td>typical acceptance (§6)</td></tr>
+</tbody></table></div>
+<p>(In the last two rows $a$ is added to the set if the formula leaves it out.) The interactive figure at the end of §6 draws all these sets on the same distribution.</p>
+
+<h3 id="greedy-topk">Top-$k$ and margins: the rules of 2018 and 2022</h3>
+<article class="mcard">
+<header class="mcard-h">
+<p class="mcard-name">Approximate verification in blockwise parallel decoding, and Spec-Verification</p>
+<p class="mcard-meta">Stern, Shazeer, Uszkoreit · NeurIPS 2018 · <a href="https://arxiv.org/abs/1811.03115">arXiv 1811.03115</a> — Xia, Ge et al. (SpecDec) · Findings of EMNLP 2023 · <a href="https://arxiv.org/abs/2203.16487">arXiv 2203.16487</a></p>
+<p class="tags"><span class="tag lossy">lossy</span><span class="tag free">no training for the rule</span><span class="tag unit">token level, greedy</span><span class="tag year">2018, 2022</span></p>
+</header>
+<dl class="mfacts">
+<dt class="tries">What it tries</dt><dd>Stop throwing away good drafted tokens “just because they are different from the top-1 result” of the verifier (the words of the SpecDec paper).</dd>
+<dt class="how">How it decides</dt><dd>Stern et al.: accept if the token is among the verifier's top $k$ (they try 2 and 3). SpecDec: accept if it is among the top $\beta$ <em>and</em> its log-probability is within $\tau$ of the best; chosen values $\beta=3$, $\tau=1$, i.e. $p(x)\ge e^{-1}p(a)\approx0.37\,p(a)$.</dd>
+<dt class="gets">What it achieves</dt><dd>Small supervised translation models, quality measured by BLEU. Stern et al. (block size 10): top-2 raises the mean accepted block from 4.95 to 5.67 tokens and lowers BLEU from 25.60 to 25.04. SpecDec (block size 25, development set): mean accepted tokens 6.41 → 7.89 and BLEU 26.62 → 26.97 with $\beta=3,\tau=1$; over-relaxed ($\beta=5,\tau=5$): 11.01 tokens and BLEU back to 26.58.</dd>
+<dt class="costs">What it costs</dt><dd>No guarantee of any kind; the output is simply a different text. Evidence limited to BLEU on machine translation with a drafter trained for the purpose. Both papers are greedy-only.</dd>
+</dl>
+</article>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Xia et al. (SpecDec), §3.2</span></div>
+<p>“Spec-Verification relaxes the criterion to trust the drafting results more, by only requiring the drafted tokens to fall in top-$\beta$ candidates with a tolerable (log-likelihood) score gap $\tau$ (away from the top-1 result).”</p>
+</div>
+<p>Compare the two rules. Top-$k$ alone lets the second choice in even when the target is nearly certain of the first ($p=(0.97,\,0.02,\dots)$): the second token is in the top 2, and it is almost surely a mistake. The margin removes exactly that case: a token passes only if the target finds it at least $e^{-\tau}$ times as likely as its favourite. This is the difference between the two sets of numbers above — a loss of BLEU for Stern et al., a small gain for SpecDec at the mild setting — and it is the first appearance of an idea that returns in every later rule: <strong>relax where the target hesitates, not where it is sure</strong>.</p>
+<p>Leviathan's lenience for greedy decoding (§3) is the margin alone, $p(x)\ge l\cdot p(a)$; so is the token rule of speculative cascades (§8), with $\kappa=1-\alpha$. A 2026 preprint that classifies these deterministic rules (Sharma) calls them additive relaxation ($p(x)>p(a)-t$), multiplicative relaxation ($p(x)>\alpha\,p(a)$), top-$m$, and entropy thresholds, and notes that the multiplicative form is the one “used in TensorRT-LLM relaxed acceptance”.</p>
+<div class="box pitfall"><div class="box-h">Pitfall — “lossless” in these two papers means “no loss of BLEU”</div>
+<p>SpecDec announces an “over $5\times$ lossless speedup”. Its output differs from the target's greedy output (the paper measures a BLEU of 86.52 between the two); “lossless” there means that the translation quality, measured against references, did not drop. In this guide the word is reserved for “same output distribution as the target”.</p>
+</div>
+
+<h2 id="bild">5. BiLD: let the small model write until it hesitates</h2>
+<p class="tldr">Two thresholds: the small model keeps writing while it is confident; when it hands over, the large model undoes everything from the first token it finds too unlikely. A probability floor on the target side, an adaptive draft length on the draft side.</p>
+<article class="mcard">
+<header class="mcard-h">
+<p class="mcard-name">Big Little Decoder (BiLD)</p>
+<p class="mcard-meta">Kim, Mangalam, Moon, Malik, Mahoney, Gholami, Keutzer · NeurIPS 2023 · <a href="https://arxiv.org/abs/2302.07863">arXiv 2302.07863</a></p>
+<p class="tags"><span class="tag lossy">lossy</span><span class="tag free">rule training-free</span><span class="tag train">optional aligned drafter</span><span class="tag unit">token level</span><span class="tag year">2023</span></p>
+</header>
+<dl class="mfacts">
+<dt class="tries">What it tries</dt><dd>Call the large model “only occasionally”, to repair the small model's inaccurate predictions, with a deterministic rule instead of rejection sampling.</dd>
+<dt class="how">How it decides</dt><dd><strong>Fallback</strong>: the small model writes until its top probability falls below $\alpha_{FB}$ (or 10 tokens). <strong>Rollback</strong>: the large model scores the block and finds the first token $x$ with $-\log p(x)>\alpha_{RB}$, i.e. $p(x)<e^{-\alpha_{RB}}$; it replaces it with its own choice and discards what follows.</dd>
+<dt class="gets">What it achieves</dt><dd>mT5 and T5, large with small (about 20× smaller), translation and summarisation, one T4 GPU, batch size 1: on average 1.50× faster than the large model with no loss of BLEU / ROUGE-L, and 1.70× for about one point lost; with a drafter fine-tuned on the large model's outputs, 1.61× and 1.85× (best case 2.12×).</dd>
+<dt class="costs">What it costs</dt><dd>No guarantee. A block that never triggers the fallback is never verified. Thresholds tuned per task (rollback thresholds from 1 to 10 for translation, 2 to 6 for summarisation).</dd>
+</dl>
+</article>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Kim et al. 2023, §3.3, §3.4 and Appendix 7.1.2</span></div>
+<p>“Fallback Policy: If $\max_{y}p_{S}(y|y_{1:n-1})<\alpha_{FB}$, then fallback to the large model and set $y_{n}=y_{n,L}$.” For the rollback, the distance between the two models' predictions is “the cross-entropy loss between the small model's hard label and the large model's soft label. This measures the (negative log) likelihood of obtaining the small model's prediction from the large model's output.”</p>
+</div>
+<dl class="decode">
+<dt>$p_S$, $p_L$</dt><dd>The small and the large model: our $q$ and $p$.</dd>
+<dt>fallback threshold $\alpha_{FB}$</dt><dd>A test on the <em>drafter's</em> confidence. It decides when to stop drafting, so it makes the draft length adaptive (an idea that page 2 treats on its own, and that costs nothing in exactness).</dd>
+<dt>rollback threshold $\alpha_{RB}$</dt><dd>A test on the <em>target's</em> probability of the drafted token: $-\log p(x)\le\alpha_{RB}$ means $p(x)\ge e^{-\alpha_{RB}}$. With $\alpha_{RB}=2$ the floor is $0.135$; with $\alpha_{RB}=6$ it is $0.0025$. This is the lossy part: an accept set $\{x:p(x)\ge e^{-\alpha_{RB}}\}$.</dd>
+</dl>
+<p>Why would a deterministic floor do better than the exact coin flip? The paper's own comparison gives the reason. Against a rejection-sampling implementation with the same models, BiLD rolls back far less often: on IWSLT, 1.56% of the tokens against 9.81%. The exact rule rejects, by chance, tokens that the target finds perfectly plausible; a floor never does. The price is that it also keeps tokens the target would not have written. A later analysis (Narasimhan et al., §8) rewrites BiLD as a rule of the form “use $q$ where the two models agree, $p$ elsewhere” and adds a caveat: when the fallback is never triggered, “the output will be a sample from the drafter” even if some of its tokens would have failed the rollback test.</p>
+
+<h2 id="typical">6. Typical acceptance: a floor that follows the entropy</h2>
+<p class="tldr">Accept a drafted token if the target gives it more than a threshold, and lower the threshold when the target's distribution is spread out. The drafter's probability plays no role. Proposed with Medusa for open-ended generation; later evaluations find it costly on hard tasks.</p>
+<article class="mcard">
+<header class="mcard-h">
+<p class="mcard-name">Typical acceptance</p>
+<p class="mcard-meta">Cai, Li, Geng, Peng, Lee, Chen, Dao (Medusa) · ICML 2024, §2.3.1 · <a href="https://arxiv.org/abs/2401.10774">arXiv 2401.10774</a></p>
+<p class="tags"><span class="tag lossy">lossy</span><span class="tag free">training-free rule</span><span class="tag unit">token level</span><span class="tag year">2024</span></p>
+</header>
+<dl class="mfacts">
+<dt class="tries">What it tries</dt><dd>Keep the speed-up when sampling at a non-zero temperature, where the exact rule rejects more. The authors' position: “it is typically unnecessary to match the distribution of the original model.”</dd>
+<dt class="how">How it decides</dt><dd>Accept the candidate $x$ if $p(x)>\min\big(\epsilon,\ \delta\,e^{-\Hent(p)}\big)$; the first token of each round is the target's greedy choice and is always accepted. Defaults of the reference code: $\epsilon=0.09$, $\delta=0.3$.</dd>
+<dt class="gets">What it achieves</dt><dd>In the paper, one figure: on the writing and role-play questions of MT-Bench at temperature 0.7 (Vicuna-7B with Medusa heads), quality “comparable with random sampling” as $\epsilon$ grows, at a higher acceleration than exact sampling. No table of numbers. The headline speed-ups of Medusa (2.2× to 2.8×) are for the whole system.</dd>
+<dt class="costs">What it costs</dt><dd>No bound. The drafter's distribution is ignored, so every accepted token is the drafter's choice among the “allowed” ones. Independent 2026 evaluations: several points of accuracy lost on hard reasoning, code and multilingual tasks (below).</dd>
+</dl>
+</article>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">Cai et al. (Medusa), ICML 2024, §2.3.1</span></div>
+<p>“we consider the condition</p>
+$$p_{\text{original}}(x_{n+k}|x_{1},\cdots,x_{n+k-1})>\min\left(\epsilon,\delta\exp\left(-H(p_{\text{original}}(\cdot|x_{1},\cdots,x_{n+k-1}))\right)\right),$$
+<p>where $H(\cdot)$ denotes the entropy function, and $\epsilon,\delta$ are the hard threshold and the entropy-dependent threshold respectively. This criterion […] rests on two observations: (1) tokens with relatively high probability are meaningful, and (2) when the distribution's entropy is high, various continuations may be deemed reasonable.”</p>
+</div>
+<dl class="decode">
+<dt>$p_{\text{original}}$</dt><dd>The target model's distribution: our $p$. Nothing in the test refers to the drafter's distribution.</dd>
+<dt>$\epsilon$ (hard threshold)</dt><dd>The floor when the target is fairly sure: a token needs a probability above $\epsilon$.</dd>
+<dt>$\delta\exp(-H)$</dt><dd>$e^{-\Hent(p)}$ is roughly “one over the number of tokens the target hesitates between” (it is exactly $1/n$ for a uniform distribution on $n$ tokens). When the target hesitates between many tokens, each has a small probability, and the floor is lowered in proportion.</dd>
+</dl>
+<div class="box example"><div class="box-h">Worked example — the threshold with the default values</div>
+<p>With $\epsilon=0.09$ and $\delta=0.3$, the threshold $\min(0.09,\ 0.3\,e^{-H})$ is:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>entropy $\Hent(p)$ (nats)</th><th>0</th><th>1.0</th><th>1.2</th><th>1.5</th><th>2.0</th><th>3.0</th></tr></thead>
+<tbody><tr><th>threshold</th><td>0.090</td><td>0.090</td><td>0.090</td><td>0.067</td><td>0.041</td><td>0.015</td></tr></tbody></table></div>
+<p>Below an entropy of $\log(0.3/0.09)\approx1.2$ nats the rule is simply “any token the target gives more than 9% is acceptable”. Take a target that hesitates, $p=(0.42,\,0.33,\,0.12,\,0.07,\,0.04,\,0.02)$: entropy $1.38$, threshold $0.076$, accept set = the first three tokens. The margin rule of SpecDec ($p(x)\ge0.37\times0.42$) would accept the first two only.</p>
+</div>
+
+<div class="widget" data-widget="p3sets"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p><strong>What to look at.</strong> The bars are a toy target distribution; the slider makes it more peaked or flatter. Choose a rule: green is the target's first choice (accepted by the exact rule), amber the other tokens of the accept set, grey the rejected ones; the dashed line is the rule's threshold when it has one. Compare top-$k$ and the margin on a peaked target (top-2 lets in a token the target barely considers; the margin does not). Then select typical acceptance and flatten the target: watch the threshold fall and the set grow. The orange dots are a toy drafter; the read-out gives the two numbers that matter — how often its token is accepted, and how often the output then differs from the target's own choice.</p>
+
+<h3 id="typical-facts">What happened to it</h3>
+<p><strong>In serving software.</strong> vLLM shipped the rule as an option (<code>typical_acceptance_sampler</code>, with the same defaults 0.09 and 0.3; on rejection the replacement was the target's argmax) from version 0.5.1 to 0.9.2; it disappeared with the rewrite of the speculative decoding code in 0.10.0. Its help text was candid: a method “allowing for a higher acceptance rate at the cost of lower quality, and vice versa.”</p>
+<p><strong>In later evaluations.</strong> Three independent results, each in its own setting:</p>
+<ul>
+<li>The authors of CACTUS (§7; ICLR 2026) measure, for Qwen3-8B with a Qwen3-0.6B drafter and drafts of 20 tokens: on GSM8K, 85.51 for typical acceptance against 84.46 for exact speculative sampling, with 7.23 against 5.44 tokens accepted per round; on the harder GPQA, 38.89 against 42.93. Their comment: the approach “distorts the verifier distribution, potentially degrading output quality when the verifier encodes critical information.”</li>
+<li>Wang, Zhou et al. (2026 preprint) point out a confound. Restricting acceptance to an “allowed set” of the target is what a truncation sampler does (the set above is that of $\eta$-sampling); so part of the quality reported for typical acceptance comes from truncating, not from verifying. Compared with the right baseline — the target itself with the same truncation — on LLaMA-3.1-8B with EAGLE-3 heads, typical acceptance scores 69.84 / 56.88 / 27.91 / 81.40 on MATH / MBPP+ / INCLUDE / BFCL, against 76.12 / 62.17 / 36.73 / 86.30 for the truncated target, and “falls below the EAGLE-3 baseline on all four benchmarks”.</li>
+<li>The same authors observe that the gap between exact verification and truncation-based verification “widens sharply with task difficulty, increasing from +0.38 pp on GSM8K to +6.67 pp on AIME”: “easy tasks such as GSM8K mask the distortions introduced by lossy verification”.</li>
+</ul>
+<div class="box reflex"><div class="box-h">Reflex</div>
+<p>When you see a lossy rule evaluated on one easy benchmark → ask for a hard one. When you see a lossy rule compared with exact speculative decoding at a different sampling configuration → ask what the target alone scores with the lossy rule's effective sampler.</p>
+</div>

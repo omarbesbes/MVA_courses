@@ -1,0 +1,75 @@
+<h2 id="mentored">7. Guarantees that protect rare tokens: mentored decoding and CACTUS</h2>
+<p class="tldr">Fix a budget in Kullback–Leibler divergence and accept as much as the budget allows. The solution keeps the output inside a band around the target, from above <em>and</em> from below (mentored decoding), or lifts only the drafted token as far as the budget permits (CACTUS).</p>
+
+<h3 id="mentored-why">Why change the yardstick</h3>
+<p>§2 ended on a blind spot: total variation counts how much probability moves, not where it lands. A Kullback–Leibler divergence does look at where. $\KL(p\,\|\,\pi)=\sum_vp(v)\log\frac{p(v)}{\pi(v)}$ becomes large when the output $\pi$ <em>starves</em> a token the target wants ($\pi(v)\ll p(v)$): it protects the target's tokens from disappearing. In the other direction, $\KL(\pi\,\|\,p)=\sum_v\pi(v)\log\frac{\pi(v)}{p(v)}$ becomes large when the output <em>inflates</em> a token the target finds unlikely ($\pi(v)\gg p(v)$): it protects against rare tokens becoming frequent. Mentored decoding constrains the first, CACTUS the second.</p>
+
+<h3 id="mentored-rule">Mentored decoding</h3>
+<article class="mcard">
+<header class="mcard-h">
+<p class="mcard-name">Mentored decoding</p>
+<p class="mcard-meta">V. Tran-Thien · blog post “An Optimal Lossy Variant of Speculative Decoding”, September 2023, with a written proof and code · <a href="https://vivien000.github.io/blog/journal/a-provably-optimal-lossy-variant-of-speculative-decoding.html">post</a> (not peer-reviewed)</p>
+<p class="tags"><span class="tag lossy">lossy</span><span class="tag free">training-free</span><span class="tag unit">token level</span><span class="tag year">2023</span></p>
+</header>
+<dl class="mfacts">
+<dt class="tries">What it tries</dt><dd>Solve the problem exactly: among all rules $(b,r)$, maximise the probability of accepting the draft subject to $\KL(p\,\|\,\text{out})\le D$ at each position.</dd>
+<dt class="how">How it decides</dt><dd>The optimum is a lenient test, $\min\big(1,\frac{p(x)}{\alpha\,q(x)}\big)$, with a factor $\alpha$ found <em>for each position</em> by binary search so that the divergence equals $D$, and a flattened residual proportional to $\pos{p/\beta-q}$. Positions where $\KL(p\,\|\,q)\le D$ accept the draft outright.</dd>
+<dt class="gets">What it achieves</dt><dd>A guarantee at every position, for every token: $\frac{p(v)}{\beta}\le\text{out}(v)\le\frac{p(v)}{\alpha}$, and $\KL(p\,\|\,\text{out})\le D$. One small experiment (T5-large with T5-small, 1000 translation examples, one V100), reported as a chart: more tokens per second than exact speculative decoding; BLEU not significantly different for the smallest $D$, lower as $D$ grows.</dd>
+<dt class="costs">What it costs</dt><dd>A search per position. The author asks for “extensive experiments”; later comparisons (below) mostly evaluate a simplified version, which is plain lenience.</dd>
+</dl>
+</article>
+<div class="box paper"><div class="box-h">In the post <span class="ref">Tran-Thien 2023; the post writes $p$ for the draft and $q$ for the target</span></div>
+<p>“we want to find the values of $(r_i)_{i \in V}$ or $(s_i)_{i \in V}$ that maximally increase the probability to accept $i$ while maintaining the Kullback-Leibler divergence between the resulting distribution and the target distribution under a certain constant $D$.” The solution: “$r_i = \min(1, \frac{q_i}{\alpha p_i})$ for a certain $\alpha$; $s_i = \frac{1}{1-\sum_jp_jr_j}\max(0, \frac{q_i}{\beta}-p_i)$ for a certain $\beta$”.</p>
+</div>
+<dl class="decode">
+<dt>$r_i$, $s_i$</dt><dd>Our acceptance probability $b$ and replacement distribution $r$ (the letters of the post are the other way round, like its $p$ and $q$).</dd>
+<dt>the constraint</dt><dd>In our letters $\KL(p\,\|\,\text{out})\le D$: the divergence <em>from the target</em> to the output, the one that punishes starving the target's tokens.</dd>
+<dt>$\alpha$ and $\beta$</dt><dd>Two numbers, $\alpha\le1\le\beta$, tied to each other by the fact that what is rejected must equal what is refilled: $\sum_v\pos{q(v)-p(v)/\alpha}=\sum_v\pos{p(v)/\beta-q(v)}$. Choosing $D$ fixes both.</dd>
+</dl>
+<p>Put the acceptance and the residual together and the output has a striking form: it is the drafter's distribution <strong>clipped into a band around the target</strong>,</p>
+$$\text{out}(v)=\min\Big(\max\Big(q(v),\ \frac{p(v)}{\beta}\Big),\ \frac{p(v)}{\alpha}\Big).$$
+<p>Where the drafter is within the band, the output is the drafter's probability; where it over-proposes, the output is capped at $p/\alpha$ (lenience's cap); where it under-proposes, the output is raised to $p/\beta$. The lower edge is precisely the guarantee that lenience lacks (“there is no guarantee on the minimum probability”).</p>
+<div class="box example"><div class="box-h">Worked example — same acceptance, same total variation, different residual</div>
+<p>Four tokens, $p=(0.4,\,0.3,\,0.2,\,0.1)$, $q=(0.1,\,0.2,\,0.3,\,0.4)$, and a lenient test with factor $0.5$ in both cases: acceptance $0.8$, rejection $0.2$.</p>
+<div class="table-wrap"><table>
+<thead><tr><th></th><th>residual</th><th>output</th><th>$\TV(\text{out},p)$</th><th>$\KL(p\,\|\,\text{out})$</th><th>largest $p(v)/\text{out}(v)$</th></tr></thead>
+<tbody>
+<tr><td>lenience (§3)</td><td>$\propto\pos{p-q}=(0.75,\ 0.25,\ 0,\ 0)$</td><td>$(0.25,\ 0.25,\ 0.3,\ 0.2)$</td><td>0.2</td><td>0.092</td><td>1.6</td></tr>
+<tr><td>mentored ($\beta=1.4$)</td><td>$\propto\pos{p/1.4-q}=(0.93,\ 0.07,\ 0,\ 0)$</td><td>$(0.286,\ 0.214,\ 0.3,\ 0.2)$</td><td>0.2</td><td>0.085</td><td>1.4</td></tr>
+</tbody></table></div>
+<p>Both rules are on the front of §2. Lenience refills the two starved tokens in proportion to their gaps, and leaves the first one at $0.25$ for a target of $0.4$. Mentored decoding sends almost all the refill to that token, so that no token is below $p/1.4$. Total variation cannot tell the two apart; the Kullback–Leibler divergence can.</p>
+</div>
+<figure class="fig"><!-- include figures/03/band.svg --><figcaption>The band of mentored decoding on the worked example ($\alpha=0.5$, $\beta=1.4$). For each token the grey bracket goes from $p/\beta$ to $p/\alpha$; the orange mark is the drafter's probability and the black dot the output: the drafter's probability when it is inside the bracket, the nearest end otherwise.</figcaption></figure>
+<p><strong>What later papers did with it.</strong> Narasimhan et al. (§8) prove that their framework contains mentored decoding (the surrogate target is the clipped distribution above) and compare the full rule with its simplification $\beta=1$: on their translation and summarisation tasks, “setting $\beta=1$ provides trade-offs comparable to or better than using a tuned value of $\beta$”, perhaps, they say, because they measure BLEU and ROUGE and not the divergence that the rule optimises. The 2026 benchmarks of §10 also use the $\beta=1$ version with one global factor — which is the lenience of §3 under another name. Keep this in mind when you read “mentored decoding” in a table.</p>
+
+<h3 id="cactus">CACTUS</h3>
+<article class="mcard">
+<header class="mcard-h">
+<p class="mcard-name">Cactus — constrained acceptance speculative sampling</p>
+<p class="mcard-meta">Y. Hao, L. Mou · ICLR 2026 · <a href="https://arxiv.org/abs/2604.04987">arXiv 2604.04987</a></p>
+<p class="tags"><span class="tag lossy">lossy</span><span class="tag free">training-free</span><span class="tag unit">token level</span><span class="tag year">2026</span></p>
+</header>
+<dl class="mfacts">
+<dt class="tries">What it tries</dt><dd>Replace the heuristic of typical acceptance by an optimisation with a hard constraint: accept the drafted token as often as possible while the distribution sampled from stays within a divergence $\delta$ of the verifier's.</dd>
+<dt class="how">How it decides</dt><dd>For the drafted token $x$, lift its target probability to $\gamma^*=\min\big(p(x)+\sqrt{2\delta\,p(x)(1-p(x))},\,1\big)$, scale the other tokens down, and run the exact test against that: accept with probability $\min\big(1,\frac{\gamma^*}{q(x)}\big)$. Recommended $\delta=1$.</dd>
+<dt class="gets">What it achieves</dt><dd>Qwen3-8B and 14B verifiers with a 0.6B drafter, sampling (temperature 0.6, top-$p$ 0.95, top-$k$ 20), drafts of 20 tokens, $\delta=1$: rejected tokens down by 30% to 50% relative to exact speculative sampling; tokens accepted per round 5.44 → 7.61 (GSM8K, 8B). Scores: GSM8K 84.46 → 86.43 (8B) and 91.89 → 92.87 (14B); IFEval 84.10 → 84.84 and 84.47 → 86.32; GPQA 42.93 → 39.90 (8B) but 40.91 → 45.46 (14B). The paper reports “nearly 1.9× speedup over the verifier alone” for the 14B pair with drafts of 10.</dd>
+<dt class="costs">What it costs</dt><dd>The bound is per drafted token; for the distribution actually sampled the paper proves a bound through a function with no closed form. With $\delta=1$ the lift is large for rare tokens (example below). Independent 2026 benchmarks class it among the aggressive rules (§10).</dd>
+</dl>
+</article>
+<p>The construction is the surrogate-target idea of §2, with a twist: the surrogate depends on which token was drafted. Given the drafted token $x$, CACTUS asks for the distribution $h$ that gives $x$ as much probability as possible under the constraint $\KL(h\,\|\,p)\le\delta$ (the paper's theory allows any $f$-divergence and its experiments use this one). The answer raises $h(x)$ to $\gamma^*$ and shrinks all the other tokens by the same factor; the paper then notes that the exact test toward $h$ is the best way to sample it (its Observation 1, our condition (i)).</p>
+<div class="box example"><div class="box-h">Worked example — how far the drafted token is lifted</div>
+<div class="table-wrap"><table>
+<thead><tr><th>target probability $p(x)$ of the drafted token</th><th>$\delta$</th><th>lifted to $\gamma^*$</th><th>accepted with probability, if $q(x)=0.5$</th></tr></thead>
+<tbody>
+<tr><td>0.30</td><td>1</td><td>0.948</td><td>1 (exact rule: 0.6)</td></tr>
+<tr><td>0.30</td><td>0.1</td><td>0.505</td><td>1</td></tr>
+<tr><td>0.02</td><td>1</td><td>0.218</td><td>0.436 (exact rule: 0.04)</td></tr>
+<tr><td>0.02</td><td>0.1</td><td>0.083</td><td>0.165</td></tr>
+</tbody></table></div>
+<p>A plausible token (30%) proposed by the drafter is accepted every time: the wasteful rejections of the exact rule are gone. A token the target gives 2% is accepted 44 times out of 100 when $\delta=1$, eleven times more than the exact rule. One nat of divergence is a large budget.</p>
+</div>
+<p>The numbers of the card deserve a careful look. On GSM8K and IFEval the scores do not move outside the noise. On GPQA they move in both directions, by more than the run-to-run standard deviation the paper reports for the verifier alone (0.8 to 1.8 points): down three points with one verifier, up four and a half with the other. This is the usual picture for a relaxed rule on a hard benchmark: the effect is not small, and it is not reliably of one sign.</p>
+<div class="quiz"><p>Mentored decoding accepts the draft outright at every position where $\KL(p\,\|\,q)\le D$. What is the output distribution at such a position, and which rule of §8 does this resemble?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body">
+<p>The output is $q$ itself: accepting every draft means sampling from the drafter, which is allowed because $q$ already satisfies the constraint. At those positions the rule is “the two distributions are close enough, take the draft”: exactly fuzzy speculative decoding (§8), which makes this test with a Jensen–Shannon divergence. The difference is at the other positions: mentored decoding still relaxes as far as the budget allows; fuzzy speculative decoding falls back to the target.</p>
+</div></details></div>
