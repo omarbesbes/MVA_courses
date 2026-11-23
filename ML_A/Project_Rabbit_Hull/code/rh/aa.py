@@ -294,7 +294,7 @@ def _aa_run(X, K, A, B, n_iter, tol, n_inner, sst):
 
 
 def archetypal_analysis(X, K, n_iter=500, n_restarts=3, seed=0, tol=1e-7, init_from_kmeans=True,
-                        n_inner=10, dtype=None, verbose=False):
+                        n_inner=10, dtype=None, verbose=False, kmeans_restarts=3):
     """Archetypal analysis: minimise ||X - A B X||_F^2 with the rows of A and B on the simplex.
 
     Parameters
@@ -305,12 +305,14 @@ def archetypal_analysis(X, K, n_iter=500, n_restarts=3, seed=0, tol=1e-7, init_f
         returned error is then <= the k-means error. The second starts from FurthestSum, the others from random
         data points.
     dtype : float64 by default; pass np.float32 for large problems.
+    kmeans_restarts : number of k-means++ initialisations of the k-means run that provides the first start
+        (its best solution is used, and its error is returned as ``kmeans_fvu``).
 
     Returns
     -------
-    dict with ``A`` (N, K), ``B`` (K, N), ``Z`` = B X (archetypes, in the coordinates of X), ``fvu``,
-    ``history`` (FVU per outer iteration of the best run), ``kmeans_fvu`` (if the k-means start was used),
-    ``fvu_restarts``.
+    dict with ``A`` (N, K), ``B`` (K, N), ``Z`` = B X (archetypes, in the coordinates of X), ``fvu``
+    (recomputed at the end from the residual X - A Z itself, hence >= 0), ``history`` (FVU per outer iteration
+    of the best run), ``kmeans_fvu`` (if the k-means start was used), ``fvu_restarts``.
 
     Notes
     -----
@@ -331,7 +333,7 @@ def archetypal_analysis(X, K, n_iter=500, n_restarts=3, seed=0, tol=1e-7, init_f
     km_fvu = None
     for r in range(max(1, n_restarts)):
         if r == 0 and init_from_kmeans:
-            km = kmeans(Xr, K, n_restarts=3, seed=int(rng.integers(2 ** 31)))
+            km = kmeans(Xr, K, n_restarts=kmeans_restarts, seed=int(rng.integers(2 ** 31)))
             km_fvu = km["fvu"]
             labels = km["labels"]
             A0 = np.zeros((N, K), dtype=dtype)
@@ -354,10 +356,14 @@ def archetypal_analysis(X, K, n_iter=500, n_restarts=3, seed=0, tol=1e-7, init_f
             print(f"  AA restart {r}: fvu = {cost / sst:.6f} after {len(hist) - 2} iterations")
         if best is None or cost < best["cost"]:
             best = {"A": A, "B": B, "cost": cost, "history": hist}
+    # the costs above come from the expansion sst - 2 <A, X Z^T> + <A Z Z^T, A>, which loses digits when the
+    # fit is nearly exact; the reported error is the residual itself
+    resid = Xr - best["A"] @ (best["B"] @ Xr)
+    cost = float((resid.astype(np.float64) ** 2).sum())
     out = {
         "A": best["A"], "B": best["B"],
         "Z": best["B"].astype(np.float64) @ X0.astype(np.float64),
-        "fvu": best["cost"] / sst if sst > 0 else 0.0,
+        "fvu": cost / sst if sst > 0 else 0.0,
         "history": best["history"], "fvu_restarts": fvus,
     }
     if km_fvu is not None:
