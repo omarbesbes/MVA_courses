@@ -1,0 +1,64 @@
+<!--
+title: Part 0 — The Model and the Method
+short: 1 · Background
+description: Vision transformers, DINOv2, linear probes, superposition and the linear representation hypothesis, dictionary learning and (archetypal) sparse autoencoders: what the paper assumes you know (paper §1–2, App. B, App. K).
+subtitle: Everything the paper takes for granted before its first result: how DINOv2 turns an image into 261 vectors, why one looks for concepts rather than neurons, and how a sparse autoencoder produces the 32,000-concept dictionary.
+kicker: Into the Rabbit Hull · study guide · paper §1–2, App. B, K
+-->
+<div class="box objectives"><div class="box-h">After this page you can</div>
+<ul>
+<li>describe what a DINOv2 ViT-B/14 with registers computes: 261 tokens of dimension 768, attention heads, residual stream, LayerNorm, MLP;</li>
+<li>write one attention head as a weighted average of value vectors, and say why this is the formula used in §7 of the paper;</li>
+<li>explain how DINOv2 is trained (DINO, iBOT, KoLeo) and what a "frozen features + linear probe" evaluation is;</li>
+<li>say why neurons are not the unit of interpretation (polysemanticity, superposition) and state the linear representation hypothesis in words;</li>
+<li>write $\mA\approx\mZ\mD$ with the constraint that defines k-means, PCA, NMF, archetypal analysis and sparse autoencoders, and read a sparse code;</li>
+<li>explain the TopK and BatchTopK rules and the archetypal constraint $\mD=\mS\mC$ used for the paper's dictionary;</li>
+<li>use the DinoVision demo and read a concept heat map or a feature visualisation.</li>
+</ul></div>
+
+<h2 id="start">Before you start</h2>
+<p class="tldr">The paper (§1–2) states in a few lines what this page unfolds: a model (DINOv2), a hypothesis (linear representation), a tool (an archetypal sparse autoencoder) and a way to look at the result (heat maps, visualisations). Nothing on this page is a result of the paper; it is the setting of all of them.</p>
+
+<h3 id="how-to-read">How to read this page</h3>
+<p>Sections 1–2 describe the network. Section 3 explains why one looks for concepts. Section 4 explains how they are extracted. Section 5 shows how to look at them. Facts about other papers were checked against their primary sources; where the paper is the only source, the text says "according to the paper". Every number not in the paper is computed by <code>checks/check_01.py</code>.</p>
+
+<h3 id="story">The story of the page in six steps</h3>
+<ol class="chain">
+<li><strong>Tokens.</strong> An image becomes a sequence of 261 vectors of dimension 768 (<a href="#vit">§1</a>).</li>
+<li><strong>Layers.</strong> Each block adds an attention update and an MLP update to every token; the sum is the residual stream (<a href="#block">§1.3</a>).</li>
+<li><strong>Training.</strong> DINOv2 learns by self-distillation; its features are used frozen, with linear probes (<a href="#dinov2">§2</a>).</li>
+<li><strong>Concepts.</strong> Neurons mix many things; a representation can hold more features than dimensions if they are sparse (<a href="#interp">§3</a>).</li>
+<li><strong>Dictionary.</strong> Factorise the activations as $\mA\approx\mZ\mD$ with sparse $\mZ$; the paper uses an archetypal SAE (<a href="#dictionary-learning">§4</a>).</li>
+<li><strong>Looking.</strong> Heat maps, visualisations, and the DinoVision demo (<a href="#seeing-concepts">§5</a>).</li>
+</ol>
+
+<h3 id="fig1">The paper's overview figure</h3>
+<figure class="paperfig"><img data-src="paper_figures/figure0.jpg" alt="Eight tiles: Elsewhere concepts, Border concepts, Monocular depth cue concepts, Token-specific concepts, Geometry and statistics of concepts, Effect of position, The shape of an image, Minkowski representation hypothesis">
+<figcaption><strong>Fig. 1 of the paper (p. 1).</strong> Overview in three parts, eight tiles. The first row is Part I (downstream usage), the second row is Parts II and III.<span class="src">From the paper (Fel, Wang et al., 2026), CC BY 4.0.</span></figcaption></figure>
+<div class="box method"><div class="box-h">How to read this figure</div>
+<ul>
+<li><strong>Tile 1, Elsewhere concepts (classification)</strong>: top row images, middle row where a concept fires (not on the animal), bottom row what it depends on. Guide: <a href="03_concepts_tasks.html#elsewhere">page 3</a>.</li>
+<li><strong>Tile 2, Border concepts (segmentation)</strong>: the concepts used for segmentation form a tight cluster. <a href="03_concepts_tasks.html#borders">Page 3</a>.</li>
+<li><strong>Tile 3, Monocular depth cues</strong>: feature visualisations of three families (projective geometry, shadow, texture transition). <a href="03_concepts_tasks.html#depth">Page 3</a>. The way these pictures are made is in <a href="#feature-viz">§5.2</a> of this page.</li>
+<li><strong>Tile 4, Token-specific concepts</strong>: concepts that fire only on register, class or position tokens. <a href="03_concepts_tasks.html#token-types">Page 3</a>; the tokens themselves are in <a href="#tokens">§1.1</a>.</li>
+<li><strong>Tile 5, Geometry and statistics</strong>: the network of co-activations and the geometry of atoms. <a href="04_statistics_geometry.html#coactivation">Page 4</a>.</li>
+<li><strong>Tile 6, Effect of position</strong>: colour map of the 16×16 positions and PCA of the position basis across layers. <a href="04_statistics_geometry.html#position">Page 4</a>.</li>
+<li><strong>Tile 7, The shape of an image</strong>: first three PCA components of the patch tokens of one image as colours. <a href="04_statistics_geometry.html#pca-maps">Page 4</a>.</li>
+<li><strong>Tile 8, Minkowski representation hypothesis</strong>: $\mathcal{X}=\mathcal{P}_i\oplus\mathcal{P}_j$, a sum of two polytopes. <a href="05_minkowski.html#definition">Page 5</a>; the attention formula it uses is in <a href="#attention">§1.2</a>.</li>
+</ul></div>
+
+<h3 id="needs">What you need</h3>
+<p>Linear algebra, softmax, and what a neural network is. The mathematics used later (coherence, convex hulls, PCA) is recalled on <a href="02_toolbox.html">page 2</a>.</p>
+
+<h3 id="notation">Notation decoder</h3>
+<div class="table-wrap"><table>
+<tr><th>Symbol</th><th>Meaning on this page</th><th>Size</th></tr>
+<tr><td>$\mX$ (or $\mA$)</td><td>the token matrix of one image entering a layer; the paper writes $\va=f(\vx)$ for the activations; stacked over images, $\mA$ is the data matrix of the dictionary</td><td>$261\times768$ ; $nt\times d$</td></tr>
+<tr><td>$\mQ,\mK,\mV$</td><td>queries, keys, values of one head (not the dictionary or the codes)</td><td>$261\times64$</td></tr>
+<tr><td>$\mW_Q,\mW_K,\mW_V,\mW_O$</td><td>learned projections of a head</td><td>$768\times64$, $64\times768$</td></tr>
+<tr><td>$\val$</td><td>attention weights of one query, a point of the simplex $\simplex^m$</td><td>$m=261$</td></tr>
+<tr><td>$\mZ$</td><td>sparse non-negative codes (here: <em>not</em> archetypes)</td><td>$nt\times c$</td></tr>
+<tr><td>$\mD$</td><td>dictionary, atoms as rows</td><td>$c\times d$</td></tr>
+<tr><td>$\mS,\mC$</td><td>row-stochastic matrix and centroids with $\mD=\mS\mC$</td><td>$c\times 128{,}000$ ; $128{,}000\times d$</td></tr>
+<tr><td>$d,t,c,k$</td><td>width 768, tokens 261, atoms 32,000, active codes 8</td><td></td></tr>
+</table></div>

@@ -1,0 +1,56 @@
+<!--
+title: Part II — Statistics, Geometry and the Shape of an Image
+short: 4 · Statistics & geometry
+description: Occurrence statistics of the codes, geometry of the 32,000 atoms, antipodal pairs, PCA maps of patch tokens and the position subspace (paper §5–6, App. E, F, H, I).
+subtitle: What the codes Z and the dictionary D look like when one measures them, and what a single image looks like in activation space. The paper uses these observations to argue that a purely linear, near-orthogonal picture is incomplete.
+kicker: Into the Rabbit Hull · study guide · paper §5–6
+-->
+<div class="box objectives"><div class="box-h">After this page you can</div>
+<ul>
+<li>read Figure 9 and explain the triangular envelope, the three dense positional concepts, and why a dense concept is awkward for a code with $k=8$ active entries;</li>
+<li>decode the two baselines of Appendix E for the spectrum of $\mZ\T\mZ$, and say why the evidence of Figure 9 (right) is weak;</li>
+<li>compute the Welch bound, the typical coherence of random vectors, the tight-frame singular value $\sqrt{c/d}$ and the Marchenko–Pastur band, and use them to read Figure 10;</li>
+<li>explain antipodal atoms with a non-negative code, and the cosine-similarity pitfall (Figure 11 A);</li>
+<li>derive the trace identity $\tr[\mZ\T\mZ\,\mD\mD\T]=\norm{\mZ\mD}_F^2$ and say what it does and does not imply for Figure 11 B;</li>
+<li>explain how a PCA map is made, why PCA cannot create curvature, and what Figures 12, 13, 22 and 27 show;</li>
+<li>define the position basis $\mP$, read Figures 14 and 15, and spot the inconsistency between stable rank and $R^2$ in Figure 14;</li>
+<li>state the "interpolative geometry" argument from the DINO/iBOT heads and KoLeo, and say which part is a conjecture.</li>
+</ul></div>
+
+<h2 id="start">Before you start</h2>
+<p class="tldr">Part II of the paper has no theorem. It measures things: how often and how strongly concepts fire, how the atoms sit relative to each other, and what the tokens of one image look like. The tone is descriptive; the conclusion ("beyond the LRH") is a reading of those measurements, and we mark where it goes further than they do.</p>
+
+<h3 id="how-to-read">How to read this page</h3>
+<p>Each section starts with a one-line summary, quotes the paper in a <em>paper</em> box with the page of the arXiv v3 PDF, and decodes it. Every figure of the paper is shown and followed by a "How to read this figure" box. Remarks of ours are in <em>Our reading</em> boxes and are developed on <a href="06_critical_reading.html#verdict">page 6</a>. Numbers that are not in the paper (marked "our estimate" or "recomputed") come from <code>checks/check_04.py</code>.</p>
+
+<h3 id="story">The story of the page in seven steps</h3>
+<ol class="chain">
+<li><strong>Occurrence.</strong> Most concepts fire rarely; three concepts about position fire on about a quarter of all tokens (Fig. 9 A–C).</li>
+<li><strong>Co-activation.</strong> The Gram matrix $\mZ\T\mZ$ has a smooth spectrum, between two baselines (Fig. 9 right).</li>
+<li><strong>Geometry of the atoms.</strong> Inner products have heavy tails, singular values decay fast, atoms are distributed over many coordinates (Fig. 10).</li>
+<li><strong>Antipodal pairs, and usage versus geometry.</strong> Some atoms are almost opposite; co-activation explains little of the geometry (Fig. 11).</li>
+<li><strong>The shape of an image.</strong> PCA maps of the patch tokens of one image are smooth and follow objects (Figs. 12, 13, 22).</li>
+<li><strong>Position.</strong> A position basis that is high-rank in early layers and two-dimensional in late ones; smoothness survives its removal (Figs. 14, 15, 27).</li>
+<li><strong>Interpolative geometry.</strong> A conjecture that tokens are mixtures of prototypes; page 5 turns it into the Minkowski Representation Hypothesis.</li>
+</ol>
+
+<h3 id="needs">What you need</h3>
+<ul>
+<li>Coherence, Welch bound, Grassmannian frames, Johnson–Lindenstrauss, tight frames and the Marchenko–Pastur band: <a href="02_toolbox.html#frames">frames</a>.</li>
+<li>Stable rank, Hoyer score, cosine similarity: <a href="02_toolbox.html#scores">scores</a>. PCA: <a href="02_toolbox.html#pca">PCA</a>.</li>
+<li>The dictionary $\mD$, codes $\mZ$, the archetypal SAE: <a href="01_background.html#dictionary-learning">dictionary learning</a>. The tokens (<code>cls</code>, registers, patches): <a href="01_background.html#tokens">tokens</a>.</li>
+<li>The setup of page 3: <a href="03_concepts_tasks.html#lrh-setup">LRH setup</a>, <a href="03_concepts_tasks.html#token-types">token types</a>.</li>
+</ul>
+
+<h3 id="notation">Notation decoder</h3>
+<div class="table-wrap"><table>
+<tr><th>Symbol</th><th>Meaning here</th><th>Size</th></tr>
+<tr><td>$\mA$</td><td>token activations (rows = tokens); not the attention matrix</td><td>$nt\times d$</td></tr>
+<tr><td>$\mZ$</td><td>sparse non-negative codes, at most $k=8$ non-zeros per row</td><td>$nt\times c$</td></tr>
+<tr><td>$\mD$</td><td>dictionary, one unit atom $\mD_i$ per row, $\mA\approx\mZ\mD$</td><td>$c\times d$</td></tr>
+<tr><td>$\mG=\mZ\T\mZ$</td><td>co-activation Gram matrix of the codes: $G_{ij}=\sum_{\text{tokens}}Z_{\cdot i}Z_{\cdot j}$</td><td>$c\times c$</td></tr>
+<tr><td>$\mD\mD\T$</td><td>Gram matrix of the atoms: inner products $\ps{\mD_i}{\mD_j}$</td><td>$c\times c$</td></tr>
+<tr><td>$\mP$</td><td>position basis: one vector per grid position, for one layer</td><td>$256\times d$</td></tr>
+<tr><td>$c,d,k,t$</td><td>$32{,}000$ atoms, $768$ width, $8$ active codes, $261$ tokens per image</td><td></td></tr>
+</table></div>
+<p>Two sizes need care. $\mZ$ has one row per <em>token</em>, over all images: with $1.4$M images that is about $3.65\times10^{8}$ rows (our estimate: $1.4\times10^6\times261$). The matrix $\mG$ is therefore a sum over more than $3\times10^8$ tokens, and the paper's "number of firings" counts tokens, not images.</p>

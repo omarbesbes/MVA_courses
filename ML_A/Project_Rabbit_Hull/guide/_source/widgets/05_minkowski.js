@@ -101,9 +101,9 @@ WIDGETS.p5sum = function (box) {
     A.forEach(function (v) { plot.dot(v[0], v[1], 6, "f1 drag"); });
     B.forEach(function (v) { plot.dot(v[0], v[1], 6, "f5 drag"); });
     plot.dot(p1[0], p1[1], 6, "f1"); plot.dot(p2[0], p2[1], 6, "f5");
-    plot.text(p1[0], p1[1], "p₁", "tx", "start", 8, -8); plot.text(p2[0], p2[1], "p₂", "tx", "start", 8, -8);
+    plot.text(p1[0], p1[1], "p₁", "tx", "end", -9, 16); plot.text(p2[0], p2[1], "p₂", "tx", "start", 9, 16);
     plot.seg(0, 0, p1[0], p1[1], "ln c1 thin"); plot.seg(p1[0], p1[1], x[0], x[1], "ln c5 thin");
-    plot.dot(x[0], x[1], 8, "f3"); plot.text(x[0], x[1], "x = p₁ + p₂", "tx-b", "start", 10, -10);
+    plot.dot(x[0], x[1], 8, "f3"); plot.text(x[0], x[1], "x = p₁ + p₂", "tx-b", "start", 12, -12);
     out.textContent = "p₁ = (" + fmt(p1[0], 2) + ", " + fmt(p1[1], 2) + "),  p₂ = (" + fmt(p2[0], 2) + ", " + fmt(p2[1], 2) + "),  x = (" + fmt(x[0], 2) + ", " + fmt(x[1], 2) + ")" +
       "\nvertices: P₁ " + HA.length + ", P₂ " + HB.length + ", P₁ ⊕ P₂ " + Sm.length + "  (at most " + (HA.length + HB.length) + ": the edges of the sum are the edges of the summands, merged by direction)" +
       "\nsupport in direction (1, 1): h₁ = " + fmt(supportFn(HA, [1, 1]), 2) + "  +  h₂ = " + fmt(supportFn(HB, [1, 1]), 2) + "  =  h₁₊₂ = " + fmt(supportFn(Sm, [1, 1]), 2);
@@ -125,9 +125,9 @@ WIDGETS.p5sum = function (box) {
 /* ---------------- directional versus archetypal steering ---------------- */
 WIDGETS.p5steer = function (box) {
   var ui = scaffold(box, "Steering: along a direction, or towards an archetype");
-  var plot = new Plot(ui.svg, { w: 560, h: 340, x: [-1.5, 8], y: [-1.5, 5.5], label: "A polytope, a start point, a steering direction and an archetype" });
+  var plot = new Plot(ui.svg, { w: 560, h: 280, x: [-1.5, 8], y: [-1.2, 5], label: "A polytope, a start point, a steering direction and an archetype" });
   var svg2 = addSvg(box, ui.svg);
-  var plot2 = new Plot(svg2, { w: 560, h: 250, x: [0, 2.5], y: [0, 1.05], label: "Proximity to the archetype as a function of the steering strength" });
+  var plot2 = new Plot(svg2, { w: 560, h: 200, x: [0, 2.5], y: [0, 1.05], label: "Proximity to the archetype as a function of the steering strength" });
   var P = [[0.5, 0.2], [5.5, 0.8], [4.6, 4.2], [0.2, 3.2]], a = P[1];
   var pts = [[1.2, 1.4]], angS, sS, out;
   function draw() {
@@ -143,7 +143,7 @@ WIDGETS.p5steer = function (box) {
     plot.seg(x[0], x[1], a[0], a[1], "ln c1 dash thin");
     var d = dirAt(s), r = arcAt(s);
     plot.seg(x[0], x[1], d[0], d[1], "ln c2"); plot.seg(x[0], x[1], r[0], r[1], "ln c1");
-    plot.dot(a[0], a[1], 7, "f1"); plot.text(a[0], a[1], "archetype a", "tx-b", "end", -10, 4);
+    plot.dot(a[0], a[1], 7, "f1"); plot.text(a[0], a[1], "archetype a", "tx-b", "start", -30, -14);
     plot.dot(x[0], x[1], 7, "f3 drag"); plot.text(x[0], x[1], "x (drag)", "tx", "start", 10, 16);
     plot.dot(d[0], d[1], 6, "f2"); plot.dot(r[0], r[1], 6, "f1");
     // curves

@@ -61,13 +61,13 @@ for tau in [1,.5,.25,.1]:
 print("tau for bound<=0.01: need diam*2e^{-1/tau}<=.01 ->",1/np.log(2*diam/.01))
 
 print("== 4. steering")
-xx=np.array([0,0.]); a=np.array([3,4.]); v=np.array([1,0.])
-ts=[0,1,2,3,4,6]
+xx=np.array([0,0.]); a=np.array([3,1.]); v=np.array([1,0.])
+ts=[0,1,2,3,4,6]; print('norm a-x',np.linalg.norm(a-xx))
 print("directional: t, dist, prox"); 
 for t in ts: d=np.linalg.norm(xx+t*v-a); print(t,d,np.exp(-d))
 print("archetypal: t, dist, prox")
 for t in [0,.25,.5,.75,1]: d=np.linalg.norm(xx+t*(a-xx)-a); print(t,d,np.exp(-d))
-print("t*",-(v@(xx-a))/(v@v),"min dist",np.linalg.norm((xx-a)-((xx-a)@v)/(v@v)*v), "e^-4",np.exp(-4))
+print("t*",-(v@(xx-a))/(v@v),"min dist",np.linalg.norm((xx-a)-((xx-a)@v)/(v@v)*v), "e^-1",np.exp(-1))
 
 print("== 5. identifiability")
 Tr=[(0,0),(1,0),(0,1)]; 
@@ -129,3 +129,32 @@ a,b=2,1; print("rectangle a,b",a,b)
 # indecomposability: triangle -- parallel edges: none
 print("== 6. dimension counts: m=261; K rank<=64 -> logit images dimension<=65; simplex dim m-1=260; heads H=12, d_k=64, 12*64=768")
 print("Minkowski sum of two triangles in R^2 : vertices count <= 6")
+
+print("== 7. hexagon decompositions of x0=(.5,0)")
+Tv=Tt
+p=.5*Tv[0]+.5*Tv[1]; q=Tv[0]; print("p",p,"q",q,"p-q",p-q)
+print("segments t=(0,.5,-.5):",.5*D[1]-.5*D[2])
+# triangle indecomposable: lambda_k e_k sum zero forces equal lambdas
+e=[Tv[1]-Tv[0],Tv[2]-Tv[1],Tv[0]-Tv[2]]; print("edge sum",sum(e)); 
+M=np.array(e[:2]).T; print("solve l1e1+l2e2+l3e3=0 -> l1=l2=l3: rank of [e1,e2]",np.linalg.matrix_rank(M))
+# T+(-T) edge directions
+print("edge angles of T:",[round(np.degrees(np.arctan2(v[1],v[0]))%360) for v in e])
+# triangle midpoint rectangle area: triangle T, sum with its half-copy
+
+print("== 8. exercises")
+T2=np.array([[0,0],[2,0],[0,2.]]); S2=np.array([[0,0],[1,1.]])
+print("ex1 sum vertices",hull([tuple(a+b) for a in T2 for b in S2]))
+print("(3,2) in?",inP([tuple(a+b) for a in T2 for b in S2],np.array([3,2.])),"(2,2) in?",inP([tuple(a+b) for a in T2 for b in S2],np.array([2,2.])))
+for sv in [.5,.75,1]: p2=np.array([sv,sv]); p1=np.array([2,1])-p2; print("s",sv,"p1",p1,"in T",p1[0]>=-1e-12 and p1[1]>=-1e-12 and p1.sum()<=2+1e-12)
+print("ex2 logits for alpha=(.5,.3,.2):",np.log(.3/.5),np.log(.2/.5),"y",np.array([.5,.3,.2])@Vv)
+Vv=np.array([[0,0],[4,0],[1,3.]])
+print("ex4 naive", (2*np.array([1,0.])+[1,1]) + (2*np.array([0,1.])+[1,1]), "true", 2*np.array([1,1.])+[1,1])
+for tau in [.148,.14,.12]:
+    X=np.array([1,0,-1.]); a=np.exp(X/tau); a/=a.sum(); y=a@Vv; dg=np.sqrt(18)
+    print("ex5 tau",tau,"dist",np.linalg.norm(y-Vv[0]),"bound",dg*(np.exp(-1/tau)+np.exp(-2/tau)))
+print("ex7 x=0,a=(3,4),v=(1,0): d(3)=",np.hypot(0,4),"prox",np.exp(-4),"archetypal t=.8 d",.2*5,"prox",np.exp(-1))
+print("ex8 hexagon x=(.5,0): t=(.5+s,-s,s), s in [-.5,0]")
+for sv in [0,-.25,-.5]:
+    t=np.array([.5+sv,-sv,sv]); print(sv,t,D.T@t)
+print("ex9: cube (1,1,0): in union |S|<=1 of axes segments? no; |S|<=2 yes")
+Vs=hull([tuple(a+b) for a in T for b in S]); print("ex_h: h_T(1,-1)",h(T,(1,-1)),"h_S",h(S,(1,-1)),"h_sum",h(Vs,(1,-1)),"| (-1,-1):",h(T,(-1,-1)),h(S,(-1,-1)),h(Vs,(-1,-1)))

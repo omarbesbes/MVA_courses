@@ -1,0 +1,64 @@
+<h2 id="exercises">8. Exercises</h2>
+<p class="tldr">Nine exercises, from computation to proof. Every number was checked by <code>checks/check_05.py</code>.</p>
+
+<div class="exo"><div class="exo-h">Exercise 1 — A Minkowski sum by hand <span class="lvl">★</span></div>
+<p>$\Pc_1=\conv\{(0,0),(2,0),(0,2)\}$, $\Pc_2=\conv\{(0,0),(1,1)\}$. (a) List the vertices of $\Pc_1\oplus\Pc_2$. (b) Is $(3,2)$ in it? Is $(2,2)$? (c) Find all decompositions $(2,1)=\vp_1+\vp_2$ with $\vp_i\in\Pc_i$.</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>Take the hull of the six pairwise sums. For (c) write $\vp_2=(s,s)$, $s\in[0,1]$, and ask when $(2,1)-\vp_2\in\Pc_1$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) Pairwise sums: $(0,0),(1,1),(2,0),(3,1),(0,2),(1,3)$. $(1,1)$ is interior to the hull of the other five, so the vertices are $(0,0),(2,0),(3,1),(1,3),(0,2)$ (five).</p>
+<p>(b) The upper right edge is from $(3,1)$ to $(1,3)$, on the line $x+y=4$, and the sum lies in $x+y\le4$. $(3,2)$ has $x+y=5$: no. $(2,2)$ has $x+y=4$: on the edge, yes ($(2,2)=(1,1)+(1,1)$ with $(1,1)\in\Pc_1$, on its hypotenuse).</p>
+<p>(c) $\vp_1=(2-s,1-s)$ needs $2-s\ge0$, $1-s\ge0$, $(2-s)+(1-s)\le2$, i.e. $s\le1$ and $s\ge\tfrac12$. So $s\in[\tfrac12,1]$: a one-parameter family, e.g. $s=\tfrac12$: $\vp_1=(1.5,0.5)$, $\vp_2=(0.5,0.5)$; $s=1$: $\vp_1=(1,0)$, $\vp_2=(1,1)$. The point has many codes: this is the non-uniqueness of codes of one decomposition, not yet of the decomposition itself.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 2 — A softmax output lies in the hull <span class="lvl">★</span></div>
+<p>$\mV=\{(0,0),(4,0),(1,3)\}$. (a) For logits $(1,0,-1)$ and $\tau=1$ compute the output and check it is in $\conv(\mV)$. (b) Find logits for which the output is $(1.4,0.6)$.</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>(b) Find the barycentric coordinates of the target first, then use $\log\val$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) $e^{1},e^{0},e^{-1}=2.718,1,0.368$, sum $4.086$, so $\val=(0.665,0.245,0.090)$ and $\vy=0.245(4,0)+0.090(1,3)=(1.069,0.270)$. It is in the hull because the weights are non-negative and sum to one.</p>
+<p>(b) Solve $\alpha_2(4,0)+\alpha_3(1,3)=(1.4,0.6)$: $\alpha_3=0.2$, $4\alpha_2=1.4-0.2=1.2$, $\alpha_2=0.3$, $\alpha_1=0.5$. Logits $\log\val=(-0.693,-1.204,-1.609)$, or after subtracting the constant $\log 0.5$, $(0,-0.511,-0.916)$. Both give the same softmax. The weights are unique here because the three values are affinely independent.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 3 — A dimension count for reachability <span class="lvl">★★</span></div>
+<p>A head has $m$ keys in $\R^{d_k}$. (a) Show that the set of reachable logit vectors modulo $\mathbf1$ has dimension at most $\rank\mK$, and that reachability of the whole hull needs $\rank\mK+1\ge m$. (b) Apply it to a head of DINOv2-B ($d_k=64$, $m=261$). (c) What does it say about the dimension of the set of reachable weight vectors?</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>The logit map is $\vq\mapsto\mK\vq$, linear.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) The image of $\vq\mapsto\mK\vq$ is the column space of $\mK$, of dimension $\rank\mK\le\min(m,d_k)$. Adding $\spn\{\mathbf1\}$ adds at most one dimension: $\dim(\Ima\mK+\spn\{\mathbf1\})\le\rank\mK+1$. The condition of Lemma 1 asks this space to be $\R^m$, so $m\le\rank\mK+1$.</p>
+<p>(b) $\rank\mK+1\le65<261$: the condition fails by a wide margin.</p>
+<p>(c) Softmax identifies logits that differ by a multiple of $\mathbf1$ and is a diffeomorphism from $\R^m/\spn\{\mathbf1\}$ onto $\relint\simplex^m$, which has dimension $m-1=260$. The reachable weights form the image of a subspace of dimension at most $64$ (the column space of $\mK$ intersects $\spn\{\mathbf1\}$ trivially or in a line): a set of dimension at most $64$ in a $260$-dimensional simplex. The reachable outputs are at most a 64-parameter family, not the full hull of the values.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 4 — The affine lemma with several tiles <span class="lvl">★★</span></div>
+<p>Two active tiles give $\vx=\vp_1+\vp_2$ with $\vp_1=(1,0)$, $\vp_2=(0,1)$. Let $\gamma(\vx)=2\vx+\vb$, $\vb=(1,1)$. (a) Compute $\gamma(\vx)$. (b) Compute $\sum_i\vp_i'$ if every archetype is replaced by $2\va+\vb$ (the paper's “absorb the bias in each archetype”). (c) Give the correct statement.</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) $\gamma(\vx)=2(1,1)+(1,1)=(3,3)$. (b) $\vp_1'=(2,0)+(1,1)=(3,1)$, $\vp_2'=(0,2)+(1,1)=(1,3)$, sum $(4,4)$: too large by $\vb=(|S|-1)\vb$. (c) $\gamma(\bigmsum_i\Pc_i)=\bigmsum_i\mW\Pc_i\oplus\{\vb\}$: transform the archetypes by $\mW$ only and add the one-point tile $\{\vb\}$ (or add $\vb$ to the archetypes of a single tile). For one tile ($|S|=1$) the paper's statement is exact because the weights sum to one.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 5 — The low-temperature bound <span class="lvl">★★</span></div>
+<p>With $\mV=\{(0,0),(4,0),(1,3)\}$ and logits $(1,0,-1)$: (a) state the bound of Lemma 5 and compute it at $\tau=0.5$. (b) Find a $\tau$ that guarantees an error below $0.01$ and compare with the true error there. (c) Prove the bound.</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>$\Delta=(1,2)$ for the two losers, $\diam=\sqrt{18}$. For (c) subtract $\vv_{j^\star}$ inside the sum.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) $\|\vy-\vv_1\|\le\sqrt{18}(e^{-2}+e^{-4})=4.243\times0.1537=0.652$; the true error is $0.487$.</p>
+<p>(b) $\sqrt{18}(e^{-1/\tau}+e^{-2/\tau})\le2\sqrt{18}e^{-1/\tau}\le0.01$ iff $\tau\le1/\ln(2\sqrt{18}/0.01)=0.148$. At $\tau=0.148$ the bound is $0.0049$ and the true error $0.0046$.</p>
+<p>(c) $\vy-\vv_{j^\star}=\sum_{j\ne j^\star}\alpha_j(\vv_j-\vv_{j^\star})$ (weights sum to 1), so $\|\vy-\vv_{j^\star}\|\le\diam\sum_{j\ne j^\star}\alpha_j$ and $\alpha_j=e^{-\Delta_j/\tau}\alpha_{j^\star}\le e^{-\Delta_j/\tau}$.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 6 — A triangle has no segment as a summand <span class="lvl">★★★</span></div>
+<p>Let $T$ be a non-degenerate triangle in $\R^2$. Prove: (a) if $T=A\oplus B$ with $A=[\mathbf 0,\vw]$ a segment, $\vw\ne0$, then a contradiction; (b) more generally, if $T=A\oplus B$ with $A,B$ convex, then $A$ and $B$ are homothetic to $T$ (or points).</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>Use faces: for a direction $\vu$, the face of $A\oplus B$ in direction $\vu$ is the sum of the faces of $A$ and $B$ in direction $\vu$. For (b) use that the edge vectors of a closed convex polygon sum to $0$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) Let $\vu\perp\vw$, $\vu\ne0$. Then the face of $A$ in direction $\vu$ and in direction $-\vu$ is the whole segment, of length $\|\vw\|>0$. The faces of $A\oplus B$ in directions $\pm\vu$ are the sums $F_A(\pm\vu)\oplus F_B(\pm\vu)$, each containing a translate of $A$: both are segments of positive length, i.e. edges. So $T$ would have two parallel edges with opposite outer normals $\vu$ and $-\vu$. A triangle has three edges, with outer normals pairwise neither equal nor opposite (the three edge vectors sum to $0$ and no two are parallel). Contradiction.</p>
+<p>(b) The edge vectors of $T$ are $\ve_1,\ve_2,\ve_3$, pairwise non-parallel, $\sum\ve_k=0$. The edges of a sum are the edges of the summands merged by direction, so each edge of $A$ is $\lambda_k\ve_k$ (a nonnegative multiple, $\lambda_k\in[0,1]$) and $A$ has no other edges. Closure of the polygon $A$ gives $\sum_k\lambda_k\ve_k=0$. Since $\ve_3=-\ve_1-\ve_2$ and $\ve_1,\ve_2$ are independent, this means $(\lambda_1-\lambda_3)\ve_1+(\lambda_2-\lambda_3)\ve_2=0$, so $\lambda_1=\lambda_2=\lambda_3=\lambda$. So $A$ is a translate of $\lambda T$ (a point if $\lambda=0$), and $B$ of $(1-\lambda)T$. The same argument gives that a segment is a sum of parallel segments only.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 7 — The two steering curves <span class="lvl">★★</span></div>
+<p>$\vx=(0,0)$, $\va=(3,4)$. (a) Directional steering $\vx_t=\vx+t(1,0)$: find $t^\star$, the peak proximity $e^{-d}$, and say what limits it. (b) Archetypal steering: the proximity at $t=0.8$. (c) For which directions $\vv$ does the directional curve reach $1$?</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) $\|\vx_t-\va\|^2=(3-t)^2+16$, minimal at $t^\star=3$ with distance $4$ ($d_\perp$ = vertical offset): peak proximity $e^{-4}=0.018$. No value of $t$ does better, because $\va$ is not on the line $\vx+t(1,0)$.</p>
+<p>(b) $\|\vx_t-\va\|=(1-t)\cdot5=1$ at $t=0.8$, proximity $e^{-1}=0.368$; at $t=1$ it is $1$.</p>
+<p>(c) Only if $\va-\vx$ is a positive multiple of $\vv$, i.e. $\vv\parallel(3,4)$ with positive sign: then $d_\perp=0$ and the peak is $1$ at $t^\star=5/\|\vv\|$.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 8 — Decomposing a point of the hexagon <span class="lvl">★★</span></div>
+<p>Let $\vd_1,\vd_2,\vd_3$ be the unit vectors at $0^\circ,60^\circ,120^\circ$, $\mathcal H=\bigmsum_k[-\tfrac12,\tfrac12]\vd_k$. (a) Show $\vd_1-\vd_2+\vd_3=0$. (b) Find all $t\in[-\tfrac12,\tfrac12]^3$ with $\sum_kt_k\vd_k=(\tfrac12,0)$. (c) Why does a $T\oplus(-T)$ description give yet other decompositions?</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>$\vd_2=(\tfrac12,\tfrac{\sqrt3}2)$, $\vd_3=(-\tfrac12,\tfrac{\sqrt3}2)$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) $(1,0)-(\tfrac12,\tfrac{\sqrt3}2)+(-\tfrac12,\tfrac{\sqrt3}2)=(0,0)$. (b) The second coordinate gives $\tfrac{\sqrt3}2(t_2+t_3)=0$, so $t_2=-t_3$; the first gives $t_1+\tfrac12t_2-\tfrac12t_3=t_1+t_2=\tfrac12$. With $s=t_3$: $t=(\tfrac12+s,-s,s)$. The box $|t_k|\le\tfrac12$ gives $s\in[-\tfrac12,0]$. Endpoints: $t=(\tfrac12,0,0)$ and $t=(0,\tfrac12,-\tfrac12)$; midpoint $(\tfrac14,\tfrac14,-\tfrac14)$. A segment of solutions, because $(1,-1,1)$ is in the kernel (a). (c) $x=\vp-\vq$ with $\vp,\vq\in T$ also has a family of solutions (e.g. $\vp=\tfrac12(\vv_0+\vv_1)$, $\vq=\vv_0$), but with a different number and kind of tiles: nothing in $\mathcal H$ says which description generated it.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 9 — Sum against union, and support functions <span class="lvl">★★</span></div>
+<p>(a) In $\R^3$ let $\Pc_j=[0,\ve_j]$, $j=1,2,3$. What is $\bigmsum_j\Pc_j$? What is the set of points with $|S|\le1$ active tile, and with $|S|\le2$? Is $(1,1,0)$ in each? (b) Verify $h_{A\oplus B}=h_A+h_B$ for the triangle and segment of the worked example (§2) in directions $(1,-1)$ and $(-1,-1)$.</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body">
+<p>(a) The sum is the cube $[0,1]^3$ (convex). With $|S|\le1$: the union of the three coordinate segments (an “L”-shaped star, not convex); with $|S|\le2$: the union of the three coordinate unit squares. $(1,1,0)$ is in the cube and in the $|S|\le2$ set (it is $\ve_1+\ve_2$), not in the $|S|\le1$ set. The set defined by (ii) with few active tiles is the union, not the convex sum of (i).</p>
+<p>(b) Triangle $(0,0),(4,0),(0,2)$, segment $(0,0)$–$(1,2)$, sum with vertices $(0,0),(4,0),(5,2),(1,4),(0,2)$. Direction $(1,-1)$: $h_T=\max(0,4,-2)=4$, $h_S=\max(0,-1)=0$, $h_{T\oplus S}=\max(0,4,3,-3,-2)=4=4+0$. Direction $(-1,-1)$: $h_T=\max(0,-4,-2)=0$, $h_S=\max(0,-3)=0$, $h_{T\oplus S}=\max(0,-4,-7,-5,-2)=0$.</p></div></details></div>

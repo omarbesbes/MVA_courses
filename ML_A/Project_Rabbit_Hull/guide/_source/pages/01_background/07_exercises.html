@@ -1,0 +1,38 @@
+<h2 id="exercises">7. Exercises</h2>
+<div class="exo"><div class="exo-h">Exercise 1 — Count the tokens <span class="lvl">★</span></div>
+<p>An image of 448×448 pixels is fed to a ViT with 14×14 patches and 4 registers. How many tokens? How many attention weights in one head?</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>Patches per side, then add the special tokens.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$448/14=32$, so $1024$ patches; plus 1 + 4: $t=1029$. The attention matrix is $1029^2=1{,}058{,}841$ per head. (The paper uses 224 px: $t=261$.)</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 2 — One attention step <span class="lvl">★</span></div>
+<p>A head has scores $(0,\ln 2,\ln 4)$ for three keys with scalar values $(10,20,30)$. Compute the weights and the output.</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>$e^{s}=(1,2,4)$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>Weights $(1,2,4)/7$; output $(10+40+120)/7=170/7\approx24.29$, inside $[10,30]$.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 3 — Residual stream <span class="lvl">★★</span></div>
+<p>In a pre-norm block, write the final token after $L$ blocks as a sum, and explain why an update $\gamma\odot\mathrm{Attn}(\cdot)$ with $\gamma\approx0$ leaves the token almost unchanged.</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>Unroll $\vx\leftarrow\vx+\text{update}$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$\vx_L=\vx_0+\sum_{l=1}^{L}(\gamma_{1,l}\odot\mathrm{Attn}_l+\gamma_{2,l}\odot\mathrm{MLP}_l)$ (before the final LayerNorm). If $\gamma\approx0$, the branch adds almost nothing, so the block is nearly the identity: this is why LayerScale with a tiny initial value (here $10^{-5}$) makes deep networks easy to start.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 4 — Interference <span class="lvl">★★</span></div>
+<p>Take the three unit vectors of the superposition example (pairwise inner product $-\tfrac12$). Feature 1 has strength 2 and feature 2 strength 1. Compute $\va$ and the three read-outs $\vd_i\cdot\va$. Why is a threshold at 0 not enough to recover the support?</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>$r_i=\sum_j z_j\,\vd_i\cdot\vd_j$ with Gram matrix $\mG=\tfrac32\mI-\tfrac12\mathbf 1\mathbf 1\T$.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>$r_1=2-\tfrac12=1.5$, $r_2=1-1=0$, $r_3=\vd_3\cdot(2\vd_1+\vd_2)=-1-\tfrac12=-1.5$. Feature 2 is active (strength 1) but reads 0: the interference from feature 1 cancels it exactly, and a threshold at 0 would miss it. Sparse coding with a proper solver (not a one-shot read-out) is needed.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 5 — TopK versus BatchTopK <span class="lvl">★★</span></div>
+<p>Two tokens have positive pre-activations $(5,4,1,0.5)$ and $(0.3,0.2,0.1,0.1)$. Which codes survive with TopK $k=2$ and with BatchTopK $k=2$? Which rule gives a better reconstruction of the first token and why?</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>BatchTopK keeps the $k\times2=4$ largest of all eight numbers.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>TopK: $(5,4,0,0)$ and $(0.3,0.2,0,0)$. BatchTopK: the four largest are $5,4,1,0.5$, all in token 1; token 2 keeps nothing. The first token keeps four codes, so its reconstruction is better; the second is sacrificed because it carries little energy. The budget follows the tokens that need it.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 6 — Which constraint? <span class="lvl">★★</span></div>
+<p>For each statement name the method of App. B: (a) every code row is a canonical basis vector; (b) atoms are orthonormal; (c) atoms are convex combinations of data points and codes are on the simplex; (d) all entries of both factors are non-negative. For (c), what does the paper's archetypal SAE change?</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>(a) k-means (ACE); (b) PCA (ICE); (c) archetypal analysis; (d) NMF (CRAFT). The archetypal SAE keeps the constraint on atoms ($\mD=\mS\mC$, row-stochastic $\mS$, 128,000 centroids) but replaces the simplex constraint on codes by $\mZ\ge0$ and $\norm{\mZ_i}_0\le8$ (BatchTopK, produced by an encoder).</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 7 — Reconstruction quality <span class="lvl">★★</span></div>
+<p>An SAE has $R^2=0.88$. What is the fraction of variance unexplained? If $\norm{\mA-\bar\mA}_F^2=100$, what is $\norm{\mA-\mZ\mD}_F^2$? Is 88 % "high"? What does $R^2$ not tell you?</p>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>FVU $=0.12$; the residual is $12$. Whether this is high depends on the baseline (k-means or PCA with the same budget). $R^2$ measures energy, not which directions are lost: a concept carrying little variance can be unreconstructed.</p></div></details></div>
+
+<div class="exo"><div class="exo-h">Exercise 8 — Parameter count of the archetypal constraint <span class="lvl">★★★</span></div>
+<p>Compare the number of free parameters of $\mD$ (free) and of $\mS$ in $\mD=\mS\mC$, with $c=32{,}000$, $d=768$, 128,000 centroids. Why is the second more expensive, and what does the archetypal SAE gain?</p>
+<details class="fold hint"><summary>Hint</summary><div class="fold-body"><p>$\mC$ is fixed, only $\mS$ is learned.</p></div></details>
+<details class="fold sol"><summary>Solution</summary><div class="fold-body"><p>Free $\mD$: $32{,}000\times768=2.46\times10^7$. $\mS$: $32{,}000\times128{,}000=4.1\times10^9$ entries (minus the row-sum constraints), about 167 times more. The cost buys a guarantee: every atom is a convex combination of centroids of real activations, hence inside the data's hull and stable. In practice rows of $\mS$ can be parametrised by a softmax and stay manageable on a GPU; we have not checked the authors' implementation.</p></div></details></div>

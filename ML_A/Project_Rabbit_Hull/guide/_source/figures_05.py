@@ -20,7 +20,7 @@ def poly(f, pts, cls, extra=""):
 
 # ---------------------------------------------------------------- 1. linear (sparse) code versus block-convex code
 def fig_codes():
-    c = Canvas("codes", 760, 330, "Left: a sparse linear code with two active directions gives a cone or a box. Right: a block-convex code gives a Minkowski sum of a triangle and a segment.", sub="05")
+    c = Canvas("codes", 760, 335, "Left: a sparse linear code with two active directions gives a cone or a box. Right: a block-convex code gives a Minkowski sum of a triangle and a segment.", sub="05")
     # left panel
     L = Fig(c, (40, 40, 300, 240), (-0.5, 3.5), (-0.5, 3.0))
     c.text(40, 24, "Sparse linear code  x = z₁d₁ + z₂d₂,  0 ≤ zⱼ ≤ M", "tx-b")
@@ -33,24 +33,22 @@ def fig_codes():
         c.arrow(L.X(0), L.Y(0), L.X(d[0]), L.Y(d[1]), 2, "ln c2")
         L.text(d[0], d[1], nm, "tx-b", dx=6, dy=-6)
     L.circle(0, 0, 4, "fk")
-    L.text(0.55, 2.15, "a box of codes:", "tx", dx=0)
-    L.text(0.55, 2.0, "each feature varies on its own", "tx-s")
-    L.text(1.2, 0.05, "segments [0, M dⱼ] anchored at the origin", "tx-s", dy=18)
+    c.text(40, 304, "a box of codes: each feature varies on its own;", "tx-s")
+    c.text(40, 320, "tiles = segments [0, M dⱼ] anchored at the origin", "tx-s")
     # right panel
     R = Fig(c, (410, 40, 300, 240), (-0.5, 5.5), (-0.5, 4.5))
     c.text(410, 24, "Block-convex code  x = p₁ + p₂,  p₁ ∈ P₁,  p₂ ∈ P₂", "tx-b")
     T = np.array([[0, 0], [3.0, 0], [0.5, 1.5]]); S = np.array([[0, 0.0], [1.0, 1.5]])
-    off = np.array([0.4, 0.3]); T = T + off; S = S + off
-    Sm = hull([tuple(a+b-off) for a in T for b in S])
+    Sm = hull([tuple(a+b) for a in T for b in S])
     poly(R, Sm, "am"); poly(R, Sm, "ln cm thin")
     poly(R, T, "a1"); poly(R, T, "ln c1")
     R.line(S[0][0], S[0][1], S[1][0], S[1][1], "ln c5")
     for p in T: R.circle(p[0], p[1], 4.5, "f1")
     for p in S: R.circle(p[0], p[1], 4.5, "f5")
-    R.text(T[1][0], T[1][1], "P₁ (a tile)", "tx-b", "start", dx=6, dy=16)
-    R.text(S[1][0], S[1][1], "P₂", "tx-b", "end", dx=-8, dy=4)
-    R.text(Sm[-1][0], Sm[-1][1], "P₁ ⊕ P₂", "tx-b", "middle", dy=-8)
-    R.text(3.4, 3.9, "each tile: a convex combination,", "tx-s"); R.text(3.4, 3.65, "weights sum to 1 (a simplex)", "tx-s")
+    R.text(1.5, 0.0, "P₁ (a triangle)", "tx-b", "middle", dy=18)
+    R.text(S[1][0], S[1][1], "P₂ (a segment)", "tx-b", "end", dx=-8, dy=4)
+    R.text(4.0, 2.4, "P₁ ⊕ P₂", "tx-b", "middle")
+    c.text(410, 304, "each tile: a convex combination of its archetypes,", "tx-s"); c.text(410, 320, "weights in a simplex (non-negative, sum 1)", "tx-s")
     c.save()
 
 # ---------------------------------------------------------------- 2. layout of a block-convex code
@@ -109,8 +107,8 @@ def fig_support():
     F.line(0, 0, u[0]*hv, u[1]*hv, "ln c2")
     c.arrow(F.X(0), F.Y(0), F.X(u[0]*1.2), F.Y(u[1]*1.2), 2, "ln c2")
     F.text(u[0]*1.2, u[1]*1.2, "u (unit)", "tx-b", dx=6, dy=14)
-    F.circle(*P[k], 6, "f3"); F.text(P[k][0], P[k][1], "vertex reaching the maximum", "tx-s", "end", dx=-8, dy=-8)
-    F.text(u[0]*hv/2, u[1]*hv/2, "h(u)", "tx-b", dx=-6, dy=14)
+    F.circle(*P[k], 6, "f3"); F.text(P[k][0], P[k][1], "maximiser", "tx-s", "end", dx=-10, dy=24)
+    F.text(u[0]*hv*0.72, u[1]*hv*0.72, "h(u)", "tx-b", dx=-8, dy=-9, anchor="end") if False else F.text(u[0]*hv*0.72, u[1]*hv*0.72, "h(u)", "tx-b", "end", dx=-8, dy=-9)
     F.text(-0.3, -0.3, "0", "tx-s")
     # right: h as a function of the angle
     G = Fig(c, (410, 40, 320, 250), (0, 360), (0, 5.0))

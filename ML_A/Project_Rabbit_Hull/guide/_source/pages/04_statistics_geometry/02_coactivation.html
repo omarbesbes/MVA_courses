@@ -1,0 +1,47 @@
+<h2 id="coactivation">2. Co-activation: the Gram matrix of the codes</h2>
+<p class="tldr">The matrix $\mG=\mZ\T\mZ$ counts, for each pair of concepts, how strongly they fire together. Its spectrum decays smoothly: no gap, no dominant mode. The paper reads this as "no block structure"; against its two baselines the evidence is weak.</p>
+
+<h3 id="coact-problem">The problem</h3>
+<p>If concepts came in modules (all "dog" concepts together, all "texture" concepts together), tokens would use whole modules at once and the co-activation matrix would be block-diagonal, with a few large eigenvalues (one per module) and a gap after them. The question is whether $\mG$ looks like that.</p>
+<div class="box paper"><div class="box-h">Concepts co-occurrence <span class="ref">§5 · p. 11–12, Fig. 9 right · p. 11</span></div>
+<p>"The Gram matrix of concept co-activation $\mG=\mZ\T\mZ\in\R^{c\times c}$ [...] has a spectrum that decays smoothly, with no gaps or dominant modes, providing little evidence for modular low-rank structure. As reference points, we create two baselines, one from random activations $\mZ$ with same sparsity (random), and one directly shuffling the coactivation matrix $\mG$ (shuffle). Relative to baselines, it lies between the steep decay of the random surrogate and the inflated tail of the shuffled one. Below both would imply redundancy, above both extreme diffuseness; its intermediate position instead reflects a high-dimensional, distributed regime where concepts co-activate without forming clear clusters."</p></div>
+
+<h3 id="coact-gram">What $\mG$ is and what its spectrum can show</h3>
+<ol class="steps">
+<li>$G_{ij}=\sum_{n}Z_{n,i}Z_{n,j}$ <span class="why">entry of $\mZ\T\mZ$: sum over tokens $n$ of the product of the codes of $i$ and $j$. Non-zero only for tokens where both are on.</span></li>
+<li>$G_{ii}=\sum_nZ_{n,i}^2$ <span class="why">diagonal: total squared energy of concept $i$. Frequent and strong concepts have large diagonals.</span></li>
+<li>$\mG\succeq0$, so its eigenvalues are $\ge0$ and $\sum_i\lambda_i=\tr\mG=\sum_iG_{ii}$ <span class="why">$\mG=\mZ\T\mZ$ is a Gram matrix; the trace is the sum of eigenvalues.</span></li>
+<li>If the concepts form $m$ disjoint modules that never co-fire across modules, $\mG$ is block-diagonal with $m$ blocks, so its eigenvalues are the union of those of the blocks <span class="why">block-diagonal matrices decompose; a module whose members co-fire a lot gives one large eigenvalue.</span></li>
+</ol>
+<p>So <em>block structure shows up as a few large eigenvalues followed by a drop</em>. A smooth decay with no drop means no such separation. Note what this cannot tell: dense positional concepts (<a href="#occurrence">section 1</a>) have huge diagonal entries and co-fire with everything, which tends to create a few large eigenvalues; the paper does not discuss this.</p>
+
+<h3 id="coact-baselines">The two baselines of Appendix E, formula by formula</h3>
+<div class="box paper"><div class="box-h">Baselines for the co-activation spectrum <span class="ref">App. E · p. 37</span></div>
+<p>Random baseline: $R_{ij}=U_{ij}\cdot\ind(V_{ij}<\rho)$ with $U_{ij},V_{ij}\sim\mathcal U(0,1)$, then $\tilde{\mR}=\dfrac{(\mR+\mR\T)/2}{\norm{\mR+\mR\T}_F}\cdot\norm{\mZ\T\mZ}_F$, with $\diag(\tilde{\mR})=\diag(\mZ\T\mZ)$. Shuffled baseline: take the upper-triangular entries $\{G_{ij}:i<j\}$, permute them randomly, and put them back symmetrically, keeping the diagonal of $\mG$.</p></div>
+<dl class="decode">
+<dt>$\rho$</dt><dd>the density of $\mG$ (fraction of non-zero entries); the paper says "identical sparsity $\rho$" without a formula.</dd>
+<dt>$U_{ij}$, $V_{ij}$</dt><dd>$U$ draws the value, $V$ decides whether the entry exists: each entry is non-zero with probability $\rho$ and then uniform in $(0,1)$. Independent over pairs: no pair is special.</dd>
+<dt>$(\mR+\mR\T)/2$</dt><dd>symmetrisation, so that eigenvalues are real.</dd>
+<dt>$\cdot\ \norm{\mZ\T\mZ}_F/\norm{\mR+\mR\T}_F$</dt><dd>rescaling so that the total mass (Frobenius norm) matches. Since $\norm{(\mR+\mR\T)/2}_F=\tfrac12\norm{\mR+\mR\T}_F$, the formula as written gives a Frobenius norm of $\tfrac12\norm{\mG}_F$ (checked in <code>check_04.py</code>); a global factor changes nothing on a normalised spectrum, so this is only a typo-level remark.</dd>
+<dt>shuffle</dt><dd>keeps three things: the diagonal, the multiset of off-diagonal values, symmetry. Destroys: which pair gets which value.</dd>
+</dl>
+<div class="box idea"><div class="box-h">What each baseline is a null for</div>
+<ul>
+<li><strong>Random</strong>: "same density and same total mass, but co-occurrences without any structure". Its spectrum has no outstanding modes.</li>
+<li><strong>Shuffled</strong>: "same values, scrambled pairs". Because $\sum_i\lambda_i^2=\norm{\mG}_F^2$ and $\sum_i\lambda_i=\tr\mG$ are the same for $\mG$ and for the shuffle, the two spectra share total mass and total squared mass. If the original has structure, its energy is concentrated in fewer eigenvalues, so the shuffle (spread out) has the heavier tail. On a toy with $20$ planted blocks (our simulation, <code>check_04.py</code>) the tenth eigenvalue is $0.59$ of the first for $\mG$ and $0.31$ for its shuffle: structure gives a <em>slower</em> head and a lighter tail, which is the picture the paper describes.</li>
+</ul></div>
+
+<figure class="paperfig narrow"><img data-src="paper_figures/spectrum_ztz.png" alt="Log-scale plot of the top 500 eigenvalues of the normalised co-activation matrix for the original, random and shuffled matrices">
+<figcaption><strong>Fig. 9 (right) of the paper.</strong> Top 500 eigenvalues of the normalised $\mZ\T\mZ$ (log scale) for the learned codes and the two baselines.
+<span class="src">From the paper (Fel, Wang et al., 2026), CC BY 4.0.</span></figcaption></figure>
+<div class="box method"><div class="box-h">How to read this figure</div>
+<ul>
+<li><strong>Axes.</strong> Horizontal: eigenvalue rank, 1 to 500. Vertical: normalised eigenvalue, log scale.</li>
+<li><strong>What to look at.</strong> No cliff in the original curve; it lies between the random curve (steeper) and the shuffled one (heavier tail).</li>
+<li><strong>Numbers.</strong> The three curves stay within a factor of about $1.3$ of each other over the plotted range (our reading of the figure).</li>
+<li><strong>The authors' conclusion.</strong> Smooth and intermediate: co-activation is high-dimensional and distributed, without modules.</li>
+<li><strong>What it does not show.</strong> A test of the module hypothesis; only that the spectrum is not extreme in either direction.</li>
+</ul></div>
+<div class="box ours"><div class="box-h">Our reading — a factor 1.3 on a log axis is a weak signal</div>
+<p>A log-scale plot makes small gaps look like gaps. The three curves differ by a factor of about $1.3$, and no variability across random draws or subsamples is shown. "Between two baselines" is also what any matrix with partial structure would do. A better test is a statistic with a null distribution (for instance the top-eigenvalue share against many shuffles). See <a href="06_critical_reading.html#diagnostics">page 6</a>.</p></div>
+<div class="box reflex"><div class="box-h">Reflex</div><p>When you see "the spectrum lies between two baselines" → ask what each baseline preserves, and by how much the curves differ on a linear scale.</p></div>

@@ -1,0 +1,55 @@
+<h2 id="vit">1. Vision transformers</h2>
+<p class="tldr">A ViT cuts the image into patches, turns each patch into a vector (a token), and repeatedly lets tokens exchange information (attention) and transform themselves (MLP), each time by adding an update to the token. The paper analyses the final token vectors of DINOv2.</p>
+
+<h3 id="tokens">1.1 From pixels to 261 tokens</h3>
+<p><strong>Problem.</strong> A transformer takes a sequence of vectors, an image is a grid of pixels. The solution is to cut the grid into square <em class="new">patches</em> and treat each patch as a word.</p>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">§2 · p. 5 and App. K · p. 52</span></div>
+<p>"A pretrained Vision Transformer $f:\mathcal X\to\R^{t\times d}$": any image $\vx$ yields activations $\va=f(\vx)\in\R^{t\times d}$, "i.e. $t$ token embeddings of dimension $d$". "We used DINOv2-B with 4 registers as $f$, with $d=768$, $t=261$." The tokens are "256 spatial patches arranged in a $16\times16$ grid plus one classification token and four register tokens."</p></div>
+<figure class="fig"><!-- include figures/01/tokens.svg --><figcaption><strong>The token sequence.</strong> A 224×224 image with patches of 14×14 pixels gives a 16×16 grid, hence 256 patch tokens. A class token and four registers are prepended. Every token is a row of 768 numbers.</figcaption></figure>
+<ol class="steps">
+<li>$224/14=16$ patches per side, so $16^2=256$ patch tokens.<span class="why">patch size 14 for DINOv2 ViT-B/14.</span></li>
+<li>Each patch (14×14×3 = 588 numbers) is multiplied by a learned matrix to give a vector of dimension $d=768$.<span class="why">this is the <em class="new">patch embedding</em>.</span></li>
+<li>A learned <em class="new">position embedding</em> is added to each patch token.<span class="why">without it the network could not tell where a patch comes from; page 4 studies this position signal.</span></li>
+<li>One <em class="new">class token</em> (<code>cls</code>) and four <em class="new">register tokens</em> are added, giving $t=256+1+4=261$.<span class="why">they have no pixels; they are learned vectors that can store global information (§1.4).</span></li>
+</ol>
+<p>The result is a matrix $\mX\in\R^{261\times768}$: 200,448 numbers per image and per layer. "Activations of a layer" means this matrix at that depth. In the paper's row convention one token activation is a row $\va\in\R^{768}$.</p>
+
+<h3 id="attention">1.2 Attention: a weighted average of values</h3>
+<p><strong>Problem.</strong> Tokens must exchange information; a patch of fur needs to know there is a rabbit elsewhere. Attention lets each token read the others.</p>
+<p>A head of ViT-B has three learned matrices $\mW_Q,\mW_K,\mW_V\in\R^{768\times64}$. For the token matrix $\mX$:</p>
+$$\begin{aligned}\mQ&=\mX\mW_Q,\quad \mK=\mX\mW_K,\\ \mV&=\mX\mW_V\quad(261\times64\text{ each}).\end{aligned}$$
+<p>Token $i$ is the <em class="new">query</em>, token $j$ offers a <em class="new">key</em> (what it is) and a <em class="new">value</em> (what it gives). The output of the head is</p>
+$$\begin{aligned}\mY&=\softmax\!\Big(\frac{\mQ\mK\T}{\sqrt{64}}\Big)\mV=\mA\mV,\\ \mY_i&=\sum_{j=1}^{261}\alpha_{ij}\,\mV_j,\\ \val_i&=\softmax\!\big(\mQ_i\mK\T/8\big)\in\simplex^{261}.\end{aligned}$$
+<dl class="decode">
+<dt>$\mQ_i\mK_j\T$</dt><dd>score: how much token $i$ wants token $j$ (a dot product of two 64-dimensional vectors).</dd>
+<dt>$/\sqrt{64}=/8$</dt><dd>keeps the scores of order one, so the softmax does not saturate.</dd>
+<dt>$\softmax$ (per row)</dt><dd>turns the 261 scores into non-negative weights $\alpha_{ij}$ that sum to 1.</dd>
+<dt>$\mY_i$</dt><dd>a <strong>weighted average</strong> of the value vectors: a point inside their convex hull. This is exactly what §7 of the paper uses (<a href="05_minkowski.html#single-head">page 5</a>). Here $\mA$ is the attention matrix, not the activations.</dd>
+</dl>
+<div class="box recall"><div class="box-h">Reminder — softmax</div>
+<p>$\softmax(s)_j=e^{s_j}/\sum_l e^{s_l}$: all weights are strictly positive and sum to 1, so the output is never on the boundary of the hull of the values. Dividing the scores by a small temperature makes the weights concentrate on the largest score. <a href="02_toolbox.html#softmax-properties">more</a></p></div>
+<div class="box example"><div class="box-h">Worked example — three tokens</div>
+<p>Scores $(2,1,0)$ give weights $(0.665,0.245,0.090)$. With 2-D values $(3,0)$, $(0,3)$, $(-3,-3)$ the output is $0.665(3,0)+0.245(0,3)+0.090(-3,-3)=(1.726,0.464)$, inside the triangle of the three values.</p></div>
+<div class="widget" data-widget="p1attention"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p><strong>What to look at:</strong> raise one score: its weight tends to 1 and the output slides to that value. Lower the temperature: same effect. Put all scores equal: the output is the plain mean of the five values. The output never leaves the dashed polygon.</p>
+<p><strong>Multi-head.</strong> A block has $H=12$ heads of dimension 64 ($12\times64=768$). Each head has its own $\mW_Q^{(h)},\mW_K^{(h)},\mW_V^{(h)}$. The outputs are concatenated and projected back to 768 dimensions with $\mW_O$; equivalently the update is a <em>sum over heads</em> of $\mW_O^{(h)}$ applied to the head output, $\sum_h \mW_O^{(h)}\mY^{(h)}$. This sum is what leads to Minkowski sums on page 5.</p>
+<div class="box pitfall"><div class="box-h">Pitfall — the values depend on the image</div>
+<p>The values $\mV_j=\mW_V\,\mathrm{LN}(\vx_j)$ are computed from the tokens of the <em>current</em> image. The convex hull of values is rebuilt for every image. <a href="06_critical_reading.html#architecture">Our reading, page 6</a>.</p></div>
+
+<h3 id="block">1.3 The block and the residual stream</h3>
+<p><strong>Problem.</strong> A deep network must stay trainable and each layer should refine, not replace, what exists. The answer is the <em class="new">residual connection</em>: a layer outputs an update that is <em>added</em> to its input.</p>
+<figure class="fig"><!-- include figures/01/block.svg --><figcaption><strong>A pre-norm block.</strong> The token matrix $x$ flows down the green line (the <em>residual stream</em>). Each branch normalises, transforms, rescales and adds back.</figcaption></figure>
+$$\begin{aligned}\vx'&=\vx+\gamma_1\odot\mathrm{Attn}(\LN(\vx)),\\ \vx''&=\vx'+\gamma_2\odot\mathrm{MLP}(\LN(\vx')).\end{aligned}$$
+<dl class="decode">
+<dt>$\LN$</dt><dd>LayerNorm: for each token separately, subtract the mean of its 768 coordinates, divide by their standard deviation, then apply a learned scale and shift. "Pre-norm" means it is applied before the branch, not after.</dd>
+<dt>$\mathrm{Attn}$</dt><dd>multi-head attention (§1.2): the only place where tokens interact.</dd>
+<dt>$\mathrm{MLP}$</dt><dd>two linear layers with a GELU in between, 768→3072→768, applied to each token alone.</dd>
+<dt>$\gamma_1,\gamma_2$</dt><dd><em class="new">LayerScale</em>: a learned per-coordinate multiplier, initialised very small, that eases training of deep networks. DINOv2 uses it (initial value $10^{-5}$ in the official configuration).</dd>
+</dl>
+<p>After 12 blocks a token is $\vx_{12}=\vx_0+\sum_{l}(\text{attention}_l+\text{MLP}_l)$: the <em class="new">residual stream</em> is a running sum of updates. A final LayerNorm is applied to the output of the last block; the paper writes $\va=f(\vx)$, the output of the network $f$; whether this is before or after this final LayerNorm matters for the geometry (<a href="06_critical_reading.html#layernorm">our reading, page 6</a>).</p>
+<div class="quiz"><p>How many numbers are in the attention matrix of one head for one image?</p><details class="fold sol"><summary>Answer</summary><div class="fold-body"><p>$261\times261=68{,}121$, one weight per (query, key) pair; each row sums to 1.</p></div></details></div>
+
+<h3 id="registers">1.4 Registers</h3>
+<p><strong>Problem.</strong> Darcet et al. (2023, arXiv:2309.16588) observed that large ViTs produce "high-norm tokens appearing during inference primarily in low-informative background areas of images": the network recycles some patch tokens to store global information, which corrupts feature maps. Their fix is to "provide additional tokens to the input sequence". These extra tokens, the <em class="new">registers</em>, are never read as an output; they are free memory slots that attention can use. The paper uses the DINOv2 model with four registers (the abstract of Darcet et al. does not give the number; four is the paper's choice of model).</p>
+<div class="box paper"><div class="box-h">Why it matters here <span class="ref">§4 · p. 9, App. K · p. 52</span></div>
+<p>Registers give the dictionary a place to find concepts that are about the whole image: the paper finds concepts that fire only on register tokens and capture "global scene properties like illumination and motion blur" (<a href="03_concepts_tasks.html#token-types">page 3</a>).</p></div>

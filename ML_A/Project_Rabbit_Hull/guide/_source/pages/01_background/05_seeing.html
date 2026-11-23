@@ -1,0 +1,31 @@
+<h2 id="seeing-concepts">5. Seeing a concept</h2>
+<p class="tldr">A concept is a vector; to look at it one shows the images and tokens where it fires (heat maps) and an image synthesised to excite it (feature visualisation). The DinoVision demo packages both for the 32,000 concepts.</p>
+
+<h3 id="heatmaps">5.1 Top-activating images and heat maps</h3>
+<p>For concept $i$, run many images, keep those with the largest $\max_t Z_{t,i}$ (<em class="new">top-activating images</em>), and colour each of the 256 patches by $Z_{t,i}$ (a <em class="new">heat map</em>; red means a large code). The class and register tokens are shown separately: they have no position in the image. Heat maps tell <em>where the concept fires</em>.</p>
+<div class="box pitfall"><div class="box-h">Pitfall — where it fires is not what it is about</div>
+<p>In a ViT a token's value depends on all tokens through attention, so a concept can fire off the object it depends on. The paper's "Elsewhere" concepts show this (<a href="03_concepts_tasks.html#elsewhere">page 3</a>).</p></div>
+
+<h3 id="feature-viz">5.2 Feature visualisation</h3>
+<div class="box paper"><div class="box-h">Visualisation <span class="ref">App. K · p. 52</span></div>
+<p>"For concept visualization we use Feature Accentuation (FA) from Hamblin et al. 2024: we start from maximally activating images of each concept and perform 1024 steps of gradient ascent optimization parameterized in Fourier space with MACO (Fel et al. 2023) constraints on the magnitude of the spectrum, boosted according to natural image statistics approximately following $1/\omega^2$ where $\omega$ represents cycles per image."</p></div>
+<dl class="decode">
+<dt>gradient ascent</dt><dd>change the image pixels to increase the concept's code $z_i$ (the output of model + SAE for atom $i$).</dd>
+<dt>Fourier parametrisation</dt><dd>the image is described by its spectrum, so that optimisation acts on frequencies, which gives smoother pictures than pixel-wise optimisation.</dd>
+<dt>MACO</dt><dd>keeps the <em>magnitude</em> of the spectrum fixed to that of natural images and optimises only the <em>phase</em>, which prevents high-frequency artefacts.</dd>
+<dt>$1/\omega^2$ boost</dt><dd>natural images have power spectra falling roughly as $1/\omega^2$; the magnitude is scaled that way.</dd>
+<dt>Feature Accentuation</dt><dd>start from a real top-activating image rather than noise, so that the result stays close to a real image: it accentuates what the concept responds to in it.</dd>
+</dl>
+<p>These are the pictures of tile 3 and tile 4 of Fig. 1. They are an aid: an optimised image shows what excites the concept, not everything it means.</p>
+
+<h3 id="demo">5.3 The DinoVision demo</h3>
+<figure class="paperfig"><img data-src="paper_figures/website.jpg" alt="DinoVision interface: a 2D UMAP of 32,000 concept points and a panel showing the activation on the 261 tokens">
+<figcaption><strong>Fig. 28 of the paper (App. K · p. 52).</strong> The interface: a 2-D UMAP of the 32,000 concepts; clicking a point opens its activation pattern over the 261 tokens.<span class="src">From the paper (Fel, Wang et al., 2026), CC BY 4.0.</span></figcaption></figure>
+<div class="box method"><div class="box-h">How to read this figure</div>
+<ul>
+<li><strong>Each point</strong> is one concept (atom); its position is a UMAP projection, "where spatial proximity indicates conceptual similarity", with a caution that global clustering patterns should be read with care (<a href="02_toolbox.html#umap">UMAP</a>). Its <strong>size</strong> reflects how often it fires.</li>
+<li><strong>Clicking</strong> a point shows the activation pattern on the 261-token grid (256 patches, one class, four registers): redder means a stronger code, next to the feature visualisation.</li>
+<li><strong>Controls</strong> (paper caption and the site): point size and heatmap opacity; co-occurrence links between concepts that often fire together; direct entry of a concept id; exploring a neighbourhood (radius); image size and an "energy" slider on the site.</li>
+<li><strong>Not shown:</strong> the concept's importance for a task; the demo's interface is a map of one dictionary.</li>
+</ul></div>
+<p>The demo is at <a href="https://kempnerinstitute.github.io/dinovision">kempnerinstitute.github.io/dinovision</a>. It opens with a content-warning gate; read it and accept it to enter. Use it to find the concepts the paper mentions: register-only concepts for illumination and motion blur, position concepts "left", "right", "bottom".</p>

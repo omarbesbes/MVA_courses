@@ -1,0 +1,69 @@
+<h2 id="dictionary-geometry">3. Geometry of the dictionary</h2>
+<p class="tldr">The 32,000 atoms are not spread like random vectors and not like a Grassmannian frame: inner products have heavy tails (up to about $0.9$), singular values decay fast (the dictionary is anisotropic), and atoms are spread over many coordinates (Hoyer score about $0.22$–$0.25$).</p>
+
+<h3 id="geo-problem">The problem and the reference points</h3>
+<p>The LRH (Definition 1, <a href="03_concepts_tasks.html#lrh-setup">page 3</a>) asks for unit atoms with small coherence. "Small" needs a scale. The paper builds two reference dictionaries with the same $c=32{,}000$ and $d=768$.</p>
+<div class="box paper"><div class="box-h">Baselines for concept geometry <span class="ref">App. F · p. 38</span></div>
+<p>"Random vectors on sphere: we sample a Gaussian random matrix $\mH\in\R^{c\times d}$, $H_{ij}\sim\mathcal N(0,1)$ i.i.d., and then we normalized each row to have L2 norm 1. [...] Grassmannian frame: [...] we numerically computed the Grassmannian frame of $c$ atoms in $d$ dimension. [...] we adapted the algorithm from recent work TAAP, [...] adapted it to CUDA [...] solving the frame once still takes 6hr on an A100 GPU. In the end, we reached maximal coherence of $0.065897$."</p></div>
+<div class="box recall"><div class="box-h">Reminder — coherence, Welch bound, Grassmannian frames</div>
+<p>Coherence of unit vectors: $\mu(\mD)=\max_{i\ne j}\abs{\ps{\mD_i}{\mD_j}}$. For $c>d$ unit vectors in $\R^d$, the Welch bound says $\mu\ge\sqrt{\dfrac{c-d}{d(c-1)}}$; a <em>Grassmannian frame</em> is a set of $c$ unit vectors minimising $\mu$ (it reaches the bound only for special $(c,d)$). <a href="02_toolbox.html#welch-grassmannian">more</a></p></div>
+<div class="box example"><div class="box-h">Recomputed — the numbers behind the baselines</div>
+<ol class="steps">
+<li>Welch bound for $c=32{,}000$, $d=768$: $\sqrt{(32000-768)/(768\times31999)}\approx0.0356$. <span class="why">plug in; no frame can be below this.</span></li>
+<li>The computed Grassmannian frame has $\mu=0.0659$: $1.85$ times the Welch bound. <span class="why">$0.065897/0.03565$. The bound is not tight for these sizes, so the numerical frame is only an approximation of the optimum (as the paper says).</span></li>
+<li>Random unit vectors: an inner product is approximately $\mathcal N(0,1/d)$, standard deviation $1/\sqrt{768}=0.0361$. <span class="why">the inner product of two independent uniform points on the sphere has variance $1/d$.</span></li>
+<li>There are $c(c-1)/2\approx5.1\times10^{8}$ pairs. The largest of $P$ approximately Gaussian values is about $\sqrt{2\ln P/d}=0.229$. <span class="why">Gaussian tail: $P\,e^{-d\mu^2/2}\approx1$. Matches the paper's "random within $\pm0.2$" (a sample of 4000 atoms gives $0.196$ in <code>check_04.py</code>).</span></li>
+</ol></div>
+<figure class="fig"><!-- include figures/04/coherence_scale.svg --><figcaption>The three dictionaries on one log axis. A random dictionary has a typical inner product the size of the Welch bound but a maximum six times larger; the Grassmannian frame removes the tail; the learned dictionary has a tail up to about $0.9$.</figcaption></figure>
+
+<h3 id="geo-fig10">Figure 10</h3>
+<figure class="paperfig"><img data-src="paper_figures/Figure_DDt_statistics.jpg" alt="Four panels: histogram of inner products for SAE, random and Grassmannian dictionaries; singular values; histogram of Hoyer scores; UMAP of atoms coloured by Hoyer score">
+<figcaption><strong>Fig. 10 of the paper.</strong> (A) distribution of pairwise inner products of atoms; (B) singular values of the dictionary; (C) Hoyer scores; (D) UMAP of the atoms coloured by Hoyer score.
+<span class="src">From the paper (Fel, Wang et al., 2026), CC BY 4.0.</span></figcaption></figure>
+<div class="box paper"><div class="box-h">Geometry of concept vectors <span class="ref">§5 · p. 12, Fig. 10 · p. 12</span></div>
+<p>"(A) [...] the SAE dictionary exhibits heavier tails and a flatter central peak—indicative of higher coherence. [...] (B) SAE exhibits sharper decay than both baselines, suggesting lower effective rank and anisotropy: some directions are densely populated while others are sparse or unused. (C &amp; D) [...] Scores remain below the neuron-aligned limit (1.0), indicating that concepts are not axis-aligned. Compared to baseline expectations (e.g., $1-\sqrt{2/\pi}\approx0.202$ for Gaussian vectors), the SAE atoms are slightly sparser, still supporting the notion of distributed representations."</p></div>
+<div class="box method"><div class="box-h">How to read this figure</div>
+<ul>
+<li><strong>(A) Axes.</strong> Horizontal: $\ps{\mD_i}{\mD_j}$; vertical: log density. <strong>Ranges read off:</strong> random within about $\pm0.2$, Grassmannian within about $\pm0.066$, SAE from about $-0.85$ to $+0.92$, with the positive tail heavier.</li>
+<li><strong>(A) Reading.</strong> Most SAE pairs are weakly correlated, but a non-negligible fraction are strongly aligned: "tight clusters". The dictionary moves away from incoherence, not towards it.</li>
+<li><strong>(B) Axes.</strong> Index of the singular value against its value. SAE: about $22.5$ at the start, about $7$ at index $200$, about $3.5$ at index $760$, near $0$ at the very end. Random: from $7.4$ to $5.5$. Grassmannian: flat at about $6.5$.</li>
+<li><strong>(C) Hoyer score</strong> of each atom: about $0.22$–$0.25$ (one-hot $=1$, Gaussian $\approx0.2$). <strong>(D)</strong> UMAP of the atoms, coloured by that score.</li>
+<li><strong>Does not show.</strong> How many pairs lie in the tail (a log density hides counts), nor which atoms form the clusters.</li>
+</ul></div>
+
+<h3 id="geo-spectrum">(B) Singular values: tight frame, Marchenko–Pastur, anisotropy</h3>
+<div class="box recall"><div class="box-h">Reminder — tight frames and the spectrum of random matrices</div>
+<p>$\mD\in\R^{c\times d}$ with unit rows has $\sum_{i\le d}\sigma_i^2=\norm{\mD}_F^2=c$. If all singular values are equal, $\sigma_i=\sqrt{c/d}$ and the rows form a <em>tight frame</em> ($\mD\T\mD=\tfrac cd\mI$). For a random matrix with i.i.d. rows, the singular values fall in the Marchenko–Pastur band $\sqrt{c/d}\,(1\pm\sqrt{d/c})$. <a href="02_toolbox.html#tight-frames-spectrum">more</a></p></div>
+<ol class="steps">
+<li>Tight-frame level: $\sqrt{c/d}=\sqrt{32000/768}=6.455$. <span class="why">$\sum\sigma^2=c$ spread evenly over $d$ values.</span></li>
+<li>Marchenko–Pastur band: $6.455\times[1-0.155,\,1+0.155]=[5.45,\,7.45]$. <span class="why">$\sqrt{d/c}=0.155$. A simulated random $32000\times768$ dictionary gives $[5.47,7.45]$, matching the figure's "$7.4\to5.5$".</span></li>
+<li>The Grassmannian frame is (almost) tight: flat at $\approx6.5$. <span class="why">minimal coherence goes with a nearly flat spectrum.</span></li>
+<li>The SAE: $\sigma_1\approx22.5$, so $\sigma_1^2\approx506$, i.e. $12$ times the average $c/d=41.7$ and $1.6\%$ of the total mass in one direction. <span class="why">$22.5^2/41.7=12.2$ and $506/32000=1.6\%$.</span></li>
+</ol>
+<div class="box def"><div class="box-h">Anisotropy</div><p>A set of atoms is <em>anisotropic</em> when their mass is not spread evenly over directions: some directions of $\R^d$ carry much more squared mass $\sigma^2$ than others. Isotropic means all $\sigma_i^2$ equal to $c/d$. Here: a few directions hold much more mass, and the tail of singular values goes to almost $0$, i.e. some directions of the space are practically unused by the dictionary.</p></div>
+<div class="widget" data-widget="p4spectrum"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p><strong>What to look at:</strong> at 0 the atoms are uniform on the sphere and the singular values fill the Marchenko–Pastur band. Raise anisotropy: the first singular values grow above the band and the last fall below it, while $\sum\sigma^2$ stays equal to $c$. Both are small-size versions ($c=160$, $d=32$) of the $32000\times768$ case.</p>
+
+<div class="box paper"><div class="box-h">Global anisotropy: two tentative explanations <span class="ref">§5 · p. 12 and footnote</span></div>
+<p>"One potential explanation is that the activations $\mA$ themselves have anisotropic covariance, thus to reconstruct them $\mA\approx\mZ\mD$ with L2 error, more atoms are allocated to the more important and higher variance subspace." Footnote: "A speculative hypothesis is that the affine components of the last LayerNorm deforms the activation space into an ellipsoidal geometry, locally increasing curvature along some directions. In such regions, dictionary learning may require more atoms to adequately cover the manifold with low reconstruction error. While this remains to be formalized [...]"</p></div>
+<ul>
+<li><strong>First explanation.</strong> The atoms are in $\conv(\mA)$ (archetypal SAE) and the loss is $\norm{\mA-\mZ\mD}_F^2$; high-variance directions of $\mA$ matter more for the loss, so more atoms point there. This is checkable (compare the spectrum of $\mD$ with the covariance spectrum of $\mA$); the paper does not do it.</li>
+<li><strong>Second explanation.</strong> After the last LayerNorm, $\mathrm{LN}(x)=\gamma\odot u+\beta$ with $u$ centred and scaled to norm $\sqrt d$. If the entries of $\gamma$ are non-zero, the output lies on an ellipsoid. The paper calls this speculative and unformalised.</li>
+</ul>
+<div class="box ours"><div class="box-h">Our reading — the two explanations are not exclusive, and the second is a real constraint</div>
+<p>Both can hold: the ellipsoid shape is itself a source of anisotropic covariance. We test the ellipsoid claim in our experiments (<a href="06_critical_reading.html#layernorm">page 6</a>); it also bears on the Minkowski hypothesis of <a href="05_minkowski.html#limits">page 5</a>.</p></div>
+
+<h3 id="geo-hoyer">(C–D) Hoyer scores: atoms are distributed</h3>
+<div class="box recall"><div class="box-h">Reminder — Hoyer sparsity</div>
+<p>For $\vx\in\R^n$, $\mathrm{Hoyer}(\vx)=\dfrac{\sqrt n-\norm{\vx}_1/\norm{\vx}_2}{\sqrt n-1}\in[0,1]$: $1$ for a one-hot vector, $0$ for a constant one. <a href="02_toolbox.html#hoyer">more</a></p></div>
+<p>For a Gaussian vector, $\norm{\vx}_1/\norm{\vx}_2\approx\sqrt{2n/\pi}$, so the score tends to $1-\sqrt{2/\pi}=0.202$ (simulation at $n=768$: $0.210$). An atom aligned with one neuron would score near $1$; a vector with $77$ equal non-zero entries ($10\%$ of $768$) scores $0.71$. The SAE atoms score $0.22$–$0.25$: almost as spread as random vectors, slightly sparser. So each atom is a combination of many of the $768$ coordinates: a <em>distributed</em> representation, not neuron-aligned.</p>
+<div class="box ours"><div class="box-h">Our reading — Hoyer depends on the basis</div>
+<p>The score is measured in the coordinate basis of the residual stream, which the model has no reason to privilege except through LayerNorm's per-coordinate $\gamma,\beta$ (and known high-norm coordinates in some ViTs). A score close to that of Gaussian vectors says the atoms are not axis-aligned; it does not say they are "as random as" Gaussian ones (they are not, by panels A and B).</p></div>
+<div class="box paper"><div class="box-h">Johnson–Lindenstrauss footnote <span class="ref">§5 · p. 12</span></div>
+<p>"The Johnson–Lindenstrauss (JL) lemma implies that $p=\exp(\mathcal O(m\eps^2))$ vectors can be embedded into $\R^m$ such that all pairwise inner products are preserved up to a small distortion $\eps>0$. This supports the feasibility of near-orthogonality even in regimes where $p\gg m$."</p></div>
+<p>Decoded: with $m=d=768$ dimensions one can place exponentially many ($\exp(O(768\eps^2))$) unit vectors with all $\abs{\ps{\cdot}{\cdot}}\le\eps$. Equivalently $d\gtrsim\eps^{-2}\ln c$: with $\ln c=10.4$, near-orthogonality at the $0.2$ level needs a few hundred dimensions. So the LRH's "overcomplete but quasi-orthogonal" is feasible, and the paper's point is that the learned dictionary does <em>not</em> use this freedom (it prefers "structured redundancy"). <a href="02_toolbox.html#jl-random">more</a></p>
+<div class="box remark"><div class="box-h">What the paper concludes, and what to keep</div>
+<p>The paper: the dictionary is "neither maximally incoherent nor uniformly distributed", with clusters, reduced effective rank, and groups of atoms tied to tasks (page 3). Keep apart: (A) is a statement about <em>pairs</em> (some are far above $0.066$); (B) about the <em>global spectrum</em>; (C–D) about <em>coordinates</em>. None of them alone contradicts the LRH, since the LRH (Def. 1) only asks for small coherence $\varepsilon$ to be <em>some</em> number; the paper's argument is that $\mu\approx0.9$ is not small.</p></div>
+<div class="quiz"><p>Why must the singular values of a unit-row dictionary with $c=32000$, $d=768$ have mean square $41.7$, whatever its geometry?</p>
+<details class="fold sol"><summary>Answer</summary><div class="fold-body"><p>$\sum_{i=1}^d\sigma_i^2=\norm{\mD}_F^2=\sum_j\norm{\mD_j}^2=c$ since rows are unit. Divide by $d$: $c/d=41.7$. A larger first singular value must be paid by smaller ones.</p></div></details></div>
+<div class="box reflex"><div class="box-h">Reflex</div><p>When you see "the singular values decay" for a dictionary → compare with $\sqrt{c/d}$ and the Marchenko–Pastur band, not with a flat line at $1$.</p></div>
