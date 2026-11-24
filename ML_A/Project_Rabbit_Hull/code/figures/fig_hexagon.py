@@ -34,6 +34,6 @@ axs[1].text(0, 0.36, "$T$", color="white", ha="center", va="center", fontsize=8,
 axs[1].text(0, -0.42, "$-T$", color=INK, ha="center", va="center", fontsize=8, zorder=4)
 # (c), (d) the clouds
 for ax, X, c in [(axs[2], z["X_lin"], ORANGE), (axs[3], z["X_blk"], BLUE)]:
-    ax.scatter(X[:, 0], X[:, 1], s=1.2, lw=0, color=c, alpha=0.2, rasterized=True, zorder=2)
+    ax.scatter(X[:, 0], X[:, 1], s=0.8, lw=0, color=c, alpha=0.2, rasterized=True, zorder=2)
 fig.subplots_adjust(wspace=0.08, left=0.01, right=0.99, top=0.97, bottom=0.22)
 save(fig, "fig_hexagon")

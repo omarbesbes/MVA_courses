@@ -57,15 +57,15 @@ b.set_xscale("log")
 b.set_xticks(dims); b.set_xticklabels([str(d) for d in dims]); b.minorticks_off()
 b.set_xlabel("dimension $d$  ($N$ = 20,000)")
 b.set_ylabel("midpoint value $\\rho$")
-b.set_ylim(0, 0.8)
+b.set_ylim(0, 0.95)
 b.legend(loc="upper left", handlelength=1.6, borderaxespad=0.1, labelspacing=0.3, fontsize=6.5)
 panel_letter(b, "b", x=-0.14, y=1.02)
 
 # (c) R2 curves
 t = np.linspace(0, 1, 101)
-for key, col in [("a", BLUE), ("c", GRAY)]:
+for key, col in [("c", GRAY), ("a", BLUE)]:
     cu = r2[key]["curves"]
-    c.plot(t, cu["lin_norm_mean"], color=col, lw=1.3)
+    c.plot(t, cu["lin_norm_mean"], color=col, lw=2.6 if key == "c" else 1.1, zorder=2 if key == "c" else 3)
     c.plot(t, cu["graph_norm_mean"], color=col, lw=1.3, ls=(0, (3, 1.6)))
 c.set_xlim(0, 1); c.set_ylim(0, 0.8)
 c.set_xlabel("position along the path")

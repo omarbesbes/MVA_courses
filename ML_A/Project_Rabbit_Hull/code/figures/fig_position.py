@@ -19,6 +19,6 @@ ax.scatter(P[:, 0], P[:, 1], s=5, color=BLUE, lw=0, zorder=3)
 ax.set_aspect("equal")
 ax.set_xlabel(f"PC 1 ({100 * sh[0]:.0f}%)"); ax.set_ylabel(f"PC 2 ({100 * sh[1]:.0f}%)")
 ax.legend(handles=[Line2D([], [], color=BLUE, marker="o", ls="none", ms=3), Line2D([], [], color=GRAY, lw=0.8)],
-          labels=["mean token at a position", "additive fit $r_i+c_j$"], loc="best", fontsize=6.5, handlelength=1.5, borderaxespad=0.2)
-fig.subplots_adjust(left=0.14, right=0.98, top=0.98, bottom=0.14)
+          labels=["mean token at a position", "additive fit $r_i+c_j$"], loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=2, fontsize=6.3, handlelength=1.4, columnspacing=0.9, handletextpad=0.4, borderaxespad=0.1)
+fig.subplots_adjust(left=0.14, right=0.98, top=0.9, bottom=0.14)
 save(fig, "fig_position")
