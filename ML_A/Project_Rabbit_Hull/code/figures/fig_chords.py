@@ -50,15 +50,15 @@ cols = {"simplex": BLUE, "cube": AQUA, "gauss": GRAY, "sphere": ORANGE}
 marks = {"simplex": "o", "cube": "s", "gauss": "^", "sphere": "D"}
 names = {"simplex": "simplex", "cube": "cube", "gauss": "Gaussian", "sphere": "sphere (non-convex)"}
 b.axhline(0.5, color=INK2, lw=0.6, ls=(0, (3, 2)))
-b.text(2.0, 0.51, "nearest sample is an endpoint", fontsize=6.5, va="bottom", ha="left")
+b.text(2.0, 0.515, "nearest sample is an endpoint", fontsize=6.5, va="bottom", ha="left")
 for k, s in enumerate(sup):
     b.plot(dims, L[k, :, 50], color=cols[s], marker=marks[s], lw=1.1, ms=3, label=names[s])
 b.set_xscale("log")
 b.set_xticks(dims); b.set_xticklabels([str(d) for d in dims]); b.minorticks_off()
 b.set_xlabel("dimension $d$  ($N$ = 20,000)")
-b.set_ylabel("midpoint value $\\rho$, straight path")
-b.set_ylim(0, 0.6)
-b.legend(loc="lower right", handlelength=1.6, borderaxespad=0.2)
+b.set_ylabel("midpoint value $\\rho$")
+b.set_ylim(0, 0.8)
+b.legend(loc="upper left", handlelength=1.6, borderaxespad=0.1, labelspacing=0.3, fontsize=6.5)
 panel_letter(b, "b", x=-0.14, y=1.02)
 
 # (c) R2 curves
@@ -67,15 +67,15 @@ for key, col in [("a", BLUE), ("c", GRAY)]:
     cu = r2[key]["curves"]
     c.plot(t, cu["lin_norm_mean"], color=col, lw=1.3)
     c.plot(t, cu["graph_norm_mean"], color=col, lw=1.3, ls=(0, (3, 1.6)))
-c.set_xlim(0, 1); c.set_ylim(0, 0.62)
+c.set_xlim(0, 1); c.set_ylim(0, 0.8)
 c.set_xlabel("position along the path")
-c.set_ylabel("dist. to nearest sample / chord")
+c.set_ylabel("dist. to nearest sample / chord", fontsize=7.5)
 l1_ = c.legend(handles=[Line2D([], [], color=BLUE, lw=1.3), Line2D([], [], color=GRAY, lw=1.3)],
-               labels=["DINOv2 tokens", "Gaussian, same covariance"], loc="upper left", handlelength=1.4,
-               borderaxespad=0.1, fontsize=6.3)
+               labels=["DINOv2 tokens", "Gaussian, same covariance"], loc="upper center", bbox_to_anchor=(0.5, 1.02),
+               handlelength=1.4, borderaxespad=0.1, fontsize=6.3, labelspacing=0.25)
 c.add_artist(l1_)
 c.legend(handles=[Line2D([], [], color=INK, lw=1.2), Line2D([], [], color=INK, lw=1.2, ls=(0, (3, 1.6)))],
-         labels=["straight path", "neighbour-graph path"], loc="center right", handlelength=1.8,
-         borderaxespad=0.1, fontsize=6.3)
+         labels=["straight path", "graph path"], loc="upper center", bbox_to_anchor=(0.5, 0.84), ncol=2,
+         handlelength=1.8, columnspacing=1.0, borderaxespad=0.1, fontsize=6.3)
 panel_letter(c, "c", x=-0.14, y=1.02)
 save(fig, "fig_chords")
