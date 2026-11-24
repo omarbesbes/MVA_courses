@@ -1,0 +1,40 @@
+<h2 id="position-tile">7. A tile that can be observed: position</h2>
+<p class="tldr">One factor of variation has a known value for every token: its position on the $16\times16$ grid. Its code in the last layer is a sum of a row effect and a column effect to 97.4%: two one-dimensional factors, a curved box, not a simplex.</p>
+
+<div class="box paper"><div class="box-h">In the paper <span class="ref">§6 · p. 15–16, Fig. 14–15 · p. 16, §5 · p. 11, Fig. 9</span></div>
+<p>The position of a token can be decoded linearly in the early layers and less in the last ones; the stable rank of the position basis falls from about 9 to about 2.7 and the two leading principal components explain about all of its variance in the last layers: a two-dimensional sheet. In the dictionary, three dense atoms (“left”, “right”, “bottom”) fire on roughly a quarter of all tokens each, and some atoms form antipodal pairs. See <a href="04_statistics_geometry.html#position">page 4</a>.</p></div>
+<p>The paper reads this as a first hint of dense, non-sparse structure. We ask which of the two geometries of <a href="#nested">section 2</a> the position code has.</p>
+
+<h3 id="pos-additive">The additive test</h3>
+<div class="box recall"><div class="box-h">Reminder — an additive two-way table</div>
+<p>A table $P_{ij}$ with $i$ indexing rows and $j$ columns is <em>additive</em> if $P_{ij}=r_i+c_j$: the effect of the row and that of the column simply add. Here each entry is a vector of $\R^{768}$. The best additive fit of a table is given by the row means and column means (after subtracting the overall mean), and the share of variance it explains is $R^2=1-\|P-\hat P\|^2/\|P\|^2$. A table that is a sum of a row effect and a column effect is a Minkowski sum of two sets: the set of row effects and the set of column effects, with no coupling between the two.</p></div>
+<div class="box example"><div class="box-h">Worked example</div>
+<p>The $2\times3$ table $\begin{pmatrix}1&2&4\\3&4&6\end{pmatrix}$ is additive: $r=(0,2)$, $c=(1,2,4)$, $R^2=1$. Change one entry: $\begin{pmatrix}1&2&4\\3&5&6\end{pmatrix}$. The additive fit now leaves the residual $\begin{pmatrix}\tfrac16&-\tfrac13&\tfrac16\\-\tfrac16&\tfrac13&-\tfrac16\end{pmatrix}$ and $R^2=0.981$. For a $16\times16$ table with 255 degrees of freedom after centring, the additive model has $15+15=30$: a table with no structure (random) would give $R^2=30/255=11.8\%$, the baseline against which $97.4\%$ is judged.</p></div>
+<p><strong>Experiment (<code>r6_position_additive</code>).</strong> Let $P_{ij}\in\R^{768}$ be the mean token at position $(i,j)$ over the 1,000 images, centred. Last layer, after the final normalisation.</p>
+<div class="nums"><div class="num"><b>97.4%</b><span>of the variance of $P$ explained by $r_i+c_j$ (44% rows, 53% columns)</span></div><div class="num"><b>94.7%</b><span>held-out: fit on 500 images, scored on the table of the other 500; ceiling 95.2%</span></div><div class="num"><b>11.8%</b><span>a generic table (30 of 255 degrees of freedom)</span></div></div>
+<p>The held-out figure is the honest one: the tables of two halves of the images are noisy, so even the exact table of one half explains only $95.2\%$ of the other's (the <em>ceiling</em>). The additive fit reaches $94.7\%$, within half a point of it. Each factor is close to one-dimensional:</p>
+<div class="table-wrap"><table>
+<thead><tr><th></th><th>one direction</th><th>two directions</th></tr></thead>
+<tbody><tr><td>row effects $r_i$ (16 vectors)</td><td>72%</td><td>96%</td></tr>
+<tr><td>column effects $c_j$ (16 vectors)</td><td>77%</td><td>97%</td></tr></tbody></table></div>
+<p>The coordinate along the leading direction is monotone in the index (rank correlation $1.0$ for both), and the two leading directions are orthogonal (cosine $0.05$). A straight line in the index would explain only $71\%$ and $75\%$: the factors are <em>arcs</em>, not segments, as the curvature of the ellipsoid imposes. The two rank-one factors together explain $72.8\%$ of $P$.</p>
+<figure class="paperfig narrow"><img data-src="own_figures/fig_position.png" alt="A curved grid of 256 dots in the plane of the first two principal components, overlaid with the lattice of the additive fit."><figcaption><strong>The positional code of the last layer.</strong> Dots: the mean token at each of the 256 positions, in the plane of its first two principal components. Lines: the additive fit $r_i+c_j$, which explains $97.4\%$ of the variance. <span class="src">From the project report.</span></figcaption></figure>
+<div class="box method"><div class="box-h">How to read this figure</div>
+<ul>
+<li><b>Axes.</b> $x$: first principal component of $P$ (41% of its variance); $y$: second (32%); together 73%. Each blue dot is the mean token at one of the 256 positions.</li>
+<li><b>Grey lattice.</b> The additive fit $r_i+c_j$ plotted in the same plane: 16 curves for fixed $i$ (varying $j$) and 16 for fixed $j$.</li>
+<li><b>Look at.</b> The dots form a curved sheet and sit on the lattice: each position is reached by combining a row arc and a column arc.</li>
+<li><b>Conclusion.</b> The sheet that the paper finds is a product: a sum of two one-dimensional factors.</li>
+<li><b>What it does not show.</b> The scatter around the lattice (about 3% of the variance outside the additive model); and that training <em>created</em> additivity: the in-sample $R^2$ is also $0.91$ before the last normalisation and $0.90$ for the random-weights twin, so the test establishes the shape of the table, not its origin. Position is also only 4.8% of the variance of a token.</li>
+</ul></div>
+
+<h3 id="pos-box">Why this is “a box”</h3>
+<p>The $16\times16$ grid of positions is the product of a row range and a column range, and the code is the sum of the corresponding factors. The row and the column vary freely and independently: there is no unit budget shared between them. In the terms of <a href="#nested">section 2</a>, this is a linear code with two bounded features (a zonotope, here curved), not a tile with a simplex of archetypes: <em>a box, not a simplex</em>. A simplex tile would predict that tokens sit near archetypes (corners); the position grid is uniform.</p>
+<div class="box ours"><div class="box-h">Our reading — it explains two anomalies of the paper's dictionary</div>
+<ul>
+<li><b>Dense atoms.</b> A non-negative, sparse code has to represent a signed axis (left-to-right) by two opposite atoms; and an axis on which every token has a value is always active. This explains atoms such as “left”, “right”, “bottom” that fire on about a quarter of all tokens each.</li>
+<li><b>Antipodal pairs.</b> Two atoms $\vd_i\approx-\vd_j$ are the two signs of one axis.</li>
+</ul>
+<p>This is the axis code the paper itself describes; it does not need polytopes. Where the paper uses position as a first hint of non-linear structure, we read it as the linear special case.</p></div>
+<div class="box lab"><div class="box-h">Checked on DINOv2 — <code>r6_position_additive</code>, <code>r7_position_layers</code></div>
+<p>Additive $R^2$: $0.974$ (trained, post-norm), $0.909$ (trained, pre-norm), $0.904$ (random twin, post-norm). Held-out for the trained post-norm: $0.947$ against a ceiling $0.952$. <code>r6</code> also gives the stable rank of the centred table (2.4) and the position share of token variance ($4.8\%$); <code>r7</code> follows position across the 13 depths. See <a href="#lab">section 8</a>.</p></div>

@@ -25,6 +25,10 @@ WIDGETS.p6budget = function (box) {
   var pc = new Plot(ui.svg, { w: 420, h: 420, x: [-0.15, 1.15], y: [-0.15, 1.15], label: "Feasible set of the codes (z1, z2) with sample points" });
   var svg2 = addSvg(box, ui.svg);
   var pa = new Plot(svg2, { w: 560, h: 420, x: [-2, 3.6], y: [-0.9, 3.13], label: "The resulting cloud of activations x = z1 g1 + z2 g2" });
+  var wrap = document.createElement("div");
+  wrap.style.cssText = "display:flex;flex-wrap:wrap;gap:0.6rem;align-items:center;justify-content:center";
+  ui.svg.parentNode.insertBefore(wrap, ui.svg); wrap.appendChild(ui.svg); wrap.appendChild(svg2);
+  [ui.svg, svg2].forEach(function (sv) { sv.style.cssText = "flex:1 1 270px;min-width:0;max-width:400px;width:auto;height:auto"; });
   var modeSel, aS, phiS, nS, seedBtn, showOther, out, seed = 1;
   var L = 1.6;
   function gens() {

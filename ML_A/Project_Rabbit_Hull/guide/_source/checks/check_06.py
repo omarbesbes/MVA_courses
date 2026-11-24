@@ -130,3 +130,14 @@ for d in (2,50):
     print("d",d,"mean rho (N=20000, 200 pairs)",np.mean(r))
 print("== 13. k-means error check of tiny example")
 print(((np.array([[0,0],[2,0],[1,1.5]])-np.array([1,.5]))**2).sum(), ((np.array([[4,0],[3,1.5]])-np.array([3.5,.75]))**2).sum())
+
+print("== 14. exercises")
+d=768; R=math.sqrt(d); 
+for th in (90,56): print("theta",th,"sqrt d",R,"depth",(1-math.cos(math.radians(th/2)))*R,"half chord",R*math.sin(math.radians(th/2)),"ratio",math.tan(math.radians(th/4)))
+X=np.array([[0,0],[2,0],[4,0],[1,1.5],[3,1.5]])
+A_=np.array([.5,.5]);B_=np.array([3.5,.5]); d_=B_-A_; t=np.clip(((X-A_)@d_)/(d_@d_),0,1); Rr=A_+t[:,None]*d_; print("AA candidate error",((X-Rr)**2).sum(), "per point",((X-Rr)**2).sum(1))
+print("A=(0.5,0.5) in hull: left edge x=2y/3 ->",2*0.5/3,"; B right edge x=4-2y/3 ->",4-2*.5/3)
+print("exercise 4 weights",np.kron([.5,.5],[.25,.75]))
+print("exercise 5 vertical Q eps=.1: f(u),f(v),f(u+v)")
+eps=.1; s=lambda w:eps*abs(w[1]); f=lambda w:hX(w)-s(w)
+uu=np.array([math.cos(math.radians(30)),.5]); vv=np.array([0,-1.]); print(f(uu),f(vv),f(uu+vv),f(uu+vv)-f(uu)-f(vv))

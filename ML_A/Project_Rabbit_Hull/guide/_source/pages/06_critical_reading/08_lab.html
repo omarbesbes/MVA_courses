@@ -1,0 +1,40 @@
+<h2 id="lab">8. The lab: how the experiments are organised</h2>
+<p class="tldr">Every number of this page comes from one of eleven scripts in <code>code/</code>; each writes one results file with its versions, seeds and running time. The DINOv2 ones read a feature cache written once by <code>r0_extract.py</code>.</p>
+
+<h3 id="lab-setup">Data, model, conventions</h3>
+<ul>
+<li><b>Model.</b> DINOv2 ViT-B/14 with 4 registers (<code>dinov2_vitb14_reg</code>, LVD-142M weights), and a random-weights twin (same architecture, <code>torch.manual_seed(0)</code>, no pre-training). CPU only.</li>
+<li><b>Data.</b> Imagenette (ten ImageNet classes), 320 px validation split. 1,000 “statistics” images (the first 100 file names of each class, sorted) and 200 held-out images (the next 20 per class). Preprocessing: shorter side 256 (bicubic), centre crop 224, ImageNet mean and standard deviation. Each image gives 256 patch tokens; the image lists are in <code>r0_image_lists.json</code>.</li>
+<li><b>Toy data.</b> Synthetic, generated inside each script; all seeds are fixed, so a rerun reproduces the files exactly.</li>
+<li><b>Files.</b> Every DINOv2 JSON file has a <code>versions</code> block (package versions, model identifier, weights SHA-256), a <code>written</code> date and <code>runtime_s</code>. Large features live outside the repository and are written by <code>r0_extract.py</code>.</li>
+</ul>
+
+<h3 id="lab-table">Experiment → script → results → what it measures</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>Experiment</th><th>Script (<code>code/</code>)</th><th>Results (<code>code/results/</code>)</th><th>What it measures</th><th>Time</th><th>Used in</th></tr></thead>
+<tbody>
+<tr><td>T1 chords</td><td><code>toy/t1_chords.py</code></td><td><code>t1_chords.json/.npz</code></td><td>$\rho$ for four supports, $d=2\dots100$, and its dependence on $N$</td><td>not recorded</td><td><a href="#diag-chords">5</a></td></tr>
+<tr><td>T2 sandwich</td><td><code>toy/t2_sandwich.py</code></td><td><code>t2_sandwich.json/.npz</code></td><td>PCA, AA, $k$-means errors and $g$ on a polytope, a Gaussian, a sum (256 points, $\R^{50}$)</td><td>not recorded</td><td><a href="#diag-aa">5</a></td></tr>
+<tr><td>T3 sum or union</td><td><code>toy/t3_sum_union.py</code></td><td><code>t3_sum_union.json/.npz</code></td><td>co-activation of AA on four triangles (union) and on $T_1+T_2$ (sum), in $\R^{20}$</td><td>not recorded</td><td><a href="#diag-blocks">5</a></td></tr>
+<tr><td>T4 hexagon</td><td><code>toy/t4_hexagon.py</code></td><td><code>t4_hexagon.json/.npz</code></td><td>two decompositions of the hexagon, two point clouds, the counter-example of the identifiability proof</td><td>not recorded</td><td><a href="#hexagon">2</a>, <a href="#identifiability">6</a></td></tr>
+<tr><td>R0 extraction</td><td><code>dino/r0_extract.py</code></td><td>feature cache (outside the repository), <code>r0_image_lists.json</code></td><td>final-layer patch tokens before and after the last normalisation, special tokens, layer statistics, held-out tokens at 13 depths</td><td>not recorded</td><td>all R</td></tr>
+<tr><td>R1 LayerNorm</td><td><code>dino/r1_layernorm_ellipsoid.py</code></td><td><code>r1_layernorm_ellipsoid.json</code></td><td>the constraint $\|\vu\|^2=d$, $\vga$, depth of chords (ray and exact)</td><td>115 s</td><td><a href="#layernorm">4</a></td></tr>
+<tr><td>R2 interpolation</td><td><code>dino/r2_interpolation_nulls.py</code></td><td><code>r2_interpolation_nulls.json</code></td><td>the paper's chord test on tokens and six nulls, variants of $k$ and $N$</td><td>750 s</td><td><a href="#diag-chords">5</a></td></tr>
+<tr><td>R3 sandwich</td><td><code>dino/r3_aa_sandwich.py</code></td><td><code>r3_aa_sandwich.json</code></td><td>per-image PCA, AA, $k$-means and $g$ on tokens, pre-norm, random twin, two nulls</td><td>1,441 s</td><td><a href="#diag-aa">5</a></td></tr>
+<tr><td>R4 attention</td><td><code>dino/r4_attention_anatomy.py</code></td><td><code>r4_attention_anatomy.json</code></td><td>residual identity and decomposition, key rank, entropy, special-token mass, heads per token (100 images)</td><td>439 s</td><td><a href="#architecture">3</a></td></tr>
+<tr><td>R5 co-activation</td><td><code>dino/r5_coactivation.py</code></td><td><code>r5_coactivation.json/.npz</code></td><td>global AA with 200 and 50 archetypes: co-activation against class and image identity</td><td>842 s (AA 613 s)</td><td><a href="#diag-blocks">5</a></td></tr>
+<tr><td>R6 position</td><td><code>dino/r6_position_additive.py</code>, <code>r6b_position_plane.py</code></td><td><code>r6_position_additive.json</code>, <code>r6_position_plane.npz</code></td><td>additive fit of the position table, split-half, one-dimensionality of the factors; the 2-D view of the figure</td><td>93 s</td><td><a href="#position-tile">7</a></td></tr>
+<tr><td>R7 position by depth</td><td><code>dino/r7_position_layers.py</code></td><td><code>r7_position_layers.json</code></td><td>stable rank, position share and a ridge position probe across 13 depths</td><td>158 s</td><td><a href="#position-tile">7</a></td></tr>
+</tbody></table></div>
+<p>R8 (PCA maps of the paper) was not run. The report's five figures are drawn by <code>code/figures/fig_*.py</code> from these files; the numbers of the worked examples of this page are recomputed by <code>checks/check_06.py</code>.</p>
+
+<h3 id="lab-rerun">How to rerun</h3>
+<p>From <code>code/</code>: <code>python toy/t1_chords.py</code> (and t2–t4), then once <code>python dino/r0_extract.py</code> (it needs the model weights and the Imagenette validation split, and writes the cache), then <code>python dino/rN_*.py</code> in any order. The shared code is in <code>code/rh/</code> (<code>aa.py</code> archetypal analysis, <code>interp.py</code> chord test and neighbour graph, <code>nulls.py</code> null models, <code>dino.py</code> model loading) and <code>code/dino/common.py</code>; <code>code/tests/test_core.py</code> tests the core functions.</p>
+
+<h3 id="lab-limits">What would be needed to go further</h3>
+<ul>
+<li><b>The paper's dictionary.</b> We did not have the 32,000-atom SAE. The experiment that our analysis calls for, a test of <em>box or simplex on its codes</em>, needs it: for groups of atoms, do the codes fill a square or a triangle (<a href="#box-simplex">section 2</a>)? Ideally on factors of known value, categorical (a simplex is plausible) against continuous (we found a box).</li>
+<li><b>Before the last normalisation,</b> or with convexity understood along the ellipsoid (<a href="#layernorm">section 4</a>).</li>
+<li><b>Per-head analysis.</b> With the attention weights as codes, look for tiles head by head, keeping in mind that all heads are active and the polytopes move with the image.</li>
+<li><b>Scale.</b> We used one model, 1,000 images of ten classes and at most 50,000 tokens; null models match first and second moments only. These are checks, not benchmarks.</li>
+</ul>
