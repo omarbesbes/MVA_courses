@@ -55,3 +55,25 @@ def save(fig, name):
     fig.savefig(os.path.join(PDF_DIR, name + ".pdf"))
     fig.savefig(os.path.join(PNG_DIR, name + ".png"), dpi=200, format="png")
     print("saved", os.path.join(PDF_DIR, name + ".pdf"))
+
+
+TALK_DIR = os.path.abspath(os.path.join(ROOT, "slides", "figures"))
+
+
+def set_talk_style():
+    """rcParams for the talk figures: designed at slide size (16:9, 160 mm wide), 9-10 pt text, thicker lines.
+    Same palette as setup(); does not alter setup()."""
+    setup()
+    plt.rcParams.update({
+        "font.size": 9.5, "axes.titlesize": 9.5, "axes.labelsize": 9.5, "xtick.labelsize": 9, "ytick.labelsize": 9,
+        "legend.fontsize": 9, "axes.linewidth": 0.9, "xtick.major.width": 0.9, "ytick.major.width": 0.9,
+        "xtick.major.size": 3.5, "ytick.major.size": 3.5, "lines.linewidth": 1.8, "lines.markersize": 5.5,
+    })
+
+
+def talk_save(fig, name):
+    os.makedirs(TALK_DIR, exist_ok=True)
+    os.makedirs(PNG_DIR, exist_ok=True)
+    fig.savefig(os.path.join(TALK_DIR, name + ".pdf"))
+    fig.savefig(os.path.join(PNG_DIR, name + ".png"), dpi=150, format="png")
+    print("saved", os.path.join(TALK_DIR, name + ".pdf"))
