@@ -65,8 +65,8 @@ on factors of known value.
 - *Did you use the paper's autoencoder?* No. We reproduced its archetypal-analysis curve and placed its
   reported autoencoder error on our axes; the box-or-simplex test on its codes remains to be done.
 - *Is the ellipsoid argument fair if the hypothesis is only approximate?* The paper presents it as a working
-  hypothesis; our point is that the exact statement cannot hold after normalisation and that signature E1 is
-  then automatic. Locally, at scales where the ellipsoid is flat, the hypothesis can still be a good model.
+  hypothesis; our point is that the exact statement cannot hold after normalisation: chords do leave the set of
+  attainable activations, slightly (10% of a half-chord). The peak of signature E1 itself is a sampling effect. Locally, at scales where the ellipsoid is flat, the hypothesis can still be a good model.
 - *Why a Gaussian null?* It has a convex support and no archetype, and it matches the first two moments of
   the tokens. It is the simplest distribution that should fail a test of polytope structure.
 - *Does the gap ratio exclude large polytopes?* No. It is calibrated for about ten vertices per image, the
