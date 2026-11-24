@@ -1,0 +1,53 @@
+<!--
+title: Critical reading — what is solid, what is not
+short: 6 · Critical reading
+description: The project's own analysis of the Minkowski representation hypothesis of "Into the Rabbit Hull": nested hypotheses, the limits of the attention argument, LayerNorm, the three signatures under null models, identifiability, the position tile, and the errata.
+subtitle: What the report argues and why, step by step, with the toy examples and the DINOv2 experiments behind it. The paper is quoted in its own boxes; everything else on this page is our reading.
+kicker: Into the Rabbit Hull · study guide · critical reading
+-->
+<div class="box objectives"><div class="box-h">After this page you can</div>
+<ul>
+<li>say, for each claim of Part III of the paper, what supports it and how strong we think it is (solid, suggestive, speculative), and defend that verdict in one sentence;</li>
+<li>repair the definition of the hypothesis (a union over active sets, not a sum over all tiles) and prove that a bounded linear code is the special case with segment tiles; say what remains to separate the two hypotheses (a box or a simplex inside a tile);</li>
+<li>explain the four limits of the attention argument with the measured numbers (rank 64 against 261, spread of attention, 0.65 / 0.35 and 0.46 / 0.54, the last block at 82%);</li>
+<li>prove that no segment lies on the output of a layer normalisation, compute the depth of a chord, and say what the result excludes and what it leaves standing;</li>
+<li>for each of the three signatures (chords, archetypal analysis against the SAE, block co-activation), say what the paper concludes, what a null model gives, and what that does not exclude;</li>
+<li>repair the proof of the non-identifiability result, give the numerical counter-example (0.45, 0.45, 1.0), and say why the same non-uniqueness holds for linear codes;</li>
+<li>explain the additive test on the position code and the numbers it gave (97.4%, 94.7% against a ceiling of 95.2%, 11.8%);</li>
+<li>say which script produced which result, and list the slips found in the paper with their evidence.</li>
+</ul></div>
+
+<h2 id="start">0. Before you start</h2>
+<p class="tldr">Parts I and II of the paper are measurements and stand. Part III proposes a hypothesis and offers evidence for it; this page, which follows the project report (sections 4 and 5), shows that the evidence does not separate the hypothesis from simpler pictures, and that one exact consequence of it fails after the last layer normalisation. It does not show that the hypothesis is false.</p>
+
+<h3 id="how-to-read">How to read this page</h3>
+<p>The page is the project's own reading. Boxes marked <span class="tag solid">In the paper</span> quote or paraphrase the paper, with a page reference; they are kept short because pages 3 to 5 develop them. Everything else, in particular every box marked “Our reading” and every experiment, is ours: we say “we” for the arguments of the report. Boxes marked “Checked on DINOv2” and the tables in <a href="#lab">section 8</a> point to the results files. A proof is in a fold; read the <em>idea</em> box first.</p>
+<p>Three statuses are used for a claim: <span class="tag solid">solid</span> (proved, or measured directly), <span class="tag suggestive">suggestive</span> (consistent with the data, not separated from rivals) and <span class="tag speculative">speculative</span> (not tested, or contradicted by our checks). <span class="tag own">own</span> marks a result of the project.</p>
+<div class="box pitfall"><div class="box-h">Pitfall — “we showed the paper is wrong”</div>
+<p>The report does not say that. It says three things: the definition needs a repair; the arguments given do not discriminate between the hypothesis and simpler models; one exact consequence (a Minkowski sum for normalised tokens) is excluded. The authors call their hypothesis “a working hypothesis” and their evidence “compatible, not proof”; the report agrees with that wording and asks what <em>would</em> count as evidence.</p></div>
+
+<h3 id="story">The argument of the report in six steps</h3>
+<ol class="chain">
+<li><b>Repair and nest.</b> The definition as written clashes with itself (a full sum is convex; the text describes a union). Repaired, it contains bounded linear codes as the case where every tile is a segment. The two hypotheses differ by one thing: inside a group of features, a box or a simplex (<a href="#nested">section 2</a>).</li>
+<li><b>Delimit the attention argument.</b> “Attention outputs convex combinations” is true for any weights and any input; the polytopes are rebuilt for every image; the condition for filling a polytope fails (rank 64 against 261); a token is mostly not an attention update (<a href="#architecture">section 3</a>).</li>
+<li><b>Layer normalisation.</b> After the last normalisation all tokens lie on an ellipsoid, which contains no segment: no non-trivial Minkowski sum describes them exactly (<a href="#layernorm">section 4</a>).</li>
+<li><b>Null models for the three signatures.</b> Chords leave a sample of a Gaussian too; per-image <em>k</em>-means matches the reported error and archetypal analysis sits where a Gaussian puts it; blocks follow image classes, the mark of a union, not of a sum (<a href="#diagnostics">section 5</a>).</li>
+<li><b>Identifiability.</b> The proof has a gap, repaired; the true statement is about supports and holds for linear codes too; what identifies a dictionary is sparsity and the law of the codes (<a href="#identifiability">section 6</a>).</li>
+<li><b>A tile one can observe.</b> The position code is additive in rows and columns to 97%: a box, the linear special case (<a href="#position-tile">section 7</a>).</li>
+</ol>
+
+<h3 id="needs">What you need</h3>
+<ul>
+<li>From <a href="02_toolbox.html">page 2</a>: <a href="02_toolbox.html#convex-hull">convex hull</a>, <a href="02_toolbox.html#simplex-barycentric">simplex</a>, <a href="02_toolbox.html#minkowski-sum">Minkowski sum</a>, <a href="02_toolbox.html#zonotopes">zonotopes</a>, <a href="02_toolbox.html#support-functions">support functions</a>, <a href="02_toolbox.html#decomposability">decomposability</a>, <a href="02_toolbox.html#stable-rank">stable rank</a>, <a href="02_toolbox.html#archetypal-analysis">archetypal analysis</a> and its <a href="02_toolbox.html#aa-sandwich">sandwich</a>, <a href="02_toolbox.html#softmax-properties">softmax</a>.</li>
+<li>From <a href="05_minkowski.html">page 5</a>: the <a href="05_minkowski.html#definition">definition</a>, the <a href="05_minkowski.html#theory">attention results</a>, the <a href="05_minkowski.html#evidence">three pieces of evidence</a> and the <a href="05_minkowski.html#imp-identifiability">identifiability result</a>. The notation is the one of page 5; $\X$ is a set of activations here.</li>
+</ul>
+<div class="box method"><div class="box-h">Notation specific to this page</div>
+<div class="table-wrap"><table>
+<tr><th>Symbol</th><th>Meaning</th></tr>
+<tr><td>$\Tc_i$, $\Pc_i$, $S$</td><td>tile, its polytope, an active set of tiles</td></tr>
+<tr><td>$u$, $\gamma$, $\beta$</td><td>layer normalisation: $u=(x-\mu\mathbf 1)/\sigma$ is the centred, scaled vector, $y=\gamma\odot u+\beta$ the output</td></tr>
+<tr><td>$\mathcal E$, $\mathbb S$</td><td>the ellipsoid of the outputs, the sphere of the $u$'s (radius $\sqrt d$ in $\mathbf 1^\perp$)</td></tr>
+<tr><td>$\rho$</td><td>midpoint distance over chord: distance from the midpoint of two samples to the nearest sample, divided by the chord</td></tr>
+<tr><td>$g$</td><td>gap ratio $(\mathrm{AA}-\mathrm{PCA})/(k\text{-means}-\mathrm{PCA})$</td></tr>
+<tr><td>$h_{\mathcal C}$</td><td>support function of a convex set $\mathcal C$</td></tr>
+</table></div></div>

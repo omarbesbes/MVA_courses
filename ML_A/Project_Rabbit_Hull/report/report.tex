@@ -51,9 +51,10 @@ weights and any input, and the final layer normalisation places all tokens on an
 no segment, so no non-trivial Minkowski sum describes them exactly. (iii)~On toy data and on DINOv2 itself,
 the three empirical signatures of MRH are reproduced by data without archetypes: a Gaussian cloud passes
 the interpolation test, $k$-means matches the reported reconstruction error, and the block structure of
-co-activations follows image classes, the signature of a union rather than of a sum. (iv)~We repair the
-proof of the non-identifiability result and show that it does not single out MRH. The positional code,
-the one factor whose values are known, is additive in rows and columns: a box.
+co-activations largely follows image classes: clusters, not tiles that add up. (iv)~The proof of the
+non-identifiability result is flawed; we give the statement that holds and argue that it bears on supports
+only. Finally, the positional code, the one factor whose values are known, is additive in rows and columns
+to 97\%: a genuine sum, but of two curves rather than of two simplices.
 \end{abstract}
 
 \begin{document}
@@ -99,9 +100,8 @@ steering and for the identifiability of concepts.
 The third part is the boldest, and the authors are careful to call it a working hypothesis. This report
 examines it. We ask three questions that a hypothesis about geometry must answer: what exactly does it
 assert that its predecessor does not, what do the arguments given for it establish, and what observation
-could contradict it? Following the philosophy of the class, we answer with definitions, short proofs and
-small examples rather than with a new benchmark; the experiments on DINOv2 itself are deliberately small
-and serve as checks. Our contributions are the following.
+could contradict it? We answer with definitions, short proofs and small examples rather than with a new
+benchmark; the experiments on DINOv2 itself are deliberately small and serve as checks. Our contributions are the following.
 
 \begin{itemize}
   \item \textbf{Two nested hypotheses (\S\ref{sec:nested}).} LRH with bounded codes is the special case of
@@ -118,13 +118,13 @@ and serve as checks. Our contributions are the following.
   high-dimensional distribution, including a Gaussian; a per-image $k$-means matches the reported
   reconstruction error; and block-diagonal co-activations are the mark of a union of clusters, whereas a
   Minkowski sum predicts dense co-activations.
-  \item \textbf{Identifiability (\S\ref{sec:identifiability}).} We repair the proof that a Minkowski
-  sum does not determine its summands, and argue that this result does not single out MRH: it concerns
-  supports, it applies word for word to linear codes, and it ignores the two ingredients, sparsity and the
-  law of the codes, on which the identifiability of dictionaries has always rested.
+  \item \textbf{Identifiability (\S\ref{sec:identifiability}).} The proof that a Minkowski sum does not
+  determine its summands is flawed. We give the statement that holds and argue that it bears on supports
+  only: it ignores the two ingredients, sparsity and the law of the codes, on which the identifiability of
+  dictionaries has always rested.
   \item \textbf{A tile that can be observed (\S\ref{sec:position}).} The positional code of the last layer
-  is additive in rows and columns to 97\%: it is a sum of two one-dimensional factors, the linear special
-  case.
+  is additive in rows and columns to 97\%: a genuine Minkowski sum, whose two summands are curves rather
+  than simplices.
 \end{itemize}
 
 % =============================================================================================
@@ -259,21 +259,23 @@ $\sum_{j\in\cT_i}z_j=1$.
 (b) is a rewriting of~\eqref{eq:mrh}(ii).
 \end{proof}
 
-With signed codes, replace $\cT_j$ by $\{-Md_j,Md_j\}$. Since activations are bounded, (a) says that
-\emph{every} representation satisfying the LRH satisfies the MRH with segments as tiles: its set of
-activations is a union of zonotopes. Conversely a tile with two archetypes $\{a,b\}$ contributes
+With signed codes, replace $\cT_j$ by $\{-Md_j,Md_j\}$; strictly, each tile holds its own copy of the
+origin, since tiles are disjoint. Codes computed on a finite data set are bounded, so (a) says that a
+sparse linear code, such as an SAE produces, is a block-convex code with segments as tiles: its
+activations fill a union of zonotopes. Conversely a tile with two archetypes $\{a,b\}$ contributes
 $a+\lambda(b-a)$, a bounded linear feature along $b-a$ with an offset. The hypotheses therefore part
 ways only at tiles with three archetypes or more, and there the difference is the feasible set of the
 codes: for a tile $\{a,b,c\}$, the coordinates $(\lambda_b,\lambda_c)$ of $a+\lambda_b(b-a)+\lambda_c(c-a)$
 range over the triangle $\lambda_b+\lambda_c\le1$ under MRH, and over a square under LRH, where the two
 features are free to be large together. \emph{Inside a tile, features share a unit budget; across tiles
-they do not.} A tile is thus an irreducible multi-dimensional feature in the sense of
-\citet{engels2025not}, and MRH is LRH plus a statement of mutual exclusion inside groups of atoms: a
-categorical variable relaxed to its simplex.
+they do not.} A tile whose codes are spread out is thus a multi-dimensional feature that cannot be split into independent
+one-dimensional ones, in the spirit of \citet{engels2025not}, and MRH is LRH plus a statement of mutual
+exclusion inside groups of atoms: a categorical variable relaxed to its simplex.
 
 \paragraph{The hexagon.} The budget is a property of the codes, not of the set they generate. Let
 $g_1,g_2,g_3$ be unit vectors at angles $0^\circ,60^\circ,120^\circ$, let $S_k=[-g_k/2,\,g_k/2]$, and let
-$T$ be an equilateral triangle with unit sides. Then the regular hexagon $H$ of unit circumradius satisfies
+$T$ be the equilateral triangle with unit sides, centred at the origin, whose edges are parallel to the
+$g_k$. Then the regular hexagon $H$ of unit circumradius satisfies
 \begin{equation}
   H \;=\; S_1\msum S_2\msum S_3 \;=\; T\msum(-T).
   \label{eq:hexagon}
@@ -282,7 +284,7 @@ The first expression is a linear code with three bounded features in superpositi
 second is a block-convex code with two ternary tiles (Figure~\ref{fig:hexagon}a--b). No property of the set
 $H$ can decide between them. What differs is the law of the points: sparse independent codes put most of
 their mass on the three lines spanned by the $g_k$, whereas codes concentrated near the archetypes put it
-near the nine sums of vertices (Figure~\ref{fig:hexagon}c--d). The lesson for what follows is that a test
+near the sums of vertices, the six corners and the centre (Figure~\ref{fig:hexagon}c--d). The lesson for what follows is that a test
 of MRH against LRH must bear on the joint statistics of the codes; a test that only asks where
 activations lie cannot succeed.
 
@@ -305,7 +307,7 @@ set, which \eqref{eq:mha} does not address.
 $K\in\R^{t\times d_k}$ are the keys and $q\in\R^{d_k}$ is the query. They span a space of dimension at most
 $d_k=64$, while the condition for equality in~\eqref{eq:mha} asks for $\rank K+1\ge t=261$. In addition
 the query of a token is tied to that token, so an image realises exactly $t$ points of each polytope.
-On DINOv2 the key matrices of the last block have rank 64 for every head and image we tested, and attention
+On DINOv2 the key matrices of the last block have rank 64 for every head and image we tested, and in that block attention
 is far from the sharp regime in which outputs sit on vertices: a patch token attends on average to the
 equivalent of 33 to 78 tokens (exponential of the entropy), and puts 10\% to 49\% of its mass, depending
 on the head, on the five special tokens.
@@ -318,10 +320,10 @@ the mean token of each image, which is what the geometry \emph{within} an image 
 become $0.46$ and $0.54$. More than half of the within-image structure is therefore produced by maps that
 are not convex combinations. The last block alone carries 82\% of the token (70\% after centring).
 
-\paragraph{The last normalisation leaves no room for a polytope.} The standard features of DINOv2, and
-the activations that the paper itself describes as lying on an ``ellipsoidal geometry'' (its footnote~5),
+\paragraph{The last normalisation leaves no room for a polytope.} The standard features of DINOv2
 are read after a final layer normalisation $\LN(x)=\gamma\odot\frac{x-\mu(x)\one}{\sigma(x)}+\beta$, with
-$\mu$ and $\sigma$ the mean and standard deviation of the coordinates of $x$. This map is not affine, and
+$\mu$ and $\sigma$ the mean and standard deviation of the coordinates of $x$; the paper's footnote~5 itself
+conjectures that this layer gives the activation space an ``ellipsoidal geometry''. This map is not affine, and
 its range is thin~\cite{brody2023expressivity}.
 
 \begin{proposition}[No segment after layer normalisation]
@@ -334,7 +336,7 @@ single point.
 \end{proposition}
 \begin{proof}
 The vector $u=(x-\mu(x)\one)/\sigma(x)$ satisfies $\one^\top u=0$ and $\|u\|^2=d$: it lies on a sphere $\mathbb{S}$
-of the hyperplane $\one^\perp$. The map $\Phi(u)=\gamma\odot u+\beta$ is affine and injective, and
+of the hyperplane $\one^\perp$. The map $\Phi(u)=\gamma\odot u+\beta$ is affine and injective on $\R^d$, and
 $\cE=\Phi(\mathbb{S})$. (a) By strict convexity of the Euclidean norm, $\|(1-s)u+su'\|<\sqrt d$ for $u\ne u'$ in
 $\mathbb{S}$, so the open segment between $u$ and $u'$ misses $\mathbb{S}$; its image by $\Phi$ is the open segment
 between $y$ and $y'$, and it misses $\Phi(\mathbb{S})$ because $\Phi$ is injective. (b) If some $\cP_i$ contains
@@ -344,13 +346,15 @@ segment inside $\cE$, which contradicts (a).
 
 Item (b) says that~\eqref{eq:mrh}(i), and its repaired form~\eqref{eq:union}, cannot hold exactly for
 normalised tokens, whatever the archetypes: at best the MRH is a local approximation, valid at scales
-where the ellipsoid is flat. Item (a) says that signature (E1) is automatic: a chord between two tokens
-leaves the set of attainable activations as soon as it starts. The midpoint of a chord subtending an
-angle $\theta$ on $\mathbb{S}$ lies at depth $(1-\cos\frac\theta2)\sqrt d$ below the sphere.
-On $256{,}000$ tokens of DINOv2 the constraint holds to a relative precision of $10^{-7}$, with
-$0.19\le\gamma_k\le14.9$ (Figure~\ref{fig:chords}a). Two tokens of the same image subtend $56^\circ$ on
-average, and the midpoint of their chord lies at $10\%$ of the half-chord from $\cE$ ($12.5\%$ for
-tokens of different images).
+where the ellipsoid is flat. Item (a) says that a chord between two tokens
+leaves the set of attainable activations as soon as it starts, though not by much. On the sphere, the
+midpoint of a chord subtending an angle $\theta$ lies $\tan(\theta/4)$ half-chords below the surface.
+On $256{,}000$ tokens of DINOv2 the constraint $\|u\|^2=d$ holds to a relative precision of $10^{-7}$, the
+size of the stabilising constant, with $0.19\le\gamma_k\le14.9$. Two tokens of the same image subtend
+$56^\circ$ on average, a depth of $0.25$ half-chord on the sphere; in token coordinates, where $\cE$ is
+strongly elongated, the Euclidean distance from the midpoint to $\cE$ is $10\%$ of the half-chord
+($12.5\%$ for tokens of different images; Figure~\ref{fig:chords}a). This is ten times less than the peak
+of signature (E1), which \S\ref{sec:diagnostics} traces to sampling.
 The LRH is affected as well, since on $\cE$ a code cannot be doubled, but definition~\eqref{eq:lrh} is a
 statement about each activation and survives, as does~\eqref{eq:mrh}(ii); only the set-level claim (i) is
 excluded.
@@ -368,9 +372,9 @@ network with the same architecture and random weights. Table~\ref{tab:signatures
   it, and no polytope fits. (b) Distance from the midpoint of a chord to the nearest sample, divided by the
   chord, for $20{,}000$ points drawn from three convex supports and from a sphere: in high dimension the
   nearest sample is an endpoint ($0.5$) whatever the support. (c) The paper's test on $50{,}000$ DINOv2
-  tokens and on a Gaussian with the same mean and covariance: the two triangles coincide along the
-  straight path, and both profiles are lower along the path in the neighbour graph (the Gaussian paths have
-  fewer, longer hops).}
+  tokens and on a Gaussian with the same mean and covariance: along the straight path the two profiles
+  coincide (a triangle: the nearest sample is always an endpoint), and both are lower along the path in the
+  neighbour graph (the Gaussian paths have fewer, longer hops).}
   \Description{Three panels: a schematic of an ellipsoid with a chord, a plot of midpoint distance against dimension, and distance profiles along paths for DINOv2 tokens and a Gaussian.}
   \label{fig:chords}
 \end{figure*}
@@ -388,9 +392,14 @@ when $N$ goes from $10^3$ to $10^5$). The path in the neighbour graph stays clos
 cases, as it must: each of its points lies within half an edge of a sample. On DINOv2 we recover the
 figure of the paper, $\rho=0.50$ on the straight path against $0.16$ on the graph path, and we recover it
 again, $0.50$ against $0.19$, on a Gaussian sample with the same mean and covariance as the tokens
-(Figure~\ref{fig:chords}c), a distribution with a convex support and no archetype. Signature (E1) is thus
-a property of finite samples in high dimension. Proposition~\ref{prop:ellipsoid} adds that for normalised
-tokens the chord does leave the support, for a reason unrelated to polytopes.
+(Figure~\ref{fig:chords}c), a distribution with a convex support and no archetype. The statistic $\rho$
+is saturated in both clouds. What separates them is local density: the nearest neighbour of a token is at
+$0.35$ chord, against $0.80$ in the Gaussian sample, so the tokens are far more clustered than their
+covariance implies, which is what the graph path exploits. (The random twin gives $\rho=0.43$ and
+$0.10$: its tokens fill their chords better than those of the trained network.) Signature (E1) is thus a
+property of finite samples in high dimension, sharpened by clustering; it does not bear on the shape of
+the support. Proposition~\ref{prop:ellipsoid} adds that for normalised tokens the chord does leave the
+support, slightly, for a reason unrelated to polytopes.
 
 \paragraph{(E2) Archetypal analysis in its sandwich.} Archetypal analysis with $K$ archetypes has two
 natural neighbours.
@@ -405,11 +414,14 @@ Reconstructions of $\mathrm{AA}_K$ lie in the affine hull of $K$ points, of dime
 $\mathrm{PCA}_{K-1}$ is the best affine subspace of that dimension. Centroids are averages of data points
 and one-hot codes belong to the simplex, so every $k$-means solution is feasible for $\mathrm{AA}_K$.
 \end{proof}
+\noindent In our runs $k$-means initialises archetypal analysis, so the second inequality also holds for
+the computed solutions.
 
 \begin{figure}
   \centering
   \includegraphics[width=\columnwidth]{fig_sandwich}
-  \caption{Signature (E2) on the 256 tokens of one image, averaged over 200 images. (a) Mean squared error
+  \caption{Signature (E2) on the 256 tokens of one image, averaged over 200 images (100 for the two
+  control sets). (a) Mean squared error
   per coordinate of archetypal analysis between its two bounds; crosses: values read from the paper's
   Figure~17; dashed: its SAE. (b) Gap ratio $g$: where archetypal analysis sits between PCA ($0$) and
   $k$-means ($1$), for DINOv2 tokens, a Gaussian with the covariance of each image, and a planted polytope
@@ -418,8 +430,9 @@ and one-hot codes belong to the simplex, so every $k$-means solution is feasible
   \label{fig:sandwich}
 \end{figure}
 
-Our errors for archetypal analysis reproduce those of the paper ($0.32$, $0.25$ and $0.18$ per coordinate
-for $K=3,5,10$, against $0.32$, $0.26$ and $0.19$), so its SAE level of $0.227$ can be placed on our axes
+Our errors for archetypal analysis reproduce those of the paper up to ten archetypes ($0.32$, $0.25$
+and $0.18$ per coordinate for $K=3,5,10$, against $0.32$, $0.26$ and $0.19$; ours are about $20\%$ lower
+for $K=20$ and $30$), so its SAE level of $0.227$ can be placed on our axes
 (Figure~\ref{fig:sandwich}a). A $k$-means with ten centroids per image already passes below it ($0.21$),
 and so does PCA with nine components ($0.15$). ``Matching the SAE with ten archetypes'' is therefore not
 specific to convex mixing: it rewards any model that is refitted on each image, against a single
@@ -433,21 +446,22 @@ barely closer to a small polytope than a Gaussian cloud is. Polytopes with many 
 are not excluded by this test.
 
 \paragraph{(E3) A sum is not a union.} Block-diagonal co-activations mean that each token uses the
-archetypes of a single group. That is the structure of a union of polytopes, that is, of clusters. A
-Minkowski sum predicts the opposite. If $x=p+q$ with $p\in\cP_1$ and $q\in\cP_2$ active together, an
-archetypal analysis, whose codes lie in a single simplex, must take as archetypes the sums of vertices
-$a_i+b_j$, and a token with codes $(\alpha,\beta)$ uses them with weights $\alpha_i\beta_j$: every
-archetype co-activates with every other. We checked both cases in $\R^{20}$
+archetypes of a single group. That is the structure of a union of polytopes, that is, of clusters: the
+case $|S|=1$ of~\eqref{eq:union}. Tiles that add up behave differently. If $x=p+q$ with $p\in\cP_1$ and
+$q\in\cP_2$ active together, the vertices of the set of tokens are sums $a_i+b_j$ of vertices, and a token
+with codes $(\alpha,\beta)$ admits on them the code $\alpha_i\beta_j$, which co-activates every pair.
+Codes on these vertices are not unique, so we checked both cases numerically in $\R^{20}$
 (Figure~\ref{fig:coactivation}a--b). For a union of four triangles, the four blocks hold $99.9\%$ of the
 off-diagonal co-activation ($18\%$ for an unstructured matrix). For the sum of two triangles, $97\%$ of
-the pairs of archetypes co-activate and no partition into blocks does better than chance ($42\%$
-against $36\%$). On DINOv2, an archetypal analysis with 200 archetypes of the tokens of 100 images
-gives blocks that follow the classes of the images: $95\%$ of the archetypes draw more than half of their
-usage from a single class, $52\%$ of the off-diagonal co-activation links archetypes with the same
-dominant class ($10\%$ expected), and a clustering of the matrix into ten blocks has an adjusted mutual
-information of $0.62$ with the classes (Figure~\ref{fig:coactivation}c). Signature (E3) shows that tokens
-of similar objects share archetypes, which any clustering would show; it is evidence for the union
-in~\eqref{eq:union}, not for additive tiles.
+the pairs of archetypes co-activate, and cutting a hierarchical clustering of the matrix into three
+blocks does hardly better than chance ($42\%$ against $36\%$). On DINOv2, an archetypal analysis with 200
+archetypes of the tokens of 100 images gives blocks that largely follow the classes of the images: $95\%$
+of the archetypes draw more than half of their usage from a single class, and $52\%$ from a single image;
+$52\%$ of the off-diagonal co-activation links archetypes with the same dominant class ($10\%$ expected);
+and a clustering of the matrix into ten blocks has an adjusted mutual information of $0.62$ with the
+classes (Figure~\ref{fig:coactivation}c). Signature (E3) thus shows that tokens of similar objects, often
+of the same image, share archetypes, which any clustering would show. It supports the hypothesis in its
+weakest form, one active group per token, and gives no sign of tiles that add up.
 
 \begin{figure*}
   \centering
@@ -455,7 +469,7 @@ in~\eqref{eq:union}, not for additive tiles.
   \caption{Signature (E3): normalised co-activation matrices $A^\top A$ of archetypal analyses. (a) Union
   of four triangles: blocks. (b) Minkowski sum of two triangles: no blocks. (c) DINOv2, 200 archetypes
   fitted on the tokens of 100 images, ordered by the class from which each archetype draws most of its
-  usage: the blocks are the ten classes.}
+  usage: the blocks largely follow the ten classes.}
   \Description{Three matrix plots: a block-diagonal matrix, a dense matrix, and a matrix with ten blocks along the diagonal.}
   \label{fig:coactivation}
 \end{figure*}
@@ -489,7 +503,7 @@ $h_\X$ as a sum of sublinear functions. Its proof then picks ``any sublinear $s$
 and writes $h_\X=(h_\X-s)+s$. This step fails, because $h_\X-s$ need not be sublinear: it is so exactly
 when the convex set with support function $s$ is a summand of $\X$. For a triangle $\X$ centred at the
 origin and a short segment $Q\subset\X$, the function $s=h_Q$ satisfies $0\le s\le h_\X$, yet a triangle
-has no summand other than its own homothets~\cite{schneider2014convex}. For a unit triangle and $Q=[-0.1,0.1]\times\{0\}$, the function $f=h_\X-s$ takes the value $0.45$ in
+has no summand other than its own homothets~\cite{schneider2014convex}. For the triangle $T$ of~\eqref{eq:hexagon} and $Q=[-0.1,0.1]\times\{0\}$, the function $f=h_\X-s$ takes the value $0.45$ in
 the directions $u,v$ at $60^\circ$ and $120^\circ$ and the value $1>0.9$ at $u+v$: it is not subadditive. The statement survives in a weaker form. Decompositions are never unique, for three
 trivial reasons: summands can be translated in opposite directions, a summand can be split as
 $\cP=\lambda\cP\msum(1-\lambda)\cP$, and summands can be regrouped. The rectangle that the paper cuts into
@@ -498,36 +512,39 @@ indecomposable ones~\cite{smilansky1987decomposability,schneider2014convex}, and
 unique either:~\eqref{eq:hexagon} is the classical example, segments and triangles being indecomposable.
 
 \paragraph{What it does not show.} The corrected statement concerns the \emph{support} of the activations
-when \emph{all} tiles are active. Under the same reading the LRH fares no better: the set
-$\{\sum_jz_jd_j:\ z\in[0,M]^c\}$ generated by a dense linear code is a zonotope, and~\eqref{eq:hexagon}
-shows that it does not determine its generators, nor even whether it comes from a linear code. Nobody
-concludes from this that sparse dictionaries cannot be learned from one layer. Dictionaries are
-identifiable because codes are sparse~\cite{donoho2003optimally,aharon2006uniqueness} and because their
-coordinates are statistically independent and non-Gaussian~\cite{comon1994independent}; both properties
-concern the law of the data on its support. The MRH has the same resources: its item (ii) is a sparsity
-assumption, which turns the support into the union~\eqref{eq:union}, whose low-dimensional pieces
-expose the individual polytopes; and the two clouds of Figure~\ref{fig:hexagon} (c--d), which share their
-support, are told apart at a glance. Consequence (I3) is thus too strong as stated. The practical advice
-of the paper stands on its own merits: attention weights are available, and they are the codes
-of~\eqref{eq:mha}.
+when \emph{all} tiles are active, and~\eqref{eq:hexagon} gives its true scope: a support does not tell
+whether it was generated by a linear code or by a block-convex one. Within one family it says more than the
+paper suggests: a sum of segments determines the directions and total lengths of its
+generators~\cite{schneider2014convex}, so the segments cannot ``vary in direction'' as the paper states;
+only their lengths can be split. More importantly, nobody learns a dictionary from a support. Dictionaries
+are identifiable because codes are sparse~\cite{donoho2003optimally,aharon2006uniqueness} and because
+their coordinates are statistically independent and non-Gaussian~\cite{comon1994independent}; both
+properties concern the law of the data on its support. The MRH has the same resources. Its item (ii) is
+a sparsity assumption: when a tile is sometimes active alone, its polytope is a visible piece of the
+union~\eqref{eq:union}, and we conjecture, without proof, that sparse activity identifies the tiles more
+generally. And the two clouds of Figure~\ref{fig:hexagon} (c--d), which share their support, are told apart
+at a glance. Consequence (I3) is thus too strong as stated. The practical advice of the paper stands on its
+own merits: attention weights are available, and they are the codes of~\eqref{eq:mha}.
 
-\subsection{A tile that can be observed: position}
+\subsection{A factor that can be observed: position}
 \label{sec:position}
 There is one factor of variation whose value is known for every token: its position $(i,j)$ on the
-$16\times16$ grid. The paper shows that its code collapses to a two-dimensional sheet in the last layers
-and reads this as a first hint of dense, non-sparse structure. We ask which of the two geometries
-of~\S\ref{sec:nested} it has. Let $P_{ij}\in\R^d$ be the mean token at position $(i,j)$ over the 1,000
-images, centred. The additive model $P_{ij}\approx r_i+c_j$, a Minkowski sum of a set of row effects and
-a set of column effects, explains $97.4\%$ of the variance of $P$ ($94.7\%$ on held-out images, for a
-ceiling of $95.2\%$; a generic table would give $11.8\%$). Each factor is close to one-dimensional: $72\%$
-of the variance of the row effects and $77\%$ of that of the column effects lie along one direction,
-$96\%$ and $97\%$ along two, the coordinate is monotone in the index, and the two leading directions are
-orthogonal (cosine $0.05$). The factors are arcs rather than straight segments, as the curvature of $\cE$
-imposes (Figure~\ref{fig:position}). Position is thus encoded as a sum of two one-dimensional factors, a
-curved zonotope: in the terms of~\S\ref{sec:nested}, a box, not a simplex. This is the axis code that
-the paper itself describes, and it accounts for two of the anomalies of its dictionary, the dense ``left'',
-``right'' and ``bottom'' atoms and the antipodal pairs: a non-negative sparse code needs two opposite
-atoms for each signed axis, and an axis that always has a value is always active.
+$16\times16$ grid. The paper shows that its code collapses to a two-dimensional sheet in the last layers.
+Is this sheet a Minkowski sum? Let $P_{ij}\in\R^d$ be the mean token at position $(i,j)$ over the 1,000
+images, centred. The additive model $P_{ij}\approx r_i+c_j$, the sum of a set of sixteen row effects and
+a set of sixteen column effects, explains $97.4\%$ of the variance of $P$ ($94.7\%$ on held-out images,
+for a ceiling of $95.2\%$; a generic table would give $11.8\%$). On the one factor that we can observe,
+the additive composition postulated by the MRH is therefore verified. This is a positive result for the
+hypothesis, although position carries only $4.8\%$ of the variance of the tokens. The summands, however,
+are not simplices. The sixteen row effects lie on an arc: $72\%$ of their variance is along one direction
+and $96\%$ along two ($77\%$ and $97\%$ for the columns), the coordinate is monotone in the index, and the
+leading directions of rows and columns are orthogonal (cosine $0.05$; Figure~\ref{fig:position}). Each
+factor is a one-parameter curve, and a signed linear code with two directions per factor represents it as
+well as a tile with sixteen archetypes does. Nor can this test separate a box from a simplex: a position
+is a single point of each factor, never a mixture. It does account for two anomalies of the paper's
+dictionary, the dense ``left'', ``right'' and ``bottom'' atoms and the antipodal pairs: a non-negative
+sparse code needs two opposite atoms for each signed axis, and an axis that always has a value is always
+active.
 
 \begin{figure}
   \centering
@@ -551,7 +568,8 @@ it asks whether features compete inside groups, a question that the LRH does not
 
 \paragraph{What would count as evidence.} By~\S\ref{sec:nested}, the question is whether the codes of a
 group fill a box or a simplex, and it must be asked of codes, on factors of known value: categorical
-attributes, for which a simplex is plausible, against continuous ones, for which we found a box. Because
+attributes, for which a simplex is plausible, and continuous ones such as position, which we found to be
+additive across coordinates and one-dimensional within each. Because
 of Proposition~\ref{prop:ellipsoid}, it must be asked before the final normalisation, or with convexity
 understood along the ellipsoid. And since~\eqref{eq:mha} makes the attention weights the codes of an exact
 decomposition, the per-head analysis that the paper recommends is the natural place to look for tiles,

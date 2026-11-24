@@ -1,6 +1,6 @@
-# Speaker notes — 10 minutes, 10 slides
+# Speaker notes — 10 minutes, 11 slides
 
-About one minute per slide. The numbers to remember are in bold.
+A little under one minute per slide. The numbers to remember are in bold.
 
 **1. Title (15 s).** "The paper proposes that DINOv2 represents an image token as a sum of convex mixtures of
 archetypes. I will ask what this claim says, what supports it, and what could contradict it."
@@ -29,9 +29,10 @@ LayerNorm all tokens lie on an ellipsoid, which contains no segment: no polytope
 leaves it. Measured: unit norm to **10⁻⁷**, midpoint at **10%** of the half-chord.
 
 **6. E1 (60 s).** The paper's test: walk the straight line between two tokens and measure the distance to the
-nearest token. Panel b: for points drawn inside a convex polytope the same triangle appears as soon as the
-dimension exceeds about 20. Panel c: a Gaussian with the covariance of the tokens gives the same curves,
-**0.50 and 0.19** against **0.50 and 0.16**. Chords leave the sample, not the support.
+nearest token. Panel b: for points drawn inside a convex polytope the same triangle appears in high dimension
+(0.37 of the chord at dimension 20, 0.49 at 50). Panel c: a Gaussian with the covariance of the tokens gives
+the same triangle, **0.50**; along the neighbour graph **0.19** against **0.16**. What differs is local
+density: the tokens are clustered. Chords leave the sample, not the support.
 
 **7. E2 (60 s).** Archetypal analysis is always between PCA and k-means. We reproduce the paper's numbers,
 and then k-means with ten centroids per image also beats the autoencoder: the comparison rewards any model
@@ -39,18 +40,25 @@ refitted on each image. Where archetypal analysis sits in the sandwich is the in
 **0.26** for a planted polytope, **0.51** for a Gaussian, **0.47** for DINOv2.
 
 **8. E3 (55 s).** Blocks in the co-activation matrix mean each token uses one group of archetypes: a union,
-that is, clusters. A true sum activates all tiles at once and gives a dense matrix. On DINOv2 the blocks are
-the image classes (**0.62** adjusted mutual information).
+that is, clusters. A true sum activates all tiles at once and gives a dense matrix. On DINOv2 the blocks
+largely follow the image classes (**0.62** adjusted mutual information): one group per token, no sign of
+tiles adding up.
 
-**9. Identifiability and position (70 s).** The proof of non-identifiability has a gap; the corrected
-statement is about supports when all tiles are active, and it applies equally to linear codes.
-Identifiability comes from sparsity and from the law of the codes. Position is the one factor we can observe:
-the mean token is a row effect plus a column effect to **97.4%**. Two one-dimensional factors: a box.
+**9. Identifiability (50 s).** The paper says a Minkowski sum does not determine its summands. Its proof has
+a gap: it subtracts a sublinear function and assumes the result is sublinear. The corrected statement is
+true but narrower: it is about supports when all tiles are active. A support cannot tell a linear code from a
+block-convex one, the hexagon again. What identifies a dictionary is sparsity and the law of the codes.
 
-**10. Conclusion (50 s).** Parts I and II stand. The hypothesis asks a real question, whether features compete
-inside groups. But its three signatures are passed by data without archetypes, exact Minkowski geometry is
-impossible after LayerNorm, and non-identifiability is not specific to it. The decisive experiment is on the
-codes: box or simplex, on factors of known value.
+**10. Position (50 s).** Position is the one factor we can observe. The mean token is a row effect plus a
+column effect to **97.4%**: a genuine Minkowski sum, a positive result for the hypothesis. But each summand
+is an arc, a one-parameter curve, not a simplex. And always-on signed axes explain the dense and antipodal
+atoms of the paper's dictionary.
+
+**11. Conclusion (45 s).** Parts I and II stand, and the additive composition holds where we can test it.
+The hypothesis asks a real question, whether features compete inside groups. But its three signatures are
+passed by data without archetypes, exact Minkowski geometry is impossible after LayerNorm, and
+non-identifiability is a statement about supports. The decisive experiment is on the codes: box or simplex,
+on factors of known value.
 
 ## Likely questions
 

@@ -10,7 +10,11 @@ import matplotlib.pyplot as plt  # noqa: E402
 setup()
 res = json.load(open(os.path.join(HERE, "..", "results", "r3_aa_sandwich.json")))["results"]
 K = np.array(res["post"]["K"])
-W = 0.5118  # mean within-image variance per coordinate over the 200 images: MSE = FVU * W
+# mean within-image variance per coordinate over the 200 images (results/r3_within_variance.json,
+# written by dino/r3b_within_variance.py): MSE per coordinate = FVU * W
+import json as _json, os as _os
+_wf = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "..", "results", "r3_within_variance.json")
+W = _json.load(open(_wf))["within_image_variance_per_coordinate"] if _os.path.exists(_wf) else 0.5118
 fig, (a, b) = plt.subplots(2, 1, figsize=(SINGLE, 3.1), sharex=True, gridspec_kw={"hspace": 0.1})
 for key, col, lab, mk in [("pca_Km1", GRAY, "PCA$(K-1)$", "^"), ("aa", BLUE, "AA$(K)$", "o"), ("kmeans", ORANGE, "$k$-means$(K)$", "s")]:
     m, s = np.array(res["post"][key + "_mean"]), np.array(res["post"][key + "_sem"])

@@ -1,0 +1,64 @@
+<h2 id="layernorm">4. No segment after layer normalisation</h2>
+<p class="tldr">The last layer normalisation puts every token on an ellipsoid. An ellipsoid contains no segment, so no non-trivial Minkowski sum of polytopes can be contained in it: the hypothesis, as a statement about the set of normalised tokens, can only be a local approximation.</p>
+
+<div class="box paper"><div class="box-h">In the paper <span class="ref">footnote 5, App. G.3</span></div>
+<p>The authors describe the activations as lying on an “ellipsoidal geometry” (footnote 5). In App. G.3 they argue that many normalisations become affine once the mean and variance are held fixed. That is true for batch normalisation; LayerNorm uses the statistics of each token, computed at inference, so it is not affine (see <a href="#errata">errata</a>).</p></div>
+
+<h3 id="ln-what">What LayerNorm does to a vector</h3>
+<p>The standard features of DINOv2 are read after a final normalisation
+$$\LN(\vx)=\vga\odot\frac{\vx-\mu(\vx)\mathbf 1}{\sigma(\vx)}+\vbe,$$
+where $\mu$ and $\sigma$ are the mean and standard deviation of the coordinates of $\vx$, and $\vga,\vbe$ are learned. Three steps: centre (subtract the mean coordinate), scale (divide by the standard deviation), then a fixed per-coordinate stretch and shift. The first two steps depend on $\vx$ through $\mu$ and $\sigma$, so the map is not affine.</p>
+<div class="box example"><div class="box-h">Worked example in dimension 3</div>
+<p>Take $\vx=(1,2,6)$. Then $\mu=3$, deviations $(-2,-1,3)$, variance $(4+1+9)/3=14/3$, $\sigma=2.160$, and $\vu=(-0.926,\,-0.463,\,1.389)$. Check: $\sum u_k=0$ and $\|\vu\|^2=0.857+0.214+1.929=3=d$. The vector $2\vx=(2,4,12)$ gives the same $\vu$: scale is forgotten. With $\vga=(1,2,0.5)$ and $\vbe=(0.1,0,-0.1)$ the output is $\vy=(-0.826,\,-0.926,\,0.594)$.</p>
+<p>Whatever $\vx$ is, $\vu$ lies in the plane $\mathbf 1^\perp$ on the circle of radius $\sqrt3$. Another point of that circle: $\vu'=(1.414,-0.707,-0.707)$ (from $\vx'=(4,1,1)$). Their midpoint is $(0.244,-0.585,0.341)$, of norm $0.720$, not $\sqrt3=1.732$: the midpoint is $1.012$ inside the circle. No input $\vx$ produces it.</p></div>
+
+<h3 id="ln-statement">The statement and its proof</h3>
+<div class="box thm"><div class="box-h">Proposition — no segment after layer normalisation <span class="tag own">own</span></div>
+<p>Assume $\gamma_k\ne0$ for all $k$ and neglect the stabilising constant in $\sigma$. Then the range of $\LN$ is contained in an ellipsoid $\mathcal E$ of dimension $d-2$, and:</p>
+<p>(a) for two distinct outputs $\vy\ne\vy'$, no point $(1-s)\vy+s\vy'$ with $0<s<1$ belongs to $\mathcal E$;</p>
+<p>(b) if a set $\X\subseteq\mathcal E$ is a Minkowski sum $\Pc_1\oplus\dots\oplus\Pc_m$, then every $\Pc_i$ is a single point.</p></div>
+<div class="box idea"><div class="box-h">Idea</div>
+<p>Before the stretch by $\vga$, the points lie on a round sphere, and the midpoint of two distinct points of a sphere is strictly inside it. An invertible affine map keeps “strictly inside” and “on the surface”. A sum that contained a non-trivial summand would contain a whole segment of the surface, which is impossible.</p></div>
+<details class="fold proof"><summary>Full proof</summary><div class="fold-body">
+<ol class="steps">
+<li>Let $\vu=(\vx-\mu(\vx)\mathbf 1)/\sigma(\vx)$. Then $\mathbf 1\T\vu=0$ and $\|\vu\|^2=d$.<span class="why">the mean of $\vu$ is 0 and its variance (mean of squares) is 1, so $\sum u_k^2=d$</span></li>
+<li>So $\vu$ lies on the sphere $\mathbb S=\{\vu\in\mathbf 1^\perp:\|\vu\|=\sqrt d\}$, of dimension $d-2$.<span class="why">a sphere in a hyperplane of dimension $d-1$</span></li>
+<li>The map $\Phi(\vu)=\vga\odot\vu+\vbe$ is affine and injective.<span class="why">$\gamma_k\ne0$: a diagonal matrix with non-zero entries is invertible</span></li>
+<li>The range of $\LN$ is contained in $\mathcal E=\Phi(\mathbb S)$, an ellipsoid.<span class="why">the image of a sphere by an invertible affine map</span></li>
+<li>(a) Take $\vu\ne\vu'$ in $\mathbb S$ and $s\in(0,1)$. Then $\|(1-s)\vu+s\vu'\|^2=d-2s(1-s)(d-\vu\T\vu')<d$.<span class="why">expand; $\vu\T\vu'<d$ by Cauchy–Schwarz with equality only if $\vu=\vu'$ (same norm)</span></li>
+<li>So the open segment between $\vu$ and $\vu'$ misses $\mathbb S$. Its image by $\Phi$ is the open segment between $\vy$ and $\vy'$, and it misses $\Phi(\mathbb S)$.<span class="why">$\Phi$ is affine (segments to segments) and injective (a point of $\mathcal E$ has one preimage in $\mathbb S$)</span></li>
+<li>(b) Suppose some $\Pc_i$ contains $\vp\ne\vp'$. Choose $\vq_j\in\Pc_j$ for $j\ne i$.<span class="why">the polytopes are non-empty</span></li>
+<li>Then $\sum_{j\ne i}\vq_j+[\vp,\vp']\subseteq\X\subseteq\mathcal E$ is a non-degenerate segment inside $\mathcal E$.<span class="why">definition of the Minkowski sum</span></li>
+<li>This contradicts (a).<span class="why">(a) says no non-degenerate segment lies in $\mathcal E$: its endpoints are two points of $\mathcal E$ and its interior is not</span></li>
+</ol></div></details>
+<div class="box remark"><div class="box-h">Remark — the two assumptions are harmless here</div>
+<p><b>$\gamma_k\ne0$.</b> Measured on DINOv2-B: $0.19\le|\gamma_k|\le14.9$ (median $0.96$), none below $0.05$, none negative. If some $\gamma_k$ were zero, $\Phi$ would project the sphere and its image could be a solid body, which does contain segments: this is why the assumption is needed, and why we measured it. <b>The stabilising constant.</b> The code adds $\varepsilon=10^{-6}$ to the variance; it makes $\|\vu\|^2=d\,\mathrm{var}/(\mathrm{var}+\varepsilon)$, slightly below $d$ (here by about $4\times10^{-7}$ relative), so tokens sit on a sphere of a radius that varies by $4\times10^{-7}$: the proof is unchanged.</p></div>
+<div class="box lab"><div class="box-h">Checked on DINOv2 — <code>r1_layernorm_ellipsoid</code></div>
+<p>On all 256,000 tokens of 1,000 images, $\vu=(\vy-\vbe)/\vga$ has a mean coordinate of at most $3.7\times10^{-8}$ in absolute value, $|\mathrm{var}-1|\le4.3\times10^{-7}$ and $\|\vu\|/\sqrt d$ between $0.9999998$ and $1.0000002$: the constraint holds to a relative precision of $10^{-7}$. The model's own normalisation, recomputed from the pre-norm tokens, agrees to $2\times10^{-6}$. For comparison the pre-norm tokens have norms between 80 and 236 (coefficient of variation 0.13), the post-norm ones 19 to 31 (0.056): the normalisation is what makes them lie on a surface.</p></div>
+
+<h3 id="ln-depth">The depth of a chord</h3>
+<p>How far is the midpoint of a chord from the surface? Take two points of $\mathbb S$ subtending an angle $\theta$ at the centre (at the origin of $\mathbf 1^\perp$). The midpoint is at distance $\sqrt d\cos(\theta/2)$ from the centre, because it lies on the bisector at $\sqrt d$ times the cosine of half the angle. Its <em>depth</em> below the sphere is therefore
+$$(1-\cos\tfrac\theta2)\sqrt d,\qquad\text{which is }\tan\tfrac\theta4\text{ times the half-chord }\sqrt d\sin\tfrac\theta2 .$$
+<div class="box example"><div class="box-h">Worked example</div>
+<p>$\theta=60^\circ$: depth $=(1-\cos30^\circ)\sqrt d=0.134\sqrt d$, and the ratio to the half-chord is $\tan15^\circ=0.268$. For $\theta=90^\circ$ it is $0.293\sqrt d$, ratio $\tan22.5^\circ=0.414$; for $\theta=180^\circ$ (opposite points) the midpoint is the centre: depth $\sqrt d$, ratio 1.</p></div>
+<p>On the real ellipsoid the shortest way to the surface is not along the ray from the centre. We measured it exactly (the true Euclidean distance to the ellipsoid, by the secular equation) on 2,000 pairs of tokens of the same image and 2,000 of different images:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>pairs</th><th>mean angle $\theta$ (in $\vu$-space)</th><th>mean chord</th><th>depth, along the ray / half-chord</th><th>depth, exact / half-chord</th></tr></thead>
+<tbody>
+<tr><td>same image</td><td>$56^\circ$</td><td>27.2</td><td>23% (circle formula: 25%)</td><td><b>10%</b></td></tr>
+<tr><td>different images</td><td>$78^\circ$</td><td>35.1</td><td>34% (circle formula: 35%)</td><td><b>12.5%</b></td></tr>
+</tbody></table></div>
+<p>The ray-based depth matches the sphere formula $\tan(\theta/4)$; the exact depth is smaller because the ellipsoid is elongated (the ratio of its longest to its shortest axis is $78$), so it is nearer to the midpoint than the radial projection. Both are positive for every pair we tested, as the proposition says.</p>
+
+<div class="widget" data-widget="p6chord"><p class="w-noscript">Interactive figure (needs JavaScript).</p></div>
+<p><em>What to look at:</em> with axis ratio 1 (a circle) the exact depth ratio equals $\tan(\theta/4)$ shown in the last line; stretch the ellipse and the exact value drops below it. Move the two points close together: the depth tends to $0$ but never reaches it, so the chord leaves the curve “as soon as it starts”. Tick the polygon: a polygon with vertices on the curve has only those vertices on it, and every edge dips inside by $\tan(\pi/2n)$ of its half-edge on a circle (0.58 for a triangle, 0.20 for 8 vertices). Because a polygon with at least three vertices cannot lie on the curve, the summands of a Minkowski sum on this curve must be single points.</p>
+
+<h3 id="ln-scope">What it excludes, and what it does not</h3>
+<ul>
+<li><b>Excluded.</b> The set-level claim: $\X=\bigmsum\Pc_i$ (or the union of such sums) cannot hold exactly for normalised tokens, whatever the archetypes. At best the hypothesis is a local approximation, valid at scales where the ellipsoid is flat.</li>
+<li><b>Excluded as evidence.</b> Signature 1 is automatic: a chord between two tokens leaves the set of attainable activations as soon as it starts (<a href="#diag-chords">next section</a>).</li>
+<li><b>Not excluded.</b> The per-activation statement. A token can still be a block-convex combination of archetypes: definition (ii) is a statement about each activation and survives, as does the linear one. Only the claim about the <em>set</em> fails. The linear hypothesis is affected in the same way (on $\mathcal E$ a code cannot be doubled), but its definition is also about each activation.</li>
+<li><b>Not excluded.</b> Earlier layers (before the last normalisation, where residual sums are exactly affine) and local statements at small scale.</li>
+</ul>
+<div class="box pitfall"><div class="box-h">Pitfall</div>
+<p>The proposition does <em>not</em> say that the hypothesis is false. It says that a particular exact reading of it (a set that is a sum) is impossible after LayerNorm. Do not state it more strongly. Also check which layer is analysed: the proof concerns post-norm tokens; we assumed that the paper analyses them, as its footnote on ellipsoidal geometry suggests.</p></div>

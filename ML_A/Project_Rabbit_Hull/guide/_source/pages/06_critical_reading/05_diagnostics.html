@@ -1,0 +1,135 @@
+<h2 id="diagnostics">5. The three signatures under null models</h2>
+<p class="tldr">For each of the paper's three empirical signatures we ask what a model without archetypes gives. Chords leave the sample of a Gaussian too; archetypal analysis sits inside its sandwich where a Gaussian puts it; block co-activation follows image classes, the mark of a union, not of a sum.</p>
+<p>The method is the same three times: (1) say what the paper shows; (2) build data whose geometry we control (a <em>toy</em>) and see what the diagnostic gives; (3) run the diagnostic on DINOv2 tokens and on a null model (a distribution with no archetype but the same first two moments) and on a twin network with random weights. The DINOv2 data are the patch tokens of 1,000 Imagenette images (ten classes), after the final normalisation; the toy scripts are in <code>code/toy</code>, the DINOv2 ones in <code>code/dino</code> (<a href="#lab">section 8</a>). Table 1 summarises the outcome.</p>
+<div class="table-wrap"><table>
+<caption>Table 1. The three signatures on DINOv2 tokens, on a null model without archetypes, and on planted structure. $\rho$: midpoint distance over chord (straight path / graph path). $g$: gap ratio at $K=10$.</caption>
+<thead><tr><th></th><th>DINOv2</th><th>Null (no archetypes)</th><th>Planted structure</th></tr></thead>
+<tbody>
+<tr><td>(1) chords, $\rho$</td><td>0.50 / 0.16</td><td>0.50 / 0.19 (Gaussian, same mean and covariance)</td><td>0.49 / 0.15 (uniform in a simplex, $d=50$)</td></tr>
+<tr><td>(2) AA, $g$</td><td>0.47</td><td>0.51 (Gaussian per image)</td><td>0.26 (ten-vertex polytope, same PCA error)</td></tr>
+<tr><td>(3) blocks</td><td>classes (AMI 0.62)</td><td>—</td><td>union: 99.9% in blocks; sum: none ($\mathrm{synthetic},\ \R^{20}$)</td></tr>
+</tbody></table></div>
+
+<!-- ======================= chords ======================= -->
+<h3 id="diag-chords">Signature 1 — chords leave the sample, not the support</h3>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">§7.2 · p. 20, Fig. 17 left · p. 21</span></div>
+<p>Take two tokens. Walk along the straight segment between them and, at each step, measure the distance to the nearest token of the data set; do the same along a shortest path in the $k$-nearest-neighbour graph. The straight path gives a triangle peaking at the midpoint (about 13), the graph path a plateau at 4–5. The authors read this as support for criterion (i), “compatible evidence, not proof”. Page 5 reads the panel: <a href="05_minkowski.html#ev-chords">chords</a>.</p></div>
+<div class="box idea"><div class="box-h">Idea</div>
+<p>In high dimension a finite sample does not fill any body. The midpoint of two samples is farther from every sample than the two endpoints are, even when the midpoint belongs to a convex support. The graph path is within half an edge of a sample by construction, so it cannot leave the data. The triangle then says “the sample is finite and the dimension is large”, not “the support is non-convex”.</p></div>
+<p><strong>A heuristic with numbers.</strong> Draw samples from $N(0,\mI_d)$. Two samples are at distance about $\sqrt{2d}$, so the endpoint is at $\sqrt{d/2}$ from the midpoint. A third independent sample is at distance about $\sqrt{d+d/2}=\sqrt{1.5d}$ from the midpoint, which is $0.87$ times the chord whatever $d$. For this third sample to beat an endpoint it must be at less than $0.5$ times the chord; the nearest of $N$ samples is closer than a typical one by a factor of about $N^{-1/d}$. At $d=50$ and $N=20{,}000$ that factor is $0.82$, giving $0.87\times0.82\approx0.7>0.5$: an endpoint stays the nearest sample. At $d=2$ the factor is $0.007$ and the midpoint is close to some sample. (An order-of-magnitude argument: the measured $\rho$ is $0.01$ at $d=2$ and $0.49$ at $d=50$.)</p>
+<p><strong>Toy experiment <code>t1_chords</code>.</strong> $N=20{,}000$ points drawn uniformly in a regular simplex (one polytope), in a cube (a Minkowski sum of $d$ segments), from a Gaussian, and on a sphere (the only non-convex support). $\rho$ is the distance from the midpoint of a chord to the nearest sample divided by the chord; $\rho=\tfrac12$ means the nearest sample is an endpoint (the “triangle” of the paper). Mean over 200 random pairs.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>support</th><th>$d=2$</th><th>3</th><th>5</th><th>10</th><th>20</th><th>50</th><th>100</th></tr></thead>
+<tbody>
+<tr><td>simplex</td><td>0.011</td><td>0.033</td><td>0.106</td><td>0.231</td><td>0.370</td><td>0.488</td><td>0.500</td></tr>
+<tr><td>cube</td><td>0.011</td><td>0.038</td><td>0.111</td><td>0.265</td><td>0.421</td><td>0.498</td><td>0.500</td></tr>
+<tr><td>Gaussian</td><td>0.011</td><td>0.039</td><td>0.116</td><td>0.253</td><td>0.392</td><td>0.496</td><td>0.500</td></tr>
+<tr><td>sphere</td><td>0.234</td><td>0.222</td><td>0.239</td><td>0.333</td><td>0.460</td><td>0.500</td><td>0.500</td></tr>
+</tbody></table></div>
+<p>For the three convex supports, in which every chord stays inside the support, $\rho$ grows from $0.01$ at $d=2$ to $0.23$–$0.27$ at $d=10$ and $0.49$–$0.50$ from $d=50$. Only in low dimension does the sphere stand out. Filling does not help quickly: at $d=20$, $\rho$ falls only from $0.44$ to $0.34$ (simplex) when $N$ goes from $10^3$ to $10^5$; the log–log slope of the nearest-neighbour distance against $N$ is $-0.067$, close to the $-1/d=-0.05$ of a filled $d$-dimensional body.</p>
+<p><strong>DINOv2 (<code>r2_interpolation_nulls</code>).</strong> We reproduce the paper's test on 50,000 post-norm tokens, 300 pairs, $k=15$ cosine neighbours, 101 steps, and run the same on null models:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>data (50,000 tokens)</th><th>$\rho$ straight path</th><th>$\rho$ graph path</th><th>pairs whose midpoint's nearest sample is an endpoint</th></tr></thead>
+<tbody>
+<tr><td>DINOv2, post-norm (the paper's setting)</td><td>0.50</td><td>0.16</td><td>95%</td></tr>
+<tr><td>DINOv2, pre-norm</td><td>0.49</td><td>0.15</td><td>60%</td></tr>
+<tr><td>Gaussian, same mean and covariance as post-norm</td><td>0.50</td><td>0.19</td><td>100%</td></tr>
+<tr><td>Gaussian mixture, 200 components fitted on post-norm</td><td>0.50</td><td>0.21</td><td>100%</td></tr>
+<tr><td>random-weights twin, post-norm</td><td>0.43</td><td>0.10</td><td>12%</td></tr>
+</tbody></table></div>
+<figure class="paperfig"><img data-src="own_figures/fig_chords.png" alt="Three panels: an ellipsoid with a chord leaving it; midpoint distance over chord against dimension for four supports; distance profiles along straight and graph paths for DINOv2 tokens and a Gaussian."><figcaption><strong>Signature 1 under null models.</strong> (a) Normalised tokens lie on an ellipsoid: a chord leaves it. (b) $\rho$ against dimension for 20,000 points from three convex supports and a sphere. (c) The paper's test on 50,000 DINOv2 tokens and on a Gaussian with the same mean and covariance. <span class="src">From the project report.</span></figcaption></figure>
+<div class="box method"><div class="box-h">How to read this figure</div>
+<ul>
+<li><b>Panel (a).</b> A schematic: the ellipsoid $\mathcal E$, two tokens $y,y'$ on it, their chord and its midpoint $m$ with the arrow “depth” down to the surface. The caption gives the measured values: tokens of one image are $56^\circ$ apart, the depth is 10% of the half-chord (12.5% and $78^\circ$ for different images). It is the picture of <a href="#layernorm">section 4</a>.</li>
+<li><b>Panel (b).</b> $x$: dimension $d$ of the toy space ($N=20{,}000$ points; the ticks 2, 3, 5, 10, 20, 50, 100 are equally spaced). $y$: $\rho$, the distance from the midpoint of a chord to the nearest sample over the chord length; $0.5$ is the ceiling (the nearest sample is an endpoint). One curve per support. Look at where the curves meet the dashed line at $0.5$: about $d=50$ for every convex support; the orange curve (sphere) starts high, near $0.23$.</li>
+<li><b>Panel (c).</b> The paper's test: $x$ position along the path, $y$ distance to the nearest sample (normalised by the chord). Solid: straight path, a triangle with peak $0.5$ at the middle, the same for DINOv2 (blue) and the Gaussian (grey). Dashed: graph path; DINOv2's is flat near $0.16$, the Gaussian's has two bumps up to $0.37$ near the ends (it has fewer, longer hops: 3.9 against 6.9).</li>
+<li><b>Conclusion.</b> The triangle is a property of finite samples in high dimension. A distribution with a convex support and no archetype gives the same figure as the tokens.</li>
+<li><b>What it does not show.</b> That the tokens are <em>not</em> a Minkowski sum: only that this test cannot say so. The null matches the first two moments only. The random twin is less extreme (0.43), so some of the tokens' behaviour does depend on training.</li>
+</ul></div>
+<div class="box ours"><div class="box-h">Our reading — caveat: the ellipsoid is a separate reason</div>
+<p>For normalised tokens the chord leaves the <em>support</em> as well, for a reason unrelated to polytopes: the support is on an ellipsoid (<a href="#ln-statement">section 4</a>, Proposition). So the signature is automatic in two independent ways. The sphere row of the table shows that a curved support gives a large $\rho$ even in low dimension, but a convex one gives it at $d\ge50$ anyway, so the figure cannot tell the two cases apart.</p></div>
+
+<!-- ======================= AA ======================= -->
+<h3 id="diag-aa">Signature 2 — archetypal analysis in its sandwich</h3>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">§7.2 · p. 20, Fig. 17 middle · p. 21</span></div>
+<p>Archetypal analysis (AA) fitted on the 256 tokens of <em>one image</em> reconstructs them with a mean squared error that falls with the number of archetypes: $0.32$ ($K=3$), $0.26$ (5), $0.19$ (10), $0.138$ (20), $0.116$ (30), against $0.227$ for the SAE (dashed). AA is the single-tile case of the hypothesis, so this is read as a direct test of convex coding. Reading of the panel: <a href="05_minkowski.html#ev-aa">page 5</a>.</p></div>
+<div class="box recall"><div class="box-h">Reminder — archetypal analysis and its sandwich</div>
+<p>AA with $K$ archetypes writes each data point as a convex combination of $K$ archetypes, themselves convex combinations of data points. It has two natural neighbours: PCA and $k$-means. <a href="02_toolbox.html#aa-sandwich">More</a>.</p></div>
+<div class="box thm"><div class="box-h">Lemma — sandwich <span class="tag own">own</span></div>
+<p>For any data set and any $K$, the optimal reconstruction errors satisfy $\mathrm{err}[\mathrm{PCA}_{K-1}]\le\mathrm{err}[\mathrm{AA}_K]\le\mathrm{err}[k\text{-means}_K]$.</p></div>
+<details class="fold proof"><summary>Proof, step by step</summary><div class="fold-body">
+<ol class="steps">
+<li>Left inequality. The reconstructions of $\mathrm{AA}_K$ are convex combinations of $K$ points, so they lie in the affine hull of these $K$ points, of dimension at most $K-1$.<span class="why">$K$ points span an affine space of dimension at most $K-1$</span></li>
+<li>$\mathrm{PCA}_{K-1}$ is the best reconstruction in an affine subspace of dimension $K-1$ (the mean plus $K-1$ principal directions).<span class="why">Eckart–Young for centred data</span></li>
+<li>Hence $\mathrm{err}[\mathrm{PCA}_{K-1}]\le\mathrm{err}[\mathrm{AA}_K]$.<span class="why">AA's reconstructions are one candidate for PCA's minimisation</span></li>
+<li>Right inequality. A $k$-means solution has $K$ centroids, each the average of the data points of its cluster. An average of data points is a convex combination of data points, so each centroid is an admissible archetype.<span class="why">archetypes must lie in the convex hull of the data</span></li>
+<li>The $k$-means reconstruction of a point is its centroid, which is the archetype with the one-hot code $(0,\dots,1,\dots,0)$, a point of the simplex.<span class="why">codes of AA are in the simplex</span></li>
+<li>So every $k$-means solution is feasible for AA with the same error; the optimum of AA is at most that.<span class="why">minimum over a larger set</span></li>
+</ol></div></details>
+<div class="box example"><div class="box-h">Worked example — a tiny data set</div>
+<p>Five points in the plane, $K=2$: $(0,0),(2,0),(4,0),(1,1.5),(3,1.5)$, errors as sums of squares. PCA with one component (a line through the mean $(2,0.6)$): error $2.70$. Best $k$-means with two centroids: clusters $\{(0,0),(2,0),(1,1.5)\}$ and $\{(4,0),(3,1.5)\}$, centroids $(1,0.5)$ and $(3.5,0.75)$, error $3.5+1.625=5.125$. AA with two archetypes reconstructs on a segment between two points of the hull; a numerical optimisation (hill climbing, 60 restarts) gives an error of about $2.97$, with archetypes near $(0.34,0.51)$ and $(3.66,0.51)$. Order: $2.70\le2.97\le5.125$; the gap ratio is $g=(2.97-2.70)/(5.125-2.70)=0.11$. The $k$-means centroids are feasible archetypes, which is why AA cannot do worse than $5.125$.</p></div>
+<p><strong>What the sandwich implies for the paper's figure.</strong> Per-image AA is a model <em>refitted on each image</em>, with $K$ free archetypes for 256 tokens. The SAE is a single dictionary shared by all images, with 8 active atoms per token. We reproduce the paper's AA errors ($0.32$, $0.25$, $0.18$ against $0.32$, $0.26$, $0.19$ for $K=3,5,10$), which lets us place the SAE's $0.227$ on our axes. A $k$-means with ten centroids per image already passes below it ($0.21$), and so does PCA with nine components ($0.15$). “Matching the SAE with ten archetypes” is therefore not specific to convex mixing: it rewards any model refitted on each image.</p>
+<p><strong>The informative number</strong> is where AA sits inside its sandwich: $g=(\mathrm{AA}-\mathrm{PCA})/(k\text{-means}-\mathrm{PCA})$, between $0$ (as good as PCA) and $1$ (as bad as $k$-means), calibrated on data of known geometry.</p>
+<p><strong>Toy experiment <code>t2_sandwich</code>.</strong> 256 points in $\R^{50}$ with identical sample mean and covariance: mixtures of ten random Gaussian vertices with Dirichlet(0.5) weights plus noise (PCA(9) error $\approx0.05$), against a Gaussian with exactly the same mean and covariance. At $K=10$: $g=0.19$ for the polytope, $g=0.49$ for the Gaussian (20 repetitions); the polytope is below the Gaussian in all repetitions for $K\ge5$. No sandwich violation in any run.</p>
+<p><strong>DINOv2 (<code>r3_aa_sandwich</code>).</strong> Per image, $K=10$, mean over 200 images (100 for the nulls):</p>
+<div class="table-wrap"><table>
+<thead><tr><th>data</th><th>$g$ at $K=10$</th></tr></thead>
+<tbody>
+<tr><td>DINOv2 tokens, post-norm</td><td><b>0.47</b> (s.e. 0.003)</td></tr>
+<tr><td>Gaussian with the covariance of the same image</td><td>0.51</td></tr>
+<tr><td>ten-vertex polytope planted in the same image (same PCA(9) error)</td><td>0.26</td></tr>
+<tr><td>DINOv2 tokens, pre-norm</td><td>0.40</td></tr>
+<tr><td>random-weights twin, post-norm</td><td>0.49</td></tr>
+</tbody></table></div>
+<figure class="paperfig"><img data-src="own_figures/fig_sandwich.png" alt="Two line plots: reconstruction error against the number of archetypes for PCA, archetypal analysis and k-means, with crosses for the paper's values and a dashed SAE line; and the gap ratio against the number of archetypes for DINOv2, a Gaussian and a planted polytope."><figcaption><strong>Signature 2 inside its sandwich.</strong> (a) Mean squared error per coordinate of AA between PCA and $k$-means, averaged over 200 images; crosses are values read from the paper's Fig. 17; the dashed line is the paper's SAE. (b) Gap ratio $g$ for DINOv2 tokens, a Gaussian and a planted polytope. <span class="src">From the project report.</span></figcaption></figure>
+<div class="box method"><div class="box-h">How to read this figure</div>
+<ul>
+<li><b>Panel (a).</b> $x$: number $K$ of archetypes. $y$: mean squared error per coordinate. Three curves: PCA with $K-1$ components (lowest), AA (middle), $k$-means (highest). Crosses: the paper's AA values, which our AA curve passes through. Dashed horizontal line: the SAE, $0.227$.</li>
+<li><b>Look at.</b> Where each curve crosses the dashed line (the $y$ axis is logarithmic): $k$-means ($0.21$) and AA ($0.18$) are below it at $K=10$, and PCA, which is the lowest curve, is already near it at $K=5$ and at $0.15$ with nine components. All three, not only AA, go below the SAE.</li>
+<li><b>Panel (b).</b> $y$: $g$ between 0 (AA as good as PCA) and 1 ($k$-means level). Three data sets. A planted polytope sits low ($0.26$ at $K=10$), a Gaussian near $0.5$, the tokens at $0.47$. At very small $K$ (2–3) the tokens lie above the Gaussian, so the ordering is not uniform in $K$; the paper's regime is $K\ge10$.</li>
+<li><b>Conclusion.</b> AA's position inside its sandwich is barely closer to a small polytope than a Gaussian cloud is.</li>
+<li><b>What it does not show.</b> It does not exclude polytopes with many more than ten vertices, which behave like a smooth body, nor sums of several tiles; it is calibrated for ten vertices (the number the paper uses).</li>
+</ul></div>
+<div class="box ours"><div class="box-h">Our reading — the honest caveat</div>
+<p>The test excludes “the token cloud of an image is a polytope with about ten vertices”, not “convex coding” in general. The tokens are somewhat closer to the polytope end than the Gaussian is ($0.47$ against $0.51$), and the pre-norm tokens more so ($0.40$); the difference is small next to the planted polytope ($0.26$). We make no claim beyond that.</p></div>
+
+<!-- ======================= blocks ======================= -->
+<h3 id="diag-blocks">Signature 3 — a sum is not a union</h3>
+<div class="box paper"><div class="box-h">In the paper <span class="ref">§7.2 · p. 20, Fig. 17 right · p. 21</span></div>
+<p>The matrix $\mZ\T\mZ$ of the codes of an archetypal analysis with about 1,000 archetypes, reordered by clustering, is block-diagonal. This is offered as support for block structure. Reading of the panel: <a href="05_minkowski.html#ev-blocks">page 5</a>.</p></div>
+<div class="box idea"><div class="box-h">Idea</div>
+<p>Block-diagonal means: a token uses archetypes of one group only. That is a union of polytopes (clusters). A Minkowski sum of tiles that are active together predicts the opposite: an AA, whose codes live in a single simplex, has to take the <em>sums of vertices</em> as archetypes, and every token uses all of them at once.</p></div>
+<details class="fold proof"><summary>Why a sum gives product weights</summary><div class="fold-body">
+<ol class="steps">
+<li>Let $\vx=\vp+\vq$ with $\vp=\sum_i\alpha_i\va_i\in\Pc_1$ and $\vq=\sum_j\beta_j\vb_j\in\Pc_2$, $\sum_i\alpha_i=\sum_j\beta_j=1$.<span class="why">two tiles active together</span></li>
+<li>$\vx=\sum_i\alpha_i\va_i\cdot\big(\sum_j\beta_j\big)+\big(\sum_i\alpha_i\big)\cdot\sum_j\beta_j\vb_j=\sum_{i,j}\alpha_i\beta_j(\va_i+\vb_j)$.<span class="why">multiply $\vp$ by $\sum_j\beta_j=1$ and $\vq$ by $\sum_i\alpha_i=1$</span></li>
+<li>The weights $\alpha_i\beta_j$ are non-negative and sum to $1$: a point of the simplex over the archetypes $\va_i+\vb_j$.<span class="why">$\sum_{i,j}\alpha_i\beta_j=(\sum_i\alpha_i)(\sum_j\beta_j)=1$</span></li>
+<li>Therefore the single-simplex AA of a sum has the vertex sums as archetypes, and the code of $\vx$ is $\val\otimes\vbe$.<span class="why">Kronecker product of the two codes</span></li>
+<li>The co-activation of this token is $(\val\otimes\vbe)(\val\otimes\vbe)\T=(\val\val\T)\otimes(\vbe\vbe\T)$, which has no zero entry as soon as all $\alpha_i,\beta_j>0$.<span class="why">product of positive numbers</span></li>
+</ol></div></details>
+<div class="box example"><div class="box-h">Worked example</div>
+<p>Two tiles, each a segment: $\Pc_1=[\va_1,\va_2]$, $\Pc_2=[\vb_1,\vb_2]$, with $\val=(0.7,0.3)$ and $\vbe=(0.6,0.4)$. <b>Sum.</b> The four archetypes are $\va_1+\vb_1,\va_1+\vb_2,\va_2+\vb_1,\va_2+\vb_2$ and the code is $(0.42,0.28,0.18,0.12)$, which sums to 1. The co-activation matrix of this token is
+$$\begin{pmatrix}0.176&0.118&0.076&0.050\\0.118&0.078&0.050&0.034\\0.076&0.050&0.032&0.022\\0.050&0.034&0.022&0.014\end{pmatrix},$$
+with no zero entry: every archetype co-activates with every other. <b>Union.</b> If the four archetypes are $\va_1,\va_2,\vb_1,\vb_2$ and a token uses one tile, the code is $(0.7,0.3,0,0)$ and the matrix has a non-zero block $\begin{pmatrix}0.49&0.21\\0.21&0.09\end{pmatrix}$ and zeros elsewhere: blocks.</p></div>
+<p><strong>Toy experiment <code>t3_sum_union</code>.</strong> In $\R^{20}$, $N=4000$ points, Dirichlet(1) weights. $U$: a union of four separated triangles ($K=12$ archetypes). $S$: the Minkowski sum $T_1+T_2$ of two triangles ($K=9$ archetypes, the nine vertex sums). We cluster the normalised co-activation matrix and measure the share of off-diagonal co-activation inside the blocks.</p>
+<div class="table-wrap"><table>
+<thead><tr><th></th><th>share inside the blocks</th><th>same for an unstructured matrix</th><th>pairs of archetypes that co-activate</th></tr></thead>
+<tbody>
+<tr><td>union of four triangles</td><td><b>99.9%</b> (four blocks)</td><td>18%</td><td>18%</td></tr>
+<tr><td>sum of two triangles</td><td>42% (best of the partitions tried: three blocks)</td><td>36%</td><td><b>97%</b></td></tr>
+</tbody></table></div>
+<p>For the union, the four blocks hold $99.9\%$ of the off-diagonal co-activation and the archetypes found are within $1.4\%$ of the diameter of true vertices. For the sum, $97\%$ of the pairs of archetypes co-activate and no partition into blocks does better than chance. The Kronecker structure predicted above is there: the co-activation of the generating product code differs from $\mathbf G_1\otimes\mathbf G_2$ by only $1.9\%$ (relative), and the AA's by $40\%$, because with $K=9$ it recovers the nine vertex sums only to within about $12\%$ of the diameter.</p>
+<p><strong>DINOv2 (<code>r5_coactivation</code>).</strong> An AA with 200 archetypes on the tokens of 100 images (256 per image), co-activation $\mZ\T\mZ$ ordered by the class from which each archetype draws most of its usage.</p>
+<div class="nums"><div class="num"><b>95%</b><span>of archetypes draw more than half of their usage from a single class (10% for a uniform spread)</span></div><div class="num"><b>52%</b><span>of the off-diagonal co-activation links archetypes of the same dominant class (10% expected; permutation 95th percentile 11%)</span></div><div class="num"><b>0.62</b><span>adjusted mutual information of a ten-block clustering with the classes (0.29 with the images)</span></div></div>
+<figure class="paperfig"><img data-src="own_figures/fig_coactivation.png" alt="Three matrix plots of normalised co-activation: block-diagonal for a union of four triangles, dense for a sum of two triangles, ten diagonal blocks for DINOv2."><figcaption><strong>Signature 3.</strong> Normalised co-activation matrices of archetypal analyses. (a) Union of four triangles: blocks. (b) Minkowski sum of two triangles: no blocks. (c) DINOv2, 200 archetypes fitted on the tokens of 100 images, ordered by class: the blocks are the ten classes. <span class="src">From the project report.</span></figcaption></figure>
+<div class="box method"><div class="box-h">How to read this figure</div>
+<ul>
+<li><b>Axes and colours.</b> Each panel is a square matrix indexed by archetypes (same order on both axes); the colour of entry $(i,j)$ is the normalised co-activation $C_{ij}/\sqrt{C_{ii}C_{jj}}$ of archetypes $i$ and $j$ (dark blue = 1, white = 0, square-root colour scale). The diagonal equals 1 by construction; in (c) black lines delimit the ten classes.</li>
+<li><b>(a) Union.</b> Four dark blocks of three archetypes on the diagonal, white elsewhere: each token lives in one triangle.</li>
+<li><b>(b) Sum.</b> Every entry is blue (moderately dark) with a faint product pattern: no block.</li>
+<li><b>(c) DINOv2.</b> Ten blocks along the diagonal, which are the ten classes. Off-diagonal mass is not zero: 57% of it is inside the ten blocks.</li>
+<li><b>Conclusion.</b> Tokens of similar objects share archetypes, which any clustering would show. The structure is that of a union of polytopes (the repaired definition of <a href="#repair">section 2</a>), not of a sum of tiles.</li>
+<li><b>What it does not show.</b> That there is no additive structure at all: a single-simplex AA with 200 archetypes might not resolve a second tile (position, say) on top of the class. Also, 52% of the archetypes draw more than half of their usage from a <em>single image</em>: with 200 archetypes on 100 images, the archetypes partly describe images.</li>
+</ul></div>
+<div class="box ours"><div class="box-h">Our reading — honest caveat</div>
+<p>Block structure is evidence for the union in the repaired definition, and against a reading where several tiles are active at once in this basis. It is not evidence for “additive tiles”, which is what the Minkowski sum needs. The global AA with 200 archetypes leaves $40\%$ of the variance unexplained, against $46\%$ for $k$-means with 200 clusters; it is a coarse description, which is part of why blocks of this size appear.</p></div>
